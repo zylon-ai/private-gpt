@@ -1,4 +1,4 @@
-"""Wrapper for the GPT4All model."""
+"""Wrapper for the GPT4All-J model."""
 from functools import partial
 from typing import Any, Dict, List, Mapping, Optional, Set
 
@@ -117,7 +117,7 @@ class GPT4All_J(LLM):
             **{
                 k: v
                 for k, v in self.__dict__.items()
-                if k in GPT4All._llama_param_names()
+                if k in GPT4All_J._llama_param_names()
             },
         }
 
