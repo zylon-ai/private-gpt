@@ -1,4 +1,5 @@
 langchain==0.0.154
+pygptj==1.0.10
 pygpt4all==1.0.1
 chromadb==0.3.21
 llama-cpp-python==0.1.41
