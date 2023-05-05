@@ -20,13 +20,12 @@ This repo uses a [state of the union transcript](https://github.com/imartinez/pr
 
 ## Instructions for ingesting your own dataset
 
-Place your .txt file in `source_documents` folder.
-Edit `ingest.py` loader to point it to your document.
+Get your .txt file ready.
 
 Run the following command to ingest the data.
 
 ```shell
-python ingest.py
+python ingest.py <path_to_your_txt_file>
 ```
 
 It will create a `db` folder containing the local vectorstore. Will take time, depending on the size of your document.

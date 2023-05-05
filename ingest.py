@@ -1,13 +1,14 @@
 from langchain.document_loaders import TextLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import LlamaCppEmbeddings
+from sys import argv
 
 def main():
     # Load document and split in chunks
-    loader = TextLoader('./source_documents/state_of_the_union.txt', encoding='utf8')
+    loader = TextLoader(argv[1], encoding="utf8")
     documents = loader.load()
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     texts = text_splitter.split_documents(documents)
     # Create embeddings
     llama = LlamaCppEmbeddings(model_path="./models/ggml-model-q4_0.bin")
