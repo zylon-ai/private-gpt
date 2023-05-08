@@ -3,6 +3,8 @@ Ask questions to your documents without an internet connection, using the power 
 
 Built with [LangChain](https://github.com/hwchase17/langchain) and [GPT4All](https://github.com/nomic-ai/gpt4all)
 
+<img width="902" alt="demo" src="https://user-images.githubusercontent.com/721666/236942256-985801c9-25b9-48ef-80be-3acbb4575164.png">
+
 # Environment Setup
 
 In order to set your environment up to run the code here, first install all requirements:
