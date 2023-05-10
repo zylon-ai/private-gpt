@@ -32,7 +32,7 @@ python ingest.py <path_to_your_txt_file>
 
 It will create a `db` folder containing the local vectorstore. Will take time, depending on the size of your document.
 You can ingest as many documents as you want by running `ingest`, and all will be accumulated in the local embeddings database. 
-If you want to start from scracth, delete the `db` folder.
+If you want to start from scratch, delete the `db` folder.
 
 Note: during the ingest process no data leaves your local environment. You could ingest without an internet connection.
 
