@@ -1,5 +1,5 @@
 # privateGPT
-Ask questions to your documents without an internet connection, using the power of LLMs. 100% private, no data leaves your execution environment at any point. You can ingest documents and ask questions without an internet connection!
+Ask questions about your documents without an internet connection, using the power of LLMs. 100% private; no data leaves your execution environment at any point. You can ingest documents and ask questions without an internet connection!
 
 Built with [LangChain](https://github.com/hwchase17/langchain) and [GPT4All](https://github.com/nomic-ai/gpt4all)
 
@@ -49,9 +49,9 @@ And wait for the script to require your input.
 > Enter a query:
 ```
 
-Hit enter. You'll need to wait 20-30 seconds (depending on your machine) while the LLM model consumes the prompt and prepares the answer. Once done, it will print the answer and the 4 sources it used as context from your documents; you can then ask another question without re-running the script, just wait for the prompt again. 
+Hit enter. You'll need to wait 20–30 seconds (depending on your machine) while the LLM model consumes the prompt and prepares the answer. Once done, it will print the answer and the four sources it used as context from your documents. You can then ask another question without re-running the script; just wait for the prompt again.
 
-Note: you could turn off your internet connection, and the script inference would still work. No data gets out of your local environment.
+Note: You could turn off your internet connection, and the script inference would still work. No data gets out of your local environment.
 
 Type `exit` to finish the script.
 
@@ -63,4 +63,4 @@ Selecting the right local models and the power of `LangChain` you can run the en
 - `GPT4All-J` wrapper was introduced in LangChain 0.0.162.
 
 # Disclaimer
-This is a test project to validate the feasibility of a fully private solution for question answering using LLMs and Vector embeddings. It is not production ready, and it is not meant to be used in production. The models selection is not optimized for performance, but for privacy; but it is possible to use different models and vectorstores to improve performance.
+This is a test project to validate the feasibility of a fully private solution for question answering using LLMs and vector embeddings. It is not production-ready, and it is not meant to be used in production. The model selection is not optimized for performance but for privacy, but it is possible to use different models and vector stores to improve performance.
