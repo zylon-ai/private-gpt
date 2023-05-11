@@ -20,7 +20,9 @@ def main():
         query = input("\nEnter a query: ")
         if query == "exit":
             break
-        
+        if query.strip() == "":
+            print("error: query empty!")
+            continue
         # Get the answer from the chain
         res = qa(query)    
         answer, docs = res['result'], res['source_documents']
