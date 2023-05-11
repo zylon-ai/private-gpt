@@ -16,11 +16,13 @@ def is_pdf(path_to_file):
         return False
 
 def main():
-    if is_pdf(argv[1]):
-        loader = PyPDFLoader(argv[1])
+    file_path = argv[1]
+
+    if is_pdf(file_path):
+        loader = PyPDFLoader(file_path)
     else:
         # Load document and split in chunks
-        loader = TextLoader(argv[1], encoding="utf8")
+        loader = TextLoader(file_path, encoding="utf8")
     documents = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     texts = text_splitter.split_documents(documents)
