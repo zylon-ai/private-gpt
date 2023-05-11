@@ -19,7 +19,7 @@ MODEL_TYPE: supports LlamaCpp or GPT4All
 PERSIST_DIRECTORY: is the folder you want your vectorstore in
 LLAMA_EMBEDDINGS_MODEL: Path to your LlamaCpp supported embeddings model
 MODEL_PATH: Path to your GPT4All or LlamaCpp supported LLM
-N_CTX: Maximum token limit for both embeddings and LLM models
+MODEL_N_CTX: Maximum token limit for both embeddings and LLM models
 ```
 
 Then, download the 2 models and place them in a directory of your choice (Ensure to update your .env with the model paths):
