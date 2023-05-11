@@ -1,9 +1,12 @@
+from dotenv import load_dotenv
 from langchain.chains import RetrievalQA
 from langchain.embeddings import LlamaCppEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
 import os
+
+load_dotenv()
 
 llama_embeddings_model = os.environ.get("LLAMA_EMBEDDINGS_MODEL")
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
