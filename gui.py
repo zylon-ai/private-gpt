@@ -68,8 +68,7 @@ class MainWindow(QWidget):
         main_layout.addWidget(self.answer_output)
 
         self.setLayout(main_layout)
-
-        self.setFixedSize(600,500)
+        self.setMinimumSize(600,500)
 
     def update_answer_output(self, answer, docs):
         self.answer_output.insertPlainText(f"Answer: {answer}\n\n")
