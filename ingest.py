@@ -1,14 +1,26 @@
 from langchain.document_loaders import TextLoader
+from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import LlamaCppEmbeddings
 from sys import argv
+from pdfminer.high_level import extract_text
 from constants import PERSIST_DIRECTORY
 from constants import CHROMA_SETTINGS
 
+def is_pdf(path_to_file):
+    try:
+        extract_text(path_to_file)
+        return True
+    except:
+        return False
+
 def main():
-    # Load document and split in chunks
-    loader = TextLoader(argv[1], encoding="utf8")
+    if is_pdf(argv[1]):
+        loader = PyPDFLoader(argv[1])
+    else:
+        # Load document and split in chunks
+        loader = TextLoader(argv[1], encoding="utf8")
     documents = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     texts = text_splitter.split_documents(documents)
