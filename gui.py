@@ -77,6 +77,7 @@ class MainWindow(QWidget):
             source_name = document.metadata["source"]
             page_content = document.page_content
             self.answer_output.insertPlainText(f"- {source_name}:\n{page_content}\n\n")
+        self.answer_output.insertPlainText("\n\n")
         self.answer_output.ensureCursorVisible()
 
 
