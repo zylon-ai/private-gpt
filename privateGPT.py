@@ -2,18 +2,32 @@ from langchain.chains import RetrievalQA
 from langchain.embeddings import LlamaCppEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
-from langchain.llms import GPT4All
-from constants import PERSIST_DIRECTORY
+from langchain.llms import GPT4All, LlamaCpp
+import os
+
+llama_embeddings_model = os.environ.get("LLAMA_EMBEDDINGS_MODEL")
+persist_directory = os.environ.get('PERSIST_DIRECTORY')
+
+model_type = os.environ.get('MODEL_TYPE')
+model_path = os.environ.get('MODEL_PATH')
+model_n_ctx = os.environ.get('MODEL_N_CTX')
+
 from constants import CHROMA_SETTINGS
 
-def main():        
-    # Load stored vectorstore
-    llama = LlamaCppEmbeddings(model_path="./models/ggml-model-q4_0.bin")
-    db = Chroma(persist_directory=PERSIST_DIRECTORY, embedding_function=llama, client_settings=CHROMA_SETTINGS)
+def main():
+    llama = LlamaCppEmbeddings(model_path=llama_embeddings_model, n_ctx=model_n_ctx)
+    db = Chroma(persist_directory=persist_directory, embedding_function=llama, client_settings=CHROMA_SETTINGS)
     retriever = db.as_retriever()
     # Prepare the LLM
     callbacks = [StreamingStdOutCallbackHandler()]
-    llm = GPT4All(model='./models/ggml-gpt4all-j-v1.3-groovy.bin', backend='gptj', callbacks=callbacks, verbose=False)
+    match model_type:
+        case "LlamaCpp":
+            llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
+        case "GPT4All":
+            llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
+        case _default:
+            print(f"Model {model_type} not supported!")
+            exit;
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
     # Interactive questions and answers
     while True:
