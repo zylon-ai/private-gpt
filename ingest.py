@@ -1,10 +1,13 @@
 import os
+from dotenv import load_dotenv
 from langchain.document_loaders import TextLoader, PDFMinerLoader, CSVLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import LlamaCppEmbeddings
 from constants import PERSIST_DIRECTORY
 from constants import CHROMA_SETTINGS
+
+load_dotenv()
 
 def main():
     llama_embeddings_model = os.environ.get('LLAMA_EMBEDDINGS_MODEL')
