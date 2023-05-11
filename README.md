@@ -20,6 +20,10 @@ Then, download the 2 models and place them in a folder called `./models`:
 ## Test dataset
 This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
 
+## How to prepare your own dataset
+
+For a custom dataset to work for your model in the most effective way, the best way to structure your own dataset is through modern spoken English. For example, a real life speech could be very useful as it will allow the model to give real human-like responses to historical events. However, this may depend on its usage; fictional text could also potentially be used to create a model which, for example could be a role play model for a game. There is no need, however, for there to be a set of questions. Even a transcription of something that you say could be sufficient.
+
 ## Instructions for ingesting your own dataset
 
 Get your .txt file ready.
