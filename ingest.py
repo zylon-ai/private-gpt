@@ -3,6 +3,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import LlamaCppEmbeddings
 from sys import argv
+from chroma_preference import PERSIST_DIRECTORY
+from chroma_preference import CHROMA_SETTINGS
 
 def main():
     # Load document and split in chunks
@@ -13,8 +15,7 @@ def main():
     # Create embeddings
     llama = LlamaCppEmbeddings(model_path="./models/ggml-model-q4_0.bin")
     # Create and store locally vectorstore
-    persist_directory = 'db'
-    db = Chroma.from_documents(texts, llama, persist_directory=persist_directory)
+    db = Chroma.from_documents(texts, llama, persist_directory=PERSIST_DIRECTORY, client_settings=CHROMA_SETTINGS)
     db.persist()
     db = None
 
