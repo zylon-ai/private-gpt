@@ -1,7 +1,7 @@
 # privateGPT
 Ask questions to your documents without an internet connection, using the power of LLMs. 100% private, no data leaves your execution environment at any point. You can ingest documents and ask questions without an internet connection!
 
-Built with [LangChain](https://github.com/hwchase17/langchain) and [GPT4All](https://github.com/nomic-ai/gpt4all)
+Built with [LangChain](https://github.com/hwchase17/langchain) and [GPT4All](https://github.com/nomic-ai/gpt4all) and [LlamaCpp](https://github.com/ggerganov/llama.cpp)
 
 <img width="902" alt="demo" src="https://user-images.githubusercontent.com/721666/236942256-985801c9-25b9-48ef-80be-3acbb4575164.png">
 
@@ -13,26 +13,29 @@ In order to set your environment up to run the code here, first install all requ
 pip install -r requirements.txt
 ```
 
+Rename example.env to .env and edit the variables appropriately.
+MODEL_TYPE supports LlamaCpp or GPT4All
+
 Then, download the 2 models and place them in a folder called `./models`:
 - LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, just download it and reference it in `privateGPT.py`.
-- Embedding: default to [ggml-model-q4_0.bin](https://huggingface.co/Pi3141/alpaca-native-7B-ggml/resolve/397e872bf4c83f4c642317a5bf65ce84a105786e/ggml-model-q4_0.bin). If you prefer a different compatible Embeddings model, just download it and reference it in `privateGPT.py` and `ingest.py`.
+- Embedding: default to [ggml-model-q4_0.bin](https://huggingface.co/Pi3141/alpaca-native-7B-ggml/resolve/397e872bf4c83f4c642317a5bf65ce84a105786e/ggml-model-q4_0.bin). If you prefer a different compatible Embeddings model, just download it and reference it in `.env`.
 
 ## Test dataset
 This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
 
 ## Instructions for ingesting your own dataset
 
-Get your .txt file ready.
+Put any and all of your .txt, .pdf, or .csv files into the source_documents directory
 
-Run the following command to ingest the data.
+Run the following command to ingest all the data.
 
 ```shell
-python ingest.py <path_to_your_txt_file>
+python ingest.py
 ```
 
-It will create a `db` folder containing the local vectorstore. Will take time, depending on the size of your document.
-You can ingest as many documents as you want by running `ingest`, and all will be accumulated in the local embeddings database. 
-If you want to start from scratch, delete the `db` folder.
+It will create a `db` folder containing the local vectorstore. Will take time, depending on the size of your documents.
+You can ingest as many documents as you want, and all will be accumulated in the local embeddings database. 
+If you want to start from an empty database, delete the `db` folder.
 
 Note: during the ingest process no data leaves your local environment. You could ingest without an internet connection.
 
@@ -59,7 +62,7 @@ Type `exit` to finish the script.
 Selecting the right local models and the power of `LangChain` you can run the entire pipeline locally, without any data leaving your environment, and with reasonable performance.
 
 - `ingest.py` uses `LangChain` tools to parse the document and create embeddings locally using `LlamaCppEmbeddings`. It then stores the result in a local vector database using `Chroma` vector store. 
-- `privateGPT.py` uses a local LLM based on `GPT4All-J` to understand questions and create answers. The context for the answers is extracted from the local vector store using a similarity search to locate the right piece of context from the docs.
+- `privateGPT.py` uses a local LLM based on `GPT4All-J` or `LlamaCpp` to understand questions and create answers. The context for the answers is extracted from the local vector store using a similarity search to locate the right piece of context from the docs.
 - `GPT4All-J` wrapper was introduced in LangChain 0.0.162.
 
 # Disclaimer
