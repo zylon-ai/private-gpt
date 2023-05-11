@@ -1,9 +1,12 @@
 from dotenv import load_dotenv
+import langchain
 from langchain.chains import RetrievalQA
 from langchain.embeddings import LlamaCppEmbeddings
+from langchain.cache import GPTCache
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
+from gptcache.adapter.api import init_similar_cache
 import os
 
 load_dotenv()
@@ -31,6 +34,7 @@ def main():
         case _default:
             print(f"Model {model_type} not supported!")
             exit;
+    langchain.llm_cache = GPTCache(init_func=lambda cache: init_similar_cache(cache_obj=cache))
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
     # Interactive questions and answers
     while True:
