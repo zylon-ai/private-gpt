@@ -14,11 +14,16 @@ pip install -r requirements.txt
 ```
 
 Rename example.env to .env and edit the variables appropriately.
-MODEL_TYPE supports LlamaCpp or GPT4All
+```
+MODEL_TYPE: supports LlamaCpp or GPT4All
+PERSIST_DIRECTORY: is the folder you want your vectorstore in
+LLAMA_EMBEDDINGS_MODEL: Path to your LlamaCpp supported embeddings model
+MODEL_PATH: Path to your GPT4All or LlamaCpp supported LLM
+```
 
-Then, download the 2 models and place them in a folder called `./models`:
-- LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, just download it and reference it in `privateGPT.py`.
-- Embedding: default to [ggml-model-q4_0.bin](https://huggingface.co/Pi3141/alpaca-native-7B-ggml/resolve/397e872bf4c83f4c642317a5bf65ce84a105786e/ggml-model-q4_0.bin). If you prefer a different compatible Embeddings model, just download it and reference it in `.env`.
+Then, download the 2 models and place them in a directory of your choice (Ensure to update your .env with the model paths):
+- LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, just download it and reference it in your `.env` file.
+- Embedding: default to [ggml-model-q4_0.bin](https://huggingface.co/Pi3141/alpaca-native-7B-ggml/resolve/397e872bf4c83f4c642317a5bf65ce84a105786e/ggml-model-q4_0.bin). If you prefer a different compatible Embeddings model, just download it and reference it in your `.env` file.
 
 ## Test dataset
 This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
