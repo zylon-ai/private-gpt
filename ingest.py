@@ -3,8 +3,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import LlamaCppEmbeddings
 from sys import argv
-from chroma_preference import PERSIST_DIRECTORY
-from chroma_preference import CHROMA_SETTINGS
+from constants import PERSIST_DIRECTORY
+from constants import CHROMA_SETTINGS
 
 def main():
     # Load document and split in chunks

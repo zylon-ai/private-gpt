@@ -3,8 +3,8 @@ from langchain.embeddings import LlamaCppEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All
-from chroma_preference import PERSIST_DIRECTORY
-from chroma_preference import CHROMA_SETTINGS
+from constants import PERSIST_DIRECTORY
+from constants import CHROMA_SETTINGS
 
 def main():        
     # Load stored vectorstore
