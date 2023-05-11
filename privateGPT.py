@@ -36,5 +36,24 @@ def main():
             print("\n> " + document.metadata["source"] + ":")
             print(document.page_content)
 
+def answer_query(query, update_callback=None):
+    # Load stored vectorstore
+    llama = LlamaCppEmbeddings(model_path="/Users/mehul/Downloads/privateGPT-main/models/ggml-model-q4_0.bin")
+    persist_directory = 'db'
+    db = Chroma(persist_directory=persist_directory, embedding_function=llama)
+    retriever = db.as_retriever()
+    # Prepare the LLM
+    callbacks = [StreamingStdOutCallbackHandler()]
+    llm = GPT4All(model='/Users/mehul/Downloads/privateGPT-main/models/ggml-gpt4all-j-v1.3-groovy.bin', backend='gptj', callbacks=callbacks, verbose=False)
+    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
+    # Get the answer from the chain
+    res = qa(query)    
+    answer, docs = res['result'], res['source_documents']
+
+    if update_callback:
+        update_callback(answer)
+    else:
+        return answer, docs
+
 if __name__ == "__main__":
     main()
