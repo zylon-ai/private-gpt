@@ -7,7 +7,8 @@ RUN apt-get update -qq && apt-get install -y \
     pip \
     wget
 
-RUN git clone https://github.com/imartinez/privateGPT.git \
+RUN cd home \
+    && git clone https://github.com/imartinez/privateGPT.git \
     && cd privateGPT \
     && pip install -r requirements.txt
 
