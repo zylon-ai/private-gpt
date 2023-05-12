@@ -38,7 +38,6 @@ Run the following command to ingest all the data.
 ```shell
 python ingest.py
 ```
-
 It will create a `db` folder containing the local vectorstore. Will take time, depending on the size of your documents.
 You can ingest as many documents as you want, and all will be accumulated in the local embeddings database. 
 If you want to start from an empty database, delete the `db` folder.
@@ -63,6 +62,17 @@ Hit enter. You'll need to wait 20-30 seconds (depending on your machine) while t
 Note: you could turn off your internet connection, and the script inference would still work. No data gets out of your local environment.
 
 Type `exit` to finish the script.
+
+## PrivateGPT GUI
+Another way to ask questions is to use the UI designed for Private GPT. Run a command like:
+
+```shell
+python gui.py
+```
+You'll see a GUI interface with a field to enter your query, then click on Submit Query, You'll need to wait 20-30 seconds (depending on your machine) same as above when using the shell version. You can keep entering questions without re-running the GUI, All Queries and Answers will be listed out in order in the Answer output box. If you would like to clear the fields click on the Reset Button.
+
+Note: you could turn off your internet connection, and the script inference would still work. No data gets out of your local environment.
+
 
 # How does it work?
 Selecting the right local models and the power of `LangChain` you can run the entire pipeline locally, without any data leaving your environment, and with reasonable performance.
