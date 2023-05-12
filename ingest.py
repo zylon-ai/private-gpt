@@ -4,7 +4,6 @@ from langchain.document_loaders import TextLoader, PDFMinerLoader, CSVLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import LlamaCppEmbeddings
-from constants import PERSIST_DIRECTORY
 from constants import CHROMA_SETTINGS
 
 load_dotenv()
@@ -28,7 +27,7 @@ def main():
     # Create embeddings
     llama = LlamaCppEmbeddings(model_path=llama_embeddings_model, n_ctx=model_n_ctx)
     # Create and store locally vectorstore
-    db = Chroma.from_documents(texts, llama, persist_directory=PERSIST_DIRECTORY, client_settings=CHROMA_SETTINGS)
+    db = Chroma.from_documents(texts, llama, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
     db.persist()
     db = None
 
