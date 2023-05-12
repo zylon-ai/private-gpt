@@ -12,7 +12,7 @@ RUN cd home \
     && cd privateGPT \
     && pip install -r requirements.txt
 
-RUN echo "PERSIST_DIRECTORY=db\nLLAMA_EMBEDDINGS_MODEL=models/ggml-model-q4_0.bin\nMODEL_TYPE=GPT4Alb\nMODEL_PATH=models/ggml-gpt4all-j-v1.3-groovy.bin\nMODEL_N_CTX=1000" > home/privateGPT/.env \
+RUN echo "PERSIST_DIRECTORY=db\nLLAMA_EMBEDDINGS_MODEL=models/ggml-model-q4_0.bin\nMODEL_TYPE=GPT4All\nMODEL_PATH=models/ggml-gpt4all-j-v1.3-groovy.bin\nMODEL_N_CTX=1000" > home/privateGPT/.env \
     && chmod a+x home/privateGPT/.env
 
 RUN mkdir home/privateGPT/models \
