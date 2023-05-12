@@ -71,7 +71,11 @@ Another way to ask questions is to use the UI designed for Private GPT. Run a co
 ```shell
 python gui.py
 ```
+
+
 You'll see a GUI interface with a field to enter your query, then click on Submit Query, You'll need to wait 20-30 seconds (depending on your machine) same as above when using the shell version. You can keep entering questions without re-running the GUI, All Queries and Answers will be listed out in order in the Answer output box. If you would like to clear the fields click on the Reset Button.
+
+<img width="701" alt="PrivateGPT-GUI" src="https://github.com/msrivas-7/privateGPT/assets/61619061/4c7351d4-e3d6-42b3-a581-46d2b3a11aeb">
 
 Note: you could turn off your internet connection, and the script inference would still work. No data gets out of your local environment.
 
