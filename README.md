@@ -26,6 +26,15 @@ Then, download the 2 models and place them in a directory of your choice (Ensure
 - LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, just download it and reference it in your `.env` file.
 - Embedding: default to [ggml-model-q4_0.bin](https://huggingface.co/Pi3141/alpaca-native-7B-ggml/resolve/397e872bf4c83f4c642317a5bf65ce84a105786e/ggml-model-q4_0.bin). If you prefer a different compatible Embeddings model, just download it and reference it in your `.env` file.
 
+To use the defaults run these commands (assumes you have curl installed)
+```shell
+cp example.env .env
+mkdir models
+cd models
+curl https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin --output ggml-gpt4all-j-v1.3-groovy.bin
+url="https://huggingface.co/Pi3141/alpaca-native-7B-ggml/resolve/397e872bf4c83f4c642317a5bf65ce84a105786e/ggml-model-q4_0.bin"; curl -L $url -o $(basename $url)
+```
+
 ## Test dataset
 This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
 
