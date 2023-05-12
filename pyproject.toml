@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "privategpt"
+version = "0.1.0"
+description = ""
+authors = []
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+langchain = "0.0.166"
+pygpt4all = "1.1.0"
+chromadb = "0.3.22"
+llama-cpp-python = "0.1.48"
+urllib3 = "1.26.6"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
