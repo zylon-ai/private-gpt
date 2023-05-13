@@ -17,6 +17,9 @@ model_n_ctx = os.environ.get('MODEL_N_CTX')
 
 from constants import CHROMA_SETTINGS
 
+# Global variable for the QA system
+qa_system = None
+
 def initialize_qa_system():
     llama = LlamaCppEmbeddings(model_path=llama_embeddings_model, n_ctx=model_n_ctx)
     db = Chroma(persist_directory=persist_directory, embedding_function=llama, client_settings=CHROMA_SETTINGS)
@@ -37,6 +40,7 @@ def initialize_qa_system():
     return qa
 
 def main():
+    global qa_system
     qa_system = initialize_qa_system()
 
     while True:
@@ -44,8 +48,7 @@ def main():
         if query == "exit":
             break
 
-        res = qa_system(query)
-        answer, docs = res['result'], res['source_documents']
+        answer, docs = answer_query(query)
 
         print("\n\n> Question:")
         print(query)
@@ -57,7 +60,10 @@ def main():
             print(document.page_content)
 
 def answer_query(query, update_callback=None):
-    qa_system = initialize_qa_system()
+    global qa_system
+    if qa_system is None:
+        qa_system = initialize_qa_system()
+
     res = qa_system(query)
     answer, docs = res['result'], res['source_documents']
 
