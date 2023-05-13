@@ -66,6 +66,12 @@ Note: you could turn off your internet connection, and the script inference woul
 
 Type `exit` to finish the script.
 
+## Conservation UI chat
+```shell
+python privateGPT_uichat.py --server-name "0.0.0.0" --server-port 8071
+```
+<img width=100% src="https://user-images.githubusercontent.com/78080480/238135659-ea0d07d9-8372-4fc3-80ed-20d804e77972.PNG">
+
 # How does it work?
 Selecting the right local models and the power of `LangChain` you can run the entire pipeline locally, without any data leaving your environment, and with reasonable performance.
 
