@@ -26,7 +26,7 @@ MODEL_PATH: Path to your GPT4All or LlamaCpp supported LLM
 MODEL_N_CTX: Maximum token limit for both embeddings and LLM models
 ```
 
-Note: because of the way `langchain` loads the `LLAMMA` embeddings, you need to specify the absolute path of your embeddings model binary. This means it will not work if you use a home directory shortcut (eg. `~/` or `$HOME/`).
+Note: because of the way `langchain` loads the `LLAMA` embeddings, you need to specify the absolute path of your embeddings model binary. This means it will not work if you use a home directory shortcut (eg. `~/` or `$HOME/`).
 
 ## Test dataset
 This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
