@@ -4,3 +4,8 @@ chromadb==0.3.22
 llama-cpp-python==0.1.48
 urllib3==1.26.6
 pdfminer.six==20221105
+
+# added to support additional compatibility for docx and pptx files
+docx2txt==0.8 #MS Word support
+unstructured==0.6.6 #MS Powerpoint support
+
