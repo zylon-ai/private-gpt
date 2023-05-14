@@ -1,0 +1,16 @@
+version: "3.9"
+services:
+  privategpt-ingest:
+    image: privategpt:test
+    command: [ "python", "src/ingest.py" ]
+    environment:
+      - PERSIST_DIRECTORY=/home/privategpt/db
+      - LLAMA_EMBEDDINGS_MODEL=/home/privategpt/models/ggml-model-q4_0.bin
+      - MODEL_TYPE=GPT4All
+      - MODEL_PATH=/home/privategpt/models/ggml-gpt4all-j-v1.3-groovy.bin
+      - MODEL_N_CTX=1000
+      - SOURCE_DIRECTORY=/home/privategpt/source_documents
+    volumes:
+      - ./models:/home/privategpt/models
+      - ./source_documents:/home/privategpt/source_documents
+      - ./db:/home/privategpt/db
