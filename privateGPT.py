@@ -1,10 +1,11 @@
+import os
+
 from dotenv import load_dotenv
 from langchain.chains import RetrievalQA
 from langchain.embeddings import LlamaCppEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
-import os
 
 load_dotenv()
 
@@ -21,6 +22,7 @@ def main():
     llama = LlamaCppEmbeddings(model_path=llama_embeddings_model, n_ctx=model_n_ctx)
     db = Chroma(persist_directory=persist_directory, embedding_function=llama, client_settings=CHROMA_SETTINGS)
     retriever = db.as_retriever()
+
     # Prepare the LLM
     callbacks = [StreamingStdOutCallbackHandler()]
     match model_type:
@@ -29,8 +31,8 @@ def main():
         case "GPT4All":
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
         case _default:
-            print(f"Model {model_type} not supported!")
-            exit;
+            raise ValueError(f"Model {model_type} not supported!")
+
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
     # Interactive questions and answers
     while True:
