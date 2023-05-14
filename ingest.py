@@ -27,11 +27,12 @@ def load_single_document(file_path: str) -> Document:
 
 def load_documents(source_dir: str) -> List[Document]:
     # Loads all documents from source documents directory
-    txt_files = glob.glob(os.path.join(source_dir, "**/*.txt"), recursive=True)
-    pdf_files = glob.glob(os.path.join(source_dir, "**/*.pdf"), recursive=True)
-    csv_files = glob.glob(os.path.join(source_dir, "**/*.csv"), recursive=True)
-    all_files = txt_files + pdf_files + csv_files
-    return [load_single_document(file_path) for file_path in all_files]
+    all_files = []
+    for root, _, files in os.walk(source_dir):
+        for file in files:
+            file_path = os.path.join(root, file)
+            all_files.append(file_path)
+    return [load_single_document(file_path) for file_path in all_files if file_path.endswith((".txt", ".pdf", ".csv"))]
 
 
 def main():
