@@ -92,3 +92,27 @@ Hit enter. You'll need to wait 20-30 seconds (depending on your machine) while t
 Note: you could turn off your internet connection, and the script inference would still work. No data gets out of your local environment. This is achieved by using the `langchain` library, which is a wrapper around the `transformers` library. The `langchain` library is a fork of the `transformers` library, and it is modified to allow for the LLM to be loaded locally.
 
 ## How it works
+
+# Acknowledgements
+
+## UNRELATED NOTES:
+
+- using ffmpeg to conver mkv to mp4. the mkv file is up one directory, and the mp4 file is in the current directory
+
+```shell
+ffmpeg -i ../privateGTP.mkv privateGTP.mp4
+```
+
+- make privateGPT.mp4 faster
+
+```shell
+ffmpeg -i privateGTP.mp4 -filter:v "setpts=0.24*PTS" privateGTP_faster.mp4
+```
+
+note: to increase speed, increase the number after the \* (e.g. 0.5 -> 0.25)
+
+- make privateGPT.mp4 a gif
+
+```shell
+ffmpeg -i privateGTP_faster.mp4 -vf "fps=10,scale=800:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" privateGTP.gif
+```
