@@ -8,7 +8,7 @@ Expected non-deterministic output:
 
 - 1st inference:
 
-```
+```CAHTGPT-3.5
 1. Captain Kirk discovers star system with spaghetti-like nebulae.
 2. Crew excited about nebulae's extraordinary properties.
 3. They navigate starship through cosmic pasta.
@@ -25,7 +25,7 @@ The above is a test against actual ChatGPT-3.5.
 
 - 2nd inference:
 
-```
+```CAHTGPT-3.5
 1. Captain Kirk finds star system with spaghetti-like nebulae.
 2. Crew believes nebulae have extraordinary properties.
 3. They navigate starship through cosmic pasta.
