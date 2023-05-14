@@ -22,7 +22,7 @@ This repo uses a [state of the union transcript](https://github.com/imartinez/pr
 
 ## How to prepare your own dataset
 
-For a custom dataset to work for your model in the most effective way, the best way to structure your own dataset is through modern spoken English. For example, a real life speech could be very useful as it will allow the model to give real human-like responses to historical events. However, this may depend on its usage; fictional text could also potentially be used to create a model which, for example could be a role play model for a game. There is no need, however, for there to be a set of questions. Even a transcription of something that you say could be sufficient.
+The best way to structure your own dataset is through modern spoken English, or even just data or documentation. For example, a real life speech could be very useful as it will allow the model to give real human-like responses to historical events. However, this may depend on its usage; fictional text could also potentially be used to create a model which, for example could be a role play model for a game. There is no need, however, for there to be a set of questions. Even a transcription of something that you say could be sufficient. However, the benefit of using LLMs is that there is the ability to be able to transform compx documents such as documentation into a model which will be able to speak text. You could use some old documentation, historical texts, or even a Wikipedia page, and it will be able to convert these into conversational content. Any of these techniques should be sufficient.
 
 ## Instructions for ingesting your own dataset
 
