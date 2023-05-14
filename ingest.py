@@ -1,8 +1,9 @@
 import os
 import glob
+import time
 from typing import List
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 from langchain.document_loaders import TextLoader, PDFMinerLoader, CSVLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
@@ -10,9 +11,12 @@ from langchain.embeddings import LlamaCppEmbeddings
 from langchain.docstore.document import Document
 from constants import CHROMA_SETTINGS
 
+from utils import get_logger
+
 
 load_dotenv()
 
+logger = get_logger("ingest")
 
 def load_single_document(file_path: str) -> Document:
     # Loads a single document from a file path
@@ -42,18 +46,21 @@ def main():
     model_n_ctx = os.environ.get('MODEL_N_CTX')
 
     # Load documents and split in chunks
-    print(f"Loading documents from {source_directory}")
+    logger.info("Loading documents from %s", source_directory)
     documents = load_documents(source_directory)
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     texts = text_splitter.split_documents(documents)
-    print(f"Loaded {len(documents)} documents from {source_directory}")
-    print(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
+    logger.info("Loaded %s documents from %s", len(documents), source_directory)
+    logger.info("Split into %s chunks of text (max. 500 tokens each)", len(texts))
 
     # Create embeddings
     llama = LlamaCppEmbeddings(model_path=llama_embeddings_model, n_ctx=model_n_ctx)
     
     # Create and store locally vectorstore
+    before = time.time()
     db = Chroma.from_documents(texts, llama, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
+    after = time.time()
+    logger.debug("Took %ss (%smin) to create and store in local vectorstore", round(after - before, 2), round((after - before) / 60, 2))
     db.persist()
     db = None
 
