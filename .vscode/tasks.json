@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "markdownlint",
+			"problemMatcher": [
+				"$markdownlint"
+			],
+			"label": "markdownlint: Lint all Markdown files in the workspace with markdownlint"
+		}
+	]
+}
