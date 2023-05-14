@@ -104,5 +104,24 @@ To install a C++ compiler on Windows 10/11, follow these steps:
 3. Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/).
 4. Run the installer and select the `gcc` component.
 
+## Docker Version
+
+1. Build the image
+```
+docker build . -t privategpt:test
+```
+
+2. Put your data in models / source_documents in the project root folder (Can be customized changing the corresponding value in the docker-compose.yaml)
+
+3. You can ingest your data using the docker-compose-ingest.yaml
+  ```
+  docker compose -f docker-compose-ingest.yaml up
+  ```
+
+4. You run it using the docker-compose.yaml
+  ```
+  docker-compose run --rm privategpt
+  ```
+
 # Disclaimer
 This is a test project to validate the feasibility of a fully private solution for question answering using LLMs and Vector embeddings. It is not production ready, and it is not meant to be used in production. The models selection is not optimized for performance, but for privacy; but it is possible to use different models and vectorstores to improve performance.
