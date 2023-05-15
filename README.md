@@ -92,21 +92,16 @@ To install a C++ compiler on Windows 10/11, follow these steps:
 
 ## Docker Version
 
-1. Build the image
-```
-docker build . -t privategpt:test
-```
+1. Put your data in models / source_documents in the project root folder (Can be customized changing the corresponding value in the docker-compose.yaml)
 
-2. Put your data in models / source_documents in the project root folder (Can be customized changing the corresponding value in the docker-compose.yaml)
-
-3. You can ingest your data using the docker-compose-ingest.yaml
+2. You can ingest your data using the docker-compose-ingest.yaml
   ```
-  docker compose -f docker-compose-ingest.yaml up
+  docker compose -f docker-compose-ingest.yaml up --build
   ```
 
-4. You run it using the docker-compose.yaml
+3. You run it using the docker-compose.yaml
   ```
-  docker-compose run --rm privategpt
+  docker-compose run --build --rm privategpt
   ```
 
 # Disclaimer
