@@ -3,7 +3,7 @@ import glob
 from typing import List
 from dotenv import load_dotenv
 
-from langchain.document_loaders import TextLoader, PDFMinerLoader, CSVLoader
+from langchain.document_loaders import TextLoader, PDFMinerLoader, CSVLoader, UnstructuredEmailLoader, OutlookMessageLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import LlamaCppEmbeddings
@@ -22,6 +22,10 @@ def load_single_document(file_path: str) -> Document:
         loader = PDFMinerLoader(file_path)
     elif file_path.endswith(".csv"):
         loader = CSVLoader(file_path)
+    elif file_path.endswith(".eml"):
+        loader = UnstructuredEmailLoader(file_path)
+    elif file_path.endswith(".msg"):
+        loader = OutlookMessageLoader(file_path)
     return loader.load()[0]
 
 
@@ -30,7 +34,9 @@ def load_documents(source_dir: str) -> List[Document]:
     txt_files = glob.glob(os.path.join(source_dir, "**/*.txt"), recursive=True)
     pdf_files = glob.glob(os.path.join(source_dir, "**/*.pdf"), recursive=True)
     csv_files = glob.glob(os.path.join(source_dir, "**/*.csv"), recursive=True)
-    all_files = txt_files + pdf_files + csv_files
+    eml_files = glob.glob(os.path.join(source_dir, "**/*.eml"), recursive=True)
+    msg_files = glob.glob(os.path.join(source_dir, "**/*.msg"), recursive=True)
+    all_files = txt_files + pdf_files + csv_files + eml_files + msg_files
     return [load_single_document(file_path) for file_path in all_files]
 
 

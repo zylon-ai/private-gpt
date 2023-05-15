@@ -46,6 +46,13 @@ If you want to start from an empty database, delete the `db` folder.
 
 Note: during the ingest process no data leaves your local environment. You could ingest without an internet connection.
 
+Supported file types:
+- txt
+- pdf
+- csv
+- eml
+- msg
+
 ## Ask questions to your documents, locally!
 In order to ask a question, run a command like:
 
