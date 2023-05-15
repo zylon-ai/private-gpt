@@ -32,26 +32,28 @@ This repo uses a [state of the union transcript](https://github.com/imartinez/pr
 
 ## Instructions for ingesting your own dataset
 
-Put any and all of your .txt, .pdf, or .csv files into the source_documents directory
+Put any and all of your files into the source_documents directory.
 
-Run the following command to ingest all the data.
+Supported file types are:
+- .txt
+- .pdf
+- .csv
+- .eml
+- .msg
+
+
+  Run the following command to ingest all the data.
 
 ```shell
 python ingest.py
 ```
 
-It will create a `db` folder containing the local vectorstore. Will take time, depending on the size of your documents.
-You can ingest as many documents as you want, and all will be accumulated in the local embeddings database. 
-If you want to start from an empty database, delete the `db` folder.
+  It will create a `db` folder containing the local vectorstore. Will take time, depending on the size of your documents.
+  You can ingest as many documents as you want, and all will be accumulated in the local embeddings database.
+  If you want to start from an empty database, delete the `db` folder.
 
-Note: during the ingest process no data leaves your local environment. You could ingest without an internet connection.
+  Note: during the ingest process no data leaves your local environment. You could ingest without an internet connection.
 
-Supported file types:
-- txt
-- pdf
-- csv
-- eml
-- msg
 
 ## Ask questions to your documents, locally!
 In order to ask a question, run a command like:
