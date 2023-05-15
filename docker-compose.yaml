@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   privategpt:
+    build: .
     image: privategpt:test
     command: [ "python", "src/privateGPT.py" ]
     environment:

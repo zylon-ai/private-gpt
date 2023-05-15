@@ -1,6 +1,7 @@
 version: "3.9"
 services:
   privategpt-ingest:
+    build: .
     image: privategpt:test
     command: [ "python", "src/ingest.py" ]
     environment:
