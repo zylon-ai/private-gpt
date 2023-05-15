@@ -4,3 +4,4 @@ chromadb==0.3.22
 llama-cpp-python==0.1.48
 urllib3==1.26.6
 pdfminer.six==20221105
+python-dotenv==1.0.0
