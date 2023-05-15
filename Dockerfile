@@ -4,8 +4,9 @@ RUN groupadd -g 10009 -o privategpt && useradd -m -u 10009 -g 10009 -o -s /bin/b
 USER privategpt
 WORKDIR /home/privategpt
 
-COPY ./src src
+COPY ./src/requirements.txt src/requirements.txt
+RUN pip install -r src/requirements.txt
 
-RUN cd src && pip install -r requirements.txt
+COPY ./src src
 
 # ENTRYPOINT ["python", "src/privateGPT.py"]
