@@ -132,7 +132,7 @@ def main():
     print(f"Finished splitting. Total documents: {len(documents)}. Total chunks of text: {len(texts)} (max. 500 tokens each)")
         # Generate responses and print them
     for text in texts:
-        response = generate_response(llm, text, use_openai=True)  # Replace llm with your local model
+        response = generate_response(llm, text, use_openai=False)  # Replace llm with your local model
         print(response)
 
     # Create embeddings
