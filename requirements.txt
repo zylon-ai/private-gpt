@@ -4,3 +4,5 @@ chromadb==0.3.22
 llama-cpp-python==0.1.48
 urllib3==1.26.6
 gradio==3.28.3
+pdfminer.six==20221105
+
