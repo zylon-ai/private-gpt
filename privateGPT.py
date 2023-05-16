@@ -19,8 +19,7 @@ from constants import CHROMA_SETTINGS
 
 def main():
     llama = LlamaCppEmbeddings(model_path=llama_embeddings_model, n_ctx=model_n_ctx)
-    db = Chroma(persist_directory=persist_directory, embedding_function=llama, client_settings=CHROMA_SETTINGS)
-    retriever = db.as_retriever()
+
     # Prepare the LLM
     callbacks = [StreamingStdOutCallbackHandler()]
     match model_type:
@@ -31,6 +30,26 @@ def main():
         case _default:
             print(f"Model {model_type} not supported!")
             exit;
+    
+    vector_store_type = os.environ.get('VECTOR_STORE', 'weaviate')
+    if vector_store_type == 'weaviate':
+        from adapters.weaviate_adapter import WeaviateVectorStoreAdapter
+
+        weaviate_url = os.environ.get('WEAVIATE_URL', 'http://localhost:8080')
+        
+        vector_store = WeaviateVectorStoreAdapter(weaviate_url, llm=llama)
+        
+    elif vector_store_type == 'chroma':
+        from adapters.chroma_adapter import ChromaVectorStoreAdapter
+
+        vector_store = ChromaVectorStoreAdapter(persist_directory=persist_directory, embedding_function=llama, client_settings=CHROMA_SETTINGS)
+    else:
+        print(f"Vector store {vector_store_type} not supported!")
+        exit(1)
+    
+    db = vector_store.db
+    retriever = db.as_retriever()
+
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
     # Interactive questions and answers
     while True:

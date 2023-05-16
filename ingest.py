@@ -53,9 +53,23 @@ def main():
     llama = LlamaCppEmbeddings(model_path=llama_embeddings_model, n_ctx=model_n_ctx)
     
     # Create and store locally vectorstore
-    db = Chroma.from_documents(texts, llama, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
-    db.persist()
-    db = None
+    vector_store_type = os.environ.get('VECTOR_STORE', 'weaviate')
+    if vector_store_type == 'weaviate':
+        from adapters.weaviate_adapter import WeaviateVectorStoreAdapter
+
+        weaviate_url = os.environ.get('WEAVIATE_URL', 'http://localhost:8080')
+        vector_store = WeaviateVectorStoreAdapter(weaviate_url)
+        vector_store.from_documents(texts, llama
+                                    )
+    elif vector_store_type == 'chroma':
+
+        from adapters.chroma_adapter import ChromaVectorStoreAdapter
+        vector_store = ChromaVectorStoreAdapter(persist_directory=persist_directory, embedding_function=llama, client_settings=CHROMA_SETTINGS)
+        vector_store.from_documents(texts, llama, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
+        
+    else:
+        print(f"Vector store type {vector_store_type} not supported!")
+        exit(1)
 
 
 if __name__ == "__main__":
