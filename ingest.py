@@ -1,6 +1,5 @@
 import os
 import glob
-import sys
 from typing import List
 from dotenv import load_dotenv
 
@@ -44,18 +43,16 @@ def main():
     # Create embeddings
     llama = LlamaCppEmbeddings(model_path=llama_embeddings_model, n_ctx=model_n_ctx)
     
-    if os.path.exists("db"):
+    if os.path.exists(persist_directory):
         # Update and store locally vectorstore
-        print("Appending to existing vectorstore")
+        print(f"Appending to existing vectorstore at {persist_directory}")
         db = Chroma(persist_directory=persist_directory, embedding_function=llama, client_settings=CHROMA_SETTINGS)
         collection = db.get()
-        print([metadata['source'] for metadata in collection['metadatas']])
-        print(f"Loading documents from {source_directory}")
         # Load documents and split in chunks
         documents = load_documents(source_directory, [metadata['source'] for metadata in collection['metadatas']])
         if documents == []:
             print("No new documents to load")
-            sys.exit()
+            exit(0)
         print(f"Loaded {len(documents)} new documents from {source_directory}")
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
         texts = text_splitter.split_documents(documents)
