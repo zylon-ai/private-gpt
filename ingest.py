@@ -56,7 +56,7 @@ def main():
         if documents == []:
             print("No new documents to load")
             sys.exit()
-        print(f"Loaded {len(documents)} documents from {source_directory}")
+        print(f"Loaded {len(documents)} new documents from {source_directory}")
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
         texts = text_splitter.split_documents(documents)
         print(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
