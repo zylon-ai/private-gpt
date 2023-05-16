@@ -1,0 +1,24 @@
+name: CI-CD
+
+on:
+  push:
+    branches: [ '*' ]
+
+jobs:
+  continuous-integration:
+    name: "🔧 Continuous Integration"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10.3
+
+      - run: |
+          pip install nox
+
+      - name: Check formatting
+        run: nox --non-interactive
