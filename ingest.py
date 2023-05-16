@@ -2,7 +2,9 @@ import os
 import glob
 from typing import List
 from dotenv import load_dotenv
+from typing_extensions import Annotated
 
+import typer
 from langchain.document_loaders import TextLoader, PDFMinerLoader, CSVLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
@@ -71,7 +73,7 @@ def load_documents_from_files(files: list[str]) -> List[Document]:
     return [load_single_document(file_path) for file_path in files]
 
 
-def main():
+def main(keep_source: Annotated[bool, typer.Option("--keep-source")] = False):
     # Load documents and split in chunks
     print(f"Loading documents from {source_directory}")
     files = find_files(source_directory)
@@ -87,8 +89,10 @@ def main():
     
     # Store documents locally and delete the source files
     save_to_vectorstore(texts, llama)
-    delete_files(files)
+
+    if not keep_source:
+        delete_files(files)
 
 
 if __name__ == "__main__":
-    main()
+    typer.run(main)
