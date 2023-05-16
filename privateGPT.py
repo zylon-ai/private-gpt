@@ -23,14 +23,13 @@ def main():
     retriever = db.as_retriever()
     # Prepare the LLM
     callbacks = [StreamingStdOutCallbackHandler()]
-    match model_type:
-        case "LlamaCpp":
-            llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
-        case "GPT4All":
-            llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
-        case _default:
-            print(f"Model {model_type} not supported!")
-            exit;
+    if model_type == "LlamaCpp":
+        llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
+    elif model_type == "GPT4All":
+        llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
+    else:
+        print(f"Model {model_type} not supported!")
+        exit;
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
     # Interactive questions and answers
     while True:
