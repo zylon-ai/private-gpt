@@ -1,13 +1,15 @@
 import os
 import glob
+from pathlib import Path
 from typing import List
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 from langchain.document_loaders import TextLoader, PDFMinerLoader, CSVLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import LlamaCppEmbeddings
 from langchain.docstore.document import Document
+
 from constants import CHROMA_SETTINGS
 
 
@@ -34,11 +36,24 @@ def load_documents(source_dir: str) -> List[Document]:
     return [load_single_document(file_path) for file_path in all_files]
 
 
+def validate_path(file_path: str, make_absolute: bool = False) -> str:
+    """
+    Check if a file path exists and optionally convert it to an absolute path.
+    Returns the validated file path as a string.
+    """
+    path = Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"File not found at path: {path}")
+    if make_absolute and not path.is_absolute():
+        path = path.resolve()
+    return str(path)
+
+
 def main():
     # Load environment variables
-    persist_directory = os.environ.get('PERSIST_DIRECTORY')
-    source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
-    llama_embeddings_model = os.environ.get('LLAMA_EMBEDDINGS_MODEL')
+    persist_directory = validate_path(os.environ.get('PERSIST_DIRECTORY'))
+    source_directory = validate_path(os.environ.get('SOURCE_DIRECTORY', 'source_documents'))
+    llama_embeddings_model = validate_path(os.environ.get('LLAMA_EMBEDDINGS_MODEL'), make_absolute=True)
     model_n_ctx = os.environ.get('MODEL_N_CTX')
 
     # Load documents and split in chunks
