@@ -49,21 +49,7 @@ It will create a `db` folder containing the local vectorstore. Will take time, d
 You can ingest as many documents as you want, and all will be accumulated in the local embeddings database.
 If you want to start from an empty database, delete the `db` folder.
 
-Note: during the ingest process no data leaves your local environment. You could ingest without an internet connection.
-
-## Instructions for ingesting more of your own dataset
-
-Put any and all of your .txt, .pdf, or .csv files into the source_documents directory
-
-Run the following command to ingest all the data.
-
-```shell
-python ingest_more.py
-```
-
-It will update the `db` folder containing the local vectorstore. Will take time, depending on the size of your documents.
-You can ingest as many documents as you want, and all will be accumulated in the local embeddings database.
-If you want to start from an empty database, delete the `db` folder.
+To add new documents to the database, just run the `ingest.py` script again. It will add the new documents to the existing database.
 
 Note: during the ingest process no data leaves your local environment. You could ingest without an internet connection.
 

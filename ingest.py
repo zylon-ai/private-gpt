@@ -1,5 +1,6 @@
 import os
 import glob
+import sys
 from typing import List
 from dotenv import load_dotenv
 
@@ -10,9 +11,7 @@ from langchain.embeddings import LlamaCppEmbeddings
 from langchain.docstore.document import Document
 from constants import CHROMA_SETTINGS
 
-
 load_dotenv()
-
 
 def load_single_document(file_path: str) -> Document:
     # Loads a single document from a file path
@@ -25,13 +24,14 @@ def load_single_document(file_path: str) -> Document:
     return loader.load()[0]
 
 
-def load_documents(source_dir: str) -> List[Document]:
-    # Loads all documents from source documents directory
+def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Document]:
+    # Loads all documents from the source documents directory, ignoring specified files
     txt_files = glob.glob(os.path.join(source_dir, "**/*.txt"), recursive=True)
     pdf_files = glob.glob(os.path.join(source_dir, "**/*.pdf"), recursive=True)
     csv_files = glob.glob(os.path.join(source_dir, "**/*.csv"), recursive=True)
     all_files = txt_files + pdf_files + csv_files
-    return [load_single_document(file_path) for file_path in all_files]
+    filtered_files = [file_path for file_path in all_files if file_path not in ignored_files]
+    return [load_single_document(file_path) for file_path in filtered_files]
 
 
 def main():
@@ -41,19 +41,37 @@ def main():
     llama_embeddings_model = os.environ.get('LLAMA_EMBEDDINGS_MODEL')
     model_n_ctx = os.environ.get('MODEL_N_CTX')
 
-    # Load documents and split in chunks
-    print(f"Loading documents from {source_directory}")
-    documents = load_documents(source_directory)
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    texts = text_splitter.split_documents(documents)
-    print(f"Loaded {len(documents)} documents from {source_directory}")
-    print(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
-
     # Create embeddings
     llama = LlamaCppEmbeddings(model_path=llama_embeddings_model, n_ctx=model_n_ctx)
     
-    # Create and store locally vectorstore
-    db = Chroma.from_documents(texts, llama, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
+    if os.path.exists("db"):
+        # Update and store locally vectorstore
+        print("Appending to existing vectorstore")
+        db = Chroma(persist_directory=persist_directory, embedding_function=llama, client_settings=CHROMA_SETTINGS)
+        collection = db.get()
+        print([metadata['source'] for metadata in collection['metadatas']])
+        print(f"Loading documents from {source_directory}")
+        # Load documents and split in chunks
+        documents = load_documents(source_directory, [metadata['source'] for metadata in collection['metadatas']])
+        if documents == []:
+            print("No new documents to load")
+            sys.exit()
+        print(f"Loaded {len(documents)} documents from {source_directory}")
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+        texts = text_splitter.split_documents(documents)
+        print(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
+        db.add_documents(texts)
+    else:
+        # Create and store locally vectorstore
+        print("Creating new vectorstore")
+        print(f"Loading documents from {source_directory}")
+        documents = load_documents(source_directory)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+        texts = text_splitter.split_documents(documents)
+        # Load documents and split in chunks
+        print(f"Loaded {len(documents)} documents from {source_directory}")
+        print(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
+        db = Chroma.from_documents(texts, llama, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
     db.persist()
     db = None
 
