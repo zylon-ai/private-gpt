@@ -1,0 +1,203 @@
+
+
+
+Motor, Structure, and Access: ALS and CP
+
+
+REV
+DESCRIPTION
+AUTHOR
+Date
+1.0
+Document creation & all content
+Luke Steuber
+1/17/22
+
+
+
+
+
+
+
+
+
+
+
+Abstract: In this document, we detail the relevant comorbidities, the role of health professionals such as neurologists, SLPs, OTs, PTs, and ATPs in evaluating these conditions, and the implications of the wearable device on wheelchair headrests, and other assistive technologies. This focuses on the unique motor, structural, and orthopedic disabilities within each population.
+
+
+
+
+
+
+
+
+Table of Contents
+Introduction	2
+Target Population	2
+Amyotrophic Lateral Sclerosis (ALS)	2
+Cerebral Palsy	4
+Responsibilities and Legal Obligations of Professionals	5
+Potential Risks of Wearing an AR Headset	6
+ALS, CP, and Other Adult Literate Populations	7
+Implications for Wheelchair Headrests and Other AT When Wearing an AR Device	7
+Recommendations and Testing	8
+Safety and Compliance	8
+Conclusion	8
+
+Introduction
+This document is intended to provide a comprehensive comparison of the motor, structural, and access needs for individuals with Amyotrophic Lateral Sclerosis (ALS) and Cerebral Palsy (CP). It gives specific attention to access and motor needs in these populations while considering other adult literate populations. The document describes the user journey for individuals with ALS and CP, outlining their touchpoints with Speech-Language Pathologists (SLPs), Occupational Therapists (OTs), Assistive Technology Professionals (ATPs), and Durable Medical Equipment (DME) speech-generating device (SGD) manufacturers. It also briefly reviews the role of professionals involved in the process, and a section on the potential risks of wearing an Augmented Reality (AR) headset for communication.
+Target Population
+The primary target populations for this document are individuals with:
+    - Amyotrophic Lateral Sclerosis (ALS)
+    - Cerebral Palsy (CP)
+The document will also retain content on other adult literate populations with conditions such as:
+    - Myasthenia Gravis
+    - Locked-In Syndrome
+    - Huntington's Disease
+    - Rett Syndrome
+    - Spinal Cord Injuries
+    - Duchenne Muscular Dystrophy
+    - Multiple System Atrophy
+    - Spinal Muscular Atrophy
+    - Multiple Sclerosis
+Amyotrophic Lateral Sclerosis (ALS)
+Motor Disorders 
+Amyotrophic Lateral Sclerosis (ALS) is a progressive neurodegenerative disease affecting motor neurons, leading to the loss of muscle control and eventual paralysis. ALS is characterized by the following motor disorders:
+    - Progressive muscle weakness, affecting the limbs, trunk, and respiratory muscles
+    - Spasticity, or increased muscle tone
+    - Muscle atrophy, or wasting
+    - Fasciculations, or muscle twitching
+    - Dysphagia, or difficulty swallowing
+    - Dysarthria, or difficulty speaking due to muscle weakness and poor coordination
+
+The specific motor disorders experienced may vary depending on the individual and the progression of the disease.
+Access Needs 
+As ALS progresses, individuals may lose their ability to communicate effectively using speech, necessitating the use of alternative communication methods. Access needs for individuals with ALS may include:
+    - Eye gaze technology: As the individual loses control of their limbs and head, eye gaze technology may become the most effective means of communication.
+    - Head pointing: In the earlier stages of ALS, head pointing may be an appropriate access method for those who still have some control over head movements.
+    - Switch access: Some individuals may benefit from switch access using residual muscle control in their limbs or other body parts.
+    - Brain-computer interface (BCI): In the most advanced stages of ALS, BCI technology may be the only viable access method for communication.
+User Journey 
+For individuals with ALS, the user journey typically involves several touchpoints with healthcare professionals and device manufacturers, including:
+    1. Diagnosis and initial consultation with a neurologist
+    2. Referral to a multidisciplinary ALS clinic or team, including SLPs, OTs, and ATPs
+    3. Assessment by an SLP to determine appropriate alternative communication methods and devices
+    4. Collaboration with an OT and ATP to identify the most suitable access method and necessary adaptations for the individual's motor abilities
+    5. Customization and setup of the SGD by the DME SGD manufacturer, based on the individual's specific access needs
+    6. Training and ongoing support from the multidisciplinary team, including the SLP, OT, ATP, and device manufacturer, to ensure effective use and device maintenance
+ALS Persona: A Literate Adult 
+John, a 55-year-old engineer, was diagnosed with ALS. After an initial consultation with a neurologist, John was referred to a multidisciplinary ALS clinic, where he met his team that includes an SLP, an OT, and an ATP. Together, they assessed John's communication and motor abilities to determine the most appropriate alternative communication methods and devices.
+
+John's SLP found that his speech was becoming increasingly difficult to understand. The OT and ATP collaborated to identify the most suitable access method for John. They recommended an eye gaze system in combination with a speech-generating device to accommodate his progressive muscle weakness.
+
+The DME SGD manufacturer customized the device according to John's specific access needs. The multidisciplinary team provided John with training on how to use the device effectively and ensured that he was comfortable with its features. They also provided ongoing support and device maintenance.
+Cerebral Palsy
+Cerebral Palsy (CP) is a group of neurological disorders that affect muscle movement and coordination. It is caused by abnormal brain development or damage that occurs before, during, or shortly after birth. The severity and type of motor impairment in CP can vary widely, from mild muscle stiffness to severe and complex motor dysfunction.
+Common motor disorders include:
+    - Spasticity, or increased muscle tone and stiffness, leading to limited range of motion and difficulty controlling movements
+    - Dyskinesia, or involuntary, uncontrolled movements, which may include athetosis (slow, writhing movements) or dystonia (twisting or repetitive movements)
+    - Ataxia, or impaired balance and coordination, resulting in unsteady and uncoordinated movements
+    - Mixed motor disorders, which may involve a combination of spasticity, dyskinesia, and ataxia
+Access 
+Individuals with CP may have varying access needs, depending on the type and severity of their motor disorders. Access needs for individuals with CP may include:
+    - Head pointing: For those with adequate head control, head pointing may be an effective access method.
+    - Eye gaze technology: In cases where limb and head movements are severely impaired, eye gaze may be more suitable for communication.
+    - Switch access: Switch access may be customized to accommodate the residual movement abilities of the individual, such as using foot or other body part switches.
+    - Mixed modality access: Combining multiple access methods may provide users with the highest level of flexibility and adaptability to their motor limitations.
+User Journey 
+The user journey for individuals with CP involves interaction with healthcare professionals and SGD manufacturers, including:
+    1. Diagnosis and initial consultation with a pediatric neurologist or developmental pediatrician
+    2. Referral to a multidisciplinary team specializing in CP, including SLPs, OTs, and ATPs
+    3. Assessment by an SLP to determine appropriate alternative communication methods and devices
+    4. Collaboration with an OT and ATP to identify the most suitable access method and necessary adaptations for the user's motor abilities
+    5. Customization and setup of the SGD by the DME SGD manufacturer, based on the user's specific access needs
+    6. Training and ongoing support from the multidisciplinary team, including the SLP, OT, ATP, and device manufacturer, to ensure effective use, device maintenance, and skill development
+
+CP Persona: A Literate Adult Narrative
+Maria, a 32-year-old graphic designer with Cerebral Palsy, was experiencing increasing difficulty in communicating effectively at work. She consulted a developmental pediatrician who referred her to a multidisciplinary team that specializes in CP, including an SLP, an OT, and an ATP. Together, they assessed Maria's communication and motor abilities to determine the most appropriate alternative communication methods and devices.
+
+Maria's SLP determined that her speech was difficult to understand, especially during long conversations. The OT and ATP collaborated to identify a suitable access method for Maria. They recommended an SGD with switch access and a head pointer system to accommodate her motor limitations.
+
+The DME SGD manufacturer customized the device, taking into account Maria's specific access needs. The multidisciplinary team provided Maria with training on how to use the device effectively and ensured that she was comfortable using it in various settings, including at work. They also provided ongoing support and device maintenance to ensure Maria's continued success with the SGD.
+Responsibilities and Legal Obligations of Professionals
+Speech-Language Pathologists (SLPs)
+SLPs play a critical role in assessing and supporting individuals with communication difficulties. Their responsibilities and legal obligations include:
+    - Conducting comprehensive evaluations of the individual's communication abilities, including speech, language, and cognitive skills
+    - Developing and implementing individualized treatment plans, including the selection and recommendation of appropriate assistive technology devices and access methods
+    - Collaborating with other professionals, such as OTs, PTs, and ATPs, to ensure a well-coordinated, interdisciplinary approach to the individual's care
+    - Providing training and support to individuals and their caregivers in the use and maintenance of assistive technology devices
+    - Abiding by the professional code of ethics and adhering to relevant laws and regulations, such as the Health Insurance Portability and Accountability Act (HIPAA) and the Individuals with Disabilities Education Act (IDEA)
+Occupational Therapists (OTs)
+OTs focus on supporting individuals with functional limitations, including those with motor and access needs. Their responsibilities and legal obligations consist of:
+    - Assessing the individual's motor skills, range of motion, and functional abilities related to the use of assistive technology devices
+    - Collaborating with SLPs and ATPs to identify and recommend appropriate access methods and device adaptations
+    - Developing and implementing individualized intervention plans to improve the individual's ability to use assistive technology devices effectively
+    - Providing training and support to individuals and their caregivers in the use and maintenance of assistive technology devices and adaptations
+    - Abiding by the professional code of ethics and adhering to relevant laws and regulations, such as HIPAA and IDEA
+Physical Therapists (PTs)
+PTs are responsible for addressing the physical needs of individuals with motor disorders. Their responsibilities and legal obligations include:
+    - Conducting comprehensive evaluations of the individual's physical abilities, including strength, balance, and coordination
+    - Developing and implementing individualized treatment plans to improve the individual's physical function and prevent complications related to motor disorders
+    - Collaborating with other professionals, such as SLPs and OTs, to ensure a well-coordinated, interdisciplinary approach to the individual's care
+    - Providing training and support to individuals and their caregivers in the implementation of therapeutic interventions and strategies
+    - Abiding by the professional code of ethics and adhering to relevant laws and regulations, such as HIPAA and IDEA
+Assistive Technology Professionals (ATPs)
+ATPs specialize in the assessment, recommendation, and implementation of assistive technology devices and services. Their responsibilities and legal obligations consist of:
+    - Conducting comprehensive assessments of individuals' assistive technology needs in collaboration with SLPs, OTs, and PTs
+    - Recommending appropriate devices and access methods based on the individual's motor abilities, communication needs, and preferences
+    - Collaborating with DME SGD manufacturers to customize and set up devices based on the individual's specific needs and abilities
+    - Providing training and ongoing support to individuals and their caregivers in the use and maintenance of assistive technology devices
+    - Abiding by the professional code of ethics and adhering to relevant laws and regulations, such as HIPAA and IDEA
+
+Potential Risks of Wearing an AR Headset
+Individuals with motor disorders may experience risks when wearing an AR headset for communication. Key areas of concern include trunk strength, muscle tone, and other weaknesses that could be impacted by wearing the device. Potential risks include:
+    - Increased fatigue: Wearing an AR headset may exacerbate fatigue in individuals with weak neck and trunk muscles.
+    - Postural instability: The added weight of an AR headset can result in poor posture or instability, especially for those with limited trunk strength or balance issues.
+    - Pressure sores or skin irritation: Prolonged use of an AR headset may cause pressure sores or skin irritation, particularly in individuals with weakened or hypersensitive skin.
+    - Musculoskeletal strain: The added weight of an AR headset may lead to musculoskeletal strain on the neck, shoulders, and back.
+    - Interference with medical devices: An AR headset could potentially interfere with the individual's medical devices, such as ventilators or feeding tubes.
+
+To minimize these potential risks, it's essential to:
+    1. Ensure that the AR headset is lightweight and ergonomically designed.
+    2. Consider using custom adaptations, such as padding or support structures, to improve comfort and stability.
+    3. Conduct frequent assessments to monitor the individual's tolerance and any potential adverse effects.
+    4. Provide clear instructions and guidelines for users and caregivers to minimize the risk of harm or misuse.
+ALS, CP, and Other Adult Literate Populations
+
+
+ALS
+CP
+Motor Disorders
+Progressive muscle weakness, spasticity, muscle atrophy, fasciculations, dysphagia, dysarthria
+Spasticity, dyskinesia, ataxia, and mixed motor disorders
+Access Needs
+Eye gaze, head pointing, switch access, brain-computer interface
+Head pointing, eye gaze, switch access, mixed modality access
+Similar Conditions (AT)
+Progressive Bulbar Palsy, Primary Lateral Sclerosis, Spinal Muscular Atrophy
+Spastic Diplegia, Choreoathetoid Cerebral Palsy, Ataxic Cerebral Palsy, Mixed Cerebral Palsy
+
+Implications for Wheelchair Headrests and Other AT When Wearing an AR Device
+Using an AR device in conjunction with existing wheelchair headrests and other assistive technology may present several challenges:
+
+    1. Interference with headrests: The AR headset's design and size may interfere with the positioning and function of wheelchair headrests, potentially reducing support and comfort. Solutions may include modifying the headrest or choosing an AR headset with a design that is compatible with the headrest.
+    2. Integration with other assistive technology: The AR device should not obstruct or hinder the use of other assistive technology, such as communication devices, switch access, or head pointers. Seamless integration is essential to ensure the user can access all necessary tools.
+    3. Weight distribution and stability: Adding an AR device to existing AT can alter the weight distribution and stability of the user's setup. It may be necessary to adjust the positioning or weighting of other devices to maintain balance and prevent the risk of falls or accidents.
+    4. Power supply considerations: The AR device may require additional power sources or charging options, especially for users who rely on power wheelchairs or other electronic devices. Integrating the AR device's power supply with the existing AT setup is crucial to ensure uninterrupted use.
+
+When implementing AR devices for users with existing AT, it is essential to consider these implications and work with a multidisciplinary team to design custom solutions that meet the user's unique needs and preferences.
+Recommendations and Testing
+When designing and implementing assistive technology devices for individuals with motor, structural, and access needs, it is crucial to:
+    1. Conduct thorough assessments of the individual's abilities and needs, considering both their current and future requirements.
+    2. Collaborate with a multidisciplinary team, including SLPs, OTs, and ATPs, to develop customized and appropriate solutions.
+    3. Engage in continuous testing and iteration of devices, ensuring that they remain effective and user-friendly as the individual's needs change.
+    4. Monitor the device's performance and make necessary adjustments to improve the user experience and maintain compliance with safety and regulatory standards.
+Safety and Compliance
+Assistive technology devices and services must adhere to relevant safety and compliance standards, including FDA regulations, the Americans with Disabilities Act (ADA), and other local, state, and federal regulations. Compliance with these standards is essential to ensure that devices are safe, effective, and accessible to the individuals who need them.
+
+Healthcare professionals and manufacturers must stay up-to-date with regulatory changes and industry best practices, making adjustments to their products and services as needed. Additionally, they should work closely with users to monitor the performance and safety of their devices, addressing any concerns or issues that may arise.
+Conclusion
+This document has provided a comprehensive comparison of the motor, structural, and access needs for individuals with ALS and CP, while retaining content on other adult literate populations. A tailored approach to designing and implementing assistive technology devices is crucial to ensure the safe, effective, and suitable use of these devices for users with different motor, structural, and orthopedic needs. By working closely with healthcare professionals, manufacturers, and users, it is possible to create customized solutions that address the unique challenges and requirements of each individual while maintaining compliance with safety and regulatory standards.
+
+

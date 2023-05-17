@@ -1,0 +1,1162 @@
+
+
+
+Marketing and Customer Requirements Document 
+Project Yoda
+IMP-002
+
+
+REVISION HISTORY
+REV
+DCO #
+DESCRIPTION
+Revision Date
+0
+CO-20
+Initial Release
+See Greenlight Guru
+1
+Xx
+Feasibility Release
+xx
+
+	
+Abstract: This document is an outline of the product strategy and product requirements.
+
+Statement of Confidentiality: This document and supporting materials contain confidential and proprietary business information of Cognixion. These materials may be printed or copied for internal use, but are not to be shared with other parties without explicit permission.
+
+DIRECTIONS:  No black text may be altered. Be sure to update the header with Title, Doc # and Revision. Please delete all blue text, it is for information and direction only.  Do use the "styles" set up in word to organize your document.  Consider showing the "navigation" pane (found in the "view" menu) to help you navigate through sections of the document.  Throughout this document, if you have images, tables or graphs that would better tell the story, feel free to use them.
+
+This document is not expected to be completed at one time.  As the project and information matures, complete additional sections or add detail to existing insights.  Sections to complete are as follows:
+    - Always update section 1
+    - First complete sections #3 & 8.  Section 8 will need to be locked down before product PRD can be completed.
+    - Next complete sections #4, 5, 6
+    - Complete sections 2 and 7 as time and information permits.  
+Write all sections using "normal" style in word.  
+
+Table of Contents	
+
+1	Executive Overview	3
+1.1	Definitions and Abbreviations	3
+2	Market Analysis	3
+2.1	Market size	3
+2.2	Market share	3
+2.3	Key customer segments	3
+2.4	Customer challenges	3
+2.5	Key Drivers/Success Factors	3
+2.6	Key Barriers	4
+2.7	Funding & Revenue Streams	4
+2.8	Channels	4
+3	Stakeholder Analysis	4
+3.1	Users	4
+3.2	Caregivers	4
+3.3	Clinicians	5
+3.4	Other Stakeholders	5
+4	Competitor Analysis	6
+4.1	<Competitor #1>	6
+5	SWOT	6
+6	Product Overview	7
+6.1	Product Goals & High Level Features	7
+6.2	Value Proposition	7
+6.3	Regulatory, Claim & Reimburesement Strategy	7
+6.4	Pricing Strategy	7
+6.5	Branding & Naming	7
+7	Commercialization Plan	7
+7.1	Trademark Plan	7
+7.2	Launch	7
+7.3	Sales Cannels/Distribution Plan	7
+7.4	Training Plan	7
+7.5	Post Market Clinical or Product Research Plan	7
+7.6	Service & Warranty	8
+8	Product Requirements	8
+8.1	Human Factors | User Interface - Audio, Tactile, Haptic, Visual	8
+8.2	Hardware / Device	10
+8.3	Language	11
+8.4	Business Requirements	13
+8.5	Patient Safety & Regulatory Requirements	14
+9	Document Approval	15
+
+1 Executive Overview
+1.1 Definitions and Abbreviations
+
+Term
+Meaning / Definition
+AAC
+Augmentative and Alternative Communication
+Input Modes
+The method that a user uses to interact with the system - input modes may include touch, switch, head movement, eye gaze and EEG.
+
+2 Market Analysis
+2.1 Market size
+The number of potential customers who would benefit from buying your product - is often measured as an estimated revenue range. For example, you can calculate market size by multiplying the number of potential customers in your market category by their average annual revenue.
+
+2.2 Market share
+Refers to the percentage of sales in the industry earned by your product. Divide your product sales by total sales for the market (via industry data) to determine market share. 
+
+2.3 Key customer segments
+High level overview of potential customer segments that will use your product - segmented by demographics, psychological attributes, geography, or behavior.
+
+2.4 Customer challenges
+Primary pain points felt by your customers.
+
+2.5 Key Drivers/Success Factors
+At a high level, what do we need to keep in mind to enable the successful introduction of this product to our target market?  Are there relevant market trends to keep in mind?
+2.6 Key Barriers
+At a high level, what  would prevent the successful introduction of this product to our target market? Are there relevant market trends to keep in mind?
+
+2.7 Funding & Revenue Streams
+How are products funded in this market segment. Projected revenue of the product (or impact to revenue of new features) .
+
+2.8 Channels
+Channels available for communicating with your target market - such as email, website, and referral 
+
+3 Stakeholder Analysis
+3.1 Users - ALS Patients
+ALS is a progressive and irreversibly debilitating disease that adversely affects motor neurons, causing muscles to weaken and eventually paralyze.  At the end stage, people have their cognitive capabilities and intact senses but no ability to move, appearing to others as statues. In other words, it's possible for ALS patients to see, hear, and feel pain, but no ability to respond to these stimuli.
+
+Figure 1 ALS Patient With Cognixion One Axon Headset (Image Used With Signed Consent Of Patient).
+ALS has no cure and the average life expectancy after diagnosis is two to five years with wide ranging varability.  Most challenging is that ALS is only diagnosed as an exclusion of all other diseases, and as such, it could take an average of a full year to diagnose these patients, by which point the symptoms can be significant.  Early in the disease progression, ALS can affect patients' oral and throat muscles making swallowing and speaking very difficult. 
+Most challenging of all is that the average age of people diagnosed with this disease is in their late 50's and early 60's.  Like the patient in the image above, they might be parents  in their prime, unable to complete their life's work, give important life lessons to their children or simply tell their family that they love them 
+There are no solutions for lengthening the time that ALS patients can communicate today.  Cognixion's goal is to maximize this time by providing a device that is both portable and evolves with the patient as their needs and abilities change.  Below is an outline of how the Cognixion ONE Axon is envisioned to support patients throughout the progression of their disease.The average age of people diagnosed with ALS is in their late 50's and early 60's, and with specific genetic risk factors can be diagnosed as early as their 30's .  
+The Milano-Torino Staging (ALS-MITOS1 ) is used for a general description of the stages below, which capture the progressive loss of independence and function observed in ALS patients. ALS-MITOS incorporates the inputs of ALS Functional Rating Scale (ALSFRS-R), which reflects the progressive loss of function in four key areas: fine motor control, gross motor control, speaking/swallowing, and breathing.
+3.1.1 ALS Patient in Stage 0
+Day in the Life
+At this stage, patients have finally received a diagnosis for their collection of ailments of muscle twitches, cramps, and weakness.  It is a terrible diagnosis and patients have a hard time accepting the prognosis.  As they grapple with the debilitating verdict, an army of specialists, doctors, support staff, and insurance claims, the muscles that enable them to speak weaken.  Patients are encouraged to begin "voice banking"2 but the process is onerous and time consuming.  Many believe they have time to complete this task in the future, but in reality, they do not.  Most spend the first critical few months in denial and lose this precious time
+Current Solution: 
+At this stage patients do not have any communication devices.  To bank their voice they  need to go to the ALS/MD Associations to learn how or attempt this process at home.  - a process that takes  hours of mind-numbing repetition.
+Cognixion Vision:
+Enable gathering of patient voice through passive, ambient data collection through an  app that the patient can set to listen at key moments. In the future, additional voice data gathering could occur through games designed to collect critical data while creating an enjoyable experience.
+Goals
+Live as much of my life as quickly as possible - finish the things that are important to me.
+Navigate the dizzying array of specialists and insurance claims with minimal disruption to my life.
+Prepare for what's coming.
+Challenges and opportunities for Cognixion
+Products today don't support the entire ALS journey - Provide a one-and-done product as early as possible, preferably walking them through the insurance process.
+Voice Banking is challenging and exhausting - Enable voice capture in as non-invasive and non-disruptive way as possible.
+Likes in Current Offerings
+Nothing - they want their life back
+Dislikes in Current Offerings
+Oenerous voice banking process
+Trusts information from
+Unsure - have seen multiple doctors by now
+Influences
+Their family and friends
+
+3.1.2 STAGE 1-2 - Loss of One To Two Types Of Functions 
+Day in the Life
+Patient Experience:
+At this stage, patients are experiencing muscle weakness affecting the arms, legs, neck or diaphragm.  They have difficulty chewing or swallowing and their voice may be slurred or nasal due to weakened throat muscles and vocal cords.  ALS does not progress in a linear fashion.  Instead, patients may suddenly lose ability to use a muscle, only to regain the ability hours or days later.  Despite this temporary improvement, it creates a false sense of hope as the disease inevitably progresses to further loss of capabilities. 
+ Current Solution:
+A number of touch screen/eye tracking solutions  exist and depend on the ability of the patient to access the device in a consistent manner.  However, these devices were primarily developed with the intent of the user accessing the device with their hands and at a distance, meaning it is attached to their wheelchair and mounted 24-36 inches away. Therefore, the language interface as well as the access method tends to have points of failure for clients with ALS.  Current devices are  better suited towards young people and childrren, instead of adults in the prime of their life and cognitive capabilitieswith more sophisticated language and more complicated access needs. 
+Additionally, the current communication solutions cause the user to be focused on a device in their lap or between themselves and the person with whom they are communicating, causing a further interaction disconnect.  . These current communication devices do not allow the user and their loved ones to have effective and efficient discourse opportunities.
+Cognixion Vision:
+The Cognixion ONE Axon is designed to evoke the futuristic gaming headsets in the consumer electronics world, inspiring interest in others.  Unlike existing solutions, the patient can verbalize, interact with their environment and project the phrase they have composed to their loved ones, increasing the probability that they will be understood and able to hold the focus of the person to whom they are communicating.  
+Interaction is also more natural since the user is facing their communication partner and they are able to see one another's face.  As an augmented reality system, the patient and their communication partner are able to look at each other through the lens, since the system is able to project the user interface on a see-through lens as illustrated here. Commmunication (decoding) is 80% non-verbal and being able to see each others facial expressions is paramount towards effective communication.With integration to Alexa, the patient regains a sense of autonomy as they are able to control their home devices through the headset, enabling them to do such things as turn music on and off, watch TV or make calls without help.
+
+Goals
+Communicate to my loved ones and/or colleagues as effectively as possible
+Minimize time I spend on anything other than getting my affairs in order and/or completing the work I want to (Parenting, Writing a Book, etc.)
+Challenges and opportunities for Cognixion 
+Touch screen & eye tracking devices are between the User and their communication partner - Provide a way that maximises person-to-person interaction & communication.  
+Agency disappears by the day - Provide a way to leverage the internet of things.
+
+Likes in Current Offerings
+Ability to use electronic communication - texts, social media, etc.
+Dislikes in Current Offerings
+Touch screen less and less usable due to muscle weakness.  Eye tracking doesn't work well unless perfectly positioned and doesn't work well outside.
+Trusts information from
+Doctors, SLPs, OTs, ALS Associations
+Influences
+Their family and friends
+
+Current Assistive Communication Systems (Standard of Care):
+Existing Device(s)
+Benefit - Stages 1-2
+Limitations - Stages 1-2
+Commercial Touchscreens such as an iPad
+    - Many already understand how to use
+    - Leverages existing email, text & social media access
+    - Allows patient with loss of throat/vocal control to use hand abilities to communicate.
+    - No additional cost if such a system is already being used in the home
+    - Prediction is unsophisticated. 
+    - Ineffective for creating audible speech (e.g. for people standing next to the user)
+    - Not supportive of deteriorating muscle control
+    - Requires fine muscle control which can limit successful use
+AAC Eye Tracking (standard of care)
+    - Device fine-tuned for AAC use
+    - Creates audible speech
+    - Presents created text in a forward-facing display
+    - Efficient composition of spoken word, esp  vs. hand composition such as iPad
+    - Insurance covers
+    - Can mount to wheelchairs and/or beds
+    - Once situated, does not depend on caregiver to activate
+    - Dependent on stable (and immobile) set up to patient eyes - often mounted to a wheelchair, if one it exists.
+    - Eye tracking as only modality can be tiresome to user
+    - Dependent on insurance to obtain and requires manufacturing company to set up - which can involve delay in obtaining and using.
+    - Eye tracking is not effective in sun/daylight conditions due to sensor limitations.
+    - Operation requires learning curve for use and may not readily connect to email, text and social media 
+    - Not supportive of deteriorating muscle control
+
+3.1.3 STAGES 2-3 - Loss of Two to Three Types of Functions 
+Day in the Life
+Patient Experience:
+The disease has progressed significantly at this point.  Muscle weakness and atrophy has spread to multiple parts of the body. Some muscles become paralyzed, while others lose strength. ALS does not progress in a linear fashion meaning that at times - often throughout a day - the patient may have neck movement and later only be able to move their eyes.  Patients may be able to vocalize using grunts and ability to use a switch would be limited.
+ Current Solution:
+ Current solutions available to these patients involve eye tracking since touch screens are no longer a viable choice.  Moreover, the systems are large and burdensome.  They need to be carefully positioned in front of the patient to be accurate, which creates a visual block between the patient and the very people with whom they are trying to communicate.  This positioning issue causes unnatural interactions as the caregiver needs to peer around the device to see the patient.
+
+Figure 4 Patient Utilizing Commercially Available Ects Device
+
+Since the patient's muscles weaken inconsistently, it is easy for them to list or drift in position, getting them out of position to use the eye tracking causing further frustration.  Even in the best of cases, composition of thoughts is slow and arduous, filled with numerous mis-selections and difficulty making any selection at all.  
+It is also a challenge to position the system while the user is on the go out in the community and sunlight often causes these systems to become unusable.  Some abandon these systems altogether and resort to rudimentary communications that the patient and their circle of care develop through gestures and grunts.  People in the community mistake a lack of ability to communicate with a lack of cognitive ability, further irritating users and their loved ones. At this stage with inconsisent communication abilities ALS patients have reported increased depression and increased desire to be involved in activities.
+Cognixion Vision:
+The industrial design of the headset was developed to inspire interest and discussion.  The system is designed so that the display is in the correct position with minimal adjustment allowing everyone to be focused on communicating rather than the technology enabling that communication.  
+The user interface that has served the patient through the earlier stages continues to be relevant, leveraging the built expertise of the patient.  The interaction mode can easily change from head movement to eye tracking based on the user's particular abilities in the moment.  
+Since the system has been learning the patient's particular turn of word, predicted words and phrases make composition faster.  The voice banked at the beginning of this journey is now used to maintain the patient's humanity and familiarity to their loved ones.  Having their voice expressed to their spouse and children often provide them a feeling of warmth.  It has been reported that hearing their dad say "I love you" often means more to the child that the patient.
+Like the language system, the library of saved phrases is likewise growing, allowing users to vocalize AND project phrases such as "Please give me a moment to compose my thoughts" with a single button, eliciting patience and anticipation from those around them.  This increase speed to access language with fewer "clicks" supports their continued need for normal language with fewer movements needed.
+
+Goals
+- Same as before - 
+Challenges and opportunities for Cognixion 
+- Same as before - 
+Likes in Current Offerings
+- See Below -
+Dislikes in Current Offerings
+- See Below -
+Trusts information from
+Doctors, SLPs, OTs, ALS Associations, Device Manufactuiring Reps
+Influences
+Their family and friends, ALS Patients
+ 
+Current Assistive Communication Systems (Standard of Care):
+Existing Device(s)
+Benefits - Stages 2-3
+Limitations - Stages 2-3
+Commercial Touchscreens such as an iPad
+(none, not usable)
+Not usable
+AAC Eye Tracking (standard of care)
+    - Device fine tuned for AAC use
+    - Creates audible speech
+    - Presents created text in a forward-facing display
+    - Efficient composition of spoken word, esp  vs. hand composition such as iPad
+    - Insurance covers
+    - Can mount to wheelchairs and/or beds
+    - Once situated, does not depend on caregiver to activate
+    - Dependent on stabile (and immobile) set up to patient eyes - often mounted to a wheelchair, if one it exists.
+    - Eye tracking as only modality could be tiresome to user
+    - Dependent on insurance to obtain and requires manufacturing company to set up - which can involve delay in obtaining and using
+    - Eye tracking is not effective in the sun
+    - Operation requires learning curve for use and may not readily connect to email, text and social media 
+    - Not supportive of deteriorating muscle control
+Poster Board or Grunts
+    - Low tech means approach is always available
+    - Intention is understood by the caregiver
+    - Slow and limited functionality
+    - Steep learning curve for new caregivers
+    - Initiation of conversation depends on caregiver 
+
+3.1.4 STAGE 4 - Loss Of Most If Not All Types Of Function
+Day in the Life
+Patient Experience:
+In this final stage, patients lose most if not all of their voluntary muscles.  While studies continue to gather an understanding of the patient's experience at this point, it is believed that cognitive function remains intact, as do the rest of their senses.  This stage, illustrated by this patient, is considered clinically locked-in and the patient experiences complete paralysis.  
+While eye movement tends to cease last (because the eyes are bilaterally innervated by the brain), movement becomes erratic and control becomes ever more difficult.  As in the other stages, progression is not linear and abilities may be improved or degraded throughout the day In short they may start the day with better muscular control but as the day progresses this control fades.
+Current Solution:
+ Beyond current eye tracking systems, there is no solution for locked-in patients today.  There are a number of invasive implantable solutions under development, but they would require surgical implants of probes in a patient's brain and are many years from completing technical development.  Most ALS patients are also not candidates for this implantable device as they would not tolerate the anesthesia and surgery required to place it.
+As patients' muscle control continues to deteriorate, eye tracking,  which was already problematic in Stage 2 becomes very unreliable.  Their eyes tends to drift at times even though their gaze at the occipital level remains intact. .  Caregivers resort to tracking vital signs such as heart rate, skin temperature and blood pressure to give them hints on whether their patient is awake or in pain.  
+We can't imagine what the patient must endure, being unable to communicate at all, perhaps being in pain and unable to communicate this to their caregivers. 
+Cognixion Vision:
+Using the same Cognixion headset that the user and caregiver have been using since Stage 1 , the patient would communicate using a combination of "visually evoked potentials" and non-invasive EEG electrodes.  Using the same eye tracking technology they had in previous stages, the system would be able to identify and adjust to the user's ability to control eye movement.  Ultimately the system would be able to move between receiving eye-tracking input and BCI, adjusting the interface and interaction to the user's physical abilities.  At a bare minimum, the user would be able to respond to Yes/No questions to communicate with their loved ones and caregivers without having to move at all.
+
+Figure 7 Cognixion One Axon User View (Bci Targets & Environment) Via Semi-Reflective Lens (Ar-Ost)
+
+3.2 Caregivers
+3.2.1 Family Member
+Day in the Life
+Life has changed as dramatically for the patient's family as they grapple with the heartbreaking diagnosis and resulting effects.  Their day to day physical support of their loved one comes with the burden of emotional effort of keeping their own mental anguish at bay while juggling the requirements of their own school or job.  
+Additionally, they are the first line of fire when it comes to understanding the diagnosis, treatments, equipment, house preparations (e.g. changing doorways to accommodate wheelchairs) and insurance claims.  Their burden is almost heavier than the patient's.  
+At the same time, they are working ever harder to understand and anticipate the needs of their loved one, devising a myriad of communication methods and directing an army of additional clinicians and specialized caregivers.
+Goals
+Keep my loved one as comfortable and self-empowered as I can
+Understand what my loved one is wishing to accomplish and help them accomplish it.
+Minimize the overhead needed to treat and pay for all activities associated with this illness.
+Get as much quality time with my loved one as possible.
+Challenges
+I can't hear what my loved one is communicating 
+I can' t connect with my loved one because there is a large device between us
+I am expected to be the device expert but I don't know how to do this and don't have time to add this to my existing load.
+Likes
+Support and training from the device manufacturer
+Ability to see and hear the user's communication
+Ability for the user to be as autonomous as possible.
+Dislikes
+Once the device is set up, the device manufacturer disappears on me.
+
+Trusts information from
+Clinical Team, ALS Organization, Other ALS Patients and Circle of Care
+Influence
+ALS Organization, Other ALS Patients and Circle of Care
+
+3.3 Clinicians
+3.3.1 <Primary Clinician | Archetype>  This will need to be completed for Neurologist, SLP, OR
+ Which type of clinician is most likely to recommend, prescribe and benefit this product? Repeat this block for up to 3 persona types
+
+Day in the Life
+A high-level description of their day to day experience - focused on interaction with our product
+Goals
+Top 1-3 Goals of this Persona
+Challenges
+Top 1 -3 Challenges that our product could help overcome
+Likes
+Preferences related to products and services that solve their challenges today
+Dislikes
+Dislikes related to products and services that solve their challenges today
+Trusts information from
+Sources they receive information from and respect
+Influence
+Other people that they have influence over and share information with
+
+3.4 Other Stakeholders
+3.4.1 <Primary Stakeholder> 
+ Are there others who will interact with this product?  hich type of clinician is most likely to recommend, prescribe and benefit this product? Repeat this block for up to 3 persona types
+
+Day in the Life
+A high-level description of their day to day experience - focused on interaction with our product 
+Goals
+Top 1-3 Goals of this Persona
+Challenges
+Top 1 -3 Challenges that our product could help overcome
+Likes
+Preferences related to products and services that solve their challenges today
+Dislikes
+Dislikes related to products and services that solve their challenges today
+Trusts information from
+Sources they receive information from and respect
+Influence
+Other people that they have influence over and share information with
+
+4 Competitor Analysis
+4.1 <Competitor #1> This will need to be completed for Tobii & EyeTech - Leverage John's existing work
+Think outside the box here - what is the most likely alternate solution to our product?  What would prevent a user from selecting our product for themselves. Repeat this block for up to 3 competitors"
+
+Description
+A summary of the organization and any distinguishing features (often found on the company's "About us" page)
+Products
+Products or services they provide
+Revenue
+A rough estimate of company revenue, if available
+Customers
+Their target customers and how they differ from your own
+Strengths
+Areas in which they excel - especially as related to our product
+Weaknesses
+Areas in which they are lacking - especially as related to our product
+Differentiators
+Factors that make them unique or compelling in the market
+
+Table 1: Comparison with marketed powered communication device (ILQ/890.3710): feature set
+
+Element/Feature
+Cognixion ONE Axon
+Tobii Dynavox I-133
+Discussion
+Manufacturer
+Cognixion Corporation
+Tobii Dynavox AB
+Tobii Dynavox I-13 is a commercially released assistive medical device with the classification shown (Class II exempt). 
+Cognixion ONE Axon is pending regulatory agency review.
+Classification Name:
+(TBD)
+System, communication, powered 
+
+Product Code:	
+(TBD)
+ILQ
+
+Regulation Number:	
+(TBD)
+890.3710
+
+Device Class:	
+(TBD)
+2 (Exempt)
+
+Medical Specialty:	
+(TBD)
+Physical Medicine
+
+Intended Use
+
+
+
+Intended Use
+Wearable speech generating device for patients who have who have debilitating or life-threatening conditions that impair speech and language, physical movement and or neuro muscular function, including but not limited to amyotrophic lateral sclerosis (ALS).
+Augmentative communication device utilizing a wearable, noninvasive brain-computer interface (BCI) utilizing dry EEG sensors and on-device processing to detect visual mental fixation.
+
+Individuals who, due to physical and/or cognitive conditions, require an AAC device for Speech and environmental controls
+Tobii Dynavox I-13 intended use is for general AAC use with speech and environmental controls. 
+Cognixion ONE Axon specifies a greater severity of disease. 
+Patient Age
+Adults ? 18 years
+Appropriate for users of all ages
+Specified use limited to adults for Cognixion ONE Axon
+Physical Characteristics
+
+
+
+Dimensions 
+33.02 L x 20.32 W x 12.7 H cm
+ 13  L x 8  W x 5  H inches
+34.3 W x 24.1 H x 8.1 D cm
+13.5 W x 9.5 H x 3.2 D inches
+
+Weight
+~1.1 lb. / 500 gm
+2.3 kg, 5.0 lbs
+
+IP Classification
+IP22
+IP22 (IP54 with I/O covers, no adapter)
+
+Patient Application
+
+
+
+Application		
+Wearable, applied to head
+Mounted (example: wheelchair or table) via  REHAdapt or Daessy plate
+Cognixion ONE Axon is patient body worn, Tobii Dynavox I-13 is mounted in proximity to patient
+Working distance	
+Wearable, applied to head
+45-85 cm; 18-33 inches
+
+Patient Interface
+
+
+
+Display		
+ 5 inch high brightness, high color gamut TFT LCD
+13.3 inch LED backlit touchscreen
+
+Display Resolution	
+1920 x 1080	
+1920 x 1080 Front,
+480 x 128 (Rear)
+Equivalent
+Display Brightness	
+2000 nits 	
+300 nits
+Cognixion ONE Axon is designed for use in sunlight 
+Touchscreen		
+(none)
+Capacitive Touch
+Cognixion ONE Axon is a wearable so no external touchscreen is utilized
+Switch Access
+YES
+YES
+External access to connected devices (various interfaces)
+Head Pose Tracking	
+YES, Integrated IMU in headset
+(none)
+
+Eye Tracking
+YES
+YES
+
+Eye Tracking Camera Distance
+~6.3 cm/2.5 inches
+~60 cm/24 inches
+
+Eye Tracking Recalibration
+Stable position of user in wearable headset
+Any repositioning of user relative to device
+With the Tobii I-13 any repositioning of the end user or system causes the system to need recalibration to meet the user's needs
+Brain-Computer Interface (BCI)
+YES - Visual Gaze Capture via SSVEP
+(none)
+Cognixion ONE Axon BCI supports communication in late stages of disease where no motor control remains (i.e patients with locked-in syndrome)
+Caregiver Access
+
+
+
+With Device		
+Headset display banner messages through lens
+Front or Rear display
+
+Separate Device		
+Tablet device
+Tablet device
+
+Use environments:
+
+
+
+Professional 
+YES
+YES
+
+Home
+YES
+YES
+
+Outdoors/direct sunlight
+YES, integrated visor, outdoor eye tracking
+
+
+
+
+5 SWOT
+Given what we know today, what are the strengths, weaknesses, opportunities and threats we foresee in this market with this product?
+
+Strengths
+Weaknesses
+    - 
+    - 
+Opportunities
+Threats
+    - 
+    - 
+6 Product Overview 
+6.1 Product Goals & High Level Features
+Desired long-term impact of our product or new feature set - including metrics for success
+6.2 Value Proposition
+Why should someone chose our product?  Our company?
+6.3 Regulatory, Claim & Reimburesement Strategy
+What is the regulatory strategy?  If there are predicate devices, what are they? If we are going to go for claims, what claims targets do we have?  How will we be paid for our product?
+6.4 Pricing Strategy 
+Product pricing (or new pricing based on added functionality)
+6.5 Branding & Naming
+What is the name of this product?  Why was this name chosen.  How will it fit into the larger brand architecture of our company?
+
+7 Commercialization Plan
+7.1 Trademark Plan
+What, when will be trademarked?
+7.2 Launch 
+How and where will this product be launched?  Is there an ideal event to be targeted?  Are there timelines the project team needs to consider?
+7.3 Sales Cannels/Distribution Plan
+How do we anticipate selling this product?  Will this approach change over time?
+7.4 Training Plan
+Who will be trained and how?  Internal stakeholders include: sales, marketing & service teams.  External stakeholders include all training required for regulatory compliance.
+7.5 Post Market Clinical or Product Research Plan
+Once launched, do we intend to do additional research on the product to measure its effect in the market?
+7.6 Service & Warranty
+How do we expect to support this product post sale?  What will the initial factory warranty be?  Will there be extended warranties?  How will we service this product once in the market?
+8 Product Requirements
+The following section outlines the market and customer requirements for this product.  The priority ratings are as follows:
+1 = Must Have - Minimum Viable Product
+2 = Desired - Target Goals
+3 = Delighters - Stretch Goals
+
+8.1 Physical Design | External Design
+
+This section describes the physical design of the headset.
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.1.1 
+The system should be comfortable to wear for 1 - 2 hours.
+1
+
+8.1.2 
+The system should be comfortable to wear for 6-8 hours.
+3
+
+8.1.3 
+The system should fit at least 95% of average adult heads (i.e. within normal limits).
+2
+
+8.1.4 
+The system should have a self-contained battery life of 2 hours
+1
+
+8.1.5 
+The system should provide an extended battery option for 8 hours of standard use.
+3
+
+8.1.6 
+The screen on the system should be legible to the user in an indoor and outdoor setting.
+2
+
+8.1.7 
+The displayed text on the outside of the screen should be legible to people interacting with the user in an indoor and outdoor setting.
+2
+
+8.1.8 
+The audio should be adjustable to be loud enough to be heard in an indoor and outdoor setting.
+2
+
+8.1.9 
+The system should be comfortable in a seated and reclined position. (e.g. when a patient with ALS wakes up, they should be able to communicate an awakened state to their caregiver)
+2
+
+8.1.10 
+The system should be comfortable for use in a wheelchair with a headrest.
+1
+
+8.1.11 
+The use of the headset should be a pleasant and relaxing experience both from a feel of the headset and the design of the user interface
+2
+
+8.1.12 
+The system should enable the user to see their surroundings as well as the graphical interface.
+1
+
+
+8.2 Input Mode Design 
+
+This section describes how the user will interact with the headset to create speach.
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.2.1 
+The system should allow for input modes of head movement and visual evoked potentials.
+1
+
+8.2.2 
+The system should allow for input modes of eye tracking
+2
+
+8.2.3 
+The system should allow the user physical methods such as a joystick or mouse to focus on a visual target (instead of head pose, for example)
+3
+
+8.2.4 
+The system should enable the use of a switch for quicker selection regardless of input mode being used.
+2
+
+8.2.5 
+The system should be able to measure user's ability to use the input modes available and adapt by transitioning between them with minimum interaction from the user. Users should have the option to override or to require confirmation for mode changes.
+3
+
+8.2.6 
+The system should allow a number of different vocabulary approaches (language systems) including alphabetic, schematic and visual scene (assisted reality - eg bottle of water on table - system ids water)
+1
+
+8.2.7 
+The system should allow the user to customize the layout of the internal screen
+2
+
+8.2.8 
+The system should be able to accommodate users with excessive movement and difficulty moving.
+2
+
+8.2.9 
+The system should be adaptable for color-blind users or vision issues (e.g. lazy eye)
+3
+
+8.2.10 
+The system should be adaptable for users who wear glasses
+2
+
+8.2.11 
+The system should be adaptable for users with hearing peripherals
+3
+
+8.2.12 
+The system should provide an opportunity for the user to rest between selections (e.g. empty space) and pause providing input altogether.
+1
+
+8.2.13 
+The system should leverage the user's entire visual field capacity, preferably adjustable by the user.
+2
+
+8.2.14 
+The system should allow a setting that auto magnifies buttons as they are selected/"moused over", (e.g. creating a larger dwell target, when the cursor rests on the "a" button, the button enlarges and "pops out" by a set percentage, as selected in a setting menu)
+2
+
+8.2.15 
+The system should follow best practices for 3D UI design (e.g. show examples of the setting change while in the setting menu such as font changes as font is adjusted without requiring the user to exit out of the settings menu)
+2
+
+
+8.3 Display & Navigation
+
+This section describes how a user will navigate the user interface.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.3.1 
+The system should help the user understand where they are "pointing" and what is being selected
+1
+
+8.3.2 
+The system should be able to provide visual, auditory and/or haptic feedback to indicate key information (e.g. such as knowing that a selection is being made and/or has been selected.)  The type of feedback provided should be adjustable in settings.
+1
+
+8.3.3 
+The system should employ assistive aids for target selection (e.g. how "sticky" the cursor is as it moves from target to target).
+1
+
+8.3.4 
+The system should allow the user to control display elements such as font size, speed of cursor, selection method and assistive aids.
+1
+
+8.3.5 
+The menu and display elements should consistently be in front of the user's eyes.
+1
+
+8.3.6 
+The menu and display elements should easily be toggled on and off screen to allow user to look at the outside world unobstructed.
+2
+
+8.3.7 
+The system should adapt to user state by transitioning between input modes (e.g. based on historical user capabilities with head pose, if the user's selection mode becomes slower, offer a switch to eye tracking). Users should have the option to override or to require confirmation for mode changes.If the system transitions between input modes, it should allow the user to confirm or over-ride the transition.  Whether confirmation is required should be adjustable in settings
+3
+
+8.3.8 
+The system should achive desired outcomes with a minimum of user interaction (effort). (e.g. minimize the number of selections- preferably under 3)
+1
+
+8.3.9 
+The system should allow the user to quickly and easily activate re-centering or re-calibration.
+1
+
+8.3.10 
+The system should allow the user to enable screen reading capabilities of navigation elements to assist with low vision users. (e.g. if cursor dwells over "settings", the system announces "settings"), ideally different from the text-to-speech voice.
+3
+
+8.3.11 
+The system should have simplified settings menu, easily configured by end users or caregivers.
+2
+
+8.3.12 
+System layout and configuration should be accessible prior to acquisition of the physical device.
+2
+
+
+8.4 Speech Generation 
+
+This section focuses on how speech will be generated.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.4.1 
+The speech generated should be adjustable in volume and speed.
+1
+
+8.4.2 
+The user should be able to specify whether speech is generated as each letter, word or phrase is created.
+1
+
+8.4.3 
+The speech generated should be loud enough to be heard in an indoor and outdoor setting(e.g. in a restaurant. Ideally consistent with human dynamic range.)
+1
+
+8.4.4 
+The speech generated should be repeatable with a single action (i.e. the phrase is repeated - visually and/or auditorily - every time the play button is pressed)
+1
+
+8.4.5 
+The system should allow for user personalization of synthesized voice (e.g. banking of voices) before a system is assigned or used.
+3
+
+8.4.6 
+The system should enable the user to "bank" their voice in an easy or enjoyable manner.  (e.g. passive capturing of the voice or capturing the voice via a game)
+3
+
+8.4.7 
+The system should support pre-recorded utterances for later use.
+2
+
+8.4.8 
+The system should provide a variety of selectable standard differentiated voices (e.g. differentiated pitches, speeds and resonance) that can be selected as default and used regardless of connectivity status of the system.
+2
+
+8.4.9 
+The system's synthesized voice should enable personalization with the user's desired voice.
+3
+
+8.4.10 
+The system should provide a variety of keyboard layouts (e.g. ABC, QWERTY, Linotype, etc.)
+2
+
+8.4.11 
+The system should generate speech with a minimum of "interactions"  (e.g. space between words should be added automatically when a word is selected or the system is aware that a word has been created)
+2
+N/A
+Design Goal
+8.4.12 
+The system should allow speech to be generated visually and/or auditorily - as preferred by the user.
+1
+
+8.4.13 
+The system should be able to indicate both visually and auditorily, per user preference, that the user is composing speech.  (e.g. Please be patient while I compose my message.)
+1
+
+8.4.14 
+The system should include a method for rapidly accessing pre-defined user phrases that can ideally be played with a single click without removing the composed message in the main window. (e.g. a phrase might be "please give me a minute to compose my reply")
+2
+
+8.4.15 
+The system should allow user to organize their phrase inventory and create shortcuts.
+2
+
+8.4.16 
+The system should allow users the option of auto clearing speech that has already been generated.
+2
+
+8.4.17 
+The system should enable to pause vocalization during readback and edit to react to interruptions or discussion. (The intent is to allow users to engage in natural conversations - e.g. turn taking, indicating a "let me finish" or "good point")
+3
+
+8.4.18 
+The system should allow the user to enter a "speaker mode" wherein they can compose and save long segments of speech that could be played back in the form of a speech, and paused periodically to enter "conversation mode".
+3
+
+8.4.19 
+The system should allow the user to enter a "document mode" wherein they can compose and save long segments of speech that could be saved and sent via electronic means in the form of texts, journals or letters.
+3
+
+
+8.5 Language System
+
+This section addresses the language system - how the user will receive word and phrase predictions based on input provided.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.5.1 
+The system should provide contextual predictions based on environment (e.g. geographical location, weather, activity).
+3
+
+8.5.2 
+The system should provide contextual predictions based on utterance history (for example, if a user is talking about a trip to Hawaii, ideally the predictions will tend to enable continued discussion on that topic).
+3
+
+8.5.3 
+The system should provide predictive words and phrases that adjust with each additional input (of a letter or word).
+2
+
+8.5.4 
+The system's word prediction should adapt to user utterances & corrections to utterances over time. (e.g. the user increasingly finds the predicted words/phrases relevant & selects them)
+3
+
+8.5.5 
+The system should provide a number of "standard phrases", configurable by the user - including comfort questions, documenting their journey and end of life planning.
+2
+
+8.5.6 
+The system should allow the user to receive auditory feedback in either "private" mode for their own purposes (e.g. vocalizing typing letter by letter or commands to alexa), or "public" mode for communicating with others.
+3
+
+8.5.7 
+The system should allow users to repair/correct sentences and words with minimum "interactions" (e.g. deleting or inserting words in the middle of a sentence or suggesting synonyms/corrections when the cursor hovers over the word).
+1
+
+8.5.8 
+The system shall be usable by Spanish speakers in the United States.
+3
+
+8.5.9 
+The system shall be usable by English speakers in the United States.
+1
+
+8.5.10 
+The system should be able to accept and add new "words" to the dictionary (e.g. ability to add unusual names and have them be predicted).
+1
+
+8.5.11 
+The system should generate speech composed within 0.5 seconds of the user pressing "play" and allow the user to increase that delay in settings.
+2
+
+8.5.12 
+The system should enable an auto-correct feature, to be turned on or off by the user.
+2
+
+8.5.13 
+The system should be able to translate composed phrases into different languages using internet translation systems.
+3
+
+8.5.14 
+The system should provide predictive phrases that customarily come before  and after each word typed by the user.
+3
+
+
+8.6 Connectivity & Compatibility
+
+This section focuses on how the headset will interact and depend (or not) on the internet.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.6.1 
+The system should generate speech even when not connected to the internet.
+1
+
+8.6.2 
+The system should be able to access banked voices even when not connected to the internet.
+2
+
+8.6.3 
+The user should be able to control their environment with the system through internet connected devices (such as alexa)
+1
+
+8.6.4 
+The system should be able to leverage existing voice banking repositories (e.g. SAPI5)
+2
+
+8.6.5 
+The system should enable the user to send messages electronically - at a minimum via text.
+3
+
+8.6.6 
+The system should be able to provide user connectivity to the internet and entertainment systems (e.g. Netflix)
+3
+
+8.6.7 
+They system should enable use of a cell-phone as a hot-spot.
+3
+
+
+8.7 Virtual Assistance
+
+The section refers to the type of assistance or information a user should be able to receive from Cognixion or the user's circle of care to enable improvement or diagnostics without active wearing of the headset. 
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.7.1 
+The system should provide a method to send a message to the company requesting customer support.
+2
+
+8.7.2 
+The system should provide a method to receive real-time customer support from the company.
+3
+
+8.7.3 
+The system should allow the company to provide technical support in a virtual manner (e.g. ability to "take over" the headset UI to trouble shoot/repair/train).
+3
+
+8.7.4 
+The system should enable the user's circle of care to see what the user is seeing from another device.
+2
+
+8.7.5 
+The system should enable the user's circle of care to control the the user's system from another device.
+3
+
+8.7.6 
+The system should provide speech generation performance data for the user's circle of care (e.g. software/access settings to make the speech generation easier, faster and better or more efficient for the user, ie. change the settings on the dwell time if they are becoming tired).  
+3
+
+8.7.7 
+The system should provide more-than-the-minimum required training of the user within the device.
+2
+
+8.7.8 
+The system should provide training of the user in a way that is enticing for the user (e.g. via games vs wall-of-text)
+3
+
+8.7.9 
+The system should provide an "admin" mode for clinicians and caregivers to customize the experience for the user.
+3
+
+8.7.10 
+The system should allow clinicians and caregivers to change and organize saved phrases in an efficient manner.
+2
+
+8.7.11 
+The system should include "how-to" videos to assist with basic operation of the unit.
+2
+
+8.7.12 
+The company should provide training and tools to enabe the user, caregivers and clinicians to operate the device.
+1
+
+
+8.8 Service
+
+This section describes how Cognixion will service the device and what support the user's circle of care can anticipate. 
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.8.1 
+The system should be serviceable by the company.
+2
+
+8.8.2 
+If service is needed, the user should not be left without a speech generating system for longer than one (1) week.
+2
+
+8.8.3 
+The system should provide a 1 year manufacturer's warranty and support.
+2
+
+8.8.4 
+The company should provide extended warranty and support options.
+3
+
+8.8.5 
+The system should include a number of field replacable parts for those items of the design most likely to break, such that it maximises the time that the user can use the system.
+1
+
+8.8.6 
+The system should include "how-to" videos to assist with basic maintenance and simple repairs of the unit.
+2
+
+
+8.9 Metrics
+
+This section describes how Cognixion could receive feedback on the headset.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.9.1 
+The user and caregiver should be able to provide feedback on the system within the system.
+2
+
+8.9.2 
+The system should enable the tracking of use metrics that protect the users identiy.
+3
+
+8.9.3 
+The system should send feedback on errors and bugs to the company while protecting the user's identity.
+3
+
+
+8.10 Alarms, Alerts, Indicators
+
+This section describes the types of alerts the system will provde to the user and the user's circle of care.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.10.1 
+The system should indicate low battery status when 30 minutes of standard use remain and critical battery status when 10 minues remain.
+2
+
+8.10.2 
+The system should alert the user that imput mode is changing based on user's fatigue with current mode.
+3
+
+8.10.3 
+The system should alert the user if re-centering or re-calibration is needed.
+2
+
+8.10.4 
+The system should provide a means for the user to easily call for help
+1
+
+8.10.5 
+The system should provide a means for the user to call 911
+3
+
+8.10.6 
+The system should alert the user and shut down if it detects excessive heat or other system parameters that could cause harm to the user.
+1
+
+8.10.7 
+The system should indicate battery and internet connectivity status
+1
+
+8.10.8 
+The system should allow user to see and change as many standard system settings as possible (e.g. volume level, system brightness, font size, cursor and dwell color, dwell type, etc.)
+1
+
+
+8.11 Patient Safety & Regulatory Requirements
+
+Besides the obvious expectation that the product will adhere to Cognixion's Product Development Process, these are requirements and standards that are particularly important to the marketing of this product.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.11.1 
+The system shall meet standard regulatory and ISO standards.
+1
+
+8.11.2 
+The system shall meet standarAAC (Augmentative and Alternative Communication) requirements
+1
+
+8.11.3 
+The system shall meet requirements for funding
+2
+
+8.11.4 
+The system shall meet applicable HIPPA and cybersecurity requirements
+2
+
+
+
+8.12 Miscellaneous
+
+This section covers any other requirements that don't fit the headings above.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+8.12.1 
+The system should allow the addition of other applications on the device.
+3
+
+
+
+9 Document Approval
+
+The following members of the Team have reviewed and agreed to the details outlined in this document.
+
+Functional Area Leads
+Name
+Signature
+Date
+Core Team
+Iyanka Ponnamperuma
+N/A for Concept
+N/A for Concept
+Downstream Mkt.
+Meaghan Azlein
+N/A for Concept
+N/A for Concept
+MfgLead
+N/A for Concept
+N/A for Concept
+N/A for Concept
+Quality
+Alex Rapp
+N/A for Concept
+N/A for Concept
+Regulatory
+Steve Gorski
+N/A for Concept
+N/A for Concept
+Technical
+Gregg Johns
+N/A for Concept
+N/A for Concept
+Upstream Mkt.
+Astrid McNellis
+See Greenlight Guru
+See Greenlight Guru
+UX & HF
+Tim Stutts
+N/A for Concept
+N/A for Concept
+

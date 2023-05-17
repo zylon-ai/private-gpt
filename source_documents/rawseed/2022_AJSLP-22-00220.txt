@@ -1,0 +1,907 @@
+Review Article
+
+Comparing Interventions With Speech-Generating
+Devices and Other Augmentative and Alternative
+Communication Modes: A Meta-Analysis
+
+Natalie S. Pak,a Kathryn M. Bailey,a Jennifer R. Ledford,a and Ann P. Kaisera
+
+a Department of Special Education, Peabody College, Vanderbilt University, Nashville, TN
+
+ARTICLE INFO                                 ABSTRACT
+
+Article History:                             Purpose: Optimal augmentative and alternative communication (AAC) systems
+Received July 9, 2022                        for children with complex communication needs depend in part on child charac-
+Revision received November 4, 2022           teristics, child preferences, and features of the systems themselves. The pur-
+Accepted November 21, 2022                   pose of this meta-analysis was to describe and synthesize single case design
+                                             studies comparing young children's acquisition of communication skills with
+Editor-in-Chief: Erinn H. Finke              speech-generating devices (SGDs) and other AAC modes.
+Editor: Billy T. Ogletree                    Method: A systematic search of published and gray literature was conducted.
+                                             Data related to study details, rigor, participant characteristics, design informa-
+https://doi.org/10.1044/2022_AJSLP-22-00220  tion, and outcomes were coded for each study. A random effects multilevel
+                                             meta-analysis was performed using log response ratios as effect sizes.
+                                             Results: Nineteen single case experimental design studies with 66 participants
+                                             (Mage = 4.9 years) met inclusion criteria. All but one study featured requesting as the
+                                             primary dependent variable. Visual analysis and meta-analysis indicated no differ-
+                                             ences between use of SGDs and picture exchange for children learning to request.
+                                             Children demonstrated preferences for and learned to request more successfully
+                                             with SGDs than with manual sign. Children who preferred picture exchange also
+                                             learned to request more easily with picture exchange than with SGDs.
+                                             Conclusions: Young children with disabilities may be able to request equally
+                                             well with SGDs and picture exchange systems in structured contexts. More
+                                             research is needed comparing AAC modes with diverse participants, communi-
+                                             cation functions, linguistic complexity, and learning contexts.
+                                             Supplemental Material: https://doi.org/10.23641/asha.22111181
+
+       Children who cannot meet all their communication                 2020; Ganz et al., 2014; Romski et al., 2010; Schlosser &
+needs with speech (i.e., children with complex communica-               Wendt, 2008).
+tion needs [CCN]) are likely to benefit from comprehen-
+sive early intervention services that incorporate augmenta-             Relative Advantages of AAC Systems
+tive and alternative communication (AAC)--systems for
+communicating that can be used instead of or in addition                       There are advantages and disadvantages to different
+to speech (Beukelman & Light, 2020; Romski et al.,                      types of AAC. Unaided systems (e.g., manual sign [MS]
+2015). Extant research has shown that AAC promotes                      language) do not require communicators to acquire or carry
+gains in spoken language, improvement in speech intellig-               anything with them. This marked advantage potentially
+ibility, reduction in challenging behaviors, and improve-               contributes to speech-language pathologists' frequent rec-
+ment in language comprehension (Beukelman & Light,                      ommendation of sign language as AAC for young children
+                                                                        who are not speaking (Lorang et al., 2022). Sign language
+Correspondence to Natalie S. Pak: natalie.s.pak@vanderbilt.edu. Dis-    can be less useful when communication partners recognize
+closure: The authors have declared that no competing financial or non-  a limited number of signs and when signs must be adapted
+financial interests existed at the time of publication.                 to accommodate children's fine motor abilities (Johnston
+                                                                        & Coseby, 2012).
+
+786 American Journal of Speech-Language Pathology · Vol. 32 · 786­802 · March 2023 · Copyright © 2023 American Speech-Language-Hearing Association
+
+            Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+       Aided systems ameliorate some disadvantages of            were unable to draw conclusions about the effects of preference
+using unaided AAC systems because they are more accessible       on learning to communicate using either type of system. Cer-
+and transparent for most communication partners. The most        tainly, participant preference for an AAC system should be a
+well-established picture-based aided AAC system is the Pic-      major factor in clinical decision making. Understanding the
+ture Exchange Communication System (PECS; Bondy &                potential association between device preferences and learning is
+Frost, 2001). PECS has a well-defined teaching protocol          critical to promoting effective, tailored AAC interventions for
+based on the principles of applied behavior analysis. The        young children. Further research on the role of preference in
+phases of training progress from requesting by exchanging sin-   learning and using communication systems is warranted.
+gle symbols for desired items in Phase 1 to answering ques-
+tions such as, "What do you see?" with short phrases in Phase           Children's ability profiles also influence their learning
+6. The effectiveness of PECS interventions for teaching chil-    and use of AAC systems. Cognitive ability does not deter-
+dren with autism to request is supported by a substantial body   mine readiness for learning AAC more broadly (Kangas &
+of research, but few studies have targeted functional commu-     Lloyd, 1988); however, it could be that certain AAC sys-
+nication skills beyond requesting (Ganz et al., 2012).           tems are easier to learn for children at different develop-
+                                                                 mental levels. The ways that families and clinicians make
+       Aided AAC interventions involving speech-generating       decisions related to AAC in practice suggest that cognitive
+devices (SGDs) also have research support (Crowe et al.,         ability is sometimes used as a reason for implementing one
+2021; Ganz et al., 2014; Gevarter & Zamora, 2018). A dis-        AAC system over another (Lorang et al., 2022). Overall, it
+tinguishing feature of SGDs, in addition to providing speech     is important to directly investigate the effect of children's
+output, is the capacity for a virtually unlimited range of lan-  ability profiles on their use of different AAC modes.
+guage content (Light et al., 2019). Compared with picture
+symbols and static displays, which have limited capacity for            A variety of AAC systems are generally effective at
+language content, SGDs may better support the complex lan-       supporting the communication of children with CCN. Even
+guage use required to meet the academic and social needs         so, children with CCN may learn one system more effi-
+of school-age children (Arndt & Schuele, 2013). Some             ciently than others, suggesting a need to directly compare
+researchers have observed that children using SGDs learned       AAC systems to identify the best system for individual
+to produce multi-symbol utterances more rapidly than chil-       learners. Comparative studies of different AAC systems
+dren using static communication boards without speech            have been synthesized in three previous systematic literature
+output, although both modes were ultimately effective            reviews of single case design studies (Aydin & Diken, 2020;
+(Binger et al., 2008; Binger & Light, 2007). Another advan-      Gevarter et al., 2013; Lorah et al., 2021). Gevarter et al.
+tage of SGDs is the variety of access methods available for      (2013) reviewed 28 studies with participants from 2 to 52 years
+selecting symbols, including direct selection, eye gaze, and     of age and a variety of ability profiles. The authors concluded
+switches with or without scanning (Beukelman & Light,            that multiple types of AAC systems could be effective for any
+2020). This range of access methods can accommodate the          given person but that aided systems were generally superior to
+needs of children with a variety of sensory and motor abili-     unaided systems in terms of efficiency and participant prefer-
+ties as well as increase efficiency of communicating. Aided      ence. More recently, two meta-analyses of peer-reviewed stud-
+AAC systems (e.g., PECS or SGD) require children and             ies concluded that SGD and PE conditions produced more
+their caregivers to acquire, carry, and maintain the systems     consistent and robust effect sizes compared with MS condi-
+(e.g., programming vocabulary; Light et al., 2019). SGDs,        tions for children up to 14 years old with autism (Aydin &
+in particular, may present a significant burden to families      Diken, 2020; Lorah et al., 2021). Overall, the research indi-
+in terms of cost and effort to maintain the device.              cates that children with autism tend to learn to use aided sys-
+                                                                 tems to communicate more effectively and efficiently than
+Child Characteristics and AAC Selection                          unaided systems. Recent meta-analyses are limited to samples
+                                                                 of children with autism (Aydin & Diken, 2020; Lorah et al.,
+       Educational professionals and families must consider,     2021), and several years have passed since Gevarter et al.
+among other characteristics, children's device preferences and   (2013) conducted their review; therefore, an updated synthesis
+developing skill repertoires and abilities when selecting an     of research is warranted.
+AAC system (Beukelman & Light, 2020). To measure device
+preference, researchers typically record the AAC system that     Current Research Synthesis
+a participant selects when multiple systems are available. In a
+systematic review of literature on measurement of device pref-          The purpose of the current systematic literature
+erences, van der Meer et al. (2011) found that two thirds of     review and meta-analysis was to investigate the compara-
+participants (ages 2.8­22 years) demonstrated a degree of        tive effectiveness and efficiency of SGDs and other AAC
+preference for SGDs and one third demonstrated a degree          systems on young children's communication abilities. The
+of preference for picture exchange (PE) systems. The authors     following research questions were addressed: (a) Do young
+                                                                 children with CCN learn targeted symbolic communication
+
+                                                                                           Pak et al.: Comparing AAC Interventions 787
+
+Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+skills more efficiently using SGDs compared with other         Behavior Abstracts, ERIC, and ProQuest Dissertations &
+types of AAC (e.g., sign language, PE)? (b) Do young chil-     Theses Global) were searched. These databases were
+dren with CCN use symbolic communication with greater          selected because they contained research related to behav-
+complexity (e.g., with more advanced morphology or syn-        ioral and educational interventions. To minimize publica-
+tax) in interventions incorporating SGDs compared with         tion bias, dissertations and theses were included in the
+other types of AAC? (c) Do outcomes vary depending on          search (King et al., 2020). A summary of the search cri-
+dependent variable characteristics (i.e., communication        teria and detailed search terms are in Table 1.
+function, linguistic form), child characteristics (i.e., AAC
+preference, etiology of CCN, cognitive ability), and internal         The first author conducted the initial online data-
+validity of the studies?                                       base search on February 19, 2021, and an updated search
+                                                               on October 5, 2022. Zotero (Version 5.0) was used to
+Method                                                         remove duplicate records. The first author and a trained
+                                                               doctoral student independently screened the titles and
+Search and Selection of Studies                                abstracts of all identified articles using Rayyan online soft-
+                                                               ware (Ouzzani et al., 2016). All articles endorsed by at
+       A systematic search of the literature was conducted     least one reviewer during title and abstract screening were
+to identify studies meeting the following criteria: (a) the    included for full text review. Both reviewers independently
+article was published in English or Spanish, (b) the study     reviewed the full text of every remaining article and
+had an experimental or quasi-experimental design, (c) par-     resolved disagreements via consensus. Finally, the first
+ticipants were younger than 9 years old (early childhood       author conducted searches for additional articles by authors
+or early elementary age), (d) participants had CCN, (e)        who appeared multiple times among the identified articles
+the study included a comparison of an SGD intervention         (Larah van der Meer, Dean Sutherland, Jeff Sigafoos, and
+condition with a low-tech AAC intervention condition for       Laurie McLay) and among references lists. Because only
+each participant, and (f) primary study outcomes were          one experimental group design study was identified
+related to language or communication. For single case          (Gilroy et al., 2018), only single-case design studies were
+designs, at least one participant had to meet all criteria.    included in the review and meta-analysis.
+For group designs, the majority of participants or the
+mean value (e.g., age) had to meet criteria. Four online       Data Collection
+databases (APA PsycInfo, Linguistics and Language
+                                                                      Study features, rigor, participant characteristics, design
+Table 1. Criteria and search terms.                            information, and outcomes were coded in Research Electronic
+
+Component        Inclusion criteria                            Exclusion criteria               Search terms
+
+Participants     Children ages 0­8;11 (years;months) and  Children 9 years or older and/or      child*a
+Primary             had complex communication needs          typically developing               ("speech generating device*" OR
+
+   intervention  Included a speech-generating             Consisted of cochlear implants           "voice output communication aid*"
+                    device or voice output                   and/or assistive technology           OR SGD* OR VOCA OR VOCAs
+Comparison          communication aid                        interventions unrelated to            OR iPad OR dynavox or "prentke
+   intervention                                              communication (e.g., iPad             romich") NOT "cochlear implant*"b
+                 Included an AAC system without              visual schedules)                  compar*a
+Outcomes            speech output                                                               Not applicable
+                                                          Not applicable
+Study design     At least one of the following                                                  treat* or therap* or train* or teach*
+                    measures of symbolic                  Only spoken language, writing,           or intervention*b
+Other               communication using AAC:                 or literacy outcomes
+                    (a) rate, (b) complexity                 measured                           Filtered to only return English or
+                                                                                                   Spanish results
+                 Experimental designs including           Designs were nonexperimental
+                    single case designs,                     (e.g., case studies, descriptive
+                    randomized controlled trials,            analyses, qualitative studies,
+                    or quasi-experimental designs            descriptive texts [e.g., book
+                                                             chapters]), or literature reviews
+                 Published in English or Spanish             or syntheses
+
+                                                          Published in any language other
+                                                             than English or Spanish
+
+Note. The truncation character (*) is used to search for variations of terms (e.g., train* retrieves trainer, training, etc.). AAC = augmentative
+and alternative communication.
+
+aFull text search. bTitle and abstract search.
+
+788 American Journal of Speech-Language Pathology · Vol. 32 · 786­802 · March 2023
+
+            Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+Data Capture databases (Harris et al., 2009, 2019). At the            Interrater Agreement
+study level, coded data included (a) authors, (b) publication                The primary coder (first author), a doctoral student,
+year, (c) publication type (e.g., peer-reviewed journal, disserta-
+tion), (d) design (e.g., alternating treatments design [ATD]),        coded and plot digitized data for all studies. Reliability
+(e) number of participants, (f) whether authors reported              coding and plot-digitizing was conducted by secondary
+inclusion criteria for participants, and (g) whether authors          coders on a randomly selected a sample of six studies
+measured and reported social validity. If there was a dis-            (32%), including 18 participants and graphs. Two second-
+crepancy between the design the authors reported using and            ary coders (second author and a trained doctoral student)
+the design they described in the methods of their article,            coded study and participant data. All disagreements were
+coders selected the design the authors described in the               discussed and resolved via consensus. Consensus coded
+methods (rather than what they named the design). For exam-           data were used in final analyses. Agreement was calcu-
+ple, a major feature distinguishing ATDs and adapted alter-           lated on a point-by-point basis, with the number of agree-
+nating treatments designs (AATDs) is whether the same                 ments divided by the total number of agreements plus dis-
+behavior set was taught in all compared conditions (i.e.,             agreements to yield a percent of agreement (Ledford
+ATDs) or separate behavior sets were taught in each condi-            et al., 2018). The average point-by-point interrater agree-
+tion (i.e., AATDs; Wolery et al., 2018). For these studies, the       ment across study-level and participant-level data was
+behavior sets were the symbols (i.e., words, phrases) pro-            91.85% (79.31%­97.54%). The secondary coder for plot
+duced via the AAC system. When authors reported use of                digitizing data was a trained undergraduate student.
+an ATD with different symbol sets in each condition, the              Agreements between primary and secondary plot digitized
+design was coded an AATD. At the participant level, coded             data were counted if the two estimates were within 3% of
+data included (a) participant characteristics (e.g., age, abilities,  one another relative to the overall scale of the dependent
+race/ethnicity, home languages), (b) intervention conditions          variable. For example, for a count variable on a y-axis
+(e.g., AAC types and technologies, dosage, instructional              scale of 0­20, the data points scored within 0.6 of one
+approach, setting, implementers), (c) dependent variables (e.g.,      another were counted as agreements. Only primary plot-
+function of communication, linguistic form, metric), and (d)          digitized data were used in final analyses. The cumulative
+outcomes based on visual analysis. Only participant-level data        interrater agreement for plot-digitized data was 98.24%.
+for participants younger than 9 years old were coded (i.e., at
+least one participant from each included study).                      Internal Validity
+                                                                             Internal validity was evaluated using the Compara-
+       Unlike group design studies, single-case design stud-
+ies typically provide raw data in the form of graphs,                 tive Single-Case Experimental Design Rating System
+allowing for effect size calculation for each participant             (CSCEDARS; Schlosser et al., 2018). The CSCEDARS is
+(Pustejovsky & Ferron, 2017). To extract raw data, coders             intended for use with single-case experimental designs that
+marked all data points on images of graphs using open-                compare effectiveness and efficiency of two or more
+source Plot Digitizer software (Huwaldt, 2020), then                  instructional interventions (Schlosser et al., 2018). The
+exported the values of data points to Microsoft Excel for             Supplemental Material S1 shows our adaptations to the
+further coding. Each digitized data point was coded with              original CSCEDARS items. Items 1­22 address aspects of
+(a) study ID, (b) participant ID, and (c) AAC condition               internal validity pertaining to all designs and participants
+(e.g., SGD, PE, MS). Only intervention phase data were                in a study. Item 23 involves evaluating whether at least
+extracted. Baseline phase data were not extracted because             one condition was clearly superior to the other compared
+they were not available for all designs and were not from             conditions with a binary yes/no response. Because several
+a primary comparison condition. Baseline levels were,                 designs in the current sample included more than two condi-
+however, used to evaluate experimental control for each               tions, Item 23 was excluded from the overall CSCEDARS
+study. Postintervention data were not extracted for meta-             score. Coders instead visually analyzed the outcomes for
+analyses, because postintervention phases typically did not           each two-way comparison (e.g., SGD vs. PE, SGD vs.
+include all compared conditions. For interventions with               MS). Like CSCEDARS Item 23, procedures for visual
+multiple PECS phases, only Phase 1 data were extracted                analysis depended on whether there was a mastery/learning
+and analyzed. Participants who received interventions using           criterion for each condition. For comparisons in studies
+the PECS teaching protocol often progressed through the               with mastery/learning criteria, coders analyzed which AAC
+PECS phases at different rates with each AAC system.                  system was learned more efficiently (i.e., mastered in fewer
+Children who advanced more quickly to more difficult                  sessions or trials). For comparisons without criteria, coders
+phases in one condition could, therefore, demonstrate lower           analyzed whether children performed better in one condi-
+performance in that condition, because responding correctly           tion for at least three consecutive measurement points
+was more challenging. Including these data in meta-analyses           (Schlosser et al., 2018).
+may have yielded misleading findings.
+                                                                             The primary coder (first author) rated CSCEDARS
+                                                                      items for all studies, and a secondary coder (second
+
+                                                                                           Pak et al.: Comparing AAC Interventions 789
+
+Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+author) rated CSCEDARS items for the randomly                   the small sample size, findings from this study are reported
+selected sample of six studies (32%). All disagreements         separately and were excluded from meta-analyses.
+were resolved via consensus, and consensus codes were
+used in final analyses. The average point-by-point inter-              Finally, the likelihood of selective reporting and/or
+rater agreement for CSCEDARS data across studies was            publication bias was addressed by visually inspecting fun-
+90.91% (77.27%­100.00%).                                        nel plots for evidence of asymmetry and by conducting
+                                                                multilevel meta-analyses to determine whether the stan-
+Effect Size Calculation and Meta-Analysis                       dard error predicted effect sizes, thus indicating significant
+                                                                asymmetry of the funnel plots (Rodgers & Pustejovsky,
+       There is little methodological guidance regarding the    2021). Sensitivity analyses with and without extreme out-
+selection of appropriate effect size indices within meta-       liers (> 3 SD above or below the mean) were conducted
+analyses of ATDs or AATDs (Pustejovsky & Ferron,                to determine whether outliers skewed findings.
+2017). The log response ratio (LRR) effect size was
+selected in part for its relative insensitivity to procedural   Results
+variations across studies, such as the number of sessions
+per condition (Pustejovsky, 2019). The LRR is appropri-                A PRISMA diagram (Haddaway et al., 2021) illus-
+ate for data on a ratio scale that are unlikely to have zero    trating each step in the search process and reasons for
+levels of behavior in the reference condition (Pustejovsky,     excluding individual studies is in Figure 1. The online
+2018). The data in the current meta-analysis met these cri-     database search yielded 741 records. After removal of 98
+teria because each condition was an active intervention,        duplicates, titles and abstracts of 643 records were
+and neither was likely to be at or near zero levels during      screened. Fifty records advanced to full-text review. No
+the intervention phase. The LRR has no widely accepted          additional studies were identified via author searches or
+benchmarks, but it can be converted to a percentage dif-        citation searches. Studies excluded during coding are in
+ference, which aids interpretation (Pustejovsky, 2018,          the Supplemental Material S2. After all exclusions, 19
+2019). One limitation of the LRR is that it assumes there       unique studies were coded and analyzed. Full references
+are no increasing or decreasing trends in the data              for included studies are marked with an asterisk in the
+(Pustejovsky, 2018). Trends were likely in the current          References list and also listed in Supplemental Material
+group of studies, given that the children were acquiring        S3. Throughout the remaining sections, numbers of studies
+skills over the course of the intervention phase. Visual        are represented by m and numbers of participants are rep-
+analysis in conjunction with calculation of effect sizes        resented by n.
+helped to address this limitation. All statistical analyses
+were conducted using RStudio Version 1.2.5033 (R Core           Participant Characteristics
+Team, 2020). LRRs were calculated for each participant
+using plot digitized data and the batch_calc_ES() function             A summary of included participants is in Table 2.
+of the "SingleCaseES" package (Pustejovsky et al., 2021).       There were 66 participants in the target age range across
+                                                                all studies, with 1­9 participants (M = 3.5) per study. Par-
+       A random effects multilevel meta-analysis of plot        ticipants ranged in age from 3 to 8 years (M = 4.9). There
+digitized data was conducted for each comparison (i.e.,         were 44 boys, 13 girls, and nine children for whom gender
+SGD vs. PE, SGD vs. MS) with participant-level data             was not reported and could not be inferred based on pro-
+nested within studies (Pustejovsky & Ferron, 2017). The         noun usage. Race or ethnicity was only reported for nine
+rma.mv() function from the metafor package was used to          participants: one Hispanic/Latina, three Samoan, and five
+carry out analyses (Viechtbauer, 2010). First, overall aver-    White/Caucasian children. Information about the child's
+age effect sizes and variance were estimated for each com-      primary language, based on explicit reporting or on words
+parison. Next, the distributions of the proposed moderator      the child produced prior to the study, was available for
+variables were examined. When the distributions of cate-        six children. These were Spanish (n = 1), Maltese (n = 1),
+gorical variables were imbalanced, with most of the stud-       Setswana (n = 2), and English (n = 2). The majority of
+ies and effect sizes in a single category (e.g., most partici-  children had a primary diagnosis of an autism spectrum
+pants having the same etiology of CCN), those variables         disorder (n = 45), followed by developmental delay (n =
+were excluded from moderator analyses. Such imbalances          10), visual impairment (n = 3), cerebral palsy (n = 2),
+can lead to variable Type 1 error rates (Tipton, 2015).         Down syndrome (n = 2), speech/language impairment
+For variables with reasonably balanced distributions, the       (n = 1), attention-deficit/hyperactivity disorder (n = 1),
+variables were added to the models one at a time to evalu-      congenital myotonic dystrophy (n = 1), and arthrogryposis
+ate the influence of these variables on effect sizes. One       (n = 1). Most children (n = 42) used fewer than 10 spoken
+study (two participants) involved comparison of SGD and         words and many (n = 21) used gestures (e.g., pointing,
+communication board conditions (Tönsing, 2016). Due to
+
+790 American Journal of Speech-Language Pathology · Vol. 32 · 786­802 · March 2023
+
+            Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+Figure 1. Preferred Reporting Items for Systematic Reviews and Meta-Analyses flow diagram.
+
+giving) to communicate. Scores from formal receptive and       application was usually Proloquo2Go (n = 41), followed by
+expressive language assessments were available for 28 and      SoundingBoard (n = 7) and GoTalk Now (n = 2). For
+37 children, respectively. Fine motor scores were available    most participants, intervention was conducted in a one-on-
+for 17 participants. Cognitive scores were reported for        one context (n = 54) at their school (n = 39) by a
+only eight children.                                           researcher (n = 47). For seven children, the implementer
+                                                               was described imprecisely as the "instructor," "trainer," or
+Study Characteristics                                          one of several implementers (e.g., a researcher or the child's
+                                                               teacher). Implementers were not well described aside from
+       A summary of included study designs is in Table 3.      their role. None of the authors reported the race/ethnicity,
+Nineteen studies included single case designs, including both  gender, or languages spoken by the implementer. The
+ATDs (m = 12) and AATDs (m = 7). Seven ATDs and                PECS teaching protocol was implemented in six studies
+three AATDs were embedded in multiple baseline or multi-       (n = 19) to teach children to request using both PE and the
+ple probe designs. There were two to four compared condi-      SGD. Interventions in other studies included teaching strat-
+tions across studies. Many studies (m = 17, n = 59) included   egies such as constant time delay (e.g., Achmadi et al.,
+a mastery criterion (e.g., 80% accurate responding for three   2014), graduated guidance (e.g., van der Meer, Kagohara,
+consecutive sessions; van der Meer, Kagohara, et al., 2012)    et al., 2012; van der Meer, Sutherland, et al., 2012), and
+for ending the study or moving to the next phase. Thus,        least-to-most prompting (e.g., Son et al., 2006).
+most outcomes represented differences in the child's effi-
+ciency of learning in the two contrasting conditions.                 The target behavior for nearly all studies and partic-
+                                                               ipants was requesting or manding for preferred items or
+       All studies included an intervention condition involv-  activities (m = 18, n = 64). Tönsing (2016) compared chil-
+ing use of an SGD. The comparison conditions included a        dren's production of two-word semantic relations (agent-
+PE system (including studies using PECS; Bondy & Frost,        action and attribute-entity) with an SGD versus a commu-
+2001) for 61 participants, manual sign (MS for 29 partici-     nication board. In another study (Boesch et al., 2013b),
+pants, and a communication board for two participants).        children's nonverbal social communicative behaviors (eye
+SGDs included an iPad and/or iPod Touch (n = 50),              contact, physical orientation, and smiling) were measured
+GoTalk (n = 10), Tech/Talk (n = 3), Logan ProxTalker           in addition to requesting behaviors. These social commu-
+(n = 2), and a 7-Level Communication Builder (n = 1).          nicative behaviors were not included in the meta-analysis
+When the SGD was an iPad or iPod Touch, the software           because they were not symbolic communication.
+
+                                                                                           Pak et al.: Comparing AAC Interventions 791
+
+Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+792 American Journal of Speech-Language Pathology · Vol. 32 · 786­802 · March 2023  Table 2. Overview of participants.
+
+                                                                                                               Participants Participants Age range            Primary        Home        Races/                                                     Preference  Cognitive
+                                                                                                                                                             diagnoses    languages    ethnicities                                                   reported    scores
+                                                                                    Study                      in study     in review  (years)      Genders                                                                                                     reported
+
+                                                                                    Achmadi et al., 2014                4   4          4­5          4M       3 ASD, 1 DD  NR           NR                                                           Y           N
+
+                                                                                    Agius & Vance, 2016                 3   3          3­4          3M       3 ASD        English, Maltese NR                                                       Y           Y
+
+                                                                                    Beck et al., 2008                   4   4          Preschool 3 M, 1 F 3 ASD, 1 SLI    NR           White                                                        N           N
+
+                                                                                    Bloh et al., 2020                   4   4          3­4          3 F, 1 M 4 VI         NR           NR                                                           N           N
+
+                                                                                    Bock et al., 2005                   6   6          4            6M       6 DD         NR           NR                                                           N           N
+
+                                                                                    Boesch et al., 2013a                3   2          6­7          1 M, 1 F 2 ASD        NR, Spanish  White, Latina                                                N           N
+
+                                                                                    Caradine, 2021                      1   1          8            1F       1 DS         NR           NR                                                           Y           N
+
+                                                                                    Couper et al., 2014                 9   8          4­8          8M       8 ASD        NR           NR                                                           Y           N
+
+                                                                                    Hill & Flores, 2014                 5   3          3­4          2 F, 1 M 2 DD, 1 ASD  NR           NR                                                           N           Y
+
+                                                                                    Lorah et al., 2013                  5   5          3­5          5M       5 ASD        NR           NR                                                           Y           N
+
+                                                                                    Lorah, 2016                         7   2          8            1 M, 1 F 2 ASD        NR           NR                                                           Y           N
+
+                                                                                    McLay et al., 2015                  4   3          7­8          2 M, 1 F 3 ASD        NR           Pacific Islander                                             Y           N
+
+                                                                                    McLay et al., 2017                  2   1          5            1M       1 ASD        NR           NR                                                           Y           N
+
+                                                                                    Simms, 2015                         12  9          3­6          NR       8 ASD, 1 ADHD NR          NR                                                           Y           N
+
+                                                                                    Son et al., 2006                    3   3          3­5          2 F, 1 M 3 ASD        NR           NR                                                           Y           N
+
+                                                                                    Tönsing, 2016                       4   2          6­8          1 M, 1 F 2 CP         Setswana     NR                                                           Y           Y
+
+                                                                                    van der Meer, Didden,               4   1          6            1M       1 ASD        NR           NR                                                           Y           N
+
+                                                                                    et al., 2012
+
+                                                                                    van der Meer, Kagohara,             4   3          5­7          3M       1 DS, 1 DD,  NR           NR                                                           Y           N
+
+                                                                                    et al., 2012                                                             1 CMD
+
+                                                                                    van der Meer, Sutherland,           4   2          4            2M       2 ASD        NR           NR                                                           Y           N
+
+                                                                                    et al., 2012
+
+                                                                                    Note. Age, gender, diagnosis, home language, and race/ethnicity data are only for participants included in the review. M = male; ASD = autism spectrum disorder; DD = develop-
+                                                                                    mental delay; NR = not reported; Y = yes; N = no; SLI = specific language impairment; VI = visual impairment; DS = Down syndrome; ADHD = attention-deficit/hyperactivity disorder;
+                                                                                    CP = cerebral palsy; CMD = congenital myotonic dystrophy.
+
+                                                                                                               Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+Table 3. Included studies.
+
+Studya                                  Publication type          Design              Conditions Target behavior Metric
+
+Achmadi et al., 2014                    Journal           ATD                           3        Request                  Percent
+Agius & Vance, 2016                     Journal
+Beck et al., 2008                       Journal           AATD with concurrent MBL      2        Request                  Percent
+Bloh et al., 2020                       Journal
+Bock et al., 2005                       Journal           AATD                          2        Request                  Percent
+Boesch et al., 2013a                    Journal
+Caradine, 2021                          Dissertation      ATD with nonconcurrent MBL    2        Request                  Percent
+Couper et al., 2014                     Journal
+Hill & Flores, 2014                     Journal           AATD                          2        Request                  Percent
+Lorah et al., 2013                      Journal
+Lorah, 2016                             Journal           AATD with concurrent MBL      2        Request, social          Count
+McLay et al., 2015                      Journal
+McLay et al., 2017                      Journal           AATD with concurrent MP       2        Request                  Percent
+Simms, 2015                             Dissertation
+Son et al., 2006                        Journal           ATD with nonconcurrent MBL    3        Request                  Percent
+Tönsing, 2016                           Journal
+van der Meer, Didden, et al., 2012      Journal           ATD                           2        Request                  Count
+van der Meer, Kagohara, et al., 2012    Journal
+van der Meer, Sutherland, et al., 2012  Journal           ATD                           2        Request                  Percent
+
+                                                          ATD                           2        Request                  Percent
+
+                                                          ATD with nonconcurrent MP     3        Request                  Percent
+
+                                                          ATD with nonconcurrent MP     3        Request                  Percent
+
+                                                          AATD                          2­4      Request                  Percent
+
+                                                          ATD                           2        Request                  Percent
+
+                                                          AATD                          2        2-symbol statement Count
+
+                                                          ATD with concurrent MP        2        Request                  Percent
+
+                                                          ATD with concurrent MP        2        Request                  Percent
+
+                                                          ATD with nonconcurrent MBL    3        Request                  Percent
+
+Note. ATD = alternating treatments design; AATD = adapted alternating treatments design; MBL = multiple baseline; MP = multiple probe.
+aFirst author, publication year.
+
+Internal Validity                                                 communication more efficiently and with greater com-
+                                                                  plexity with interventions incorporating SGDs over other
+       The range of possible scores on the CSCEDARS for           types of AAC. The third research question was whether
+each study was 0­22, with higher scores indicating greater        effects differed by dependent variable, child, and study
+internal validity. The scores for the 19 studies in the cur-      characteristics. Visual analysis included outcomes from 57
+rent review ranged from 8.66 (Simms, 2015) to 17.66
+(Simms, 2015). Table 4 displays the total item scores             Table 4. Comparative Single-Case Experimental Design Appraisal
+across studies. All study reports included operational defi-      Rating System (CSCEDARS; Schlosser et al., 2018) summary scores.
+nitions of the dependent variables that were the same across
+conditions (Items 3 and 10). All studies had procedural safe-     CSCEDARS              CSCEDARS           Number of studies
+guards against carryover effects (Item 16) because the nature     item category         item number       meeting item criteria
+of the experimental comparison conditions made them highly
+discriminable to participants. In other words, the children       Participants               1                    12
+were able to tell which condition was occurring because only                                                      14
+one AAC modality was available in each condition. Fourth,         Setting                    2                    19
+all the included studies had designs that minimized order                                                         13
+effects (Item 17), because there were multiple rapid alterna-     Dependent variable         3
+tions between the conditions. None of the included studies                                                         5
+met the criterion for allocating stimuli/sets to each condition                              4                    17
+in a concealed manner (Item 21) and only two of seven
+AATD studies (Beck et al., 2008; Bock et al., 2005) met the                                  5                     6
+criterion for random allocation of stimuli/sets to conditions                                                      5
+(Item 20). Additionally, many authors did not report proce-       Independent variable       6                    10
+dural fidelity separately for each condition (Item 7); thus, it                                                   19
+was unclear if the level of fidelity was similar across compari-                             7                    13
+son conditions.                                                                                                   11
+                                                                  Baseline                   8                    16
+Effects on Symbolic Communication                                                                                 14
+                                                                  Participants               9                     7
+       The first two research questions were whether young                                                        19
+children with CCN would learn to use symbolic                     Dependent variable         10                   19
+                                                                                                                  16
+                                                                                             11                    4.29a
+                                                                                                                   2
+                                                                  Independent variable       12                    0
+                                                                                                                   7
+                                                                  Baseline                   13
+
+                                                                                             14
+
+                                                                  Carryover effects          15
+
+                                                                                             16
+
+                                                                  Order effects              17
+
+                                                                                             18
+
+                                                                  Instructional sets         19
+
+                                                                                             20
+
+                                                                                             21
+
+                                                                  Experimental control       22
+
+                                                                  aReflects sum scores across studies. The item allows for partial
+                                                                  credit (0, 0.33, 0.66, 1).
+
+                                                                                                   Pak et al.: Comparing AAC Interventions 793
+
+        Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+participants; meta-analysis included outcomes from 52 par-     favored the SGD condition for 14 children, the PE condi-
+ticipants. The reasons for exclusion of participants from      tion for eight children, and neither condition for 16 chil-
+each analysis are in Supplemental Material S4.                 dren. For the comparisons in which children were required
+                                                               to pick up the SGD, none of the children learned more
+Visual Analysis of Outcomes                                    quickly in the SGD condition. Outcomes favored the PE
+       Outcomes based on visual analysis are shown in          condition for six children and neither condition for seven
+                                                               children.
+Figure 2. Fifty-two designs included a comparison
+between an SGD and a PE condition. Many participants           Meta-Analysis of Outcomes
+learned to use both systems equally efficiently (n = 22),             Effect sizes are depicted in forest plots in Figures 3
+and there were equal numbers of participants with supe-
+rior outcomes in each condition (n = 14). Twenty-five          and 4. For the SGD versus PE comparisons (m = 15, n =
+designs included a comparison between an SGD and an            49), the average effect size was small and nonsignificant
+MS condition. Most participants achieved better request-       (LRR = -0.20, p = .46). This indicates that across stud-
+ing outcomes with the SGD condition (n = 18). Two par-         ies and participants, levels of responding for SGD and
+ticipants learned to use MS more effectively or efficiently    PE conditions were approximately equal. For the SGD
+than SGD, two participants learned the two systems             versus MS conditions (m = 7, n = 20), the average effect
+equally well, and three participants did not meet criteria     size was statistically significant (LRR = 2.38, p < .001),
+in either the SGD or MS condition. Two participants who        indicating that requesting outcomes were more than 10
+met inclusion criteria in the Tönsing (2016) study were        times higher for SGD than for MS conditions. All target
+taught to formulate two-word phrases using an SGD and          behaviors in these meta-analyses were single-symbol
+a communication board during storybook reading. Partici-       requests. This made it impossible to address the second
+pant 3 met the mastery criterion with the communication        research question regarding complexity of communica-
+board but not the SGD; Participant 4 did not reach mas-        tion via meta-analysis.
+tery criterion in either condition.
+                                                                      Funnel plots are depicted in Figure 5. The standard
+       Post hoc analysis. For 13 children across three stud-   errors did not significantly predict effect sizes for SGD
+ies, correct responses required fully or partially picking up  versus PE comparisons (ß = 1.62, p = .09), indicating that
+the SGD prior to activating the symbol (Agius & Vance,         the effect sizes were not significantly asymmetrical. There-
+2016; Beck et al., 2008; Bock et al., 2005). This require-     fore, the funnel plots and statistical tests did not indicate
+ment was meant to prepare the child for the Phase 2 of         a high risk of publication bias for SGD versus PE com-
+the PECS protocol in which the child would be required         parisons. Upon visually inspecting funnel plots, there were
+to carry the device to the communication partner. These        two outliers (> 3 SDs below the mean) among the SGD
+data were coded and analyzed to examine whether these          versus PE effect sizes (Beck et al., 2008, participants Brad
+procedures influenced outcomes. There was a notable dis-       and Mitchell). These two effect sizes were excluded in a
+crepancy. For SGD versus PE comparisons in which chil-         sensitivity analysis to investigate whether findings changed
+dren were not required to physically pick up the SGD           when the outliers were removed. The average effect size
+prior to symbol activation (m = 12, n = 36), outcomes          remained small and nonsignificant (LRR = -.03, p = .78).
+
+Figure 2. Visual analysis outcomes. For speech-generating devices (SGD) versus picture exchange (PE) comparisons, 52 participants in 16
+studies were visually analyzed. For SGD versus manual sign (MS) comparisons, 25 participants in eight studies were visually analyzed.
+
+794 American Journal of Speech-Language Pathology · Vol. 32 · 786­802 · March 2023
+
+            Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+Figure 3. Effect sizes for speech-generating devices versus picture exchange comparisons. RE = random effects.
+
+       For SGD versus MS comparisons, many effect sizes           other causes (Rodgers & Pustejovsky, 2021). The forest plot
+were exceedingly small or large relative to the mean and          in Figure 4 indicated that extreme effect sizes tended to
+had smaller standard errors than expected. Standard errors        vary by participant rather than by study. Thus, there may
+significantly predicted effect sizes (ß = 4.31, p < .05). This    have been participant characteristics (e.g., fine motor abili-
+finding indicated that the funnel plots, which depicted sev-      ties) that influenced children's ability to learn manual sign,
+eral effect sizes outside the expected range, were significantly  with most children either learning it easily or not at all.
+asymmetrical. This finding is an indicator of potential publi-    Because there were no obvious outliers, sensitivity analyses
+cation bias, although significant asymmetry could have            were not conducted for SGD versus MS comparisons.
+
+                                                                                           Pak et al.: Comparing AAC Interventions 795
+
+Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+Figure 4. Effect sizes for speech-generating devices versus manual sign comparisons. RE = random effects.
+
+Moderator Analyses                                             study internal validity scores. There was insufficient vari-
+       The third research question addressed the potential     ability or reporting of variables across studies in the sam-
+                                                               ple to conduct moderator analyses with the remaining a
+associations between outcomes and child, study, or vari-       priori or post hoc variables.
+able characteristics. Moderator analyses were planned a
+priori for (a) dependent variable characteristics (i.e., com-         AAC preference. For the SGD versus PE compari-
+munication function, linguistic form), (b) child characteris-  sons, preference was not measured for 18 participants,
+tics (i.e., AAC preference, etiology of CCN, cognitive abil-   including the two outliers (Beck et al., 2008, participants
+ity), and (c) study internal validity. A post hoc variable     Brad and Mitchell). Of the participants for whom prefer-
+was identified while coding studies (i.e., whether the child   ence was measured (m = 11, n = 31), all demonstrated a
+was required to pick up the SGD). Only two moderator           preference for either the SGD (n = 21) or the PE system
+analyses could be completed: child AAC preference and          (n = 10). A multivariate meta-analysis indicated a
+
+796 American Journal of Speech-Language Pathology · Vol. 32 · 786­802 · March 2023
+
+            Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+Figure 5. Funnel plots for speech-generating devices (SGD) versus picture exchange (PE; left) and manual sign (MS; right). For SGD versus
+PE comparisons, 49 participants in 15 studies were included in the meta-analysis. For SGD versus MS comparisons, 20 participants in
+seven studies were included in the meta-analysis.
+
+significant moderating effect of preference on outcomes.         the SGD was more efficient (i.e., mastered in fewer ses-
+The children who preferred the PE system had significantly       sions) than MS for most children learning to request.
+better outcomes with the PE system (LRR = -0.28, p <             Nearly all target behaviors in these studies involved
+.01). The children who preferred the SGD had outcomes            single-symbol responses, which did not allow for investiga-
+that did not differ significantly between the SGD and PE         tion of comparative effects of AAC systems on complexity
+conditions in this small sample (LRR = 0.12, p = .07).           of communication.
+
+       For the SGD versus MS comparisons, preference was                The findings from the current review are consistent
+measured for 19 out of the 20 participants. Sixteen partici-     with those from previous reviews with children with
+pants demonstrated a preference for either the SGD (n = 15)      autism (Aydin & Diken, 2020; Lorah et al., 2021); how-
+or MS (n = 1). The lack of variability in preference across      ever, the current analysis included participants with a
+participants did not allow for further analysis. The one par-    greater range of etiologies of CCN. Generally, aided AAC
+ticipant who demonstrated a preference for MS (Simms,            systems (i.e., SGD, PE) appear to be more effective for
+2015, participant Zane) met mastery criteria more quickly in     requesting outcomes than unaided systems (i.e., MS).
+the SGD and PE conditions than in the MS condition.              These findings are also consistent with those from the one
+                                                                 group design study identified in the search process (Gilroy
+       Internal validity. The internal validity of the study as  et al., 2018) in which both SGD and PECS interventions
+measured by the CSCEDARS summed scores (Items 1­                 resulted in increased prompted and unprompted request-
+22) was not significantly associated with the size of the        ing with no interaction between time and AAC type. The
+differences between conditions for the SGD versus PE             replication of these findings across multiple review teams,
+comparisons (ß = -0.09, p = .38) or the SGD versus MS            analytical methods, and specific research questions
+comparisons (ß = -0.30, p = .21). Results for the SGD            increases confidence in the conclusions (Gast & Ledford,
+versus PE comparisons were unchanged when the two out-           2018).
+liers were removed (ß = -0.05, p = .13).
+                                                                        It was also important to consider for whom and
+Discussion                                                       under what conditions these effects were relevant. Based
+                                                                 on the research identified in the current search, most of
+       The purpose of this systematic review and meta-           the planned moderator analyses could not be performed
+analysis was to summarize the evidence on the compara-           (i.e., function of communication, linguistic form of com-
+tive effectiveness and efficiency of SGDs and other AAC          munication, child ability profiles, child etiology of CCN).
+systems for young children with CCN learning to commu-           Only participant preference for AAC systems and internal
+nicate symbolically. Nineteen unique studies meeting             validity of studies were analyzed as moderators. Children
+inclusion criteria were identified, most of which included       who preferred the PE system over the SGD learned to
+comparisons of SGDs with PE systems, MS systems, or              request significantly more efficiently with the PE system
+both. Results from these studies were visually and statisti-     (i.e., reached mastery in fewer sessions). Children who pre-
+cally synthesized. Between SGDs and PE systems, there            ferred the SGD over the PE system did not learn signifi-
+was no clear advantage of either system for the children         cantly more efficiently with either system, although there
+learning to request among these studies. In comparison,          was a trend in favor of the SGD (p = .07). It is possible
+                                                                 that some children preferred use of PE because of their
+
+                                                                                           Pak et al.: Comparing AAC Interventions 797
+
+Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+ability to communicate more easily using this system,           partner. Outcomes favored the PECS conditions for par-
+whereas children who were able to communicate with              ticipants in these studies. The physical movement required
+both systems tended to prefer the high-tech option with         to initiate a request via each of the AAC systems is intrin-
+more communicative capabilities (e.g., speech output).          sic to the systems; thus, it is one of the aspects that should
+The relation between children's AAC preference and rela-        be compared rather than controlled. In other words,
+tive efficiency of learning bears further investigation.        PECS requires picking up and giving a picture to a com-
+                                                                munication partner, whereas the speech output of SGDs
+       Internal validity was measured using the CSCE-           makes picking up the device unnecessary in many cases.
+DARS tool (Schlosser et al., 2018), adapted for this study.     Requiring children to pick up the SGD may have made it
+There was a wide range in overall scores across these stud-     unnecessarily inefficient to use and thus more difficult to
+ies (8.66­17.66 out of a possible 22 points). In general,       learn in Phase 1 of the PECS protocol.
+these study reports contained sufficient descriptive infor-
+mation about participants, variables, and designs. Areas               A limitation of this review is the lack of investiga-
+of concern were typically lack of reporting of how stimuli/     tion other features of the AAC systems that may have
+sets were assigned to each AAC condition and procedural         influenced their comparative effectiveness or efficiency.
+fidelity for each condition. Sufficient measurement of pro-     For example, SGDs vary in the size and type of displays
+cedural fidelity in each condition is especially important in   (Light et al., 2019). The current synthesis did not explore
+ATDs and AATDs, because interventionists are required           the differences in numbers of symbols available to children
+to learn and execute a separate set of procedures for each      in these studies, although some studies with PECS teach-
+condition and rapidly alternate conditions across sessions      ing protocols included picture symbol discrimination in
+(Wolery et al., 2018). Researchers should take care to          later phases of the intervention (Agius & Vance, 2016;
+measure and report fidelity across conditions to ensure         Beck et al., 2008; Bock et al., 2005; Boesch et al., 2013b).
+that differences in outcomes are not due to discrepancies       There are also different types of SGD displays, such as
+in fidelity across conditions. CSCEDARS scores were not         grid versus visual scene displays, that were not coded for
+significantly associated with outcomes in this relatively       this analysis (Ganz et al., 2015; Light et al., 2019).
+small sample; therefore, there was no evidence that stron-      Finally, secondary dependent variables, generalization
+ger outcomes resulted from weak designs, methods, or            outcomes, and maintenance outcomes were not analyzed
+reporting.                                                      for the current review and meta-analysis, although they
+                                                                were reported in some of the studies. Future systematic
+       The funnel plots and statistical analyses related to     reviews should explore comparative effects for AAC sys-
+publication bias indicated one main reason for concern.         tems with different features on a variety of outcome
+Among the participants who learned to use both the SGD          variables.
+and MS systems, data were significantly asymmetrical
+(ß = 4.31, p < .05) with few effect sizes near the mean         Generalizability and Implications
+(see Figure 5). Based on visual inspection of the forest
+plot (Figure 4), the variability appeared to occur at the              The findings from this synthesis may be expected to
+level of the participant rather than the study. In other        generalize to a specific population and context: young
+words, variability may have been due to individual differ-      children with autism or other developmental delays who
+ences rather than publication bias. Future research should      have CCN when learning to request objects or activities in
+explore the influence of additional child variables on          structured, trial-based teaching contexts. All studies except
+learning using different AAC systems.                           one (Tönsing, 2016) investigated the differential effects of
+                                                                AAC type on accuracy of requesting as the primary
+Strengths and Limitations                                       dependent variable. The purposes of communication
+                                                                extend far beyond requesting and include sharing informa-
+       There were strengths and limitations to the sample       tion, forming and cultivating relationships, practicing
+of studies identified in the current review. These studies      social etiquette within a given society, and organizing
+used ATDs or AATDs, which are appropriate single case           thoughts and ideas (Beukelman & Light, 2020; Light,
+designs for answering comparative research questions, and       1997). Furthermore, competence with various grammatical
+the independent and dependent variables were well               structures has important implications for academic and
+defined. Additionally, most studies included baseline con-      social well-being (Arndt & Schuele, 2013). Yet, children
+ditions that allowed for identification of threats to internal  and adolescents who use AAC tend to communicate using
+validity. An important limitation to the evidence was           single-symbol utterances (Binger & Light, 2008). The find-
+established in the post hoc analysis. The intervention pro-     ings from the current synthesis indicate that SGDs and
+cedures in three studies required children to pick up the       PE systems are often equally efficient to learn for simple
+SGD prior to communicating, despite there being only a          communication tasks (e.g., requesting). Therefore, it may
+small distance between themselves and the communication
+
+798 American Journal of Speech-Language Pathology · Vol. 32 · 786­802 · March 2023
+
+            Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+be more efficient to begin intervention with an SGD that          Conclusions
+would better accommodate growth in grammatical com-
+plexity and diverse communicative functions. In the cur-                 There are many types of AAC with many different
+rent synthesis, only Tönsing (2016) investigated children's       features, all of which should be matched to the communica-
+ability to combine words into phrases for commenting              tion needs of children with CCN. Understanding the relative
+using different AAC systems. Tönsing reported that one            effectiveness and efficiency of different types of AAC is
+child learned more easily with the communication board            important for clinical decision-making. The current system-
+than with the SGD, and another child did not meet learn-          atic review and meta-analysis found that 66 young children
+ing criteria with either AAC system. Further research is          who participated in 19 comparative single-case design studies
+needed to understand the effects of different modes of            were able to learn to use SGD as efficiently as PE and more
+AAC when children are learning more advanced commu-               efficiently than MS for requesting items. Further research is
+nication skills.                                                  needed to understand the effects of types of AAC systems
+                                                                  on communication for a variety of social purposes, in a vari-
+       With these caveats, SGDs and PEs may both be rea-          ety of linguistic forms, by diverse participants.
+sonable choices of communication modes for teaching
+single-symbol requesting to young children with CCN. It           Data Availability Statement
+is possible that children may benefit from learning to use
+both SGDs and PE systems. For example, when a child's                    The full data sets are available in the Open Science
+SGD battery dies while at school, it would be better to           Framework repository, https://osf.io/4jmbn/.
+have PE as a back-up communication system than for the
+child to be unable to communicate wants and needs on              Acknowledgments
+that day. In contrast, children whose primary communica-
+tion partners use speech to communicate (i.e., children                 We received funding from the U.S. Office of Special
+who are not members of the Deaf community) may learn              Education Programs Grants H325D180095 (Ann P. Kaiser,
+to request more efficiently with SGDs than with MS.               Vanderbilt University, PI) and H325H190004 (Mary Beth
+                                                                  Bruder, University of Connecticut, PI). We thank Cassandra
+       When making decisions about AAC selection, fami-           Standish, Kelsey M. Dillehay, and Caroline Wilkerson for
+lies and practitioners consider factors beyond children's         their contributions to the data collection for this project.
+likelihood of learning a system. Children's preferences for
+a communication system should be a primary consider-              References
+ation when selecting AAC systems because teaching chil-
+dren to communicate using AAC fundamentally involves              *Asterisk indicates article included in review.
+empowering them to communicate their choices, ideas,              *Achmadi, D., Sigafoos, J., van der Meer, L., Sutherland, D.,
+and stories. The current findings suggest that AAC prefer-
+ences may be related to efficiency of learning in some                Lancioni, G. E., O'Reilly, M. F., Hodis, F., Green, V. A.,
+cases, although the findings should be interpreted with               McLay, L., & Marschik, P. B. (2014). Acquisition, preference,
+caution given the small sample size. Children may be                  and follow-up data on the use of three AAC options by four
+more motivated to communicate when they find the AAC                  boys with developmental disability/delay. Journal of Develop-
+system to be easy to use or appealing for other reasons               mental and Physical Disabilities, 26(5), 565­583. https://doi.
+(e.g., features such as speech output). Future research               org/10.1007/s10882-014-9379-z
+could explore this relation further by investigating chil-        *Agius, M. M., & Vance, M. (2016). A comparison of PECS and
+dren's and family's responses to questions about their                iPad to teach requesting to preschoolers with autistic spectrum
+AAC preferences.                                                      disorders. Augmentative and Alternative Communication, 32(1),
+                                                                      58­68. https://doi.org/10.3109/07434618.2015.1108363
+       The moderators that could not be explored (i.e., func-     Arndt, K. B., & Schuele, C. M. (2013). Multiclausal utterances
+tion and complexity of the targeted communication behav-              aren't just for big kids. Topics in Language Disorders, 33(2),
+ior; children's cognitive abilities and etiology of CCN) may          125­139. https://doi.org/10.1097/TLD.0b013e31828f9ee8
+also influence practitioner and family decisions. Future          Aydin, O., & Diken, I. H. (2020). Studies comparing augmenta-
+studies should involve diverse participants, contexts, and            tive and alternative communication systems (AAC) applica-
+communication functions. Researchers should report partic-            tions for individuals with autism spectrum disorder: A system-
+ipant characteristics that are relevant to communication,             atic review and meta-analysis. Education and Training in
+such as home language and culture, as well as cognitive               Autism and Developmental Disabilities, 55(2), 119­141.
+and functional abilities. Such research fully describing par-     *Beck, A. R., Stoner, J. B., Bock, S. J., & Parton, T. (2008).
+ticipants in their cultural and linguistic contexts is necessary      Comparison of PECS and the use of a VOCA: A replication.
+for informing policies and the development of technology
+relevant to minoritized populations (e.g., multilingual AAC
+systems and interventions).
+
+                                                                                           Pak et al.: Comparing AAC Interventions 799
+
+Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+    Education and Training in Developmental Disabilities, 43(2),         phase. Research in Developmental Disabilities, 33(2), 406­418.
+    198­216.                                                             https://doi.org/10.1016/j.ridd.2011.09.023
+Beukelman, D. R. & Light, J. K. (Eds.). (2020). Augmentative and     Ganz, J. B., Hong, E. R., Gilliland, W., Morin, K., & Svenkerud,
+    alternative communication: Supporting children and adults with       N. (2015). Comparison between visual scene displays and
+    complex communication needs (5th ed.). Brookes.                      exchange-based communication in augmentative and alterna-
+Binger, C., Kent-Walsh, J., Berens, J., Del Campo, S., & Rivera, D.      tive communication for children with ASD. Research in
+    (2008). Teaching Latino parents to support the multi-symbol          Autism Spectrum Disorders, 11, 27­41. https://doi.org/10.1016/
+    message productions of their children who require AAC. Aug-          j.rasd.2014.11.005
+    mentative and Alternative Communication, 24(4), 323­338.         Ganz, J. B., Mason, R. A., Goodwyn, F. D., Boles, M. B., Heath,
+    https://doi.org/10.1080/07434610802130978                            A. K., & Davis, J. L. (2014). Interaction of participant characteris-
+Binger, C., & Light, J. (2007). The effect of aided AAC modeling         tics and type of AAC with individuals with ASD: A meta-analysis.
+    on the expression of multi-symbol messages by preschoolers           American Journal on Intellectual and Developmental Disabilities,
+    who use AAC. Augmentative and Alternative Communication,             119(6), 516­535. https://doi.org/10.1352/1944-7558-119.6.516
+    23(1), 30­43. https://doi.org/10.1080/07434610600807470          Gast, D. L., & Ledford, J. R. (2018). Replication. In J. R.
+Binger, C., & Light, J. (2008). The morphology and syntax of             Ledford & D. L. Gast (Eds.), Single case research methodol-
+    individuals who use AAC: Research review and implications            ogy (3rd ed., pp. 77­96). Routledge. https://doi.org/10.4324/
+    for effective practice. Augmentative and Alternative Communica-      9781315150666-4
+    tion, 24(2), 123­138. https://doi.org/10.1080/07434610701830587  Gevarter, C., O'Reilly, M. F., Rojeski, L., Sammarco, N., Lang,
+*Bloh, C., Johnson, N., Strohl, C., & Tidmarsh, N. (2020).               R., Lancioni, G. E., & Sigafoos, J. (2013). Comparing com-
+    Increasing communication for students with visual impair-            munication systems for individuals with developmental dis-
+    ments and developmental disabilities. The Analysis of Verbal         abilities: A review of single case research studies. Research in
+    Behavior, 36(1), 157­168. https://doi.org/10.1007/s40616-019-        Developmental Disabilities, 34(12), 4415­4432. https://doi.org/
+    00121-1                                                              10.1016/j.ridd.2013.09.017
+*Bock, S. J., Stoner, J. B., Beck, A. R., Hanley, L., & Prochnow,    Gevarter, C., & Zamora, C. (2018). Naturalistic speech-
+    J. (2005). Increasing functional communication in non-speaking       generating device interventions for children with complex
+    preschool children: Comparison of PECS and VOCA. Educa-              communication needs: A systematic review of single-subject
+    tion and Training in Developmental Disabilities, 40(3), 264­         studies. American Journal of Speech-Language Pathology,
+    278.                                                                 27(3), 1073­1090. https://doi.org/10.1044/2018_AJSLP-17-0128
+*Boesch, M. C., Wendt, O., Subramanian, A., & Hsu, N. (2013a).       Gilroy, S. P., Leader, G., & McCleery, J. P. (2018). A pilot
+    Comparative efficacy of the Picture Exchange Communica-              community-based randomized comparison of speech generat-
+    tion System (PECS) versus a speech-generating device: Effects        ing devices and the picture exchange communication system
+    on requesting skills. Research in Autism Spectrum Disorders,         for children diagnosed with autism spectrum disorder. Autism
+    7(3), 480­493. https://doi.org/10.1016/j.rasd.2012.12.002            Research, 11(12), 1701­1711. https://doi.org/10.1002/aur.2025
+Boesch, M. C., Wendt, O., Subramanian, A., & Hsu, N. (2013b).        Haddaway, N. R., McGuinness, L. A., & Pritchard, C. C. (2021).
+    Comparative efficacy of the Picture Exchange Communica-              PRISMA2020: R package and ShinyApp for producing
+    tion System (PECS) versus a speech-generating device: Effects        PRISMA 2020 compliant flow diagrams (0.0.2) [Computer
+    on social-communicative skills and speech development. Aug-          software]. Zenodo. https://doi.org/10.5281/ZENODO.4287834
+    mentative and Alternative Communication, 29(3), 197­209.         Harris, P. A., Taylor, R., Minor, B. L., Elliott, V., Fernandez,
+    https://doi.org/10.3109/07434618.2013.818059                         M., O'Neal, L., McLeod, L., Delacqua, G., Delacqua, F.,
+Bondy, A., & Frost, L. (2001). The picture exchange communica-           Kirby, J., & Duda, S. N. (2019). The REDCap consortium:
+    tion system. Behavior Modification, 25(5), 725­744. https://         Building an international community of software platform
+    doi.org/10.1177/0145445501255004                                     partners. Journal of Biomedical Informatics, 95, 103208.
+*Caradine, M. H. (2021). The comparative effects of modified             https://doi.org/10.1016/j.jbi.2019.103208
+    augmentative and alternative communication modalities on         Harris, P. A., Taylor, R., Thielke, R., Payne, J., Gonzalez, N., &
+    requesting for a child with autism and visual impairments [Doc-      Conde, J. G. (2009). Research Electronic Data Capture
+    toral dissertation, The University of Memphis]. Dissertation         (REDCap)--A metadata-driven methodology and workflow
+    Abstracts International: Section B: The Sciences and Engi-           process for providing translational research informatics sup-
+    neering (2594718513; 2021-92236-045).                                port. Journal of Biomedical Informatics, 42(2), 377­381.
+*Couper, L., van der Meer, L., Schäfer, M. C. M., McKenzie, E.,          https://doi.org/10.1016/j.jbi.2008.08.010
+    McLay, L., O'Reilly, M. F., Lancioni, G. E., Marschik, P. B.,    *Hill, D. A., & Flores, M. M. (2014). Comparing the Picture
+    Sigafoos, J., & Sutherland, D. (2014). Comparing acquisition         Exchange Communication System and the iPadTM for com-
+    of and preference for manual signs, picture exchange, and            munication of students with autism spectrum disorder and
+    speech-generating devices in nine children with autism spec-         developmental delay. TechTrends, 58(3), 45­53. https://doi.
+    trum disorder. Developmental Neurorehabilitation, 17(2), 99­         org/10.1007/s11528-014-0751-8
+    109. https://doi.org/10.3109/17518423.2013.870244                Huwaldt, J. A. (2020). Plot Digitizer (2.6.9) [Macintosh].
+Crowe, B., Machalicek, W., Wei, Q., Drew, C., & Ganz, J. (2021).     Johnston, S. S., & Coseby, J. (2012). Building blocks of a begin-
+    Augmentative and alternative communication for children with         ning communication system: Communicative modes. In J.
+    intellectual and developmental disability: A mega-review of the      Reichle, K. M. Feeley, & S. S. Johnston (Eds.), AAC strate-
+    literature. Journal of Developmental and Physical Disabilities,      gies for individuals with moderate to severe disabilities (pp.
+    34(1), 1­42. https://doi.org/10.1007/s10882-021-09790-0              311­345). Brookes.
+Ganz, J. B., Davis, J. L., Lund, E. M., Goodwyn, F. D., &            Kangas, K., & Lloyd, L. (1988). Early cognitive skills as prerequi-
+    Simpson, R. L. (2012). Meta-analysis of PECS with individ-           sites to augmentative and alternative communication use: What
+    uals with ASD: Investigation of targeted versus non-targeted         are we waiting for? Augmentative and Alternative Communication,
+    outcomes, participant characteristics, and implementation            4(4), 211­221. https://doi.org/10.1080/07434618812331274817
+
+800 American Journal of Speech-Language Pathology · Vol. 32 · 786­802 · March 2023
+
+            Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+King, S., Davidson, K., Chitiyo, A., & Apple, D. (2020). Evaluat-          outcome measures. Psychological Methods, 24(2), 217­235.
+    ing article search and selection procedures in special education       https://doi.org/10.1037/met0000179
+    literature reviews. Remedial and Special Education, 41(1), 3­17.   Pustejovsky, J. E., Chen, M., & Swan, D. M. (2021). A calculator
+    https://doi.org/10.1177/0741932518813142                               for single case effect sizes (0.5.0) [Computer software]. https://
+                                                                           jepusto.github.io/SingleCaseES/
+Ledford, J. R., Lane, J. D., & Gast, D. L. (2018). Dependent var-      Pustejovsky, J. E., & Ferron, J. M. (2017). Research synthesis
+    iables, measurement, and reliability. In J. R. Ledford & D. L.         and meta-analysis of single case designs. In J. M. Kaufmann,
+    Gast (Eds.), Single case research methodology (3rd ed., pp.            D. P. Hallahan, & P. C. Pullen (Eds.), Handbook of special
+    97­131). Routledge/Taylor & Francis Group. https://doi.org/            education (2nd ed., pp. 168­186). Routledge. https://doi.org/
+    10.4324/9781315150666-5                                                10.4324/9781315517698-15
+                                                                       R Core Team. (2020). R: A language and environment for statisti-
+Light, J. (1997). "Communication is the essence of human life":            cal computing. R Foundation for Statistical Computing.
+    Reflections on communicative competence. Augmentative and              https://www.R-project.org/
+    Alternative Communication, 13(2), 61­70. https://doi.org/10.       Rodgers, M. A., & Pustejovsky, J. E. (2021). Evaluating meta-
+    1080/07434619712331277848                                              analytic methods to detect selective reporting in the presence of
+                                                                           dependent effect sizes. Psychological Methods, 26(2), 141­160.
+Light, J., McNaughton, D., & Caron, J. (2019). New and emerg-              https://doi.org/10.1037/met0000300
+    ing AAC technology supports for children with complex com-         Romski, M., Sevcik, R. A., Adamson, L. B., Cheslock, M., Smith,
+    munication needs and their communication partners: State of            A., Barker, R. M., & Bakeman, R. (2010). Randomized com-
+    the science and future research directions. Augmentative and           parison of augmented and nonaugmented language interven-
+    Alternative Communication, 35(1), 26­41. https://doi.org/10.           tions for toddlers with developmental delays and their parents.
+    1080/07434618.2018.1557251                                             Journal of Speech, Language, and Hearing Research, 53(2),
+                                                                           350­364. https://doi.org/10.1044/1092-4388(2009/08-0156)
+*Lorah, E. R. (2016). Comparing teacher and student use and            Romski, M., Sevcik, R. A., Barton-Hulsey, A., & Whitmore, A. S.
+    preference of two methods of augmentative and alternative              (2015). Early intervention and AAC: What a difference
+    communication: Picture exchange and a speech-generating                30 years makes. Augmentative and Alternative Communication,
+    device. Journal of Developmental and Physical Disabilities,            31(3), 181­202. https://doi.org/10.3109/07434618.2015.1064163
+    28(5), 751­767. https://doi.org/10.1007/s10882-016-9507-z          Schlosser, R. W., Belfiore, P. J., Sigafoos, J., Briesch, A. M., &
+                                                                           Wendt, O. (2018). Appraisal of comparative single case exper-
+Lorah, E. R., Holyfield, C., Miller, J., Griffen, B., & Lindbloom,         imental designs for instructional interventions with non-
+    C. (2021). A systematic review of research comparing mobile            reversible target behaviors: Introducing the CSCEDARS
+    technology speech-generating devices to other AAC modes                ("Cedars"). Research in Developmental Disabilities, 79, 33­52.
+    with individuals with autism spectrum disorder. Journal of             https://doi.org/10.1016/j.ridd.2018.04.028
+    Developmental and Physical Disabilities, 34(2), 187­210. https://  Schlosser, R. W., & Wendt, O. (2008). Effects of augmentative
+    doi.org/10.1007/s10882-021-09803-y                                     and alternative communication intervention on speech pro-
+                                                                           duction in children with autism: A systematic review. Ameri-
+*Lorah, E. R., Tincani, M., Dodge, J., Gilroy, S., Hickey, A., &           can Journal of Speech-Language Pathology, 17(3), 212­230.
+    Hantula, D. (2013). Evaluating picture exchange and the                https://doi.org/10.1044/1058-0360(2008/021)
+    iPadTM as a speech generating device to teach communication        *Simms, C. B. (2015). An evaluation of mand modalities for indi-
+    to young children with autism. Journal of Developmental and            viduals with limited verbal repertoires [Unpublished doctoral
+    Physical Disabilities, 25(6), 637­649. https://doi.org/10.1007/        dissertation]. University of Florida.
+    s10882-013-9337-1                                                  *Son, S.-H., Sigafoos, J., O'Reilly, M., & Lancioni, G. E. (2006).
+                                                                           Comparing two types of augmentative and alternative commu-
+Lorang, E., Maltman, N., Venker, C., Eith, A., & Sterling, A.              nication systems for children with autism. Pediatric Rehabilita-
+    (2022). Speech-language pathologists' practices in augmenta-           tion, 9(4), 389­395. https://doi.org/10.1080/13638490500519984
+    tive and alternative communication during early intervention.      Tipton, E. (2015). Small sample adjustments for robust variance
+    Augmentative and Alternative Communication, 38(1), 41­52.              estimation with meta-regression. Psychological Methods,
+    https://doi.org/10.1080/07434618.2022.2046853                          20(3), 375­393. https://doi.org/10.1037/met0000011
+                                                                       *Tönsing, K. M. (2016). Supporting the production of graphic
+*McLay, L., Schäfer, M. C. M., van der Meer, L., Couper, L.,               symbol combinations by children with limited speech: A com-
+    McKenzie, E., O'Reilly, M. F., Lancioni, G. E., Marschik,              parison of two AAC systems. Journal of Developmental and
+    P. B., Sigafoos, J., & Sutherland, D. (2017). Acquisition, pref-       Physical Disabilities, 28(1), 5­29. https://doi.org/10.1007/
+    erence and follow-up comparison across three AAC modalities            s10882-015-9425-5
+    taught to two children with autism spectrum disorder. Interna-     *van der Meer, L., Didden, R., Sutherland, D., O'Reilly, M. F.,
+    tional Journal of Disability, Development and Education, 64(2),        Lancioni, G. E., & Sigafoos, J. (2012). Comparing three aug-
+    117­130. https://doi.org/10.1080/1034912X.2016.1188892                 mentative and alternative communication modes for children
+                                                                           with developmental disabilities. Journal of Developmental and
+*McLay, L., van der Meer, L., Schäfer, M. C. M., Couper, L.,               Physical Disabilities, 24(5), 451­468. https://doi.org/10.1007/
+    McKenzie, E., O'Reilly, M. F., Lancioni, G. E., Marschik,              s10882-012-9283-3
+    P. B., Green, V. A., Sigafoos, J., & Sutherland, D. (2015).        *van der Meer, L., Kagohara, D., Achmadi, D., O'Reilly, M. F.,
+    Comparing acquisition, generalization, maintenance, and prefer-        Lancioni, G. E., Sutherland, D., & Sigafoos, J. (2012). Speech-
+    ence across three AAC options in four children with autism spec-       generating devices versus manual signing for children with devel-
+    trum disorder. Journal of Developmental and Physical Disabil-          opmental disabilities. Research in Developmental Disabilities,
+    ities, 27(3), 323­339. https://doi.org/10.1007/s10882-014-9417-x       33(5), 1658­1669. https://doi.org/10.1016/j.ridd.2012.04.004
+
+Ouzzani, M., Hammady, H., Fedorowicz, Z., & Elmagarmid, A.
+    (2016). Rayyan--A web and mobile app for systematic
+    reviews. Systematic Reviews, 5(1), 210. https://doi.org/10.1186/
+    s13643-016-0384-4
+
+Pustejovsky, J. E. (2018). Using response ratios for meta-analyzing
+    single case designs with behavioral outcomes. Journal of School
+    Psychology, 68, 99­112. https://doi.org/10.1016/j.jsp.2018.02.003
+
+Pustejovsky, J. E. (2019). Procedural sensitivities of effect sizes
+    for single case designs with directly observed behavioral
+
+                                                                                           Pak et al.: Comparing AAC Interventions 801
+
+Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+van der Meer, L., Sigafoos, J., O'Reilly, M. F., & Lancioni, G. E.           disorders. Research in Autism Spectrum Disorders, 6(4), 1247­
+    (2011). Assessing preferences for AAC options in communica-              1257. https://doi.org/10.1016/j.rasd.2012.04.005
+    tion interventions for individuals with developmental disabilities:  Viechtbauer, W. (2010). Conducting meta-analyses in R with the
+    A review of the literature. Research in Developmental Disabilities,      metafor package. Journal of Statistical Software, 36(3).
+    32(5), 1422­1431. https://doi.org/10.1016/j.ridd.2011.02.003             https://doi.org/10.18637/jss.v036.i03
+                                                                         Wolery, M., Gast, D. L., & Ledford, J. R. (2018). Comparative
+*van der Meer, L., Sutherland, D., O'Reilly, M. F., Lancioni,                designs. In J. R. Ledford & D. L. Gast (Eds.), Single case
+    G. E., & Sigafoos, J. (2012). A further comparison of manual             research methodology (3rd ed., pp. 283­334). Routledge.
+    signing, picture exchange, and speech-generating devices as              https://doi.org/10.4324/9781315150666-11
+    communication modes for children with autism spectrum
+
+802 American Journal of Speech-Language Pathology · Vol. 32 · 786­802 · March 2023
+
+            Downloaded from: https://pubs.asha.org Lucas Steuber on 05/09/2023, Terms of Use: https://pubs.asha.org/pubs/rights_and_permissions
+

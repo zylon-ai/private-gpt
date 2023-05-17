@@ -1,0 +1,188 @@
+UX Yoda Roadmap DRAFT
+
+Based on the SW Yoda Roadmap: https://miro.com/app/board/uXjVP_y3v4I=/
+
+Legend:
+green text = Progress indication
+red text equals = Engineering dependency
+blue text = BioSignals dependency
+purple text = Context / NLP dependency
+orange text = Hardware dependency
+
+2022
+
+November:
+- ASHA Demo to incorporate Context v1 (language system) DONE
+- ASHA Survey authoring DONE
+- ASHA Survey collection DONE
+- ASHA Survey analysis DONE
+- MRTK initial investigation / audit DONE
+- MRTK keyboard prototype generation in Unity STARTED
+- Babylon.js to MRTK tech research / approach determination (BioSignals dependency - agreement)   STARTED
+- Stimuli UX Metrics finalization w/ BioSignals (BioSignals dependency - agreement) DONE
+- Stimuli Test Survey authorship w/ BioSignals (BioSignals dependency - collaboration) DONE
+- Hardware / Industrial Design participation STARTED
+
+December:
+- Babylon.js -> GLB to MRTK tech research / approach determination cont'd (BioSignals dependency - validation) IN PROGRESS
+- Design a couple first SSVEPs (BioSignals dependency - feedback) STARTED
+- Design a first SSMVEP (assumed rotations / movement / scaling of object only for now) (BioSignals dependency - feedback) STARTED 
+- Post-MF1/ASHA design directives DONE
+- Stimuli Keyboard Design Exploratory Concept (BioSignals dependency - feedback) STARTED
+- Phrase Management UI redesign rough wired based on ASHA feedback STARTED 
+- Complete MRTK QWERTY keyboard (ENG DEPENDENCY - handoff to engineering in MRTK for evaluation starting Dec 14th - integrate later / September) IN PROGRESS 
+- Implement and Evaluate (w/ tool) a couple first SSVEPS (BioSignals dependency - support)
+- On-board Sandra to BioSignals / etc (should happen while Emily is still here) (BioSignals dependency - support)
+- Improved design/prototyping of head-pose dwell animations
+- Design of MRTK Settings Panel (ENG DEPENDENCY - handoff to engineering in MRTK for evaluation starting Dec 28th - integrate later / December) IN PROGRESS
+- Update of SPAR Notifications, Dialogs, Nav & Status Bar in MRTK and Unity prototype implementations of each (minimal spec update - prototype implementation is what engineers will benefit from) (ENG  - handoff to engineering in MRTK for evaluation starting Dec 28th - integrate Dialogs / Notifications September, Nav & Status Bar integrate July)
+- MRTK Phrase Management update based on ASHA feedback / recommendations
+- MRTK UI Framework for Internal UX Prototyping (Keyboard, Settings, Phrase Management, Notications, etc)
+- Finalize UI Framework Decision (ENG DEPENDENCY - decide whether it's MRTK or other for UI implementation and move forward, evaluation starting Dec 28th) IN PROGRESS
+- Hardware / Industrial Design participation ongoing IN PROGRESS
+- Planning First Language System UI Design/ Prototype with Context team 
+
+2023
+
+January:
+- Note: Prototyping with Mira Headset outfitted to work with Samsung Galaxy should be possible now for Headpose. Grael headset, PC and external monitor (taped etc) for BCI for now. (HARDWARE DEPENDENCY)
+- Implement and Evaluate (w/ tool) the first SSMVEP (assumed rotations / movement / scaling of object only for now) (BioSignals dependency - provide source code for tool, feedback)
+- Phrase Management Re-Design Prototype / User Test
+- Further Head-pose UI innovations Prototyping / User Test (e.g. swipe, lasso)
+- SPAR UI sound design - first pass (note: there is current sound design in the default prototype)
+- MRTK design system authorship / Figma / prefabs and distribution (note: eventually useful for Jupiter). (ENG DEPENDENCY - may start to use in build if ready)
+- Hardware / Industrial Design participation ongoing
+- Design/ Prototype T4 (Linotype) keyboard or TBD concept to demonstate language system enhancements as desktop/python app 
+
+February:
+- Note: Prototyping with Mira Headset outfitted to work with Samsung Galaxy should be possible now with Grael headset for BCI for now. (HARDWARE DEPENDENCY)
+- Prototype experience will two SSVEPs / SSMVEPs at a time (Yes/No only) for desktop or potentially Mira solution mentioned above (BioSignals dependency - source code for tool, feedback)
+- Plan MF2 user test (working title) for SPAR re-design & targetability with target users. UX needs to prototype this for use testing. Will need to build our own UX prototypes.
+- Run MF2 user test (working title) for SPAR MRTK re-design & targetability
+- MF2 user test analysis
+- MF2 design directives for UX enhancements / changes
+- Eye-tracking as targeting mechanism/cursor prototype and testing on some kind of TBD hardware (note: BioSignals is going to be testing eye tracking for the purpose of BCI content tagalong using candidate Yes/No UI to try to prove feasibility for v1)
+- Eye-tracking Input and Interaction Design as cursory mechanism 
+- Hardware / Industrial Design participation ongoing 
+- Note: Unity support with BCI (BioSignals)
+- Test T4 Prototype keyboard (multiple versions) with Language System / Interactivity or TBD concept, but as a desktop/python app
+
+March:
+- Note: Representative Android AR / BCI hardware ready to prototype with (HARDWARE DEPENDENCY)
+- Design/Prototype BCI dwell behavior / animation (BioSignals dependency - source code for tool, collaboration)
+- Range of Motion / UI Follow / etc. Design Spec Delivery based on MF2 (ENG DEPENDENCY - implementation March)
+- Eye-tracking input spec delivery (ENG DEPENDENCY - implementation March)
+- Hardware / Industrial Design participation ongoing
+- Design/Prototype/Test QWERTY keyboard with auto-expansion / auto-replacement with space bar to select / bucket of words in Language System / Interactivity (might include new layout?) or TBD concept, but as a desktop/python app
+
+April:
+- Prototype experience will two SSVEPs / SSMVEPs at a time (Yes/No) plus disengagement indicator (BioSignals dependency - source code for tool, collaboration)
+- Hardware / Industrial Design participation ongoing
+- Switch Input design / prototype / user test
+- Start working on Requirements UX 
+- Design/Prototype T4 Prototype keyboard with Context v2 / Interactivity, with our AR device/ BCI / stimuli or TBD concept (ENG DEPENDENCY - potentially)
+
+May:
+- Yes/No/ Basic Needs keyboard (5-7 stimuli territory) w/ disengagement indicator and manual rest control design / prototyping / test (BioSignals dependency - source code for tool, collaboration)
+- Switch Input spec delivery experience (ENG DEPENDENCY - implementation June, requires Settings to be in place to support)
+- Design and rough wires of MRTK Virtual Assistant experience / screens (possibly Alexa). (ENG DEPENDENCY - implementation May/June)
+- Delivery Requirements UX (ENG DEPENDENCY - acceptance)
+- Hardware / Industrial Design participation ongoing
+- Start working Main Scene Redesign - 3D assets spec
+- Test T4 Prototype keyboard with Language System / Interactivity or TBD concept, with our AR device/ BCI / stimuli (ENG DEPENDENCY - potentially)
+
+June:
+- Design updates to all aspects based on test from previous month
+- Full onboarding experience design
+- Companion App design kick-off
+- Design of additional MRTK keyboards (Yes/No/Maybe, Linotype, Other, etc). (ENG DEPENDENCY -implementation post-August)
+- Design of BCI calibration (ENG DEPENDENCY - implementation July)
+- Formative testing on Jupiter / Axon-R with assets package
+- Continue working Main Scene Redesign - 3D assets spec
+- Start Prototype / User Testing Yes/No, Linotype and Other headpose keyboard
+- Design, creation and testing of Code Modulated (M-Sequences) or new type of Stimuli  - multiple at a time (20+) (BioSignals dependency - source code for tool, collaboration. Date for this is not critical, since it's not within MVP release / not needed for funding.)
+
+July:
+- Delivery of Main Scene Redesign - 3D assets spec (ENG DEPENDENCY - implementation July)
+- Companion App design continuation
+- Start design of Phrase Management
+- Start headpose Keyboards (QWERTY, Linotype, Yes/No, Other TBD) spec
+
+August:
+- Delivery of Phrase Management spec (ENG DEPENDENCY - implementation August)
+- Begin creation of completely new type of stimuli
+
+- Onboarding (headpose + BCI) experience design kick-off
+- Companion App design continuation
+- Start UI Scaling spec
+- Start Notification / Dialogs/ Toast spec 
+- Complete headpose Keyboards (QWERTY, Linotype, Yes/No, Other TBD) spec
+
+September:
+- Delivery of UI Scaling spec (ENG DEPENDENCY - implementation September)
+- Delivery of Notification / Dialogs/ Toast spec (ENG DEPENDENCY - implementation September)
+- Delivery of Headpose Keyboards (QWERTY, Linotype, Yes/No, Other TBD) sepc (ENG DEPENDENCY - implementation September)
+- Onboarding (headpose + BCI) experience prototype / testing
+- BCI UI yes/no/basic needs final design commited / user test for FDA for approval (BioSignals dependency - collaboration)
+- Companion App design continuation
+
+October:
+- BCI UI yes/no spec (ENG DEPENDENCY - implementation October, requires Settings to be in place beforehand)
+- Onboarding (headpose + BCI) experience spec delivery (ENG DEPENDENCY - implementation October, requires Settings to be in place beforehand)
+- Companion App design continuation
+- SPAR full sound and haptic design (ENG DEPENDENCY - implementation in the January 2024)
+- Companion App design continuation
+
+November:
+- Plan out first full formative test with SPAR headpose + stimuli, switch, representative AR/BCI hardware
+- Execute above formative test
+- Analyze results of formative test
+- Determine Design directives based on formative test
+- User settings spec start
+- External display + Audio design start
+- Start Internal Sound & Haptic design (final pass)
+
+December:
+- Packaging / paper manual design support
+- Web support help
+- User Settings design spec delivery (ENG DEPENDENCY - implementation in the December 2024)
+- External display + Audio prototyping / user test
+- Companion App design continuation
+- Continue Internal Sound & Haptic design (final pass)
+
+2024
+
+January:
+- Design of MRTK tooltips / button copy responsiveness (Settings related to this behavior as well) (ENG DEPENDENCY - implementation February 2024)
+- Internal Sound & Haptic spec delivery (ENG DEPENDENCY - implementation January 2024)
+- External display + Audio spec delivery (ENG DEPENDENCY - implementation January 2024)
+- Full Summative test planning, execution and analysis of all aspects and design changes applied
+- Companion App design continuation / user testing (ENG DEPENDENCY isn't until April 2024 spec deliver - implementation June 2024)
+
+
+February:
+- SW Design cutoff
+
+
+Formative user test: July - September 
+Summative user test: November - Dec
+
+
+- Design Unity Asset Package & Interactions. Includes BCI Stimuli. Work with PM to determine what UI element are for Jupiter / Researchers. (ENG DEPENDENCY - implementation April) (BioSignals dependency - collaboration)
+
+
+NLP UX roadmap: (Meeting with team to determine this Friday)
+
+- Start researching new UI designs based on improved Context Engine/ NLP approaches 
+
+January - February:
+    - Testing the interface communication / completion / etc
+        ? Doing discovery spike
+        ? Prototype: UI with keyboard to test interaction (goal: to type as little as possible, more tokens to select). Someone will develop a prototype. We probably need a technical resource to help support beyond that. NLP is planning to rely on Benjamin to hook up prototype.
+        ? Participants: external
+
+March - April:
+    - NLP integrating content for BioSignals
+        ? Doing discovery spike
+        ? Engineering dependency with Mike
+

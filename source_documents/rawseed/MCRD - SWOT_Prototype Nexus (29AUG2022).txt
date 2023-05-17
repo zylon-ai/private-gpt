@@ -1,0 +1,378 @@
+5 SWOT
+Given what we know today, what are the strengths, weaknesses, opportunities and threats we foresee in this market with this product?
+
+
+Strengths
+Weaknesses
+Customer Centered Design
+    - Customer advisory board (Brainiacs) that has lived experience and is representative of CXN end users' needs/wants/desires while providing feedback on the product design & marketing
+    - Recognized - Red Dot Luminary Award (2021)
+    - Focus on human factors and user experience. Employee talent with significant domain experience in organizations with industry-recognized branding and design leadership
+
+First to Market: Wearable AR, Speech Generation
+    - Other major AAC providers do not currently have a wearable HMD product available.
+
+CMS Reimbursement / Insurance Fundable
+    - A significant investment of time and resources to meet funding requirements becomes a deterrent to competition
+    - Reimbursement via insurance enables accessible pricing and access to a larger market
+    - Employee talent with significant domain experience in medical devices and obtaining regulatory clearance
+
+High Tech Value Proposition 
+    - Intelligent multi-faceted language prediction engine that improves communication rates with continued use
+    - Integration with the leading home automation and smart device control platform (Alexa).
+    - The most accessible wearable AR platform
+
+Unrecognized Company and Brand
+    - Other AAC companies have a track history of SGD product launches /tenure in the industry
+
+Product-Market-Fit Validation Needed
+    - An SGD that is head-worn and uses augmented reality has yet to be adopted by the market; first device in its class 
+
+Head/Eyewear: Human Factors Challenges
+    - There are inherent challenges in designing a wearable technology that is placed on a human head and rests on the face including variability in head/facial features and sizes, weight distribution, heat dissipation, sensor calibration, visual acuity, and durability.
+    - While technology is advancing rapidly to address wearability, comfort, and performance considerations, the current state requires tradeoffs or prohibitively large R&D budgets to optimize the user experience 
+
+Complex Funding & Reimbursement Process
+    - There are several stakeholders that influence the user's purchase decision including Doctors, Speech & Language Pathologists, Caregivers, and 3rd party payers
+    -  3rd party payer reimbursement approvals will require additional time and diligence and could delay product revenue from insurance funded channels.
+
+
+
+
+Opportunities
+Threats
+Low Serviceable Obtainable Market Capture
+    - Only 2-3% of all individuals with SGD needs can be served annually due to a shortage of SLPs with SGD prescribing capabilities
+    - Poor attitude towards, and limited skills using technology; concerns of social stigma
+    - Lack of support/training and increased responsibilities or stress on the caregiver
+
+Predictive Language Technology
+    - Existing SGD solutions often lack language prediction capabilities or utilize limited and primitive technology
+    - Predictive capabilities that can improve over time/with use, become personalized to the user, and integrate situational characteristics to improve intent prediction
+
+Personalized Synthetic Voices
+    - Voice synthesis and text-to-speech technology have sufficiently advanced. It is now humanistic sounding and can be individualized to represent the personal voice profile of the user
+    - Existing SGD solutions are limited to robotic-sounding voices that are not representative of the user. Additionally, synthetic voices that are representative of the user's favorite voices in popular culture would provide entertainment value and promote conversations with others
+    - The ability to customize the voice profile to the user's needs would help to break down barriers in adoption and social stigma 
+
+Enabling the Care Circle with Companion Features
+    - Reduce the friction of adoption through effective training and device onboarding
+    - Empower the circle of care with tools to support the patient by granting them visibility into the system operation and how it can be personalized to the user.
+    - Provide data and analytics that can be used to drive evidence-based treatment programs
+
+Integrated IoT Controls & Virtual Assistance
+    - Empower the users to ''get things done" through home automation and IoT device control
+    - Grant them the ability to speak with virtual assistant services, like Alexa, for entertainment, productivity, and creative expression
+Competition
+    - New consumer AR/MR hardware coupled with a low-cost AAC software application.
+    - Leading technology company directly launches free features or apps for speech generation on consumer AR/VR devices
+    - AAC companies partner with an AR/VR company to port their current software applications to an AR/VR device.
+
+Talent
+    - Critical employee talent is poached by larger, more established companies to build competitive products or services.
+
+Supply Chain
+    - Vendors and suppliers are unable to deliver core components with the desired lead times or quantities. Resulting in delays to a product launch or overall product availability
+
+
+6 Product Overview 
+6.1 Product Goals & High-Level Features
+The desired long-term impact of our product or new feature set - including metrics for success
+
+6.1.1 High-Level Features
+
+6.1.2 Product Goals
+
+Business-driven goals
+Goals focused on revenue, growth strategies, hiring and development, and cost-saving process improvements.
+
+Market-driven goals
+Goals related to market awareness, perception, and virality - like expanding into a new market, outperforming competitors, or developing strategic partnerships.
+
+Customer-driven goals
+Goals tied to customer happiness and the overall customer experience - measured by product usage, customer satisfaction, and value delivered.
+Portfolio/Product Roadmap-driven goals
+Goals tied to the product portfolio strategy and roadmap- measured by strategic accomplishments, agility to bring innovative products to market, and return on investment
+
+
+Product Goal Type
+Product Goal Description
+Business
+Goal: Increase company revenue
+Time frame: 24 months from launch
+Success metric: + $7.5M in new product revenue from Nexus
+
+Goal: Demonstrate product viability
+Time frame: 12 months from launch
+Success metric: 55%+ product gross margin
+Portfolio / Product Roadmap
+Goal: Build an agile and sustainable product innovation pipeline
+Time frame: 6 months from launch
+Success metric: People, systems, and processes are optimized for bringing Cognixion One products to market in <6 months (concept à launch)
+
+Goal: Obtain FDA clearance
+Time frame: By launch
+Success metric: Regulatory execution strategy and systems for compliance are in place. Nexus can be used as a predicate device for future CXN ONE family of products
+Market
+Goal: Receive recognition for innovation in AAC
+Time frame: 6 months from launch
+Success metric: Award or non-paid promotion from a leading AAC organization, top publisher, or a top 10 key opinion leader
+
+Goal: TBD  (VP of Sales/Marketing)
+Time frame: x months from launch
+Success metric: TBD
+
+Customer
+Goal: Demonstrated conversation of tablet/eye-tracker users to AR users
+Time frame: 12 months from launch
+Success metric: 3+ case studies or long-form testimonials from customers that highlight the advantages of Nexus over other AAC options
+
+Goal: Best in class for customer satisfaction
+Time frame: 12 months from launch
+Success metric: cNPS ? 65
+
+
+6.2 Value Proposition
+Why should someone choose our product?  Our company?
+
+At Cognixion, we believe that technology should help us as well as entertain us. For too long, the assistive technology industry has relied on repurposed consumer electronics, often years behind the cutting edge of what is possible. 
+
+Every individual deserves a solution as unique as they are - and we believe it's possible to build one tool for communication, access, and everything else life brings their way. That's why we design products that are universally accessible, enabling users with a wide variety of physical and neurological abilities to access augmented reality-powered applications to assist them in daily tasks, thereby enhancing their abilities and individual agency.
+
+Introducing Cognixion ONE, the world's most accessible augmented reality platform.  Cognixion ONE is a wearable window to the world, offering both speech and an integrated AI assistant for home automation control and other enrichment. Communication and home automation commands are sent through an interface mounted on a transparent display, a combination we call "Assisted Reality."
+
+The Cognixion ONE - Nexus was designed to assist people who can utilize an AAC system via head pointing or switch. Some of the conditions that are representative of users that could benefit from Nexus include Cerebral Palsy, Spinal Cord Injury, and certain stages of ALS or Primary Supranuclear Palsy, among others.
+
+With the Cognixion ONE - Nexus you will be able to
+    - Engage in conversations and speak what's on your mind
+    - Independently connect to real-time information throughout your day 
+    - Ask Alexa anything from anywhere, anytime
+    - Take control of smart-enabled devices with easy-to-use commands
+    - Personalize your experience to match your needs and capabilities
+    - Invite your friends, family, and care providers to support your journey
+
+The Cognixion One - Nexus will help and entertain you throughout your day-to-day, whether you are at home or out exploring the world. Its assistive features will empower you to think and act in the new ways, granting you the agency to shape your experiences and life trajectories, and affording new possibilities for personal expression and individual autonomy.
+
+6.3 Regulatory, Claim & Reimbursement Strategy
+What is the regulatory strategy?  If there are predicate devices, what are they? If we are going to go for claims, what claims targets do we have?  How will we be paid for our product?
+
+6.3.1 Overview of the Funding & Regulatory Strategy
+Notes for now - Medicare + VA first. Other direct pay channels 2nd. 
+
+6.3.2 Indications for Use
+Cognixion ONE Nexus is intended to be used: 
+
+    - As a powered environmental control system by individuals with physical impairment and/or weakness
+    - As a powered communication system by individuals who have physical limitations, weakness, and/or limited communication abilities
+
+6.3.3 U.S. Regulatory Pathways and Considerations
+Both powered communication systems and powered environmental control systems are considered by the FDA to be Class II exempt devices1,2.  For exempt devices, no submission is required, but the device and manufacturer must be registered with the FDA prior to marketing the device.  While no formal submission package is required, the manufacturer is expected to adhere to certain regulatory controls.3  Substantial equivalence to predicate devices is still needed to ensure that the exempt classification is valid4.
+
+Head-tracking devices are regulated as Class II devices5,6, and the use of additional technologies may cause a loss of exempt status.  It is unclear if the device will be exempt due to its intended use as a speech generation or environmental control device, or if the head-tracking features will keep the device from being exempt.  A similar example is that shoe orthotics are exempt devices, but when electronics were introduced into the orthotics, the devices were required to submit 510(k)s7.
+
+Given the above information, it is highly likely that Nexus falls under the exempt category. Therefore, two regulatory pathways should be considered: 
+    1) Class II Exempt or 510(k) notification: Use the Indications for Use (IFUs) that fall under the exempt categories which may not be accepted by the FDA due to the inclusion of non-exempt components. The Cognixion One - Nexus is likely exempt. However, to minimize the risk of denial of the exempt status, it is recommended that a Pre-submission meeting be requested from the FDA, and a question be asked of the FDA regarding the exempt status.
+
+    2) De Novo reclassification request: If the exempt categories are not applicable, then the device has no appropriate category/predicate device.  (It should be noted that for a device to be considered an appropriate predicate, it must have the same indications for use and same or similar device description and device properties.)  In this case, the device is automatically considered a Class III device unless it can be recategorized via the De Novo process to a Class II device.  This process involves more regulatory hurdles and longer timelines but allows manufacturers to place special controls that would place regulatory burdens on potential future competitors.
+
+6.3.4 Device Classification and Predicates
+Proposed Classification
+Regulation Name
+Powered Environmental Control System  
+Regulation Number
+21 CFR 890.3725
+Regulation Identification
+A powered environmental control system is an AC- or battery-powered device intended for medical purposes that is used by a patient to operate an environmental control function. Examples of environmental control functions include the following: to control room temperature, to answer a doorbell or telephone, or to sound an alarm for assistance. 
+Device Class
+2
+Submission Type
+510(k) Exempt
+Primary Product Code
+IQA
+Secondary Product Code
+ILQ (Powered communication system)
+
+
+
+Comparison with Powered Environmental Control System (product code IQA) device:  Deltatalker (K961306)
+ 
+Cognixion ONE Nexus 
+Deltatalker with Infrared (K961306)* 
+Comparison Discussion 
+Indications
+ for Use 
+Intended to be used as a powered environmental control system by individuals with physical impairment and/or weakness. 
+
+Intended to be used as a powered communication system by individuals who have physical limitations, weaknesses, and/or limited communication abilities.  
+ 
+ 
+Unspecified - however, the indicated use of the device was assessed from the device's user manual 
+ 
+Powered Environmental Control: Page 216-275 of the user manual describes the ability of the device to control of any external devices that has infrared remote-control capabilities, including but not limited to, TV, phone, printer, lights, and computer access. 
+
+Powered Communication:  
+Page 13 of the user manual states that the "DeltaTalker is an augmentative/alternative communication (AAC) device which uses the Minspeak communication system for the storage and retrieval of messages. It was developed to be used by anyone who has difficulty speaking and who wants to use an AAC system for easy interactive communication". 
+Similar 
+ 
+Both devices have the same intended use, in that both can serve as an augmentative/ 
+alternative powered communication and powered environmental systems.    
+ 
+ 
+ 
+ 
+ 
+Patient 
+Population 
+Patients who have difficulty speaking and operating environmental controls  
+Patients who have difficulty speaking and operating environmental controls  
+Same 
+Environment 
+of Use 
+Home, community, school, clinic, and/or hospital  
+Unspecified but based on the device description and features, it can be used in the home, community, school, clinic, or hospital environment.  
+Same 
+
+Technological Characteristics
+ 
+Cognixion ONE Nexus 
+Deltatalker with Infrared (K961306)* 
+Comparison Discussion 
+Input/Control Signal 
+Signals measured from the motion sensor in the device interface as well as other wirelessly paired BLE accessory controllers such as switch, joystick, keyboard, and sip-and-puff inputs.  
+ 
+ 
+Control signals from a keyboard 
+Different 
+ 
+The Cognixion devices is designed to use a variety of input from different sensors based on the patient's preference, while the DeltaTalker device is limited to button presses on the device's keyboard. However, these technological differences do not raise new questions of safety and effectiveness.  In both cases, the effectiveness of the device is dependent on receiving a consistent input signal to control an external device.  In terms of safety the risks associated with both devices are similar since both have the capacity to control similar speech generation systems and remotely controlled units around the home. 
+ 
+Furthermore, it is important to note that the other devices have been cleared under the IQA product code with control input options that are different from a keyboard.  For example, the Imperium system (K953905) is a switch-activated unit which controls home appliances such as TVs, electronic bed, lights, nurse call systems, powered door openers, and CD players.  
+ 
+ 
+Outputs 
+Interfaces with external devices for powered communication and powered environmental controls which include smart enabled devices within the user's home (e.g., turning lights on/off, setting the thermostat, locking/unlocking doors, control a television) 
+Interfaces with external devices for powered communication and powered environmental controls which include all home appliances and units that are capable of remote control through infrared wireless technology (e.g., turning lights on/off, setting the thermostat, locking/unlocking doors, control a television). 
+Similar 
+ 
+Both devices allow for speech generation and control external devices that are wirelessly controlled either through a Bluetooth connection or through IR remote control system.   
+Power  
+The Cognixion ONE Nexus device is powered from either an electric mains line using a DC powered adaptor or an internal rechargeable battery.   
+The DeltaTalker is powered from either an electric mains line using a DC powered adaptor or an internal rechargeable battery.   
+Same 
+ 
+Both devices use rechargeable batteries that can be recharged using a power adapter.  
+Software/
+Hardware 
+The Cognixion ONE Nexus device has a dedicated hardware interface which runs the device's mobile application. 
+DeltaTalker's has a hardware platform that runs the device software.   
+Similar 
+ 
+Both devices have dedicated hardware interfaces that runs their device software.  There may be some differences in the operating system that the software runs however these differences do not raise new questions of safety and effectiveness.   
+
+
+
+Comparison with a cleared powered communication device (ILQ): Noddle (K162817)
+ 
+Cognixion ONE Nexus 
+Noddle (K162817) 
+Comparison Discussion 
+Indications 
+for Use 
+Intended to be used as a powered environmental control system by individuals with physical impairment and/or weakness. 
+
+Intended to be used as a powered communication system by individuals who have physical limitations, weaknesses, and/or limited communication abilities.  
+ 
+ 
+The Noddle? is indicated for use by patients who have physical limitations, weaknesses, and/or limited communication 
+abilities to assist them with summoning and communicating with their caregiver by controlling other devices such as the nurse call and speech generation devices. To use the Noddle? patients should be sufficiently cognitively intact so that they can produce intentional gestures and intend to communicate with caregivers. 
+Similar 
+ 
+Both devices are for prescription use only.  
+ 
+Although the indications for use between the two devices have slightly different wording, both devices have the same intended use in that they both serve as a powered communication device.  Specifically, they are both intended to detect voluntary gestures to assist individuals with motor disabilities communicate and interface with external devices (e.g., speech generating device, nurse call station) 
+ 
+The Cognixion device also includes an additional indication for use as a powered environmental control system which is not present in the Noddle indications.  However, it should be noted that the addition of the powered environmental control feature does not alter the intended use or risk profile of using the device as a powered communication system.  To adequately account for the features that encompass the Cognixion ONE Nexus device, we believe it is appropriate bot the IQA and the ILQ.
+Patient 
+Population 
+Individuals who have physical limitations, weakness and/or limited communication abilities 
+Individuals who have physical limitations, weakness and/or limited communication abilities 
+Same 
+Environment 
+of Use 
+Home, clinic, community, or hospital setting 
+Home, clinic, community, or hospital setting 
+Same 
+
+Technological Characteristics
+ 
+Cognixion ONE Nexus 
+Noddle (K162817) 
+Comparison Discussion 
+Inputs 
+Signals measured from the motion sensor in the user's smartphone as well as other wirelessly paired BLE accessory controllers such as switch, joystick, keyboard, and sip-and-puff inputs.  
+ 
+Signals measured using a microphone, proximity detector, or any sensor/switch with a switch-closure output (e.g., tongue click, tongue in cheek gesture, button push) 
+Similar 
+ 
+Both devices can utilize a variety of control signals measured using different sensors  
+ 
+Outputs 
+Interfaces with external devices for powered communication and powered environmental controls which include smart enabled devices within the user's home (e.g., turning lights on/off, setting the thermostat, locking/unlocking doors, control a television) 
+Interfaces with external devices for powered communication.  
+Different 
+ 
+Although, both devices can serve as a powered communication system, the Cognixion ONE Nexus device also includes powered environmental controls features. To account for powered environmental control feature we propose the using the DeltaTalker with Infrared as the primary predicate. Please see 
+ 
+ 
+Power  
+The Cognixion ONE Nexus device is powered from either an electric mains line using a DC powered adaptor or an internal rechargeable battery.   
+The Noddle device is powered from either an electric mains line using a DC powered adaptor or an internal rechargeable battery.   
+Similar 
+ 
+Both devices use rechargeable batteries that can be recharged using a power adapter. 
+Software/
+Hardware 
+The Cognixion ONE Nexus device uses a mobile App that runs on the device's hardware interface.   
+The Noddle has a hardware platform that runs the device software.   
+Similar 
+ 
+Both devices have dedicated hardware interfaces that runs their device software.  There may be some differences in the operating system that the software runs however these differences do not raise new questions of safety and effectiveness 
+
+
+
+6.4 Pricing Strategy 
+Product pricing (or new pricing based on added functionality)
+
+The Cognixion ONE - Nexus will be sold at a list price of $7,500 and the following accessories are included with a product purchase.
+    - Reusable carrying case
+    - Elastic Velcro top-of-head strap
+    - Removable, adjustable chin strap
+    - USB charging cable and power adaptor plug
+
+Also included in the product purchase is Speakprose AR software which can be used for
+    - Speech composition and generation
+    - Smart device control and virtual assistance
+
+Optional peripherals that can be bundled with a purchase or sold separately include
+    - Bluetooth switch input adapter with integrated dual-button switch control
+    - TBD - Lucas to define and explore
+
+Optional Care Companion software that can be purchased separately 
+    - TBD - pricing model & subscription tiers
+
+6.5 Branding & Naming
+What is the name of this product?  Why was this name chosen?  How will it fit into the larger brand architecture of our company?
+
+TBD - Meaghan + Andreas to provide information
+
+Nex-ushttps://www.google.com/search?client=safari&rls=en&sxsrf=ALiCzsa4QJdiqm3zfFIHAYWpQS1DMB4DCw:1662421987909&q=how+to+pronounce+nexus&stick=H4sIAAAAAAAAAOMIfcRozi3w8sc9YSm9SWtOXmPU4OINKMrPK81LzkwsyczPExLkYglJLcoV4pRi52LNS60oLbZiUWJKzeNZxCqWkV-uUJKvUADUkA_UkaoAlgcA_zXNdlUAAAA&pron_lang=en&pron_country=us&sa=X&ved=2ahUKEwiXj7nA7P75AhXIDkQIHWiiBnAQ3eEDegQIEBAK
+noun: nexus; plural noun: nexus; plural noun: nexuses
+    1. a connection or series of connections linking two or more things.
+"the nexus between industry and political power"
+        ? a connected group or series.
+"a nexus of ideas"
+        ? the central and most important point or place.
+"the nexus of all this activity was the disco"
+
+
+

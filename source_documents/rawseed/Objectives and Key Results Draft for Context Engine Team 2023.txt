@@ -1,0 +1,38 @@
+Objectives and Key Results Draft for Context Engine Team 2023
+Change Tracking
+Version 1.0 Draft 1
+12 Dec 2022
+Carl Hagmann
+Version 1.0 Draft 2
+13 Dec 2022
+Benjamin Cortens
+Version 1.0 Draft 3
+14 Dec 2022
+Carl Hagmann
+
+
+
+
+Ultimate Objective: Generate value with Cognixion's language generation technology stack by establishing and executing research and development.
+Objective 1: Build high-quality language processing and generating software components 
+KR1: Deliver word & phrase completion model(s) and architecture design to Software Engineering that offers similar capabilities to the ASHA language system with improved reliability and accuracy.
+KR2: Achieve communication rates and accuracy that exceed existing AAC language systems 
+KR3: Create a basic AWS API infrastructure and documentation for training and fine-tuning models 
+
+Objective 2: Develop lines of research at the edge of what is possible (under O-2)
+KR1: Patent review board approves at least one patent. 
+KR2: Steering committee reviews and approves research roadmap.
+KR3: Execute research roadmap on time.
+KR4: Experimental plans developed for conducting speculative hi-risk research. 
+KR5: List of potential high value research topics identified (with special interest paid to those which will involve collaboration with Biosignals research team).
+
+Objective 3: Evangelize Cognixion technology with collaboration and outreach (O-14)
+KR1: Submit at least one paper in 2023 in an ML journal with academic research collaborator
+KR2: Publish white paper and give presentation of new NLG/NLP technology internally 
+KR3: Attend (or present at) at least 1 major conference on Natural Language Generation / Linguistics / Neurotech / AAC
+KR4: Identify external research opportunities, secure a funded collaborator for 2024, and develop research papers
+
+Objective 4: Grow a team that fosters collaboration, stewardship, and diversity (O-4)
+KR1: Fully document notebooks and SOPs for non-technical staff to use, owned jointly by all members of Context Engine team. This includes excellent documentation of tools and models as well as on-boarding resources.
+KR2: Acquire resources needed to satisfy efforts from technology and research roadmaps - these resources include both new staff, collaboration with existing teams, as well as hardware and software resources
+KR3: Ensure current and new members are well-informed on Quality Assurance, Machine Learning pipelines and follow best practices. Best practices documentation is well maintained and easily accessible by all team members.

@@ -1,0 +1,3 @@
+# Activities of Daily Living (ADLs)
+
+Definition: Fundamental skills required to independently care for oneself including: ambulation (movement), feeding, dressing, personal hygiene, continence (bowel and bladder control) and toileting (use of toilet). More advanced ADLs include transportation and shopping, financial management, housecleaning, meal preparation, communication and managing medications

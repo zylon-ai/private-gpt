@@ -1,0 +1,3 @@
+# Partner-Assisted Scanning
+
+Definition: An AAC technique used to enable a person with severe speech impairments to communicate. The approach is used with individuals who, due to sickness or disability, have severe motor impairments and good memory and attention skills. It is used as an alternative to direct access. The communication partner presents messages or letter choices in a sequential fashion to the individual who wishes to communicate something, and the individual then makes their selection.

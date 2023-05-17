@@ -1,0 +1,294 @@
+ 
+
+Speakprose AR IRB Test Document
+
+
+
+
+
+Table of Contents
+
+
+Table of Contents	1
+Test Cases	2
+User Task Analysis - Device Start Up	2
+User Task Analysis - Recenter	2
+User Task Analysis - Calibration	2
+User Task Analysis - Orientation	3
+User Task Analysis - Navigation	3
+User Task Analysis - Device Status*	4
+User Task Analysis - Customization #1	4
+User Task Analysis - Usability	4
+User Task Analysis - Customization #2	6
+User Task Analysis - Environmental Controls	7
+User Task Analysis - TroubleShoot and Maintenance	7
+Recommendations	7
+Additional Notes	8
+
+Test Cases
+User Task Analysis - Device Start Up
+
+Bug-DeviceStartUp-02
+With researcher or caregiver assistant, user presses the button on the phone, completes login to the Speakprose app
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-DeviceStartUp-03
+With researcher or caregiver assistant, user logins with Amazon credentials and links Alexa account with Speakprose AR
+Bugs Found
+
+Steps to replicate
+
+
+
+
+User Task Analysis - Recenter
+
+Bug-Recenter-05
+With researcher or caregiver assistant, user repositions the UI to a comfortable position to "recenter" the headset
+Bugs Found
+
+Steps to replicate
+
+
+
+
+User Task Analysis - Calibration
+
+Bug-Calibration-07
+User completes a range of motion calibration, uses the head pointer for the placement of objects on the screen, then calibrates the visual field to a comfortable position
+Bugs Found
+
+Steps to replicate
+
+
+
+
+User Task Analysis - Orientation
+
+Bug-Orientation-08
+User moves the head around to identify the headpointer and interact with buttons on the screen
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-Orientation-09
+User uses the head pointer to touch the house (home button) and hold the pointer on the button to show yellow racetrack dwell timer
+Bugs Found
+
+Steps to replicate
+
+
+
+
+User Task Analysis - Navigation
+
+Bug-Navigation-10
+User turns on/off the UI using a persistent toggle "Home" button in the view to avoid accidentally hit the UI elements while engaged in other activities.
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-Navigation-11
+User reaches and dwells on a larger button centered in front of the user (30-45 degree up from the center) to collapse/expand the UI view.
+Bugs Found
+
+Steps to replicate
+
+
+
+
+User Task Analysis - Device Status*
+
+Bug-DeviceStatus-12
+With researcher or caregiver assistant, user sees the BCI battery status to decide when to plug in the device to charge
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-DeviceStatus-13
+User sees system status information about connection status and signal strength of cellular data or Wi-Fi network to ensure the device is connected and working.
+Bugs Found
+
+Steps to replicate
+
+
+
+
+User Task Analysis - Customization #1
+
+Bug-Customization-14
+User chooses the preferred keyboard from the available keyboard layout in settings, apply and save it, and see the layout changed in the view
+Bugs Found
+
+Steps to replicate
+
+
+
+
+User Task Analysis - Usability
+
+Bug-Usability-15
+User selects the "yes/no" buttons on the Home Scene to answer questions (WAB/CLQT)
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-Usability-16
+User hears audio feedback while confirming the selection, and receives haptic feedback while confirming the selection.
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-Usability-17
+User looks at a letter and wait for the yellow line to go completely around in order to select it. (Instruction: Please selects the alphabet.) 
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-Usability-18
+User selects all the single-digit numbers and can compose the present year.
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-Usability-19
+User uses the "clear" and "delete" button to clear the slate and delete single characters
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-Usability-20
+User uses the "play" button to play an audible message to others
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-Usability-21
+User completes generative naming using the keyboard 
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-Usability-22
+User completes confrontational naming using the keyboard 
+Bugs Found
+
+Steps to replicate
+
+
+
+
+User Task Analysis - Customization #2
+
+Bug-Customization-23
+User uses the keyboard to compose Alexa commands (e.g., what's the news)
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-Customization-24
+User uses the star button to save three customized Alexa phrases in the "My Favorites" folder
+Bugs Found
+
+Steps to replicate
+
+
+
+
+Bug-Customization-25
+User selects an Alexa command in the "My Favourites" and selects the "send" button to send it to Alexa
+Bugs Found
+
+Steps to replicate
+
+
+
+
+User Task Analysis - Environmental Controls
+
+Bug-EnvironmentalControls-26
+User composes utterances for smart home controls (e.g., "turn on/off light/fan/thermostats", "turn on/off TV)
+Bugs Found
+
+Steps to replicate
+
+
+
+
+User Task Analysis - TroubleShoot and Maintenance
+
+Bug-TSM-27
+With research or caregiver assistant, user charges the device to manage the device's power and usage updates
+Bugs Found
+
+Steps to replicate
+
+
+
+
+
+Recommendations
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Additional Notes
+
+
+
+
+
+

@@ -1,0 +1,363 @@
+
+
+
+Kishu Project
+Design Document
+
+
+
+Author 
+Wil Macaulay
+Creation Date
+15 Feb 2022
+Last Revised 
+9 Mar15 Feb 2022
+Version
+0.1.1 - Signoff candidate1
+
+
+
+
+
+
+
+
+
+
+Abstract: This document is a specification for a customer deliverable of the CNXN ONE EEG device to an early customer.
+
+Statement of Confidentiality: This document and supporting materials contain confidential and proprietary business information of Cognixion. These materials may be printed or copied for internal use, but are not to be shared with other parties without explicit permission.
+
+
+Table of Contents
+1	Document Control	3
+2	Introduction	3
+2.1	Audience	3
+2.2	Glossary	3
+3	Requirements	4
+3.1	Business Objectives	4
+3.2	Product Overview	4
+3.3	Requirements 	5
+3.4	Non-requirements	7
+4	Assumptions, Risks and Uncertainties	8
+4.1	Assumptions	8
+4.2	Risks and Uncertainties	8
+5	Approach	8
+5.1	Components	9
+5.1.1	Hardware	9
+5.1.2	Software/Firmware	9
+5.2	Component changes	9
+5.2.1	Firmware	9
+5.2.2	BCI application	10
+5.3	User Interface	10
+1	Document Control	3
+2	Introduction	3
+2.1	Audience	3
+2.2	Glossary	3
+3	Requirements	4
+3.1	Business Objectives	4
+3.2	Requirements covered	4
+3.3	Non-requirements	5
+4	Assumptions, Risks and Uncertainties	6
+5	Approach	6
+5.1	Components	6
+5.1.1	Hardware	6
+5.1.2	Software/Firmware	6
+5.2	Use cases and sequence diagrams	6
+
+1 Document Control
+OneDrive link: 
+Link
+Related documents and URLs: 
+[prop]    
+
+proposal 
+AF
+1 Feb 2022
+[PH1UI]
+Phase 1 UI design (Figma) 
+NA/CL
+4 Mar 2022
+[Assess]
+BCI-Readiness Assessment Design Document
+SP
+11 March 2022
+[risks]
+Risk Register - Kahan Project
+AM
+21 March 2022
+Revision history:
+0.1
+first draft for discussion
+WM
+15 Feb 2022
+0.2
+Updated after internal review
+WM
+22 Feb 2022
+1.0
+Updated after second review - candidate for signoff
+    - Formalized risk section
+    - Added link to Assessment design doc
+    - Addressed comments
+WM
+11 Mar 2022
+1.1
+Candidate for signoff
+    - Remove risk section, refer to external risk register.
+    - Minor updates
+WM
+1 April 2022
+2 Introduction
+This design document outlines the approach to implementing an early prototype of an SSVEP communications device for an ALS client in a private-care setting.
+This document details the first version only; if successful, further revisions will be delivered. These will be detailed in future specification documents.  References to future possible functionality are made to guide the implementation team in design choices only.
+
+NOTE: this document does not cover the assessment phase of the project. A companion document is available at [Assess].
+
+2.1 Audience
+This document is intended for:
+    - The project team.
+2.2 Glossary
+This section enumerates terms and abbreviations specific to the problem or solution domain.
+AAC
+Augmentative and Alternative Communication
+ALS
+Amyotrophic Lateral Sclerosis - a degenerative disease of the nervous system causing progressive loss of muscle control.
+BCI
+Brain-computer interface
+Caregiver
+A person who assists the primary user in donning and removing the headset and ensuring that it is properly adjusted and receiving good signal. The caregiver may or may not have medical training.
+Cognixion ONE, CXN ONE
+Cognixion's BCI headset incorporating an EEG and associated firmware, with a mount for a mini-tablet to be used as an application platform.
+Mini-tablet
+A device that is inserted in the CXN ONE headset to serve as a host for the AAC application. This can be an iPhone, iPod Touch or other suitably-sized device.
+Speakprose AR
+Cognixion's augmented-reality based AAC application, currently in early development.
+SSVEP
+Steady-state visually evoked potential
+
+
+
+3 Requirements 
+This section enumerates a set of requirements that are covered by this document. 
+
+NOTE that this document only covers the initial deliverable to the family. 
+
+NOTE: once this document is approved, requirements are never renumbered: if a requirement is removed it is indicated by "requirement removed"
+
+3.1 Business Objectives
+The intended user is an ALS sufferer who has been an eye-tracking AAC user for a period of time, but has lost the ability to move his eyes sufficiently to use eye-tracking based AAC.  The family needs to be able to get yes/no answers to questions as a minimum.  
+When trading off accuracy, mobility and latency, the primary requirement is accuracy.
+As well as helping an individual user, this project will provide valuable insights into the suitability of the CXN ONE headset in a home setting. A successful project may provide access to additional users in the primary user's community.
+It is desirable to be able to introduce Speakprose AR into the project at a later date.
+3.2 Product Overview
+In the scope of this project, early versions of hardware and software will be delivered.
+    - A functional prototype of a simple host-based software system to classify EEG signals with respect to presented stimuli. This prototype does NOT run on a mobile device.  
+    - A subset of a preliminary product prototype of the CXN ONE headset including:
+    - A functional prototype of the CXN ONE industrial design, constructed with prototyping methods such as 3d printing
+    - A functional prototype of the CXN ONE electrical and electronic design, including electrodes, analog/digital conversion and processor board.
+    - One set of Datwyler 8 mm dry passive electrodes 
+    - A pre-release version of CXN ONE firmware, capable of collecting EEG data at at least 250 samples/sec and transmitting those samples via an accessible USB interface.
+The delivered system will NOT include the following:
+    - Any mobile device
+    - Any semi-transparent visor 
+    - Any mobile application
+As a result of findings during the course of this project, any or all of the delivered components may be modified before initial public availability.
+
+3.3 Requirements covered
+Identifier 
+Requirement
+R-001
+During a communications session the user must be able to choose a minimum of two stimuli "yes" and "no" with their eyes. . Additional stimuli up to 6 in total are desirable to be introduced over the course of the engagement.  Candidates for additional stimuli include:
+    - "ask me a yes or no question"
+    - "I don't know"
+R-002
+A mechanism ("impedance measurement") must be provided to assess the quality of the electrical contact per electrode at the start of a communications session.
+R-003
+A mechanism ("alpha test") must be provided to assess the positioning of electrodes at the start of a communications session.
+R-004
+A communications session must be able to be restarted by the caregiver without removing the headset from the subject's head.
+R-005
+A communications session must be able to be interrupted by the caregiver without removing the headset from the subject's head.
+R-006
+The headset firmware must be able to be reset by the caregiver without removing the headset.
+R-007 
+The impedance measurement must be able to be initiated by the caregiver without removing the headset.
+R-008
+The alpha measurement must be able to be initiated by the caregiver without removing the headset.
+R-009
+The appearance of the stimuli on the monitor must be adjustable by the caregiver in the following attributes:
+    - Size
+    - Font size
+    - Position/spacing on the monitor
+    - Brightness of flashing
+    - Text* (Yes and No are fixed; all others presented are editable)
+NOTE: depending on the patient's level of ocular control, it may be useful to present a horizontally laid out set of stimuli.
+R-010
+Changes to appearance must be persistent across application/system restart.
+R-011
+There must be a way for the caregiver to reset appearance to defaults.
+R-012
+Appearance on the external caregivers monitor must mirror reflect the state of the BCI user'sinternal monitor. UI elements that are not interactive to the BCI user must not be shown on the BCI user's monitor.
+R-013
+Auto-dimming/auto-shutoff must be disabled while the application is running.
+R-014
+The caregiver must be able to quickly start the application on system restart.
+R-015
+It must be possible to use the BCI application without Internet connectivity. must not be required for the BCI application.
+R-016
+Documentation including must be supplied including: 
+    - troubleshooting is requiredguide
+    - installation and upgrade guide
+    - configuration guide
+    - fitting and assessment guide
+    - care and cleaning guide
+R-017
+An activity log should be created to log the following events:
+    - Session initiation time (launching app)
+    - Classification events (successful/unsuccessful)
+    - Reset to default
+    - Modification of UI configurations - all settings must be recorded
+    - Keystrokes selected (words phrases associated with buttons clickedchosen stimuli)
+    - Timestamp for words selected
+    - Session end (closing app)
+    - Session pause
+    - Session resume
+    - Results of alpha test
+    - Results of impedance test
+    - An indication by the caregiver/assessor of whether the chosen stimulus is accurate
+R-018
+A preliminary SSVEP (single class) screen must be available for presentation for use during initial assessment for suitability. The frequency of the stimulus must be adjustable by the technician carrying out the assessment.
+R-019
+When a stimulus is determined to have been selected, the phrase associated with that stimulus must be briefly displayed by itself and text-to-speech must be invoked to play the phrase over the computer's chosen speakers
+R-020
+Configuration adjustments must not be subject to accidental change, for example by locking so that they require a password to change or by requiring the caregiver to explicitly choose to adjust advanced settings.
+R-021
+A set of configuration settings ("profile") should be recorded and restored
+R-019
+All EEG data captured must remain in the United States.
+R-022
+Any interaction by the caregiver (for example, marking 'correct vs incorrect' responses) must be done without distraction to the primary user.
+R-023
+The minimum acceptable accuracy is 50%, with the expectation that 80% accuracy can be achieved with practice.
+
+
+3.4 Non-requirements
+This section identifies possible feature candidates that were not identified as requirements, but are not simply missing. Feature candidates in this section are often surfaced during detailed analysis.  This section is included to ensure that stakeholders agree that business goals can still be satisfied without the inclusion of these feature candidates as requirements. Note that future product release may promote some of these items to requirements
+NR-001
+It is not required that the primary user be able to access functionality other than R-001 (above) in the absence of a caregiver.
+
+NR-002
+It is not required in the first release to add or modify stimuli, but this requirement will be needed in subsequent releases.
+
+NR-003
+It is not required to modify the foreground or background colours of the stimuli
+
+NR-004
+Upgrade of application, firmware or OS may require a Cognixion site visit.
+
+NR-005
+It is not required to use other stimuli besides flashing SSVEP in this phase of the project. However if motion-evoked potentials (SSMVEP) are shown to be more effective or more comfortable they can be substituted.
+
+
+
+4 Assumptions, Risks and Uncertainties
+4.1 Assumptions
+
+    - Use of the AR-based AAC application (Speakprose AR) is entirely out of scope for the initial phase of the project. 
+    - The What is the minimum acceptable accuracy is ? (50% initially, with a goal of /80% eventually)
+    - The patient is assumed to be in a reclining or semi-reclined position
+    - The caregiver is assumed to have access to the computer keyboard without disturbing the position of the headset - in other words, it is expected that there is a keyboard and monitor that is accessible to the caregiver with the user's interface mirrored to an external screen.
+    - What frequencies are best? Should this be adjustable
+    - Assume no photo-sensitive epilepsy
+    - Assume caregiver has sufficient knowledge to follow instructions given documentation.
+    - colorsThe device is assumed to be stored appropriately when not in use - i.e stored in its case out of direct sunlight
+    - The device is assumed to be properly cleaned at regular intervals
+    - It is assumed that only the patient will be wearing the device
+    - Equipment remains the property of Cognixion and is returned when the engagement is over.
+    - The equipment is assumed to be set up so that the caregiver is able to see both screens at the same time (see below for description).
+    - The caregiver is able to consistently don the headset on the client such that the electrode locations follow their corresponding locations (PO3, POz, PO4, O2, Oz, O1) on the 10-20 international standard.
+    - The caregiver carefully inspects electrodes for wear and tear prior to each collection session.
+    - The patient is assumed to have sufficient stable ocular control to be able to attend to at least 2 SSVEP stimuli.
+    - The family is assumed to have a suitable stand available for the display that will face the patient.
+    - Risk: video calls are off limits, audio calls are allowed.
+        ? Is screen sharing available?
+
+4.2 Risks and Uncertainties
+Section broken into its own document at [risks]
+
+
+        ? The headset may not fit client's headWhat is the minimum acceptable accuracy? (50% initially/80% eventually)
+    - What frequencies are best? Should this be adjustable
+    - Risk: video calls are off limits, audio calls are allowed.
+    - Is screen sharing available?condition
+    - We will have to derive our own assessment of the patient's current condition, of which certain aspects have not been explored in prior work
+    - The client's condition may deteriorate too much between phase 0 and phase 1 visit for BCI to be useful
+    - The headset used may have unforeseen issues at assembly time (e.g., issues with soldering rendering certain channels to be too noisy to be useful)
+    - Current expectation is to provide P2.2 headset, which may not have sufficient testing time
+    - The libraries and packages supported by the Jupyter notebook interface require manual setup by a technician and can have unforeseen issues during setup
+    - The libraries and packages supported by the Jupyter notebook interface are not compatible with all computers (i.e., M1 macs do not have support yet)
+
+5 Approach
+No iPhone mini-tablet or MIRA visor will be provided.
+The CXN ONE headset will be used to gather EEG signals only, with onboard processing limited to notch filtering and/or bandpass.
+All further signal processing and audio output will be done in a python-based application ("BCI application") running on an Intel-based MacBbook Pro supplied and configured by Cognixion. The BCI application will be developed based on the existing Python code used to implement an internal Jupyter notebook suite ("Jupyter apps").  The Jupyter apps already demonstrate the required primary functionality:
+    - Impedance testing
+    - Alpha testing
+    - Selection of up to 64 different targets displayed on a laptop monitor
+
+Proposed flow:
+    - Caregiver will prepare settings (can save/restore from previously saved settings)an
+    - Caregiver willd press start
+    - Caregiver should ask the user ('client') the question to be asked, then press the space button to initiate active stimulation/classification epoch
+    - User ('client') will select an option during this epoch
+    - At end of epoch, there is no active processing or EEG collection happening on the board. 
+    - If caregiver wants to ask another question they should ask another question and initiate another session by pressing the spacebar again
+    - Caregiver can optionally log a message to indicate their assessment of the accuracy of the answer.
+    - IfF the caregiver prefers to end the session, they should press the escape key and session will exit
+    - When session exits, caregiver will have to relaunch application and start over (settings persist from last session)
+5.1 Components 
+5.1.1 Hardware
+    - CXN ONE Axon headset (no iPhone mini-tablet installed, no visor installed)
+        ? P2.2 with adjustable toe-angle
+    - USB  cable to connect CXN ONE to laptop
+    - USB isolator
+    - M1 (preferred) or Intel-based Mac laptop 
+    - External monitor w. 60 Hz refresh rate
+    - USB-C display cable
+    - (optional) external speaker
+    - Updated electrode puller (Datwyler)
+    - Datwyler 8mm passive dry electrodes x 8
+    - Assumed supplied by the patient: stand for the display 
+
+5.1.2 Software/Firmware
+    - MacOS 12.3 2 Monterey or greater
+    - BCI application software (to be developed)
+    - CNXN One firmware version 0.9.1 or greater
+    - iOS testsuite for use by the assessment team
+
+5.2 Component changes
+5.2.1 Firmware 
+No required changes identified when using the serial interface.
+NOTE: if the impedance abstraction interface is ready in time it will be used but is not required.
+NOTE: might need to change some default settings
+5.2.2 BCI application
+The BCI application will enhance the python code base in the following ways:
+    - Improvements of integration between the test flows and the main UI.
+    - Ability to run in a standalone fashion (not requiring the Jupyter environment)
+    - Improvements to the user interface
+    - Enhancements to the usability of configuration features by non-technical users
+    - Implementation of SSVEP suitability assessment.
+    - Addition of a local log file	
+
+5.3 User Interface
+[to be updated with details]
+The main UI will be presented to the user on an external monitor suspended by a stand that allows comfortable viewing.  It will consist initially of two light-grey targets placed side-by-side on a black background on the monitor.  The size and positioning (distance between the targets) can be configured.
+Note that it is important that any interaction by the caregiver (for example, marking 'correct vs incorrect' responses) be done without distraction to the primary users.  This means we may have to have a primary window on one screen and a secondary interface on the other.
+
+[temporarily filled with basic wireframe and flows for illustration purposes only]
+Please see Figma file [PH1UI] for full document: https://www.figma.com/file/OaEzSBKeZ0syt9DCOXuZjq/Jupyter-Desktop-SSVEP-UI?node-id=0%3A1
+
+
+
+

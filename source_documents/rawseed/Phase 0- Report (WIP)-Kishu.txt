@@ -1,0 +1,185 @@
+Description of Listed Items
+
+Most of the recorded artifacts from the visit were captured via photos, videos, and written notes taken during/immediately after site visits. The family was asked to provide details regarding the client's alertness and quality of sleep the night before. Relevant findings and documents are captured below for each day, to provide any potential further context to the result of the assessments or other relevant findings while using the software.
+
+For specifications regarding the details of phase 0 and phase 1 software, please use the following table to review its specifications:
+
+LINK
+DESCRIPTION
+Phase 1 Specification
+Specifications for the phase 1 software for simple desktop-based BCI operation (yes/no use case)
+Phase 0 Specification
+Specifications for the phase 0 software for BCI fit-of-use assessment (Covert and overt stimuli detection)
+
+Table of Contents
+Description of Listed Items	1
+May 18	2
+Setup	2
+Exercises Completed	2
+Overt Assessment Test	2
+Presentation of occipital alpha oscillations in ALS	3
+Impedance and Signal Quality	4
+Presentation of SSVEP and SSMVEPs in client	4
+May 19	5
+Setup	5
+Bibliography	8
+
+
+
+May 18
+
+Setup
+
+Most of the day was spent setting up the equipment that will be used for BCI operation. A monitor stand was assembled and connected to a laptop. The Axon P2.1 prototype was plugged into the laptop (the laptop was not plugged directly into a power supply), and the client was positioned as close to the screen as possible. Note that on this particular day, the family tended to hold the headset while it was on the client's head (see Figure 2).
+
+Note that the monitor is situated fairly far away compared to other days. While this is a comfortable position for a typical individual, it would be more ideal to have the screen take up more of the client's field of view to ensure a line of sight on any stimulation or text. Most of the day was spent trying to set up the monitor's stand and to figure out the best place for the client to sit. 
+
+The family reported that the client was feeling a little tired and indicated that they avoided sharing news of our visit with the client. They raised a concern that sleep may be affected in anticipation of our visit.
+
+Exercises Completed
+Only the Overt Assessment Test (Part One of Phase 0) was conducted this day. 
+
+Overt Assessment Test
+
+As of the time of this report, VEP research for clinically locked-in ALS patients is practically non-existent [1]. As a result, there are no existing datasets or EEG measurements that can help indicate the viability of VEP-based BCI operation for such advanced cases of the disease. Thus, it was critical to find any epochs or indication that any kind of steady-state VEP stimulation can be detected. It is worth noting that this assessment is not enough to demonstrate robust and consistent BCI operation alone - that would require proven efficacy of multi-target selections.
+
+During the overt assessment the team and circle of care found that the client had a challenging time maintaining a fixed gaze. When prompted and engaged, the client was able to maintain gaze in one direction for approximately thirty seconds before the eyes would gaze towards the right and up, where they would stay. Unfortunately, the monitor stand was not flexible enough to move to meet the client's gaze when this occurs. This is an indicator that the client has a severe case of ocularmotor apraxia which is very likely due to his advanced progression of ALS. It is not clear at this time whether visual acuity is reduced, however the client's ONH and RFNL analysis reports do show evidence of axonal degeneration in both eyes. Prior work has indicated that visual acuity is relatively mild, although prior research for CLIS is underreported [1]. Recent efforts has made interesting strides in measuring optic neuropathy [2], [3] however it should be noted that our team had no intention to provide clinical or ophthalmologic guidance to the family. Any further speculation on this matter should refer to [cite lucas' clinical assessment here]. 
+
+Presentation of occipital alpha oscillations in ALS
+
+During the assessment, the client's eyelids began drooping. This affected the early trial data in two ways: first, SSVEP stimuli on the screen would be unable to elicit responses if they are not within his field of view. Secondly, there is evidence of a strong EEG component present during these trials that is unlikely to have a noise-related source (see Figure 3).  
+
+In [4], the two CLIS patients that participated in that study still had the ability to keep their eyes open (although they were unable to have sufficient ocular control to use an eyetracking system effectively), so their conditions were arguably less severe than the client. The findings in that study are nevertheless consistent with the observations from this assessment - there was a slowing of occipital alpha activity outside of the typical alpha range of 8-13 Hz. In neurotypical individuals this peak is around 10 Hz. For our client, his peak consistently presented between 6-8 Hz during periods of inhibition or lack of focus. However, prior research in ALS research has not reported alpha oscillation differences in individuals who are in a condition where they cannot voluntarily close their eyes. As a result, it is difficult to validate our findings against research.
+
+Occipital alpha waves tend to present themselves during periods of mental inhibition and when the eyes are closed. Due to reports from the family about the client's wakefulness and drooping eyelids, we hypothesize that these effects may have elicited the identified alpha artifacts are present during the trials.
+
+Impedance and Signal Quality
+
+Reported impedance levels for the patient tended to sit at approximately 1600k?s on this day, which is much higher than what is regarded as acceptable impedance levels in research studies. Such a high impedance is not unheard of using electrodes with compositions like the Datwyler SoftPulse electrodes. In general, reported impedance levels for dry and passive systems such as ours can approach 1M?s due to insufficient scalp contact, and the natural impedance of dead, dry skin cells sitting on the top layer of skin [5]. The high impedance levels lead to the wires acting like antennae, and therefore become particularly sensitive to environmental noises along the wire prior to reaching the amplifier (ADS1299). If severe enough, the EEG signal can be indistinguishable in a sea of noise. Impedances can be reduced by improving the electrode-electrolyte interface or by using active electrodes to boost signal sources and reduce other noise. The former is a cheaper solution and be done through several means (e.g., using wet saline gels electrolyte to hydrate the cells, or removing the top layer of skin) however they can be prone to human error and rather uncomfortable for a long-term solution.
+
+Solutions for successful BCI operation with this measured impedance usually mean increasing the length of data collected. Thus, it is advised to use longer epochs when impedance is high. Future work could include automating this relationship between impedance and epoch length.
+
+During the assessment, channels PO4 and POz lost skin contact. As a result, the data collected by those channels should be disregarded from future findings  
+
+Presentation of SSVEP and SSMVEPs in client
+
+Due to the challenges above in acquiring good ERPs from the client, it was unlikely to find consistent SSVEPs across trials. Thus, the goal was to identify at least a couple trials of strong SSVEP responses to indicate some expected operation of the visual processes required to control our BCI. In the collected data and graphs below, the goal is to find peaks in the Power Spectral Density graphs across channels. These graphs indicate signal power (y-axis) across the frequency bands of interest (x-axis). The overt assessment only uses SSVEP and SSMVEP stimuli at 10 Hz, so to find evidence of good SSVEP responses we look for power peaks at the fundamental frequency 10 Hz, the subharmonics 20 and 30 Hz, as well as any possible activity in the subharmonic 5 Hz. The following graph indicates one trial in which SSVEP evidence is clear:
+
+
+Figure 5 The PSD across each channel during the SSMVEP trial 9 of the overt assessment. Note the identifiable peaks in the PSD At channels Oz and PO3. The markers in the graph indicate subharmonic and harmonic frequencies of the stimulus that was being presented on the screen (10Hz). The data has been processed with a bandpass filter from 4-35 Hz to minimize artifacts such as main line and any motion at the site of the electrode.
+Although not identifiable across all channels, there is clear evidence of SSVEP responses in at least two channels that stand out from the noise floor. Such responses are extremely unlikely to be coincidental noise sources because there are no environmental sources that have such characteristics around such a low frequency range.
+
+Initial findings from this assessment have indicated to the team that ideal VEP responses were most likely to be detectable (strong responses at relevant peaks) when motion-based stimuli were used. There was sufficient evidence of SSVEP activity was identified to proceed with the covert assessment. The covert assessment was scheduled to occur tomorrow, after the setup of the second monitor and after a long period of rest for the family and client.
+
+May 19
+
+Setup
+
+For this day's setup, a different monitor stand was assembled in the hopes that greater flexibility in the stand's arm could compensate for the client's wandering eyes. While the new monitor stand was assembled in due time, it could not be attached to the end of a table without falling. Thus, the team had to abandon that monitor and use the one from May 18th for this day's round of tests.
+
+MAY 19:
+
+Setup:
+
+Similar setup to the 18th but was able to bring the client closer to the screen. Also, arrived and began testing earlier to ensure test the client was more awake and engaged for the test done that day. Another monitor stand arrived but we could not find a suitable table to mount it to. Committed to using a better mount for the 20th.
+
+Exercises Completed:
+
+Two tests were performed today.
+
+Morning Overt Assessment Test notes:
+    - Test done around 10am, and measured impedance levels were approximately 3 Mohms
+    - Observed drop in performance over time
+    - Around trial 6, we found his eyes wandering off the screen recovered for trials 9, 10
+    - Strong low-alpha component present during entire session, and in general much more noise as assessment went on 
+    - Notable trials:
+        ? SSMVEP trial 1
+        ? SSVEP trial 1, 9
+    - Despite high noise, had some success with CCA
+    - After a short break, we attempted phase one after this test due to a request from Astrid
+        ? Threshold was set to 0 due to such low SNR identified in Assessment
+        ? First three trials 100%, took a short phone break and upon return was only getting around 60% accuracy
+        ? Removed poz, po4, o2 from phase one
+
+Afternoon Overt Assessment Test notes:
+    - Family reported that client did not rest well that day, and he had a lot of difficulty keeping his eyes open after trial 4
+    - Test done around 3pm, was able to get client closer to monitor this time
+    - Eyes consistently moving up and to the right
+    - Son forced client's eyes open the entire time after trial 5 - risk of added motion artifacts, fatigue, possible headset jiggling
+    - Notable trials:
+        ? SSMVEP trial 1, 2, 3
+        ? SSVEP trial 3, 6, 9, 10
+
+Initial findings:
+ - Very high impedance in the system, requires long epochs to get the data clean
+In general, very small SSVEP responses compared to neurotypical response - but this could be due to a number of complicated factors. Probably safe to assume this is the norm for this client
+    - Indicators for success and use at home, but significant human error is likely and headset is showing signs of wear, particularly at one of the PO electrodes
+    - 
+
+MAY 20:
+
+Setup:
+
+Left picture is setup for morning, right picture is the afternoon setup. The afternoon setup is much easier to work with and is easier to move around to capture client's gaze. Family reported that client is much more tired today (sounds like the family was parting last night due to yesterday being a religious holiday).
+
+Overt assessment notes:
+    - Impedance during setup measured around 3 Mohms again 
+    - Notable trials:
+        ? SSMVEP trial 7, 
+        ? SSVEP trial 2, 7, 9
+    - Mostly used to capture another day of data, and for comparison with other assessments 
+    - Strong lower-wave alpha again
+
+NO BREAK BETWEEN
+
+Covert Assessment (Movement+Flash)  V1 notes:
+    - Challenge because client indicated in earlier tests to have strong responses at subharmonic, plus has low alpha 
+    - No identified distraction factors with stimuli very close together? indicator that maybe he wasn't able to actually see the stimuli because there was not much response for either stimuli
+    - One successful SSMVEP epoch at epoch 11 - probably indicator of eye drift during session
+
+NO BREAK BETWEEN
+
+Covert Assessment (Flash+Flash) V2 notes:
+    - PO3 is damages so removed from analysis
+    - same successful epoch detection at epoch 11 - same as before
+    - Eyes probably are too far off to the right
+    - Largest response at Oz, so indicates that gaze was directly on the stimuli and not real covert
+    - 
+Afternoon, we tried the phase one software again with the new setup (too many people present to repeat the assessment)
+
+Initial findings:
+    - If we use SSMVEP stimuli, we have to make sure subharmonic values are outside of the alpha peak the client appears to have 
+    - We should consider using eyetracking to at least track current eye position to set up VEP placement close to gaze - current solution is too difficult to line up with gaze
+    - Absolutely need to repeat assessment with the new monitor setup
+    - Because task performance is inconsistent, we are not likely to improve results at this time with specialized training-specific algorithms like TRCA
+Next time, we absolutely need to collect the EEG Data as well and bring it back with us for further processing
+
+---
+
+Sections of relevant Information:
+    1. Resting EEG state - alpha artifacts from each day
+    2. SSMVEP responses vs. SSVEP responses
+    3. Issues with high impedance in important frequency band in our system
+    4. Issues with engaging circle of care for ideal results
+        a. Handling improper care of patient
+            i. Eyes being forced open
+            ii. Addressing sensitive skin 
+            iii. Leaving mouth open
+            iv. Sufficient neck support
+    5. Challenges in presenting stimuli
+
+Other opportunities:
+
+    - Tracking progress of conditions using mfVEPs for ALS or other ON progression? - will need to figure out how to extract segment responses from a small number of EEG channels
+    - Will need to collect and store raw data to observe potential latiencies in VEP elicitation, to validate other study findings. This would affect any time-domain processing, especially with pseudo random pattern sequences for the stimuli.
+    - While there is impact to the motor ganglion cells and neurons, there isn't any structurally that impacts chances of SSVEP success, but impact to motor neurone implies potential visual processing impacts, and there is evidence of axonal degeneration
+        ? So processing is still probably possible, but there are less recruitment of neutrons during cortical processing - less responses 
+        ? If we assume that there is visual neuronal impact, it would be unclear what would be most effective
+Bibliography
+
+[1]	P. Kellmeyer, M. Grosse-Wentrup, A. Schulze-Bonhage, U. Ziemann, and T. Ball, "Electrophysiological correlates of neurodegeneration in motor and non-motor brain regions in amyotrophic lateral sclerosis-implications for brain-computer interfacing," Journal of Neural Engineering, vol. 15, no. 4, p. 041003, Jun. 2018, doi: 10.1088/1741-2552/AABFA5.
+[2]	A. van der Walt et al., "Parallel Changes in Structural and Functional Measures of Optic Nerve Myelination after Optic Neuritis," PLOS ONE, vol. 10, no. 5, p. e0121084, May 2015, doi: 10.1371/JOURNAL.PONE.0121084.
+[3]	D. C. Hood, J. G. Odel, and B. J. Winn, "The multifocal visual evoked potential," J Neuroophthalmol, vol. 23, no. 4, pp. 279-289, Dec. 2003, doi: 10.1097/00041327-200312000-00010.
+[4]	M. R. Hohmann et al., "Case series: Slowing alpha rhythm in late-stage ALS patients," Clinical Neurophysiology, vol. 129, no. 2, pp. 406-408, Feb. 2018, doi: 10.1016/J.CLINPH.2017.11.013.
+[5]	E. Habibzadeh Tonekabony Shad, M. Molinas, and T. Ytterdal, "Impedance and Noise of Passive and Active Dry EEG Electrodes: A Review," IEEE Sensors Journal, vol. 20, no. 24, pp. 14565-14577, Dec. 2020, doi: 10.1109/JSEN.2020.3012394.
+ 

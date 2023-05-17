@@ -1,0 +1,745 @@
+1161454                                                                                                      International Journal of StrokeBurton et al.
+                                                                                                        WSO
+
+Review                                                                                                                                                     International Journal of Stroke
+                                                                                                                                                           1­11
+An updated systematic review of stroke                                                                                                                     © 2023 World Stroke Organization
+clinical practice guidelines to inform
+aphasia management                                                                                                                                         Article reuse guidelines:
+                                                                                                                                                           sagepub.com/journals-permissions
+                                                                                                                                                           hDttOpsI:://1d0o.i1.o1r7g/71/01.17147774/19734072493310126311416514454
+                                                                                                                                                           journals.sagepub.com/home/wso
+
+Bridget Burton1,2,3,4 , Megan Isaacs1,2,3,4, Emily Brogan3,5,6 ,
+Kirstine Shrubsole1,2,3,4, Monique F Kilkenny3,7,8 ,
+Emma Power3,9, Erin Godecke3,5,6 , Dominique A Cadilhac3,7,8 ,
+David Copland1,2,3,4 and Sarah J Wallace1,2,3,4
+
+Abstract
+
+Background: Aphasia is a common consequence of stroke, and people who live with this condition experience poor
+outcomes. Adherence to clinical practice guidelines can promote high-quality service delivery and optimize patient out-
+comes. However, there are currently no high-quality guidelines specific to post-stroke aphasia management.
+
+Aims: To identify and evaluate recommendations from high-quality stroke guidelines that can inform aphasia manage-
+ment.
+
+Summary of review: We conducted an updated systematic review in accordance with PRISMA guidelines to identify
+high-quality clinical guidelines published between January 2015 and October 2022. Primary searches were performed
+using electronic databases: PubMed, EMBASE, CINAHL, and Web of Science. Gray literature searches were conducted
+using Google Scholar, guideline databases, and stroke websites. Clinical practice guidelines were evaluated using the
+Appraisal of Guidelines and Research and Evaluation (AGREE II) tool. Recommendations were extracted from high-qual-
+ity guidelines (scored>66.7% on Domain 3: "Rigor of Development"), classified as aphasia-specific or aphasia-related,
+and categorized into clinical practice areas. Evidence ratings and source citations were assessed, and similar recommen-
+dations were grouped. Twenty-three stroke clinical practice guidelines were identified and 9 (39%) met our criteria for
+rigor of development. From these guidelines, 82 recommendations for aphasia management were extracted: 31 were
+aphasia-specific, 51 aphasia-related, 67 evidence-based, and 15 consensus-based.
+
+Conclusion: More than half of stroke clinical practice guidelines identified did not meet our criteria for rigorous devel-
+opment. We identified 9 high-quality guidelines and 82 recommendations to inform aphasia management. Most recom-
+mendations were aphasia-related; aphasia-specific recommendation gaps were identified in three clinical practice areas:
+"accessing community supports," "return to work, leisure, driving," and "interprofessional practice."
+
+Keywords
+Aphasia, stroke, practice guidelines, rehabilitation, speech­language pathology
+
+Received: 4 November 2022; accepted: 12 February 2023
+
+1School of Health and Rehabilitation Sciences, The University of Queensland, Brisbane, QLD, Australia
+2Queensland Aphasia Research Centre, Brisbane, QLD, Australia
+3Centre for Research Excellence in Aphasia Recovery and Rehabilitation, La Trobe University, Melbourne, VIC, Australia
+4Surgical Treatment and Rehabilitation Service (STARS) Education and Research Alliance, The University of Queensland and Metro North Health,
+Queensland, Australia
+5School of Medical and Health Sciences, Edith Cowan University, Joondalup, WA, Australia
+6Sir Charles Gairdner Hospital, Perth, WA, Australia
+7Stroke and Ageing Research, School of Clinical Sciences at Monash Health, Monash University, Clayton, VIC, Australia
+8Stroke Division, The Florey Institute of Neuroscience and Mental Health, University of Melbourne, Heidelberg, VIC, Australia
+9University of Technology Sydney, Graduate School of Health, Speech Pathology, Sydney, NSW, Australia
+
+Corresponding author:
+Sarah J Wallace, School of Health and Rehabilitation Sciences, The University of Queensland, Brisbane, QLD 4072, Australia.
+Email: s.wallace3@uq.edu.au
+
+                                                                                                        International Journal of Stroke, 00(0)
+2                                                               International Journal of Stroke 00(0)
+
+Introduction                                                    Microsoft Office Excel. The review protocol is available at:
+                                                                https://osf.io/9fp47/.
+Aphasia is an acquired language impairment that initially
+affects up to one-third of stroke survivors.1,2 Speech and      Search strategy
+language therapy can significantly improve communication
+outcomes for people with aphasia;3 however, comprehen-          We replicated the two-phase search strategy used by
+sive clinical guidance is needed to support the delivery of     Shrubsole et al.7 Primary searches were performed using
+high-quality services. Clinical practice guidelines are sys-    electronic databases: PubMed, EMBASE, CINAHL, and
+tematically developed sets of recommendations, based on         Web of Science. Gray literature searches were conducted
+the best available research evidence and expert consensus.4     within: Google Scholar, guideline databases, and using
+Such guidelines support clinical decision-making, optimiz-      stroke websites. Bibliographies of relevant articles were
+ing service delivery and patient outcomes by linking            hand-searched. Search terms included population (aphasia
+research evidence to practice in a clinically accessible        OR dysphasia OR stroke OR cardiovascular) and publica-
+resource.4 The routine use of clinical practice guidelines      tion type (guidelines OR recommendation OR clinical
+can improve health5 and economic outcomes6 for people           practice guideline). Refer to Supplemental Table 1 for the
+living with stroke.                                             search strategy.
+
+   Currently there are no clinical practice guidelines pub-     Study selection process
+lished in English that specifically and comprehensively
+guide aphasia management following stroke. Clinicians can       Electronic database searches were conducted in July 2020
+access relevant recommendations within general stroke           and updated in October 2022. Gray literature was searched
+management guidelines; however, such guidelines vary in         in June 2021 and October 2022. Two appraisers (M.I. and
+methodological quality and comprehensiveness and quickly        E.B.) independently screened titles and abstracts. If a dis-
+become outdated with changes in the evidence-base. Over         crepancy arose, a third appraiser (M.K.) determined if the
+the past decade, systematic reviews have been conducted7,8      article should be included.
+to bridge this gap, identifying high-quality stroke clinical
+practice guidelines that contain recommendations for the        Inclusion and exclusion criteria
+clinical management of aphasia. These reviews provide a
+crucial resource for clinicians, given the absence of apha-     Clinical practice guidelines (defined as, statements that
+sia-specific guidelines; however, regular updates are           include recommendations intended to optimize patient care
+required to keep pace with the rapidly evolving evidence-       that are informed by evidence or expert consensus) were
+base. Therefore, we sought to update the most recent sys-       included if they: (1) related to the clinical management of
+tematic review by Shrubsole et al.7 with the following aims:    stroke or aphasia in adults; (2) were published between
+                                                                January 2015 and date of search; (3) were available in
+   1. To identify clinical practice guidelines relevant to      English; (4) were multi-disciplinary or speech pathology
+        post-stroke aphasia management published or             specific in nature. Clinical practice guidelines were
+        updated since January 2015.                             excluded if they: (1) related selectively to sub-arachnoid
+                                                                hemorrhage or stroke prevention or (2) were published as
+   2. To examine the methodological quality of identified       conference abstracts, theses, or systematic reviews.
+        clinical practice guidelines using the AGREE II
+        instrument.9                                            Evaluation of guideline quality
+
+   3. To describe and synthesize recommendations for            Guideline quality was evaluated using the rigor of develop-
+        post-stroke aphasia management from clinical prac-      ment (Domain 3) score of the AGREE II instrument, as it is
+        tice guidelines of the highest methodological quality.  considered most reflective of overall guideline standard
+                                                                and quality.7,8,11 Domain 3 has eight items, rated on a
+   4. To describe changes in the scope of guideline recom-      7-point Likert-type scale (1="Strongly Disagree";
+        mendations and the quality of evidence since 2015.      7="Strongly Agree"). Two reviewers (M.I. and E.B.) inde-
+                                                                pendently assessed guidelines following standard proce-
+Methods                                                         dures. Domain scores were compared and where scores
+                                                                differed by more than two points, they were discussed to
+Design                                                          achieve a consensus. Domain scores were converted to a
+                                                                standardized percentage score, and as with previous
+Updated systematic review conducted and reported in
+alignment with PRISMA guidelines.10 Title and abstract
+screening and full-text review were conducted using
+Covidence systematic review software (available at
+www.covidence.org) with data extraction managed using
+
+International Journal of Stroke, 00(0)
+Burton et al.                                                                                             3
+
+Figure 1. Clinical practice guideline selection process (PRISMA).
+
+reviews, the cut-off for inclusion was a rating of 66.67% to Results
+include the top third of the 7-point Likert-type scale.7,8
+                                                                   Database and gray literature searches
+
+Evaluation of aphasia-relevant recommendations                     In total, 1749 sources were retrieved through database
+                                                                   searches and 41 sources through the gray literature search.
+Recommendations relating to aphasia management and their           Following the removal of duplicates, 1563 sources under-
+strength of evidence ratings were extracted from guidelines        went title and abstract screening. Of these, 1456 were
+and categorized by clinical practice area. New clinical prac-      excluded as they did not meet the inclusion criteria. The
+tice topic areas were devised where necessary. Overlapping         remaining 107 sources underwent a full-text review, and 31
+recommendations, that is, those containing similar or the          were evaluated using the AGREE II tool.9 The selection
+same wording, were organized together and counted as a sin-        process is illustrated in Figure 1.
+gle recommendation. Source citations for individual recom-
+mendations were retrieved and reviewed. If source citations        Evaluation of guidelines
+were inconsistent with the recommendation or evidence rat-
+ing, they were excluded. Where source citations were not           We identified 23 stroke clinical practice guidelines and 9
+available, guideline developers were contacted for infor           (39%) met or exceeded our cut-off for AGREE II Domain
+mation demonstrating recommendation-to-citation links.             3: Rigor of Development. Included guidelines were from
+Recommendations not directly linked to an evidence source          Australia, Canada, United States, and United Kingdom.
+or expert consensus were excluded. Included recommenda-            Four guidelines were Canadian Stroke Best Practice
+tions were classified as aphasia-specific or aphasia-related.      Recommendations,12­15 two guidelines were from the
+Aphasia-specific recommendations related to the clinical           American Heart Association and American Stroke
+management of aphasia (e.g. language assessments or apha-          Association,16,17 one guideline was published by each of the
+sia therapy). Aphasia-related recommendations included             Australian Stroke Foundation,18 the UK Royal College of
+general rehabilitation considerations that were not aphasia or     Physicians,19 and the US Department of Veteran's Affairs
+speech-pathology specific; however, they were relevant to          and Department of Defense.20 See Table 1, Supplemental
+clinical aphasia management (e.g. multi-disciplinary team          Table 2 for guideline scope, and Supplemental Tables 4­9
+considerations or discharge processes).                            for AGREE-II ratings.
+
+                                                                      International Journal of Stroke, 00(0)
+4                                                                                           International Journal of Stroke 00(0)
+
+Table 1. High-quality stroke clinical practice guidelines and AGREE II ratings.
+
+                 Clinical practice guidelines
+
+                            Canada:                    Canada:                                          US: Rehab
+                 Canada: Prehospital,   Canada: Mood,
+                 Tele- Emergency,       Rehab and Cognition,    AUS Stroke       UK: Acute  US: Early   and                        US: DVA/
+                 Stroke Acute           Recovery Fatigue        Foundation       and Rehab  Management
+Domain                                                                                                  Recovery DoD
+
+1.Scope and      83.33 88.89            88.89  80.56            94.44            91.67      75.00       83.33                      86.11
+   purpose
+
+2.Stakeholder 69.44 75.00               75.00  69.44            86.11            83.33      50.00       55.56                      86.11
+   involvement
+
+3.Rigor of       66.67 66.67            69.79  73.96            85.42            84.38      90.63       68.75                      84.38
+
+   development
+
+4.Clarity of     88.89 94.44            88.89  83.33            83.33            80.56      88.89       80.56                      63.89
+
+   presentation
+
+5. Applicability 64.58 64.58            29.17  58.33            70.83            33.33      16.16       25.00                      33.33
+
+6.Editorial      58.33 62.50            58.33  62.50            75.00            83.33      45.83       41.67                      58.33
+
+   independence
+
+7. Overall rating 71.88 75.35           68.34  71.35            82.52            76.10      61.17       59.14                      68.69
+
+Note. High-quality clinical practice guidelines were those that scored 66.67 on Domain 3: Rigor of development (shaded in table).
+
+Identified recommendations and links to                         Discussion
+underlying literature
+                                                                A total of 82 recommendations from nine high-quality clin-
+A total of 178 recommendations relevant to aphasia man-         ical practice guidelines were identified in the current
+agement were extracted. Following review, four were             review, an increase from the 76 recommendations from five
+removed as they were not within the scope of this review        guidelines identified in 2017.7 The number of included rec-
+(e.g. recommendations relating to staffing/organizational       ommendations across reviews is not directly comparable
+flow of stroke units). The remaining 174 recommenda-            however, as not all guidelines included in the 2017 review,
+tions were categorized across 16 topic areas (See Table         were included in the current review (see Supplemental
+2). A further 14 recommendations were excluded due to           Table 2). While the total number of recommendations was
+the lack of relevancy to the clinical management of apha-       relatively unchanged since the last review, there was a sub-
+sia. The underlying evidence-base of each recommenda-           stantial increase in the number of clinical practice guide-
+tion was reviewed to confirm links to the literature. A         lines both identified and included. Of concern however,
+total of 36 recommendations were removed where links            was that 61% of the clinical practice guidelines appraised
+could not be established. The remaining 124 recommen-           did not meet our minimum standard for inclusion as a high-
+dations were reviewed within each topic area, and those         quality source. Among those that did, there was still consid-
+with similar or the same wording were grouped together.         erable variation in quality ratings. There is no agreement
+This resulted in a total of 82 recommendations. Of the          about the AGREE-II cut-off scores that should be used to
+82 included recommendations, 67 (82%) were evidence-            distinguish between high- and low-quality clinical practice
+based and 15 (18%) were consensus-based. Thirty-                guidelines and arbitrary changes to cut-off scores can
+one (38%) were classified as aphasia-specific and 51            change quality categorization.25 As such, it is recommended
+(62%) recommendations were classed as aphasia-related.          that health professionals select the highest rated guidelines
+Aphasia-specific recommendations are presented in               to inform their clinical decisions.25 In our review, the guide-
+Table 3. All recommendations relevant to aphasia man-           line with the overall highest AGREE-II rating and the most
+agement are listed in Supplemental Table 10 and are sum-        aphasia-relevant recommendations, was the Australian
+marized in Figure 2. "Strength of Recommendation" and           Stroke Foundation Living Guideline (85.42%).18 Living
+"Highest Level of Underpinning Evidence" ratings are            guidelines use continuous surveillance and rapid response
+provided in Supplemental Table 3.                               to continually integrate new relevant evidence into clinical
+
+International Journal of Stroke, 00(0)
+Burton et al.                                                                                                       5
+
+Table 2. Aphasia-relevant recommendations by clinical practice area.
+
+                                                        Total          Aphasia- Aphasia- Evidence- Consensus-
+
+Clinical practice area                                  recommendation, n specific, n related, n based, n based, n
+
+1. Screening assessment                                 5              1   4   5   0
+
+2. Comprehensive assessmenta                            14             5   9   9   5
+
+3. Goal setting                                         5              1   4   5   0
+
+4. Treatment: amount, timing, and intensity             11             5   6   10  1
+
+5. Treatment: deliverya                                 5              1   4   5   0
+
+6. Treatment: Approaches                                8              6   2   7   1
+
+7. Treatment: family and conversational partner training 6             3   3   5   1
+
+8. Aphasia-friendly information & education             6              3   3   5   1
+
+9. Clinician traininga                                  5              1   4   4   1
+
+11. Counseling and mental health                        5              3   2   3   2
+
+12. Dischargea                                          5              1   4   3   2
+
+13. Accessing community supports                        3              0   3   3   0
+
+14. Return to work, leisure, driving                    2              0   2   2   0
+
+15. Culturally and linguistically responsive practicea  1              1   0   0   1
+
+16. Interprofessional practicea                         1              0   1   1   0
+
+Total                                                   82             31  51  67  15
+
+Note. aNew since 2017 review.
+
+Figure 2. Best practice aphasia management after stroke: An overview.
+
+                                                                           International Journal of Stroke, 00(0)
+6                                                                                                International Journal of Stroke 00(0)
+
+Table 3. Aphasia-specific recommendations by clinical practice area.
+
+   Aphasia-specific recommendations                                                                          Strength of  Highest
+                                                                                                             evidencea    evidenceb
+                                                                                                                          Level II
+   Screening assessment
+                                                                                                                          CB
+   ·"All stroke patients should be screened for communication disorders, ideally by a Speech                 C            CB
+                                                                                                                          Level I
+   Language Pathologist, and using a valid screening tool. If a Speech Language Pathologist is not
+                                                                                                                          Level IV
+   available, this should be done by another appropriately trained professional." Canada: Rehab &                         CB
+                                                                                                                          CB
+   Recovery                                                                                                               Level I
+
+   ·"All stroke survivors should be screened for communication deficits using a screening tool that GPP                   CB
+       is valid and reliable." AUS Stroke Foundation                                                                      CB
+                                                                                                                          Level I
+   Comprehensive assessment                                                                                               CB
+                                                                                                                          CB
+   · "Those stroke survivors with suspected communication difficulties should receive formal,                GPP          Level I
+                                                                                                                          (Continued)
+   comprehensive assessment by a specialist clinician to determine the nature and type of the
+
+   communication impairment." AUS Stroke Foundation
+
+   · "People with communication problems after stroke should be assessed by a speech and language            Key Rec
+       therapist to diagnose the problem and to explain the nature and implications to the person,
+       their family/carers and the multidisciplinary team. Reassessment in the first four months should
+       only be undertaken if the results will affect decision-making or are required for mental capacity
+       assessment." UK: Acute and Rehab
+
+   · "Communication assessment may consider the individual's unique priorities using the ICF                 Class IIb
+       framework, including quality of life." US: Rehab and Recovery
+
+   · "The impact of aphasia on functional activities, participation and quality of life, including the       GPP
+
+   impact upon relationships, vocation and leisure, should be assessed and addressed as appropriate
+
+   from early post-onset and over time for those chronically affected." AUS Stroke Foundation
+
+   · "People with aphasia after stroke whose first language is not English should be assessed                N/A
+
+   and provided with information about aphasia and communication practice in their preferred
+
+   language." UK: Acute and Rehab
+
+   · "After the first four months, people with communication problems after stroke should                    N/A
+
+   be reviewed to determine their suitability for further treatment with the aim of increasing
+
+   participation in communication and social activities. This may involve using an assistant or
+
+   volunteer, family member or communication partner guided by the speech and language
+
+   therapist, computer-based practice or other impairment-based or functional treatment." UK:
+
+   Acute and Rehab
+
+   · "Where a stroke patient is found to have aphasia, the clinician should: Document the diagnosis." GPP
+       AUS Stroke Foundation
+
+   Goal setting
+
+   · "Where a stroke patient is found to have aphasia, the clinician should:                                 GPP
+
+   Identify goals for therapy, and develop and initiate a tailored intervention plan, in collaboration with
+
+   the patient and family/carer." AUS Stroke Foundation
+
+   ·"They (goals) should be reviewed and updated regularly." AUS Stroke Foundation                           Strong
+
+   · "Where a stroke patient is found to have aphasia, the clinician should:                                 GPP
+
+   Reassess the goals and plans at appropriate intervals over time." AUS Stroke Foundation
+
+   Treatment: amount, timing, and intensity
+
+   · "Treatment for aphasia should be offered as early as tolerated." AUS Stroke Foundation                  GPP
+
+   · "In the first four months after stroke, people with aphasia should be given the opportunity             N/A
+
+   to practice their language and communication with a speech and language therapist or other
+
+   communication partner as frequently as tolerated."
+
+International Journal of Stroke, 00(0)
+Burton et al.                                                                                                    7
+
+Table 3.(Continued)
+
+Aphasia-specific recommendations                                                                    Strength of  Highest
+                                                                                                    evidencea    evidenceb
+                                                                                                                 Level I
+· "For stroke survivors with aphasia, early aphasia therapy, starting within the first 4weeks post  Strong       Level I
+    stroke should be provided to maximise language recovery." US Stroke Foundation                               Level I
+                                                                                                                 Level I
+· "For stroke survivors with aphasia, intensive aphasia therapy (at least 45minutes of direct       Weak         Level I
+    language therapy for five days a week) may be used in the first few months after stroke." AUS                Level I
+    Stroke Foundation                                                                                            Level I
+                                                                                                                 Level II
+· "For stroke survivors in the acute phase (up to six weeks post-onset), language therapy sessions  Weak
+    (direct time on task) ranging between 30-45minutes, two-three days per week may be provided                  Level II
+    from stroke onset to week 6 post-stroke." AUS Stroke Foundation                                              Level I
+
+· "For stroke survivors with aphasia, speech and language therapy should be provided to improve Strong           Level I
+    functional communication." AUS Stroke Foundation
+                                                                                                                 CB
+· "Speech and language therapy is recommended for individuals with aphasia." US: Rehab and          Class I      CB
+    Recovery                                                                                                     Level II
+                                                                                                                 Level II
+· "For stroke survivors with aphasia, speech and language therapy should be provided to improve     Strong       Level II
+    functional communication, reading comprehension, general expressive language and written                     (Continued)
+    language." AUS Stroke Foundation
+
+· "Persons with aphasia should have early access to a combination of intensive speech and           B
+
+language therapy and communication therapy according to their needs, goals, and impairment
+
+severity." Canada: Rehab & Recovery
+
+· "For stroke survivors with chronic aphasia (>6months post stroke onset), intensive aphasia        Weak
+    therapy (at least 10 hours/week of therapist led, individual or group therapy for 3weeks,
+    together with 5 hours or more, per week of self-managed training) may be used to improve
+    aphasia." AUS Stroke Foundation
+
+· "There is insufficient evidence to recommend for or against the use of intensive language         Neither for
+    therapy for aphasia." US: DVA/DoD                                                               nor against
+
+· "Intensive treatment is probably indicated, but there is no definitive agreement on the optimum Class IIa
+    amount, timing, intensity, distribution, or duration of treatment." US: Rehab and Recovery
+
+Treatment: delivery
+
+· "Computerized treatment may be considered to supplement treatment provided by a speech­           Class IIb
+    language pathologist." US: Rehab and Recovery
+
+Treatment: approaches
+
+· "Where a stroke patient is found to have aphasia, the clinician should: Use alternative means     GPP
+
+of communication (such as gesture, drawing, writing, use of augmentative and alternative
+
+communication devices) as appropriate." AUS Stroke Foundation
+
+· "People with communication problems after stroke should be considered for assistive               N/A
+
+technology and communication aids by an appropriately trained, experienced clinician." UK: Acute
+
+and Rehab
+
+· "A variety of different treatment approaches for aphasia may be useful, but their relative        Class IIb
+    effectiveness is not known." US: Rehab and Recovery
+
+· "Group treatment may be useful across the continuum of care, including the use of community- Class IIb
+    based aphasia groups." US: Rehab and Recovery
+
+· "Treatment for aphasia may include group therapy and conversation groups. Groups can be           B
+
+used to supplement the intensity of therapy during hospitalization and/or as continuing therapy
+
+following discharge." Canada: Rehab & Recovery
+
+                                                                                              International Journal of Stroke, 00(0)
+8                                                                                                International Journal of Stroke 00(0)
+
+Table 3.(Continued)
+
+   Aphasia-specific recommendations                                                                       Strength of  Highest
+                                                                                                          evidencea    evidenceb
+                                                                                                                       Level I
+   · "Treatment to improve functional communication can include language therapy focusing on: a. C                     Level II
+       Production and/or comprehension of words, sentences, and discourse (including reading and writing)."            Level
+       Canada: Rehab & Recovery                                                                                        III-2
+                                                                                                                       Level I
+   · "Treatment to improve functional communication can include language therapy focusing on: c. B                     Level I
+       constraint-induced language therapy." Canada: Rehab & Recovery                                                  CB
+
+   · "Treatment to improve functional communication can include language therapy focusing on: e. Use C                 Level II
+       of computerized language therapy to enhance benefits of other therapies." Canada: Rehab & Recovery
+                                                                                                                       CB
+   Treatment: family and conversational partner training                                                               Level II
+                                                                                                                       CB
+   · "Treatment to improve functional communication should include supported conversation                 A            Level I
+
+   techniques for potential communication partners of the person with aphasia." Canada: Rehab &                        CCB
+
+   Recovery                                                                                                            Level I
+
+   · "Treatment for aphasia should include communication partner training." US: Rehab and Recovery Class I             (Continued)
+
+   · "Environmental barriers facing people with aphasia should be addressed through training              GPP
+
+   communication partners, raising awareness of and educating about aphasia to reduce negative
+
+   attitudes, and promoting access and inclusion by providing aphasia-friendly formats or other
+
+   environmental adaptations. People with aphasia from culturally and linguistically diverse backgrounds
+
+   may need special attention from trained healthcare interpreters." AUS Stroke Foundation
+
+   · "The carers and family of a person with communication problems after stroke, and health and N/A
+       social care staff, should receive information and training from a speech and language therapist
+       which should enable communication partners to optimise engagement in rehabilitation, and
+       promote autonomy and social participation." UK: Acute and Rehab
+
+   Aphasia-friendly information and education
+
+   · "All written information on health, aphasia, social and community supports (such as that             GPP
+
+   available from the Australian Aphasia Association or local agencies) should be available in an
+
+   aphasia-friendly format." AUS Stroke Foundation
+
+   · "All stroke survivors and their families/carers should be offered information tailored to meet       Strong
+
+   their individual needs using relevant language and communication formats." AUS Stroke Foundation
+
+   · "Where a stroke patient is found to have aphasia, the clinician should: Explain and discuss the      GPP
+
+   nature of the impairment with the patient, family/carers and treating team, and discuss and teach
+
+   strategies or techniques which may enhance communication." AUS Stroke Foundation
+
+   · "Relevant members of the interdisciplinary team should provide specific and tailored                 Weak
+       training for carers/family before the stroke survivor is discharged home. This training should
+       include, as necessary, personal care techniques, communication strategies, physical handling
+       techniques, information about ongoing prevention and other specific stroke-related problems,
+       safe swallowing and appropriate dietary modifications, and management of behaviours and
+       psychosocial issues." AUS Stroke Foundation
+
+   · "Environmental barriers facing people with aphasia should be addressed through training              GPP
+
+   communication partners, raising awareness of and educating about aphasia to reduce negative
+
+   attitudes, and promoting access and inclusion by providing aphasia-friendly formats or other
+
+   environmental adaptations." AUS Stroke Foundation
+
+   Clinician training
+
+   · "All health care providers working with persons with stroke across the continuum of care             C
+
+   should undergo training about aphasia and other communication disorders, including the
+
+   recognition of the impact of aphasia and methods to support communication such as Supported
+
+   Conversation for Adults with Aphasia (SCATM)." Canada: Rehab & Recovery
+
+International Journal of Stroke, 00(0)
+Burton et al.                                                                                                             9
+
+Table 3.(Continued)
+
+Aphasia-specific recommendations                                                                  Strength of  Highest
+                                                                                                  evidencea    evidenceb
+                                                                                                               CB
+Counseling and mental health                                                                                   Level II
+                                                                                                               Level
+· "Stroke survivors with chronic and persisting aphasia should have their mood monitored." AUS GPP             III-2
+    Stroke Foundation
+                                                                                                               CB
+· "People who have had a stroke with resulting communication limitations should be screened for B
+    anxiety using appropriate methods validated for aphasic people who have experienced a stroke."             CB
+    Canada: Mood, Cognition and Fatigue
+
+· "For people who experience some degree of communication challenge or deficits following         C
+
+stroke, appropriate strategies that do not rely on verbal communication should be implemented
+
+for screening of possible post-stroke depression to ensure adequate detection and assessment,
+
+and access to appropriate treatment." Canada: Mood, Cognition and Fatigue
+
+Discharge
+
+· "A locally developed protocol or standardised tool may assist in implementation of a safe and   N/A
+
+comprehensive discharge process. This tool should be aphasia and cognition friendly." AUS Stroke
+
+Foundation
+
+Culturally and linguistically responsive practice
+
+· "People with aphasia from culturally and linguistically diverse backgrounds may need special    GPP
+
+attention from trained healthcare interpreters." AUS Stroke Foundation
+
+Note. "Highest Evidence" rating is based on study design only. Methodological quality has not informed this rating.
+aStrength of Evidence Ratings:
+GRADE:21
+Strong=All/most would benefit.
+Weak=The majority would benefit, but many would not.
+ACC/AHA:22
+Class I (strong)=Treatment/procedure/intervention is useful/effective for most.
+Class IIa (moderate)=Treatment/procedure/intervention is reasonable and can be useful/effective/beneficial.
+Class IIb (weak)=Benefit only marginally exceeds risk or usefulness/effectiveness is unclear.
+Class III (no benefit)=Treatment/procedure/intervention is not effective/beneficial/recommended.
+Class III (harm)=Treatment/procedure/intervention is potentially harmful. Not recommended.
+Canadian Stroke Best Practice Recommendations:23
+A=Desirable effects clearly outweigh undesirable effects or undesirable effects clearly outweigh desirable effects.
+B=Desirable effects outweigh or are closely balanced with undesirable effects or undesirable effects outweigh or are closely balanced with desirable
+effects.
+C=Writing group consensus and/or supported by limited research evidence.
+bHighest Evidence using NHMRC Level of Evidence Classification:24
+Level I=Systematic review; meta-analyses of RCTs.
+Level II=RCT; prospective cohort study.
+Level III-1=Pseudorandomised control trial.
+Level III-2=Comparative study with concurrent controls.
+Level III-3=Comparative study without concurrent controls.
+Level IV=Case series.
+CB=Consensus-based.
+
+guidelines, addressing the perennial problem of rapid loss    delivery; discharge; culturally and linguistically responsive
+of currency.26                                                practice; and interprofessional practice. We found no apha-
+                                                              sia-specific recommendations in the areas of: return to
+   As per the previous review,7 there were fewer aphasia-     work, leisure and driving; accessing community supports;
+specific, than aphasia-related recommendations. When          or interprofessional practice. Return to work and driving
+considered by topic area, aphasia-specific recommenda-        have been identified as priorities by stakeholders in aphasia
+tions in the current review predominately related to therapy  rehabilitation.27 Return to driving is a priority for people
+and treatment approaches, comprehensive assessment,           with aphasia and return to work for clinicians.27 Future
+and aphasia-friendly information and education. New topic     aphasia research should seek to bridge these gaps through
+areas were created for recommendations relating to            targeted research.
+comprehensive assessment; clinician training; treatment
+
+                                                                           International Journal of Stroke, 00(0)
+10                                                                                  International Journal of Stroke 00(0)
+
+   Most aphasia-specific recommendations identified in        compromising reliability and quality.29 However, care
+our review were formulated through consensus, listed as       standards play an important role in supplementing clinical
+good practice points, or had limited/weak evidence sup-       practice guidelines, and clinicians are encouraged to refer
+porting them. Consensus-based recommendations serve an        to high-quality care standards such as the Australian
+important role, as they provide advice for areas with an      Aphasia Rehabilitation Pathway.30 In this review, we did
+emerging evidence-base. However, only the Australian          not use the PICO framework24 to organize treatment-related
+Stroke Foundation guidelines provided explicit information    recommendations by area of outcome (e.g. language), but
+on the nature of group consensus processes, making it dif-    rather instead grouped recommendation by area of practice,
+ficult to ascertain how consensus was achieved for many       in line with the previous review.7 Also of note, is that our
+recommendations.18 Greater transparency in future guide-      "Highest Evidence" ratings are based on study design
+line iterations would support the trustworthiness of consen-  alone. Consideration of risk of bias/methodological quality
+sus-based recommendations.28                                  may alter these ratings.
+
+   Our review process was complicated by the different        Conclusion
+strength of evidence grading systems used across the clini-
+cal practice guidelines. Both the Australian Stroke           We identified 82 recommendations from nine high-quality
+Foundation and the Department of Veterans Affairs and         clinical practice guidelines that can inform clinical practice
+USA Department of Defense adopted the GRADE (Grading          for people with post-stroke aphasia. There is a need for
+of Recommendations, Assessment, Development and               aphasia-specific research in "accessing community sup-
+Evaluation) method in the development of their guide-         ports," "return to work, leisure, driving," and "interprofes-
+lines.18,20 The GRADE method has only two strength of         sional practice." Rigorous research in these areas may
+recommendation classifications ("strong" and "weak"), or      strengthen the existing evidence-base and improve the
+alternatively classifies a recommendation as a "good prac-    clinical services delivered to people with aphasia.
+tice point" (consensus-based recommendation).21 In con-
+trast, the American Heart Association adopted the American    Declaration of conflicting interests
+College of Cardiology/American Heart Association (ACC/
+AHA) Clinical Practice Guideline Recommendation               The author(s) declared the following potential conflicts of interest
+Classification System, which assigns Classes I-III.22 The     with respect to the research, authorship, and/or publication of this
+Canadian Stroke Best Practice Recommendations used a          article: E.G., E.B., K.S., and E.P. are current members of the
+modified GRADE method with an alphabetical ranking            speech pathology working group for the Australian Stroke
+system to describe strength of recommendations (A, B,         Foundation--Clinical Guidelines for Stroke Management. D.C. is
+C).23 The UK Royal College of Physicians did not adopt a      a current member of the Australian Stroke Foundation--Clinical
+hierarchal grading system for their guidelines, and instead   Guidelines for Stroke Management Steering Committee. During
+formulated "key recommendations" identified through a         this research, E.P. was on the Research Advisory Committee of the
+consensus process.19 Just as these disparate systems were a   Stroke Foundation. E.G. was an expert panel member in develop-
+challenge to the comparison of evidence in our review pro-    ment of the Australian Aphasia Rehabilitation Pathway Best
+cess, they likely pose similar challenges for guidelines      Practice Statements. E.P. led the expert panel on the Australian
+users. Use of a universally recognized, unambiguous grad-     Aphasia Rehabilitation Pathway Best Practice Statements.
+ing system may promote transparency when reporting and
+describing the evidence-base, while simultaneously reduc-     Funding
+ing inconsistencies in evidence interpretation.21
+                                                              The author(s) disclosed receipt of the following financial support
+Limitations                                                   for the research, authorship, and/or publication of this article: This
+                                                              research was funded by a National Health and Medical Research
+It is a limitation of our research that where links to the    Council (NHMRC) Investigator Grant (grant no. 1175821)
+underlying evidence-base could not be established, recom-     awarded to S.J.W. and The Center for Research Excellence in
+mendations were excluded. While best efforts were made to     Aphasia Rehabilitation and Recovery (Aphasia CRE; grant no.
+establish recommendation-to-citation links (i.e. by contact-  1153236, La Trobe University (ABN: 64 804 735 113).
+ing guideline developers), some could not be established,
+and clinically relevant recommendations were excluded.        ORCID iDs
+Other limitations include the exclusion of non-invasive
+brain stimulation and pharmacological interventions,          Bridget Burton https://orcid.org/0000-0003-0311-5113
+guidelines in languages other than English, and care stand-
+ards. Care standards (non-governing quality-of-care state-    Emily Brogan https://orcid.org/0000-0001-9604-4558
+ments published by best-practice groups) were not reviewed
+in this study as their development methods can vary widely,   Monique F Kilkenny https://orcid.org/0000-0002-3375-287X
+
+                                                              Erin Godecke https://orcid.org/0000-0002-7210-1295
+
+                                                              Dominique A Cadilhac  https://orcid.org/0000-0001-8162-
+                                                              682X
+
+                                                              Sarah J Wallace https://orcid.org/0000-0002-0600-9343
+
+International Journal of Stroke, 00(0)
+Burton et al.                                                            11
+
+Supplemental material                                                    16. Winstein CJ, Stein J, Arena R, et al. Guidelines for adult
+                                                                             stroke rehabilitation and recovery: a guideline for healthcare
+Supplemental material for this article is available online.                  professionals from the American Heart Association/American
+                                                                             Stroke Association. Stroke 2016; 47: 98­169.
+References
+                                                                         17. Powers WJ, Rabinstein AA, Ackerson T, et al. Guidelines
+1. Mitchell C, Gittins M, Tyson S, et al. Prevalence of aphasia              for the early management of patients with acute ischemic
+    and dysarthria among inpatient stroke survivors: describing              stroke: 2019 update to the 2018 guidelines for the early man-
+    the population, therapy provision and outcomes on discharge.             agement of acute ischemic stroke: a guideline for healthcare
+    Aphasiology 2020; 35: 950­960.                                           professionals from the American Heart Association/American
+                                                                             Stroke Association. Stroke 2019; 50: 344­418.
+2. Mitchell AJ, Sheth B, Gill J, et al. Prevalence and predictors
+    of post-stroke mood disorders: a meta-analysis and meta-             18. Stroke Foundation. Living clinical guidelines for stroke man-
+    regression of depression, anxiety and adjustment disorder.               agement, https://informme.org.au/guidelines/living-clinical-
+    Gen Hosp Psychiatry 2017; 47: 48­60.                                     guidelines-for-stroke-management (2022, accessed October
+                                                                             2022).
+3. Brady MC, Kelly H, Godwin J, et al. Speech and language
+    therapy for aphasia following stroke. Cochrane Database Syst         19. Royal College of Physicians. National clinical guideline for
+    Rev 2016; 2016: CD000425.                                                stroke. 5th ed., https://www.rcplondon.ac.uk/guidelines-pol-
+                                                                             icy/stroke-guidelines (2016, Accessed July 2020).
+4. Woolf SH, Grol R, Hutchinson A, et al. Clinical guidelines:
+    potential benefits, limitations, and harms of clinical guide-        20. Sall J, Eapen BC, Tran JE, et al. The management of stroke
+    lines. BMJ 1999; 318: 527­530.                                           rehabilitation: a synopsis of the 2019 U.S. Department of
+                                                                             Veterans Affairs and U.S. Department of Defense Clinical
+5. Hubbard IJ, Harris D, Kilkenny MF, Faux SG, Pollack MR                    Practice Guideline. Ann Intern Med 2019; 171: 916­924.
+    and Cadilhac DA. Adherence to clinical guidelines improves
+    patient outcomes in Australian audit of stroke rehabilitation        21. Guyatt GH, Oxman AD, Vist GE, et al. GRADE: an emerg-
+    practice. Arch Phys Med Rehabil 2012; 93: 965­971.                       ing consensus on rating quality of evidence and strength of
+                                                                             recommendations. BMJ 2008; 336: 924­926.
+6. Quaglini S, Cavallini A, Gerzeli S, Micieli G and GLADIS
+    Study Group (Guideline Application for the Decision making           22. Halperin JL, Levine GN, Al-Khatib SM, et al. Further evolu-
+    in Ischemic Stroke). Economic benefit from clinical practice             tion of the ACC/AHA clinical practice guideline recommenda-
+    guideline compliance in stroke patient management. Health                tion classification system: a report of the American College of
+    Policy 2004; 69: 305­315.                                                Cardiology/American Heart Association task force on clinical
+                                                                             practice guidelines. J Am Coll Cardiol 2016; 67: 1572­1574.
+7. Shrubsole K, Worrall L, Power E, et al. Recommendations
+    for post-stroke aphasia rehabilitation: an updated system-           23. Heart Stroke Foundation of Canada. Canadian Stroke Best
+    atic review and evaluation of clinical practice guidelines.              Practice Recommendations: overview of methodology,
+    Aphasiology 2017; 31: 1­24.                                              https://heartstrokeprod.azureedge.net/-/media/1-stroke-best-
+                                                                             practices/overview-methods-and-knowledge-exchange/
+8. Rohde A, Worrall L and Le Dorze G. Systematic review of the qual-         csbpr-methods-overview-7th-ed-final.ashx?rev=9dc8e1f9964
+    ity of clinical guidelines for aphasia in stroke management: clini-      d4772bf0d969d354ac224 (2019, accessed October 2022).
+    cal guidelines for aphasia. J Eval Clin Pract 2013; 19: 994­1003.
+                                                                         24. National Health Medical Research Council. NHMRC levels
+9. Brouwers MC, Kerkvliet K and Spithoff K. The AGREE                        of evidence and grades for recommendations for developers
+    reporting checklist: a tool to improve reporting of clinical             of guidelines, https://www.nhmrc.gov.au/sites/default/files/
+    practice guidelines. BMJ 2016; 2016: 352.                                images/NHMRC%20Levels%20and%20Grades%20(2009).
+                                                                             pdf (2009, accessed October 2022).
+10. Moher D, Liberati A, Tetzlaff J, et al. Preferred reporting
+    items for systematic reviews and meta-analyses: the PRISMA           25. Bargeri S, Iannicelli V, Castellini G, Cinquini M and Gianola
+    statement. Phys Ther 2009; 89: 873­880.                                  S. AGREE II appraisals of clinical practice guidelines in reha-
+                                                                             bilitation showed poor reporting and moderate variability in
+11. Brouwers MC, Kho ME, Browman GP, et al. AGREE II:                        quality ratings when users apply different cuff-offs: a meth-
+    advancing guideline development, reporting and evaluation in             odological study. J Clin Epidemiol 2021; 139: 222­231.
+    health care. CMAJ 2010; 182: 839­842.
+                                                                         26. Stroke Foundation. Living guidelines: methodology, https://
+12. Teasell R, Salbach NM, Foley N, et al. Canadian Stroke Best              app.magicapp.org/#/guideline/NnV76E/section/L65wAj
+    Practice Recommendations: rehabilitation, recovery, and com-             (2022, accessed October 2022).
+    munity participation following stroke. Part one: rehabilitation
+    and recovery following stroke, 6th edition, Update 2019. Int J       27. Franklin S, Harhen D, Hayes M, et al. Top 10 research priori-
+    Stroke 2020; 15: 763­788.                                                ties relating to aphasia following stroke. Aphasiology 2018;
+                                                                             32: 1388­1395.
+13. Lanctôt KL, Lindsay MP, Smith EE, et al. Canadian Stroke
+    Best Practice Recommendations: mood, cognition and fatigue           28. Venus C and Jamrozik E. Transparency in clinical practice
+    following stroke, 6th edition, update 2019. Int J Stroke 2020;           guidelines: the problem of consensus-based recommendations
+    15: 668­688.                                                             and practice points. Intern Med J 2021; 51: 291­294.
+
+14. Boulanger JM, Lindsay MP, Gubitz G, et al. Canadian Stroke           29. Tolmie EP and Rice AM. Best-practice statements: should we
+    Best Practice Recommendations for acute stroke management:               use them? Nurs Times 2015; 111: 12­14.
+    prehospital, emergency department, and acute inpatient stroke
+    care, 6th edition, update 2018. Int J Stroke 2018; 13: 949­984.      30. Power E, Thomas E, Worrall L, et al. Development and vali-
+                                                                             dation of Australian aphasia rehabilitation best practice state-
+15. Blacquiere D, Lindsay MP, Foley N, et al. Canadian Stroke                ments using the RAND/UCLA appropriateness method. BMJ
+    Best Practice Recommendations: telestroke best practice                  Open 2015; 5: e007641.
+    guidelines, update 2017. Int J Stroke 2017; 12: 886­895.
+
+                                                                         International Journal of Stroke, 00(0)
+

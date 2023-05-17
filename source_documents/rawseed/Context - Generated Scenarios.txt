@@ -1,0 +1,93 @@
+Personas:
+    - Alice: 68-year-old woman with middle-stage ALS, enjoys reading and gardening, has three adult children, and five grandchildren.
+    - Brian: Alice's 70-year-old husband, supportive caregiver, loves fishing and woodworking, tends to be patient and understanding.
+Context: Alice and Brian are in their living room, watching a movie together. Alice is positioned in her recliner, while Brian sits on the couch nearby. The ambient temperature is warm, and the lighting is dim. It's evening, and both are slightly tired from the day's activities.
+Turn 1:
+    1. Output: "I'm tired."
+    2. Desired output: "I'm getting tired, can we go to bed soon?"
+    3. Interaction sequence: a. Autocomplete: "I'm" (1 interaction, 1 second) b. Phrase prediction: "tired" (1 interaction, 1 second)
+    4. AF>>why does she need to type "I'm"? Why not just "slee" and predict all relevant expressions related to sleepy including "tired"? Or is this a use case for prefrontal eeg sensors or eye tracking to acknowledge physiological states?
+    5. Contextual impact: The ALS user's fatigue level and the evening timing influenced the phrase prediction.
+    6. Prediction influence: Fatigue level and evening timing had a strong impact, while other factors had little to no influence.
+    7. Default keyboard interactions: "I'm" (keyboard input), "tired" (next word prediction)
+
+
+
+Conversation 11: Mary, a professional caregiver, and John are discussing his exercise routine.
+Persona: Mary is a professional caregiver who is dedicated to her clients and knowledgeable about exercise routines for people with ALS. John, a former woodworking and golf enthusiast, has late-stage ALS and relies on his Cognixion ONE device to communicate. He is generally positive and patient but can become frustrated with his communication limitations.
+Context: Mary and John are in John's living room, discussing his exercise routine to maintain mobility and flexibility. The phone sensors detect the sound of light music playing in the background. The mood is focused and supportive.
+Turn 1:
+    8. Output: "Stretching helps me."
+    9. Desired Output: "I find that stretching helps me maintain my flexibility."
+    10. Interaction sequence (4 interactions, 4 seconds):
+        ? Keyboard input: "S"
+        ? Autocomplete: "Stretching"
+        ? Next word: "helps"
+        ? Next word: "me"
+        ? Automatic: "."
+        ? Generate speech
+    11. Context: The sound of light music playing in the background, combined with the focused and supportive mood, affects the conversation.
+    12. Influence on predictions: The focused and supportive mood influences the predictions, resulting in more topic-specific and informative phrases. The phone sensors detecting the sound of light music playing in the background also impact the predictions.
+    13. Default phone keyboard sequence (6 interactions):
+        ? Keyboard input: "S"
+        ? Word completion: "Stretching"
+        ? Next word: "helps"
+        ? Next word: "me"
+        ? Automatic: "."
+        ? Generate speech
+
+
+Persona: Jane is a warm, caring, and nurturing woman who loves her family and enjoys celebrating special occasions. John, a former woodworking and golf enthusiast, has late-stage ALS and relies on his Cognixion ONE device to communicate. He is generally positive and patient but can become frustrated with his communication limitations.
+Context: John and Jane are at their granddaughter's birthday party, surrounded by family and friends. The phone sensors detect the sound of laughter, conversation, and birthday music. The mood is festive and joyful.
+Turn 1:
+    14. Output: "She's growing up so fast."
+    15. Desired Output: "Our granddaughter is growing up so fast."
+    16. Interaction sequence (5 interactions, 5 seconds):
+        ? Keyboard input: "s"
+        ? Autocomplete: "she's"
+        ? Next word: "growing"
+        ? Next word: "up"
+        ? Next word: "so fast"
+        ? Automatic: "."
+        ? Generate speech
+    17. Context: The sound of laughter, conversation, and birthday music, combined with the festive and joyful mood, affect the conversation.
+    18. Influence on predictions: The festive and joyful mood influences the predictions, resulting in more positive and uplifting phrases. The phone sensors detecting the sound of laughter, conversation, and birthday music also impact the predictions.
+    19. Default phone keyboard sequence (6 interactions):
+        ? Keyboard input: "s"
+        ? Word completion: "she's"
+        ? Next word: "growing"
+        ? Next word: "up"
+        ? Next word: "so fast"
+        ? Automatic: "."
+        ? Generate speech
+Turn 2:
+    20. Output: "I'm so proud of her."
+    21. Desired Output: "I'm incredibly proud of our granddaughter."
+    22. Interaction sequence (4 interactions, 4 seconds):
+        ? Keyboard input: "p"
+        ? Autocomplete: "proud"
+        ? Automatic: "of"
+        ? Automatic: "her"
+        ? Automatic: "."
+        ? Generate speech
+    23. Context: Same as Turn 1.
+    24. Influence on predictions: Same as Turn 1, leading to more positive and uplifting phrases and predictions.
+    25. Default phone keyboard sequence (6 interactions):
+        ? Keyboard input: "p"
+        ? Word completion: "proud"
+        ? Next word: "of"
+        ? Next word: "her"
+        ? Automatic: "."
+        ? Generate speech
+Personas:
+    - Emily: 65-year-old woman with middle-stage ALS, former teacher, has two adult children, and three grandchildren.
+    - Frank: Emily's 67-year-old husband, supportive caregiver, enjoys photography, and is an avid birdwatcher.
+Context: Emily and Frank are outside on their patio, watching birds in the backyard. It's a sunny afternoon, and the weather is pleasant. Suddenly, Emily notices a snake approaching their small dog.
+Turn 1:
+    26. Output: "There's a snake near the dog!"
+    27. Desired output: "Frank, there's a snake near our dog! Do something!"
+    28. Interaction sequence: a. Keyboard input: "T" (1 interaction, 1 second) b. Phrase prediction: "here's a snake near the dog" (1 interaction, 1 second)
+    29. Contextual impact: The urgency of the situation and the presence of the snake influenced the phrase prediction.
+    30. Prediction influence: The urgency and environmental context had a strong impact, while other factors had little to no influence.
+    31. Default keyboard interactions: "T" (keyboard input), "here's a snake near the dog" (phrase prediction)
+

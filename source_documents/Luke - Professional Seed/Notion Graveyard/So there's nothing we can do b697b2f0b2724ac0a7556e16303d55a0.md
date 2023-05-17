@@ -1,0 +1,11 @@
+# So there's nothing we can do?
+
+Notes: Not necessarily. There are promising treatments regarding photosensitivity, from specialized screens to colored glasses to pharmaceuticals like Valproate and Lamotrigine.
+
+There are also secondary factors that exacerbate the condition - most notably sleep deprivation and exposure to drugs and alcohol, which have been shown to raise incidence of seizures among epileptics who have not previously been photosensitive to as high as 14%.
+
+It's also important to remember that photosensitive epilepsy - a form of "reflex epilepsy" triggered by sensory input - is actually one of the least common types. While we will need to be cautious around liability, particularly as relates to so-called idiopathic or "de novo" epilepsy, most individuals are aware of their conditions or carry comorbidites that should serve as clues to us. Recent advances in genetics have also enabled accurate testing for a percentage of those impacted.
+
+As another point of interest, one study found that visually evoked responses carried over even when the subject was exposed to them while under full anesthesia - showing the occipital lobe was indeed active at that time.
+
+Plus, one 1997 study argues it is far more difficult for individuals who are colorblind to respond adversely so SSVEPs; if only I could share my superpower.

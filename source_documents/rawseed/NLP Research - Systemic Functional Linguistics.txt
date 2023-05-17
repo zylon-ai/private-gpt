@@ -1,0 +1,166 @@
+
+
+
+Systemic Functional Linguistics and the Context Engine
+
+
+REV
+DESCRIPTION
+AUTHOR
+Date
+1.0
+Document creation & all content
+Luke Steuber
+1/15/22
+
+
+
+
+
+
+
+
+
+
+
+
+Abstract: This research report investigates the integration of Systemic Functional Linguistics (SFL) principles and sensor fusion in the Context Engine, with primary focus on the ALS use case for augmentative communication devices. A definition of intent is offered as well as a bullet point overview of the theories.
+
+
+
+
+
+?
+?
+?
+?
+?
+?
+?
+?
+?
+?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1 Introduction
+Systemic Functional Linguistics (SFL) is an approach to understanding language as a social semiotic system, developed by Michael Halliday. SFL posits that language serves three main functions: ideational, interpersonal, and textual, which are realized through various linguistic resources with context playing a crucial role. The theory provides a framework by which context can be defined and inferred, as well as potential insight into the contexts and sensors that are most critical.
+2 Theories of Systemic Functional Linguistics
+
+Cline of Instantiation
+    - Think of this as the vector of meaning as it travels through successive contextual filters. The cline of instantiation describes the relationship between the abstract, generalized linguistic system and specific instances of language use. It represents a continuum from the most abstract, systemic level to the most concrete, instance level. 
+Contexts in SFL
+    - SFL distinguishes between three types of context that influence language use: field, tenor, and mode. Field refers to the subject matter or content of communication, tenor relates to the participants and their social roles, and mode concerns the channel and degree of formality of the communication
+Lexicogrammar
+    - Lexicogrammar describes the combined system of lexis (vocabulary) and grammar, emphasizing the interconnectedness of these two aspects of language and their role in realizing the three metafunctions (ideational, interpersonal, and textual). Lexicogrammar is an essential component of SFL-informed communication devices, as it enables users to select appropriate linguistic resources based on their context and communication needs. 
+    - The concept of lexicogrammar has a great deal of similarity to the structure of a LLM.
+Metafunctions
+The three metafunctions in SFL are ideational, interpersonal, and textual.
+
+Ideational Function
+This function represents the user's thoughts, experiences, and ideas they wish to convey. Sensors can infer the user's goals by analyzing their gaze patterns, which may indicate the focus of their thoughts, and by examining their communication history to identify recurring themes or topics.
+
+Interpersonal Function
+This function involves the user's social interactions and relationships, including their roles, emotions, and attitudes towards others. Sensors can infer the user's goals by monitoring their facial expressions, body language, and biometric data (e.g., heart rate, skin conductance) to gauge their emotional state. Additionally, the device can analyze the user's communication history to determine their typical interaction patterns with specific conversation partners.
+
+Textual Function 
+This function focuses on the organization and structure of the user's communication, ensuring that it is coherent and contextually appropriate. Sensors can infer the user's goals by examining the user's location, time of day, and ambient noise levels to determine the context of the communication. The device can also analyze the user's communication history to identify patterns in their language use and structure.
+3 Order of Contextual Operations According to SFL
+
+When designing communication devices informed by SFL, consider the following order of operations based on the importance of contexts:
+
+Determine the Field
+First, identify the field of communication by considering the subject matter or content that the user is likely to discuss. This information can be used to tailor the device's linguistic resources, such as vocabulary and grammar, to the user's specific needs.
+
+Establish the Tenor
+Next, consider the tenor of the communication, which involves the participants and their social roles. This information can help the device generate language that is appropriate for the user's social context, taking into account factors such as politeness, formality, and power dynamics.
+
+Assess the Mode
+Finally, evaluate the mode of communication, which concerns the channel (e.g., spoken or written) and degree of formality. This information can be used to guide the selection of appropriate linguistic resources, such as register and text structure, to ensure that the user's messages are coherent and well-organized.
+4 Sensor Mapping to SFL Contexts, Metafunctions, and Lexicogrammar
+
+Android Platform Sensors
+Motion, position, environment sensors, and antennas can provide information about the user's physical movements, orientation, location, and surroundings. This data can be used to adjust the language generation based on the user's activity, situation, comfort level, and environmental conditions, mapping to the field, tenor, and mode of the communication.
+
+Biomedical Sensors
+EEG, EMG, and other biomedical sensors can provide information about the user's neurological, muscular activity, and overall health, which can be used to infer their current mental and physical state. This information can be mapped to the field, tenor, and mode of the communication, adjusting the language generation based on the user's state.
+
+Position Sensors (Magnetic Field, Orientation, Proximity)
+Position sensors can help determine the user's location and proximity to other objects or people (Lee et al., 2012). This information can be used to adjust the language generation based on the user's surroundings, such as using more formal language when in a professional setting. The data from these sensors can be mapped to the field (location), tenor (social roles), and mode (formality) of the communication.
+
+Environment Sensors (Ambient Temperature, Light, Pressure, Relative Humidity)
+Environment sensors can provide information about the user's surroundings, such as temperature, lighting, and air pressure (Rana et al., 2016). This data can be used to adjust the language generation based on the user's comfort level and environmental conditions. For example, if the user is in a noisy environment, the device might prioritize shorter, more concise messages. This information can be mapped to the field (environment), tenor (user's comfort level), and mode (degree of formality) of the communication.
+
+Antennas (GPS & Raw GNSS, Network State, Wi-Fi, Bluetooth/BTLE)
+Antennas can provide information about the user's location, network connectivity, and nearby devices (Zandbergen, 2009). This data can be used to adjust the language generation based on the user's location and the presence of other people or devices. For example, if the user is in a public place with many people nearby, the device might prioritize more formal language. The data from these sensors can be mapped to the field (location), tenor (social roles), and mode (formality) of the communication.
+5 Application of SFL to Augmentative Communication Devices
+Sensor Fusion and Environmental Data
+Incorporating sensor fusion and environmental data into augmentative communication devices can provide valuable context for users, helping them to select appropriate linguistic resources and tailor their messages to specific situations. By integrating data from various sensors, such as location, temperature, and ambient noise, the device can offer context-sensitive suggestions and predictions, allowing users to compose messages more quickly and accurately.
+
+User-specific Corpus and Ontological Layer
+A user-specific corpus, combined with an ontological layer based on GPT-4, can further enhance the efficiency of augmentative communication devices. The user-specific corpus contains a collection of texts relevant to the user's interests, experiences, and communication needs, and can be used to train the GPT-4 model, resulting in more accurate and personalized language predictions. The ontological layer organizes the user-specific corpus into a structured hierarchy of concepts and relationships, facilitating the retrieval of relevant information and the generation of context-appropriate messages.
+6 SFL and Intent
+In the context of Systemic Functional Linguistics (SFL), Large Language Models (LLM), and Augmentative and Alternative Communication (AAC), intent refers to the underlying purpose, goal, or meaning that a user aims to convey through their communication. Intent encompasses the user's thoughts, emotions, social interactions, and communication preferences, which are influenced by various factors such as context, relationships, and personal experiences.
+In SFL, intent is closely tied to the three metafunctions (ideational, interpersonal, and textual) that serve specific purposes in communication. The ideational metafunction represents the user's thoughts and ideas, the interpersonal metafunction involves the user's social interactions and relationships, and the textual metafunction focuses on the organization and structure of the user's communication. Understanding intent in SFL involves analyzing these metafunctions in relation to the user's context, which includes field (subject matter), tenor (participants and their social roles), and mode (channel and degree of formality).
+In AAC, intent plays a crucial role in enhancing the communication experience for individuals with speech or language impairments. By incorporating SFL principles and sensor fusion, augmentative communication devices can better understand and infer the user's intent through various sensors, such as eye-tracking, facial expression analysis, and body language analysis. This understanding allows the devices to provide more relevant and contextually appropriate language suggestions, ultimately improving the rate of composition and empowering users to communicate more effectively and independently.
+Ethical issues surrounding AAC and autonomy include the potential for loss of privacy, data security concerns, and the risk of undermining the user's autonomy in communication. The use of sensors and large language models in AAC devices may inadvertently expose sensitive information about the user's thoughts, emotions, and personal experiences. Ensuring data security and privacy is essential to protect users from potential misuse of their information.
+Moreover, while AAC devices aim to empower users by providing them with the means to communicate effectively, there is a risk of undermining their autonomy if the devices generate suggestions that do not accurately represent the user's intent or if the devices become overly reliant on the generated suggestions. To address these ethical concerns, it is crucial to develop AAC systems that prioritize user intent, offer customizable settings, and maintain a balance between providing assistance and preserving the user's autonomy in communication.
+
+7 Case Studies
+Case Study 1: Communicating at Home
+In this scenario, the user is at home and wants to communicate with their spouse about their plans for dinner. The device uses GPS data to determine that the user is at home, and ambient noise sensors detect a quiet environment, suggesting a relaxed setting. The device also analyzes the user's communication history and patterns, recognizing that the user often discusses dinner plans with their spouse at this time of day.
+
+By combining this contextual information with SFL principles, the device infers that the user's intent is to discuss dinner plans and generates relevant suggestions, such as "What should we have for dinner tonight?" or "Do you feel like cooking or ordering takeout?". The user can then select the most appropriate suggestion with minimal input, allowing them to communicate efficiently and effectively.
+Case Study 2: Participating in a Work Meeting
+In this scenario, the user is attending a work meeting and wants to contribute to a discussion about a project they are involved in. The device uses GPS data and calendar information to determine that the user is at their workplace and currently in a scheduled meeting. Computer vision and eye-tracking technologies detect that the user is focusing on a presentation slide about the project, and biometric sensors indicate that the user is experiencing a moderate level of stress.
+
+By analyzing this contextual information and applying SFL principles, the device infers that the user's intent is to contribute to the discussion about the project. The device generates contextually appropriate language suggestions, such as "I have some thoughts on the project timeline" or "I believe we can improve the efficiency of our current approach". The user can then select the most suitable suggestion with minimal input, allowing them to participate effectively in the meeting.
+Case Study 3: Social Interaction at a Party
+In this scenario, the user is attending a party and wants to engage in a conversation with a group of friends. The device uses GPS data and ambient noise sensors to determine that the user is in a social setting with a high level of background noise. Computer vision and eye-tracking technologies detect that the user is focusing on a group of people who are discussing a recent movie release.
+
+By combining this contextual information with SFL principles, the device infers that the user's intent is to join the conversation about the movie. The device generates relevant suggestions, such as "I saw that movie last week and really enjoyed it" or "What did you all think of the movie's plot?". The user can then select the most appropriate suggestion with minimal input, allowing them to engage in the conversation seamlessly.
+8 Benefits of Integrating SFL and Sensor Fusion in Augmentative Communication Devices
+
+    - Improved Contextual Understanding: By incorporating SFL principles and sensor fusion, augmentative communication devices can better understand the user's context, including their thoughts, emotions, social interactions, and communication preferences.
+    - Enhanced Rate of Composition: With a more accurate understanding of the user's intent and context, devices can provide more relevant and contextually appropriate language suggestions, enabling users to communicate more effectively and efficiently.
+    - Personalized Communication Experience: By analyzing the user's communication history, preferences, and interests, devices can tailor their linguistic resources to the user's specific needs, providing a more personalized communication experience.
+    - Increased Independence: Enhanced augmentative communication devices can empower users with communication impairments to communicate more independently and confidently in various social and professional settings.
+
+9 Future Directions and Challenges
+
+The integration of SFL principles and sensor fusion in augmentative communication devices holds great promise for enhancing the communication experience of users with minimal or no input. However, several challenges and future directions need to be addressed to fully realize the potential of this approach:
+
+Improving Sensor Accuracy and Reliability
+The effectiveness of sensor fusion in determining user intent relies heavily on the accuracy and reliability of the sensors used. Future research should focus on improving sensor technologies and developing more robust algorithms for integrating and interpreting sensor data.
+
+Expanding the Range of Sensors and Data Sources
+To provide a more comprehensive understanding of the user's context and intent, augmentative communication devices could incorporate additional sensors and data sources, such as wearable devices, smart home technologies, and social media feeds.
+
+Addressing Privacy and Ethical Concerns
+The use of sensor data and personal information to determine user intent raises privacy and ethical concerns. Developers of augmentative communication devices should carefully consider these issues and implement appropriate safeguards to protect user privacy and ensure ethical use of data.
+
+Evaluating the Effectiveness of SFL and Sensor Fusion in Real-World Settings
+To validate the effectiveness of SFL and sensor fusion in determining user intent, future research should conduct rigorous evaluations of these approaches in real-world settings, involving users with diverse communication needs and contexts.
+Glossary:
+    1. Systemic Functional Linguistics (SFL): An approach to understanding language as a social semiotic system, which posits that language serves three main functions: ideational, interpersonal, and textual.
+    2. Large Language Models (LLM): Computational mowdels that generate human-like text based on user input and context, emphasizing the interdependence of vocabulary (lexis) and structure (grammar) in language use.
+    3. Augmentative and Alternative Communication (AAC): A range of communication methods and devices used to support or replace speech and writing for individuals with speech or language impairments.
+    4. Intent: The underlying purpose, goal, or meaning that a user aims to convey through their communication, encompassing thoughts, emotions, social interactions, and communication preferences.
+    5. Metafunctions in SFL: The three main functions of language in SFL, which include ideational (representing thoughts and ideas), interpersonal (involving social interactions and relationships), and textual (focusing on the organization and structure of communication).
+    6. Contexts in SFL: The factors that shape language use in SFL, including field (subject matter), tenor (participants and their social roles), and mode (channel and degree of formality).
+    7. Sensor Fusion: The integration of data from multiple sensors to provide a more accurate and comprehensive understanding of a user's context, intent, and communication preferences.
+    8. Lexicogrammar: A concept in SFL that emphasizes the interdependence of vocabulary (lexis) and structure (grammar) in language use, asserting that meaning cannot be separated from structure.
+    9. Ethical Issues in AAC: Concerns related to user autonomy, privacy, and data security when using augmentative communication devices, particularly when incorporating sensor fusion and large language models.
+    10. Rate of Composition: The speed at which a user can generate and convey their intended message using an augmentative communication device. Improved rate of composition enables users to communicate more effectively and efficiently.
+

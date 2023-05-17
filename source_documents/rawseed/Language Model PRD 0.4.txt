@@ -1,0 +1,408 @@
+
+
+
+Speakprose Language Model
+Mini Specification Document
+
+
+
+Author 
+Wil Macaulay / Luke Steuber
+Creation Date
+8 Dec 2021
+Last Revised 
+8 Dec 2021
+Version
+0.2 - Draft
+
+
+
+
+
+
+
+
+
+
+Abstract: This document captures high level requirements for the language system that will be a basis to underly Cognixion's Speakprose AAC platform.
+
+Statement of Confidentiality: This document and supporting materials contain confidential and proprietary business information of Cognixion. These materials may be printed or copied for internal use, but are not to be shared with other parties without explicit permission.
+
+
+Table of Contents
+1	Document Control	3
+2	Introduction	3
+2.1	Document Evolution	3
+2.2	Business Context	4
+3	Language Model Requirements	4
+3.1	Requirements	5
+3.1.1	Rapid selection	5
+3.1.2	Utterance	5
+3.1.3	Pre-defined vocabulary	5
+3.1.3.1	Pre-processed user vocabulary	6
+3.1.4	User-managed vocabulary	6
+3.1.5	Word completion	6
+3.1.6	Auto-Correct	6
+3.1.7	Automatic Spell-Check	6
+3.1.8	Learning Words	6
+3.1.9	Phrase prediction	7
+3.1.10	User history	7
+3.1.11	Forbidden phrases	7
+3.1.12	Vocabulary classification	7
+3.1.13	Predictability	7
+3.1.14	Emoji	8
+3.2	Performance Metrics	8
+3.2.1	Speed/Time Metrics	8
+3.2.2	Quality Metrics	8
+3.3	Non requirements	8
+3.4	Risks and Uncertainties	8
+4	Test Application Requirements	8
+5	Approach	8
+5.1	Overview	8
+5.1.1	Iteration	8
+5.2	Modularity	8
+5.3	Character/String Assumptions	9
+5.4	Development Language	9
+5.4.1	Discarded Plans	9
+5.5	Libraries	9
+5.6	Development Phases	9
+5.6.1	Initial User Test	9
+5.6.2	MVP	9
+5.6.3	Future Phases	9
+5.7	Affected Components	9
+6	Glossary of Terms	9
+
+1 Document Control
+OneDrive link: 
+Link
+Related documents and URLs: 
+[concept]
+Speakprose AR Concept/Spec
+Forsland, Cottrell
+
+PRD
+Product Requirements Document
+
+
+[trials]
+Clinical Trials, Human Factors, and User Testing
+Steuber
+2021
+[AAC]
+Augmentative and Alternative Communication
+ASHA.org
+
+Revision history:
+0.1
+first draft for discussion
+WM
+8 Dec 2021
+0.2
+Added new Pre-defined User Vocabulary section (New 3.2.4) to Section 3.2 - old section numbers incremented
+BC
+17 Mar 2022
+0.3
+Restructuring of Document
+Added new sections and moved many sections around. 
+BC
+21 Mar 2022
+0.4
+Latest requirements update and approach update 
+BC
+6 Apr 2022
+2 Introduction
+2.1 Document Evolution
+This document is issued iteratively, starting with a high-level discussion of requirements and use cases, and drilling down into components until the end-to-end implementation is clear to all parties. 
+2.2 Business Context
+The language system is the engine that underlies the speech function of an AAC product. It allows the user to quickly construct natural-language phrases that can be used as input to various real-world destinations:
+    - Other humans via on-board speech generation
+    - Speech-controlled AI assistants such as Alexa or Google Home
+    - Others over time, such as online platforms, messaging and social media
+Users of AAC products rely on their devices for all communication, yielding the expectation that their language system must provide the ability to express all the things they want to communicate. They are strongly motivated to learn to use their devices.
+To be credibly considered by AAC professionals, Speakprose and Speakprose AR must meet a basic set of requirements for language production.  There are a basic set of requirements that must be met in order to qualify for funding.  
+In particular, demonstrations to potential users and recommenders of AAC systems must demonstrate at least a minimum baseline of functionality.  In order to iterate on the UI/UX design for Speakprose products, a basic set of functionality and a development plan needs to be available for the ATIA conference in January 2021 to capture user feedback.
+Competitors in the AAC space (e.g. Proloquo, see screenshot below) provide a reference for this baseline functionality:
+    - A keyboard or keyboard equivalent to enter free text
+    - A set of 'quick hit' phrases that can be accessed quickly from the home level of the UI
+    - A nested set of folders of phrases organized contextually that can be browsed to select a specific predefined phrase
+    - An area associated with the keyboard that provides a set of candidate completions for the phrase under construction
+3 Language System Requirements 
+NOTE: this section does not exhaustively enumerate the product requirements - refer to [PRD] for those.  This section lists a set of requirements that guide the selection of the implementation approach.
+3.1 High Level Overview
+    - The primary goal is to create a language system that allows users to produce rapid fluent speech 
+    - The system shall provide hierarchical access to a word library to allow users to quickly find and enter common words
+    - Similarly, the system shall provide users hierarchical access to a phrase library and phrase fragment library to allow fast phrase construction
+    - Auto-correction shall be available to correct users spelling with both automatic and manual correction capabilities 
+    - Word and phrase suggestions shall be produced by the system to enable 
+    - The language system will learn from user word and phrase choice to improve predictive capabilities.
+    - The language system will aid in construction of grammatical sentences. 
+3.2 Rapid selection
+    - Commonly used words should be available with less selections than uncommon words
+    - Commonly used phrases should be available with less selections than uncommon phrases
+    - Any phrase should be accessible, possibly requiring fully spelling out the phrase.
+    - The goal of the language system is to minimize the number of explicit individual selections required for a user to complete a phrase.  
+3.3 Vocabulary
+3.3.1 Word Dictionary
+    - A database of words known by the system used in auto-correction and auto-completion of words
+    - Words are tagged with part of speech, word form, and additional semantic and syntactic information
+    - Words shall link to other versions (such as past tense, future tense, pluralization, etc.) 
+    - Future versions of this system may include definitions, semantic links, and synonyms in the word data system
+    - The source of this word list has yet to be determined
+3.3.2 Pre-defined Word Vocabulary
+    - The word vocabulary is the subset of the word dictionary which consists of the most frequently used words 
+    - Organized into a hierarchical category representation
+    - Available as a single list sorted by frequency
+    - The basis for this frequency identification has yet to be determined
+3.3.3 User Word Vocabulary
+    - The word vocabulary is the subset of the word dictionary consisting of the users' most frequently used words 
+    - Organized into a hierarchical category representation
+    - Available as a single list sorted by frequency
+    - System should support importing a corpus of texts composed by the user to build the user word vocabulary
+3.3.4 Phrase Dictionary
+    - Grouped into categories to improve selection speed
+    - New categories can be created
+    - Will allow tagging of phrases with abbreviated phrase replacement suggestions, for example: omw = on my way
+    - Phrases shall contain additional information (semantic and context) for use in predictive suggestion system
+3.3.5 Pre-defined Phrase Vocabulary
+    - A set of phrases chosen from standard corpora are available to all users
+3.3.6 User Phrase Vocabulary
+    - A set of phrases previously uttered by the user of the system
+    - These phrases are specific to the current user 
+    - System should support importing a corpus of texts composed by the user to build the user phrase vocabulary
+    - A user can select a phrase from vocabulary to place it in the input area where it can be uttered immediately or edited
+    - Phrases are not added multiple times to vocabulary
+    - Individual phrases can be removed from vocabulary (resets their probabilities - could be re-relearned in the future)
+    - Since phrase vocabulary is built from utterances - Edited phrases are considered new
+    - Uttering a phrase from user vocabulary increases the probability that it will be surfaced by phrase prediction.
+3.3.7 User Phrase History
+    - List of most recent phrases uttered by the user
+    - Phrases that have been uttered are added to user history unless disabled.
+    - User phrase history can be cleared
+    - The addition of phrases to history can be disabled permanently or temporarily to preserve privacy (May not be necessary)
+3.4 Vocabulary classification
+    - Individual phrase can be classified under multiple categories
+    - Individual words can be tagged with multiple categories 
+    - Categories can be disabled from prediction either temporarily or permanently
+    - Categories can be disabled from browsing either temporarily or permanently
+3.5 Learning Words and Phrases
+    - Words that are not in dictionary should be learnable - added to dictionary 
+    - Phrases that are not in the users' dictionary shall be learnable - added to the dictionary 
+    - Option to add additional data to dictionary entry - definition, type of word - etc?
+3.6 Forbidden words
+    - Words that are forbidden (profanity) shall be maintained in a list and automatically excluded from standard processing. 
+3.7 Forbidden phrases
+    - The user will be able to add a set of forbidden phrases that should not be suggested
+3.8 System Training
+3.8.1 Online Prediction and Training
+    - While the system is in operation on a user's device it shall offer word and phrase completion (see below)
+    - Word and phrase probabilities may be updated on the live model 
+        ? A series of tests shall be developed to determine the limits of the online learning system - based on memory and processing performance limits of mobile devices 
+3.8.2 Offline Training
+    - A separate offline model shall process the pre-defined and user corpora to build the predictive probabilities
+    - Testing shall be done to determine the limits of time required for model processing and construction
+3.9 Input Model 
+    - The input from the phrase entry area shall be treated as uncertain - the user may have made a mistake while typing in a word or phrase
+    - Deprecated idea:
+        ? The input model will determine how probable the entered character is relative to possible entered characters. With on screen keyboards the user might press in-between two characters - both have a probability.
+        ? Note: This may be rejected as it is specific to the input device and we may want the language system to be agnostic in this respect.
+3.10 Types of Prediction 
+This system shall provide a variety of word and phrase predictions.
+3.10.1 Current word fragment completion
+    - The current string of characters entered by the user that needs to be completed (not terminated by either a punctuation mark or whitespace)
+    - If more than one word has a probability above a given threshold all words shall be provided in a list sorted by probability
+3.10.2 Next word prediction
+    - The most likely word(s) given the previously entered words
+    - If more than one word has a probability above a given threshold all words shall be provided in a list sorted by probability
+3.10.3 Phrase fragment prediction and replacement
+    - The phrase fragment (beginning, middle, or end) that is most likely given the surrounding word context 
+    - Phrase fragments that will be inserted/replaced will contain a range in the existing string which corresponds to the location of insertion (it is up to the UI to decide how to visually communicate the insertion location which is out of scope for this document)
+    - If more than one phrase fragment has a probability above a given threshold, all phrase fragments shall be provided in a list sorted by probability
+3.10.4 Phrase prediction and replacement 
+    - A complete phrase will replace the current phrase fragment (even if the current phrase fragment is empty).
+    - Complete phrase prediction will be based on previous words in current phrase as well as previous phrases if no phrase is currently being entered. 
+    - If more than one phrase has a probability above a given threshold, all phrases shall be provided in a list sorted by probability
+3.11 Spell Check and Auto-Correct
+3.11.1 Auto-Correct (last word replacement)
+    - Language system will provide suggestions for word replacement (only after completing a word by entering a word separator):
+        ? Word is not in dictionary/model (unknown word)
+        ? Word was not the result of a word completion suggestion tap (tapped words are assumed to be the one the user wanted)
+    - Auto-correct will be ON by default and will automatically replace words with most probable correct spelling 
+        ? Probability threshold for replacement - this value shall be a constant that we tweak during development
+3.11.2 Automatic Spell-Check
+    - Language system should provide a list of candidate words for replacing an incorrectly spelled word
+    - Language system should automatically detect and notify when an incorrectly spelled word is detected in the input stream.
+3.12 Disable Features
+The user shall be able to disable features that they do not wish to use
+    - Disable learning - next word prediction will NOT be based on machine learning but will instead rely solely on the dictionary spellings of words and choose the most probable based on that.
+    - Disable phrase history - Phrases that have been uttered are added to user history unless disabled
+3.13 Emoji
+The system shall offer replacement emoji based on standard emoji short names. 
+As word(s) are typed the emoji for the word(s) will be provided as a list of candidate emoji. 
+    - Emoji lookup shall be based on providing the emoji-lookup system a list of n-grams of the most recent words up N-words where N is the length of the longest emoji short-name or the number of the words in the current sentence/utterance (whichever is shorter).
+    - Emoji lookup system shall likely be best implemented alongside the language system itself as it is likely not based on the same linguistic lookup systems as the rest of the language system.
+3.14 Predictability
+    - Model will learn (weight) next words predictions that are most likely based on what the user chooses to complete.
+    - Re-learning and resistance to change 
+        ? If the system learns the two letters "tri" are almost always followed "ed" it will take several instances of "triangle" before the system begins to suggest "angle" instead of "ed"
+        ? The number of instances will be based on several factors
+            ? Number of instances to be over-written 
+            ? Frequency of new use vs old use
+            ? Frequency of new use in vocabulary vs old use in vocabulary
+        ? The factors that influence re-learning will be weighted by adjustable constants that we can change during development 
+    - Potentially could expose to the user (as a "resistance to change" slider) that lets the user adjust how resistant to change the system is when it comes to replacing suggestions. 
+3.15 Emoji
+When providing suggestions - offer emoji replacement options
+Use the short name of emoji to match to entered text and offer replacement/addition options 
+If words are incomplete when selecting suggested emoji - replace words (word fragment completion)
+If words are complete when selecting suggested emoji - append next to words (next word insertion)
+3.16 Evaluation Metrics
+3.16.1 On device maximums
+    - What is the maximum size of the language model that we are able to fit on device? 
+3.16.2 Speed/Time Metrics
+    - The time before producing a new response 
+3.16.3 Quality Metrics
+    - External Evaluation
+        ? Evaluate the model in the real word 
+        ? Probability of suggesting good relevant words - words that are always selected when suggested
+        ? Probability of suggesting irrelevant words - words that are never selected when suggested 
+        ? Proportion of time a suggestion is accepted vs rejected
+        ? Number of characters that need to be typed before a suggestion is accepted
+    - Intrinsic evaluation
+        ? Evaluate the model using test data
+        ? Split up training data into test and training sets and use compare predictive potential of model by evaluation vs this test set. Should be noted that the test set might not be 100% accurate since it doesn't capture all possible sentences the user might want to type. The intrinsic test is not meant to replace an end-to-end real user evaluation but just to provide a baseline of performance to compare against.
+3.17 Harm Mitigation
+    - Any classification and analysis system has the potential to perpetuate harms due to biases in the training set.
+    - To mitigate the potential for harms:
+        ? Careful selection and analysis of the training set data
+        ? Careful examination of the results of any human labelling 
+        ? Case studies and trials to determine whether or not there are behaviors that were missed in development 
+3.18 Non requirements
+3.19 Risks and Uncertainties
+
+4 Test Application UI Requirements
+Note: this document does not specify the appearance of a user interface, only the required components for a test user interface.  
+
+There are several reasons for this:
+    - The UI is undergoing rapid evolution
+    - The language system should be able to be used in multiple contexts, including but not limited to
+        ? Tablet based with a keyboard interface
+        ? Tablet based with eye-tracking interface
+        ? Tablet based with alternate input device
+        ? AR based with head movement interface
+
+
+
+
+4.1 UI Components
+The test user interface will require feature several components to test the language system.
+    - Phrase Prediction Area 
+    - Word Prediction Area 
+    - Text Entry Area
+    - Text History Area
+    - Phrase Library Browser
+    - Word Library Browser
+    - Quick Talk Browser
+4.1.1 Utterance
+    - A phrase that is in the input area can be uttered. 
+4.1.2 Phrase Prediction Area
+    - As words are completed, a small number of candidate phrases are presented on the UI in the phrase prediction area. 
+    - This displays either complete or fragments of phrases for selection sorted by probability
+        ? What is the predicted phrase given the current phrase fragment
+        ? What is the predicted phrase given the previous complete phrase (if no phrase fragment has started)
+    - Selecting a phrase or phrase fragment from the phrase prediction will run the phrase and the currently entered text through the language system to replace and update the whole phrase text (replacing or appending as appropriate) a space shall be appended after the updates are finished
+4.1.3 Word Prediction Area
+    - Area which displays word completion or next word suggestions sorted by probability
+    - What is the predicted current word based on the current word fragment
+    - What is the predicted word based on the previous word (if no word fragment is present)
+    - A phrase once selected is echoed to the input area. A space is appended.
+4.1.4 Text Entry Area
+    - As user enters words/characters/phrases they are echoed to the input area. 
+        ? If a user selects a character the item is 
+    - As the user enters text character by character, a short list of candidate words is presented on the UI in the word prediction area so that they can be quickly selected by the user.
+    - If a word is selected from the word prediction area it is echoed to the input area. A space is appended
+4.1.5 Text History Area
+    - A scrolling list with the most recently uttered phrase at the bottom
+    - Tap on a previously uttered phrase to populate the text entry area with that phrase
+4.1.6 Phrase Library Browser
+    - The phrase categories are represented to the UI with a unique folder label. For the purposes of this document, a folder represents a category which can be browsed hierarchically. 
+    - While browsing the phrase categories hierarchically you can eventually select a phrase which will be copied to the input area. 
+4.1.7 Word Library Browser
+    - The word categories are represented to the UI with a unique folder label. For the purposes of this document, a folder represents a category which can be browsed hierarchically. 
+    - While browsing the word categories hierarchically you can eventually select a word which will be copied to the input area. 
+4.1.8 Quick Talk Browser
+    - Most frequently used phrases across all categories are presented here for quick usage
+    - After selecting a quick talk phrase, it will be copied to the text entry area and a space will be appended
+5 Approach
+5.1 Overview
+5.1.1 Iteration
+It is assumed that multiple iterations on not just individual components but even the overall approach may be completely reorganized
+When iterating a working version shall be maintained 
+5.2 Modularity
+    - The NLP algorithms will necessarily become larger over time and we will want to be able to update different components as we identify better ways of accomplishing the tasks. Thus we should try and ensure each step of the process is in its own module.
+        ? For example the system which tokenizes should be distinct from the stemmer and also from any lematization system - can start more primitive and then get more complex as new algorithms are added. 
+5.3 Character/String Assumptions
+Early iterations will be using English 
+Emoji is going to be very important (how do we represent these in prediction?)
+Unicode support - all input strings will be assumed to be in UTF8 or a format that can be converted to UTF8.
+For text input that is not already in UTF8 conversion to UTF8 will occur before any further processing. 
+Word level prediction will attempt to operate on characters rather than individual Unicode points or ASCII characters (though early test implementations may use ASCII compatible Unicode).
+Regular expression parsing - a Unicode aware regular expression parser will be required.
+5.4 Uncertain input 
+    - Most recently entered character is received by the language system
+    - Language system will treat input characters as uncertain - there is a chance that the character entered is incorrect - should automatically try and find most correct word (Minimum string distance?)
+    - While typing a word the most probable words shall be provided by the language system
+        ? Based on all previous characters in the word 
+        ? Based on n-previous words in the sentence (n to be determined experimentally based on performance requirements)
+5.4.1 Word Completion
+    - Word frequency and minimum edit distance shall be used to determine the best word completion options
+        ? Minimum string edit distance is the number of changes required to convert the current string into the candidate string
+5.4.2 Word Prediction
+    - N-Gram based word prediction shall be the initial approach to generating the next word
+5.4.3 Phrase prediction
+    - Initial approach to phrase prediction is will use probability based pattern matching
+        ? Matching the largest chunk of text in candidate phrases to chunks of the input phrase
+        ? Input phrase chunking will occur in groups of 2-5 words - performance analysis to determine if longer phrase chunks should be tested 
+5.5 Development Language
+Initial prototyping will be completed in Swift/Objective-C as this will allow the fastest time to market for our initial target platforms (iOS/iPad OS/watchOS).
+Prototyping language does not need to match final implementation language.
+Final implementation language could change in the future
+5.5.1 Discarded Plans
+Initial plan was to use C/C++ in order to achieve maximum performance and portability however time to market concerns ended up superseding portability concerns. 
+Should performance in Swift prove insufficient or if portability becomes an issue in the future this decision may be revisited. 
+5.6 Libraries
+Any libraries must offer permissible licenses - avoid GPL 
+5.7 Development Phases
+5.7.1 Initial User Test 
+    - Language databases
+5.7.2 MVP
+5.7.3 Future Directions
+    - Audio processing of heard text - build context for the current conversation - call and answer responses can be better predicted by building a better corpus 
+        ? Ability to predict next most likely phrase based on what the device just "heard" through its microphone.
+
+5.8 Affected Components
+
+6 Glossary of Terms
+
+Utterance
+    - The action of expressing a word or statement to communicate meaning
+    - For the purposes of this document, a phrase is uttered when it is sent to an output channel. This includes:
+        ? Text to speech to a locally attached speaker
+        ? A directive to a digital personal assistance such as Amazon Alexa
+        ? A web interface, including social media
+        ? Text message (SMS, iMessage etc)
+
+AAC - Augmentative and Alternative Communication
+    - The ways in which people may communicate without using spoken or visual language (sign language)
+    - Low tech examples of alternative include
+        ? Drawing
+        ? Spelling words by pointing to letters
+        ? Pointing to photos
+
+BCI - Brain Computer Interface
+    - A mechanism for controlling a computer system by monitoring brain signals
+
+N-gram
+    - A contiguous sequence of n-items, for the purposes of this document n-grams usually refer to sequences of letters or words. 
+
+NLP - Natural Language Processing
+    - The process of extracting information from language data.

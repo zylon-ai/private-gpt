@@ -1,0 +1,889 @@
+
+Cognixion ONE
+Guidance Documents: Clinical Trials, Human Factors, and User Testing
+Luke Steuber, MS CCC/SLP, MA Applied Linguistics
+V1.6 - Last Updated 8/25/2022
+
+1 Introduction
+2 Human Factors and User Testing
+2.1 Background
+2.3 Inclusion and Exclusion Criteria
+2.4 Areas of Particular Diligence
+2.5 Addressable Populations Summary
+2.6 Extenuating Circumstances and Approval Flow
+2.7 Process Rubric, Tools, and Personnel
+Rubric: System Design
+Rubric: Pre-Assessment and Assessment Design
+3 Appendices: Human Factors Planning and Guidance
+Appendix A: Photosensitive Epilepsy
+Appendix B: Dermal Conditions and Allergies
+Appendix C: Behavioral Considerations
+Appendix D: Visual Comorbidities
+Appendix E: Muscles and Bones (Structural or Orthopedic)
+Appendix F: Clinical Assessment Tools
+4 Deprecated Content
+Outcomes Documentation
+FDA & CMS
+Human Factors Assessment Notes
+
+
+1 Introduction
+As a platform, Cognixion is aware of the expansive scope for which the Cognixion ONE headset will be valuable in the life sciences, healthcare, and adjacent industries. Our primary objective is to first and foremost find the fastest and most fundamental regulatory path that may accelerate our ability to commercialize the platform - our first addressable market - which in this case is as a wearable speech generating device that is to be marketed, sold and used as an Augmentative & Alternative Communication (AAC) system which is currently funded under several Durable Medical Equipment (DME) codes. 
+
+Therefore, the scope of this clinical plan is currently limited to the necessary steps for achieving a Food and Drug Administration (FDA) 510k and Pricing, Data Analysis and Coding (PDAC) number as a Class II EEG measurement system with a motion sensing headband and Head Mounted Display (HMD) for visual content, and Centers for Medicare & Medicaid Services (CMS) accreditation as a fundable Speech Generating Device (SGD) for AAC use.
+
+Successful completion of initial clinical assessments will create a foundation for future partnerships and collaborations, where Cognixion's first market of physiology, neuroscience, bioengineering labs in universities and corporations will uncover emergent use cases that cite the Cognixion ONE, and we may decide to return to FDA and CMS for additional expansion claims in the future - further increasing the value of our platform. These additional clinical applications may be addressed simply by creating new software that runs on the Augmented Reality (AR) portion of the headset, with little to no anticipated modifications to the hardware, or may present an opportunity to adapt our patented and patents pending platform into new embodiments of the hardware and software. This also presents an opportunity to license aspects of our technology to partners ranging from Bio/Pharma to Medical Device, Digital Health and Consumer Electronics companies.
+
+The following clinical plan reflects diligent attention to initial use cases related to people with disabilities. Extensive research has been completed to identify appropriate candidates for participation in Human Factor Assessment as well as functional use of the final hardware and software as designed. These candidates are categorized and detailed within the comprehensive Addressable Populations resource available in the Appendix section of this document. Relevant factors include cognitive and physical impairments, comorbidities, risk as it relates to functional use, and impact on overall quality of life in terms of efficacy of communication.
+
+Due to the comprehensive nature of the clinical trials as they relate to medical diagnosis, combined with raw, unfiltered data obtainable via the non-invasive EEG sensor capture, the resulting digitally processed signal activity is also valuable to additional studies of other CNS (Central Nervous System) research. This includes but is not limited to psychology, neuromuscular and neurodegenerative diseases, wellness detection, emotional well-being, cognitive process and performance analysis, therapeutic effects and efficacy, effects of non-invasive neural stimulation via visual, auditory and somatosensory inputs, environmental influences, bionic prosthetic controls, and more.
+
+Lastly, in addition to addressing very large populations like Cerebral Palsy and Aphasia, Cognixion could also release a version of the system that could qualify for accelerated Humanitarian Use Device status (HUD) for orphan diseases with less than 4,000 patients.
+
+2 Human Factors and User Testing
+2.1 Background
+The process of establishing criteria for human factors trials and user testing began almost immediately after inception of the Cognixion ONE project, and has been underway for 4+ years with particular focus on specific user segments and risk mitigation starting at the beginning of 2020. Over 1,220 citations are included to support an internal knowledge base that is summarized here, with findings from predicate research as well as two initial rounds of testing with addressable populations used to inform material choices for sanitation and comfort, flexible dry electrodes with position adjustments, language systems and range of adjustable range of motion settings in the application, overall weight and weight distribution, optical properties of the lens, battery life and placement and safety circuitry, visual stimulation design for comfort and signal quality, reduction of electrical magnetic radio frequency interference and body blocking and shielding, to supporting subsystems including a head strap and chin strap accessory - for safety and comfort.
+
+Whereas the CE, FDA and CMS submission are primarily concerned with the potential risk that the device may pose to users, the Human Factors and User Testing process is focused on:
+    1. Preemptively excluding populations where predicate research already exists to demonstrate potential risk of harm or inadequate functionality;
+    2. Informing the comprehensive design of the wearable to ensure comfort, durability, ease of maintenance, and adequate software interactivity, including an appropriate language system;
+    3. Finally, making sure that the BCI-AR hardware system and software interface meet clinical and legal requirements established by Speech and Language licensing bodies, the Department of Justice, and the World Health organization. In other words, making sure the device will be both recommended and funded based on the accepted clinical assessment process.
+2.3 Inclusion and Exclusion Criteria
+In total, 167 total medical conditions - internally referred to as "Addressable Populations" were assessed in detail, including their motor, cognitive, and sensory profiles as well as market sizing and frequent comorbidities. Specific diagnostic codes were then categorized as "Ideal," "Likely," "Unlikely," "Excluded," and "Unaddressed." Initial categorization was based on the following criteria:
+    - Does the device pose a risk of harm to this population?
+        ? Is that population thus necessarily excluded from trials?
+        ? Is that risk secondary to a frequent comorbidity, and thus not universally applicable?
+        ? If the risk is not universal, or if it can be otherwise mitigated via other accommodations, can trials proceed with a physician's authorization and/or involvement of other related health professionals (eg optometry, psychology).
+    - Will this population be able to wear the device for an extended period of time?
+        ? Sensory considerations were applied here, in addition to concerns related to device placement, weight, weight distribution, heat, electromagnetism, noise, comorbid behaviors, and UX design.
+    - Will this population be able to understand the purpose of the device and develop the competence to use and navigate it?
+        ? Comorbid dementia(s) are thus an example of an exclusion criteria, or minimally one necessitating a lower ranked weight to that population relative to conditions without cognitive impairment.
+    - Will the device be able to function in parallel with other possible or likely interventions?
+        ? Cochlear Implants are the primary example of this, which introduce noise into the EEG signal that our current BCI design is unable to compensate for.
+    - Finally: Is this device the most appropriate solution for that population in terms of access method, language system, cost, maintenance requirements, and more.
+        ? For example: The software user experience and interface could be designed for the Down Syndrome or Autism populations that could absolutely facilitate greater participation in activities of daily living. However, there is no reason why those populations would necessarily require a BCI-AR wearable device as opposed to existing tablet-based solutions, unless it's proven to increase usage or social behavior changes and accelerated learning. We would expect that the first researchers to acquire these headsets will be motivated to conduct this sort of research, for which we will be very interested to see their results.
+2.4 Areas of Particular Diligence
+A number of areas of concern were identified early in the process and warranted a deeper dive with accompanying brief analysis for our external industrial design, biometric, and software engineering teams. Summary examples can be found for the following subtopics in the appendices for this document:
+    - Photosensitive Epilepsy 
+    - Allergies and Other Dermal Concerns 
+    - Behavioral Concerns
+    - Visual Comorbidities 
+    - Structural and Orthopedic Concerns
+
+2.5 Addressable Populations Summary
+
+Ideal Addressable Populations: Those that meet all of the criteria above, including being the most appropriate solution for their motor, cognitive, structural, and developmental profile.
+
+Condition
+Rationale
+Details*
+ICD-10 Code(s)
+n Addressable (USA)**
+ALS/MND
+No cognitive impairment, no inherent dermal restrictions, no cochlear implants; considerations in place for reduced range of motion and muscle tone
+Onset: Adulthood
+Gender Balance: Either
+Etiology: Genetic
+Pathology: Sproradic/Familial
+Pathophysiology: Genetic expression: Sporadic (primarily De Novo, less often Somatic) - 90%, Heritable - 10%
+G12.21
+
+Non-progressive: M62.5
+Progressive: G95.89
+27,488
+Cerebral Palsy
+Varying cognitive impairment with higher incidence of typical abilities, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion and muscle spasticity
+Onset: Birth
+Gender Balance: Either
+Etiology: Prenatal
+Pathology: Teratogenic
+Pathophysiology: CVA/CVI resulting in brain damage prior or during birth secondary to asphyxia, meningitis, trauma, and more
+Spastic Quad: G80.0
+Spastic Diplegic: G80.1
+Spastic Hemi: G80.2
+Athetoid: G80.3
+Ataxic: G80.4
+Other: G80.8X
+250,954
+Huntington's Disease
+Varying cognitive impairment with higher incidence of typical abilities, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion and muscle spasticity
+Onset: Adolescence (juvenile) to Adulthood (typical)
+Gender Balance: Either
+Etiology: Genetic
+Pathology: Heritable
+Pathophysiology: CAG trinucleotide repeat on HTT gene; quantity of reduplication associated with both age of onset and severity
+G10
+
+w/ Chorea: G25.5
+Degenerative: F03.90
+1,915
+Locked-In Syndrome
+No cognitive impairment with higher incidence of typical abilities, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion 
+Onset: Any Age
+Gender Balance: Either
+Etiology: Infarction
+Pathology: Variable
+Pathophysiology: Primarily bulbar CVI
+G83.5
+1,673
+Multiple Sclerosis (MS)
+Varying cognitive impairment with higher incidence of typical abilities, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion and muscle spasticity
+Onset: Any Age
+Gender Balance: Primarily Women
+Etiology:Genetic
+Pathology: Variable
+Pathophysiology: Presents as an autoimmune disorder and is generally discussed as such, but there is a clear heritable genetic element
+G35.0
+
+w/ Dementia: F03.90
+w/ Demylination: G37.90
+w/ Spinal Degen: G95.89
+28,963
+Multiple System Atrophy (MSA)
+Varying cognitive impairment with higher incidence of typical abilities, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion and muscle spasticity
+Onset: Adulthood
+Gender Balance: Either
+Etiology: Ideopathic
+Pathology: Structural
+Pathophysiology: CNS damage secondary to overexpression of alpha-synuclein protein; cause of expression variable or unknown
+M62.59
+
+Ideopathic: M62.50
+13,242
+Muscular Dystrophy (Duchenne)
+Varying cognitive impairment with higher incidence of typical abilities, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion 
+Onset: Birth
+Gender Balance: Mostly Men
+Etiology: Genetic
+Pathology: Variable
+Pathophysiology: ~30 identified genetic origins w/ various onset; high prevalence among men; low but evolving understanding of prognosis
+G71.01
+
+w/ Paralysis: G83.9
+7,416
+Myasthenia Gravis
+No cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion and muscle flaccidity
+Onset: Any Age
+Gender Balance: Either
+Etiology: Autoimmune
+Pathology: Idiopathic
+Pathophysiology: Error in transmission CNS->PNS; origin and duration variable but generally associated with infection
+G70.0
+
+Acute: G70.01
+Congenital: G70.8
+Unspecified: G70.9
+937
+Rett Syndrome (All Variants)
+Varying cognitive impairment with higher incidence of typical abilities, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion and hypotonia
+Onset: Infancy
+Gender Balance: Women
+Etiology: Developmental
+Pathology: De Novo Mutation
+Pathophysiology: MECP2 clearly implicated, with other MECP2 disorders now separate; FOXG1 and CDKL5 also implicated but likely comorbid. Usually a somatic mutation with some hereditary incidence.
+R84.2
+6,721
+Spinal Cord Injury w/ Tetraplegia
+No cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion and muscle spasticity
+Onset: Any Age
+Gender Balance: Mostly Men
+Etiology: Variable
+Pathology: Trauma
+C1-C4 Complete:G82.51
+C1-C4 Incomplete: G82.52
+C5-C7 Complete: G82.53
+C5-C7 Incomplete: G82.54
+7,372
+Spinal Muscular Atrophy Type 2 (Dubowitz)
+No cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion and muscle atrophy
+Onset: Infancy
+Gender Balance: Either
+Etiology: Genetic
+Pathology: Heritable
+Pathophysiology:Variants in SMN1 gene; very similar genetically to SMA1 with different age of onset & expression
+Q87.19
+17,877
+*A much broader set of details and factors across various geographies is available internally and can be shared; as we move into other categories, the level of detail will reduce proportionately
+**These population estimates are based not only on incidence and prevalence data from the NHS, WHO, Gates Foundation, and many other sources, but also take into account what percentage of the population may be a candidate for AAC as well as typical mortality at various stages of life and, where appropriate, international funding considerations. The details of this are beyond the scope of this document but can be shared.
+
+Likely Addressable Populations: Those that generally fit the broad criteria for use, but:
+    - may have occasional exceptions due to comorbidities or secondary characteristics such as seizure disorders; 
+    - vary in their presentation among subpopulations to a degree that some may not require the BCI-AR access method, which is taken into account in our population estimates but more granular data is unavailable, or
+    - simply be so low-incidence that an individual with the target diagnosis is difficult to find.
+
+Condition
+Rationale
+ICD-10 and Other Diagnostic  Code(s)***
+n Addressable (USA)
+Angelman Syndrome
+Moderate to severe cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of ataxia, epilepsy
+Q93.51
+10,373
+Aphasia
+Varying cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion and muscle weakness
+R47.01
+
+Receptive: F80.2
+Expressive: F80.1
+Primary Progressive: G31.01
+I69 codes specify CVI site
+398,261
+Foix Chavany Marie Syndrome (Bilateral Opercular Syndrome)
+Varying cognitive impairment, no inherent dermal restrictions, bilateral sensorineural hearing loss, considerations in place for reduced range of motion and muscle weakness
+G12.2
+
+ORPHA: 2048
+UMLS: C2931412
+GARD: 2351
+MeSH: C537069
+332
+Fragile X
+Mild to severe cognitive impairment, no inherent dermal restrictions, no cochlear implants
+Q99.2
+11,711
+Friedrich's Ataxia
+Mild to moderate cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion, ataxia, and visual impairment
+G11.1
+
+ORPHA: 95
+OMIM: 229300, 601992
+UMLS: C0016719
+GARD: 6468
+MeSH: D005621
+MedDRA: 10017374
+1,680
+Landau-Kleffner Syndrome
+Varying cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for epilepsy
+G40.8
+5,171
+Klinefelter Syndrome
+Mild cognitive impairment with emphasis on speech impairment, no inherent dermal restrictions, no cochlear implants
+Q98.4
+1,561
+MECP2 Duplication Syndrome
+Moderate to severe cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for muscle weakness
+Q87.8
+
+ORPHA: 85281
+OMIM: 300260
+UMLS: C1846058
+MeSH: C537723
+54
+Parkinson's Disease
+Minimal to mild cognitive impairment, no inherent dermal restrictions, no cochlear implants
+G20
+w/ Dementia: F03.90
+w/ Paralysis: G83.9
+835,177
+Pompe Disease
+Minimal to mild cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion and muscle weakness
+E74.02
+210
+Progressive Supranuclear Palsy (PSP)
+Minimal to mild cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for reduced range of motion and muscle weakness
+G23.1
+
+Palsy Unly: G83.9
+Bulbar: G12.22
+19,913
+Trisomy 18 (Edwards' Syndrome)
+Mild to moderate cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for motor impairments
+Q91.3
+Meiotic Nondisjunction: Q90.0
+Meitotic Nondisjunction: Q90.1
+Mosaic: Q90.1
+Translocation: Q90.2
+158
+Trisomy X
+Minimal cognitive impairment, no inherent dermal restrictions, no cochlear implants, considerations in place for muscle weakness
+Q92.9
+2,847
+Turner Syndrome
+Minimal cognitive impairment, no inherent dermal restrictions, no cochlear implants
+Q96.9
+6,692
+***As many of the diagnoses considered are designated as Orphan- or Ultra-Oprhan, diagnostic codes other than ICD-10 are presented where appropriate. 
+
+Unlikely Addressable Populations are those for which: 
+    - Risk factors could be mitigated, but may require adjustments in hardware design, and/or 
+    - An entirely different software interface would be required to meet their needs, and/or 
+    - Incidence or mortality make trials among an adult population exceedingly unlikely, and/or
+    - There is no current reason why a BCI-AR wearable would be clinically recommended over existing tablet solutions without scientifically peer reviewed evidence of benefits beyond our functional claims that may emerge as researchers use our system as noted earlier in this plan. 
+
+As with the above two categories  ("ideal" and "likely," extensive research has informed these decisions. Background data exists including diagnostic codes, etiology, pathology, and much more, but in brief such populations include:
+    - CANDLE Syndrome (Chronic Atypical Neutrophilic Dermatosis with Lipodystrophy and Elevated Temperature): Lipodystrophy resulting in sensitive and abrasion-prone skin. Mild cases may be addressable with the existing solution.
+    - Christianson Syndrome: Microcephaly; comorbid seizure disorders; location of population (primarily South Africa).
+    - Trisomy 12P: Craniofacial abnormalities may make fitting challenging; low population; high mortality.
+    - Trisomy 9: Craniofacial abnormalities may make fitting challenging; ocular anomalies challenging for AR use case; low population; high mortality.
+    - Mowat-Wilson Syndrome: Craniofacial abnormalities (microcephaly) may make fitting challenging; comorbid epilepsy, although photosensitivity is not indicated. Proceed cautiously in partnership with other health providers.
+    - Cardio-Facio-Cutaneous (CFC) Syndrome: Low population; high mortality; craniofacial abnormalities that may make fitting difficult; ichthyosis (dry, thick, scaly skin) that could compromise electrodes. There is no reason it would be harmful to trial with this population, but also no reason to actively seek it.
+    - Guillain-Barré Syndrome: Low population; high mortality; craniofacial abnormalities that may make fitting difficult; ichthyosis (dry, thick, scaly skin) that could compromise electrodes. There is no reason it would be harmful to trial with this population, but also no reason to actively seek it.
+    - CHARGE Syndrome: Low population; high mortality; comorbid cranial nerve abnormalities; structurally compromised vision (coloboma and microphthalmia)
+    - Joubert Syndrome: Very low population; hypotonia; cerebellar vermis hypoplasia (abnormal brain structure); low mortality. There is no reason NOT to proceed with a Joubert user if we encounter one, but it's unlikely we will (at adult age).
+    - Trisomy 13 (Patau Syndrome): Microcephaly and structural eye defects make it very unlikely that a wearable is right for this population. However, milder or "non-mosaic" cases are possible and can be pursued if encountered. Also one of very few conditions that can present with "aplasia cutis congenita" (absence of skin).
+    - Sturge-Weber Syndrome: Presentation is highly variable; seizures exist but are typically focal and not photosensitive; abnormal blood vessel structure can impact the eyes but typically only on one side. A possible candidate, but proceed with caution.
+    - CDKL5 Deficiency: Once considered a form of Rett syndrome - and often comorbid with Rett - CDKL5 is typically either fatal or minimally more severe in men. However, while Rett patients are good candidates, the near 100% incidence of seizure activity when the CDKL5 gene is compromised (in addition to MECP2, causing Rett) makes this more problematic - and more fatal. Proceed very cautiously.
+    - Aicardi Syndrome: Low population; microcephaly makes headset fit unlikely; comorbid visual impairment (microphthalmia).
+    - Machado-Joseph Disease: There are three variants of Machado Joseph Disease, otherwise known as "spinocerebellar ataxia," and presentation is similar to Parkinson's except a near 100% incidence of several visual disorders. In the absence of such disorders these candidates are perfect, but are extremely uncommon; tend to have mid-30s mortality; and are almost exclusively found in Portugal.
+    - 22q.11 Deletion (DiGeorge Syndrome): Low population; high variability in presentation; structural abnormalities do not necessarily preclude typical speech; 25%+ comorbidity of Schizophrenia.
+    - Pitt-Hopkins Syndrome: Excellent candidates neurogenically and in terms of AAC need but also present with craniofacial abnormalities (microcephaly) and, typically, at least nearsightedness if not at least blindness. Mortality is also quite young. A surviving adult may be a candidate - there's no other excluding factor - but it would be very unusual.
+    - Williams Syndrome: Outside of low muscle tone, individuals with Williams are perfect candidates - but only if they need a solution like our wearable, and those impacted rarely present with speech and cognitive challenges warranting it. If encountered, no reason not to proceed.
+    - Prader-Willi Syndrome: Low incidence; high mortality; profound intellectual disability and psychiatric comorbidities; I wouldn't outright exclude this group but the few patients  I have seen clinically with this diagnosis could not navigate the AR environment.
+    - Cornelia de Lange Syndrome: Low population; comorbid visual impairment; craniofacial abnormalities could impact headset fit.
+    - SMA Type 1 (Werdnig-Hoffman): Ideal profile for candidacy but extremely low likelihood of survival past adolescence. No barrier to proceed, but the chance is very low of encountering such an individual.
+    - Neonatal Encephalopathy: Extremely high mortality; varying pathogenesis and presentation makes it hard to predict outcomes and difficult to diagnose later in life; possible candidacy but extremely uncommon and case-by-case.
+    - Pervasive Developmental Disorder, Not Otherwise Specified (PDD-NOS): Very tentatively included; there is overwhelming comorbidity with other conditions, highly variable diagnosis, and - in the absence of other factors - extremely low need for assistive tech. However, there are indeed pervasive developmental disorders not otherwise specified who could benefit, and in the event we encounter that diagnosis we shouldn't rule it out.
+    - Specific Learning Disability: Overwhelming comorbidity with other conditions, highly variable diagnosis, and - in the absence of other factors - extremely low need for assistive tech. In other words: If an adult with SLD needs our wearable, it's not because they have SLD.
+    - Trisomy 21 (Down Syndrome): The majority of those impacted by Down syndrome are not necessarily AAC users, a fact that is becoming more and more true with improved natal feeding techniques. However, the AR component of the headset could be enormously valuable as a prosthetic of other kinds. Proceed, but with knowledge that bespoke content will likely be necessary.
+    - Autism Spectrum Disorder: This is one of only three included conditions (along with dementias and Childhood Apraxia of Speech) for which incidence, prevalence, and population generally did not meet my established standard of 95% consensus among researchers. ASD was almost excluded due to wildly variable presentation, no national or international consensus of incidence and prevalence, and overall poor understanding of etiology. However, as literature is so sparse on adult activities of daily living for highly impacted ASD without behavioral accompaniment, there is no reason not to perform a trial if the right individual is found.
+    - Alzheimers and Related Dementia: There is no specific reason to exclude this population except that the period of time between when they may benefit from a wearable from ours and when they are too impacted to use/interact with it is often shorter than a funding cycle. In addition, bespoke content would need to be created to serve this audience.
+
+A number of populations have been excluded due to either blanket unsuitability of the solution for their needs or inability to mitigate risks related to their condition. A partial list follows:
+    - PPM-X (Lindsay-Burn Syndrome): Low incidence; high mortality; high comorbidity with psychosis.
+    - FOXG1 Syndrome: Low population; high mortality; cranial structure abnormality (microcephaly) may lead to a poor fit.
+    - Merrf Syndrome: Low population; high mortality; comorbid optic atrophy; definite epilepsy, possibly photosensitive.
+    - Leigh Syndrome: Low population; High mortality; comorbid optic paralysis and/or atrophy (ophthalmoparesis).
+    - Krabbe Disease: Low  population; very high mortality.
+    - Dandy-Walker Malformation (DWS): Low population; abnormal/excessive hair growth (hypertrichosis); frequent comorbidity of visual impairment.
+    - PURA Syndrome: Incredibly rare; low population and high incidence of tonic-clonic seizures makes it difficult to rule out photosensitive epilepsy; high mortality in adolescence and infancy.
+    - CLN2 Disease: A form of Batten Disease, sometimes also implicating the GLN23 gene; a member of the group of neuronal ceroid lipofusciones (NCLs). Not all are addressed here because all would be excluded due to: Low population; high mortality; waste accumulation in retina typically results in childhood blindness.
+    - Heller Syndrome ("Childhood Disintegrative Disorder"): A pervasive developmental disorder thought to be in the same general family as Autism and Rett Syndrome, the rate of childhood mortality and comorbidity with psychosis excludes this cohort.
+    - Childhood Apraxia of Speech: Excluded due to rampant misdiagnosis, comorbidity with other conditions, typically transient nature in "pure" cases, and focus on adult subjects for v1.
+    - Profound Intellectual Disability: Excluded due to overwhelming comorbidity with other conditions, highly variable diagnosis, and - in the absence of other factors - extremely low need for assistive tech. In other words: If an adult with ID needs our wearable, it's not because they have ID (or very, very rarely).
+
+Finally, a number of conditions have been left "unaddressed" - which simply means that they have been considered, and are certainly candidates for the wearable, but that candidacy is dependent on secondary conditions that will either enhance their suitability (such as any form of paralysis) or exclude them from consideration (such as photosensitive epilepsy). Some examples include: Individuals who have undergone a glossectomy or laryngectomy; those who have experienced various facial cancers; acquired apraxia and dyspraxia, dysarthria, and a variety of other structural and motor impairments either acquired in isolation or secondary to a primary diagnosis.
+
+Addressable Populations remains an ongoing category of internal research, with 67 additional conditions pending review and the capacity to incorporate others - or generalize findings from those already explored - as testing continues.
+2.6 Extenuating Circumstances and Approval Flow
+As noted in a number of "likely" conditions - as well as "unlikely" ones - exceptions can be made to initiate a trial with a population that is either not yet researched or researched and excluded. An example of this could be one with a comorbid seizure disorder, but where the user and/or their caregivers insist that there is not a photosensitive trigger. In those circumstances an assessment and/or trial may still continue, but only with written consent from a neurologist or other physician attesting to that and with caregiver(s) present at the time of device trial. Exceptions must be authorized by Lucas Steuber CCC-SLP or Mai Ling Chan CCC-SLP for human factors and user testing, and by Lucas Steuber CCC-SLP or the PI for formal clinical trials as performed for the FDA.
+2.7 Process Rubric, Tools, and Personnel
+Rubric: System Design
+System Design
+    - Primary Components: Those that perform the functions of natural language and have the greatest impact on performance.
+        ? Symbol Selection
+        ? Vocabulary
+        ? Means of Utterance Generation
+    - Secondary Components: The way the individual interacts with the System.
+        ? User Experience
+        ? Selection Method
+        ? Output Format
+    - Tertiary Components: External to the system but affect long-term use.
+        ? Switch Access
+        ? Portability
+        ? Mounts
+        ? Training and Support
+Rubric: Pre-Assessment and Assessment Design
+Per the American Speech-Language Hearing Association (ASHA), the Department of Justice Individuals with Disabilities Act (DOJ IDEA), and the World Health Organization's International Classification of Functioning, Disability and Health (WHO-ICF) framework, a comprehensive assessment is conducted to identify and describe:
+    - Impairments in body structure and function;
+    - Comorbid deficits such as apraxia, dysarthria, intellectual disability (ID), and neurodegenerative diseases;
+    - Limitations in activity and participation, including functional communication, interpersonal interactions, and learning;
+    - Impact on quality of life relative to premorbid communication status, where relevant.
+
+The procedural responsibilities related to each of those areas is addressed in detail below, with the following "Tools" section identifying the standardized assessments used to meet those requirements for each population. 
+
+In the pre-assessment process, the SLP must evaluate:
+    - Medical status and history, education, educational achievement (under 21 years of age), occupation, and cultural/linguistic background;
+    - History and current use of AAC, including motivation and prior adoption or abandonment;
+    - Prognosis and potential for disease progression, where applicable;
+    - Impact on the individual's participation in activities of daily  living;
+    - Impact on their family, caregivers, and others in circle of support;
+    - Individual's self-reported goals, preferences, and contexts of concern, where possible.
+    - These are assessed via a combination of medical and education documents release and remote data gathering modalities such as a family interview and self-assessment forms.
+
+In the assessment process, the SLP must also evaluate:
+    - Linguistic Competence: Knowledge of and ability to use language among their family and community.
+    - Operational Competence: The ability to understand the UX and interaction and successfully navigate/operate, etc.
+    - Strategic Competence: The ability to effectively convey messages by employing compensatory strategies like prediction.
+    - Social Competence: Knowing who to talk to, who not to talk to, and what is appropriate to say.
+    - Psychosocial Competence: Actually wanting to communicate, and wanting to learn how to use AAC.
+
+At the time of the physical examination(s), the SLP must evaluate:
+    - Vision: Ability to see symbols or orthography on the AAC system.
+    - Sensory system integration: Ability to regulate their body in order to communicate.
+    - Physical/Motor status: Ability to access the device via direct or indirect selection.
+    - Behavioral profile: Whether they intend to participate in therapy and not pose a risk of harm to themselves or others.
+    - Oral motor examination: Whether they are structurally capable of producing oral speec h.
+    - Hearing: Whether the patient is able to hear well enough to understand others' communication.
+    - In the absence of oral motor or structural abnormalities, if there is an underlying articulation disorder.
+    - Expressive and receptive language abilities, including:
+        ? Communicative intent;
+        ? Current means of communication;
+        ? Vocabulary size and word types (expressive and receptive);
+        ? Ability to follow commands;
+        ? Ability to respond to yes-no questions, and
+        ? Ability to point to or otherwise indicate correctly to objects, words, and pictures.
+    - Reading and writing skills, and whether they are:
+        ? Emergent or pre-emergent;
+        ? Early elementary;
+        ? Later elementary;
+        ? Substantially different for literate adults relative to their premorbid state.
+    - Pragmatics and social skills.
+    - Cognitive communication: Memory, attention, problem-solving, and executive functioning in the context of AAC.
+    - Ability to access the symbols/orthography on the device, including:
+        ? Choice of symbols;
+        ? Size of symbols;
+        ? Field size (array of possible selections);
+        ? Organization.
+
+    - Finally, identify and recommend: the appropriate AAC system via the feature matching method:
+        ? Ensure the system allows a wide range of communication features;
+        ? That it gives them capacity to communicate in varying environments with different partners;
+        ? The vocabulary and symbol inventory is adequate;
+        ? The display and features are appropriate for their needs;
+        ? The input type meets their needs;
+        ? Output is in an appropriate form of speech and language, with cultural considerations accounted for;
+        ? Physical positioning and accessory needs are met;
+        ? It is adequately portable;
+        ? It can be modified for their individual communicative needs;
+        ? The individual can be motivated to use it;
+        ? It is the least costly alternative that will meet their needs, and can be maintained by their circle of social and professional support.
+
+Content on specific clinical measures and formal assessments has been moved to Appendix H. Some information about the path to funding and regulatory steps has been redacted and moved as well due to the influx of comprehensive internal knowledge.
+
+
+3 Appendices: Human Factors Planning and Guidance
+
+
+Appendix A: Photosensitive Epilepsy
+
+[See Following Page for PDF Insert]
+
+
+Appendix B: Dermal Conditions and Allergies
+
+I. Introduction and Executive Summary
+Dermal concerns relating to the use of the brain-computer interface wearable headset include comorbid conditions affecting the skin on the head where the headset and electrodes will be directly in contact. Dermal conditions affecting areas other than points of contact between the headset and head do not warrant clinical consideration. A condition can result in exclusion if it includes irritation at or around the area of contact with the headset or electrodes as well as immediate or eventual discomfort from the headset or electrodes. Altered bodily reactivity to a component of the wearable caused by an allergen causing exaggerated reaction do necessitate clinical consideration. An allergy can result in exclusion if the allergen is contained in the headset and results in a substantial reaction affecting the patient externally or internally.
+
+1a. Myasthenia Gravis
+Myasthenia Gravis patients are often affected by comorbid dermatomyositis, an autoimmune disorder linked to muscle weakness and rash. These rashes may be avoided with proper skin care and treatment of the locked-in patient. If severe enough and located in a point of contact with the headset, dermatomyositis warrants clinical consideration.
+
+1b. Locked-In Syndrome
+Locked-In Syndrome is not known to be associated with any dermal comorbidities.
+
+1c. Huntington's Disease
+Huntington's Disease is associated with several comorbid dermal conditions including hyperkeratosis, thickening of the outer layer of skin, epidermal atrophy, the microscopic degeneration of connective tissue, and subepidermal fibrosis, a tumor-like nodule that can cause severe itching and pain. Huntington's Disease patients in stages 4 and 5 are known to experience skin breakdown. These comorbidities are not likely to warrant exclusion except in severe cases located on the head, however patients with these conditions should be clinically evaluated. A final condition of Huntington's that may be associated with the skin is tingling phantom sensations, similar to shivering. Although patients may feel as if this tingling is due to a dermal condition, phantom sensations are in fact purely mental and therefore do not qualify as a dermal exclusion factor.
+
+1d. Rett Syndrome
+Although not directly linked to the skin, patients with Rett Syndrome are subject to vasomotor instability or "hot flashes" in which the patient has a sensation of heat in the body that can cause discomfort. Hypersensitive skin and delayed sensitivity to pain contribute to increased incidence of skin injury which does not pose an issue with the proper monitoring and care, but still increases risk of damaging the skin in contact with a wearable. Skin breakdown and ulcers are also present especially in cases with insufficient skincare or a sedentary patient.
+
+1e. Spinal Cord Injuries
+A relatively small number of patients with Spinal Cord Injuries present with Seborrheic dermatitis, an eczema that affects the scalp, which may require immediate resolution before headset use due to the nature and location of the itchy rash. Pressure sores are common with paralyzed patients due to immobility but should not affect headset use unless the neck and head are completely paralyzed.
+
+1f. Duchenne Muscular Dystrophy
+Patients with Duchenne Muscular Dystrophy are at high risk of skin conditions. Rashes burns, skin breakdown and pressure injuries all present at higher rates. With proper self-care and diet, patients can reduce the risk of skin issues, but patients with DMD should be closely monitored.
+
+1g. Multiple System Atrophy
+Patients with Multiple System Atrophy have similar risk as other degenerative muscle disorders such as increased incidence of skin breakdown, pressure ulcers and other related conditions. MSA is not specifically linked to additional dermal comorbidities.
+
+1h. Spinal Muscular Atrophy Type 2 (Dubowitz)
+Patients with Spinal Muscular Atrophy Type 2 have similar risk as other degenerative muscle disorders such as increased incidence of skin breakdown, pressure ulcers and other related conditions. SMA Type 2 is not specifically linked to additional dermal comorbidities.
+
+1i. Amyotrophic Lateral Sclerosis (ALS)
+Immobility in patients with Amyotrophic Lateral Sclerosis can cause Decubitus Ulcers, however these will most likely not pose an issue for headset compatibility since the ulcers will only be located on nonfunctional parts of the body (generally not the head). ALS patients are also affected by skin breakdown in flexor creases which should not affect qualification because flexor creases are located on the hands, not points of contact with the headset.
+
+1j. Multiple Sclerosis (MS)
+Similar to Huntington's Disease, Multiple Sclerosis can cause phantom sensations or tingling feeling that can be painful or itchy. MS can cause dry and uncomfortable skin that may be in contact with the headset, however this can be combated with cream and wipes to increase comfort. There is literature suggesting an association between Multiple Sclerosis and Bullous Pemphigoid, a rare skin condition causing large fluid filled blisters. Generally, these blisters are located on the lower body, but it is possible they appear in an area on contact with the headset.
+
+1k. Cerebral Palsy (CP)
+People with Cerebral Palsy are especially susceptible to skin conditions such as infections like ringworms and staph infections, irritations and ulcers which can be located on a point of contact with the headset. Some infections such as Impetigo are generally located on the head or face and therefore have a higher risk of contact with the headset.
+
+II. Dermal Conclusions
+Dermal affects or injuries at the area of contact with the headset or electrodes can be excluded depending on severity until resolved. Dermal conditions or abnormalities present on the body not located around the area of contact should prompt evaluation with a physician to determine the risk of spreading to the area of contact with the headset. If no visible conditions are present patients should be questioned about dermal history, especially disorder-specific comorbidities. If the patient has a history, a physician should be consulted. If the patient has no history, proceeding without a physician is acceptable if the patient is informed of potential risks and dermal signals that should prompt them to contact a physician and reevaluate headset compatibility.
+
+III. Final Dermal Notes
+This deep dive specifically discusses disorder-specific comorbidities, there are a plethora of additional conditions that can be present in conjunction with any patient. The standard for dermal concerns must be patient to patient evaluation, involving physicians when a history is present, to offer no room for error regarding potentially harmful conditions. In order to follow this standard of patient to patient evaluation, in the case of a dermal condition that is present and would normally result in exclusion, exceptions can be made. The brain-computer interface headset has the potential to unlock communication for its users and some patients may be willing to endure slight dermal discomfort to gain that ability. Ultimately the decision is up to the discretion of the user and the physician to determine severity of risk and whether device use is worth potential negative effects.
+
+IV. Allergies
+
+4a. Nickel
+Nickel directly touching human skin can result in contact dermatitis which can cause severe itching, scaly, raw, or thickened skin, dry, discolored, or rough skin, warm, tender skin and fluid-filled blisters. Nickel allergies can develop with prolonged exposure over time, making individuals with prolonged, direct contact with a headset especially susceptible. Literature suggests up to 1 in 5 individuals possess nickel allergies and repeated exposure increases odds of hypersensitivity. Nickel allergies are significantly more prevalent in women which may be due to prolonged contact with nickel-containing substances such as jewelry. The symptoms associated with a nickel allergy would most likely result in exclusion, and nickel was therefore avoided in the composition of the wearable headset.
+
+4b. Gold
+Similar to nickel, gold in contact with human skin can result in contact dermatitis which can cause swelling, rashes, redness, itching, peeling, dark spots and blistering. Literature suggests around 1 in 10 individuals possess nickel allergies and repeated exposure increases odds of hypersensitivity. Gold allergies are significantly more prevalent in women which may be due to prolonged contact with gold-containing substances such as jewelry. Nickel allergies can often be mistaken for gold allergies as impure gold often contains traces of nickel. Gold allergies, similar to nickel and many other metals, can develop with prolonged exposure over time, making individuals with prolonged, direct contact with a headset especially susceptible.
+
+There is no cure for metal allergies however some prescription creams can reduce irritation. Metal allergies are not fatal; however, they can cause severe discomfort. The symptoms associated with a gold allergy would most likely result in exclusion, and gold was therefore avoided in the composition of the wearable headset.
+
+4c. Latex
+Latex allergies can trigger reactions due to contact or inhalation of latex particles and can range in severity from mild to life-threatening. Mild symptoms include sneezing, runny nose, itching, skin redness, hives and rashes. More severe symptoms include itchy or watery eyes, scratchy throat, difficulty breathing, wheezing and coughing. Life threatening symptoms associated with anaphylaxis include nausea and vomiting, drop in blood pressure, dizziness, loss of consciousness, confusion, rapid or weak pulse and severe difficulty breathing or coughing. Reactions can increase in severity with repeated exposure to latex. This is called sensitization. Several disorders are tied to increased chance of latex allergy, the most prevalent being Spina Bifida. Literature suggests less than 1% of the population has latex allergies, but increased exposure can increase chances of contact dermatitis. The inclusion of latex in the wearable may cause issues regardless of preexisting latex hypersensitivity as sensitization could induce contact dermatitis with the prolonged contact expected of users. For this reason, and the severity of reactions to latex, it has been excluded from the composition of the wearable.
+
+4d. 3-D Printing Polymers - Polylactic Acid (PLA)
+Although there is some discussion regarding potential allergens contained in 3D printed materials, literature regarding hypersensitivity to 3D printed polymers is limited. Polylactic acid (PLA) and Acrylonitrile Butadiene Styrene (ABS) are the two primary concerns as they are the most frequently used in the highest concentration, however no reports of confirmed hypersensitivity have surfaced yet. Concerns that those allergic to corn may also be allergic to the compound extracted from it, PLA, are mistaken as the process of deriving starch from corn removes the allergen. Other potential reactions to microscopic quantities of 3D polymers may be addressed case by case with a physician present, however if any cases are present, nothing suggests the effects to be more than mild.
+
+4e. Silver
+Pure silver is not hypoallergenic, however even sterling silver can contain up to 7.5% other metals. If this metal is nickel, an allergy can appear to come from the silver but come from the nickel through contact dermatitis. Allergies to silver itself are negligible or nonexistent. Although hypersensitivity and allergies are not caused by the silver, prolonged contact can cause argyria, the permanent discoloration of the skin to a bluish-grey color. Localized Argyria can stem from direct contact to silver or silver-containing compounds. Argyria is normally induced through the ingestion of silver soluble liquids, however it is possible through direct contact. Although possible, the chances of argyria vastly decrease when the concentration of silver is diminished within a compound. The guideline set by the American Conference of Governmental Industrial Hygienists (ACGIH) for silver concentration is 0.1mg/m^3 for an 8hr Time Weighted Average (TWA).
+
+4f. Silver-Chloride
+It is possible for silver-chloride to cause skin irritation with prolonged contact of high enough concentration, however the concentration of silver and silver-chloride in the electrodes used in the wearable is nontoxic and should not result in any allergic reaction. In the very low probability that a patient has an adverse reaction to the compounds in the electrodes, it would be minimal and easily addressable with prescription creams or excluded before any serious health risks if the reaction is severe enough. The concentration of silver used in the electrodes is below the guideline mandated by the ACGIH.
+
+V. Allergy Conclusions:
+Use of Gold and Nickel in the electrodes and latex in the headset would create due to the high rates of allergy and potential to induce an allergy with prolonged exposure. 3D polymers seem to have no measurable allergic issues. The current working model using electrodes of silver-chloride presents no allergic concerns as the compounds are hypoallergenic. If the concentration of silver remains below the legally safe limit, argyria should not be an issue. The current working model has no issues with allergens, however if this model shifts, new materials must be considered for allergens since possible substitute materials do have major allergen concerns. There is no research directly tying increased odds of allergies to diseases or disorders however it is worth noting managing the allergies may be difficult to manage in conjunction with behavioral or physical conditions.
+
+
+Appendix C: Behavioral Considerations
+The goal of any Augmentative and Alternative Communication technology is to improve the quality of life of the user and the user's family and caretakers. If a patient is unable to understand that the headset is helping them, they unfortunately must be excluded as any AAC intervention may do more harm than good. Another behavioral consideration is the monetary cost of an uncontrolled behavioral incident resulting in the destruction of the device. Due to the costly and fragile nature of BCI technology, repeated outbursts breaking the device may exclude certain patients. Finally, if the patient understands the device is helping them and is not at risk of breaking the device, but has a behavioral issue preventing them from feeling comfortable with the device in augmented reality, the patient will be excluded.
+Glossary of Behavioral Concerns:
+    - Depression - The persistent feeling of sadness or loss of interest that characterizes major depression can lead to a range of behavioral and physical symptoms.
+    - Anxiety - A mental health disorder characterized by feelings of worry, anxiety, or fear that are strong enough to interfere with one's daily activities
+    - Aphasia - loss of ability to understand or express speech, caused by brain damage.
+    - Amnesia - a partial or total loss of memory.
+    - Dementia - a chronic or persistent disorder of the mental processes caused by brain disease or injury and marked by memory disorders, personality changes, and impaired reasoning.
+    - Attention-Deficit Hyperactivity Disorder (ADHD) - a disorder marked by an ongoing pattern of inattention and/or hyperactivity-impulsivity that interferes with functioning or development.
+    - Obsessive-Compulsive Disorder (OCD) - a personality disorder characterized by excessive orderliness, perfectionism, attention to details, and a need for control in relating to others.
+    - Pseudobulbar Affect (PBA) - Inappropriate involuntary laughing and crying due to a nervous system disorder.
+Myasthenia Gravis
+Myasthenia Gravis is commonly associated with several mental health disorders that may affect behavior. The highest incidence mental comorbidity being depression, the headset should help users, and depression provides no monetary risk. Depression therefore requires no additional clinical consideration. The greater disqualifying issues associated with Myasthenia Gravis are anxiety and panic attacks. Since panic attacks are usually associated with elevated levels of stress or discomfort, the foreign environment of augmented reality has the potential to trigger an incident of panic or anxiety that could damage the patient or device. This risk warrants the presence of a medical professional at primary fittings of the device.
+Locked-In Syndrome
+The lack of literature discussing specifics of low incidence disorders such as Locked-In Syndrome makes any stipulation nothing more than assumption, however similar disorders allow clinicians to predict expected conditions. The full mental capacity but complete lack of physical ability associated with LIS can be expected to cause mental illness such as depression and anxiety. Despite the potential presence of mental comorbidities, patients with LIS will not be excluded due to these conditions since LIS patients present with normal mental capacity, and their paralysis prevents any possible destruction of the device.
+Huntington's Disease
+Huntington's Disease is characterized by several psychiatric comorbidities of ranging severity that can affect behavior. The conditions most discussed in medical literature are depression and anxiety, which lead to significantly increased rates of suicide. Although these conditions are medically serious and can lead to outbursts of anger or apathy, extra clinical consideration for headset compatibility is not necessary since the headset will increase the patient's quality of life. An exception to this is extreme anxiety in which the patient is unable to maintain normal functions or have repeated and regular panic attacks. Patients with Huntington's Disease are also affected by less documented comorbidities that affect mood and personality often making the patients more irritable and even angry than a typical person. The cognitive aspect of Huntington's presents similar to Alzheimer's with aphasia, amnesia and dementia presenting at increasing rates as the disease progresses. These cognitive inhibitions require clinical review as they are associated with mental deterioration which may nullify the benefits of any assistive technology due to a lack of understanding. Aphasia specifically may require a headset variant.
+Rett Syndrome
+Rett Syndrome is often characterized by unusual physical behaviors such as hand-flapping, walking on toes and breath holding, as well as potentially decreased mental capacity, autistic-like behaviors and cognitive disabilities. None of these disorders are remotely exclusive unless extremely severe. Extra clinical consideration is most likely unnecessary unless specific behavioral issues are reported.
+Spinal Cord Injuries (Quadriplegia)
+The full mental capacity but complete lack of physical ability associated with SCIs can be expected to cause mental illness such as depression and anxiety. Despite the potential presence of mental comorbidities such as these, patients with SCIs will not be excluded due to these conditions since SCI patients present with normal mental capacity, and their paralysis prevents any possible destruction of the device.
+Duchenne Muscular Dystrophy
+Patients with Duchenne Muscular Dystrophy usually present with no mental health issues, but they are still possible and people with DMD have increased risk of behavioral issues associated with Autism, ADHD, OCD, social interactions, cognitive impairment and aggression. Although all conditions should be clinically considered, aggression and anger management should take primary concern as it is not necessarily disqualifying but can be if severe enough.
+Multiple System Atrophy
+Multiple System Atrophy, similar to other Parkinsonian diseases, presents a significantly higher than average rate of dementia as well as increased chance of cognitive impairment and progressive intellectual deterioration. MSA patients require special clinical consideration and care as a window of prime candidacy will exist for most patients, but mental deterioration and dementia may progress to a point of disqualification as the disease progresses.
+SMA Type 2 Dubowitz
+Spinal Muscular Atrophy does not affect cognitive function or cause intellectual ability; however, it does present a higher than average rate of internalized psychiatric comorbidities, like depression. Surprisingly, SMA is associated with a lower than average rate of externalized psychiatric comorbidities. Since this is the case, additional clinical behavioral consideration is unnecessary.
+ALS
+Although Amyotrophic Lateral Sclerosis is not generally characterized by mental or behavioral effects, around half of all patients with ALS will experience some of these traits. The behavioral effects are wide ranging from as minor as slight changes in manners, language and decision-making to as major as dementia. Most patients with ALS will not experience effects great enough to come close to warranting disqualification, however in some extreme cases when dementia is present, exclusion is warranted.
+MS
+Patients with Multiple Sclerosis present with a high likelihood for behavioral changes of some sort. These conditions are wide ranging from mood changes, irritability and increased chance for inappropriate behavior to depression or anxiety. Another less common effect is the Pseudobulbar Affect (PBA), which causes the affected individual to laugh or cry uncontrollably. Multiple Sclerosis is not generally associated with dementia and any behavioral changes are usually minor. For this reason, patients with Multiple Sclerosis do not need additional clinical consideration of behavioral concerns.
+CP
+Children with Cerebral Palsy are more likely than the average unaffected child to display behavioral comorbidities. These behavioral issues can include anger issues, temper tantrums and social discomfort. Adults with Cerebral Palsy do not seem to exhibit anger issues; however, they are at increased chance of mental health disorders like anxiety and depression. Clinical involvement is not necessary in adults unless extreme anxiety is present, but children with CP and anger issues may warrant increased clinical care and consideration.
+Conclusion:
+Behavioral abnormalities in headset candidates pose potential issues and disqualifying factors depending on the nature and severity of the comorbidity or condition. Although no behavioral condition is immediately disqualifying, some are at higher for exclusion as they are generally more severe, such as dementia. The vast majority of behavioral or mental conditions in patients are depression and anxiety, which do not seem to be disqualifying. Most other concerns are minor and should be considered, but do not warrant exclusion. In conclusion, very few patients will be excluded for behavioral concerns unless the patient is: uncomfortable in the headset, a danger of breaking the headset or does not understand the benefit of the headset and does not want to wear it.
+
+
+Appendix D: Visual Comorbidities
+Eye-tracking software and BCI calibration necessary for the use of AR devices require a certain degree of visual functioning. Complete blindness is an immediate disqualifier for all current Cognixion AAC devices. Visual abnormalities involving partial blindness or uncontrolled movement supply increased difficulties for effective use but must be evaluated case by case as there is no definite standard for exclusion. Many of the addressable disorders are affected by visual comorbidities and therefore require special attention. Visual issues while important as they can result in immediate exclusion, do not provide an extreme liability as further damage or injury of the occipital lobe, ocular nerve or eyes themselves would be virtually impossible (with the exception of perhaps someone stabbing themselves in the eye which is more of a behavioral than visual issue). It is worth noting that far or nearsightedness are easily addressed since contacts and glasses are compatible for simultaneous use with the AR headset.
+Comorbidities:
+    - Ptosis - Abnormal low-lying or drooping upper eyelid.
+    - Diplopia - Seeing two images of an object, also known as double vision.
+    - Retinal Interneuron Degeneration - atrophy of eye neural signaling cells
+    - Refractive Errors - the shape of the eye does not bend light correctly, resulting in a blurred image.
+    - Esotropia - Misaligned eye turned inward
+    - Exotropia - Misaligned eye turned outward
+    - Hypertropia - Misaligned eye turned upward
+    - Hypotropia - Misaligned eye turned downward
+    - Cortical Visual Impairment (CVI) - Visual impairment due to a brain injury preventing the interpretation of images seen with the properly functioning eyes
+    - Oculomotor Apraxia - the absence or defect of controlled, voluntary, and purposeful eye movement.
+    - Cortical Blindness - total or partial loss of vision in a normal-appearing eye caused by damage to the brain's occipital cortex
+    - Insufficient Convergence - a sensory and neuromuscular anomaly of the binocular vision system, characterized by a reduced ability of the eyes to turn towards each other
+    - Blepharospasm - Uncontrolled squeezing or twitching of the eyelids.
+    - Blepharitis - An inflammation of the eyelid that affects the eyelashes or tear production.
+    - Nystagmus - An involuntary eye movement which may cause the eye to rapidly move from side to side, up and down, or in a circle, and may slightly blur vision.
+    - Ophthalmoplegia - paralysis of the muscles within or surrounding the eye.
+    - Saccadic Movements - A quick, simultaneous movement of both eyes between two or more phases of fixation in the same direction. In contrast, in smooth pursuit movements, the eyes move smoothly instead of in jumps.
+    - Extraocular Muscle Atrophy - Paralysis of the muscles surrounding the eye due to cell death
+    - Optic Neuritis - Inflammation of the optic nerve.
+    - Scotoma - A partial loss of vision or blind spot in an otherwise normal visual field.
+    - Hemianopsia - a loss of vision or blindness in half the visual field
+    - Strabismus - a condition in which the eyes do not properly align with each other when looking at an object.
+    - Cataracts - a cloudy area in the lens of your eye causing blurry vision
+    - Central Field Loss - a small dark spot in the center of the vision that gets larger over time.
+    - Peripheral Field Loss - The inability to see objects unless they're right in front of you. This is also known as tunnel vision.
+Disorder specific comorbidities in ideal diseases:
+Myasthenia Gravis
+There are several visual comorbidities associated with Myasthenia Gravis. As a neurodegenerative muscle disorder, MG can lead to loss of control in the muscles surrounding the eye and the eyelids. This lack of control can cause ptosis (an abnormally low-lying or drooping upper eyelid). Patients with Myasthenia Gravis are also commonly afflicted with diplopia (double vision). Neither of these visual limitations are grounds for immediate exclusion, however they should be considered during clinical evaluation
+    - The lack of muscle control associated with myasthenia gravis often causes ptosis and compromises vision. Remediation is often as rudimentary as taping eyelids up. This lack of control could provide a long-term user issue if it affects the AR choice but with extra care it shouldn't be disqualifying.
+    - Diplopia is another major side effect for MG patients. This may be disqualifying as it seems to prove a significant barrier for AR effectiveness however optometrists can counter the severity of the double vision with specialized eyeglass prisms.
+Locked-In Syndrome
+    - No clear visual comorbidities
+Huntington's Disease
+Huntington's Disease has been associated with several optical conditions which may impair effective use of an augmented reality headset. The most typical of these abnormalities being slow and uncontrolled eye movement due to muscle and neural deterioration. Retinal interneuron degeneration (atrophy of eye neural signaling cells) has been selectively found in patients with Huntington's Disease. Some literature connecting Huntington's Disease to impaired color vision exists and should be clinically considered, however it is worth noting that AR technology relies most heavily on color identification in candidates with lower literacy levels. Since Huntington's Disease is progressive, most affected individuals with be literate and not as reliant on color identification. None of these conditions are immediately exclusive, however should be clinically considered. Retinal interneuron degeneration poses the largest threat for exclusion depending on its severity as the atrophy may prevent signaling essential to proper functioning of the headset and its electrodes.
+    - HD has several optical affects often resulting slow and uncontrolled eye movements
+    - HD can result in impaired color vision which can be problematic depending on the necessity of colors in the AR headset choices, although HD patients usually are literate as the disease is progressive and late onset so reading should not be an issue and therefore distinguishing colors may be less important
+    - There is evidence that HD selectively causes retinal interneuron degeneration which can affect field of view and focus
+Rett Syndrome
+Rett syndrome is not typically characterized by ocular impairment, however some visual disorders occur at higher than average incidence. Girls with Rett Syndrome may be more readily subject to intermittent esotropia (inward turning eyes), cortical visual impairment (if severe enough can result in immediate exclusion) or oculomotor apraxia (a- can't; praxis - do) (lack of eye control). Although not generally present in girls with Rett Syndrome, CVI and oculomotor apraxia severely affect vision and will most likely result in more common clinical exclusion than similar visual disorders. Finally, Rett Syndrome causes a significantly higher than average rate of refractive errors (blurry vision fixed with corrective lenses) more commonly known as near or far-sightedness. The immediately evident solution to this issue is the employment of corrective lenses which are compatible with the AR headset, meaning clinical consideration is unnecessary.
+    - RS causes higher than average refractive errors (blurry vison fixed with corrective lenses), but this should not pose an issue since glasses and contacts work with the AR headset
+    - Girls with RS may have intermittent esotropia (inward turning eyes), cortical visual impairment (if severe enough can result in immediate exclusion) or oculomotor apraxia (a- can't; praxis - do) (lack of eye control).
+Spinal Cord Injuries
+Although there is some literature documenting cortical blindness following SCIs, these cases are rare and easily identifiable and disqualifying. This low incidence comorbidity certainly does not exclude most tetraplegic SCIs.
+Duchenne Muscular Dystrophy
+Although many muscular dystrophies and other neurodegenerative muscular disorders result in impaired ocular control due to atrophy of the eye muscles, Duchenne Muscular Dystrophy in most literature appears to present normal eye muscle development and control. Extra clinical consideration is therefore not necessary for patients with Duchenne without the presence of a clear comorbidity not specifically linked to DMD.
+    - The muscles controlling eye movement are impaired in many muscular dystrophies but in DMD eye muscles are normal
+Multiple System Atrophy
+Due to the nature of Multiple System Atrophy, lack of muscle definition and control are common throughout the body including the eyes and ocular systems. This muscular impairment emerges through several visual comorbidities including insufficient convergence (eyes cannot focus together), slow or jerky eye movement, Blepharospasm (involuntary eyelid closure), Blepharitis (eyelid irritation due to eyelash infection) and Nystagmus (uncontrolled constant motion of the eyes). None of these conditions warrant immediate clinical exclusion but have the potential to be disqualifying if severe enough. They should be clinically considered and may be good candidates for modifications to the base headset.
+    - Muscles controlling eye movement can be impaired resulting in insufficient convergence (eyes cannot focus together) and slow or jerky eye movement
+    - Blepharospasm (involuntary eyelid closure) could affect headset use however it can be treated with Botox injections which have proved to be effective for increments of around four months
+    - Blepharitis (eyelid irritation due to eyelash infection) is common but easily treated or irritation and discomfort however an increased sensitivity to light may make the AR display less comfortable
+    - Nystagmus - uncontrolled constant motion of the eyes is a possible comorbidity as well
+SMA Type 2 Dubowitz
+Although many muscular dystrophies and other neurodegenerative muscular disorders result in impaired ocular control due to atrophy of the eye muscles, Spinal Muscular Atrophy Type II (Dubowitz) in most literature appears to present normal eye muscle development and control.
+    - Eye muscles are usually unaffected in type 2
+ALS
+Although Amyotrophic Lateral Sclerosis (ALS) is not typically associated with visual impairment or structural ocular abnormalities, there is literature suggesting that rare visual comorbidities may exist, such as ophthalmoplegia (eye and muscle paralysis), irregular saccades (choppy/jumpy eye movements), as well as nystagmus (vibration of the muscles controlling the eyes). These conditions should be considered, but do not warrant clinical exclusion; rather, some adaptation may be desired. However, late-stage ALS does present consistently with extraocular muscle atrophy, making BCI access solutions more appropriate than eye or head pointing measures in the (typically brief) terminal phase.
+    - Ocular motor function is mostly unaffected but there is some, but rare, literature documenting conditions such as ophthalmoplegia (eye and eye muscle paralysis), saccadic movements (choppy, jumping eyes instead of smooth flowing) as well as nystagmus
+    - Extraocular muscle atrophy does occur in the terminal phase of the disease
+MS
+Visual impairment does present consistently with Multiple Sclerosis (MS) as the majority of patients experience optic neuritis (loss or disturbance of vision and pain going with eye movement). Optic neuritis seems to prove an immediate concern for disqualification as the pain could warrant clinical disqualification. Complete loss of vision due to optic neuritis would result in clinical exclusion. Patients with multiple sclerosis are also at risk of affliction from less common visual comorbidities such as diplopia (double vision), nystagmus (uncontrolled constant motion of the eyes), scotoma (blind spot in middle of vision) or hemianopsia (loss of vision in the right or left fields of both eyes). These conditions are not grounds for disqualification but should be clinically considered. Multiple Sclerosis patients may be candidates for headset adaptations due to the range of visual comorbidities associated with the disorder.
+    - Around half of MS patients experience optic neuritis (loss or disturbance of vision and pain going with eye movement)
+    - MS patients are also subject to potential diplopia and nystagmus
+    - Some patients may experience scotoma (blind spot in middle of vision) or hemianopsia (loss of vision in the right or left fields of both eyes.
+CP
+Visual impairment can be considered a defining characteristic of cerebral palsy as it affects the vast majority of the population. Most commonly, patients with cerebral palsy are affected by strabismus (severely turned eye that does not allow for eyes to work together), cataracts (clouding over the eye that blurs vision) or refractive issues (when the eyes cannot focus). Additional literature suggests the presence of more rare comorbidities with cerebral palsy including hemianopia, central or peripheral field loss, oculomotor concerns where the eye is turned an unwanted direction, or CVI (loss of brain function causing difficulty interpreting what is being seen). With the exception of severe CVI, most visual ailments affecting people with cerebral palsy are not disqualifying, but all patients with cerebral palsy warrant additional clinical consideration due to the high incidence and range of visual comorbidities.
+    - Vision problems are very common up to ¾ of patients affected
+    - Patients are most affected by strabismus (severely turned eye that does not allow for eyes to work together), cataracts (clouding over the eye that blurs vision) or refractive issues (when the eyes cannot focus).
+    - Other ailments include hemianopia, central or peripheral field loss, oculomotor concerns where the eye is turned an unwanted direction, or CVI (loss of brain function causing difficulty interpreting what is being seen).
+Conclusion:
+The ubiquitous presence of visual comorbidities in degenerative muscle disorders and other AR headset candidates poses a significant procedural challenge due to the visual nature of the device. BCI should nullify the concern of comorbidities decreasing eye control as the technology can detect intention without physical execution, but random, uncontrolled motion may increase the difficulty of device setup. Vision failure and blindness is a more immediate disqualifying concern. Users must be able to clearly see all AR options and interpret what they see. Partial or complete blindness could inhibit the ability for comprehensible communication or communication at all using the device. The majority of ocular issues will require a physician's presence but not result in exclusion. Complete blindness is cause for immediate exclusion, partial blindness will most likely result in immediate or eventual exclusion, however depending on severity may qualify.
+
+
+Appendix E: Muscles and Bones (Structural or Orthopedic)
+I. Introduction and Executive Summary
+Craniofacial abnormalities may need to be addressed by adjustable features on the AR headset. Extreme physical barriers may warrant exclusion, but the headset has an adjustable format and can therefore overcome minor abnormalities. Structural and Orthopedic Comorbidities located somewhere other than the head that do not affect head or neck positioning do not need to be considered for exclusion as they will not affect device usage. Some conditions such as scoliosis do not affect the head directly but still warrant special consideration as they can impair neck and head positioning and control.
+1a. Myasthenia Gravis
+Myasthenia Gravis, a neuromuscular disease, is generally characterized by muscle weakness in the trunk, neck and limbs. This weakness can make it difficult for patients to raise the head and make intentional controlled movements. Patients with Myasthenia Gravis will most likely struggle to effectively use any speech-generating device operated with head-wand pointing. This makes patients with MG ideal candidates for brain-computer interface communication devices or eye-tracking as the devices require little to no intentional head movements. Neck braces are a clinical option for structural support to prevent drooping of the head that could potentially interfere with AAC devices. There is some literature detailing the relatively rare scoliosis comorbidity which requires clinical evaluation and is detailed further below.
+1b. Locked-In Syndrome
+Locked-In Syndrome is characterized by tetraplegia or total immobility making any controlled head movements virtually impossible. Even during recovery, trunk and neck strength are they last to recover due to axial hypotonia. This immobility makes patients with Locked-In Syndrome ideal candidates for devices operating through brain-computer interface. Since the wearable headset employs BCI technology and is compatible with patients lying down, it will effectively serve the needs of the LIS community.
+1c. Huntington's Disease
+Although Huntington's Disease presents many motor impairment difficulties (further examined in Deep Dive: Motor Impairments and Fatigue) due to chorea, strictly orthopedic disqualifiers aren't generally present. Dystonia, or muscle rigidity and contracture, can be present in the neck or trunk and warrants clinical consideration.
+1d. Rett Syndrome
+Rett syndrome presents with several orthopedic comorbidities potentially affecting brain-computer interface headset candidacy. First, girls with Rett Syndrome have bone fragility increasing the chance of fractures, however there is literature suggesting this decreased bone density has no correlation to impaired ambulatory abilities. Therefore, the degree of ambulatory impairment is a motor impairment concern, not orthopedic. Comorbid Scoliosis in patients with Rett Syndrome is very common with increased rates of typical and severe scoliosis. Patients with scoliosis may have pain with neck and head movements, making them more ideal candidates for eye-tracking or brain computer interface speech generating devices. Orthopedic clinical consideration is warranted for patients with Rett Syndrome, but exclusion is unlikely due to solely structural concerns.
+1e. Spinal Cord Injuries
+Patients with Spinal Cord Injuries causing quadriplegia experience paralysis due to orthopedic injury, but most patients maintain the ability to move their necks and heads. Clinical consideration is necessary to determine the extent of head and neck motion, but patients with typical control will be viable candidates for head-wand pointing, eye-tracking and brain computer interface speech generating devices (SGDs). Even patients with limited neck and head movement will qualify for eye-tracking and brain computer interface SGDs.
+1f. Duchenne Muscular Dystrophy (MD)
+Duchenne Muscular Dystrophy, a musculoskeletal disorder is characterized by decreased muscle tone and control, as well as increased likelihood or skeletal comorbidities. Decreased trunk and neck muscles and control make head-wand speech generating devices less viable especially in more progressed cases. Joint contractures in the neck and trunk may also limit range of motion of the head. Some patients may experience comorbid scoliosis which can cause pain in head and neck movements. Osteoporosis is another comorbid orthopedic condition for patients with DMD that can cause painful bone fractures, but these will most likely not affect the use of a wearable headset.
+1g. Multiple System Atrophy (MSA)
+Multiple System Atrophy is a Parkinsonian type disease and is therefore connected to some movement disorders. Many of these are addressed in, Deep Dive: Motor Impairments, however some are due to orthopedic and structural factors. Joint contractures, muscle rigidity and bradykinesias can cause stiffness in muscles that makes controlled effective head movements more of a challenge. Patients with MSA will be ideal candidates for brain-computer interface and eye-tracking devices and will need clinical evaluation of individual capacity for motion to determine candidacy for head-wand SGDs.
+1h. Spinal Muscular Atrophy (SMA) Type 2 (Dubowitz)
+Spinal Muscular Atrophy presents with muscle weakness from a young age causing patients to need support to stand or walk properly. Comorbid Scoliosis can cause pain in head and neck movements and in conjunction with the hypotonia will most likely exclude most patients from head-wand pointing SGDs although clinical evaluation is warranted. Eye-tracking and brain-computer interface are viable options for most patients with SMA.
+1i. Amyotrophic Lateral Sclerosis (ALS)
+ALS is a movement disorder caused by the degeneration of nerves in the brain and spinal cord that affect muscle control. Muscle weakness develops usually in an upper extremity and moves throughout the entire body. Muscle contractions and stiffness are possible side effects in addition to the hypotonia and lack of control. In early stage ALS most patients will have a fully functional head and neck and not need an SGD, however in later stages when speech and movement are more compromised, ALS patients become ideal candidates for brain-computer interface SGDs.
+1l. Multiple Sclerosis
+Multiple Sclerosis affects the body in multiple ways, some of which can be classified as orthopedic. The primary concern in MS patients is paralysis which can affect the extremities and the trunk and therefore impair head movements in some patients. Neck movements in Multiple Sclerosis can cause painful tingling sensations called Lhermitte's signals. These signals can be an issue for head-wand pointing SGDs as user comfort is a priority. The lack of motion needed in brain-computer interface SGDs counters this potential disqualifier and makes MS patients ideal candidates.
+1m. Cerebral Palsy (CP)
+Cerebral palsy has many effects on the muscles of patients but many of these comorbidities will be covered in, Deep Dive: Motor Impairments, as they relate more the motion than structure of an individual. Spastic quadriplegia is a type of Cerebral Palsy that presents as most ideal for brain-computer interface since spasticity, increased muscle tone and stiffness, affects the trunk and face preventing intentional and controlled head-movements. Muscle contractures in any type of CP can further impair head movement. Neuromuscular Scoliosis can impair typical head placement and increase pain in head and neck movements.
+II. Conclusion
+Many disorders needing Augmentative and Alternative Communication devices have symptoms or comorbid conditions affecting bone and muscular structure. None of these conditions should result in exclusion, however impaired neck or head movements due to these conditions warrant clinical determination of the best suited type of SGD. Pain during neck and head movements would also result in disqualification for head-pointing SGDs. None of these conditions affecting head and neck movement, pain or placement will result in disqualification from the brain-computer interface headset except for craniofacial abnormalities too severe to be compatible with the range of headset size adjustability.
+
+Appendix F: Clinical Assessment Tools
+
+This section has been relocated from earlier in the document and largely redacted. The information isn't necessarily wrong, but out of date given how the IRB has progressed. The tools discussion below remains valid, but content in strikethrough has been replaced with newer versions.
+
+Tools
+Standardized, norm-referenced assessments employed in this process, to satisfy the criteria listed in the rubric above, include:
+
+The Dynamic AAC Goals Grid 2 (DAGG-2) 
+The primary objectives of the Dynamic AAC Goals Grid-2 are to provide a systematic means to assess (and reassess) an individual's current skills in AAC and to assist partners in developing a comprehensive, long-reaching plan for enhancing the AAC user's communicative independence. This tool strives to assist with the team's consideration of the myriad of components that make for successful AAC use.
+https://strokengine.ca/en/assessments/boston-diagnostic-aphasia-examination-bdae/
+
+Boston Diagnostic Aphasia Examination (BDAE)
+The BDAE is designed to diagnose aphasia and related disorders. This test evaluates various perceptual modalities (auditory, visual, and gestural), processing functions (comprehension, analysis, problem-solving) and response modalities (writing, articulation, and manipulation). The BDAE can be used by neurologists, psychologists, speech language pathologists and occupational therapists (Goodglass & Kaplan, 1972).
+
+Montreal Cognitive Assessment (MoCA)
+The MoCA is a cognitive screening test designed to assist Health Professionals in the detection of mild cognitive impairment and Alzheimer's disease. The MoCA Test was validated in the setting of mild cognitive impairment (MCI), and has been subsequently adopted in numerous clinical settings. The sensitivity of the MoCA for detecting MCI is 90%, compared to 18% for other leading cognitive screening tools.
+
+The MoCA assesses:
+    - Short term memory
+    - Visuospatial abilities
+    - Executive functions
+    - Attention, concentration and working memory
+    - Language
+    - Orientation to time and place
+https://www.pearsonassessments.com/store/usassessments/en/Store/Professional-Assessments/Speech-&-Language/Clinical-Evaluation-of-Language-Fundamentals-|-Fifth-Edition/p/100000705.html
+
+Clinical Evaluation of Language Fundamentals 5 Ed (CELF-5)
+The Clinical Evaluation of Language Fundamentals (CELF-5) was designed to assess a student's language and communication skills in a variety of contexts, determine the presence of a language disorder, describe the nature of the language disorder, and plan for intervention or treatment.
+
+The CELF-5 is a comprehensive and flexible assessment procedure. The test identifies a student's language strengths and weaknesses and can be used to determine eligibility for services, plan "curriculum relevant treatment," recommend classroom language adaptations or accommodations and provide performance-based assessment that corresponds to educational objectives.
+
+Ross Information Processing Assessment-Second Edition (RIPA-2)
+The RIPA-2 enables the examiner to quantify cognitive-linguistic deficits, determine severity levels for each skill area, and develop rehabilitation goals and objectives. The RIPA-2 provides quantifiable data for profiling 10 key areas basic to communicative and cognitive functioning:
+    - Immediate Memory
+    - Recent Memory
+    - Temporal Orientation (Recent Memory)
+    - Temporal Orientation (Remote Memory)
+    - Spatial Orientation
+    - Orientation to Environment
+    - Recall of General Information
+    - Problem Solving and Abstract Reasoning
+    - Organization
+    - Auditory Processing and Retention
+
+Amyotrophic Lateral Sclerosis Functional Rating Scale (ALSFRS)  
+The Amyotrophic Lateral Sclerosis Functional Rating Scale (ALSFRS) is an instrument for evaluating the functional status of patients with Amyotrophic Lateral Sclerosis. It can be used to monitor functional change in a patient over time. 
+Measures:
+    - Speech 
+    - Salivation 
+    - Swallowing 
+    - Handwriting 
+    - Cutting food and handling utensils (with or without gastrostomy) 
+    - Dressing and hygiene 
+    - Turning in bed and adjusting bed clothes 
+    - Walking 
+    - Climbing stairs 
+    - Breathing
+
+ Edinburgh Cognitive and Behavioural ALS Screen (ECAS)
+The ECAS is a practical screening tool that incorporates a range of short cognitive tests that have been shown to be sensitive to cognitive impairment in ALS. The ECAS has been designed to differentiate between the different profiles common with ageing including depression, Alzheimer's disease and Frontotemporal Dementia. Executive Functions, Memory, Language, Visuospatial skills and Social cognition are specifically assessed whilst a Behavioural and Psychosis brief interview can be carried out with carers or relatives.
+
+ALS Cognitive Behavioral Screen (ALS CBS)
+The Amyotrophic Lateral Sclerosis Cognitive Behavioral Screen? (ALS CBS?) is the only validated, ALS-specific tool available for screening these patients. The ALS CBS is highly accurate in identifying frontotemporal dementia where it serves to aid formal diagnostic assessment and is particularly valuable in situations where detailed testing is not readily available.
+
+Consensus Auditory-Perceptual Evaluation of Voice (CAPE-V)
+The Consensus Auditory-Perceptual Evaluation of Voice (CAPE-V) was developed as a tool for clinical auditory-perceptual assessment of voice. Its primary purpose is to describe the severity of auditory-perceptual attributes of a voice problem, in a way that can be communicated among clinicians. Its secondary purpose is to contribute to hypotheses regarding the anatomic and physiological bases of voice problems and to evaluate the need for additional testing.
+
+Frenchay Dysarthria Assessment-Second Edition (FDA-2)
+The FDA-2 is a rating scale with which clinicians assess patients' performance on a range of behaviors related to speech function. The test is divided into seven sections: (a) Reflexes, (b) Respiration, (c) Lips, (d) Palate, (e) Laryngeal, (f) Tongue, and (g) Intelligibility. In addition, the FDA-2 includes a section on influencing factors: hearing, sight, teeth, language, mood, posture, rate (words per minute) and sensation.
+
+4 Deprecated Content
+
+Outcomes Documentation 
+Critical measures such as the DAGG-2, the MOCA, and any other cognitive/behavioral screenings - as well as participation inventories supplied to the user and family as pre-assessments - will be collected and documented at six week intervals to gather outcome data from participants who are (or are not) using the wearable to communicate.
+
+FDA & CMS
+FDA Approval
+
+FDA Registration Cost:  $5236.00 (Year 2020)
+FDA Consultant: $80-120K
+We are in the process of due diligence and selection.
+Registration needs to be completed each January
+Estimated 4-6 month process for 510k and 2-month process for PDAC
+There is substantial cost in overheads (time and materials) to produce the required policies and procedures documentation, system level testing, QMS and UDI systems, and training of personnel.
+
+Required Policies & Procedures Documentation for FDA          
+This is an outline based upon historical best practices from employee and consultant past experience securing FDA and CMS approvals for numerous Speech Generating Devices. This outline and template is unique and proprietary to Cognixion.
+Group 1: Material Controls 
+Purchasing, supplier evaluation, acceptance activities (receiving, in process, final), acceptance status, material handling, identification, traceability and handling/storage/distribution/installation, identification 
+Group 2: Document Control/records
+Document control, records, device history record, device master record and quality system record, and change controls
+Group 3: Monitoring & Feedback
+Nonconforming material, corrective and preventive action, complaints, failure investigation, medical device reporting, and recalls
+Group 4: Production & Process Controls
+ Production, process validation, calibration, maintenance, labeling, automated systems, software, and packaging
+Group 5: Design Controls
+Planning, inputs, outputs, reviews, verification, validation, transfer and design history file 
+Group 6: Management Controls
+Quality system, management responsibility, management representative, quality audit, personnel/training, and quality manual
+CMS Approval
+
+Base cost is between $2895.00 and $5495.00 for a 3-year accreditation- contingent upon gross annual DME revenue of previous year.
+There is also a workroom cost of approximately $600.00 and a 4 to 6-month process.
+There is substantial cost in overheads (time and materials) to produce the required policies and procedures documentation, a possible relocation of our Santa Barbara offices to a compliant facility with clean room, facility site inspection, and training of personnel.
+
+Insurance: Various US funding sources
+    - Medicare
+Application processing fee:  $586.00 for 2020 - one-time fee 
+Surety Bond Fee: approximate $300.00 annually
+CA Home Medicl Device retailer license - $1050.00 annual fee (Cognixion already has it's HMDR license)
+
+Can begin funding Medicare as soon as PTAN number is issued 4 to 6-month process
+
+Requires site visit
+
+    - Medicaid
+To be completed on a state by state basis after Medicare number is granted.  
+Fees are typically minimal.
+Cognixion is currently awaiting approval for Medi-Cal, the California equivalent to Medicaid.
+
+    - Insurance & Health Benefits Plans   
+Individual contracts with each Insurance payer.
+Cognixion is currently contracted with CenCal Health, the MCO for Medi-Cal & CCS in Central California region (Santa Barbara and San Luis Obispo Counties).
+
+Federal and state funding
+    - Federal Employee Health Benefits Plan            
+    - Tricare            
+    - Department of Veterans Affairs            
+    - Special Education & Early Intervention  
+    - Vocational Rehabilitation            
+    - Telecommunications Equipment Distribution Programs
+
+Principal Investigator (PI)
+
+Yao Du, Ph.D., CCC-SLP
+Yao Du, Ph.D., CCC-SLP is an Assistant Professor and Clinical Supervisor in the Department of Speech-Language Pathology at Monmouth University in West Long Branch, New Jersey. She is a certified speech-language pathologist through the American Speech-Language-Hearing Association (ASHA) and is licensed to practice in the states of New Jersey and California. She currently resides in San Francisco, California and is working remotely with Monmouth University.
+
+Dr. Du has clinical experiences working with both pediatric and geriatric clients in schools, private practice, skilled nursing facilities, home health, and inpatient and outpatient rehabilitation units. She also holds the Advanced Telehealth Coordinator Certificate from the University of Delaware. Dr. Du completed her doctoral degree in Informatics from the University of California, Irvine where she investigated the design and evaluation of web, mobile, and voice interfaces for both monolingual and bilingual Mandarin-English speaking children.
+Her prior work has been published in medical informatics, game design, and assistive technology conferences. Using both qualitative and quantitative research methods, her current research studies seek to bridge the gap between speech language pathology and human computer interaction through the design and evaluation of mobile and voice technology for teletherapy.
+Additionally, she also provides consulting for digital health startup companies to develop digital diagnostic and therapeutic tools for children with autism.
+
+Responsibilities:
+- Support the product design and development team for FDA digital therapeutic device 
+  designation
+- Evaluate clinically and commercially available diagnostic measures and instruments
+- Design and conduct a feasibility study 
+- Analyzed speech and language samples to develop automated features for speech recognition, natural language processing, and machine-learning algorithms
+- Disseminate research outcomes through published work and conference presentations
+
+Human Factors Assessment Notes
+
+Human Factors Assessment Notes
+Brainiac:        							Date:
+Additional Participants:      					Session Location:
+Cognixion Representative (s):				Current Device:
+
+
+Physical Attributes & Other Notes:				         Total Session Duration:
+Upper mobility___________________________________		Headset On:
+Hair____________________________________________		Headset Off:		Vision__________________________________________
+Other muscular abilities (eg. hand, toe, leg)	
+________________________________________________
+________________________________________________
+Skin_____________________________________________
+Age_____________________________________________
+Positioning_______________________________________
+Fatigue__________________________________________	          Glasses:
+Rx-
+? Nearsighted
+? Farsighted
+? Strabismus
+? Esotropia
+? Exotropia
+? Hypertropia
+Dominant Eye: ?R / ?L
+? Confirm HF Assessment Intake Form				? Reading
+? Confirm auth for release of PHI	
+? Headset Placement Video						
+? Headset Placement Photos						
+Words/Phrases Selected: 									
+     ROM:
+Adequate for calibration
+Yes            No
+Vertical
+ 		Up:		Down:
+Horizontal
+Left:		Right:	
+
+
+Human Factors Assessment Notes
+Brainiac:  
+
+
+
+Patient Questions:
+
+
+
+
+
+
+
+
+
+Patient Comments :
+
+
+
+
+
+
+
+
+
+
+Additional Notes:
+
+
+
+
+
+
+
+
+
+
+

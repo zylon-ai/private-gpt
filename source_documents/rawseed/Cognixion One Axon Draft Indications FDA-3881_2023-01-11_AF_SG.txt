@@ -1,0 +1,53 @@
+
+510(k) Number (if known)
+
+
+Device Name
+Cognixion ONE Axon
+
+
+Indications for Use (Describe)
+Cognixion ONE Axon is intended:
+(informative: what the device does - general, with Breakthrough criteria considered)
+    - As a wearable speech generating device for patients who have debilitating or life-threatening conditions that impair speech and language, physical movement and or neuro muscular function, including but not limited to amyotrophic lateral sclerosis (ALS).
+(informative: what the device does - more specifics that point to how)
+    - As an augmentative communication device utilizing a wearable, noninvasive brain-computer interface (BCI) utilizing dry EEG sensors and processing to detect visual mental fixation attending to images projected onto a translucent Augmented Reality (AR) visor display.
+    - Integrated headpose tracking, eye tracking and or EEG BCI for hands-free input methods which can be personalized to each patient and adjusted as the debilitating or life-threatening condition progresses or changes.
+    - A predictive alphanumeric language system to provide word and sentence completion or suggested whole phrase utterances to enable patients to increase communication rates/speeds.
+    - An outward facing display of the spoken utterances composed by the patient for the caregiver or physician to see.
+(informative: patient population)
+    - For use by adult and pediatric patients at least 14 years old. 
+(informative: environments of use)
+    - For use in professional healthcare facilities as well as in a home setting. 
+
+
+NOTES:
+What criteria are needed for Breakthrough?
+? 1: ".. provide for more effective treatment or diagnosis of life-threatening or irreversibly debilitating human disease or conditions;"
+(plus any one of following):
+? 2A: "represents breakthrough technologies;"
+? 2B: "for which no approved or cleared alternatives exist;"
+? 2C: "offer[s] significant advantages over existing approved or cleared alternatives, including the potential, compared to existing approved alternatives, to ..improve patient quality of life, facilitate patients' ability to manage their own care (such as through self-directed personal assistance), or establish long term clinical efficiencies;"
+? 2D: Device availability "is in the best interest of patients."\
+
+(removed from indications: following look more like features - may want to consider to shorten, modify, or remove)
+    - A set of functions that enable a patient to save utterances, speak utterances aloud on the device, or send the utterance digitally to other systems over a wireless connection.
+    - At least one wireless network connection [in order to send patient composed utterances to recipients or systems on the network]
+    - At least one wireless API [in order to connect an (secondary) access input device such as a switch]
+
+
+
+
+
+Type of Use (Select one or both, as applicable)
+ Prescription Use (Part 21 CFR 801 Subpart D)	Over-The-Counter Use (21 CFR 801 Subpart C)
+CONTINUE ON A SEPARATE PAGE IF NEEDED.
+
+This section applies only to requirements of the Paperwork Reduction Act of 1995.
+*DO NOT SEND YOUR COMPLETED FORM TO THE PRA STAFF EMAIL ADDRESS BELOW.*
+The burden time for this collection of information is estimated to average 79 hours per response, including the time to review instructions, search existing data sources, gather and maintain the data needed and complete and review the collection of information. Send comments regarding this burden estimate or any other aspect of this information collection, including suggestions for reducing this burden, to:
+Department of Health and Human Services Food and Drug Administration
+Office of Chief Information Officer Paperwork Reduction Act (PRA) Staff PRAStaff@fda.hhs.gov
+"An agency may not conduct or sponsor, and a person is not required to respond to, a collection of information unless it displays a currently valid OMB number."
+
+FORM FDA 3881 (6/20)	Page 1 of 1	PSC Publishing Services (301) 443-6740      EF

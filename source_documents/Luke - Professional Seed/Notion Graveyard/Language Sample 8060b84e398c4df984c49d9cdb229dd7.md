@@ -1,0 +1,3 @@
+# Language Sample
+
+Definition: A recording of speech by a child needing speech therapy that provides a great deal of information on a child’s language abilities and overall conversational skills. Specific language areas include syntax (grammar), semantics (word meanings), morphology (word parts, such as suffixes and prefixes), and pragmatics (social skills). A language sample often consists of 50 to 100 utterances spoken by the child, but it can have as many as 200 utterances

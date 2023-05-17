@@ -1,0 +1,403 @@
+
+
+
+BCI-Readiness Assessment
+Design Document
+
+
+
+Author 
+Sarah Pearce
+Creation Date
+18 Feb 2022
+Last Revised 
+14 March 2022
+Version
+0.2
+
+
+
+
+
+
+
+
+
+
+
+
+
+Statement of Confidentiality: This document and supporting materials contain confidential and proprietary business information of Cognixion. These materials may be printed or copied for internal use, but are not to be shared with other parties without explicit permission.
+
+
+Table of Contents
+1	Document Control	3
+1.1	Audience	3
+1.2	Glossary	3
+2	Introduction	5
+3	Requirements	5
+3.1	Business Objectives	5
+3.2	Requirements covered	5
+3.3	Non-requirements	6
+4	Literature Review	7
+5	Assessment Overview	9
+5.1	Metrics for Assessment	9
+5.2	Overt Stimuli Assessment	9
+5.2.1	Front End Flow	9
+5.2.2	Metrics	10
+5.2.3	Success Criteria:	10
+5.3	Covert Stimuli Assessment	11
+5.3.1	Front End Flow	11
+5.3.2	Metrics	11
+5.3.3	Success Criteria	12
+6	Assumptions, Risks and Uncertainties	12
+6.1	Assumptions	12
+6.2	Risks	12
+6.3	Uncertainties	13
+7	Approach	14
+7.1	Components	14
+7.1.1	Hardware	14
+7.1.2	Software/Firmware	14
+
+1 Document Control
+OneDrive link: 
+Link
+Related documents and URLs: 
+[Figma Assessment]    
+
+https://www.figma.com/file/OaEzSBKeZ0syt9DCOXuZjq/Jupyter-Desktop-SSVEP-UI?node-id=90%3A10598
+
+
+
+Revision history:
+0.1
+first draft for discussion
+SP
+11 March 2022
+0.2
+First and second part of assessment overview added, and draft information for all sections incorporated
+SP
+14 March 2022
+
+
+1.1 Audience
+This document is intended for:
+    - TBD
+1.2 Glossary
+This section enumerates terms and abbreviations specific to the problem or solution domain.
+AAC
+Augmentative and Alternative Communication
+ALS
+Amyotrophic Lateral Sclerosis - a degenerative disease of the nervous system causing progressive loss of muscle control.
+BCI
+Brain-computer interface
+Caregiver
+A person who assists the primary user in donning and removing the headset and ensuring that it is properly adjusted and receiving good signal.
+SSVEP
+Steady-state visually evoked potential
+P300
+Brain signal generated from oddball paradigms, elicited through 
+Participant
+The candidate user for the BCI paradigm who is using the assess to determine fit-for-BCI-use. Currently the scope of this document assumes that this user has late-stage ALS, but as the tools and measurements are refined this use case may expand.
+Overt stimuli
+The vernacular describing stimuli located within the central fixation gaze (inner 27 degrees of field of view, which is the average region representing high-detail information within the macula) of the participant. This does not necessarily mean that the participant is actively moving their eyes to maintain fixation.
+Covert stimuli
+The vernacular describing stimuli outside of the range of stimuli described with overt stimuli. SSVEP responses can still be elicited with covert stimuli, as long as participant can attend to stimuli over a period of time.
+
+
+2 Introduction
+This design document outlines the approach to implementing an early prototype of an SSVEP communications device for an ALS client in a private-care setting.
+
+ALS USE CASE NEEDS BCI IN LATE STAGE
+    - Discuss stages of ALS (0-5) according to what Lucas provided 
+    - At the later stages, eye-tracking will no longer be useful and the user will have to transition to BCI
+    - Ideally the user should start getting familiar with BCI early to ensure a smooth transition (BCIs have a very steep learning curve, so ramping up early on is going to be critical to success)
+    - https://www.frontiersin.org/articles/10.3389/fnhum.2020.595890/full
+
+SSVEP vs OTHER BCI PARADIGMS
+    - Currently we use visual evoked potentials to drive a BCI for AAC control
+    - https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0073691 
+    - P300 is a transient signal, so if you don't catch the signal on first attempt then you've lost all your evidence
+    - SSVEP can persist during entire epoch so you have multiple changes to detect signal
+    - Motor imagery paradigms and anything that's an efferent paradigm (e.g., motor imagery) is problematic due to BCI illiteracy issue [cite] 
+
+BUSINESS NEED: TEST FOR BCI-READINESS IN POPULATION
+    - Product journey for ALS user Tablet -> AR -> BCI as condition progresses
+    - Readiness from Tablet->AR transition well defined, but not for AR->BCI
+        ? Where does eyetracking fit into this? Tablet (touch)>AR>Tablet (eyetracking)>BCI???
+    - Need to develop metrics, tools and tools we can use to evaluate them
+    - Ideally we begin BCI training before eyetracking /AR become completely ineffective
+        ? No way to give feedback for setting changes before then
+    - However, no guarantee that ALS users will be using speakprose products from the start of their diagnosis, thus we need a tool to help decide what will be most effective for them
+3 Requirements 
+This section enumerates a set of requirements that are covered by this document. WIP
+
+3.1 Business Objectives
+WIP
+3.2 Requirements covered
+R-001
+The technician will be running the assessment.
+
+R-002
+Impedance testing must occur prior to the assessment. Sufficient electrode contact with all 6 electrodes is required.
+
+R-003
+The P2.2 version of the CXN ONE headset will be used for the assessment.
+
+R-004
+
+
+R-005
+
+
+
+
+3.3 Non-requirements
+This section identifies possible feature candidates that were not identified as requirements, but are not simply missing. Feature candidates in this section are often surfaced during detailed analysis.  This section is included to ensure that stakeholders agree that business goals can still be satisfied without the inclusion of these feature candidates as requirements. Note that future product release may promote some of these items to requirements
+NR-001
+The participant can use as much ocular control as available to attend to stimuli. 
+
+NR-002
+The caregiver or participant does not need to run this assessment without technician support.
+
+NR-003
+Advanced machine learning models are not required for the assessment, as they are dependent on having a large amount of existing training data from the participant for model training and reinforcement.
+
+NR-004
+The desktop implementation of the assessment protocol does not need to live as a standalone executable (i.e., can live as a Jupyter notebook).
+
+NR-005
+
+
+
+
+
+4 Literature Review
+
+https://www.frontiersin.org/articles/10.3389/fnhum.2020.595890/full 
+"Two participants with late-stage ALS, visual impairments, and minimal volitional movement completed a single-case experimental research design comparing copy-spelling performance with three different typing systems: (1) commercially available eye tracking communication software, (2) Shuffle Speller with modified eye tracking, and (3) Shuffle Speller with SSVEP BCI. Participant 1 was unable to type any correct characters with the commercial system, but achieved accuracies of up to 50% with Shuffle Speller eye tracking and 89% with Shuffle Speller BCI. Participant 2 also had higher maximum accuracies with Shuffle Speller, typing with up to 63% accuracy with eye tracking and 100% accuracy with BCI. However, participants' typing accuracy for both Shuffle Speller conditions was highly variable, particularly in the BCI condition. "
+
+https://cogsci.ucsd.edu/~desa/SSVEP-Masaki.pdf
+Outlines glaucoma protocol - could overlap with assessment techniques
+
+https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0073691
+SSVEP is a stronger performing BCI paradigm than P300
+
+
+(Note that all the studies below were with neurotypical, healthy participants)
+
+
+PMID: 25571230 (full-text at researchgate)
+"A number of neurophysiological studies showed that brain can covertly shift the focus of attention without redirecting the gaze [9], [10]" 
+- Suggests covert attention creates strongest response in first harmonics
+ - While the overt attention generated strong oscillations in the range of flickering frequencies and can be observed in the 1st and 2nd harmonics, the covert attention resulted in higher power only in the 2nd harmonics, consistently in all subjects, which is really an interesting observation.
+- Used active / dry electrodes (impedance <5 kohms)
+- Task processing increases power in alpha band, but also dampens cortical processing of other stimuli
+We suggest that using ?-band power and flickering frequency power as a combination of two specific features would enhance the specificity of the BCI system aiming at the neuro-rehabilitation of subjects with concentration difficulties.
+
+See also: https://www.frontiersin.org/articles/10.3389/fnins.2021.746146/full
+A BCI-Based Study on the Relationship Between the SSVEP and Retinal Eccentricity in Overt and Covert Attention - Frontiers of Neuroscience - Dec. 2021
+    - Here, we conducted an EEG study with 25 subjects who performed covert attentional tasks at different retinal eccentricities ranging from 0.75° to 13.90°, as well as tasks involving overt attention and no attention
+    - This study employed the extended canonical correlation analysis (CCA)-based method, using the multiple trials of overt attention as individual calibration signals to extract the metrical features for the test signals during covert attention (Nakanishi et al., 2014, 2015; Chen et al., 2015b).
+    - 
+    - Furthermore, offline classification of overt attention, covert attention, and no attention yielded an average accuracy of 91.42%. This work contributes to our understanding of the SSVEP representation of attention in humans and may also lead to brain-computer interfaces (BCIs) that allow people to communicate with choices simply by shifting their attention to them.
+    -  most subjects showed more noticeable response when shifting their attention to horizontal targets than to vertical targets [F(1,48) = 7.62, p < 0.01]
+    - Nevertheless, the ability to decode the attention state could support optimization of the locus information of the stimulus in alerting applications. People, especially those who are completely paralyzed and have difficulty fixing their gaze, could choose an item simply by paying attention to it, as many existing BCI systems have important dependencies on gaze 
+
+
+PMID: 22579858
+- "In an earlier study, Kelly and colleagues reported a drop in SSVEP classification accuracy of ?20% when subjects shifted attention while keeping their eyes at central fixation (covert attention) [8] compared to when subjects directly gazed at a stimulus (overt attention)" - but this was a meta-analysis done between two different sessions with different participants, so it's not a strong comparison
+- 4.88 degrees of separation between stimuli
+- Also biosemi
+- Rejected 17% of all trials used for the paper?
+- Attention. Modulation index
+- Compared to peripheral stimulation, foveally presented stimuli elicit greater amplitudes due to the higher cortical resolution of the fovea (for a review see [4]). In addition, attention per se magnifies SSVEP amplitudes [11,14]. Compared to the covert mode, foveal perception apparently contributes more to effect size if we assume that the effect of attention is about the same for both attentional modes (Fig. 2a). We found the topographical distribution in the covert mode to be more lateralised compared to the overt mode. Cortical source reconstruction provided clear evidence for such a difference in the topographical distribution, with neural generators of the SSVEP in the covert mode being located in early visual areas contralateral to the driving stimulus (Fig. 2b). These results are consistent both with earlier findings investigating stimuli with various eccentricities from fovea to periphery and their representation in visual cortex (for a review see [21]), as well as with earlier results in SSVEP research [13].
+SSVEP amplitudes were estimated by Fourier transformation of the 3000 ms window. Mean topographies for each driving frequency (10 Hz versus 12 Hz) and condition (Overt versus Covert) revealed that overtly attended stimuli elicited the largest ampli- tudes at central occipital electrodes, whereas in the covert attention condition most activation was found at occipital sites contra-lateral to the driving stimulus. Based on these findings we chose three electrode clusters for further statistical analysis: for the overt con- dition (O1,O2, Oz, Iz), covert left (Po7, PO3, O1, Oz), and covert right (PO8, PO4, O2, Oz).
+- 
+ 
+PMID: 12867981
+- "Recent experiments, however, indicate that the spotlight of spatial attention may be divided between non- contiguous zones of the visual field for very brief stimulus exposures (<100ms)13,14."
+- Although different studies have obtained varying estimates of the minimal time for switching attention, there is general agreement that the minimum time needed to identify a target at one location and then switch attention to identify a target at a second location is in the range of 200-500 ms (refs 20-24) 
+- 30% of trials were removed
+
+DOI: 10.1073/pnas.93.10.4770
+- "The magnitude of 8.6- and 12-Hz SSVEP activity was quantified in the frequency domain by multiplying each averaged wave form by sine and cosine functions at the corresponding frequency, taking the square root of the sum of the squares of these two numbers, and scaling the resultant value to microvolts.This procedure was applied to the averaged waveforms in a window between 0.58 and 9.92 s after the start of the flickering stimuli to avoid any initial transient-evoked responses and to include an integral number of both 8.6- and 12-Hz cycles in the measurement window, thereby minimizing spectral leakage(16). SSVEP amplitudes were subjected to a repeated-measure analysis of variance that included the following factors: condition (attended versus unattended),side of stimulus presentation (left versus right), hemisphere of recording (left versus right), scalp site within the hemisphere (F3/4,C3/4,P3/4,01/2,P07/8,andT5/6), and subject. The Greenhouse-Geisser adjustment for nonsphericity was applied whenever appropriate "
+-   Across subjects, the mean percent correct target detections was 63%(SE= 4.8%),where a correct detection was defined as a button press within a 200- to 1200-ms interval following target onset. False alarm rates were negligible.  (But used PSDA)
+Ched significance(F= 2.25,P < 0.12) for the 8.6-Hz response. Interestingly, while the overall SSVEP amplitudes (collapsed over attended and unattended conditions) were greater over scalp sites contralateral to the visual field of stimulation (visual field x hemisphere: F= 9.41, P< 0.02 for 12Hz; F = 14.05,P < 0.005 for 8.6Hz),the attentional enhancement of these SSVEPs was not contralaterally distributed
+- (We seem to have contradictory evidence as to the spatial relationship of stimuli vs where the strobing response has strongest power at on scalp between this and the earlier nature paper. Could be due to new findings over last decade, but should re-review just in case)
+
+https://pubmed.ncbi.nlm.nih.gov/20972777/
+    - Alpha waves are not really a light/no light cortical response, it is a gating response to suppressing stimuli
+    - Therefore, during covert stimuli when you likely have to suppress attention ('ignore') other stimuli, alpha blocking stops and you see the traditional alpha band activity you'd see when eyes are closed
+    - This means that stimuli really close to typical alpha activity peak frequencies (usually around 10 Hz) can pose challenges with covert SSVEP detection - should avoid stimuli at that frequency
+    - 
+5 Assessment Overview
+5.1 Metrics for Assessment
+
+CLINICAL ASSESSMENTS?
+    - Exclusion criteria - get from Lucas
+        ? History of photoparoxysmal activity or photosensitive epilepsy
+        ? Possibly depends on what stage of ALS? Comorbidities?
+    - 
+
+THINGS WE NEED TO ASSESS ARE:
+    - Field of Attendable View: Not the same as a field of view because it's likely that the client can still 'see' elements outside of their central field of view. However, this region likely varies from user to user based on the severity of their condition.
+    - Most effective types of stimuli for user: some ranking system measuring VEP responses based on different stimuli. 'Effectiveness' is pretty vague, for now we can have it driven by effectiveness (stimuli type / frequencies that give the best SSVEP response in amplitude) but should factor in UX later (comfort, fatigue, etc.) 
+    - Sensitivity to competing stimuli: how many/how close competing stimuli can be placed before additive distraction effects make classification too difficult (some initial research done on this in NSERC Engage, but need to consider how to make this work for ALS use case)
+    - Quantification of SSVEP responses with overt and covert stimuli - is there enough to detect them with the participant?
+
+To derive these metrics, a two-part assessment is proposed here to derive, quantify, and estimate effects that the current condition of the participant may have on successful visual BCI operation. 
+5.2 Overt Stimuli Assessment
+
+This section describes the first part of the assessment. The goal of his part is to determine the answers to the following:
+    1. Is the participant able to generate SSVEP responses to overt stimuli?
+    2. Is the participant able to generate SSMVEP responses to overt stimuli?
+    3. How strongly is the participant able to elicit cortical responses to visual stimuli? Will it be detectable with simple algorithms?
+
+5.2.1 Front End Flow
+
+
+The procedure will be conducted as follows:
+    1. When the overt stimuli assessment is initiated, a fullscreen window should appear.
+    2. A brief prompt to attend to stimuli in the center of the screen should appear to brief the participant for 6 seconds, before disappearing from the screen.
+    3. A single SSVEP stimuli (10 Hz) should strobe for an active epoch period in the center of the screen. [6 seconds]
+    4. The SSVEP stimuli should disappear for the rest period. [6 seconds]
+    5. A single SSMVEP stimuli (10 Hz) should present for an active epoch period in the center if the screen. [6 seconds]
+    6. The SSMVEP stimuli should disappear for the rest period. [6 seconds]
+    7. Steps 3-6 should be repeated for 9 more times, for a total of 10 SSVEP and 10 SSMVEP epoch data.
+    8. The window should close and metrics outlined in 5.2.2 should be computed and displayed.
+
+https://www.figma.com/file/OaEzSBKeZ0syt9DCOXuZjq/Jupyter-Desktop-SSVEP-UI?node-id=90%3A10598
+
+5.2.2 Metrics
+
+When the data collection period has ended, the result will be a set of SSVEP and SSMVEP data of a 10 Hz target. Across all the sample epochs, the following metrics must be derived:
+    1. Power spectral density of epoch, with peaks of particular interest (harmonics, subharmonics identified) marked.
+    2. Averaged distribution of ERP activity across all channels
+    3. Results of an SSVEP-based CCA for each epoch. The CCA templates should be sin and cosine waves oscillating at 8.6, 17.2, 12, and 24 Hz where 10 and 20 Hz templates are the correct class templates and 12 and 24 Hz are false/distractor class templates. The class is detected in a winner-takes-all decision for the highest correlation of the templates.
+    4. The SNR of the stimuli's fundamental frequency to the noise floor.
+
+At the end of the session, the UI window should be dismissed and the graphs of the PSD and topographic map of ERP activity across channels should appear. The results of CCA analysis and SNR should be written to a text file.
+5.2.3 Success Criteria:
+
+Note that this is just initial benchmarking and is likely to change as the assessment is refined over iterations. The first part is successful if CCA accuracy is above 60% in the session for both SSVEP and SSMVEP stimuli. 
+
+The PSD and ERP distribution should be referenced to check for any concerning artifacts and to be used for further analysis for future implementations of BCI operation, but will not impact the success of the overt stimuli assessment.
+
+IF SUCCESS:
+Then the next part of the assessment for covert stimuli should be carried out.
+
+IF FAILURE:
+Impedance should be checked and this part should be repeated. If impedance is in an acceptable region but response can not be identified, then participant may not have strong enough SSVEP responses to drive the BCI.
+
+5.3 Covert Stimuli Assessment
+
+The questions this part aims to answer are the following:
+    1. Is the participant able to elicit responses to covert stimuli?
+    2. How far across from the center can stimuli live on a monitor, such that it can be detected reliably?
+    3. How close can stimuli be before distraction and competing mechanisms make different stimuli indistinguishable for each other?
+    4. Can SSMVEP stimuli be used for covert stimuli?
+
+To be able to answer these questions, it must first be established that the participant is able to detect stimuli overtly. This is covered in the overt stimuli assessment.
+
+5.3.1 Front End Flow
+
+The procedure is as follows:
+    1. When the covert stimuli assessment is initiated, a fullscreen window should appear
+    2. The participant should see a prompt to focus on the SSMVEP stimulus when it is on the screen and to ignore SSVEP stimuli. [10 seconds]
+    3. Prompt should disappear and prepare to begin [at least 2 seconds]
+(Note that grid is used as a reference for stimuli locations, but is not displayed on the screen.)
+    4. An SSVEP and an SSMVEP stimulus will appear on the screen at the same time and be active [6 seconds]
+    5. Stimuli should disappear for a rest period [6 seconds]
+    6. Steps 2-5 should be repeated, following a pattern of increasing widths and heights outlined in the screenshots below.
+    7. After all regions have been tested, the epochs with successful SSMVEP detection via CCA should be noted. The grid should then be displayed, where the boundaries of successful SSMVEP detection should colour that boundary of the grid green. 
+
+
+5.3.2 Metrics
+
+After the assessment, a set of stimuli locations for SSMVEP stimuli and SSVEP stimuli as well as the EEG response should be recorded for each epoch. The following metrics need to be derived from this dataset:
+    1. CCA results for each epoch for the SSVEP and SSMVEP stimuli
+    2. For all instances where the SSMVEP stimulus was on the left half of the screen, the average distribution of ERP activity across channels
+    3. For all instances where the SSMVEP stimulus was on the right half of the screen, the average distribution of ERP activity across all channels
+    4. For epochs in which the SSVEP stimuli was detected, display the PSD and SNR for SSVEP and SSMVEP features (indicate which are which with different coloured markings). Identify how close the power was for both stimuli.
+    5. Repeat 4 but specifically for the epoch where the SSVEP and SSMVEP stimuli is very close together in the center of the screen, to compare with epochs in metric 4.
+    6. A screenshot to capture the boundary 
+
+5.3.3 Success Criteria
+
+The success criteria is driven by whether any region or boundary was able to be specified by the test. If no boundary (even within 25% range) is able to be drawn, then the assessment has failed. 
+
+IF FAILURE:
+Recommended next steps for this case would be to repeat impedance test and part one to ensure contact was maintained during the session. If the first part of the assessment fails or if impedance has significantly changed, it indicates that the electrodes have shifted and thus signal quality is reduced. Electrodes should be manipulated to ensure good contact, and the assessment should be restarted. If failure continues, then the candidate is not in sufficient condition to operate the BCI reliably.
+
+IF SUCCESS:
+A boundary can be drawn for where stimuli can be detected within the participant's field of attendable view. The boundary will determine where to place UI elements for detectable operation. This boundary will automatically change UI elements or can be referenced to manually replace UI elements.
+
+
+6 Assumptions, Risks and Uncertainties
+
+6.1 Assumptions
+    - Participant may or may not have ocular control for gaze fixation. If gaze fixation is possible the participant should be encouraged to do so.
+    - The CXN ONE can be placed on the correct EEG locations (according to 10-20 international standard) on the participant 
+    - The EEG data and logging will be saved and can be taken back to the Toronto office for further analysis
+6.2 Risks
+This section enumerates the risks that have been identified for this project. (NOTE: we may want to break this into a separate document).  Risks are: 
+    - Resolved: avoided or eliminated  
+    - Owned: assigned to somebody with the responsibility of doing something about it 
+    - Accepted: it has been agreed that nothing will be done about it 
+    - Mitigated: either the likelihood or the impact has been reduced 
+ 
+Risk 
+Impact 
+Likelihood 
+ROAM strategy 
+Any problems with the headset (electrode age, head size, electrical contacts) will affect the success of signal pickup for the assessment
+H
+?
+ ?
+We are using dry/passive electrodes instead of active (reported impedances for the papers that were able to do covert stimuli detection were <=5k ohms, ours is hundreds-millions of ohms)
+H
+H
+Accepted for now, will start project demonstrating efficacy of active components in current rig. Hardware changes are currently owned by BIOPAC
+Headset may not fit participant
+M
+?
+Mitigated. Can bring gold cap electrodes as a backup with the development board
+People with ALS may not generate responses to SSMVEP stimuli
+M
+?
+Mitigated. Can move to SSVEP stimuli as a fallback if this is occurring.
+Even if first part of assessment passes, second part may fail
+M
+?
+Accepted. If first part is successful and second part is not, it means that either the participant is not able to respond sufficiently to covert stimuli or our hardware wasn't sensitive enough to pick the signals up. Would require a repeat assessment to determine if it's the latter. 
+User fatigue likely depends on test duration and other difficult to mitigate factors.
+
+
+
+
+6.3 Uncertainties
+ 
+    - We do not know if the participant is able to use overt or covert stimuli
+    - We do not know how long the participant will be able to participate in the assessment - may get fatigued before assessment is complete
+    - Covert SSMVEP research has never been conducted before, however the second part of the assessment utilizes covert SSMVEP.
+    - Existing literature on some key principles being utilized here is somewhat problematic because data was cherry-picked. It will not be possible to throw out bad data or sessions for end-user operation
+    - The channel locations play a stronger role in covert SSVEP detection, but these conclusions have been inconsistent in literature. There is not much research-based evidence to make recommendations for best practices on this
+    - The most reputable papers used PSDA for SSVEP detection with covert stimuli, and even then reported accuracies of under 70% - in theory CCA will be more accurate but we don't know how much given the other unknowns
+    - 
+7 Approach
+7.1 Components 
+7.1.1 Hardware
+    - CXN ONE headset (no iPhone installed)
+    - USB  cable to connect CXN ONE to laptop
+    - USB isolator
+    - Mac laptop
+    - External monitor w. 60 Hz refresh rate
+    - USB-C display cable
+    - (optional) external speaker
+
+7.1.2 Software/Firmware
+    - MacOS 12.2 Monterey
+    - BCI application software (to be developed)
+    - CNX One firmware version 0.9.1 or greater
+

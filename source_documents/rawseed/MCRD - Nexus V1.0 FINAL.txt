@@ -1,0 +1,1449 @@
+
+
+
+
+
+Marketing and Customer Requirements Document
+
+Cognixion One | Nexus
+
+
+REVISION HISTORY
+REV
+DESCRIPTION
+Revision Date
+Editor
+1.0
+Release 1  (Section 8: Requirements)
+11-JUL-2022
+J.Myers
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Abstract: This document is an outline of the product strategy and product requirements.
+
+Statement of Confidentiality: This document and supporting materials contain confidential and proprietary business information of Cognixion. These materials may be printed or copied for internal use, but are not to be shared with other parties without explicit permission.
+
+DIRECTIONS:  Please delete all blue text, it is for information and direction only.  Do use the "styles" set up in word to organize your document.  Consider showing the "navigation" pane (found in the "view" menu) to help you navigate through sections of the document.  Throughout this document, if you have images, tables or graphs that would better tell the story, feel free to use them.
+This document is not expected to be completed at one time.  As the project and information mature, complete additional sections or add detail to existing insights.  Sections to complete are as follows:
+    - Always update section 1
+    - First complete sections #3 & 8.  Section 8 will need to be locked down before product PRD can be completed.
+    - Next complete sections #4, 5, 6
+    - Complete sections 2 and 7 as time and information permits.  
+Write all sections using the "normal" style.  
+
+Table of Contents
+
+1	Executive Overview	4
+2	Market Analysis	4
+2.1	Market size	4
+2.2	Market share	4
+2.3	Key customer segments	4
+2.4	Customer challenges	4
+2.5	Key Drivers/Success Factors	4
+2.6	Key Barriers	4
+2.7	Funding & Revenue Streams	4
+2.8	Channels	5
+3	Stakeholder Analysis	5
+3.1	Users	5
+3.2	Caregivers	5
+3.3	Clinicians	6
+3.4	Other Stakeholders	6
+4	Competitor Analysis	7
+4.1	Tobii Dynavox	7
+4.2	Prentke Romich Company	7
+5	SWOT	8
+6	Product Overview	8
+6.1	Product Goals & High-Level Features	8
+6.2	Value Proposition	8
+6.3	Regulatory, Claim & Reimbursement Strategy	9
+6.4	Pricing Strategy	9
+6.5	Branding & Naming	9
+7	Commercialization Plan	9
+7.1	Trademark Plan	9
+7.2	Launch	9
+7.3	Sales Channels/Distribution Plan	10
+7.4	Training Plan	11
+7.5	Post Market Clinical or Product Research Plan	11
+7.6	Service & Warranty	11
+8	Requirements	12
+8.1	Human Factors / User Interface	12
+8.1.1	Use Scenarios and Characteristics	12
+8.1.2	Alarms, Alerts, Indicators	13
+8.1.3	Display & Navigation	14
+8.2	Hardware / Device	15
+8.2.1	Physical Design / External Design	15
+8.2.2	Internal Design	16
+8.3	Software Systems	17
+8.3.1	Connectivity & Compatibility	17
+8.3.2	Language Generation	18
+8.3.3	Intelligent Linguistics	19
+8.3.4	Synthetic Voices	20
+8.3.5	Virtual Assistance	20
+8.3.6	Device Telemetry	21
+8.3.7	Companion Software (User's Care Circle)	22
+8.3.8	Data Security and Privacy	24
+8.4	Business Requirements	25
+8.4.1	Operations	25
+8.4.2	Service and Support	26
+8.4.3	Marketing	27
+8.5	Patient Safety & Regulatory Requirements	27
+8.5.1	Regulatory	27
+8.5.2	Patient Safety	28
+9	Document Approval	29
+
+1 Executive Overview
+
+2 Market Analysis
+2.1 Market size
+The number of potential customers who would benefit from buying your product - is often measured as an estimated revenue range. For example, you can calculate market size by multiplying the number of potential customers in your market category by their average annual revenue.
+
+2.2 Market share
+Refers to the percentage of sales in the industry earned by your product. Divide your product sales by total sales for the market (via industry data) to determine market share. 
+
+2.3 Key customer segments
+High level overview of potential customer segments that will use your product - segmented by demographics, psychological attributes, geography, or behavior
+
+2.4 Customer challenges
+Primary pain points felt by your customers
+
+2.5 Key Drivers/Success Factors
+At a high level, what do we need to keep in mind to enable the successful introduction of this product to our target market?  Are there relevant market trends to keep in mind?
+2.6 Key Barriers
+At a high level, what  would prevent the successful introduction of this product to our target market? Are there relevant market trends to keep in mind?
+
+2.7 Funding & Revenue Streams
+How are products funded in this market segment. Projected revenue of the product (or impact to revenue of new features) .
+
+2.8 Channels
+Channels available for communicating with your target market - such as email, website, and referral 
+
+3 Stakeholder Analysis
+3.1 Users
+Primary User
+ Who is most likely to interact, use, and from this product? Repeat this block for up to 3 persona types
+
+Day in the Life
+A high-level description of their day to day experience - focused on interaction with our product
+Goals
+Top 1-3 Goals of this Persona
+Challenges
+Top 1 -3 Challenges that our product could help overcome
+Likes
+Preferences related to products and services that solve their challenges today
+Dislikes
+Dislikes related to products and services that solve their challenges today
+Trusts information from
+Sources they receive information from and respect
+Influence
+Other people that they have influence over and share information with
+
+3.2 Caregivers
+Primary Caregiver  
+ Which type of caregiver is most likely to interact, use and benefit from this product?  Repeat this block for up to 3 persona types
+
+Day in the Life
+A high-level description of their day to day experience - focused on interaction with our product
+Goals
+Top 1-3 Goals of this Persona
+Challenges
+Top 1 -3 Challenges that our product could help overcome
+Likes
+Preferences related to products and services that solve their challenges today
+Dislikes
+Dislikes related to products and services that solve their challenges today
+Trusts information from
+Sources they receive information from and respect
+Influence
+Other people that they have influence over and share information with
+
+3.3 Clinicians
+Primary Clinician
+ Which type of clinician is most likely to recommend, prescribe and benefit this product? Repeat this block for up to 3 persona types
+
+Day in the Life
+A high-level description of their day to day experience - focused on interaction with our product
+Goals
+Top 1-3 Goals of this Persona
+Challenges
+Top 1 -3 Challenges that our product could help overcome
+Likes
+Preferences related to products and services that solve their challenges today
+Dislikes
+Dislikes related to products and services that solve their challenges today
+Trusts information from
+Sources they receive information from and respect
+Influence
+Other people that they have influence over and share information with
+
+3.4 Other Stakeholders
+Name other stakeholder-TBD
+ Are there others who will interact with this product?  Which type of clinician is most likely to recommend, prescribe and benefit from this product? Repeat this block for up to 3 persona types
+
+Day in the Life
+A high-level description of their day to day experience - focused on interaction with our product 
+Goals
+Top 1-3 Goals of this Persona
+Challenges
+Top 1 -3 Challenges that our product could help overcome
+Likes
+Preferences related to products and services that solve their challenges today
+Dislikes
+Dislikes related to products and services that solve their challenges today
+Trusts information from
+Sources they receive information from and respect
+Influence
+Other people that they have influence over and share information with
+
+4 Competitor Analysis
+4.1 Tobii Dynavox
+Think outside the box here - what is the most likely alternate solution to our product?  What would prevent a user from selecting our product for themselves? Repeat this block for up to 3 competitors"
+
+Description
+A summary of the organization and any distinguishing features (often found on the company's "About us" page)
+Products
+Products or services they provide
+Revenue
+A rough estimate of company revenue, if available
+Customers
+Their target customers and how they differ from your own
+Strengths
+Areas in which they excel - especially as related to our product
+Weaknesses
+Areas in which they are lacking - especially as related to our product
+Differentiators
+Factors that make them unique or compelling in the market
+
+4.2 Prentke Romich Company
+Think outside the box here - what is the most likely alternate solution to our product?  What would prevent a user from selecting our product for themselves? Repeat this block for up to 3 competitors"
+
+Description
+A summary of the organization and any distinguishing features (often found on the company's "About us" page)
+Products
+Products or services they provide
+Revenue
+A rough estimate of company revenue, if available
+Customers
+Their target customers and how they differ from your own
+Strengths
+Areas in which they excel - especially as related to our product
+Weaknesses
+Areas in which they are lacking - especially as related to our product
+Differentiators
+Factors that make them unique or compelling in the market
+
+
+4.3 Smartbox
+
+Description
+A summary of the organization and any distinguishing features (often found on the company's "About us" page)
+Products
+Products or services they provide
+Revenue
+A rough estimate of company revenue, if available
+Customers
+Their target customers and how they differ from your own
+Strengths
+Areas in which they excel - especially as related to our product
+Weaknesses
+Areas in which they are lacking - especially as related to our product
+Differentiators
+Factors that make them unique or compelling in the market
+
+
+5 SWOT
+Given what we know today, what are the strengths, weaknesses, opportunities and threats we foresee in this market with this product?
+
+Strengths
+Weaknesses
+    - 
+    - 
+Opportunities
+Threats
+    - 
+    - 
+6 Product Overview 
+6.1 Product Goals & High-Level Features
+The desired long-term impact of our product or new feature set - including metrics for success
+6.2 Value Proposition
+Why should someone choose our product?  Our company?
+6.3 Regulatory, Claim & Reimbursement Strategy
+What is the regulatory strategy?  If there are predicate devices, what are they? If we are going to go for claims, what claims targets do we have?  How will we be paid for our product?
+6.4 Pricing Strategy 
+Product pricing (or new pricing based on added functionality)
+6.5 Branding & Naming
+What is the name of this product?  Why was this name chosen?  How will it fit into the larger brand architecture of our company?
+
+7 Commercialization Plan
+7.1 Trademark Plan
+What, when will be trademarked?
+7.2 Launch 
+How and where will this product be launched?  Is there an ideal event to be targeted?  Are there timelines the project team needs to consider?
+
+These items were moved from the product Requirements section (Section 8) and may be re-written.
+7.2.1 
+The GTM strategy will effectively target our user population and their specific needs. This will include a multi-member effort to include PR, digital creation, social plan, CRM plan to help attain Nexus sales goals.
+1
+
+7.2.2 
+The Nexus marketing will explain how the system works by creating supporting explainer content such as but not limited to downloadable documents, viewable web content, webinar-style presentation materials or videos.
+2
+
+7.2.3 
+The Nexus marketing will enable prospects, customers an online website to learn about the product, to express evaluation or purchase intent, to initiate purchasing, and self service support
+1
+
+7.2.4 
+The Nexus marketing shall provide asynchronous support via email and online chat
+1
+
+7.2.5 
+The marketing team will create documentation and training materials to help support Sales Training
+2
+
+7.2.6 
+The Nexus Marketing will identify key events, both physical and virtual, and attend/exhibit where targeted evaluators and prospective customers and active customers may interact with company staff and product demonstrations, and facilitate receiving evaluation intent, purchase intent or information gathering for future purchase
+2
+
+7.2.7 
+The Nexus Marketing team will have a social media pre, during and post-launch calendar created with intention and precision. 
+1
+
+7.2.8 
+A customer database will be maintained that provides marketing team with information about the customer that enables marketing team to provide relevant and efficient marketing, sales and support
+
+
+7.2.9 
+The marketing will raise public awareness of the product via editorial print and online media, public relations, sponsorships, blogs, podcasts and public speaking within relevant industries and channels
+
+
+7.2.10 
+The marketing shall collect prospect and customer data in order to deliver marketing and product services and support
+
+
+
+7.3 Sales Channels/Distribution Plan
+How do we anticipate selling this product?  Will this approach change over time?
+
+Channels:
+    - Funding - Medicare/Medicaid
+    - Funding - Private Insurance
+    - Funding - Veterans Administration
+    - Donated - Nonprofits and other NGOs
+    - Lent - Telephone Access Program (TAP)
+    - Direct Bill - Direct to Consumer (D2C)
+    - Direct Bill - Hospital Facility
+    - Direct Bill - Skilled Nursing, Long-Term Care, Home Health
+    - Direct Bill - Rehab Facilities and Private Practice
+    - Direct Bill - Assessment Centers
+Other Considerations:
+    - Discounts, Financing, and Loan Programs
+    - Portfolio Synergy
+    - High-Volume Evaluators (HVEs) and Influencers
+    - Academic Programs
+7.3.1 
+We need to include box packaging requirements 
+
+
+7.3.2 
+We need to address kitting, provisioning, shipping 
+
+
+
+7.4 Training Plan
+Who will be trained and how?  Internal stakeholders include sales, marketing & service teams.  External stakeholders include all training required for regulatory compliance.
+
+    1 Training Content - General and Product-Specific
+    - Implementation Supports
+    - Conferences and Presentations
+    2 Certifications
+    3 Continuing Education Credits
+    4 Interdisciplinary Outreach
+7.5 Post Market Clinical or Product Research Plan
+Once launched, do we intend to do additional research on the product to measure its effect in the market?
+7.6 Service & Warranty
+How do we expect to support this product post-sale?  What will the initial factory warranty be?  Will there be extended warranties?  How will we service this product once in the market?
+
+    - Five years of support and functionality required for funded devices
+        ? Devices CAN be replaced with a different model in that five year period by the manufacturer but it most offer an equivalent experience without additional cost
+        ? This is NOT true for accidental damage and loss, etc., which could be an opportunity for us.
+        ? Monetized expert support and service is also a viable route
+8 Product Requirements
+The following section outlines the market and customer requirements for this product.  The priority ratings are as follows:
+1 = Must Have - Minimum Viable Product
+2 = Desired - Target Goals
+3 = Delighters - Stretch Goals
+
+8.1 Human Factors / User Interface
+8.1.1 Use Scenarios and Characteristics
+The Nexus is built with accessibility as its foundation. The product aims to enable and empower those with physical disabilities to have a voice in communicating directly to humans and smart home services. . People need to communicate in a wide variety of environments throughout their day-to-day lives and the Nexus intends to be suitable for common, day-to-day scenarios.
+
+This section of requirements describes scenarios where a Nexus user shall be able to utilize the product and the characteristics of its use.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+1.1.1
+User shall be able to use Nexus while in a seated position
+1
+
+1.1.2
+User shall be able to use Nexus while in a supine position
+2
+
+1.1.3
+User shall be able to use Nexus while in a prone position
+2
+
+1.1.4
+User shall be able to use Nexus while they are stationary in their physical environment
+1
+
+1.1.5
+User shall be able to locomote on a flat surface up to 3 meters while using Nexus in their physical environment
+3
+
+1.1.6
+User shall be able to use Nexus in environments with illuminance ranging from 0 to 2000 lux
+1
+
+1.1.7
+A speech-impaired user shall be able to use Nexus independently following initial setup and configuration by a caregiver
+1
+
+1.1.8
+A motor-impaired user shall be able to use Nexus independently following the initial setup and configuration by a caregiver
+1
+
+1.1.9
+A color-blind user shall be able to use Nexus independently following initial setup and configuration by a caregiver
+2
+
+1.1.10
+A neurotypical user shall be able to use Nexus independently following initial setup and configuration
+1
+
+1.1.11
+A user with the equivalent of fourth-grade literacy shall be able to use Nexus independently following initial setup and configuration
+1
+
+1.1.12
+User shall be able to use an external switch accessory or a hand controller for software control and selection
+1
+
+
+
+8.1.2 Alarms, Alerts, Indicators
+The Nexus can provide a wide variety of sensory feedback including audio, haptic, and visual feedback. The user will have access to a wide variety of status indications, notifications, and settings monitoring capabilities to ensure they are always informed with the right information. They will also be able to view their current "Fatigue Score" which will be representative of their current UI interactions and movment as compared to the user's baseline activity.
+
+This section of requirements describes status indicators, visual and other sensory feedback mechanisms, notifications, and information that is passively monitored by the user.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+1.2.1
+The Nexus shall be able to confirm software interactions through haptic feedback  
+1
+
+1.2.2
+The Nexus shall be able to indicate software interactions through auditory feedback  
+1
+
+1.2.3
+User shall be able to see the battery status of Nexus 
+1
+
+1.2.4
+User shall be able to see the connectivity status of WiFi and cellular networks
+1
+
+1.2.5
+User shall be able to see the connectivity status with Bluetooth peripherals
+1
+
+1.2.6
+User shall be able to see the time of day, day of the week, and day of the month
+1
+
+1.2.7
+User shall be able to see the connectivity status to a virtual assistance service
+1
+
+1.2.8
+User shall be able to see the current application audio output volume
+1
+
+1.2.9
+User shall be able to see the current application setting for display brightness
+2
+
+1.2.10
+User shall be able to see their current Fatigue Score that is estimated by the Nexus system
+3
+
+1.2.11
+User shall be notified when their Fatigue Score is below a threshold for more than 15 minutes
+3
+
+1.2.12
+The Nexus shall indicate when a word or phrase in the message composition field is a saved utterance in their favorites
+2
+
+
+8.1.3 Display & Navigation
+The Nexus features a wearable augmented reality (AR), heads-up display that allows its users to see the physical world around them while wearing the device. The AR software is projected into the user's field of view allowing them to compose messages, generate synthetically spoken utterances, and send commands to a virtual assistant. The user interface and navigation enable users to craft sentences rapidly, save and reuse words or phrases, and customize their experience based on their personal capabilities. 
+
+This section of requirements describes the visual AR software features and the visual user interface. It also serves to define the user experience while wearing the Nexus or while observing someone else using Nexus.
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+
+1.3.1
+User shall be able to see through the display lens to identify objects and people in their physical environment while using Nexus
+1
+
+
+1.3.2
+User shall be able to compose messages with a virtual keyboard interface
+1
+
+
+1.3.3
+User shall be able to change their keyboard style from a list of available layouts 
+1
+
+
+1.3.4
+User shall be able to use symbols and punctuation when composing messages 
+1
+
+
+1.3.5
+User shall be able to access emojis when composing messages
+2
+
+
+1.3.6
+User shall be able to correct message composition errors by deleting individual characters, entire words, or clearing the entire composition 
+1
+
+
+1.3.7
+User shall be able to select predicted words and phrases while composing messages to update their current composed message
+1
+
+
+1.3.8
+User shall be able to preview the inclusion of a prediction into their current composed message by interacting with the predicted suggestion
+2
+
+
+1.3.9
+User shall be able to save words and phrases to a favorites folder
+1
+
+
+1.3.10
+User shall be able to edit and delete favorite words and phrases from folders
+1
+
+
+1.3.11
+User shall be able to create a new folder, rename a folder, delete a folder, and move the folder to a new directory
+1
+
+
+1.3.12
+User shall be able to categorize words and phrases into sequences and organize the words, phrases, and sequences in the folders
+2
+
+
+1.3.13
+The Nexus shall present a tooltip when a word or phrase has been successfully used 3 or more times by the user and the utterance is not currently saved as a favorite.
+2
+
+
+1.3.14
+Nexus shall adapt the visual user interface to the range-of-motion of the user through a user-initiated software calibration
+2
+
+
+1.3.15
+User shall be able to provide feedback about their in-app experience while wearing Nexus
+1
+
+
+1.3.16
+An external observer with 20/20 eyesight, who is within 2 meters of the Nexus user shall be able to read the text equivalent of artificially spoken language when generated by the Nexus user
+1
+
+
+1.3.17
+User shall be able to choose, via a setting, when to display synthesized language as a text for external observers and the display duration: after the artificially spoke language has been dictated, during language composition, or never
+2
+
+
+1.3.18
+The Nexus shall display emergency contact information to an external observer upon user selection or if an emergency situation is detected by Nexus
+2
+
+
+1.3.19
+User shall be able to turn fatigue assessment feedback prompting, language prediction features and tooltips for favorites on or off in the settings
+2
+
+
+1.3.20
+User shall be able to score their current level of fatigue when prompted for an assessment
+2
+
+
+1.3.21
+User shall be able to manage access or permissions requests from companion app users and approve or reject them
+2
+
+
+1.3.22
+User shall be able to delete a single character or word, delete a single word in a phrase, or clear the entire utterance they have composed. 
+1
+
+
+8.2 Hardware / Device
+8.2.1 Physical Design / External Design
+The Nexus is designed to be worn by an adult and to be used throughout daily activities. It can be easily charged and can be used for several hours on a single charge. It also can be worn with corrective eyewear, can be adjusted to most head sizes, and has replaceable lenses and forehead pads.
+
+This section of requirements describes the physical, mechanical, and external design characteristics.
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+2.1.1
+User shall be able to tolerate the weight, balance, and heat of Nexus for four consecutive hours of use
+1
+
+2.1.2
+User shall be able to adjust the Nexus headband size for head circumferences ranging from 55 to 60 cm
+1
+
+2.1.3
+The Nexus shall perform as intended irrespective of the users hair length, density, or style
+2
+
+2.1.4
+User shall be able to utilize corrective eyewear, such as contact lenses and eyeglasses, while wearing and using Nexus
+1
+
+2.1.5
+User shall be able to adjust the audio output volume of the device, while wearing the device, through physical buttons on the Nexus.
+2
+
+2.1.6
+The Nexus shall be chargeable without requiring the user to remove the smartphone from the device
+1
+
+2.1.7
+The Nexus shall be chargeable while the device is being worn by the user
+1
+
+2.1.8
+User shall be able to turn the device display on or off through a physical button on the Nexus
+1
+
+2.1.9
+User shall be able to independently remove and replace the Nexus optical lens 
+2
+
+2.1.10
+The Nexus shall have a removable forehead pad that can be replaced with no tools required
+3
+
+2.1.11
+The removable forehead pad shall be able to be sanitized or disinfected before installation in Nexus
+2
+
+2.1.12
+The Nexus design and style shall be sleek, modern, and fashionable such that users feel comfortable freely wearing the device around others they don't know
+2
+
+
+8.2.2 Internal Design 
+The Nexus has a wide range of sensors, actuators, and radios that are integrated into a wearable augmented reality device. The integrated mobile device provides access to many desirable hardware features that are utilized by the Nexus software to deliver the end-user experience.
+
+This section of requirements describes internal hardware subsystems used for sensing, computation, power delivery, graphical rendering, and wireless connectivity.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+2.2.1
+The Nexus shall be fully operational without an external power source and be usable on only battery power
+1
+
+2.2.2
+The Nexus shall have a battery capacity that supports a minimum of 3 consecutive hours of use without requiring external power or battery charging
+1
+
+2.2.3
+The Nexus shall be able to render real-time, stereoscopic 3D software applications 
+1
+
+2.2.4
+The Nexus shall be able to present augmented reality graphics on a heads-up display
+1
+
+2.2.5
+The Nexus shall include a Bluetooth Low Energy radio
+1
+
+2.2.6
+The Nexus shall include a Wifi radio
+1
+
+2.2.7
+The Nexus shall include an 3-degree's-of-freedom inertial measurement unit
+1
+
+2.2.8
+The Nexus shall include stereoscopic audio speakers
+1
+
+2.2.9
+The Nexus shall include a Global Positioning System
+1
+
+2.2.10
+The Nexus shall include a built-in microphone
+1
+
+2.2.11
+The Nexus shall include haptic actuators
+1
+
+2.2.12
+The Nexus shall include a cellular broadband radio
+1
+
+
+8.3 Software Systems
+8.3.1 Connectivity & Compatibility
+The Nexus serves as a connectivity hub where the definition of the word nexus is "a connection or series of connections linking two or more things". Bluetooth connectivity enables compatibility with peripheral devices such as a switch or handheld controller, which are common devices used in accessibility technology. The connectivity to the internet via WiFi or cellular broadband enables the users to interact with other devices connected to the internet including intelligent voice assistants such as Amazon Alexa.
+
+This section of requirements describes the connectivity capabilities including Bluetooth, WiFi, and cellular broadband.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+
+3.1.1
+The Nexus shall allow for device pairing to Bluetooth peripheral devices
+1
+
+
+3.1.2
+The Nexus's Bluetooth radio shall be useable for device control and data transfer
+1
+
+
+3.1.3
+The Nexus shall support the use of an external Bluetooth switch or hand controller as an input device
+2
+
+
+3.1.4
+The Nexus's Bluetooth communications shall be encrypted
+1
+
+
+3.1.5
+The Nexus shall be able to connect to, send, and receive data from local WiFi networks
+1
+
+
+3.1.6
+The Nexus shall be able to connect to, send, and receive data from wireless cellular broadband networks with an accompanying cellular data plan
+2
+
+
+3.1.7
+The Nexus shall be compatible with Alexa Voice Services, when internet connectivity is available, and shall allow a user to authenticate their personal Amazon Alexa accounts with the Nexus.
+1
+
+
+8.3.2 Language Generation
+The Nexus is a speech-generating device that is capable of verbally dictating user-composed utterances. Its users are able to use favorite words and phrases or other historical utterances to accelerate the utterance composition. They can also incorporate punctuation and utilize emojis and their spoken language to further personalize their utterances. Finally, they can choose when to present the composed utterance on the outward-facing display for viewing by their conversational partners or observers.
+
+This section of requirements describes the language generation capabilities including device verbal dictation, the use of various characters, punctuation, emojis, languages, and keyboards.
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+3.2.1
+User shall be able to use Nexus to generate artificially spoken words and phrases
+1
+
+3.2.2
+User shall be able to incorporate "favorited" words and phrases when using Nexus to generate artificially spoken language
+1
+
+3.2.3
+User shall be able to incorporate historically spoken words and phrases when using Nexus to generate artificially spoken language
+1
+
+3.2.4
+User shall be able to incorporate emojis into phrases and have them expressed as audible words when artificially spoken by Nexus
+3
+
+3.2.5
+User shall be able to use the English language with English characters, words, punctuations, and pronunciation of spoken words
+1
+
+3.2.6
+User shall be able to use the Spanish language with Spanish characters, words, punctuations, and pronunciation of spoken words
+3
+
+3.2.7
+User shall be able to use one language for language composition but have the text translated and spoken in a different language
+3
+
+3.2.8
+User shall be able to choose, via a setting, when Nexus should vocalize synthesized language as audio for external observers: After the completion of an utterance, during language composition (word-by-word), or never
+2
+
+
+8.3.3 Intelligent Linguistics
+The Nexus incorporates machine learning-based predictive capabilities to accelerate the composition of utterances. Intelligent linguistics comprises a language engine with the goal of achieving fluent speech replacement with minimum fatigue on behalf of the user. Rapid and fluent speech is facilitated by word and phrase suggestions, auto-correction, and rapid selection.
+
+This section of requirements describes language prediction, autocorrection, and vocabulary characteristics. 
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+3.3.1
+The Nexus shall allow users to create words specific to their culture, dialect, gender, sexual identity, and religion.
+1
+
+3.3.2
+The Nexus shall be able to predict entry within each word and suggest correction for spelling errors
+1
+
+3.3.3
+The Nexus shall be able to predict words that are personally or contextually relevant
+2
+
+3.3.4
+The Nexus shall be able to predict phrases from words that are personally or contextually relevant
+2
+
+3.3.5
+The Nexus shall adapt prediction weights based on the users long- and short-term communicative history and the current context of communication
+1
+
+3.3.6
+The Nexus shall predict the use of acronyms, where relevant, and pronounce them as expected for each acronym (eg. NASA or FBI)
+3
+
+3.3.7
+The Nexus shall retain verbally spoken utterances and commands to a virtual assistant in a history folder
+1
+
+3.3.8
+The Nexus shall be able to predict punctuation for phrases that are likely to be a question
+3
+
+3.3.9
+The Nexus shall be able to predict punctuation for words that that are likely to include apostrophes
+3
+
+3.3.10
+The Nexus shall add frequently used words to the users language corpus and be weighted for predictions based on the frequency of use
+1
+
+3.3.11
+The Nexus shall be able to predict words and phrases that come before or after the current word in the user composed utterance
+1
+
+3.3.12
+The Nexus shall be able to predict complete phrases that are frequently used from a single word in a message being composed by the user 
+1
+
+3.3.13
+The Nexus shall be able to predict complete words that are frequently used from a single character in a message being composed by the user
+1
+
+3.3.14
+The Nexus shall be able to support autocorrect at the same level as the native platform (iOS and/or Android).
+1
+
+
+
+8.3.4 Synthetic Voices
+The Nexus as a speech-generating device incorporates speech synthesis, the artificial production of human speech, to verbally dictate the utterances composed by the user. The voice that represents the user is intrinsically personal to that user and should be highly representative of their intended verbal output. The user's ability to select a representative voice or to create a custom voice profile to represent their verbal identity will improve their overall experience and product loyalty.
+
+This section of requirements describes the speech synthesis capabilities including the use of standard voice profiles, creating custom voice profiles, and the use of synthetic voices without connectivity.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+3.4.1
+User shall have a selection of synthetic voices that are representative of their personal communicative identity
+1
+
+3.4.2
+User shall be able to customize a synthetic voice profile that is unique to their preferences
+2
+
+3.4.3
+User shall be able to create a synthetic voice profile from historical audio files that capture the user's speaking style and voice characteristics
+3
+
+3.4.4
+The Nexus shall incorporate changes to the tone and inflection of the synthetic voice when an emoji is incorporated into an utterance
+3
+
+3.4.5
+The Nexus shall incorporate changes to the tone and inflection of the synthetic voice when punctuation is incorporated into an utterance
+2
+
+3.4.6
+User shall be able to use synthetic voices without connectivity to the internet
+1
+
+
+
+
+8.3.5 Virtual Assistance
+The Nexus can also access and send commands to AI voice assistants, such as Amazon Alexa, and other supported IoT devices that have been configured to receive voice commands. This allows its users to utilize home and lifestyle automation tools (IE. Turn the bedroom lights on or open the front door) and to send a private message or request assistance from their friends and family. All virtual assistance features will require connectivity to the internet via WiFi or cellular broadband data.
+
+This section of requirements describes the physical, mechanical, and external design characteristics.
+
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+3.5.1
+User shall be able to send text commands and receive responses from a third-party voice assistant 
+1
+
+3.5.2
+User shall be able to access home and lifestyle automation tools via supported text commands that are generated by the Nexus user
+1
+
+3.5.3
+User shall be able to request assistance from their caregiver and other emergency contacts
+2
+
+3.5.4
+User shall be able to contact friends and family with a text-based messaging service
+3
+
+3.5.5
+User shall be able to use the device without access to any remote communication or IoT functionality.
+1
+
+3.5.6
+The device must be able to be provisioned in a manner that locks the user into the communication application at the time of delivery.
+3
+
+
+
+8.3.6 Device Telemetry
+The Nexus has a wide variety of sensing capabilities, and the collection of certain metrics or metadata is called device telemetry. Telemetry can inform the software application, the user, and authorized care circle companion users with insights into their success and effectiveness using Nexus. Additionally, it can further optimize their experience through personalization and when they experience issues, they can capture useful troubleshooting information.
+
+This section of requirements describes the logging of sensor data, software activities, language composition, product usage, and other performance metrics
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+3.1.1
+The Nexus shall log spatio-temporal IMU information including radial distance traveled, velocity, acceleration, movement frequency, and movement duration 
+1
+
+3.1.2
+The Nexus shall log software interaction information including interaction type, interaction frequency, and duration between interactions
+1
+
+3.1.3
+The Nexus shall log the deletion of character, word, or phrase and record the number of language errors autocorrected while composing utterances
+1
+
+3.1.4
+The Nexus shall log utterance length, utterance frequency, and calculate the mean length of utterance, total word count, and total utterances
+1
+
+3.1.5
+The Nexus shall count each word, phrase, and the keyboard used to generate language or send a command to a virtual assistant
+1
+
+3.1.6
+The Nexus shall count the number of words and phrases that have been stored in the history, favorites, and phrase inventory folders on a daily basis
+1
+
+3.1.7
+The Nexus shall calculate the user fatigue over time as a function of IMU information, rate of interaction, interaction success, and fatigue feedback scores
+2
+
+3.1.8
+The Nexus shall log the utilization of software feature families including the use of spoken text, virtual assistance, favorites, language predictions, and settings
+1
+
+3.1.9
+The Nexus shall log the amount of hits (the selection of a letter, word, or phrase) that were required for each completed utterance
+1
+
+3.1.10
+The Nexus shall log the the time duration of active device and calculate daily average utilization over time
+1
+
+3.1.11
+The Nexus shall log device connectivity status, events related to low/no bandwidth, and network adapter states
+1
+
+3.1.12
+The Nexus shall allow for UI keyframes to be extracted as part of a user feedback submission, bug reporting, or fatal software crashes
+2
+
+
+
+
+8.3.7 Companion Software (User's Care Circle)
+The Nexus has a supporting companion software that can be used by authorized members of the users care circle (see Section 3: Stakeholder Analysis). 
+
+This section of requirements describes the capabilities and features for companion users using companion software and includes account authorization, access and permissions, remote co-viewing, peer-to-peer messaging, and viewing or modifying end-user vocabulary, favorites, or application settings.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+3.7.1
+Companion user shall be able to register a companion account and request for it to be paired to an associated Nexus end-user's account.
+1
+
+3.7.2
+Companion user shall be able to request access information from a Nexus end-user's account as an ad hoc request with a defined access duration
+1
+
+3.7.3
+Companion user shall be able to request permissions to access information and make changes to the Nexus end-user's account or device settings
+1
+
+3.7.4
+Companion user shall be able to view a list of current access requests or permissions and cancel the requests and permissions
+1
+
+3.7.5
+Companion user shall be able to access the companion software on a mobile or desktop web browser
+1
+
+3.7.6
+Companion user shall be able to upload and save new words and phrases to the Nexus end-user's corpus, using a corpus update template and the companion software
+1
+
+3.7.7
+Companion user shall be able to view or edit the current corpus and view, edit, delete, or activate historical corpora associated to the Nexus end-user
+2
+
+3.7.8
+Companion user shall be able to view and edit the end-users favorites, reorganize favorite folders, and view their word or phrase usage history
+2
+
+3.7.9
+Companion user shall be able to adjust a weighting value that influences the prediction of certain words, phrases, or language topics
+3
+
+3.7.10
+Companion user shall be able to add contextual information about the end-user and their enviroments or scenarios (IE. Household facts or familial relationships).
+2
+
+3.7.11
+Companion user shall be able to add, edit, or delete emergency contact information and other contacts, when given the proper permissions
+2
+
+3.7.12
+Companion user shall be able to receive messages for assistance and other free-text responses from the Nexus end-user
+3
+
+3.7.13
+Companion user shall be able to compose and send messages to, or reply to messages from, the Nexus end-user
+3
+
+3.7.14
+Companion user shall be able to access clinical reports and visualizations of user activity metrics
+1
+
+3.7.15
+The user activity metrics that shall be represented in reports and usage visualizations shall include: MLU = Mean length of utterances, WPM = (composed) words per minute, activities and time spent using specific features, and language topics/categories usage distribution
+1
+
+3.7.16
+Companion user shall be able to view multi-media training, setup instructions, troubleshooting guides, and request technical support in the companion software
+1
+
+3.7.17
+Companion user shall be able to view in real-time an emulation of the experience being displayed to the Nexus end-user (IE. Screen-mirroring)
+2
+
+3.7.18
+Companion user shall be able to backup the Nexus end-user's personal application settings and device specific configuration
+1
+
+3.7.19
+Companion user shall be able to restore a backup of the Nexus end-user's personal application settings and device specific configuration
+1
+
+3.7.20
+Companion user shall be able to use a step-by-step software walkthrough to migrate data from one Nexus device to another device in the event of a system error that requires software application deletion and reinstallation 
+2
+
+3.7.21
+Companion user shall be able to set up and configure the Nexus device, upon authorization from the Nexus user, by updating the user's vocabulary, phrase inventory, or favorites
+1
+
+3.7.22
+Companion user shall be able to locate a lost or stolen Nexus device, following authorization of the Nexus end-user, via 'Apple Find My' service
+3
+
+
+
+8.3.8 Data Security and Privacy
+The Nexus records information and metrics about the user and their preferences and these can be shared with others, when appropriate. Access and permissions to various soures of user data is managed and authorized by the Nexus user and their care circle contacts can request access to assist in the management of their settings and data.
+
+This section of requirements describes the capabilities and features for managing the security and privacy of the Nexus user's application settings, history, configuration, metrics, and reports.
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+3.7.1
+User shall be able to access privacy settings to delete utterance history
+1
+
+3.7.2
+User shall have the option to turn off the utterance retention in their settings and the Nexus will no longer save any new utterances to the history folder
+1
+
+3.7.3
+User shall be able to access privacy settings to opt-out of recording user activity and the associated metrics used for clinical reports
+1
+
+3.7.4
+Primary user shall be able to create a user account for personal device use
+1
+
+3.7.5
+Additional users shall be able to create a care circle account and request a primary account user to authorize account information sharing 
+2
+
+3.7.6
+User shall be able to authorize care circle contacts and manage their information access and permissions
+2
+
+3.7.7
+User shall be able to approve changes to their personal data and settings that are made by those in their care circle on an individual basis
+1
+
+3.7.8
+User shall be able to grant an auto-approve permission that authorizes selected individuals in their care circle the ability to change their personal data and settings without a manual approval by the user
+2
+
+3.7.9
+Nexus shall store account-specific settings, user favorites, history, and predictive models in the cloud for backup, when connectivity is available
+1
+
+3.7.10
+User shall have the ability to restore account-specific settings, user favorites, history, and predictive models from the cloud backup, when connectivity is available
+2
+
+
+
+8.4 Business Requirements
+8.4.1 Operations
+The following requirements are intended to support the effective build of the Nexus product.
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+4.1.1
+The cost of goods sold for all device hardware assembly and peripherals shall not exceed $2,000 USD
+1
+
+4.1.2
+The Nexus shall have an N. America-based depot repair center with certified repair personnel and certified replacement parts
+1
+
+4.1.3
+The Nexus shall include manufacturing test suite software for device component verification, configuration, and integrated system testing
+2
+
+4.1.4
+The manufacturing test suite software for Nexus shall include acceptance criteria and methods for verifying the components and systems
+2
+
+4.1.5
+The manufacturing test suite software for Nexus shall include acceptance criteria and methods for verifying factory equipment and test apparati 
+2
+
+4.1.6
+The manufacturing test suite software reports for Nexus shall be stored in a centralized data repository that is accessible via the internet
+3
+
+4.1.7
+The Nexus shall be shipped in a container that protects the product integrity and ensures that less than 1% of all shipped units are dead-on-arrival
+2
+
+4.1.8
+The Nexus packaging shall include the appropriate labeling for electrical safety information, device certifications, and a FDA compliant unique device identification
+1
+
+
+
+8.4.2 Service and Support
+
+The Nexus comes with comprehensive support both built into the device itself as well as remote services.  From delivery to daily use the Nexus will come with support materials to walk the user through each step needed for success.  
+
+This section of requirements describes the support included in the purchase of a Nexus from unboxing to daily use, troubleshooting, potential repair support, and various customer support documents.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+
+
+4.2.1
+The Nexus shall include software for field service troubleshooting, repair, maintenance, and device performance testing
+1
+
+
+
+4.2.2
+The Nexus shall include software for technical support to remotely access the device, with permission of the user, for device configuration and user training
+3
+
+
+
+4.2.3
+The Nexus shall have an average mean time between failure of 1 year or longer
+2
+
+
+
+4.2.3
+The Nexus shall support customer replaceable components including:lens mounting cover, lens, charging cable, head-strap, and mobile phone
+1
+
+
+
+4.2.4
+The Nexus technical support model shall include a rapid field replacement process when a device repair is required and device return has been approved
+1
+
+
+
+4.2.5
+The Nexus support model shall include a returns tracking process for root cause analysis and install base monitoring
+1
+
+
+
+4.2.6
+The Nexus support model shall include a technical support and field service training certification process.
+2
+
+
+
+4.2.7
+The Nexus field service training shall require demonstrating proficiency in using the field service software for device maintenance and performance verification
+1
+
+
+
+4.2.8
+The Nexus customer support model shall include email, phone, live-remote, and on-site support capabilities 
+2
+
+
+
+4.2.9
+The Nexus customer support model shall include a system for recording, storing, and viewing historical customer support details and service reports
+1
+
+
+
+4.2.10
+The Nexus customer documentation shall include a User Manual, Quick Start Guide, and Companion Software User Manual
+1
+
+
+4.2.11
+The Nexus field service and technical support documentation shall include an Install and Configuration Guide, Technical Service Manual, and Instrument Performance Verification Guide
+1
+
+
+4.2.12
+Nexus shall include training, tools and guides to enable users to express their first word within 5 minutes.
+2
+
+
+
+4.2.13
+Nexus shall include training, tools and guides to enable users to use the device independently within 30 minutes.
+1
+
+
+
+4.2.14
+Nexus shall have application and crash behavior logs available for remote diagnostics. 
+2
+
+
+
+
+
+
+
+
+
+
+
+
+
+8.4.3 Marketing
+ The Nexus marketing plan will include a multistep rollout that will reach the goal market. The marketing plan will assist in creating a new funnel of customers as well as nurturing the existing clientele.
+
+This section of requirements describes the marketing included in the pre-launch, promotion and post launch of the Nexus.
+
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+4.3.1
+The Nexus will be for use by adult literate users that have at least a 4th-grade literacy and do not rely on symbol-only language systems
+1
+
+4.3.2
+The Nexus will include a disclaimer indicating that users at risk of photoepileptic response shall first consult their physician before use
+1
+
+4.3.3
+The Nexus will indicate the cognitive/visual impairments that are compatible with its use and impairments that are not currently supported
+1
+
+4.3.14
+Marketing will include a demo version of the application that can be used in live events like tradeshows and also include the ability for demonsration over online conferencing like Zoom for webinar based demos.
+
+
+4.3.15
+The Nexus product will include telemetry that can be integrated with marketing automation systems for customer relationship manatement and support
+
+
+4.3.16
+The Nexus product will include MDM (Mobile Device Management) or equivalent method for asset tracking and remote support
+
+
+
+8.5 Patient Safety & Regulatory Requirements
+8.5.1 Regulatory
+The Nexus product will meet the standard regulations and standards required for marketing and sale in the united states.  Based on FDA feedback, it will be a class 2 device with either a 510K or be 510K exempt.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+5.1.1
+The Nexus shall conform to appropriate FDA regulations suitable for compliance in a supervised, clinical, at home setting
+2
+
+5.1.2
+The Nexus shall conform to appropriate FCC and CE regulations suitable for compliance in a home, office, and other personal settings
+1
+
+5.1.3
+The Nexus shall conform to appropriate GDPR, FERPA, HIPAA, CCPA, and other privacy regulations suitable for compliance in storing personally identifiable information
+1
+
+5.1.4
+The Nexus shall conform to the appropriate ISO requirements (e.g.13485)
+1
+
+
+8.5.2 Patient Safety
+The Nexus will meet standard patient safety requirements for a product maketed and sold in the united states.  The product is primarily intended for a single person use.
+
+Req #
+Requirement Description
+Priority
+(1,2,3)
+PRD #
+5.2.1
+The Nexus shall be able to be sanitized between uses or users 
+3
+
+
+9 Document Approval
+
+The following members of the Team have reviewed and agreed to the details outlined in this document.
+
+Functional Area
+Name
+Signature
+Date
+Upstream Marketing
+Jakrey Myers
+
+
+Downstream Marketing
+Meaghan Azlein
+
+
+Project Management
+Iyanka Ponnamperuma
+
+
+Technical
+Chris Ullrich
+
+
+Clinical & Language System Design
+Lucas Steuber
+
+
+User Interface
+Tim Stutts
+
+
+

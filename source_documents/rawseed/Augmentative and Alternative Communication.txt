@@ -1,0 +1,2090 @@
+5/9/23, 12:11 PM  Augmentative and Alternative Communication
+
+American Speech-Language-Hearing Association
+
+Making effective communication, a human right, accessible and achievable for all.
+
+Search                                                                                                           
+
+Augmentative and Alternative Communication
+
+                                                                                                                 Collapse All
+
+Overview
+
+The scope of this page is augmentative and alternative communication across the lifespan.
+
+See ASHA's Augmentative and Alternative Communication evidence map for summaries of the available research
+on this topic.
+
+Augmentative and alternative communication (AAC) is an area of clinical practice that supplements or compensates
+for impairments in speech-language production and/or comprehension, including spoken and written modes of
+communication. AAC falls under the broader umbrella of assistive technology, or the use of any equipment, tool, or
+strategy to improve functional daily living in individuals with disabilities or limitations.
+
+AAC uses a variety of techniques and tools to help the individual express thoughts, wants and needs, feelings, and ideas,
+including the following:
+
+       manual signs
+       gestures
+       finger spelling
+       tangible objects
+       line drawings
+       picture communication boards and letter boards
+       speech-generating devices
+
+AAC is augmentative when used to supplement existing speech, alternative when used in place of speech that is absent
+or not functional, or temporary as when used by patients postoperatively in intensive care (Elsahar et al., 2019).
+
+Key Issues
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2  1/37
+5/9/23, 12:11 PM            Augmentative and Alternative Communication
+
+  Incidence and Prevalence
+
+It is difficult to estimate the prevalence of AAC users due to wide variability across this population in terms of diagnosis,
+age, location, communication modality, and extent of AAC use. Overall, the more severe an individual's communication
+deficit, the more likely the individual would benefit from AAC support (Brown et al., 2021; Funke et al., 2018; Iacono et al.,
+2016; Kristoffersson et al., 2020).
+
+Beukelman and Light (2020) estimated that approximately 5 million Americans and 97 million people in the world
+may benefit from AAC.
+In the United States among students who need support when communicating, a national survey of special educators
+across all 50 states reported that 18.2% of their students use a form of AAC for their communication mode: 6.9%
+use gestural modes, 6.5% employ pictorial supports, and 4.8% use a speech-generating device (SGD; Andzik et al.,
+2018). According to the 2009­2010 National Survey of Children with Special Health Care Needs, 4% of U.S.
+children with developmental disabilities and 10.5% of children with special health care needs did not have their
+assistive technology (AT) communication needs met (Lin et al., 2017).
+In the United Kingdom, Creer et al. (2016) estimated that 0.5% of the population requires the use of AAC based on
+the prevalence of conditions associated with the use of AAC in the United Kingdom. The largest populations of
+individuals who could benefit from AAC had diagnoses of Alzheimer's/dementia (23%), Parkinson's disease (22%),
+autism spectrum disorder (ASD; 19%), learning disabilities (13%), and stroke (11%). A survey of U.K. service
+providers conducted by Judge et al. (2017) reported an average of 0.0155% of individuals known to be using
+powered communication aids (e.g., voice output communication aids).
+Across specific pediatric populations, Iacono et al. (2016) estimated that 25%­30% of Australian children with
+autism have limited speech skills and would benefit from AAC. Kristoffersson et al. (2020) found that 44.4% of
+Swedish children with cerebral palsy used a form of AAC either exclusively or to supplement their speech. Brown et
+al. (2021) identified 6.9% of U.S. children with cleft palate or craniofacial anomalies as AAC users.
+A review of medical records at the University of Iowa Hospitals & Clinics found that 33% of intensive care unit (ICU)
+patients met the AAC candidacy criterion, whereas 3% of non-ICU patients met the AAC candidacy criterion (Zubow
+& Hurtig, 2013). Similarly, in the ICU setting, an Australian cohort study found that patients were unable to
+communicate verbally 17% of the time and staff reported difficulty communicating with patients 35% of the time.
+Despite these communication breakdowns, ICU patients used alternative modes (e.g., gestures, mouthing, personal
+electronic device) during only 11% of their time in the ICU (Freeman-Sanderson et al., 2019).
+Among adults with amyotrophic lateral sclerosis (ALS) in Scotland, Elliott et al. (2020) found 17.3% of ALS patients
+acquired AAC equipment for speech augmentation, speech replacement, or written communication support. In
+Germany, 46% of patients demonstrated the need for AAC, yet 39% failed to access an AAC device (Funke et al.,
+2018).
+
+Roles and Responsibilities
+
+Speech-language pathologists (SLPs) play a central role in the screening, assessment, diagnosis, and treatment of
+persons requiring AAC intervention. The professional roles and activities in speech-language pathology include
+clinical/educational services (diagnosis, assessment, planning, and treatment), advocacy, education, administration, and
+research.
+
+Appropriate roles for medical/clinical SLPs include the following:
+
+Provide training for medical and allied health professionals, educators, family members, and community members
+about AAC use and the impact of AAC on quality of life.
+Educate other professionals and caregivers on the needs of persons using AAC and the role of SLPs in meeting the
+needs of individuals who use AAC.
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2           2/37
+5/9/23, 12:11 PM                      Augmentative and Alternative Communication
+
+Serve as a liaison between the family and the SGD provider.
+
+Screen individuals who may benefit from AAC intervention.
+
+Conduct a culturally and linguistically relevant, comprehensive assessment of the individual's speech, language,
+
+and overall communication abilities.
+
+Conduct a comprehensive, transdisciplinary, culturally and linguistically relevant AAC assessment.
+
+Develop and implement culturally and linguistically relevant intervention plans to maximize effective communication
+
+between individuals who use AAC and their communication partners across the life span.
+
+Determine the need for further assessment and/or referral for other services.
+
+Refer to other professionals (rehabilitation engineer, AT professional, occupational therapist, physical therapist,
+
+music therapist, vision specialist, special educator, respite care worker) to facilitate access to comprehensive
+
+services, reduce barriers, and maximize opportunities for successful AAC use.
+
+Involve individuals and family members in decision making to the greatest extent possible throughout the
+
+assessment and intervention process.
+
+Document progress, determine appropriate AAC modifications, and determine dismissal and follow-up criteria, if
+
+indicated.
+
+Provide programming support, technical support, trialing of additional systems, and AAC/language development
+
+strategies, as necessary.
+
+Generate reports to help with funding and collaborate with funding agencies.
+
+Counsel persons who use AAC and their families/caregivers regarding communication-related issues and provide
+
+education aimed at preventing abandonment and other complications relating to AAC use.
+
+Serve as an integral member of an interdisciplinary team working with individuals who use AAC and their
+
+families/caregivers.
+
+Remain informed of research in the area of AAC and help advance the knowledge base regarding AAC assessment
+
+and intervention.
+
+Use evidence-based practice to evaluate functional outcomes of AAC intervention.
+
+Know about funding sources and the requirements for applying for funding from each source.
+
+Advocate for individuals and their families/caregivers.
+
+Roles and Responsibilities of School-Based SLPs
+
+Appropriate roles for school-based SLPs include the following:
+
+       Complete the comprehensive speech-language evaluation.
+       Consider the student's need for AT, including AAC.
+       Request, coordinate, or conduct a transdisciplinary AAC evaluation within the student's natural environment and
+       educational setting that includes both the student and their caregiver(s).
+       Provide trial periods with AAC systems and collect data.
+       Provide a variety of multimodal supports (no-tech/rapid access, low-tech/light-tech, and high-tech) to allow the
+       student to communicate across various environments in the school setting.
+       Collaboratively write and implement goals related to speech, language, literacy, participation, and use of AAC as
+       part of the individualized education program (IEP) team.
+       Ensure that the student's needs are met by others on the evaluation and treatment team.
+       Provide initial and ongoing training to teachers, parents, and support staff about AAC and the needs of students who
+       use AAC.
+       Participate in IEP meetings.
+       Ensure that AAC goals and AAC use are documented in a student's IEP.
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2      3/37
+5/9/23, 12:11 PM  Augmentative and Alternative Communication
+
+Provide transition support and documentation if AAC is deemed necessary for the student as they exit the school
+
+system.
+
+As indicated in the ASHA Code of Ethics, SLPs shall engage in only those aspects of the profession that are within the
+scope of their professional practice and competence, considering their level of education, training, and experience. If an
+SLP has inadequate experience/training and is unable to assist an AAC user, an SLP refers to or (at minimum) consults
+with an SLP with experience in AAC.
+
+AAC Populations
+
+Individuals who use AAC have an impairment or a limitation in speech, language, reading, and/or writing. These can be
+the result of congenital disabilities, acquired disabilities, or neurological differences such as autism.
+
+Examples of congenital disabilities that may benefit from AAC include
+
+       cerebral palsy,
+       developmental apraxia of speech,
+       developmental disability,
+       genetic disorders, and
+       intellectual disability.
+
+Individuals with congenital disabilities may continue to acquire language while using AAC. AAC may also serve as a tool
+to aid in expressive and receptive language acquisition and literacy development in this population. AAC needs may vary
+and change over time.
+
+Examples of acquired disabilities that may benefit from AAC include
+
+       cerebrovascular accidents (i.e., stroke);
+       traumatic or acquired brain injuries;
+       neurodegenerative diseases, such as
+
+               ALS,
+               supranuclear palsy,
+               primary progressive aphasia, and
+               apraxia;
+       disability following surgeries (e.g., glossectomy, laryngectomy); and
+       temporary/intermittent conditions for
+               patients in critical care settings (e.g., intubated patients) and
+               patients with acute laryngitis.
+
+AAC needs for individuals with acquired disabilities vary and may change over time, depending on language and
+cognitive status at the time of injury as well as on disease onset and progression.
+
+AAC Systems
+
+An AAC system is an integrated group of components used to enhance communication. These components include
+forms of AAC (described below), symbols, selection techniques, and strategies.
+
+The design of an AAC system should incorporate individual strengths and needs. It considers the individual's full
+communication abilities and may include existing speech, vocalizations, gestures, and/or some form of external system
+(e.g., SGD).
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2             4/37
+5/9/23, 12:11 PM                                     Augmentative and Alternative Communication
+
+An individual may use multiple modalities or many forms of AAC in combination, allowing for change based on context,
+
+audience, and communicative intent. A well-designed AAC system is flexible and adaptable. It allows for changes to
+
+vocabulary and mode of access as the individual's language and physical needs change over time.
+
+Forms
+
+AAC is typically divided into two broad categories.
+
+Unaided--do not require an external tool. Unaided forms require some degree of motor control. Unaided forms include
+the following:
+
+body language
+facial expressions
+finger spelling
+gestures
+manual signs
+vocalizations
+verbalizations
+
+Aided--require some form of external tool, either electronic or nonelectronic. Nonelectronic aided forms are often
+referred to as "light-tech" or "low-tech." Electronic forms may be referred to as "high-tech."
+
+Low-tech/light-tech options include the following:
+
+       communication boards/books
+       objects
+       pictures
+       photographs
+       visual schedules
+       writing
+
+High-tech options include the following:
+
+       computer/tablet/smartphone
+               communication apps, such as AAC software that enables dynamic symbol/language representation
+               text-to-speech features
+               texting
+               drawing/writing using a tablet
+
+       single-message devices and recordable/digitized devices
+       SGDs
+
+An individual may use one form of AAC alone or utilize a combination of unaided AAC, low-tech/light-tech aided AAC,
+and/or high-tech aided AAC forms.
+
+People who use AAC should always have access to their communication tools or devices. Concerns about the overuse of
+screen time, particularly for young children, do not apply to the use of screens as part of an AAC system.
+
+SGDs often have different voice output options to allow users to select a voice based on the following:
+
+age
+ethnicity
+gender
+language(s) used
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2       5/37
+5/9/23, 12:11 PM                     Augmentative and Alternative Communication
+
+          race
+
+However, voice output options may be limited and may not accurately reflect an individual's culture. SLPs should be
+mindful that work continues to be needed to develop AAC treatment and assessment that is culturally responsive (Mindel,
+2020).
+
+These devices use synthesized speech output, digitized speech output, or both.
+
+       Synthesized speech is electronically produced. Phonemes and allophones of the target language are used to
+       generate digital speech signals that are transformed into intelligible speech. Newer technology uses parameters and
+       vocal characteristics of the speaker's former or residual speech. Through voice banking, an individual can record a
+       large inventory of speech, which is then used to create a synthetic voice that approximates their natural voice
+       (Costello, 2011/2016). See Steve Gleason's Synthetic Voice for an example. Voice banking should be completed
+       when a communicator's energy and skills are sufficient to generate clear speech.
+       Digitized speech consists of natural speech that has been recorded, stored, and reproduced. Nonspeech sounds,
+       such as laughter or the sound of a car horn, can also be recorded. Through message banking, an individual can
+       use their own voice or a proxy voice to digitally record and store messages, which may include words, phrases,
+       sentences, and sounds using natural voice, inflection, and intonation. Those messages are then stored on, and
+       reproduced by, the AAC device (Costello, 2011/2016).
+
+Comparison of Synthesized and Digitized Speech Output
+
+Synthesized Speech                   Digitized Speech
+
+Less "natural sounding"              More "natural sounding"
+
+Requires less device memory storage  Requires more device memory storage
+
+Allows for generation of speech in   Allows for recording of speech in an individual's voice, reflecting their
+multiple languages                   language(s) and dialect(s) used
+
+Allows for novel message generation  Limited novel message generation (number of possible utterances is
+                                     limited to recorded items)
+
+SGDs should also have customization/individualization options for users to select icons, vocabulary, and
+languages/dialects that meet their unique needs.
+
+Additional Augmentative Supports
+
+In addition to AAC, other support systems exist for individuals with differences in expressive or receptive communication.
+These include additional augmentative supports and hearing AT systems. These devices are considered AT but do not fall
+under AAC, because they do not require skilled SLP intervention prior to use.
+
+Supports include the following:
+
+       amplification
+               hearing aids
+               cochlear implants
+               Hearing Assistive Technology Systems (HATS)
+                      personal amplification devices
+                      text telephones
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2  6/37
+5/9/23, 12:11 PM                                   Augmentative and Alternative Communication
+
+                  Telecommunications Device for the Deaf
+
+                  Teletype
+
+Braille
+
+voice amplifiers and artificial phonation devices
+
+                  electrolarynx devices
+
+                  intraoral devices
+
+                  speech valves (for individuals with tracheostomies or ventilators)
+
+HATS may aid communication among individuals who are not able to communicate via sign language or choose not to do
+so (see ASHA's Practice Portal pages on Hearing Loss in Adults and Hearing Aids For Adults).
+
+Symbols
+
+Symbols are used in AAC to represent objects, actions, concepts, and emotions. They can include the following:
+
+       facial expressions
+       gestures
+       objects
+       photographs
+       drawings
+       auditory symbols (e.g., spoken words)
+       orthography (i.e., alphabet-based symbols)
+       3-D symbols or tactile symbols
+
+Symbols may not have the same meaning or relevance across different languages and cultures. Responsive practices
+consider what is meaningful for each device user.
+
+Iconicity is the association made between a symbol and the item for which it stands (referent; Schlosser, 2003). Iconicity
+is classified depending on how easily the meaning of a symbol can be guessed.
+
+       Transparent symbols are readily guessable in the absence of the referent, such as a photograph or written word.
+       Opaque symbols are not readily guessable even when the meaning of the symbol is known, such as an
+       individualized gesture.
+       Translucent symbols lie between transparent and opaque symbols. The meaning of the referent may not be
+       obvious, but the relationship between symbol and referent is more obvious when additional information is provided
+       (Fuller & Lloyd, 1991).
+
+Iconicity directly affects the communicator's efficiency and effectiveness, especially with untrained or unfamiliar
+communication partners. High iconicity refers to displaying a symbol along with a written word and can help
+communication partners learn and interpret symbols, particularly if no voice output is available (Wilkinson & McIlvane,
+2002). Language representation methods (LRMs) refer to three common ways that symbols are used to represent
+language. The following LRMs are commonly used in AAC systems.
+
+       Alphabet-based methods use traditional orthography (spelling) and rate enhancement techniques such as word or
+       phrase prediction.
+       Single-meaning messages use graphic symbols (e.g., photographs, drawings), each of which represents one word
+       or message (e.g., touching a picture of a toy to indicate a desire or want to play with that toy).
+       Semantic compaction is based on the concept of multiple-meaning iconic encoding and is sometimes referred
+       to by its commercial name "Minspeak" (Baker, 1987). Semantic compaction combines picture symbols (icons) in
+       various prescribed sequences to form words or phrases. Because a single icon can be associated with multiple
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2             7/37
+5/9/23, 12:11 PM                         Augmentative and Alternative Communication
+
+meanings, a relatively small set of icons can be used to create many words and phrases. Early in the use of
+
+semantic compaction, for example, frog could refer to the following concepts: "frog," "green," "jump," and "water."
+
+Pairing frog with different symbols can communicate these various concepts--Frog + Rainbow = Green; Frog +
+
+Arrow = Jump; Frog + Cup = Pond (Glennen, 1997). With the increase in dynamic screen technology, semantic
+
+compaction still uses multiple-meaning icons, but the technology guides the user with screen changes and picture
+
+representations. For example, one would now touch a rainbow to represent color words. The screen changes to
+
+represent a picture of a hand with a crayon for the verb "color," and a row of colors at the top of the screen.
+
+A person who uses AAC may use a single LRM or a combination of LRMs, depending on preference and the functionality
+of the system.
+
+A person's spoken vocabulary will change based on their age, communication partner, language development,
+environment, mood, and context. The symbols used in an AAC system should allow for the same changes and flexibility.
+Symbols are not universal across cultures. It is important to include symbols that are relevant to the individual and their
+community. In addition, consider appropriate skin tone and physical features in icons that appropriately reflect the AAC
+user and their community.
+
+Symbol selection is also based on the person's ability to access, recognize, and learn each symbol's meaning. For
+example, a person with visual deficits may need a symbol that is modified to be viewable or is accessible via other
+sensory modes such as listening or touch.
+
+Symbol Display
+
+The display relates to the way in which symbols are presented on an AAC system. Different encoding options (e.g.,
+alphanumeric, numeric, iconic, alphabetic, and color) are sometimes used to organize displays. Displays can be static
+(fixed), dynamic (changes based on user actions), or hybrid (a combination of static and dynamic).
+
+                                         Display Types
+
+Static/Fixed                    Dynamic                      Hybrid
+
+Symbols remain in a fixed       Electronic--selection of     Static/fixed display with dynamic
+location.                       one symbol automatically     component (e.g., alphabet board or
+Most common in                  activates change in symbol   keyboard with word prediction; grid
+communication boards or low-    set.                         display that opens new page following
+tech SGDs.                      Often arranged by large      user selection of a symbol).
+There are a finite number of    category first and then
+symbols/messages.               broken down to more
+Users may have multiple fixed   specific vocabulary items.
+displays (e.g., multiple pages  With use of multiple-
+in a communication book).       meaning icons, selection of
+                                one icon may prompt
+                                display of other related
+                                icons.
+
+A visual scene is a photo or video that represents situations, routines, places, or events. Elements within the visual
+scene may trigger message output when selected, also known as "hotspots."
+
+Visual scenes may be easier to learn and use than grid displays for beginning communicators (e.g., young children or
+older individuals who are at early-functioning communication stages). There is also utility for people with acquired
+communication needs such as aphasia (Dietz et al., 2020). For more details about visual scene displays and an example,
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2              8/37
+5/9/23, 12:11 PM                         Augmentative and Alternative Communication
+
+   see Tuthill (2014).
+
+Symbol Organization
+
+Symbol organization on an AAC system affects the individual's ability to communicate effectively and efficiently. Symbol
+organization should be appropriate to the user's language level and address the user's needs and capabilities as well as
+those of the communication partners (Beukelman & Light, 2020). Organization strategies may change over time based on
+changes in skills and contexts.
+
+Most AAC systems, with the exception of visual scenes, are presented in a grid format. The organization of vocabulary,
+symbol size, and number of symbols on the grid is individualized and determined by the type of display; the type of
+symbol; and the visual acuity, communication and cognitive skills, integrated sensory system, and motor control of the
+individual. These systems do not have to be accessed via touch; selections can be made via eye gaze, head pointing, or
+scanning methods.
+
+Semantic­syntactic displays organize vocabulary based on parts of speech and syntactic framework. Symbols are laid
+out according to spoken word order and print orientation, and they are adaptable to languages that follow different
+semantic rules than English (e.g., left-to-right or right-to-left, adjective­noun, noun­adjective). Semantic­syntactic
+displays are useful for adults with relatively intact language (e.g., individuals with ALS) or language learners, and they can
+facilitate efficient production of grammatically complex messages.
+
+Taxonomic displays group symbols according to semantic category (e.g., people, places, feelings, actions). Typically
+developing children begin to find this type of grouping helpful at around the age of 6­7 years, so this strategy may not be
+appropriate for individuals at earlier stages of language development (Beukelman & Light, 2020). The use of taxonomic
+displays for persons with aphasia can add to the cognitive and linguistic load and may lead to increased errors and slower
+response time (Petroi et al., 2011).
+
+Activity grid displays (also known as "schematic grid layouts" or "activity-based displays") organize vocabulary by event
+schemes, routines, or activities. Each page or display includes activity-specific vocabulary and may be further organized
+by part of speech (e.g., nouns, verbs). Activity grid displays can increase participation and syntactic development by
+encouraging use of multiword combinations (Drager et al., 2003). Users may be able to navigate independently from one
+activity display to another, or they may rely on a facilitator or communication partner to provide the appropriate activity
+display for a given situation.
+
+Context-based displays are similar to activity grid displays but are designed for a particular (usually frequent) context or
+environment, allowing for greater generalization than vocabulary designed around a single, specific activity. Context-
+based displays require a well-developed combination of core and fringe vocabulary.
+
+Pragmatic Organization Dynamic Display (PODD) is a system of organizing and selecting words or symbol vocabulary
+on a low-tech/light-tech or high-tech AAC system, so that individuals with complex communication needs and their
+communication partners can communicate more easily. The aim is to provide vocabulary for continuous communication
+all the time, across a range of different topics, using a variety of messages.
+
+PODD communication books can vary depending on the specific needs of the individual, in
+
+symbol size,
+number of items on a page,
+language complexity,
+access method, and
+presentation mode (visual or auditory).
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2         9/37
+5/9/23, 12:11 PM                Augmentative and Alternative Communication
+
+Vocabulary organization considers communicative function and flow of conversational discourse. Books include symbols
+
+for navigation, such as "I have something to say" and "Go to page____"; colored page tabs that match page numbers;
+
+and symbols for specific operational commands, such as "Turn the page," "Go back to page__," and so forth. The first
+
+pages of the PODD book often include words or phrases to support behavioral and environmental regulation and may
+
+also include pragmatic starters, such as "Something's wrong," "I want something," or "I'm asking a question," to help
+
+individuals convey contextual information (Porter & Cafiero, 2009). PODD can help increase communication because of
+
+the focus on the communication partner to work with the client to maneuver the PODD book.
+
+Inclusive Vocabulary Selection
+
+Selection and inclusion of functional, personalized, and meaningful vocabulary within an AAC system can lead to greater
+intervention success and decreased likelihood of abandonment (Moorcroft et al., 2019) of AAC supports. The SLP
+considers the individual's needs for communicating with family members and other communication partners (e.g., in social
+contexts, academic settings, medical settings, vocational settings, etc.). The vocabulary selected is commensurate with
+peers, relevant to the individual's language, dialects, culture, and personal identities. Our personal lexicons shift over
+time. AAC devices should provide users with opportunities to grow and speak about their personal relationships with their
+loved ones. Nouns tend to dominate vocabulary sets for AAC users (Dark & Balandin, 2007); however, the inclusion of
+verbs and other parts of speech can increase AAC acceptance and use (Adamson et al., 1992).
+
+Vocabulary is often divided into two categories: core and fringe (or "extended"). Core vocabulary consists of high-
+frequency words that make up about 80% of the words used by most people every day (Quick et al., 2019). Core
+vocabulary contains mostly pronouns, verbs, descriptors, and question words (Witkowski & Baker, 2012). English
+language learners use a comparable amount of core vocabulary as do native English speakers (Boenisch & Soto, 2015).
+Fringe vocabulary consists of lower frequency words--mostly nouns--that tend to be context specific. Combining core
+and fringe vocabulary can increase the frequency of AAC use (Beukelman et al., 1991; van Tilborg & Deckers, 2016;
+Yorkston et al., 1988).
+
+Selection Techniques
+
+Selection techniques are the ways in which messages or symbols are accessed by the AAC user. There are two main
+selection techniques.
+
+Direct selection--The AAC user selects the desired symbol directly from a selection set. Direct selection can be
+
+electronic or nonelectronic,
+done with direct physical touch (e.g., body part or other object), or
+done with a generated movement or signal (e.g., via joystick, eye gaze, trackball, traditional or head mouse, brain­
+computer interface technology, light indicator).
+
+Indirect selection (scanning)--Each item from a selection set is presented sequentially until the desired item appears
+and is selected by using a previously agreed-upon motor movement or vocalization or by using a switch.
+
+Presentation of items in the selection set can be auditory, tactile, or visual.
+Items on the screen are presented one by one, in a row, column, or quadrant.
+Partner-assisted scanning is an indirect selection technique in which the communication partner presents
+messages or letter choices in a sequential fashion (visually or auditorily) to the individual, and the individual then
+makes their selection using a previously agreed-upon motor act (e.g., blinking, grunting, nodding, raising a hand,
+etc.). Partner-assisted scanning
+
+       is used with individuals who have severe motor, visual, and/or communication impairments;
+       may be used with individuals who do not yet have established means of alternative access; and
+       may be used as an alternative when the primary system is unavailable or not functioning.
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2         10/37
+5/9/23, 12:11 PM                                    Augmentative and Alternative Communication
+
+                  Comparing Direct and Indirect Selection Techniques
+
+Direct Selection                                   Indirect Selection
+
+Less load on working memory of user and listener   Greater demand on listener's and user's working
+Can be used with high-tech or low-tech/light-tech  memory
+systems                                            Can be used with high-tech or low-tech systems
+Requires more precise and accurate motor           Requires less fine-motor control
+movements                                          Requires intermediary steps between the motor act
+One-to-one relationship between the motor act and  and message generation
+message generation                                 Can be used by individuals with significant visual
+Requires greater visual and/or auditory acuity     and/or auditory deficits
+
+Communicative Competence
+
+Communicative competence is an individual's ability to freely express ideas, thoughts, and feelings to a variety of
+listeners across contexts. It provides the means to achieve personal, educational, vocational, and social goals (Calculator,
+2009; Light & McNaughton, 2014; Lund & Light, 2007). Individuals must achieve communicative competence whether
+they use natural speech or AAC, but their paths may vary (Light et al., 2003).
+
+Communicative competence for AAC users consists of the following five individual competencies (Light et al., 2003; Light
+& McNaughton, 2014).
+
+Linguistic competence includes knowledge of and the ability to use the language(s) spoken and written in the
+individual's family and community (see Language In Brief) as well as knowledge of and the ability to use the
+linguistic code (symbols, syntax, grammar) of the AAC system.
+Operational competence requires skill in the technical operation of AAC systems and techniques, including
+
+       having the motor movements needed for unaided approaches,
+       using selection techniques for aided approaches,
+       navigating in and between systems,
+       turning an electronic device on and off and charging it, and
+       operating electronic equipment and/or navigating pages in a low-tech system.
+Strategic competence is the ability to use available features to convey messages efficiently and effectively,
+including
+       asking for choices due to vocabulary limitations,
+       using word/phrase prediction to enhance efficiency,
+       using an introductory (pre-stored) statement to explain AAC to unfamiliar communication partners, and
+       asking one's communication partner to write or type messages to aid in understanding and to repair
+       communication breakdowns.
+Social competence is knowing what, where, with whom, when and when not to, and in what manner to
+communicate. Social communication skills include
+       turn-taking,
+       initiating and terminating communication,
+       topic maintenance, and
+       code-switching.
+       requesting attention;
+       requesting or providing information; and
+       pragmatic skills, such as
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2  11/37
+5/9/23, 12:11 PM                                   Augmentative and Alternative Communication
+
+Psychosocial competence is the ability to manage the demands and challenges of daily life, maintain a state of
+
+mental well-being, and demonstrate adaptive and positive behavior during communication (World Health
+
+Organization [WHO], 1997). Psychosocial competence for AAC users includes
+
+                  being motivated to communicate,
+
+                  having a positive attitude toward the use of AAC,
+
+                  having confidence in one's ability to communicate effectively in a given situation, and
+
+                  being resilient--persisting in the face of communication failures.
+
+Assessment
+
+See the Assessment section of the Augmentative and Alternative Communication (AAC) Evidence Map for pertinent
+scientific evidence, expert opinion, and client/caregiver perspective.
+
+The goal of an AAC assessment is to determine the system component that will optimize communication for the user.
+AAC assessment is an ongoing process; ongoing evaluation and decision making are required, even after an AAC system
+has been selected. Elements of dynamic assessment and other informal assessments are used to supplement
+standardized assessment data. See Assessment Tools, Techniques, and Data Sources for a description of testing and
+data collection options.
+
+Exposing individuals to symbols and systems prior to assessment may ensure more accurate assessment results. This
+can be accomplished by providing core and fringe vocabulary supports in the home and day environment (e.g.,
+classroom) and by introducing visually represented language using a variety of communication display forms and sizes
+prior to the formal assessment process.
+
+Assessment considers the needs of the individual. Needs may include one or more of the following:
+
+       augmentative means of communication to facilitate natural speech;
+       alternative means of communication to replace verbal speech, writing, or expressive language;
+       temporary or permanent need for AAC; and/or
+       means of communication to facilitate more appropriate alternate behaviors.
+
+Primary, secondary, and tertiary components of the AAC system are also considered during assessment.
+
+       Primary components are those that perform the functions of natural language and have the greatest impact on
+       communication performance (e.g., symbols, vocabulary, methods of utterance generation).
+       Secondary components relate to the way the individual uses and interacts with the system (e.g., user interface,
+       selection method and output).
+       Tertiary components are often external to the system itself but affect long-term use and ongoing success with the
+       system (e.g., switches, portability, mounts, training and support; Hill & Corsi, 2012).
+
+SLPs also collaborate and engage with family members and caregivers during the assessment. These individuals can
+often report consistent behaviors and current means of communication beyond what the SLP may directly
+assess/observe. Lack of family involvement in the AAC process is cited as a significant factor in device abandonment.
+Therefore, incorporating family members into the AAC process is crucial (Bailey et al., 2006; Moorcroft et al., 2019).
+Abandonment of an AAC system is used here to mean that an individual has stopped using an AAC device even though
+one is still needed. Abandonment occurs in approximately one third of cases (Zangari & Kangas, 1997), even if the
+system is well designed and functional (Johnson et al., 2006).
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2  12/37
+5/9/23, 12:11 PM  Augmentative and Alternative Communication
+
+The assessment should be conducted in the language(s) needed by the AAC user. Unique characteristics, linguistic
+
+background, and cultural variables that affect communication style and use are considered and reflected in assessment
+
+and treatment plans. Interpretation services may be needed (see Collaborating With Interpreters, Transliterators, and
+
+Translators).
+
+If the individual (and/or communication partner) wears hearing aids or prescription eyeglasses, these should be worn
+during the assessment. Hearing aids should be inspected prior to the assessment to ensure that they are in working
+order. SLPs should obtain documentation of hearing and vision evaluations or make referrals as appropriate.
+
+Environmental modifications should be made to accommodate vision or hearing deficits and any other physical difficulties.
+These modifications may include the following:
+
+special lighting
+physical positioning of the individual relative to their communication partner
+volume of the SGD
+additional personal amplification, if needed
+modifications of physical space to accommodate wheelchairs or other specialty seats
+
+Consistent with the WHO's International Classification of Functioning, Disability and Health (ICF) framework (ASHA,
+2016; WHO, 2014), a comprehensive assessment of individuals with AAC needs is conducted to identify and describe
+
+       impairments in body structure and function, including underlying strengths and weaknesses in speech sound
+       production, verbal/nonverbal communication, and gross and fine motor skills for writing and accessing an AAC
+       system;
+       comorbid deficits, such as apraxia of speech, dysarthria, ASD, intellectual disability, and neurodegenerative
+       disease;
+       the individual's limitations in activity and participation, including functional status in communication,
+       interpersonal interactions, and learning potential;
+       contextual (environmental and personal) factors that serve as barriers to, or facilitators of, successful
+       communication and life participation; and
+       the impact of communication impairments on quality of life and functional limitations relative to premorbid
+       communication status (where applicable).
+
+See Person-Centered Focus on Function: Augmentative and Alternative Communication for Adult with Amyotrophic
+Lateral Sclerosis (ALS) [PDF] and Person-Centered Focus on Function: Augmentative and Alternative Communication for
+Child with Cerebral Palsy [PDF] for examples of assessment data consistent with the ICF framework.
+
+Comprehensive Assessment for AAC: Typical Components
+
+Many components of the comprehensive assessment may already be documented in an individual's records (i.e., medical
+or school records). The components listed below may be completed if not addressed in these records.
+
+Case History
+
+       medical status and history, education, occupation, and linguistic backgrounds
+       history and current use of AAC systems, including motivation to use AAC
+       prognosis and potential for disease progression, when applicable
+
+   Ecological Inventory                                                                                                13/37
+
+          current communication skills and needs
+          communication skills in relation to similarly matched peers
+          communication skills in relation to the environment
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2
+5/9/23, 12:11 PM  Augmentative and Alternative Communication
+
+   Self-Report
+
+functional communication success
+communication difficulties and impact on individual and family/caregiver
+contexts of concern (e.g., social interactions, work activities)
+language(s) used in contexts of concern
+individual's goals and preferences
+
+Sensory and Motor Status
+
+       vision--ability to see symbols/text on the AAC system
+       physical/motor status--means of access to the AAC system (positioning, fine motor, gross motor)
+       integrated sensory system--ability to regulate and ready the body for communication
+
+Hearing Screening
+
+See Childhood Hearing Screening and Hearing Screening.
+
+Speech Sound Assessment
+
+See the Assessment section of the following ASHA Practice Portal resources: Speech Sound Disorders: Articulation and
+Phonology, Childhood Apraxia of Speech, and Acquired Apraxia of Speech.
+
+Expressive and Receptive Language Assessment
+
+The SLP should complete a comprehensive speech and language assessment relative to an individual's needs. An SLP
+should evaluate expressive and receptive skills, including
+
+       an individual's method of expressing communicative intent;
+       current means of communication and their effectiveness (verbal and nonverbal);
+       vocabulary size and word types used and understood;
+       word combinations and grammatical forms used and understood;
+       the ability to follow commands;
+       the ability to respond to yes/no questions; and
+       the ability to correctly point to objects, words, and pictures given an auditory stimulus.
+
+See the Assessment section of the following ASHA Practice Portal resources: Spoken Language Disorders, Late
+Language Emergence, and Aphasia.
+Written Language Assessment (Reading and Writing)
+See the Assessment section of Written Language Disorders.
+Social Communication Assessment
+See the Assessment section of Social Communication Disorder.
+Cognitive Communication Assessment
+Memory, attention, problem-solving, and executive skills in the context of functional AAC use.
+See Traumatic Brain Injury in Adults and Evaluating and Treating Communication and Cognitive Disorders: Approaches to
+Referral and Collaboration for Speech-Language Pathology and Clinical Neuropsychology.
+Symbol Assessment
+Ability to use various symbol features to meet current and future communication needs, including
+
+       type of symbol (e.g., objects, pictures, letters, printed text),
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2       14/37
+5/9/23, 12:11 PM          Augmentative and Alternative Communication
+
+symbol size,
+
+field size (e.g., number of symbols in a display), and
+
+organization of display.
+
+Feature-Matching Assessment
+
+Based on individual skills and needs, determine appropriate AAC system features, including
+
+       the ability to facilitate written communication,
+       the capability to allow a range of communication functions,
+       capacity for use in varying environments and with different partners,
+       type and number of symbols,
+       type of display and display features (e.g., color vs. black and white, static vs. dynamic, hybrid),
+       input type (i.e., direct vs. indirect selection),
+       output (i.e., type of speech, voice),
+       options for physical positioning and need for accessories (e.g., mounts or switches),
+       portability,
+       the capability to be modified to allow for changes in communication abilities and needs,
+       AAC user preference,
+       the ability to motivate use by an individual, and
+       affordability and ease of maintenance.
+
+See the Resources section of this document for sample feature-matching charts and checklists.
+
+Identification of Contextual Facilitators and Barriers
+
+       Facilitators such as
+               the ability and willingness to use AAC systems,
+               family support,
+               motivation to communicate, and
+               technological knowledge/abilities of the user and family.
+
+       Barriers such as
+               reduced confidence in communication,
+               cognitive deficits,
+               visual and motor impairments,
+               lack of acceptance of disability and/or AAC use,
+               limitations in the capability of the AAC system, and
+               seating and positioning limitations across environments.
+
+Assessment Considerations
+
+AAC assessments may be time consuming, and if all questions are unanswered, continued assessment may progress
+alongside treatment. Trials of specific devices are often a component of AAC treatment, and an individual's success with a
+specific device may not be effectively determined upon initial assessment.
+
+Treatment
+
+See the Treatment section of the Augmentative and Alternative Communication (AAC) Evidence Map for pertinent
+scientific evidence, expert opinion, and client/caregiver perspective.
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2  15/37
+5/9/23, 12:11 PM  Augmentative and Alternative Communication
+
+The goal of intervention is to maximize the efficiency and effectiveness of communication for individuals who are unable
+
+to communicate via verbal speech. Whenever possible, intervention takes place in a naturalistic environment in order to
+
+promote generalization and functional use. Potential areas of focus for treatment include using AAC to
+
+improve functional communication,
+increase language and literacy skills,
+improve speech production and comprehensibility with the use of multiple modalities,
+decrease challenging behaviors, and
+improve social communication.
+
+AAC interventions address the development of adequate, functional communication skills to support individuals with
+complex communication needs in developing, rebuilding, or sustaining communicative competence to express needs and
+wants, develop social closeness, exchange information, and participate in social etiquette routines (Drager et al., 2010;
+Light & McNaughton, 2014).
+
+AAC intervention requires ongoing collaborative decision making and training to promote communicative competence and
+language and literacy development, as well as modifications to AAC systems to support changes in communication needs
+over time. For individuals using aided approaches, intervention may include customization of vocabulary, rate
+enhancement features that allow users to produce language with fewer keystrokes, and updates to software for high-tech
+devices.
+
+Preferred practice for AAC intervention incorporates multiple communication modalities so that the user is not restricted to
+aided or unaided approaches but can use a combination of communication modalities, depending on the environment,
+listener, and intent of the message.
+
+See Person-Centered Focus on Function: Augmentative and Alternative Communication for Adult with Amyotrophic
+Lateral Sclerosis (ALS) [PDF] and Person-Centered Focus on Function: Augmentative and Alternative Communication for
+Child with Cerebral Palsy [PDF] for examples of functional goals consistent with the ICF framework.
+
+Working With Other Professionals
+
+SLPs often collaborate with other professionals to improve the success of AAC intervention.
+
+       Physical and occupational therapists assist with positioning and selection methods for AAC users.
+       Vision specialists assist in determining the best ways for an individual to process and understand symbols and to
+       reduce visual barriers to symbols.
+       Rehabilitation engineers or AT professionals help SLPs and AAC users with programming, accessibility, and efficient
+       use of the AAC device.
+       Special education and classroom teachers can help the SLP incorporate curriculum-related vocabulary into the AAC
+       system and facilitate the use of the AAC system in the classroom.
+       Behavior specialists assist in identifying communicative intent and embedding AAC systems into daily activities.
+       Vocational rehabilitation specialists provide education to employers regarding workplace accessibility and inclusion
+       of the AAC user in vocational activities.
+       Members of the medical team include nurses, doctors, case managers, and social workers to assist with medical
+       management and transition planning.
+
+See Collaboration and Teaming and Interprofessional Education/Interprofessional Practice (IPE/IPP).
+
+Communication Partner Involvement and Training
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2           16/37
+5/9/23, 12:11 PM                           Augmentative and Alternative Communication
+
+Communication partners are integral to the assessment and treatment process. Family, friends, and caregivers bring an
+
+important and unique understanding of the strengths, challenges, and needs of the individual who uses AAC. In addition
+
+to helping the individual identify goals and objectives for treatment, they often have input into the type of AAC system
+
+used, daily communication needs, and vocabulary incorporated into the system. This helps ensure carryover and
+
+functional use of the system in everyday life. Partial or complete abandonment of AAC can occur when partner input is not
+
+considered during AAC intervention (Angelo et al., 1995; H. P. Parette et al., 2000; P. Parette et al., 2000). See Family-
+
+Centered Practice for general guidelines.
+
+Communication partner training facilitates effective communication and incorporates instruction in the following skills:
+
+using active listening strategies;
+increasing wait time for conversational turn-taking;
+using augmented input to facilitate communication (e.g., visual and environmental cues);
+helping the user take advantage of rate enhancement features;
+understanding the operational aspects of high-tech devices (e.g., turning the device on and off; charging and storing
+the device; programming; and troubleshooting); and
+supporting the communication of the person who uses AAC across contexts, and communication partners.
+
+The SLP trains multiple communication partners, including other professionals who work with the AAC user.
+
+Inadequate training of communication partners has been identified as a barrier to device use in addition to limitations of
+the AAC device itself and insufficient involvement in device selection (Bailey et al., 2006). For example, communication
+partners are more likely to ask yes/no questions instead of open-ended questions, dominate the conversation, or fail to
+respond to the individual's communication attempts when communicating with children who use AAC (Kent-Walsh &
+McNaughton, 2005).
+
+Successful integration of AAC devices depends on the consistency of use. For instance, a device may not be maximally
+effective if it is used only at home but not in other situations (e.g., school or the workplace).
+
+Treatment Approaches
+
+Treatment selection depends on a number of factors, including the individual's communication needs, the presence and
+severity of co-occurring conditions (e.g., cerebral palsy, apraxia of speech, aphasia, or progressive neurological
+diseases), and the individual's communication needs, including language(s) used and consideration of belief systems and
+other cultural elements.
+
+Once an AAC system is selected, intervention will initially focus on training the individual and their family/caregivers in
+how to use the device and/or system components (i.e., operational competence). Interventions should incorporate use of
+the AAC system into a naturalistic environment and address using the system to target broader communication goals
+such as language and literacy development and social interaction.
+
+SLPs consider strategies, target areas and goals they use in other areas of language treatment as they select and
+implement AAC treatment approaches. SLPs use AAC system components to address these areas. Additionally, SLPs
+consider the type and frequency of prompting they use during AAC intervention and training, including fading prompts to
+facilitate independence.
+
+Below are brief descriptions of both general and specific treatment approaches and instructional strategies for AAC
+intervention. Some are prescribed interventions with specified procedures, and some are more general approaches to
+language organization and/or system presentation.
+
+This list is not exhaustive, and the inclusion of any specific treatment approach does not imply endorsement from ASHA.
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2             17/37
+5/9/23, 12:11 PM  Augmentative and Alternative Communication
+
+Augmented input--also called "natural aided language," "aided language stimulation," or "aided language modeling"--is
+
+a receptive language training approach in which the communication partner provides spoken words along with AAC
+
+symbols during communication tasks (e.g., partner points to the AAC symbols while simultaneously talking).
+
+Augmented input is based on the concept that language input provides a model for language development. This approach
+can lead to increased symbol comprehension in young AAC users and in users with severe cognitive or intellectual
+disabilities (Binger & Light, 2007; Drager et al., 2006, 2010), as well as increased symbol comprehension and production
+(Binger & Light, 2007; C. Goossens, 1992; M. D. Harris & Reichle, 2004). In fact, this approach can be effective for
+participants of many differing ages/disabilities/language skills (O'Neill et al., 2018).
+
+Behavioral interventions are used to teach desired behaviors and are based on behavioral/operant principles of
+learning (i.e., differential reinforcement, modeling, prompting, and fading). Behavioral methods involve examining
+antecedents that elicit a behavior and the consequences that follow that behavior. Adjustments are made to increase
+desired behaviors and/or decrease inappropriate ones. Behavioral interventions range from one-to-one discrete trial
+instruction to naturalistic approaches.
+
+Discrete trial training (DTT) is a one-to-one instructional approach that uses behavioral methods to teach skills in small
+systematic steps. The teaching opportunity is a discrete trial with a clearly identified antecedent and consequence (e.g.,
+reinforcement in the form of praise or tangible rewards) for desired behaviors. DTT is most often used for skills that (a)
+learners are not initiating on their own; (b) have a clear, correct procedure; and (c) can be taught in a one-to-one setting. It
+may be difficult to generalize learning via DTT beyond the setting in which a skill is learned.
+
+Milieu therapy includes a range of methods--including incidental teaching, time delay, and mand-model procedures--
+that are integrated into a child's natural environment. It includes training in everyday environments and during activities
+that take place throughout the day, rather than only at "therapy time." Milieu language teaching and other related
+procedures offer systematic approaches for prompting children to expand their repertoire of communication functions and
+to use increasingly complex language skills (Kaiser et al., 1992; Kasari et al., 2014).
+
+Incidental teaching is a teaching technique that uses behavioral procedures to teach elaborated language. Naturally
+occurring teaching opportunities are provided, based on the individual's interests. The clinician reinforces the individual's
+attempts to communicate as these attempts get closer to the desired communication behavior (McGee et al., 1999). The
+individual should initiate contact, which begins a language teaching episode. If the person does not initiate, an expectant
+look and a time delay might be sufficient to prompt language use. The clinician can prompt with a question (e.g., "What do
+you want?") or model a request (e.g., "Say: I need paint.").
+
+Time delay is a method of teaching that fades the use of prompts during instruction. For example, the time delay between
+initial instruction and any additional instruction or prompting is gradually increased as the individual becomes more
+proficient at the skill being taught. Time delay can be used with individuals regardless of cognitive level or expressive
+communication abilities.
+
+In Core Vocabulary Approach the clinician teaches the individual an initial set of core vocabulary that often consists of
+common words used across contexts. This approach considers vocabulary used by typically communicating peers and
+any additional words needed by the user based on input from members of the community (e.g., family members,
+teachers). Often, words from the initial set remain in the same location to minimize demands on memory and motor
+planning as more words are added to the AAC display; however, the extent to which this can happen varies depending on
+the AAC system. The variety of word types (pronouns, verbs, descriptors, question words, etc.) used in a core vocabulary
+approach allows the individual to complete various communicative functions, such as asking questions, requesting,
+rejecting, protesting, commenting, and describing.
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2      18/37
+5/9/23, 12:11 PM                        Augmentative and Alternative Communication
+
+Core vocabulary is likely represented by symbols or symbols combined with written words for individuals with congenital
+
+disabilities who use AAC. The core vocabulary may consist of only written words, depending on premorbid and current
+
+literacy level for those with acquired disabilities. A foundation of language skills based on core vocabulary is crucial if a
+
+focus of AAC intervention is to develop oral and written communication skills (Witkowski & Baker, 2012). Core vocabulary
+
+is reflective of all language(s) used.
+
+Development of functional communication skills training (e.g., expressing wants and needs, gaining attention,
+indicating preferences, and protesting) is often the first focus of linguistic intervention for the AAC user. For example,
+individuals can be taught to make requests by using symbols, objects, or words to indicate desired objects or actions
+(Johnston et al., 2012). Functional communication skills help minimize communication breakdowns and reduce the
+occurrence of challenging behaviors (Carr & Durand, 1985; Mirenda, 1997).
+
+Language Acquisition Through Motor Planning (LAMP) is a therapeutic approach based on neurological and motor
+learning principles that uses a high-tech AAC system to provide the child with opportunities to initiate activity, engage in
+communication around activities of their choice, and access consistent motor plans to locate vocabulary (Potts &
+Satterfield, 2013).
+
+The LAMP approach teaches the individual to independently select words and build sentences on a voice output AAC
+device using consistent motor plans to access vocabulary. LAMP's emphasis on motor planning may reduce the cognitive
+demands of choosing from a symbol set and may result in more automatic and faster communication (Autism Spectrum
+Australia, 2013).
+
+Mentoring programs pair young, newly proficient AAC users with older, more experienced users, with the intention of
+providing positive role models; teaching higher level sociorelational skills; and improving self-confidence and desire to
+achieve personal, educational, and professional goals. In addition to improving self-confidence and sociorelational skills in
+the newly proficient AAC user, mentors also benefit from the training experience that prepares them for participation in
+mentoring programs (Light et al., 2007).
+
+Picture Exchange Communication System (PECS) is a low-tech intervention program for individuals with ASD and
+other developmental disabilities that is intended to shape a child's expressive communication abilities using prompting
+and reinforcement strategies. PECS is a specific approach with specific implementation parameters. PECS is based on
+applied behavior analysis. PECS training consists of six progressive instructional phases:
+
+1. How to Communicate--exchanging single pictures for desired items/activities
+2. Distance and Persistence--generalizing picture exchange to different situations and communication partners
+3. Picture Discrimination--selecting from two or more pictures (typically stored in a communication book) to request
+
+   items/activities
+4. Sentence Structure--constructing simple sentences by adding a picture of the desired item to a sentence strip that
+
+   begins with an "I want" carrier phrase
+5. Answering Questions--using a picture to request an item/activity in response to the question, "What do you want?"
+6. Responsive and Spontaneous Commenting--using pictures to respond to a variety of questions (e.g., "What do you
+
+   see?" "What do you have?" "What is this?") to introduce commenting behavior
+
+PECS requires the facilitator to prepare pictures on and the user to accept and have the ability to transport a
+communication board or book (Flippin et al., 2010).
+
+Total communication (TC) is a holistic approach to communication that promotes the use of all modes of
+communication, including sign language, spoken language, gestures, facial expressions, and environmental cues such as
+pictures and sounds. TC has also been used with populations such as individuals with ASD (e.g., Nunes, 2008; Wong &
+Wong, 1991).
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2                19/37
+5/9/23, 12:11 PM                                    Augmentative and Alternative Communication
+
+Video-based instruction (also called "video modeling") is an observational mode of teaching that uses video recordings
+
+to provide a model of a desired communication behavior. Video recordings of such a behavior (e.g., appropriate use of an
+
+AAC device) are watched and imitated by a learner. The learner's attempts to incorporate learned communication
+
+behaviors can also be videotaped for later review.
+
+Visual prompting strategies use visual cues (e.g., pointing or gesturing) to help individuals maintain attention,
+understand spoken language, sequence events, organize environments, or increase independence with task completion
+(Hodgdon, 1995). Visual prompts can be general (e.g., gesturing toward the communication system) or specific (e.g.,
+pointing to a specific display location).
+
+Visual prompting strategies can help increase an individual's ability to independently initiate tasks, sustain participation in
+an activity, perform multistep tasks, and participate in an increased variety of activities.
+
+The use of visual prompting strategies that incorporate the same symbols from an individual's AAC system or that are
+incorporated into the system itself can help the AAC user understand, anticipate, and communicate about daily routines
+and can also help decrease challenging behaviors (Drager et al., 2010). Visual prompting strategies can create
+opportunities to increase aided language input or augmented input.
+
+Visual schedules are a common method of visual prompting. Visual schedules use objects, photographs, drawings,
+written words, or other symbols to cue or prompt individuals to complete a sequence of tasks or activities. Symbols on the
+display are presented horizontally or vertically in the sequence of occurrence and can represent activities within a day or
+week (or longer period) or the steps within a particular activity. Visual schedules that initiate or sustain interaction are
+called scripts. Scripts are often used to promote social interaction but can also be used in a classroom setting to facilitate
+academic interactions and promote academic engagement (Hart & Whalon, 2008).
+
+Visual schedules can be used to
+
+improve understanding of routines and expectations,
+increase engagement time,
+ease transitions from one activity to the next,
+provide opportunities to make choices, and
+increase an individual's control over their daily life (Mechling, 2007).
+
+Treatments Not Recommended
+
+Facilitated communication is a discredited technique by which a "facilitator" provides physical and other supports in an
+attempt to assist a person with a significant communication disability to point to pictures, objects, printed letters and
+words, or a keyboard in order to communicate.
+
+According to ASHA's position statement titled Facilitated Communication, "It is the position of the American Speech-
+Language-Hearing Association (ASHA) that Facilitated Communication (FC) is a discredited technique that should not be
+used. There is no scientific evidence of the validity of FC, and there is extensive scientific evidence--produced over
+several decades and across several countries--that messages are authored by the `facilitator' rather than the person with
+a disability. Furthermore, there is extensive evidence of harms related to the use of FC. Information obtained through the
+use of FC should not be considered as the communication of the person with a disability" (ASHA, 2018a).
+
+The Rapid Prompting Method, also known as Spelling to Communicate, is a technique in which an instructor holds a
+letter board and provides prompts to encourage an individual to point to letters to spell words. According to ASHA's
+position statement, Rapid Prompting Method, "It is the position of the American Speech-Language-Hearing Association
+(ASHA) that use of the Rapid Prompting Method (RPM) is not recommended because of prompt dependency and the lack
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2         20/37
+5/9/23, 12:11 PM           Augmentative and Alternative Communication
+
+of scientific validity. Furthermore, information obtained through the use of RPM should not be assumed to be the
+
+communication of the person with a disability" (ASHA, 2018b). Please see ASHA's resource on Rapid Prompting Method
+
+for further details.
+
+Special Considerations: Assessment and Treatment
+
+Accommodations for Individuals Who Use AAC
+
+Many standardized assessments include items that require a verbal (e.g., picture naming) and/or motor (e.g., pointing)
+response. For individuals who are not able to do so, it may be necessary to modify the task or the response mode.
+
+Standardized scores cannot be used when assessments are modified because the tasks are fundamentally different
+(Barker et al., 2012). Assessment should include elements of dynamic assessment and other informal assessments (e.g.,
+direct observation of language use in a variety of natural contexts) to supplement standardized assessment data.
+
+See the Assessment section of ASHA's Practice Portal page on Written Language Disorders for a discussion of task
+modifications for assessing literacy skills in individuals who use AAC.
+
+Participation Gap
+
+When evaluating and planning for AAC intervention, the clinician considers the individual's communication abilities and
+potential barriers to communication. AAC intervention is considered whenever a gap exists between the communication
+abilities of the AAC user and those of their peers for individuals with congenital disabilities. AAC intervention occurs when
+a gap is identified between pre- and post-injury abilities for individuals with acquired disabilities. See The Participation
+Model for Augmentative and Alternative Communication [PDF] (Beukelman & Mirenda, 2013).
+
+Eligibility for Services
+
+Use of AAC should be considered as early as possible, regardless of etiology of the communication impairment. The goal
+of AAC intervention is to facilitate communication between the individual and their communities. ASHA aligns with the
+National Joint Committee for the Communication Needs of Persons With Severe Disabilities (NJC) in support of a zero-
+exclusion policy for AAC services. See the Communication Bill of Rights (Brady et al., 2016; NJC, 1992).
+
+There are no prerequisites for AAC intervention, and a variety of strategies and techniques should be implemented in
+order to determine the most effective means of communication for the individual (Brady et al., 2016; Zangari & Kangas,
+1997). All individuals are considered candidates for AAC intervention if their communication abilities do not meet
+communication needs. The time and effort involved to implement AAC should not be a reason for exclusion from
+intervention.
+
+Cultural Considerations
+
+Views of disability vary widely and may influence all areas of AAC service delivery, including the decision to use AAC, the
+choice of AAC hardware, and the selection of vocabulary and symbol systems. SLPs collaborate with the individual and
+their family members with consideration of their beliefs and views of how to incorporate AAC into their lives.
+
+A thorough assessment includes gathering information about lifestyle, the desire to communicate, and expectations
+regarding AAC use that are unique to each individual and their communication environments. Ethnographic interviews can
+be used to supplement information from commercial questionnaires and surveys and can help clinicians better
+understand clients' communicative needs (Jenkins & Rojas, 2020). SLPs also recognize that not all individuals who use
+AAC will share the same beliefs about AAC as their families (O. Harris, 2015). SLPs consider routines, customs, and
+activities that are relevant to the AAC user's culture. Please see ASHA's Practice Portal page on Cultural Responsiveness
+for more information.
+
+Linguistic Considerations
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2         21/37
+5/9/23, 12:11 PM              Augmentative and Alternative Communication
+
+For individuals who speak more than one language, the clinician should collect a thorough description of prior language
+
+exposure and proficiency as well as current level of functioning in every language used. Clinicians should also consider
+
+changes in language proficiency due to acquired injury. For example, a bilingual individual with aphasia may no longer be
+
+as proficient in all languages used prior to the injury. Availability of culturally and linguistically relevant vocabulary
+
+facilitates buy-in and communicative success (Mindel & John, 2018). AAC tools should support various languages and
+
+dialects when possible; if the AAC system does not support all of the individual's language(s), they may be unable to
+
+communicate in the home, and carryover will be limited (Dukhovny & Kelly, 2015). In addition, the lack of access to
+
+language(s) used will result in social isolation from that linguistic community. An SLP may consider AAC systems with the
+
+ability to switch between messages in different languages. Several AAC companies offer devices or software that includes
+
+multilingual functionality. See Dukhovny and Kelly (2015) for the availability of SGDs with multilingual capabilities.
+
+Involving families and caregivers in the assessment process may involve working with an interpreter or a translator. See
+Collaborating With Interpreters, Transliterators, and Translators and Cultural Responsiveness for more information.
+
+Language Acquisition
+
+Language acquisition via AAC is different from language acquisition through typical means. Before acquiring AAC,
+children likely had (a) reduced means of expression and ability to control communication interactions and (b) fewer
+opportunities for exploring and interacting with their environment. During the language learning process, AAC users
+depend on someone else to provide vocabulary and content for their AAC system, and there may be few communicators
+who can model language using the same form of communication that the child is expected to use (Blockberger &
+Johnston, 2003; Blockberger & Sutton, 2003).
+
+Acquisition of grammar (both morphology and syntax) can be especially challenging for AAC users who are
+simultaneously acquiring language, because morphological markers (e.g., tense and plural markers) are difficult to
+represent via symbols or may be excluded due to space constraints (Sutton et al., 2002).
+
+It is essential to provide support to all beginning communicators as they develop language skills. Children must be able to
+comprehend and use language to communicate with others in a wide variety of settings and to function effectively in the
+classroom. For children with disabilities, the skills to support language development very often must be explicitly taught.
+This includes building both receptive and expressive vocabulary (including both spoken words and AAC symbols).
+Specific types of vocabulary may need to be targeted (e.g., teaching verbs and adjectives to a child who primarily uses
+nouns). Once the child has acquired a good number of words and/or AAC symbols, they can be taught how to begin
+combining words to form sentences (Kent-Walsh & Binger, 2009).
+
+For pragmatic/social language, an AAC user learns to adapt their communication style based on their environment,
+communication partner, and needs.
+
+Literacy Development and AAC
+
+Children who use AAC often receive less exposure to language and literacy due to motor, sensory, cognitive, or other
+impairments.
+
+Lack of literacy development restricts AAC users to nonorthographic symbols and limits their ability for novel message
+generation (Millar et al., 2004). Nonverbal children may have difficulty acquiring phonemic awareness--an essential skill
+for literacy development--because they are unable to produce the sounds (Hetzroni, 2004; Millar et al., 2004).
+
+Literacy instruction for AAC users incorporates AAC, AT, and task adaptations that can support literacy learning in children
+with complex communication needs (Hetzroni, 2004; Light & McNaughton, 2012). Many literacy activities can be adapted
+to meet the needs of AAC users, for example,
+
+print awareness activities using adapted books and modeling behaviors, such as indicating
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2             22/37
+5/9/23, 12:11 PM                                   Augmentative and Alternative Communication
+
+                  title and author,
+
+                  front and back of the book, and
+
+                  directionality of print;
+
+decoding activities (e.g., segmenting and blending sounds) using materials appropriate to motor and sensory needs;
+
+engaging in shared reading and reading discussions with ready access to a communication device and other
+
+supports to allow maximum participation;
+
+access to letter boards or adaptive keyboards via direct or indirect selection; and
+
+direct instruction in decoding and encoding.
+
+Literacy intervention for children who use AAC also includes instruction on how to read for a variety of purposes while
+drawing on one's own relevant background knowledge and personal experiences (Erickson et al., 2006).
+
+Setting Considerations
+
+School-Based Settings
+
+In the school-based setting, the SLP works as part of a team that typically includes general and special education
+teachers, paraprofessionals, physical and occupational therapists, teachers of students with visual or hearing impairment,
+music therapists, administrators, nurses, case managers, and family members.
+
+Important considerations for this population include
+
+       providing an AAC system that allows the student to access the general education curriculum;
+       supporting the transition between home and school and between classrooms and schools; and
+       other challenges, including
+
+               securing funding for AAC devices and accessing necessary resources,
+               lack of buy-in (e.g., from the educational team, administrators, or parents), and
+               inconsistent implementation of AAC across school and home settings.
+
+Challenges noted above can be overcome or prevented by
+
+       partnering with a state tech-act agency or a regional or state support center to obtain materials and equipment for
+       loaner and trial periods;
+       developing a structured implementation plan with defined roles and responsibilities;
+       involving the students, parents, teachers, and administrator in the AAC process from initial consideration through
+       implementation;
+       encouraging and promoting interprofessional education and interprofessional practice; and
+       providing training as necessary and documenting need for/use of AAC.
+
+The school-based SLP works as part of a team that may include an AAC or AT specialist who facilitates or completes the
+AAC evaluation. Implementing AAC in the schools is the responsibility of the school-based team--which includes the
+school SLP--and may include support from an AAC specialist. If the IEP team determines that AAC is required in order
+for a student to be provided "free appropriate public education" (FAPE; U.S. Department of Education Office for Civil
+Rights, 1996; U.S. Department of Education Office of Special Education Programs, 2006), the technology must be
+provided to implement the IEP. The SLP is also responsible for IEP documentation.
+
+According to the Individuals with Disabilities Education Act (2004), Section 300.105 on AT, on a case-by-case basis, the
+use of school-purchased AT devices in a child's home or in other settings is required if the child's IEP team determines
+that the child needs access to those devices in order to receive "free appropriate public education."
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2             23/37
+5/9/23, 12:11 PM                                     Augmentative and Alternative Communication
+
+Clinicians should consider the amount of support that the child will need to use their AAC system within the school
+
+(classroom, lunchroom, hallways, play and leisure activities, etc.) and outside the school setting when working with
+
+school-age children who use AAC. Vocabulary selection should give the individual access to the general education
+
+curriculum along with access to and use of vocabulary for social communication, functional needs, and support for
+
+ongoing language development.
+
+Transitional and Postsecondary Educational Settings
+
+The transition from adolescence to young adulthood can be challenging. The challenges associated with AAC use can
+present added barriers to success in postsecondary educational or vocational training programs, employment settings,
+and independent or semi-independent living situations. SLPs are involved in transition planning and may be involved in
+other support services beyond high school. Support for transitioning individuals who use AAC includes
+
+transition planning,
+disability support services,
+vocational support services,
+housing assistance,
+support for community integration, and
+ensuring access to AAC systems after leaving the postsecondary setting.
+
+See ASHA's Practice Portal page on Transitioning Youth for more information.
+
+Adult Outpatient Setting
+
+Special considerations should be made when evaluating and treating adults as AAC choice may be highly contextual.
+Temporary needs versus progressive needs should be considered. For example, an adult with a temporary need for a
+ventilator after a traumatic brain injury may have significantly different communication needs from somebody with a
+progressive disease (e.g., ALS).
+
+When working with adults who are using AAC, the SLP considers
+
+       when the individual started using AAC;
+       the individual's comfort level with technology;
+       the individual's literacy skills prior to and after the injury or progression of the disease;
+       if the individual is using AAC for the first time; and
+       the individual's skills in areas such as language, cognition, and motor abilities prior to becoming an AAC user.
+
+These factors may affect the individual's acceptance of AAC, their desire and ability to return to or enter the workforce,
+any accommodations that may be needed, and the need for communication partner training.
+
+The following factors should be considered when facilitating transition and selecting an appropriate AAC system:
+
+       ability of the AAC system to incorporate vocabulary for various settings (e.g., medical, leisure, recreational,
+       vocational)
+       need for strategies to support partner-dependent and independent communication (e.g., written choice or visual
+       supports)
+       vocational training as well as intervention and acceptance of AAC in employment setting
+       concerns regarding device ownership following school-based intervention, as applicable
+       considerations for work-related communication (e.g., conference calls, e-mails, etc.)
+       accessibility of work (or other) environment
+
+Acute Care Setting
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2             24/37
+5/9/23, 12:11 PM                                      Augmentative and Alternative Communication
+
+In the acute care setting, the SLP works as part of a team that often includes doctors, nursing staff, physical and
+
+occupational therapists, case managers, family members, and caregivers. Many acute care facilities have AAC tool kits
+
+for use in acute care settings, and clinicians are encouraged to consult with the treating facility or to consider creating a
+
+tool kit. Please see Patient-Provider Communication for an example of such a tool kit.
+
+Important considerations for this population include
+
+fluctuating physical, cognitive, and linguistic abilities due to medication side effects, pain, arousal/alertness, and
+acuity of illness;
+positioning and access to AAC from hospital bed;
+vocabulary that allows the individual to participate in their medical care by expressing basic wants and needs,
+indicating refusal or rejection, advocating for basic needs, and expressing preferences related to medical care;
+motor deficits (temporary and chronic); and
+education of SLPs in the acute care setting to provide this service and educate doctors, nurses, and other allied
+health professionals.
+
+Telepractice
+
+Effective AAC assessment via telepractice is a complex process. Refer to guidance from your state, employer, or school
+district. Some considerations for AAC evaluation include
+
+       the availability of system components to be trialed for both the clinician and the client;
+       the availability of not only a facilitator but also instruction and training for this individual to set up the device prior to
+       evaluation;
+       access to cameras (e.g., document cameras, smartphones, tablets) or other methods, which allow the clinician to
+       observe the client's interaction with the device (e.g., camera placement over the client's shoulder to show the device
+       from above, allowing the clinician to see the device screen and the client's selection);
+       proper audio/amplification for the clinician to hear selections;
+       the need for interdisciplinary collaboration with physical and/or occupational therapy to establish optimal positioning
+       for access prior to or during the evaluation process; and
+       the need for trial periods with devices or extended dynamic assessment across multiple sessions to ensure the
+       clinician's confidence in system recommendations.
+
+See a demonstration of equipment setup, intervention, and engagement strategies that are applicable to remote
+assessment from Special Interest Group 12, Augmentative and Alternative Communication. See ASHA's Practice Portal
+page on Telepractice.
+
+End-of-Life Considerations
+
+SLPs often assist individuals with reduced or impaired communication when nearing the end of life. When supporting an
+individual with AAC at the end stages of life, the SLP considers
+
+       flexibility of access method as physical abilities change or decline;
+       vocabulary selection to ensure that the individual will be able to express their wishes, desires, and feelings; basic
+       needs; and issues related to medical care; and
+       the individual's access to social networks and the Internet.
+
+The goal of intervention at this stage is to develop communication strategies that will facilitate efficient and effective
+communication for as long as possible, including connecting with the outside world via social media, e-mail, and texting.
+The expected outcome of intervention is not to improve abilities but to allow the individual to express wants and needs
+and to participate in decision making to the best of their abilities.
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2                25/37
+5/9/23, 12:11 PM                           Augmentative and Alternative Communication
+
+SLPs should understand the process of dying to understand the emotional and psychological issues faced by individuals
+
+and their family members. The wishes of the patient and family are of utmost importance, and the SLP's role extends only
+
+as far as the patient and family chooses.
+
+See End-of-Life Issues in Speech-Language Pathology for more information.
+
+Barriers to AAC Use and Implementation
+
+The following factors may serve as barriers to AAC use (Johnson et al., 2006; Light et al., 1996; Moorcroft et al., 2019;
+Pape et al., 2002):
+
+frustration due to lack of AAC knowledge on the part of the professional,
+negative attitudes toward persons with disabilities and the stigma associated with AAC,
+AAC potentially symbolizing disease progression,
+slow rate and low frequency of communication,
+equipment breakdowns,
+lack of relevant vocabulary,
+failure to consider cultural differences in AAC system design,
+lack of support for device use on the part of caregivers or belief that they can communicate effectively without the
+device,
+lack of motivation by the user and family members or caregivers, and
+accessibility due to physical limitations.
+
+Barriers can be reduced if
+
+       the AAC system serves the communication needs of the individual and can be updated when these needs change;
+       there is a good match between the device and the user's language, physical, and cognitive abilities;
+       there is collaboration with the AAC user, their family, and a multidisciplinary team to incorporate their needs and
+       values during selection of the device;
+       the clinician provides realistic timelines regarding progress and use of the device that are understood by the user;
+       the AAC user experiences communication success with the system;
+       the AAC user values the system and has a sense of ownership;
+       thorough training is conducted with both the AAC user and the family/caregiver after receipt of the device; and
+       ongoing training, including theoretical and practical experience, is conducted for new communication partners (e.g.,
+       new staff at a vocational setting).
+
+Increasing AAC Awareness
+
+There are many misconceptions about AAC that may deter an individual or a family member from AAC use. Advocacy
+and/or counseling efforts are critical to informing these potential AAC users, as well as professionals key to AAC
+implementation (e.g., SLPs, teachers, applied behavior analysis therapists). Potential AAC users may believe that AAC
+reduces motivation to improve natural speech and delays language development. However, AAC use may help improve
+natural speech when used in a multimodal approach (Millar et al., 2006; Sedey et al., 1991).
+
+Consumers and professionals may think that young children are not ready for AAC until they reach school age. However,
+early AAC use can help develop speech and language (Lüke, 2014; Romski et al., 2010; Wright et al., 2013) and can
+increase vocabulary for children with developmental delays aged 3 years and younger (Romski et al., 2015). AAC use in
+preschool-age children may also increase use of multisymbol utterances and grammar development (Binger & Light,
+2007; L. Harris et al., 1996; see Romski et al., 2015, for a review), and AAC may improve receptive vocabulary in young
+children (Brady, 2000; Drager et al., 2006).
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2            26/37
+5/9/23, 12:11 PM                                  Augmentative and Alternative Communication
+
+Caregivers and professionals may think that cognitive skills such as demonstrating communicative intent and
+
+understanding cause and effect are prerequisite to AAC use. However, impaired cognition does not preclude
+
+communication (Cress & Marvin, 2003; Zangari & Kangas, 1997). AAC may help children with complex communication
+
+needs develop functional communication, cognitive, literacy, and social communication skills (Drager et al., 2010).
+
+Reimbursement and Funding
+
+SLPs who provide AAC services should be familiar with funding options, including knowledge of public and private funding
+sources, how funding is determined, and how advocacy may affect funding. Low-tech or light-tech AAC systems are
+typically created by an SLP and do not typically require or qualify for additional amounts of funding.
+
+SGDs are considered durable medical equipment (DME), and funding by third-party payers can vary. SLPs will need to
+verify coverage based on their client's specific needs and insurance. The SLP must justify that the device being ordered is
+medically necessary in order to receive third-party funding. A payer may require that an SLP consider multiple SGDs
+during their evaluation process and that those devices must not be from the same manufacturer or product line. SGD
+vendors may be able to assist with funding questions and may have templates for meeting payer standards; however, this
+does not take the place of a comprehensive AAC evaluation.
+
+SLPs writing AAC evaluations and completing funding requests must disclose any financial relationships that they have
+with device manufacturers and must certify that their recommendation for device selection is based on a comprehensive
+evaluation and preferred practice patterns and is not due to any financial incentive.
+
+The Assistive Technology Act
+
+The Assistive Technology Act (AT Act) of 2004 provides every state and territory with federal funding to support efforts to
+increase access to, and acquisition of, AT devices and services (Assistive Technology Act, 2004). Find your state's AT Act
+program at the National Assistive Technology Act Technical Assistance and Training (AT3) Center - Program Directory.
+For more information about the AT Act, go to National Assistive Technology Act Technical Assistance and Training (AT3)
+Center - AT Act Information.
+
+Insurance Information
+
+Medicare
+
+Please see Local Coverage Determinations by State Index for further information. See ASHA's Medicare Coverage Policy
+on Speech-Generating Devices as well as guidelines from CMS. Medicare rules are subject to change. Medicare may not
+cover AAC devices in all settings (e.g., skilled nursing facilities, hospice). SLPs work with their patients and facilities to
+provide appropriate services to their areas of need.
+
+Medicaid
+Refer to the Medicaid Guidelines for your state.
+
+The Patient Protection and Affordable Care Act
+
+The Patient Protection and Affordable Care Act (2010), commonly called the Affordable Care Act of 2010, prohibits
+disability-based discrimination in insurance policies for essential health benefits, which often includes SGDs.
+
+Private Insurance Plans
+There is significant variability in funding of AAC devices between different plans and companies. Each is different, and an
+SLP should check with the provider before beginning the process of obtaining a dedicated AAC device (e.g., SGD).
+
+Funding for Tablets, Apps, and Computers
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2        27/37
+5/9/23, 12:11 PM         Augmentative and Alternative Communication
+
+Tablets, apps, and computers are considered nondurable, nondedicated devices, and payers' coverage for these devices
+
+varies. SLPs need to verify coverage with the individual's insurance, based on that individual's specific plan and
+
+coverage.
+
+Funding for Telecommunication Equipment
+
+Technology to assist with communication over the phone may be covered by a state's telecommunication equipment
+distribution program. Eligibility may vary state-to-state. A listing of these programs is available at TEDPA
+Telecommunications Equipment Distribution Program Association.
+
+For individuals who are deaf-blind, the federally funded I Can Connect program provides eligible individuals with devices
+necessary for distance-related communication (including computers and software), as well as evaluation and training on
+the equipment.
+
+Funding for Accessories
+
+As with SGDs, an SLP should document medical necessity for accessories. A team-based approach is suggested when
+considering appropriate accessories, particularly with considerations from physical therapy and occupational therapy.
+Accessories that may support an AAC user include the following:
+
+case
+keyboard
+mouse
+keyguard
+stylus
+amplification
+joystick/trackball
+mount/stand
+
+Resources
+
+ASHA Resources
+
+       ASHA AAC Information for the Public
+       Health Care Common Procedure Coding System (HCPCS) Level II Codes: AAC and Other Speech-Language
+       Pathology Related Devices
+       High-Tech AAC for Spanish Speakers
+       Medicare Coverage Policy on Speech-Generating Devices
+       National Joint Committee for the Communication Needs of Persons With Severe Disabilities (NJC)
+       An Overview of the AAC Assessment Process
+       SIG 12 AAC and Telepractice Information
+       Transitioning Youth
+
+Other Resources
+
+This list of resources is not exhaustive and the inclusion of any specific resource does not imply endorsement from ASHA.
+
+Advocacy/Education
+
+       CommunicationFIRST
+       International Society for Augmentative and Alternative Communication
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2            28/37
+5/9/23, 12:11 PM                Augmentative and Alternative Communication
+
+National Parent Center on Transition and Employment
+
+Orange Effect Foundation
+
+Patient-Provider Communication
+
+Project Core
+
+Assessment
+
+       AAC at the University of Washington
+       Association of Assistive Technology Act Programs
+       Communication Matrix
+       Communication Supports Inventory­Children & Youth (CSI-CY)
+       Family Impact of Assistive Technology Scale for Augmentative and Alternative Communication Systems (FIATS-
+       AAC)
+       Feature Matching Comparison Chart [PDF]
+       Tobii Dynavox Dynamic AAC Goals Grid 2
+
+Intervention
+
+       AAC Language Lab
+       Dynamic Learning Maps Professional Development
+       LAMP (Center for AAC/Autism)
+       Minspeak
+       Model Talker
+       Pennsylvania Training and Technical Assistance Network (PaTTAN)
+       PrAACtical AAC
+       Talking with Tech
+       Tele-AAC Resolution
+
+Related Organizations
+
+       AAC-RERC
+       ALS Association
+       American Association on Intellectual and Developmental Disabilities (AAIDD)
+       Assistive Technology Industry Association (ATIA)
+       The Center for AAC & Autism
+       CommunicationFIRST
+       Rehabilitation Engineering and Assistive Technology Society of America (RESNA)
+       Rehabilitation Engineering Research Center on AAC
+       TASH
+       Team Gleason
+       United States Society for AAC (USSAAC)
+
+Other
+
+       Boston Children's Hospital Augmentative Communication Program Handouts and Resources
+       Institute for Matching Person and Technology, Inc.
+       The Participation Model for Augmentative and Alternative Communication [PDF]
+       Talking Mats
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2    29/37
+5/9/23, 12:11 PM  Augmentative and Alternative Communication
+
+  References
+
+Adamson, L. B., Romski, M. A., Deffebach, K., & Sevcik, R. A. (1992). Symbol vocabulary and the focus of conversations:
+Augmenting language development for youth with mental retardation. Journal of Speech and Hearing Research, 35(6),
+1333­1343. https://doi.org/10.1044/jshr.3506.1333
+
+American Speech-Language-Hearing Association. (2016). Scope of practice in speech-language pathology [Scope of
+practice]. https://www.asha.org/policy/sp2016-00343/
+
+American Speech-Language-Hearing Association. (2018a). Facilitated communication [Position
+statement]. https://www.asha.org/policy/ps2018-00352/
+
+American Speech-Language-Hearing Association. (2018b). Rapid prompting method [Position
+statement]. https://www.asha.org/policy/ps2018-00351/
+
+Andzik, N. R., Schaefer, J. M., Nichols, R. T., & Chung, Y.-C. (2018). National survey describing and quantifying students
+with communication needs. Developmental Neurorehabilitation, 21(1), 40­47.
+https://doi.org/10.1080/17518423.2017.1339133
+
+Angelo, D., Jones, S., & Kokoska, S. (1995). Family perspective on augmentative and alternative communication:
+Families of young children. Augmentative and Alternative Communication, 11(3), 193­201.
+https://doi.org/10.1080/07434619512331277319
+
+Assistive Technology Act of 2004, Pub. L. No. 108-364, 118 Stat. 1707 (2004).
+
+Autism Spectrum Australia. (2013). Evaluation of the Language Acquisition through Motor Planning (LAMP) program with
+children with autism spectrum disorders (ASD). Aspect Research Insights, 6, 1­4.
+https://www.liberator.co.uk/media/wysiwyg/Documents/Autism_Spectrum_LAMP_Research_Report.pdf [PDF]
+
+Bailey, R. L., Parette, H. P., Jr., Stoner, J. B., Angell, M. E., & Carroll, K. (2006). Family members' perceptions of
+augmentative and alternative communication device use. Language, Speech, and Hearing Services in Schools, 37(1),
+50­60. https://doi.org/10.1044/0161-1461(2006/006)
+
+Barker, R. M., Saunders, K. J., & Brady, N. C. (2012). Reading instruction for children who use AAC: Considerations in the
+pursuit of generalizable results. Augmentative and Alternative Communication, 28(3), 160­170.
+https://doi.org/10.3109/07434618.2012.704523
+
+Beukelman, D. R., & Light, J. C. (2020). Augmentative & alternative communication: Supporting children and adults with
+complex communication needs (5th ed.). Brookes.
+
+Beukelman, D. R., McGinnis, J., & Morrow, D. (1991). Vocabulary selection in augmentative and alternative
+communication. Augmentative and Alternative Communication, 7(3), 171­185.
+https://doi.org/10.1080/07434619112331275883
+
+Beukelman, D. R., & Mirenda, P. (2013). Augmentative & alternative communication: Supporting children and adults with
+complex communication needs (4th ed.). Brookes.
+
+Binger, C., & Light, J. (2007). The effect of aided AAC modeling on the expression of multi-symbol messages by
+preschoolers who use AAC. Augmentative and Alternative Communication, 23(1), 30­43.
+https://doi.org/10.1080/07434610600807470
+
+Blockberger, S., & Johnston, J. (2003). Grammatical morphology acquisition by children with complex communication
+needs. Augmentative and Alternative Communication, 19(4), 207­221. https://doi.org/10.1080/07434610310001598233
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2  30/37
+5/9/23, 12:11 PM                                Augmentative and Alternative Communication
+
+Blockberger, S., & Sutton, A. (2003). Towards linguistic competence: The language experiences and knowledge of
+
+children with extremely limited speech. In J. Light, D. Beukelman, & J. Reichle (Eds.), Communication competence for
+
+individuals who use AAC (pp. 63­106). Brookes.
+
+Boenisch, J., & Soto, G. (2015). The oral core vocabulary of typically developing English speaking school-aged children:
+Implications for AAC practice. Augmentative and Alternative Communication, 31(1), 77­84.
+https://doi.org/10.3109/07434618.2014.1001521
+
+Brady, N. C. (2000). Improved comprehension of object names following voice output communication aid use: Two case
+studies. Augmentative and Alternative Communication, 16(3), 197­204. https://doi.org/10.1080/07434610012331279054
+
+Brady, N. C., Bruce, S., Goldman, A., Erickson, K., Mineo, B., Ogletree, B. T., Paul, D., Romski, M., Sevcik, R., Siegel, E.,
+Schoonover, J., Snell, M., Sylvester, L., & Wilkinson, K. (2016). Communication services and supports for individuals with
+severe disabilities: Guidance for assessment and intervention. American Journal on Intellectual and Developmental
+Disabilities, 121(2), 121­138. https://doi.org/10.1352/1944-7558-121.2.121
+
+Brown, M. N., Grames, L. M., & Skolnick, G. B. (2021). Augmentative and alternative communication (AAC) use among
+patients followed by a multidisciplinary cleft and craniofacial team. The Cleft Palate­Craniofacial Journal, 58(3), 324­331.
+https://doi.org/10.1177/1055665620947606
+
+Calculator, S. N. (2009). Augmentative and alternative communication (AAC) and inclusive education for students with the
+most severe disabilities. International Journal of Inclusive Education, 13(1), 93­113.
+https://doi.org/10.1080/13603110701284656
+
+Carr, E., & Durand, M. (1985). Reducing behavior problems through functional communication training. Journal of Applied
+Behavior Analysis, 18(2), 111­126. https://doi.org/10.1901/jaba.1985.18-111
+
+Costello, J. M. (2011/2016). Message banking, voice banking and legacy messages [Message banking examples from
+people with ALS]. Boston Children's Hospital. https://www.childrenshospital.org/~/media/centers-and-
+services/programs/a_e/augmentative-communication-program/messagebankdefinitionsandvocab201613.ashx?la=en
+
+Creer, S., Enderby, P., Judge, S., & John, A. (2016). Prevalence of people who could benefit from augmentative and
+alternative communication (AAC) in the UK: Determining the need. International Journal of Language & Communication
+Disorders, e51(6), 639­653. https://doi.org/10.1111/1460-6984.12235
+
+Cress, C. J., & Marvin, C. A. (2003). Common questions about AAC services in early intervention. Augmentative and
+Alternative Communication, 19(4), 254­272. https://doi.org/10.1080/07434610310001598242
+
+Dark, L., & Balandin, S. (2007). Prediction and selection of vocabulary for two leisure activities. Augmentative and
+Alternative Communication, 23(4), 288­299. https://doi.org/10.1080/07434610601152140
+
+Dietz, A., Wallace, S. E., & Weissling, K. (2020). Revisiting the role of augmentative and alternative communication in
+aphasia rehabilitation. American Journal of Speech-Language Pathology, 29(2), 909­913.
+https://doi.org/10.1044/2019_AJSLP-19-00041
+
+Drager, K. D. R., Light, J., & McNaughton, D. (2010). Effects of AAC interventions on communication and language for
+young children with complex communication needs. Journal of Pediatric Rehabilitation Medicine: An Interdisciplinary
+Approach, 3(4), 303­310. https://doi.org/10.3233/PRM-2010-0141
+
+Drager, K. D. R., Light, J., Speltz, J., Fallon, K., & Jeffries, L. (2003). The performance of typically developing 2½-year-
+olds on dynamic display AAC technologies with different system layouts and language organizations. Journal of Speech,
+Language, and Hearing Research, 46(2), 298­312. https://doi.org/10.1044/1092-4388(2003/024)
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2           31/37
+5/9/23, 12:11 PM  Augmentative and Alternative Communication
+
+Drager, K. D. R., Postal, V. J., Carroulus, L., Castellano, M., Gagliano, C., & Glynn, J. (2006). The effect of aided
+
+language modeling on symbol comprehension and production in 2 preschoolers with autism. American Journal of
+
+Speech-Language Pathology, 15(2), 112­125. https://doi.org/10.1044/1058-0360(2006/012)
+
+Dukhovny, E., & Kelly, E. B. (2015). Practical resources for provision of services to culturally and linguistically diverse
+users of AAC. Perspectives on Communication Disorders and Sciences in Culturally and Linguistically Diverse (CLD)
+Populations, 22(1), 25­39. https://doi.org/10.1044/cds22.1.25
+
+Elliott, E., Newton, J., Rewaj, P., Gregory, J. M., Tomarelli, L., Colville, S., Chandran, S., Pal, S., & CARE-MND
+Consortium. (2020). An epidemiological profile of dysarthria incidence and assistive technology use in the living
+population of people with MND in Scotland. Amyotrophic Lateral Sclerosis and Frontotemporal Degeneration, 21(1­2),
+116­122. https://doi.org/10.1080/21678421.2019.1672748
+
+Elsahar, Y., Hu, S., Bouazza-Marouf, K., Kerr, D., & Mansor, A. (2019). Augmentative and alternative communication
+(AAC) advances: A review of configurations for individuals with a speech disability. Sensors, 19(8), 1911.
+https://doi.org/10.3390/s19081911
+
+Erickson, K. A., Koppenhaver, D. A., & Cunningham, J. W. (2006). Balanced reading intervention and assessment in
+augmentative communication. In R. J. McCauley, M. E. Fey, & R. Gillam (Eds.), Treatment of language disorders in
+children (pp. 309­346). Brookes.
+
+Flippin, M., Reszka, S., & Watson, L. R. (2010). Effectiveness of the Picture Exchange Communication System (PECS)
+on communication and speech for children with autism spectrum disorders: A meta-analysis. American Journal of Speech-
+Language Pathology, 19(2), 178­195. https://doi.org/10.1044/1058-0360(2010/09-0022)
+
+Freeman-Sanderson, A., Morris, K., & Elkins, M. (2019). Characteristics of patient communication and prevalence of
+communication difficulty in the intensive care unit: An observational study. Australian Critical Care, 32(5), 373­377.
+https://doi.org/10.1016/j.aucc.2018.09.002
+
+Fuller, D., & Lloyd, L. (1991). Toward a common usage of iconicity terminology. Augmentative and Alternative
+Communication, 7(3), 215­220. https://doi.org/10.1080/07434619112331275913
+
+Funke, A., Spittel, S., Grehl, T., Grosskreutz, J., Kettemann, D., Petri, S., Weyen, U., Weydt, P., Dorst, J., Ludolph, A. C.,
+Baum, P., Oberstadt, M., Jordan, B., Hermann, A., Wolf, J., Boentert, M., Walter, B., Gajewski, N., Maier, A., ...Meyer, T.
+(2018). Provision of assistive technology devices among people with ALS in Germany: A platform-case management
+approach. Amyotrophic Lateral Sclerosis and Frontotemporal Degeneration, 19(5­6), 1­9.
+https://doi.org/10.1080/21678421.2018.1431786
+
+Glennen, S. L. (1997). Augmentative and alterative communication systems. In S. L. Glennen & D. C. DeCoste (Eds.),
+Handbook of augmentative and alternative communication (pp. 59­96). Singular.
+
+Goossens, C. (1992). Engineering the preschool environment for interactive symbolic communication: 18 months to 5
+years developmentally. Southeast Augmentative Communication Conference Publications.
+
+Harris, L., Doyle, E. S., & Haaf, R. (1996). Language treatment approach for users of AAC: Experimental single-subject
+investigation. Augmentative and Alternative Communication, 12(4), 230­243.
+https://doi.org/10.1080/07434619612331277698
+
+Harris, M. D., & Reichle, J. (2004). The impact of aided language stimulation on symbol comprehension and production in
+children with moderate cognitive disabilities. American Journal of Speech-Language Pathology, 13(2), 155­167.
+https://doi.org/10.1044/1058-0360(2004/016)
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2              32/37
+5/9/23, 12:11 PM                     Augmentative and Alternative Communication
+
+Harris, O. (2015). A cultural basis to develop strong advocates for client and family involvement in the speech-generated
+
+device evaluation and funding process. Perspectives on Augmentative and Alternative Communication, 24(4), 142­146.
+
+https://doi.org/10.1044/aac24.4.142
+
+Hart, J. E., & Whalon, K. J. (2008). Promote academic engagement and communication of students with autism spectrum
+disorder in inclusive settings. Intervention in School and Clinic, 44(2), 116­120.
+https://doi.org/10.1177/1053451207310346
+
+Hetzroni, O. E. (2004). AAC and literacy. Disability and Rehabilitation, 26(21­22), 1305­1312.
+https://doi.org/10.1080/09638280412331280334
+
+Hill, K., & Corsi, V. (2012). Role of speech-language pathologists in assistive technology assessments. In S. Federici & M.
+J. Scherer (Eds.), Assistive technology assessment handbook (pp. 301­327). CRC Press.
+
+Hodgdon, L. Q. (1995). Solving social-behavioral problems through the use of visually supported communication. In K. A.
+Quill (Ed.), Teaching children with autism: Strategies to enhance communication and socialization (pp. 265­286). Delmar.
+
+Individuals with Disabilities Education Act of 2004, 20 U.S.C. § 300.105, Assistive Technology.
+http://idea.ed.gov/explore/view/p/%2Croot%2Cregs%2C300%2CB%2C300%252E105%2C
+
+Jenkins, K., & Rojas, R. (2020). Developing cultural competence from a Funds of Knowledge framework: Ethnographic
+interviewing revisited. Perspectives of the ASHA Special Interest Groups, 5(6), 1683­1686.
+https://doi.org/10.1044/2020_PERSP-20-00081
+
+Johnson, J. M., Inglebret, E., Jones, C., & Ray, J. (2006). Perspectives of speech-language pathologists regarding
+success versus abandonment of AAC. Augmentative and Alternative Communication, 22(2), 85­99.
+https://doi.org/10.1080/07434610500483588
+
+Johnston, S. S., Reichle, J., Feeley, K. M., & Jones, E. A. (2012). AAC strategies for individuals with moderate to severe
+disabilities. Brookes.
+
+Judge, S., Enderby, P., Creer, S., & John, A. (2017). Provision of powered communication aids in the United Kingdom.
+Augmentative and Alternative Communication, 33(3), 181­187. https://doi.org/10.1080/07434618.2017.1347960
+
+Kaiser, A. P., Yoder, P. J., & Keetz, A. (1992). Evaluating milieu teaching. In S. F. Warren & J. Reichle (Eds.), Causes and
+effects in communication and language intervention (pp. 9­47). Brookes.
+
+Kasari, C., Kaiser, A., Goods, K., Nietfeld, J., Mathy, P., Landa, R., Murphy, S., & Almirall, D. (2014). Communication
+interventions for minimally verbal children with autism: A sequential multiple assignment randomized trial. Journal of the
+American Academy of Child & Adolescent Psychiatry, 53(6), 635­646. https://doi.org/10.1016/j.jaac.2014.01.019
+
+Kent-Walsh, J., & Binger, C. (2009). Addressing the communication demands of the classroom for beginning
+communicators and early language users. In G. Soto & C. Zangari (Eds.), Practically speaking: Language, literacy and
+academic development for students with AAC needs (pp. 143­172). Brookes.
+
+Kent-Walsh, J., & McNaughton, D. (2005). Communication partner instruction in AAC: Present practices and future
+directions. Augmentative and Alternative Communication, 21(3), 195­204. https://doi.org/10.1080/07434610400006646
+
+Kristoffersson, E., Sandber, A. G., & Holck, P. (2020). Communication ability and communication methods in children with
+cerebral palsy. Developmental Medicine & Child Neurology, 62(8), 933­938. https://doi.org/10.1111/dmcn.14546
+
+Light, J. C., Beukelman, D. R., & Reichle, J. (2003). Communicative competence for individuals who use AAC: From
+research to effective practice. Brookes.
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2             33/37
+5/9/23, 12:11 PM                              Augmentative and Alternative Communication
+
+Light, J. C., & McNaughton, D. (2012). The changing face of augmentative and alternative communication: Past, present,
+
+and future challenges. Augmentative and Alternative Communication, 28(4), 197­204.
+
+https://doi.org/10.3109/07434618.2012.737024
+
+Light, J. C., & McNaughton, D. (2014). Communicative competence for individuals who require augmentative and
+alternative communication: A new definition for a new era of communication? Augmentative and Alternative
+Communication, 30(1), 1­18. https://doi.org/10.3109/07434618.2014.885080
+
+Light, J. C., McNaughton, D., Krezman, C., Williams, M., Gulens, M., Galskoy, A., & Umpleby, M. (2007). The AAC Mentor
+Project: Web-based instruction in sociorelational skills and collaborative problem solving for adults who use augmentative
+and alternative communication. Augmentative and Alternative Communication, 23(1), 56­75.
+https://doi.org/10.1080/07434610600924499
+
+Light, J. C., Stoltz, B., & McNaughton, D. (1996). Community-based employment: Experiences of adults who use AAC.
+Augmentative and Alternative Communication, 12(4), 215­229. https://doi.org/10.1080/07434619612331277688
+
+Lin, S. C., & Gold, R. S. (2017). Assistive technology needs, functional difficulties, and services utilization and
+coordination of children with developmental disabilities in the United States. Assistive Technology, 30(2), 100­106.
+https://doi.org/10.1080/10400435.2016.1265023
+
+Lund, S. K., & Light, J. C. (2007). Long-term outcomes for individuals who use augmentative and alternative
+communication: Part III--Augmentative and Alternative Communication, 23(4), 323­335.
+https://doi.org/10.1080/02656730701189123
+
+Lüke, C. (2014). Impact of speech-generating devices on the language development of a child with childhood apraxia of
+speech: A case study. Disability and Rehabilitation: Assistive Technology, 11(1), 80­88.
+https://doi.org/10.3109/17483107.2014.913715
+
+McGee, G. G., Morrier, M. J., & Daly, T. (1999). An incidental teaching approach to early intervention for toddlers with
+autism. Research and Practice for Persons with Severe Disabilities, 24(3), 133­146. https://doi.org/10.2511/rpsd.24.3.133
+
+Mechling, L. C. (2007). Assistive technology as a self-management tool for prompting students with intellectual disabilities
+to initiate and complete daily tasks: A literature review. Education and Training in Developmental Disabilities, 42(3), 252­
+269. https://www.jstor.org/stable/23879621
+
+Millar, D. C., Light, J. C., & McNaughton, D. B. (2004). The effect of direct instruction and writer's workshop on the early
+writing skills of children who use augmentative and alternative communication. Augmentative and Alternative
+Communication, 20(3), 164­178. https://doi.org/10.1080/07434610410001699690
+
+Millar, D. C., Light, J. C., & Schlosser, R. W. (2006). The impact of augmentative and alternative communication
+intervention on the speech production of individuals with developmental disabilities: A research review. Journal of Speech,
+Language, and Hearing Research, 49(2), 248­264. https://doi.org/10.1044/1092-4388(2006/021)
+
+Mindel, M. (2020). Talk like me: Supporting students who are African American using augmentative and alternative
+communication. Perspectives of the ASHA Special Interest Groups, 5(6), 1586­1592.
+https://doi.org/10.1044/2020_PERSP-20-00041
+
+Mindel, M., & John, J. (2018). Bridging the school and home divide for culturally and linguistically diverse families using
+augmentative and alternative communication systems. Perspectives of the ASHA Special Interest Groups, 3(12), 154­
+163. https://doi.org/10.1044/persp3.SIG12.154
+
+Mirenda, P. (1997). Supporting individuals with challenging behavior through functional communication training and AAC:
+
+Research review. Augmentative and Alternative Communication, 13(4), 207­225.
+
+https://doi.org/10.1080/07434619712331278048
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2               34/37
+5/9/23, 12:11 PM  Augmentative and Alternative Communication
+
+National Joint Committee for the Communication Needs of Persons With Severe Disabilities. (1992). Guidelines for
+
+meeting the communication needs of persons with severe disabilities [Guidelines]. https://www.asha.org/policy
+
+Nunes, D. R. P. (2008). AAC interventions for autism: A research summary. International Journal of Special Education,
+23(2), 17­26.
+
+O'Neill, T., Light, J., & Pope, L. (2018). Effects of interventions that include aided augmentative and alternative
+communication input on the communication of individuals with complex communication needs: A meta-analysis. Journal of
+Speech, Language, and Hearing Research, 61(7), 1743­1765. https://doi.org/10.1044/2018_JSLHR-L-17-0132
+
+Pape, T. L. B., Kim, J., & Weiner, B. (2002). The shaping of individual meanings assigned to assistive technology: A
+review of personal factors. Disability and Rehabilitation, 24(1­3), 5­20. https://doi.org/10.1080/09638280110066235
+
+Parette, H. P., Jr., Brotherson, M. J., & Huer, M. B. (2000). Giving families a voice in augmentative and alternative
+communication decision-making. Education and Training in Mental Retardation and Developmental Disabilities, 35(2),
+177­190. https://www.jstor.org/stable/23879942
+
+Parette, P., VanBiervliet, A., & Hourcade, J. J. (2000). Family-centered decision making in assistive technology. Journal of
+Special Education Technology, 15(1), 45­55. https://doi.org/10.1177/016264340001500104
+
+Patient Protection and Affordable Care Act of 2010, H.R. 3590, Pub. L. No. 111-148. https://www.congress.gov/bill/111th-
+congress/house-bill/3590
+
+Petroi, D., Koul, R., & Corwin, M. (2011, November). Resource allocation and use of SGDs by persons with aphasia
+[Paper presentation]. Annual Convention of the American Speech-Language-Hearing Association, San Diego, CA, United
+States.
+
+Porter, G., & Cafiero, J. M. (2009). Pragmatic Organization Dynamic Display (PODD) communication books: A promising
+practice for individuals with autism spectrum disorders. Perspectives on Augmentative and Alternative Communication,
+18, 121­129. https://doi.org/10.1044/aac18.4.121
+
+Potts, M., & Satterfield, B. (2013). Studies in AAC and autism: The impact of LAMP as a therapy intervention.
+https://gatfl.gatech.edu//tflwiki/images/4/43/LAMP_Rsch_Article.pdf [PDF]
+
+Quick, N., Erickson, K., & McCright, J. (2019). The most frequently used words: Comparing child-directed speech and
+young children's speech to inform vocabulary selection for aided input. Augmentative and Alternative Communication,
+35(2), 120­131. https://doi.org/10.1080/07434618.2019.1576225
+
+Romski, M., Sevcik, R. A., Adamson, L. B., Cheslock, M., Smith, A., Barker, M., & Bakeman, R. (2010). Randomized
+comparison of augmented and nonaugmented language interventions for toddlers with developmental delays and their
+parents. Journal of Speech, Language, and Hearing Research, 53(2), 350­364. https://doi.org/10.1044/1092-
+4388(2009/08-0156)
+
+Romski, M., Sevcik, R. A., Barton-Hulsey, A., & Whitmore, A. S. (2015). Early intervention and AAC: What a difference 30
+years makes. Augmentative and Alternative Communication, 31(3), 181­202.
+https://doi.org/10.3109/07434618.2015.1064163
+
+Schlosser, R. (2003). Selecting graphic symbols for an initial request lexicon. In R. Schlosser (Ed.), The efficacy of
+augmentative and alternative communication: Toward evidence-based practice (pp. 347­402). Elsevier.
+
+Sedey, A., Rosin, M., & Miller, J. (1991, November). The use of signs among children with Down syndrome [Poster
+presentation]. Annual Convention of the American Speech-Language-Hearing Association, Atlanta, GA, United States.
+
+Sutton, A., Soto, G., & Blockberger, S. (2002). Grammatical issues in graphic symbol communication. Augmentative and
+Alternative Communication, 18(3), 192­204. https://doi.org/10.1080/07434610212331281271
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2         35/37
+5/9/23, 12:11 PM                                Augmentative and Alternative Communication
+
+Tuthill, J. (2014). Get real with visual scene displays. The ASHA Leader, 19(6), 34­35.
+
+https://doi.org/10.1044/leader.APP.19062014.34
+
+U.S. Department of Education Office for Civil Rights. (1996). Free appropriate public education for students with
+disabilities: Requirements under Section 504 of the Rehabilitation Act of 1973.
+https://www2.ed.gov/about/offices/list/ocr/docs/edlite-
+FAPE504.html#:~:text=The%20Section%20504%20regulation%20requires,severity%20of%20the%20person's%20disability.
+
+U.S. Department of Education Office of Special Education Programs. (2006). OSEP policy documents regarding the
+education of infants, toddlers, children and youth with disabilities: Free appropriate public education.
+https://www2.ed.gov/policy/speced/guid/idea/letters/revpolicy/tpfape.html
+
+van Tilborg, A., & Deckers, S. R. J. M. (2016). Vocabulary selection in AAC: Application of core vocabulary in atypical
+populations. Perspectives of the ASHA Special Interest Groups, 1(12), 125­138.
+https://doi.org/10.1044/persp1.SIG12.125
+
+Wilkinson, K., & McIlvane, W. (2002). Considerations in teaching graphic symbols to beginning communicators. In J.
+Reichle, D. Beukelman, & J. C. Light (Eds.), Exemplary practices for beginning communicators: Implications for AAC (pp.
+273­322). Brookes.
+
+Witkowski, D., & Baker, B. (2012). Addressing the content vocabulary with core: Theory and practice for nonliterate or
+emerging literate students. Perspectives on Augmentative and Alternative Communication, 21(3), 74­81.
+https://doi.org/10.1044/aac21.3.74
+
+Wong, V., & Wong, S. N. (1991). Brainstem auditory evoked potential study in children with autistic disorder. Journal of
+Autism and Developmental Disorders, 21(3), 329­340. https://doi.org/10.1007/BF02207329
+
+World Health Organization. (1997). Life skills education for children and adolescents in schools [Programme on Mental
+Health Organization].
+
+World Health Organization. (2014). International Classification of Functioning, Disability and Health.
+
+Wright, C. A., Kaiser, A. P., Reikowsky, D. I., & Roberts, M. Y. (2013). Effects of a naturalistic sign intervention on
+expressive language of toddlers with Down syndrome. Journal of Speech, Language, and Hearing Research, 56(3), 994­
+1008. https://doi.org/10.1044/1092-4388(2012/12-0060)
+
+Yorkston, K., Dowden, P., Honsinger, M., Marriner, N., & Smith, K. (1988). A comparison of standard and user vocabulary
+lists. Augmentative and Alternative Communication, 4(4), 189­210. https://doi.org/10.1080/07434618812331274807
+
+Zangari, C., & Kangas, K. (1997). Intervention principles and procedures. In L. Lloyd, D. Fuller, & H. Arvidson (Eds.),
+Augmentative and alternative communication (pp. 235­253). Allyn & Bacon.
+
+Zubow, L., & Hurtig, R. (2013). A demographic study of AAC/AT needs in hospitalized patients. Perspectives on
+Augmentative and Alternative Communication, 22(2), 79­90. https://pubs.asha.org/doi/10.1044/aac22.2.79
+
+About This Content
+
+Content Disclaimer: The Practice Portal, ASHA policy documents, and guidelines contain information for use in all settings; however,
+members must consider all applicable local, state and federal requirements when applying the information in their specific work setting.
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2                           36/37
+5/9/23, 12:11 PM                                          Augmentative and Alternative Communication
+
+© 1997-2023 American Speech-Language-Hearing Association
+
+https://www.asha.org/Practice-Portal/Professional-Issues/Augmentative-and-Alternative-Communication/#collapse_2  37/37
+
