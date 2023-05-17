@@ -8,12 +8,13 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-      args: [--rm, BASEIMAGE=python:3.10.11]
+      args: [--rm, BASEIMAGE=python:3.10.11, LLAMA_CMAMAKE:"" ]
     image: privategpt:test
     command: [python, src/privateGPT.py]
     environment:
       - PERSIST_DIRECTORY=${PERSIST_DIRECTORY:-/home/privategpt/db}
       - LLAMA_EMBEDDINGS_MODEL=${LLAMA_EMBEDDINGS_MODEL:-/home/privategpt/models/ggml-model-q4_0.bin}
+      - EMBEDDINGS_MODEL_NAME=${EMBEDDINGS_MODEL_NAME:-all-MiniLM-L6-v2}
       - MODEL_TYPE=${MODEL_TYPE:-GPT4All}
       - MODEL_PATH=${MODEL_PATH:-/home/privategpt/models/ggml-gpt4all-j-v1.3-groovy.bin}
       - MODEL_N_CTX=${MODEL_N_CTX:-1000}
@@ -29,7 +30,9 @@ services:
   privategpt-cuda-11.6:
     extends: privategpt
     build:
-      args: [BASEIMAGE=wallies/python-cuda:3.10-cuda11.6-runtime]
+      args:
+        - BASEIMAGE=wallies/python-cuda:3.10-cuda11.6-runtime
+        - LLAMA_CMAKE="-DLLAMA_OPENBLAS=on" FORCE_CMAKE=1"
     deploy:
       resources:
         reservations:
