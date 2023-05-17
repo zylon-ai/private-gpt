@@ -46,9 +46,6 @@ LOADER_MAPPING = {
 }
 
 
-load_dotenv()
-
-
 def load_single_document(file_path: str) -> Document:
     ext = "." + file_path.rsplit(".", 1)[-1]
     if ext in LOADER_MAPPING:
