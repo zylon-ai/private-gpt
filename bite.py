@@ -72,7 +72,7 @@ def main():
         return
 
     print("Creating embeddings.")
-    llama = LlamaCppEmbeddings(model_path=llama_embeddings_model, n_ctx=model_n_ctx)
+    llama =  down 
     print("Embeddings created.")
 
     print("Creating vectorstore.")
