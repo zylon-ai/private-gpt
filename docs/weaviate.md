@@ -8,7 +8,7 @@
 
 2. Install Langchain's master branch (do this until PR [#4824](https://github.com/hwchase17/langchain/pull/4824) is released):
    ```bash
-   pip install git+https://github.com/hwchase17/langchain.git@main
+   pip install git+https://github.com/hwchase17/langchain.git@master
    ```
 
 3. Define the following env vars:
