@@ -9,7 +9,6 @@ import streamlit as st
 from typing import List
 from dotenv import load_dotenv
 load_dotenv()
-OPENAI_API_KEY = os.environ['OPENAI_API_KEY']
 
 from flair import (
     gears,
@@ -58,7 +57,7 @@ load_dotenv()
 
 
 LOADER_MAPPING = {
-    ".csv": (CSVLoader, {}),
+#    ".csv": (CSVLoader, {}),
     ".docx": (UnstructuredWordDocumentLoader, {}),
     ".enex": (EverNoteLoader, {}),
     ".eml": (UnstructuredEmailLoader, {}),
@@ -72,7 +71,7 @@ LOADER_MAPPING = {
     ".pptx": (UnstructuredPowerPointLoader, {}),
     ".py": (TextLoader, {"encoding": "utf8"}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
-    ".xlsx": (CSVLoader, {"sheet_name": "Sheet1"}), # use the CSV loader but add sheet_name arg for excel file
+#    ".xlsx": (CSVLoader, {"sheet_name": "Sheet1"}), # use the CSV loader but add sheet_name arg for excel file
 }
 
 
@@ -108,6 +107,14 @@ def animate(text="💭 Learning"):
 def load_single_document(file_path: str) -> Document:
     global loading  # make sure to use the global loading variable
     loading = True
+    load_dotenv()  # take environment variables from .env.
+
+    persist_directory = os.getenv("PERSIST_DIRECTORY")
+    llama_embeddings_model = os.getenv("LLAMA_EMBEDDINGS_MODEL")
+    model_type = os.getenv("MODEL_TYPE")
+    model_path = os.getenv("MODEL_PATH")
+    model_n_ctx = os.getenv("MODEL_N_CTX")
+    openai_api_key = os.getenv("OPENAI_API_KEY")
     ext = "." + file_path.rsplit(".", 1)[-1]
     if ext in LOADER_MAPPING:
         loader_class, loader_args = LOADER_MAPPING[ext]
@@ -115,9 +122,9 @@ def load_single_document(file_path: str) -> Document:
         
         try:
             doc = loader.load()[0]
-            print(f"\n")
+
             print(f"✅ Successfully loaded document from file {file_path}.\033[0m")
-            print(f"\n")
+
             t = threading.Thread(target=animate)
             t.start()
             response = openai.ChatCompletion.create(
@@ -130,8 +137,8 @@ def load_single_document(file_path: str) -> Document:
             docs = loader.load()
             num_docs = len(docs)
             doc_types = set([type(doc).__name__ for doc in docs])
-            print(f"\n\033[0;32m")
-            print(f"✅ Successfully loaded {num_docs} documents from file {file_path}.\n")
+
+            print(f"✅ Successfully loaded {num_docs} documents from file {file_path}.\n\033[0m\n")
             colored_print(logosmall)
             loading=False
             print("💡 \033[1m\033[0;36mDreamwalk:\033[0m", response['choices'][0]['message']['content'],)
@@ -139,22 +146,22 @@ def load_single_document(file_path: str) -> Document:
             return doc
             
         except UnicodeDecodeError:
-            print(f"⚠️ \033[5m*", f"\033[31mSkipping file {file_path} due to UnicodeDecodeError.\033[0m")
+            print(f"\033[5m⚠️\033[0m", f" Skipping file {file_path} due to UnicodeDecodeError.\033[0m")
             return None
         except TypeError:
-            print(f"⚠️ \033[5m*", f"\033[31mSkipping file {file_path} due to TypeError (possibly invalid document structure).\033[0m")
+            print(f"\033[5m⚠️\033[0m", f" Skipping file {file_path} due to TypeError (possibly invalid document structure).\033[0m")
             return None
         except PDFSyntaxError:
-            print(f"⚠️ \033[5m*", f"\033[31mSkipping file {file_path} due to PDFSyntaxError (no /root).\033[0m")
+            print(f"\033[5m⚠️\033[0m", f" Skipping file {file_path} due to PDFSyntaxError (no /root).\033[0m")
             return None
         # except PSEOF:
         #     print(f"⚠️ \033[5m*", f"\033[31mError: Unexpected EOF in file {file_path}. The file might be corrupted or not a valid PDF.\033[0m")
         #     return None
         except Exception as e:
-            print(f"⚠️ \033[5m*", f"\033[31mAn unexpected error occurred while processing the file {file_path}: {str(e)}\033[0m")
+            print(f"\033[5m⚠️\033[0m", f" An unexpected error occurred while processing the file {file_path}: {str(e)}\033[0m")
             return None
     else:
-        print(f"⚠️ Skipping file {file_path} due to unsupported file extension '{ext}'\033[0m")
+        print(f"\033[5m⚠️ \033[0mSkipping file {file_path} due to unsupported file extension '{ext}'\033[0m")
         return None
 
 def load_documents(source_dir: str) -> List[Document]:
@@ -166,7 +173,10 @@ def load_documents(source_dir: str) -> List[Document]:
         )
     valid_files = [file_path for file_path in all_files if not os.path.basename(file_path).startswith('~$')]
     print(f"Found {len(valid_files)} valid files.")
-    return [load_single_document(file_path) for file_path in valid_files]
+    documents = [load_single_document(file_path) for file_path in valid_files]
+    # Filter out any None values from the documents list
+    return [doc for doc in documents if doc is not None]
+
 
 
 def main():
