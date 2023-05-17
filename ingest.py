@@ -32,6 +32,7 @@ LOADER_MAPPING = {
     ".csv": (CSVLoader, {}),
     # ".docx": (Docx2txtLoader, {}),
     ".docx": (UnstructuredWordDocumentLoader, {}),
+    ".doc": (UnstructuredWordDocumentLoader, {}),
     ".enex": (EverNoteLoader, {}),
     ".eml": (UnstructuredEmailLoader, {}),
     ".epub": (UnstructuredEPubLoader, {}),
@@ -40,6 +41,7 @@ LOADER_MAPPING = {
     ".odt": (UnstructuredODTLoader, {}),
     ".pdf": (PDFMinerLoader, {}),
     ".pptx": (UnstructuredPowerPointLoader, {}),
+    ".ppt": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
     # Add more mappings for other file extensions and loaders as needed
 }
