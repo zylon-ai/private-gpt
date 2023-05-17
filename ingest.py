@@ -90,7 +90,7 @@ def main():
     if os.path.exists(persist_directory):
         # Update and store locally vectorstore
         print(f"Appending to existing vectorstore at {persist_directory}")
-        db = Chroma(persist_directory=persist_directory, embedding_function=llama, client_settings=CHROMA_SETTINGS)
+        db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
         collection = db.get()
         # Load documents and split in chunks
         documents = load_documents(source_directory, [metadata['source'] for metadata in collection['metadatas']])
