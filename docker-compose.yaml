@@ -1,9 +1,16 @@
-version: "3.9"
+---
+version: '3.9'
 services:
+  #
+  # Base service, without CUDA
+  #
   privategpt:
-    build: .
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args: [--rm, BASEIMAGE=python:3.10.11]
     image: privategpt:test
-    command: [ "python", "src/privateGPT.py" ]
+    command: [python, src/privateGPT.py]
     environment:
       - PERSIST_DIRECTORY=${PERSIST_DIRECTORY:-/home/privategpt/db}
       - LLAMA_EMBEDDINGS_MODEL=${LLAMA_EMBEDDINGS_MODEL:-/home/privategpt/models/ggml-model-q4_0.bin}
@@ -13,3 +20,73 @@ services:
     volumes:
       - ${MODEL_MOUNT:-./models}:/home/privategpt/models
       - ${PERSIST_MOUNT:-./db}:/home/privategpt/db
+
+  #
+  # To run with CUDA 11.6
+  #
+  #  docker compose run --rm --build privategpt-cuda-11.6
+  # 
+  privategpt-cuda-11.6:
+    extends: privategpt
+    build:
+      args: [BASEIMAGE=wallies/python-cuda:3.10-cuda11.6-runtime]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+          memory: 8G
+
+  #
+  # To run with CUDA 11.7
+  #
+  #  docker compose run --rm --build privategpt-cuda-11.7
+  # 
+  privategpt-cuda-11.7:
+    extends: privategpt-cuda-11.6
+    build:
+      args: [BASEIMAGE=wallies/python-cuda:3.10-cuda11.7-runtime]
+
+  #
+  # To ingest using cuda 11.6:
+  # 
+  #  docker compose run --rm --build privategpt-cuda-11.6-ingest
+  #  
+  privategpt-cuda-11.6-ingest:
+    extends: privategpt-cuda-11.6
+    command: [python, src/ingest.py]
+
+  #
+  # To ingest using cuda 11.7:
+  # 
+  #  docker compose run --rm --build privategpt-cuda-11.7-ingest
+  #  
+  privategpt-cuda-11.7-ingest:
+    extends: privategpt-cuda-11.7
+    command: [python, src/ingest.py]
+
+  # Check your system's version using
+  # 
+  #  docker compose run --rm check-cuda-version
+  #
+  # then build and test the privateGPT container
+  # using
+  #
+  #  docker compose run --rm check-cuda-<CUDAVERSION>
+  #
+  # Where <CUDAVERSION> is the version you found using 'check-cuda-version'.
+  #
+  # Example if CUDAVERSION == 11.6
+  # 
+  #  docker compose run --rm --build check-cuda-11.6
+  check-cuda-version:
+    image: ubuntu
+    command: [nvidia-smi]
+  check-cuda-11.6:
+    extends: privategpt-cuda-11.6
+    command: [nvidia-smi]
+  check-cuda-11.7:
+    extends: privategpt-cuda-11.7
+    command: [nvidia-smi]
