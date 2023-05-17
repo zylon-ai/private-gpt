@@ -81,9 +81,9 @@ def validate_path(file_path: str, make_absolute: bool = False) -> str:
 
 def main():
     # Load environment variables
-    persist_directory = os.environ.get('PERSIST_DIRECTORY')
-    source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
-    embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
+    persist_directory = validate_path(os.environ.get('PERSIST_DIRECTORY'))
+    source_directory = validate_path(os.environ.get('SOURCE_DIRECTORY', 'source_documents'))
+    embeddings_model_name = validate_path(os.environ.get('EMBEDDINGS_MODEL_NAME'))
 
     # Load documents and split in chunks
     print(f"Loading documents from {source_directory}")
