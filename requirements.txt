@@ -15,4 +15,3 @@ huggingface_hub
 transformers
 sentence_transformers
 accelerate
-bitsandbytes
