@@ -63,8 +63,8 @@ def main():
 def create_HuggingFace_pipeline(model_path, model_n_ctx):
 
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model_path)
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_path, device_map='auto')
+        tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_path, device_map='auto', local_files_only=True)
         pipe = pipeline(
         "text2text-generation",
         model=model, 
