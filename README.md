@@ -26,6 +26,7 @@ PERSIST_DIRECTORY: is the folder you want your vectorstore in
 LLAMA_EMBEDDINGS_MODEL: (absolute) Path to your LlamaCpp supported embeddings model
 MODEL_PATH: Path to your GPT4All or LlamaCpp supported LLM
 MODEL_N_CTX: Maximum token limit for both embeddings and LLM models
+VECTOR_STORE: supports weaviate or chroma
 ```
 
 Note: because of the way `langchain` loads the `LLAMA` embeddings, you need to specify the absolute path of your embeddings model binary. This means it will not work if you use a home directory shortcut (eg. `~/` or `$HOME/`).
