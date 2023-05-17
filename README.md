@@ -7,7 +7,7 @@ Built with [LangChain](https://github.com/hwchase17/langchain) and [GPT4All](htt
 
 # Environment Setup
 
-Read [this](docs/weaviate.md) first if you want to use weaviate!
+Read [this](docs/weaviate.md) first if you want to use with [Weaviate](https://weaviate.io/).
 
 In order to set your environment up to run the code here, first install all requirements:
 
@@ -72,7 +72,7 @@ Type `exit` to finish the script.
 # How does it work?
 Selecting the right local models and the power of `LangChain` you can run the entire pipeline locally, without any data leaving your environment, and with reasonable performance.
 
-- `ingest.py` uses `LangChain` tools to parse the document and create embeddings locally using `LlamaCppEmbeddings`. It then stores the result in a local vector database using `Chroma` vector store. 
+- `ingest.py` uses `LangChain` tools to parse the document and create embeddings locally using `LlamaCppEmbeddings`. It then stores the result in a local vector database using either `Chroma` or `Weaviate`. 
 - `privateGPT.py` uses a local LLM based on `GPT4All-J` or `LlamaCpp` to understand questions and create answers. The context for the answers is extracted from the local vector store using a similarity search to locate the right piece of context from the docs.
 - `GPT4All-J` wrapper was introduced in LangChain 0.0.162.
 
