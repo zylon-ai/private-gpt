@@ -50,6 +50,15 @@ services:
       args: [BASEIMAGE=wallies/python-cuda:3.10-cuda11.7-runtime]
 
   #
+  # For ingest without cuda:
+  # 
+  #  docker compose run --rm --build privategpt-ingest
+  #  
+  privategpt-ingest:
+    extends: privategpt
+    command: [python, src/ingest.py]
+
+  #
   # To ingest using cuda 11.6:
   # 
   #  docker compose run --rm --build privategpt-cuda-11.6-ingest
