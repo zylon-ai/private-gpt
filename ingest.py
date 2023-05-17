@@ -56,11 +56,11 @@ def main():
     vector_store_type = os.environ.get('VECTOR_STORE', 'weaviate')
     if vector_store_type == 'weaviate':
         from adapters.weaviate_adapter import WeaviateVectorStoreAdapter
-
         weaviate_url = os.environ.get('WEAVIATE_URL', 'http://localhost:8080')
         vector_store = WeaviateVectorStoreAdapter(weaviate_url)
         vector_store.from_documents(texts, llama
                                     )
+        print(f"Ingested {len(texts)} document snippets from {source_directory} into Weaviate at {weaviate_url}")
     elif vector_store_type == 'chroma':
 
         from adapters.chroma_adapter import ChromaVectorStoreAdapter

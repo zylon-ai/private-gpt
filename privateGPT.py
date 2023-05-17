@@ -38,6 +38,8 @@ def main():
         weaviate_url = os.environ.get('WEAVIATE_URL', 'http://localhost:8080')
         
         vector_store = WeaviateVectorStoreAdapter(weaviate_url, llm=llama)
+
+        print(f"Using Weaviate vector store at {weaviate_url}")
         
     elif vector_store_type == 'chroma':
         from adapters.chroma_adapter import ChromaVectorStoreAdapter
