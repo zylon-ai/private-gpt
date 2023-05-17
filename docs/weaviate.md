@@ -10,10 +10,7 @@
    docker compose up -d
    ```
    
-3. Install Langchain's master branch (do this until PR [#4824](https://github.com/hwchase17/langchain/pull/4824) is released):
-   ```bash
-   pip install git+https://github.com/hwchase17/langchain.git@master
-   ```
+3. Install Langchain if you haven't already done so. Make sure to install version [0.0.172](https://github.com/hwchase17/langchain/releases/tag/v0.0.172) or greater because we need the `by_text` feature introduced in PR [#4824](https://github.com/hwchase17/langchain/pull/4824)
 
 4. Define these additional env vars in `.env`:
    ```
