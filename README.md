@@ -37,6 +37,7 @@ The supported extensions are:
 
    - `.csv`: CSV,
    - `.docx`: Word Document,
+   - `.doc`: Word Document,
    - `.enex`: EverNote,
    - `.eml`: Email,
    - `.epub`: EPub,
@@ -46,6 +47,7 @@ The supported extensions are:
    - `.odt`: Open Document Text,
    - `.pdf`: Portable Document Format (PDF),
    - `.pptx` : PowerPoint Document,
+   - `.ppt` : PowerPoint Document,
    - `.txt`: Text file (UTF-8),
 
 Run the following command to ingest all the data.
