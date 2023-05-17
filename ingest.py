@@ -3,6 +3,8 @@ import glob
 from typing import List
 from dotenv import load_dotenv
 
+import multiprocessing
+
 from langchain.document_loaders import (
     CSVLoader,
     EverNoteLoader,
@@ -49,6 +51,7 @@ load_dotenv()
 
 
 def load_single_document(file_path: str) -> Document:
+    print(f"Loading document from {file_path}")
     ext = "." + file_path.rsplit(".", 1)[-1]
     if ext in LOADER_MAPPING:
         loader_class, loader_args = LOADER_MAPPING[ext]
@@ -65,7 +68,11 @@ def load_documents(source_dir: str) -> List[Document]:
         all_files.extend(
             glob.glob(os.path.join(source_dir, f"**/*{ext}"), recursive=True)
         )
-    return [load_single_document(file_path) for file_path in all_files]
+    pool = multiprocessing.Pool(os.environ.get('LOAD_DOCUMENTS_NUMBER_OF_THREADS', multiprocessing.cpu_count()))
+    result = pool.map(load_single_document, all_files)
+    pool.close()
+    pool.join()
+    return result
 
 
 def main():
