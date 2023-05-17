@@ -45,9 +45,10 @@ Run the following command to ingest all the data.
 python ingest.py
 ```
 
-It will create a `db` folder containing the local vectorstore. Will take time, depending on the size of your documents.
-You can ingest as many documents as you want, and all will be accumulated in the local embeddings database. 
-If you want to start from an empty database, delete the `db` folder.
+If using `Weaviate` this will upsert data to your local vector database instance. If using `Chroma` this will create a `db` folder containing the local vectorstore. Will take time, depending on the size of your documents.
+
+You can ingest as many documents as you want, and all will be accumulated in the local embeddings database.
+If you want to start from an empty database, you can either create a new `Weaviate` instance or if working with `Chroma` you can delete the `db` folder.
 
 Note: during the ingest process no data leaves your local environment. You could ingest without an internet connection.
 
