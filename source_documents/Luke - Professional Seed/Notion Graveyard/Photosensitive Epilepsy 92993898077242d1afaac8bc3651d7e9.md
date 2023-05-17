@@ -1,3 +1,0 @@
-# Photosensitive Epilepsy
-
-Notes: Fortunately, only about 3% of people with an epilepsy diagnosis are triggered by flashing lights - and only at specific intensities, frequencies, or visual patterns. Research indicates it is more common in juveniles, particularly juvenile myoclonic (twitching) seizures and even more particularly when that twitching is centralized around their eyelid (Jeavon's syndrome).

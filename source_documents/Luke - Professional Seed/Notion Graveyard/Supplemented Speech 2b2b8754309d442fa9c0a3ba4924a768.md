@@ -1,3 +1,0 @@
-# Supplemented Speech
-
-Definition: Supplemented speech is a strategy used with dysarthric speakers to improve their intelligibility. An alphabet board or other AAC device is used to allow the speaker to indicate the first letter of each word as he says it. Those that receive the message are then able to narrow down the range of possibilities and intelligibility is increased while still allowing for natural speech.

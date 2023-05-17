@@ -42,7 +42,6 @@ llama_embeddings_model = os.getenv("LLAMA_EMBEDDINGS_MODEL")
 model_type = os.getenv("MODEL_TYPE")
 model_path = os.getenv("MODEL_PATH")
 model_n_ctx = os.getenv("MODEL_N_CTX")
-openai_api_key = os.getenv("OPENAI_API_KEY")
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
@@ -53,7 +52,7 @@ from constants import CHROMA_SETTINGS
 
 
 load_dotenv()
-
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 LOADER_MAPPING = {
@@ -108,13 +107,6 @@ def load_single_document(file_path: str) -> Document:
     global loading  # make sure to use the global loading variable
     loading = True
     load_dotenv()  # take environment variables from .env.
-
-    persist_directory = os.getenv("PERSIST_DIRECTORY")
-    llama_embeddings_model = os.getenv("LLAMA_EMBEDDINGS_MODEL")
-    model_type = os.getenv("MODEL_TYPE")
-    model_path = os.getenv("MODEL_PATH")
-    model_n_ctx = os.getenv("MODEL_N_CTX")
-    openai_api_key = os.getenv("OPENAI_API_KEY")
     ext = "." + file_path.rsplit(".", 1)[-1]
     if ext in LOADER_MAPPING:
         loader_class, loader_args = LOADER_MAPPING[ext]

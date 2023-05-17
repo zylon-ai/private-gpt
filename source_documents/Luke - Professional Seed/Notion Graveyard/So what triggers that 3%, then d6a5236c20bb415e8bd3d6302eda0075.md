@@ -1,3 +1,0 @@
-# So what triggers that 3%, then?
-
-Notes: Unfortunately there isn't a huge body of research on photosensitive juvenile myoclonic epilepsy, because human subjects boards tend not to approve studies that involve subjecting children to potentially fatal seizures. There have been a number of articles written about the Pokémon incident of the 90s (or as the Japanese authors put it, the "Pocket Monsters," but we do know quite a bit nonetheless.

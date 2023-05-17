@@ -1,1 +1,0 @@
-# Participation Model
