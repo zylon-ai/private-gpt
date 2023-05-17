@@ -1,15 +1,15 @@
-import os
 import glob
+import os
 from typing import List
-from dotenv import load_dotenv
 
-from langchain.document_loaders import TextLoader, PDFMinerLoader, CSVLoader
+from dotenv import load_dotenv
+from langchain.docstore.document import Document
+from langchain.document_loaders import CSVLoader, PDFMinerLoader, TextLoader
+from langchain.embeddings import LlamaCppEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
-from langchain.embeddings import LlamaCppEmbeddings
-from langchain.docstore.document import Document
-from constants import CHROMA_SETTINGS
 
+from constants import CHROMA_SETTINGS
 
 load_dotenv()
 
@@ -35,13 +35,13 @@ def load_documents(source_dir: str) -> List[Document]:
 
 
 def main():
-    # Load environment variables
-    persist_directory = os.environ.get('PERSIST_DIRECTORY')
-    source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
-    llama_embeddings_model = os.environ.get('LLAMA_EMBEDDINGS_MODEL')
-    model_n_ctx = os.environ.get('MODEL_N_CTX')
+    # Load environment variables
+    persist_directory = os.environ.get("PERSIST_DIRECTORY")
+    source_directory = os.environ.get("SOURCE_DIRECTORY", "source_documents")
+    llama_embeddings_model = os.environ.get("LLAMA_EMBEDDINGS_MODEL")
+    model_n_ctx = os.environ.get("MODEL_N_CTX")
 
-    # Load documents and split in chunks
+    # Load documents and split in chunks
     print(f"Loading documents from {source_directory}")
     documents = load_documents(source_directory)
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
@@ -51,22 +51,33 @@ def main():
 
     # Create embeddings
     llama = LlamaCppEmbeddings(model_path=llama_embeddings_model, n_ctx=model_n_ctx)
-    
-    # Create and store locally vectorstore
-    vector_store_type = os.environ.get('VECTOR_STORE', 'weaviate')
-    if vector_store_type == 'weaviate':
-        from adapters.weaviate_adapter import WeaviateVectorStoreAdapter
-        weaviate_url = os.environ.get('WEAVIATE_URL', 'http://localhost:8080')
-        vector_store = WeaviateVectorStoreAdapter(weaviate_url)
-        vector_store.from_documents(texts, llama
-                                    )
-        print(f"Ingested {len(texts)} document snippets from {source_directory} into Weaviate at {weaviate_url}")
-    elif vector_store_type == 'chroma':
 
+    # Create and store locally vectorstore
+    vector_store_type = os.environ.get("VECTOR_STORE", "weaviate")
+    if vector_store_type == "weaviate":
+        from adapters.weaviate_adapter import WeaviateVectorStoreAdapter
+
+        weaviate_url = os.environ.get("WEAVIATE_URL", "http://localhost:8080")
+        vector_store = WeaviateVectorStoreAdapter(weaviate_url)
+        vector_store.from_documents(texts, llama)
+        print(
+            f"Ingested {len(texts)} document snippets from {source_directory} into Weaviate at {weaviate_url}"
+        )
+    elif vector_store_type == "chroma":
         from adapters.chroma_adapter import ChromaVectorStoreAdapter
-        vector_store = ChromaVectorStoreAdapter(persist_directory=persist_directory, embedding_function=llama, client_settings=CHROMA_SETTINGS)
-        vector_store.from_documents(texts, llama, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
-        
+
+        vector_store = ChromaVectorStoreAdapter(
+            persist_directory=persist_directory,
+            embedding_function=llama,
+            client_settings=CHROMA_SETTINGS,
+        )
+        vector_store.from_documents(
+            texts,
+            llama,
+            persist_directory=persist_directory,
+            client_settings=CHROMA_SETTINGS,
+        )
+
     else:
         print(f"Vector store type {vector_store_type} not supported!")
         exit(1)
