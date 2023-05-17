@@ -68,7 +68,7 @@ def load_documents(source_dir: str) -> List[Document]:
         all_files.extend(
             glob.glob(os.path.join(source_dir, f"**/*{ext}"), recursive=True)
         )
-    with multiprocessing.Pool(os.environ.get('LOAD_DOCUMENTS_NUMBER_OF_THREADS', multiprocessing.cpu_count() - 1)) as pool:
+    with multiprocessing.Pool(int(os.environ.get('LOAD_DOCUMENTS_NUMBER_OF_THREADS', multiprocessing.cpu_count() - 1))) as pool:
         result = pool.map(load_single_document, all_files)
     return result
 
