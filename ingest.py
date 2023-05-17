@@ -31,6 +31,8 @@ load_dotenv()
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
 source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
 embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
+chunk_size = 500
+chunk_overlap = 50
     
 # Map file extensions to document loaders and their arguments
 LOADER_MAPPING = {
@@ -72,19 +74,20 @@ def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Docum
     filtered_files = [file_path for file_path in all_files if file_path not in ignored_files]
     return [load_single_document(file_path) for file_path in filtered_files]
 
-
-def main():
-
+def process_documents(ignored_files: List[str] = []) -> List[Document]:
     # Load documents and split in chunks
     print(f"Loading documents from {source_directory}")
-    chunk_size = 500
-    chunk_overlap = 50
-    documents = load_documents(source_directory)
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    documents = load_documents(source_directory, ignored_files)
+    if documents == []:
+        print("No new documents to load")
+        exit(0)
+    print(f"Loaded {len(documents)} new documents from {source_directory}")
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     texts = text_splitter.split_documents(documents)
-    print(f"Loaded {len(documents)} documents from {source_directory}")
-    print(f"Split into {len(texts)} chunks of text (max. {chunk_size} characters each)")
+    print(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
+    return texts
 
+def main():
     # Create embeddings
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     
@@ -93,26 +96,12 @@ def main():
         print(f"Appending to existing vectorstore at {persist_directory}")
         db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
         collection = db.get()
-        # Load documents and split in chunks
-        documents = load_documents(source_directory, [metadata['source'] for metadata in collection['metadatas']])
-        if documents == []:
-            print("No new documents to load")
-            exit(0)
-        print(f"Loaded {len(documents)} new documents from {source_directory}")
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-        texts = text_splitter.split_documents(documents)
-        print(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
+        texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
         db.add_documents(texts)
     else:
         # Create and store locally vectorstore
         print("Creating new vectorstore")
-        print(f"Loading documents from {source_directory}")
-        documents = load_documents(source_directory)
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-        texts = text_splitter.split_documents(documents)
-        # Load documents and split in chunks
-        print(f"Loaded {len(documents)} documents from {source_directory}")
-        print(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
+        texts = process_documents()
         db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
     db.persist()
     db = None
