@@ -1,3 +1,4 @@
+from unittest.util import _MAX_LENGTH
 from dotenv import load_dotenv
 from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -16,7 +17,6 @@ persist_directory = os.environ.get('PERSIST_DIRECTORY')
 model_type = os.environ.get('MODEL_TYPE')
 model_path = os.environ.get('MODEL_PATH')
 model_n_ctx = os.environ.get('MODEL_N_CTX')
-model_name_HuggingFaceHub = os.environ.get('MODEL_NAME_HUGGING_FACE_HUB')
 
 from constants import CHROMA_SETTINGS
 
@@ -32,7 +32,7 @@ def main():
         case "GPT4All":
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
         case "HuggingFace":
-            llm = create_HuggingFace_model(model_name_HuggingFaceHub)
+            llm = create_HuggingFace_pipeline(model_path, model_n_ctx) #Encoder-Decoder Models 
         case _default: 
             print(f"Model {model_type} not supported!")
             exit
@@ -58,16 +58,24 @@ def main():
             print("\n> " + document.metadata["source"] + ":")
             print(document.page_content)
 
-            
-def create_HuggingFace_model(model_name_HuggingFaceHub):
-    model_id = model_name_HuggingFaceHub
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_id, device_map='auto')
-    pipe = pipeline(
+# This function assummes that the model is already downloaded 
+# See https://huggingface.co/docs/transformers/installation for steps on downloading from their repo.
+def create_HuggingFace_pipeline(model_path, model_n_ctx):
+
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_path, device_map='auto')
+        pipe = pipeline(
         "text2text-generation",
         model=model, 
-        tokenizer=tokenizer)
-    return HuggingFacePipeline(pipeline=pipe)
+        tokenizer=tokenizer,
+        max_length = model_n_ctx )
+        
+        return HuggingFacePipeline(pipeline=pipe)
+    except Exception as e:
+        print(e)
+        
+   
     
 if __name__ == "__main__":
     main()
