@@ -18,7 +18,12 @@ class WeaviateVectorStoreAdapter(VectorStoreAdapter):
 
         client = weaviate.Client(weaviate_url)
         self._weaviate = Weaviate(
-            client, index_name, text_key, by_text=False, embedding=llm
+            client,
+            index_name,
+            text_key,
+            by_text=False,
+            embedding=llm,
+            attributes=["source"],
         )
 
     @property
