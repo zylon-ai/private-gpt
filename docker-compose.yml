@@ -29,6 +29,7 @@ services:
   #
   privategpt-cuda-11.6:
     extends: privategpt
+    image: privategpt:cuda-11.6
     build:
       args:
         - BASEIMAGE=wallies/python-cuda:3.10-cuda11.6-runtime
@@ -48,6 +49,7 @@ services:
   #
   privategpt-cuda-11.7:
     extends: privategpt-cuda-11.6
+    image: privategpt:cuda-11.7
     build:
       args: [ "BASEIMAGE=wallies/python-cuda:3.10-cuda11.7-runtime" ]
 
@@ -69,6 +71,7 @@ services:
   #
   privategpt-cuda-11.6-ingest:
     extends: privategpt-cuda-11.6
+    image: privategpt:cuda-11.6
     command: [ python, src/ingest.py ]
     volumes:
       - ${SOURCE_MOUNT:-./source_documents}:/home/privategpt/source_documents
@@ -80,6 +83,7 @@ services:
   #
   privategpt-cuda-11.7-ingest:
     extends: privategpt-cuda-11.7
+    image: privategpt:cuda-11.7
     command: [ python, src/ingest.py ]
     volumes:
       - ${SOURCE_MOUNT:-./source_documents}:/home/privategpt/source_documents
