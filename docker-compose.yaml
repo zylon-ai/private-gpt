@@ -26,6 +26,7 @@ services:
       - ${PERSIST_MOUNT:-./db}:/home/privategpt/db
       - ${SOURCE_MOUNT:-./source_documents}:/home/privategpt/source_documents
 
+
   #
   # To run with CUDA 11.6
   #
@@ -97,6 +98,15 @@ services:
   # Example if CUDAVERSION == 11.6
   #
   #  docker compose run --rm --build check-cuda-11.6
+  #
+  #
+  #
+  # You can update your host's CUDA installation by downloading
+  # a recent version from
+  #
+  # https://developer.nvidia.com/cuda-downloads .
+  #
+
   check-cuda-version:
     image: ubuntu
     command: [nvidia-smi]
