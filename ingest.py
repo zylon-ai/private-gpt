@@ -31,8 +31,8 @@ load_dotenv()
 LOADER_MAPPING = {
     ".csv": (CSVLoader, {}),
     # ".docx": (Docx2txtLoader, {}),
-    ".docx": (UnstructuredWordDocumentLoader, {}),
     ".doc": (UnstructuredWordDocumentLoader, {}),
+    ".docx": (UnstructuredWordDocumentLoader, {}),
     ".enex": (EverNoteLoader, {}),
     ".eml": (UnstructuredEmailLoader, {}),
     ".epub": (UnstructuredEPubLoader, {}),
@@ -40,8 +40,8 @@ LOADER_MAPPING = {
     ".md": (UnstructuredMarkdownLoader, {}),
     ".odt": (UnstructuredODTLoader, {}),
     ".pdf": (PDFMinerLoader, {}),
-    ".pptx": (UnstructuredPowerPointLoader, {}),
     ".ppt": (UnstructuredPowerPointLoader, {}),
+    ".pptx": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
     # Add more mappings for other file extensions and loaders as needed
 }
