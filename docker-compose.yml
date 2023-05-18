@@ -1,5 +1,13 @@
 ---
 version: '3.9'
+
+x-ingest: &ingest
+  command: [ python, src/ingest.py ]
+  environment:
+    - SOURCE_DIRECTORY=${SOURCE_DIRECTORY:-/home/privategpt/source_documents}
+  volumes:
+    - ${SOURCE_MOUNT:-./source_documents}:/home/privategpt/source_documents
+
 services:
   #
   # Base service, without CUDA
@@ -61,11 +69,7 @@ services:
   #
   privategpt-ingest:
     extends: privategpt
-    command: [ python, src/ingest.py ]
-    environment:
-      - SOURCE_DIRECTORY=${SOURCE_DIRECTORY:-/home/privategpt/source_documents}
-    volumes:
-      - ${SOURCE_MOUNT:-./source_documents}:/home/privategpt/source_documents
+    <<: *ingest
 
   #
   # To ingest using cuda 11.6:
@@ -73,8 +77,9 @@ services:
   #  docker compose run --rm --build privategpt-cuda-11.6-ingest
   #
   privategpt-cuda-11.6-ingest:
-    extends: privategpt-ingest
+    extends: privategpt-cuda-11.6
     image: privategpt:cuda-11.6
+    <<: *ingest
 
   #
   # To ingest using cuda 11.7:
@@ -82,8 +87,9 @@ services:
   #  docker compose run --rm --build privategpt-cuda-11.7-ingest
   #
   privategpt-cuda-11.7-ingest:
-    extends: privategpt-ingest
+    extends: privategpt-cuda-11.7
     image: privategpt:cuda-11.7
+    <<: *ingest
 
   # Check your system's version using
   #
