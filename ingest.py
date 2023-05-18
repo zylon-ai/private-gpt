@@ -3,6 +3,7 @@ import glob
 from typing import List
 from dotenv import load_dotenv
 from multiprocessing import Pool
+from tqdm import tqdm
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -57,7 +58,6 @@ def load_single_document(file_path: str) -> Document:
 
     raise ValueError(f"Unsupported file extension '{ext}'")
 
-
 def load_documents(source_dir: str) -> List[Document]:
     # Loads all documents from source documents directory
     all_files = []
@@ -65,9 +65,15 @@ def load_documents(source_dir: str) -> List[Document]:
         all_files.extend(
             glob.glob(os.path.join(source_dir, f"**/*{ext}"), recursive=True)
         )
+
     with Pool(processes=os.cpu_count()) as pool:
-        documents = pool.map(load_single_document, all_files)
-    return documents
+        results = []
+        with tqdm(total=len(all_files), desc='Loading documents', ncols=80) as pbar:
+            for i, doc in enumerate(pool.imap_unordered(load_single_document, all_files)):
+                results.append(doc)
+                pbar.update()
+
+    return results
 
 
 def main():
