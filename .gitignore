@@ -171,3 +171,4 @@ cython_debug/
 
 # Conda files
 conda-meta/
+.local/
