@@ -3,6 +3,7 @@ import os
 import glob
 from typing import List
 from dotenv import load_dotenv
+from multiprocessing import Pool
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -87,7 +88,9 @@ def load_documents(source_dir: str) -> List[Document]:
         all_files.extend(
             glob.glob(os.path.join(source_dir, f"**/*{ext}"), recursive=True)
         )
-    return [load_single_document(file_path) for file_path in all_files]
+    with Pool(processes=os.cpu_count()) as pool:
+        documents = pool.map(load_single_document, all_files)
+    return documents
 
 
 def main():
