@@ -19,6 +19,7 @@ services:
       - MODEL_PATH=${MODEL_PATH:-/home/privategpt/models/ggml-gpt4all-j-v1.3-groovy.bin}
       - MODEL_N_CTX=${MODEL_N_CTX:-1000}
     volumes:
+      - ${CACHE_MOUNT:-./cache}:/home/privategpt/.cache/torch
       - ${MODEL_MOUNT:-./models}:/home/privategpt/models
       - ${PERSIST_MOUNT:-./db}:/home/privategpt/db
 
