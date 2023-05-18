@@ -1,0 +1,20 @@
+version: '3'
+services:
+  python:
+    image: private-gpt:latest
+    # image: python:3.11.3
+    # build:
+      # context: .
+      # dockerfile: Dockerfile
+    environment:
+      - PERSIST_DIRECTORY=db
+      - LLAMA_EMBEDDINGS_MODEL=models/ggml-model-q4_0.bin
+      - MODEL_TYPE=GPT4All
+      - MODEL_PATH=models/ggml-gpt4all-j-v1.3-groovy.bin
+      - MODEL_N_CTX=1000
+    command: tail -f /dev/null
+    volumes:
+      - ./scripts:/root/scripts
+      - ./models:/root/models
+      - ./source_documents:/root/source_documents
+      # - ./requirements.txt:/requirements.txt
