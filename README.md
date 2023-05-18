@@ -113,18 +113,3 @@ If so set your archflags during pip install. eg: _ARCHFLAGS="-arch x86_64" pip3 
 
 # Disclaimer
 This is a test project to validate the feasibility of a fully private solution for question answering using LLMs and Vector embeddings. It is not production ready, and it is not meant to be used in production. The models selection is not optimized for performance, but for privacy; but it is possible to use different models and vectorstores to improve performance.
-
-
-# Docker and Docker Compose
-
-To run locally,
-```
-docker build . -t private-gpt:latest.
-docker compose up -d
-docker exec -it privategpt-python-1 /bin/bash
-```
-
-Once inside, you can run the commands normally.
-```
-python3 scripts/ingest.py
-```
