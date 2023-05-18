@@ -12,6 +12,7 @@ services:
       - MODEL_TYPE=GPT4All
       - MODEL_PATH=models/ggml-gpt4all-j-v1.3-groovy.bin
       - MODEL_N_CTX=1000
+      - EMBEDDINGS_MODEL_NAME=all-mpnet-base-v2
     command: tail -f /dev/null
     volumes:
       - ./scripts:/root/scripts
