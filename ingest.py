@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from langchain.document_loaders import (
     CSVLoader,
+    Docx2txtLoader,
     EverNoteLoader,
     PDFMinerLoader,
     TextLoader,
