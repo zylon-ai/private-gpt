@@ -59,7 +59,7 @@ python ingest.py
 ```
 
 It will create a `db` folder containing the local vectorstore. Will take 20-30 seconds per document, depending on the size of the document.
-You can ingest as many documents as you want, and all will be accumulated in the local embeddings database. 
+You can ingest as many documents as you want, and all will be accumulated in the local embeddings database.
 If you want to start from an empty database, delete the `db` folder.
 
 To add new documents to the database, just run the `ingest.py` script again. It will add the new documents to the existing database.

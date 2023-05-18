@@ -78,11 +78,11 @@ def process_documents(ignored_files: List[str] = []) -> List[Document]:
     # Load documents and split in chunks
     print(f"Loading documents from {source_directory}")
     documents = load_documents(source_directory, ignored_files)
-    if documents == []:
+    if not documents:
         print("No new documents to load")
         exit(0)
     print(f"Loaded {len(documents)} new documents from {source_directory}")
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     texts = text_splitter.split_documents(documents)
     print(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
     return texts
