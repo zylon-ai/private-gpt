@@ -70,6 +70,8 @@ services:
   privategpt-cuda-11.6-ingest:
     extends: privategpt-cuda-11.6
     command: [ python, src/ingest.py ]
+    volumes:
+      - ${SOURCE_MOUNT:-./source_documents}:/home/privategpt/source_documents
 
   #
   # To ingest using cuda 11.7:
@@ -79,6 +81,8 @@ services:
   privategpt-cuda-11.7-ingest:
     extends: privategpt-cuda-11.7
     command: [ python, src/ingest.py ]
+    volumes:
+      - ${SOURCE_MOUNT:-./source_documents}:/home/privategpt/source_documents
 
   # Check your system's version using
   #
