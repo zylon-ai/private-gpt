@@ -10,7 +10,10 @@ USER privategpt
 WORKDIR /home/privategpt
 
 COPY ./src/requirements.txt src/requirements.txt
-RUN pip install --no-cache-dir -r src/requirements.txt
+ARG LLAMA_CMAKE
+#RUN CMAKE_ARGS="-DLLAMA_OPENBLAS=on" FORCE_CMAKE=1 pip install $(grep llama-cpp-python src/requirements.txt)
+RUN ( /bin/bash -c "${LLAMA_CMAKE} pip install \$(grep llama-cpp-python src/requirements.txt)" 2>&1 | tee llama-build.log ) && sleep 10
+RUN pip install --no-cache-dir -r src/requirements.txt 2>&1 | tee pip-install.log
 
 COPY ./src src
 

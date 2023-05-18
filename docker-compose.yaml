@@ -8,7 +8,7 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-      args: [--rm, BASEIMAGE=python:3.10.11, LLAMA_CMAMAKE:"" ]
+      args: [--rm, "BASEIMAGE=python:3.10.11", LLAMA_CMAKE=]
     image: privategpt:test
     command: [python, src/privateGPT.py]
     environment:
@@ -20,19 +20,23 @@ services:
       - MODEL_N_CTX=${MODEL_N_CTX:-1000}
     volumes:
       - ${MODEL_MOUNT:-./models}:/home/privategpt/models
+      - type: bind
+        source: ${MODEL_MOUNT:-./models}/cache/torch
+        target: /home/privategpt/.cache/torch
       - ${PERSIST_MOUNT:-./db}:/home/privategpt/db
+      - ${SOURCE_MOUNT:-./source_documents}:/home/privategpt/source_documents
 
   #
   # To run with CUDA 11.6
   #
   #  docker compose run --rm --build privategpt-cuda-11.6
-  # 
+  #
   privategpt-cuda-11.6:
     extends: privategpt
     build:
       args:
         - BASEIMAGE=wallies/python-cuda:3.10-cuda11.6-runtime
-        - LLAMA_CMAKE="-DLLAMA_OPENBLAS=on" FORCE_CMAKE=1"
+        - LLAMA_CMAKE=CMAKE_ARGS='-DLLAMA_OPENBLAS=on' FORCE_CMAKE=1
     deploy:
       resources:
         reservations:
@@ -46,41 +50,41 @@ services:
   # To run with CUDA 11.7
   #
   #  docker compose run --rm --build privategpt-cuda-11.7
-  # 
+  #
   privategpt-cuda-11.7:
     extends: privategpt-cuda-11.6
     build:
-      args: [BASEIMAGE=wallies/python-cuda:3.10-cuda11.7-runtime]
+      args: ["BASEIMAGE=wallies/python-cuda:3.10-cuda11.7-runtime"]
 
   #
   # For ingest without cuda:
-  # 
+  #
   #  docker compose run --rm --build privategpt-ingest
-  #  
+  #
   privategpt-ingest:
     extends: privategpt
     command: [python, src/ingest.py]
 
   #
   # To ingest using cuda 11.6:
-  # 
+  #
   #  docker compose run --rm --build privategpt-cuda-11.6-ingest
-  #  
+  #
   privategpt-cuda-11.6-ingest:
     extends: privategpt-cuda-11.6
     command: [python, src/ingest.py]
 
   #
   # To ingest using cuda 11.7:
-  # 
+  #
   #  docker compose run --rm --build privategpt-cuda-11.7-ingest
-  #  
+  #
   privategpt-cuda-11.7-ingest:
     extends: privategpt-cuda-11.7
     command: [python, src/ingest.py]
 
   # Check your system's version using
-  # 
+  #
   #  docker compose run --rm check-cuda-version
   #
   # then build and test the privateGPT container
@@ -91,7 +95,7 @@ services:
   # Where <CUDAVERSION> is the version you found using 'check-cuda-version'.
   #
   # Example if CUDAVERSION == 11.6
-  # 
+  #
   #  docker compose run --rm --build check-cuda-11.6
   check-cuda-version:
     image: ubuntu
