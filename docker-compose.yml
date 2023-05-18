@@ -8,9 +8,9 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-      args: [--rm, "BASEIMAGE=python:3.10.11", LLAMA_CMAKE=]
+      args: [ --rm, "BASEIMAGE=python:3.10.11", LLAMA_CMAKE= ]
     image: privategpt:test
-    command: [python, src/privateGPT.py]
+    command: [ python, src/privateGPT.py ]
     environment:
       - PERSIST_DIRECTORY=${PERSIST_DIRECTORY:-/home/privategpt/db}
       - LLAMA_EMBEDDINGS_MODEL=${LLAMA_EMBEDDINGS_MODEL:-/home/privategpt/models/ggml-model-q4_0.bin}
@@ -20,12 +20,7 @@ services:
       - MODEL_N_CTX=${MODEL_N_CTX:-1000}
     volumes:
       - ${MODEL_MOUNT:-./models}:/home/privategpt/models
-      - type: bind
-        source: ${MODEL_MOUNT:-./models}/cache/torch
-        target: /home/privategpt/.cache/torch
       - ${PERSIST_MOUNT:-./db}:/home/privategpt/db
-      - ${SOURCE_MOUNT:-./source_documents}:/home/privategpt/source_documents
-
 
   #
   # To run with CUDA 11.6
@@ -44,8 +39,7 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
-          memory: 8G
+              capabilities: [ gpu ]
 
   #
   # To run with CUDA 11.7
@@ -55,7 +49,7 @@ services:
   privategpt-cuda-11.7:
     extends: privategpt-cuda-11.6
     build:
-      args: ["BASEIMAGE=wallies/python-cuda:3.10-cuda11.7-runtime"]
+      args: [ "BASEIMAGE=wallies/python-cuda:3.10-cuda11.7-runtime" ]
 
   #
   # For ingest without cuda:
@@ -64,7 +58,9 @@ services:
   #
   privategpt-ingest:
     extends: privategpt
-    command: [python, src/ingest.py]
+    command: [ python, src/ingest.py ]
+    volumes:
+      - ${SOURCE_MOUNT:-./source_documents}:/home/privategpt/source_documents
 
   #
   # To ingest using cuda 11.6:
@@ -73,7 +69,7 @@ services:
   #
   privategpt-cuda-11.6-ingest:
     extends: privategpt-cuda-11.6
-    command: [python, src/ingest.py]
+    command: [ python, src/ingest.py ]
 
   #
   # To ingest using cuda 11.7:
@@ -82,7 +78,7 @@ services:
   #
   privategpt-cuda-11.7-ingest:
     extends: privategpt-cuda-11.7
-    command: [python, src/ingest.py]
+    command: [ python, src/ingest.py ]
 
   # Check your system's version using
   #
@@ -109,10 +105,10 @@ services:
 
   check-cuda-version:
     image: ubuntu
-    command: [nvidia-smi]
+    command: [ nvidia-smi ]
   check-cuda-11.6:
     extends: privategpt-cuda-11.6
-    command: [nvidia-smi]
+    command: [ nvidia-smi ]
   check-cuda-11.7:
     extends: privategpt-cuda-11.7
-    command: [nvidia-smi]
+    command: [ nvidia-smi ]

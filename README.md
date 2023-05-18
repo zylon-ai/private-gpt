@@ -106,22 +106,39 @@ To install a C++ compiler on Windows 10/11, follow these steps:
 
 ## Docker Version
 
-1. Build the image
-```
-docker build . -t privategpt:test
-```
+1. Put your data in models / source_documents in the project root folder (Can be customized changing the corresponding value in the docker-compose.yaml)
 
-2. Put your data in models / source_documents in the project root folder (Can be customized changing the corresponding value in the docker-compose.yaml)
+2. You can ingest your data using the docker-compose
 
-3. You can ingest your data using the docker-compose-ingest.yaml
-  ```
-  docker compose -f docker-compose-ingest.yaml up
-  ```
+   1. Without Cuda
 
-4. You run it using the docker-compose.yaml
-  ```
-  docker-compose run --rm privategpt
-  ```
+    ```sh
+    docker compose run --rm --build privategpt-ingest
+    ```
+
+   2. With Cuda 11.6 or 11.7
+
+    ```sh
+    docker compose run --rm --build privategpt-cuda-11.6-ingest
+
+    docker compose run --rm --build privategpt-cuda-11.7-ingest
+    ```
+
+3. You can run **after** ingesting your data or using an **existing db** with the docker-compose
+
+   1. Without Cuda
+
+    ```sh
+    docker compose run --rm --build privategpt
+    ```
+
+   2. With Cuda 11.6 or 11.7
+
+    ```sh
+    docker compose run --rm --build privategpt-cuda-11.6
+
+    docker compose run --rm --build privategpt-cuda-11.7
+    ```
 
 # Disclaimer
 This is a test project to validate the feasibility of a fully private solution for question answering using LLMs and Vector embeddings. It is not production ready, and it is not meant to be used in production. The models selection is not optimized for performance, but for privacy; but it is possible to use different models and vectorstores to improve performance.
