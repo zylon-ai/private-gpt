@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import glob
 from typing import List
@@ -107,7 +108,7 @@ def main():
 
     # Create embeddings
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
-    
+
     # Create and store locally vectorstore
     db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
     db.persist()
