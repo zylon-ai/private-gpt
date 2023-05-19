@@ -21,7 +21,7 @@ MODEL_TYPE: supports LlamaCpp or GPT4All
 PERSIST_DIRECTORY: is the folder you want your vectorstore in
 MODEL_PATH: Path to your GPT4All or LlamaCpp supported LLM
 MODEL_N_CTX: Maximum token limit for the LLM model
-EMBEDDINGS_MODEL_NAME: SentenceTransformers embeddings model name (see https://www.sbert.net/docs/pretrained_models.html)
+EMBEDDINGS_MODEL_NAME: all-mpnet-base-v2SentenceTransformers embeddings model name (see https://www.sbert.net/docs/pretrained_models.html)
 ```
 
 Note: because of the way `langchain` loads the `SentenceTransformers` embeddings, the first time you run the script it will require internet connection to download the embeddings model itself.
@@ -113,3 +113,13 @@ If so set your archflags during pip install. eg: _ARCHFLAGS="-arch x86_64" pip3 
 
 # Disclaimer
 This is a test project to validate the feasibility of a fully private solution for question answering using LLMs and Vector embeddings. It is not production ready, and it is not meant to be used in production. The models selection is not optimized for performance, but for privacy; but it is possible to use different models and vectorstores to improve performance.
+
+# Docker
+
+```
+docker build . -t private-gpt:latest
+docker compose up -d
+docker exec -it privategpt-python-1 /bin/bash
+python3 scripts/ingest.py
+python3 scripts/privateGPT.py
+```
