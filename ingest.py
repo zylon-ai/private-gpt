@@ -22,6 +22,7 @@ from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
 from constants import CHROMA_SETTINGS
+from tqdm import tqdm
 
 
 class MyElmLoader(UnstructuredEmailLoader):
@@ -71,7 +72,7 @@ load_dotenv()
 
 def load_single_document(file_path: str) -> Document:
     ext = "." + file_path.rsplit(".", 1)[-1]
-    if ext in LOADER_MAPPING:
+    if ext in tqdm(LOADER_MAPPING):
         loader_class, loader_args = LOADER_MAPPING[ext]
         loader = loader_class(file_path, **loader_args)
         return loader.load()[0]
@@ -86,7 +87,7 @@ def load_documents(source_dir: str) -> List[Document]:
         all_files.extend(
             glob.glob(os.path.join(source_dir, f"**/*{ext}"), recursive=True)
         )
-    return [load_single_document(file_path) for file_path in all_files]
+    return [load_single_document(file_path) for file_path in tqdm(all_files)]
 
 
 def main():
