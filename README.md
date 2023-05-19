@@ -81,6 +81,29 @@ Note: you could turn off your internet connection, and the script inference woul
 
 Type `exit` to finish the script.
 
+
+### Script Arguments
+The script also supports optional command-line arguments to modify its behavior:
+
+- `--hide-source` or `-S`: Use this flag to disable printing of the source documents used for answers. By default, the source documents are printed.
+  
+```shell
+python privateGPT.py --hide-source
+```
+
+- `--mute-stream` or `-M`: Use this flag to disable LLM standard output streaming response, which by default prints progress to the console.
+
+```shell
+python privateGPT.py --mute-stream
+```
+
+You can combine these options if needed:
+
+```shell
+python privateGPT.py --hide-source --mute-callback
+```
+
+
 # How does it work?
 Selecting the right local models and the power of `LangChain` you can run the entire pipeline locally, without any data leaving your environment, and with reasonable performance.
 

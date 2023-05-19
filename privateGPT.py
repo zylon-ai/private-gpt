@@ -5,6 +5,7 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
 import os
+import argparse
 
 load_dotenv()
 
@@ -17,12 +18,13 @@ model_n_ctx = os.environ.get('MODEL_N_CTX')
 
 from constants import CHROMA_SETTINGS
 
-def main():
+def main(hide_source=False, mute_stream=False):
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
     retriever = db.as_retriever()
+    # activate/deactivate the streaming StdOut callback for LLMs
+    callbacks = [] if mute_stream else [StreamingStdOutCallbackHandler()]
     # Prepare the LLM
-    callbacks = [StreamingStdOutCallbackHandler()]
     match model_type:
         case "LlamaCpp":
             llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
@@ -31,7 +33,7 @@ def main():
         case _default:
             print(f"Model {model_type} not supported!")
             exit;
-    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
+    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not hide_source)
     # Interactive questions and answers
     while True:
         query = input("\nEnter a query: ")
@@ -39,19 +41,34 @@ def main():
             break
         
         # Get the answer from the chain
-        res = qa(query)    
-        answer, docs = res['result'], res['source_documents']
+        res = qa(query)
+        answer, docs = res['result'], None if hide_source else res['source_documents']
 
         # Print the result
         print("\n\n> Question:")
         print(query)
         print("\n> Answer:")
         print(answer)
-        
-        # Print the relevant sources used for the answer
-        for document in docs:
-            print("\n> " + document.metadata["source"] + ":")
-            print(document.page_content)
+
+        # Print the relevant sources used for the answer, if source is True
+        if not hide_source and docs:
+            for document in docs:
+                print("\n> " + document.metadata["source"] + ":")
+                print(document.page_content)
+
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--hide-source", "-S", action='store_true',
+                        help='Use this flag to disable printing of source documents used for answers.')
+
+    parser.add_argument("--mute-stream", "-M",
+                        action='store_true',
+                        help='Use this flag to disable the streaming StdOut callback for LLMs.')
+
+    return parser.parse_args()
+
 
 if __name__ == "__main__":
-    main()
+    # Parse the command line arguments
+    args = parse_arguments()
+    main(hide_source=args.hide_source, mute_stream=args.mute_stream)
