@@ -5,6 +5,7 @@ from typing import List
 from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
+from utils import *
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -126,27 +127,9 @@ def process_documents(ignored_files: List[str] = []) -> List[Document]:
     print(f"Split into {len(texts)} chunks of text (max. {chunk_size} tokens each)")
     return texts
 
-def ensure_integrity(persist_directory: str) -> bool:
-    """
-    Checks if vectorstore exists, and if it does, if it is valid
-    """
-    if os.path.exists(os.path.join(persist_directory, 'index')):
-        if os.path.exists(os.path.join(persist_directory, 'chroma-collections.parquet')) and os.path.exists(os.path.join(persist_directory, 'chroma-embeddings.parquet')):
-            list_index_files = glob.glob(os.path.join(persist_directory, 'index/*.bin'))
-            list_index_files += glob.glob(os.path.join(persist_directory, 'index/*.pkl'))
-            # More than 3 documents are needed in a working vectorstore
-            if len(list_index_files) > 3:
-                return True # Vectorstore exists and is valid
-        return False # Vectorstore exists but is not valid
-    return True # Vectorstore does not exist yet
-
 def main():
     # Create embeddings
-    if not ensure_integrity(persist_directory):
-        print(f"Current vectorstore is not valid. Aborting ingestion.")
-        print(f"If you deleted any files in the '{persist_directory}' folder, please restore them (if possible) and run ingest.py again.")
-        print("If you want to start from scratch, delete the folder and its contents and run ingest.py again.")
-        exit(1)
+    ensure_integrity(persist_directory, True)
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
     collection = db.get()
