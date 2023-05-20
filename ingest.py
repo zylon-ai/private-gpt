@@ -79,7 +79,9 @@ def main():
     chunk_overlap = 50
     documents = load_documents(source_directory)
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    texts = text_splitter.split_documents(documents)
+    text_docs = text_splitter.split_documents(documents)
+    texts = [doc.page_content for doc in text_docs]
+    metadatas = [doc.metadata for doc in text_docs]
     print(f"Loaded {len(documents)} documents from {source_directory}")
     print(f"Split into {len(texts)} chunks of text (max. {chunk_size} characters each)")
 
@@ -87,7 +89,7 @@ def main():
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     
     # Create and store locally vectorstore
-    db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
+    db = Chroma.from_texts(texts=texts, embedding=embeddings, metadatas=metadatas, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
     db.persist()
     db = None
 
