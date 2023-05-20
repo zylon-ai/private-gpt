@@ -68,9 +68,10 @@ def main():
         print("\n\n> Question:")
         print(query)
         print("\n> Answer:")
-        from translation import params, translator_main
-        if params["translate_system_output"]:
-            answer = translator_main(answer,"en",params["user_lang"])
+        if translate_use:
+            from translation import params, translator_main
+            if params["translate_system_output"]:
+                answer = translator_main(answer,"en",params["user_lang"])
 
         print(answer)
 
