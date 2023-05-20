@@ -10,7 +10,7 @@ params = {
     'translate_user_input': (os.environ.get('TRANSLATE_USER_INPUT',"0") == "1"), # translate user input to EN
     'translate_system_output': (os.environ.get('TRANSLATE_SYSTEM_OUTPUT',"0") == "1"), # translate system output to UserLang
 }
-print(params)
+#print(params)
 def translator_main(string,from_lang:str,to_lang:str) -> str:
     if from_lang == to_lang: return string
 
