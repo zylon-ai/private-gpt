@@ -1,7 +1,7 @@
 params = {
     'translator': 'GoogleTranslator', # GoogleTranslator or OneRingTranslator.
     'custom_url': "http://127.0.0.1:4990/", # custom url for OneRingTranslator server
-    'user_lang': 'ru', # user language two-letters code like "fr", "es" etc.
+    'user_lang': 'en', # user language two-letters code like "fr", "es" etc. "en" for NO translation
     'translate_user_input': True, # translate user input to EN
     'translate_system_output': True, # translate system output to UserLang
 }
