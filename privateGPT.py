@@ -19,7 +19,28 @@ model_n_ctx = os.environ.get('MODEL_N_CTX')
 
 from constants import CHROMA_SETTINGS
 
+
+
+def ensure_integrity(persist_directory: str) -> bool:
+    """
+    Checks if vectorstore exists, and if it does, if it is valid
+    """
+    if os.path.exists(os.path.join(persist_directory, 'index')):
+        if os.path.exists(os.path.join(persist_directory, 'chroma-collections.parquet')) and os.path.exists(os.path.join(persist_directory, 'chroma-embeddings.parquet')):
+            list_index_files = glob.glob(os.path.join(persist_directory, 'index/*.bin'))
+            list_index_files += glob.glob(os.path.join(persist_directory, 'index/*.pkl'))
+            # More than 3 documents are needed in a working vectorstore
+            if len(list_index_files) > 3:
+                return True # Vectorstore exists and is valid
+        return False # Vectorstore exists but is not valid
+    return False # Vectorstore does not exist yet
+
 def main():
+    if not ensure_integrity(persist_directory):
+        print(f"Current vectorstore is not valid. Aborting.")
+        print(f"If you deleted any files in the '{persist_directory}' folder, please restore them (if possible) and run privateGPT.py again.")
+        print("If you want to start from scratch, delete the folder and its contents and run ingest.py again.")
+        exit(1)
     # Parse the command line arguments
     args = parse_arguments()
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
