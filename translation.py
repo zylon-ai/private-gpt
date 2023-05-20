@@ -14,9 +14,9 @@ params = {
 def translator_main(string,from_lang:str,to_lang:str) -> str:
     if from_lang == to_lang: return string
 
-    from deep_translator import GoogleTranslator
     res = ""
     if params['translator'] == "GoogleTranslator":
+        from deep_translator import GoogleTranslator
         res = GoogleTranslator(source=from_lang, target=to_lang).translate(string)
     if params['translator'] == "OneRingTranslator":
         #print("GoogleTranslator using")
