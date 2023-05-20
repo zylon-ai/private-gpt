@@ -89,7 +89,7 @@ def main():
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     
     # Create and store locally vectorstore
-    db = Chroma.from_texts(texts=texts, embedding=embeddings, metadatas=metadatas, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
+    db = Chroma.from_texts(texts, embeddings, metadatas=metadatas, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
     db.persist()
     db = None
 
