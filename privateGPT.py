@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from dotenv import load_dotenv
 from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -37,9 +38,9 @@ def main():
         query = input("\nEnter a query: ")
         if query == "exit":
             break
-        
+
         # Get the answer from the chain
-        res = qa(query)    
+        res = qa(query)
         answer, docs = res['result'], res['source_documents']
 
         # Print the result
@@ -47,7 +48,7 @@ def main():
         print(query)
         print("\n> Answer:")
         print(answer)
-        
+
         # Print the relevant sources used for the answer
         for document in docs:
             print("\n> " + document.metadata["source"] + ":")
