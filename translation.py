@@ -58,3 +58,18 @@ class PromptTemplateTrans(PromptTemplate):
             res = translator_main(res,params["user_lang"],"en")
             #print("Translated prompt: ",res)
         return res
+
+# making template for prompt (Alpaca variation mostly)
+prompt_template = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
+### Instruction:
+Answer the question using the context. 
+Context:
+{context}
+Question: 
+{question}
+### Response: """
+
+# making PromptTemplate that allow translation
+PROMPT = PromptTemplateTrans(
+    template=prompt_template, input_variables=["context", "question"]
+)

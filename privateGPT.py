@@ -8,22 +8,8 @@ from langchain.llms import GPT4All, LlamaCpp, OpenAI
 import os
 import argparse
 
-# making template for prompt (Alpaca variation mostly)
-prompt_template = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
-### Instruction:
-Answer the question using the context. 
-Context:
-{context}
-Question: 
-{question}
-### Response: """
 
-# making PromptTemplate that allow translation
-from translation import PromptTemplateTrans
-PROMPT = PromptTemplateTrans(
-    template=prompt_template, input_variables=["context", "question"]
-)
-chain_type_kwargs = {"prompt": PROMPT}
+
 
 
 load_dotenv()
@@ -34,6 +20,15 @@ persist_directory = os.environ.get('PERSIST_DIRECTORY')
 model_type = os.environ.get('MODEL_TYPE')
 model_path = os.environ.get('MODEL_PATH')
 model_n_ctx = os.environ.get('MODEL_N_CTX')
+
+translate_use = (os.environ.get('TRANSLATE_USE',"0") == "1") # is use translate?
+translate_engine = os.environ.get('TRANSLATE_ENGINE',"GoogleTranslator") # GoogleTranslator or OneRingTranslator.
+
+chain_type_kwargs = None
+if translate_use:
+    from translation import PROMPT
+    chain_type_kwargs = {"prompt": PROMPT}
+    print(f"IMPORTANT: You are use translation. Your data may be transferred to {translate_engine} server(s).")
 
 from constants import CHROMA_SETTINGS
 
