@@ -79,9 +79,9 @@ def main():
     chunk_overlap = 50
     documents = load_documents(source_directory)
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    text_docs = text_splitter.split_documents(documents)
-    texts = [doc.page_content for doc in text_docs]
-    metadatas = [doc.metadata for doc in text_docs]
+    chunks = text_splitter.split_documents(documents)
+    texts = [doc.page_content for doc in chunks]
+    metadatas = [doc.metadata for doc in chunks]
     print(f"Loaded {len(documents)} documents from {source_directory}")
     print(f"Split into {len(texts)} chunks of text (max. {chunk_size} characters each)")
 
