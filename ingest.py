@@ -37,6 +37,8 @@ embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
 chunk_size = 500
 chunk_overlap = 50
 
+
+# Custom document loaders
 class MyElmLoader(UnstructuredEmailLoader):
     """Wrapper to fallback to text/plain when default does not work"""
 
@@ -78,8 +80,6 @@ LOADER_MAPPING = {
     # Add more mappings for other file extensions and loaders as needed
 }
 
-
-load_dotenv()
 
 def load_single_document(file_path: str) -> Document:
     ext = "." + file_path.rsplit(".", 1)[-1]
@@ -123,7 +123,7 @@ def process_documents(ignored_files: List[str] = []) -> List[Document]:
     print(f"Loaded {len(documents)} new documents from {source_directory}")
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     texts = text_splitter.split_documents(documents)
-    print(f"Split into {len(texts)} chunks of text (max. 500 tokens each)")
+    print(f"Split into {len(texts)} chunks of text (max. {chunk_size} tokens each)")
     return texts
 
 def does_vectorstore_exist(persist_directory: str) -> bool:
@@ -131,10 +131,11 @@ def does_vectorstore_exist(persist_directory: str) -> bool:
     Checks if vectorstore exists
     """
     if os.path.exists(os.path.join(persist_directory, 'index')):
-         if os.path.exists(os.path.join(persist_directory, 'chroma-collections.parquet')) and os.path.exists(os.path.join(persist_directory, 'chroma-embeddings.parquet')):
+        if os.path.exists(os.path.join(persist_directory, 'chroma-collections.parquet')) and os.path.exists(os.path.join(persist_directory, 'chroma-embeddings.parquet')):
             list_index_files = glob.glob(os.path.join(persist_directory, 'index/*.bin'))
             list_index_files += glob.glob(os.path.join(persist_directory, 'index/*.pkl'))
-            if len(list_index_files) == 4:
+            # At least 3 documents are needed in a working vectorstore
+            if len(list_index_files) > 3:
                 return True
     return False
 
