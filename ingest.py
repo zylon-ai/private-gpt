@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import glob
 import re
 import sys
 from typing import List, Optional
@@ -146,13 +145,15 @@ def does_vectorstore_exist(persist_path: str) -> bool:
     """
     Checks if vectorstore exists
     """
-    if os.path.exists(os.path.join(persist_path, 'index')):
-        if os.path.exists(os.path.join(persist_path, 'chroma-collections.parquet')) and os.path.exists(os.path.join(persist_path, 'chroma-embeddings.parquet')):
-            list_index_files = glob.glob(os.path.join(persist_path, 'index/*.bin'))
-            list_index_files += glob.glob(os.path.join(persist_path, 'index/*.pkl'))
-            # At least 3 documents are needed in a working vectorstore
+    index_path = os.path.join(persist_path, 'index')
+    if os.path.exists(index_path):
+        chroma_collections_path = os.path.join(persist_path, 'chroma-collections.parquet')
+        chroma_embeddings_path = os.path.join(persist_path, 'chroma-embeddings.parquet')
+        if os.path.exists(chroma_collections_path) and os.path.exists(chroma_embeddings_path):
+            list_index_files = [f for f in os.listdir(index_path) if f.endswith(('.bin', '.pkl'))]
             if len(list_index_files) > 3:
                 return True
+
     return False
 
 def main():
