@@ -131,7 +131,11 @@ def load_documents(
                     pbar.update()
                 if report_processed_files:
                     file_path = filtered_files[i]
-                    print(f"Processed '{file_path}'")
+                    msg = f"Processed '{file_path}'"
+                    if use_progress_bar:
+                        tqdm.write(msg)
+                    else:
+                        print(msg)
 
     return results
 
