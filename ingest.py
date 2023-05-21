@@ -96,7 +96,7 @@ def load_documents(
     report_processed_files: bool = False,
     report_skipped_files: bool = True,
     report_previously_ingested_files: bool = False,
-    use_process_bar: bool = True,
+    use_progress_bar: bool = True,
 ) -> List[Document]:
 
     """
@@ -124,10 +124,10 @@ def load_documents(
 
     with Pool(processes=os.cpu_count()) as pool:
         results = []
-        with (tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) if use_process_bar else nullcontext()) as pbar:
+        with (tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) if use_progress_bar else nullcontext()) as pbar:
             for i, doc in enumerate(pool.imap_unordered(load_single_document, filtered_files)):
                 results.append(doc)
-                if use_process_bar:
+                if use_progress_bar:
                     pbar.update()
                 if report_processed_files:
                     file_path = filtered_files[i]
