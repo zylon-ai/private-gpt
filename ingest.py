@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+from contextlib import nullcontext
 from typing import List, Optional
 from dotenv import load_dotenv
 from multiprocessing import Pool
@@ -95,7 +96,7 @@ def load_documents(
     report_processed_files: bool = True,
     report_skipped_files: bool = True,
     report_ignored_files: bool = True,
-    use_process_bar: bool = True,
+    use_process_bar: bool = False,
 ) -> List[Document]:
 
     """
@@ -123,7 +124,7 @@ def load_documents(
 
     with Pool(processes=os.cpu_count()) as pool:
         results = []
-        with (tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) if use_process_bar else None) as pbar:
+        with (tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) if use_process_bar else nullcontext()) as pbar:
             for i, doc in enumerate(pool.imap_unordered(load_single_document, filtered_files)):
                 results.append(doc)
                 if use_process_bar:
