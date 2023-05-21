@@ -92,18 +92,18 @@ def load_single_document(file_path: str) -> Document:
 
 def load_documents(
     source_dir: str,
-    ignored_files: Optional[List[str]] = None,
-    report_processed_files: bool = True,
+    ingested_files: Optional[List[str]] = None,
+    report_processed_files: bool = False,
     report_skipped_files: bool = True,
-    report_ignored_files: bool = True,
-    use_process_bar: bool = False,
+    report_previously_ingested_files: bool = False,
+    use_process_bar: bool = True,
 ) -> List[Document]:
 
     """
     Loads all documents from the source documents directory, ignoring specified files
     """
-    if ignored_files is None:
-        ignored_files : List[str] = []
+    if ingested_files is None:
+        ingested_files : List[str] = []
 
     filtered_files = []
     extensions = tuple(LOADER_MAPPING.keys())
@@ -112,10 +112,10 @@ def load_documents(
         for file in files:
             if file.endswith(extensions):
                 file_path = os.path.join(root, file)
-                if file_path not in ignored_files:
+                if file_path not in ingested_files:
                     filtered_files.append(file_path)
                 else:
-                    if report_ignored_files:
+                    if report_ingested_files:
                         print(f"Ignored '{file_path}' (ignore list)")
             else:
                 if report_skipped_files:
@@ -135,16 +135,16 @@ def load_documents(
 
     return results
 
-def process_documents(ignored_files: Optional[List[str]] = None) -> List[Document]:
+def process_documents(ingested_files: Optional[List[str]] = None) -> List[Document]:
     """
     Load documents and split in chunks
     """
 
-    if ignored_files is None:
-        ignored_files : List[str] = []
+    if ingested_files is None:
+        ingested_files : List[str] = []
 
     print(f"Loading documents from {source_directory}")
-    documents = load_documents(source_directory, ignored_files)
+    documents = load_documents(source_directory, ingested_files)
     if not documents:
         print("No new documents to load")
         sys.exit(0)
