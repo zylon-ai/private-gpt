@@ -115,7 +115,7 @@ def load_documents(
                 if file_path not in ingested_files:
                     filtered_files.append(file_path)
                 else:
-                    if report_ingested_files:
+                    if report_previously_ingested_files:
                         print(f"Ignored '{file_path}' (ignore list)")
             else:
                 if report_skipped_files:
