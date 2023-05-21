@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import re
 import sys
 from typing import List, Optional
 from dotenv import load_dotenv
@@ -84,15 +83,21 @@ LOADER_MAPPING = {
 
 def load_single_document(file_path: str) -> Document:
     ext = "." + file_path.rsplit(".", 1)[-1]
-    if ext in LOADER_MAPPING:
-        loader_class, loader_args = LOADER_MAPPING[ext]
-        loader = loader_class(file_path, **loader_args)
-        return loader.load()[0]
 
-    raise ValueError(f"Unsupported file extension '{ext}'")
+    loader_class, loader_args = LOADER_MAPPING[ext]
+    loader = loader_class(file_path, **loader_args)
+    return loader.load()[0]
 
 
-def load_documents(source_dir: str, ignored_files: Optional[List[str]] = None) -> List[Document]:
+def load_documents(
+    source_dir: str,
+    ignored_files: Optional[List[str]] = None,
+    report_processed_files: bool = True,
+    report_skipped_files: bool = True,
+    report_ignored_files: bool = True,
+    use_process_bar: bool = True,
+) -> List[Document]:
+
     """
     Loads all documents from the source documents directory, ignoring specified files
     """
@@ -100,25 +105,32 @@ def load_documents(source_dir: str, ignored_files: Optional[List[str]] = None) -
         ignored_files : List[str] = []
 
     filtered_files = []
-
-    ext_pattern = re.compile(
-        r"({})$".format("|".join(re.escape(ext) for ext in LOADER_MAPPING)),
-        re.IGNORECASE
-    )
+    extensions = tuple(LOADER_MAPPING.keys())
 
     for root, _, files in os.walk(source_dir):
         for file in files:
-            if ext_pattern.search(file):
+            if file.endswith(extensions):
                 file_path = os.path.join(root, file)
                 if file_path not in ignored_files:
                     filtered_files.append(file_path)
+                else:
+                    if report_ignored_files:
+                        print(f"Ignored '{file_path}' (ignore list)")
+            else:
+                if report_skipped_files:
+                    file_path = os.path.join(root, file)
+                    print(f"Skipping '{file_path}' - unmatched extension")
 
     with Pool(processes=os.cpu_count()) as pool:
         results = []
-        with tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) as pbar:
-            for _, doc in enumerate(pool.imap_unordered(load_single_document, filtered_files)):
+        with (tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) if use_process_bar else None) as pbar:
+            for i, doc in enumerate(pool.imap_unordered(load_single_document, filtered_files)):
                 results.append(doc)
-                pbar.update()
+                if use_process_bar:
+                    pbar.update()
+                if report_processed_files:
+                    file_path = filtered_files[i]
+                    print(f"Processed '{file_path}'")
 
     return results
 
@@ -175,7 +187,6 @@ def main():
         print("Creating embeddings. May take some minutes...")
         db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
     db.persist()
-    db = None
 
     print("Ingestion complete! You can now run privateGPT.py to query your documents")
 
