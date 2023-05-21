@@ -116,7 +116,7 @@ def load_documents(
                     filtered_files.append(file_path)
                 else:
                     if report_previously_ingested_files:
-                        print(f"Ignored '{file_path}' (ignore list)")
+                        print(f"Ignored '{file_path}' (already ingested, ignored if updated!)")
             else:
                 if report_skipped_files:
                     file_path = os.path.join(root, file)
