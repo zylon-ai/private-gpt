@@ -35,7 +35,7 @@ def main():
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
         case _default:
             print(f"Model {model_type} not supported!")
-            exit;
+            exit
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
     # Interactive questions and answers
     while True:
@@ -48,15 +48,15 @@ def main():
         answer, docs = res['result'], [] if args.hide_source else res['source_documents']
 
         # Print the result
-        print("\n\n> Question:")
+        print("\n\n\n\n> Question:")
         print(query)
-        print("\n> Answer:")
+        print("\n\n> Answer:")
         print(answer)
 
         # Print the relevant sources used for the answer
-        for document in docs:
-            print("\n> " + document.metadata["source"] + ":")
-            print(document.page_content)
+        # for document in docs:
+        #     print("\n> " + document.metadata["source"] + ":")
+        #     print(document.page_content)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='privateGPT: Ask questions to your documents without an internet connection, '
