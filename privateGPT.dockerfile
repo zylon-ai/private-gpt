@@ -1,9 +1,9 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get -y update && apt-get install -y software-properties-common \
-&& add-apt-repository ppa:deadsnakes/ppa && apt-get install -y build-essential python3.10 python3-dev wget python3-distutils gcc mono-mcs && \
+&& add-apt-repository ppa:deadsnakes/ppa && apt-get install -y build-essential python3-dev wget python3-distutils gcc && \
     rm -rf /var/lib/apt/lists/*
 
 # create a non-root user
