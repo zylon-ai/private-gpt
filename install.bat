@@ -1,5 +1,6 @@
 @echo off
 
+ren "example.env" ".env"
 echo Creating venv...
 python3 -m venv venv
 
