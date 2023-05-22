@@ -1,4 +1,5 @@
 #!/bin/bash
+mv example.env .env
 
 echo "Creating venv..."
 python3 -m venv venv
