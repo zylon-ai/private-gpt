@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 echo "Starting ingest..."
-source ./venv/Scripts/activate
+source ./venv/bin/activate
 python ingest.py
