@@ -2,7 +2,7 @@
 import os
 import sys
 from contextlib import nullcontext
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
@@ -82,12 +82,12 @@ LOADER_MAPPING = {
 }
 
 
-def load_single_document(file_path: str) -> Document:
+def load_single_document(file_path: str) -> Tuple[str, Document]:
     ext = "." + file_path.rsplit(".", 1)[-1]
 
     loader_class, loader_args = LOADER_MAPPING[ext]
     loader = loader_class(file_path, **loader_args)
-    return loader.load()[0]
+    return (file_path, loader.load()[0],)
 
 
 def load_documents(
@@ -125,12 +125,11 @@ def load_documents(
     with Pool(processes=os.cpu_count()) as pool:
         results = []
         with (tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) if use_progress_bar else nullcontext()) as pbar:
-            for i, doc in enumerate(pool.imap_unordered(load_single_document, filtered_files)):
+            for file_path, doc in pool.imap_unordered(load_single_document, filtered_files):
                 results.append(doc)
                 if use_progress_bar:
                     pbar.update()
                 if report_processed_files:
-                    file_path = filtered_files[i]
                     msg = f"Processed '{file_path}'"
                     if use_progress_bar:
                         tqdm.write(msg)
