@@ -114,6 +114,10 @@ To use this software, you must have Python 3.10 or later installed. Earlier vers
 ## C++ Compiler
 If you encounter an error while building a wheel during the `pip install` process, you may need to install a C++ compiler on your computer.
 
+## NLTK Data
+
+If you encounter an error downloading punkt or with any nltk_data, follow the instructions[here](https://www.nltk.org/install.html).
+
 ### For Windows 10/11
 To install a C++ compiler on Windows 10/11, follow these steps:
 
