@@ -28,7 +28,7 @@ chain_type_kwargs = None
 if translate_use:
     from translation import PROMPT
     chain_type_kwargs = {"prompt": PROMPT}
-    print(f"IMPORTANT: You are use translation. Your data may be transferred to {translate_engine} server(s).")
+    print(f"IMPORTANT: You enable translation. Your data may be transferred to {translate_engine} server(s).")
 
 from constants import CHROMA_SETTINGS
 
@@ -50,6 +50,12 @@ def main():
             llm = OpenAI(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False, openai_api_key="nnn")
             import openai
             openai.api_base = "http://127.0.0.1:5001/v1"
+        case "KoboldApiLocal":
+            from koboldapillm import KoboldApiLLM
+            llm = KoboldApiLLM(callbacks=callbacks, verbose=False)
+        case "Dummy":
+            from koboldapillm import DummyLLM
+            llm = DummyLLM(callbacks=callbacks, verbose=False)
         case _default:
             print(f"Model {model_type} not supported!")
             exit;

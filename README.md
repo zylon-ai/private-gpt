@@ -26,6 +26,29 @@ EMBEDDINGS_MODEL_NAME: SentenceTransformers embeddings model name (see https://w
 
 Note: because of the way `langchain` loads the `SentenceTransformers` embeddings, the first time you run the script it will require internet connection to download the embeddings model itself.
 
+UPD:
+New supported type of models:
+- Dummy - if you want no processing, just get related context from DB
+- OpenAILocal - to connect to local OpenAI server (example - https://github.com/oobabooga/text-generation-webui LLM runner with openai extension)
+- KoboldApiLocal - to connect to local KoboldAPI server (example - https://github.com/LostRuins/koboldcpp, which SIGNIFICANTLY faster run GGML models (process input prompt by CUBLAST (CUDA Blast), highly recommended to speed up)
+
+## Translation
+
+To enable work with other language recommended:
+1. Setup `EMBEDDINGS_MODEL_NAME=sentence-transformers/paraphrase-multilingual-mpnet-base-v2` in .env and rerun the ingest.py. This allow you to get semantic vectors not only for En language, but more others. (Or use even another embedding) 
+2. Setup translation in .env file
+
+Params:
+```python
+params = {
+    'translator': os.environ.get('TRANSLATE_ENGINE',"GoogleTranslator"), # GoogleTranslator or OneRingTranslator.
+    'custom_url': os.environ.get('TRANSLATE_CUSTOM_URL',"http://127.0.0.1:4990/"), # custom url for OneRingTranslator server
+    'user_lang': os.environ.get('TRANSLATE_USER_LANG','en'), # user language two-letters code like "fr", "es" etc. "en" for NO translation
+    'translate_user_input': (os.environ.get('TRANSLATE_USER_INPUT',"0") == "1"), # translate user input to EN
+    'translate_system_output': (os.environ.get('TRANSLATE_SYSTEM_OUTPUT',"0") == "1"), # translate system output to UserLang
+}
+```
+
 ## Test dataset
 This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
 
