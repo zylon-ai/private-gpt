@@ -35,8 +35,9 @@ New supported type of models:
 ## Translation
 
 To enable work with other language recommended:
-1. Setup `EMBEDDINGS_MODEL_NAME=sentence-transformers/paraphrase-multilingual-mpnet-base-v2` in .env and rerun the ingest.py. This allow you to get semantic vectors not only for En language, but more others. (Or use even another embedding) 
-2. Setup translation in .env file
+1. Setup `EMBEDDINGS_MODEL_NAME=sentence-transformers/paraphrase-multilingual-mpnet-base-v2` in .env and rerun the ingest.py. This allow you to get semantic vectors not only for En language, but more others. (Or use even another embedding)
+2. Install additional requirements `pip install -r requirements-translate.txt`
+3. Setup translation in .env file
 
 Params:
 ```python
