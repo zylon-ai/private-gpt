@@ -1,3 +1,4 @@
 #!/bin/bash
+
 source ./venv/Scripts/activate
-python privateGPT.py
+python3 privateGPT.py

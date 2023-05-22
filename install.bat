@@ -1,10 +1,13 @@
 @echo off
+
 echo Creating venv...
-mkdir venv
-python -m venv venv
+python3 -m venv venv
+
 echo Activating venv...
 call .\venv\Scripts\activate.bat
+
 echo Installing requirements...
-pip install -r requirements.txt
+pip3 install -r requirements.txt
+
 echo Successfully installed!
 pause
