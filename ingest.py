@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
 
+from xlsx_loader import XLSXLoader
+
+
 from langchain.document_loaders import (
     CSVLoader,
     EverNoteLoader,
@@ -78,6 +81,7 @@ LOADER_MAPPING = {
     ".pptx": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
     # Add more mappings for other file extensions and loaders as needed
+    ".xlsx" : (XLSXLoader, {})
 }
 
 
@@ -161,6 +165,7 @@ def main():
     db = None
 
     print(f"Ingestion complete! You can now run privateGPT.py to query your documents")
+
 
 
 if __name__ == "__main__":
