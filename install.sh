@@ -5,5 +5,5 @@ python -m venv venv
 echo "Activating venv..."
 source ./venv/Scripts/activate
 echo "Installing requirements..."
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 echo "Successfully installed!"
