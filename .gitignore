@@ -4,6 +4,10 @@
 # Models
 models/
 
+# Source Documents
+source_documents/*
+!source_documents/state_of_the_union.txt
+
 # Local Chroma db
 .chroma/
 db/
