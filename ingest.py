@@ -98,7 +98,6 @@ def load_documents(
     report_previously_ingested_files: bool = False,
     use_progress_bar: bool = True,
 ) -> List[Document]:
-
     """
     Loads all documents from the source documents directory, ignoring specified files
     """
