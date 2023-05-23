@@ -39,12 +39,19 @@ def main():
         case "GPT4All":
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
         case type if type.lower().startswith('hf'):
+            type = type.lower()
             tokenizer = AutoTokenizer.from_pretrained(model_path)
-            model = AutoModelForCausalLM.from_pretrained(model_path, revision = model_revision,
-                             torch_dtype = torch.float16 if type.count('16') else torch.float32)
-            if type.lower().count('cuda'):
-                device = 'cuda:0'
-                model.cuda()
+            model = AutoModelForCausalLM.from_pretrained(model_path,
+                             revision = model_revision,
+                             device_map='auto',
+                             torch_dtype = torch.float16 if type.count('cuda') and type.count('16') else torch.float32,
+                             load_in_8bit = True if type.count('cuda') and type.count('8') else False)
+            if type.count('cuda'):
+                if type.count('8'):
+                    device = None
+                else:
+                    device = 'cuda:0'
+                    model.cuda()
             else:
                 device = 'cpu'
             pipe = pipeline('text-generation', model=model, tokenizer=tokenizer, max_new_tokens=100, device=device)
