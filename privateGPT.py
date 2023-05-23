@@ -10,6 +10,7 @@ import os
 import argparse
 
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from transformers import LlamaTokenizer
 import torch
 
 load_dotenv()
@@ -40,7 +41,13 @@ def main():
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
         case type if type.lower().startswith('hf'):
             type = type.lower()
-            tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+			# Special case for llama-based models where the tokenizer's case is
+			# LLaMATokenizer instead of LlamaTokenizer.
+            if type.count('llama') or model_path.lower().count('llama'):
+                tokenizer = LlamaTokenizer.from_pretrained(model_path)
+            else:
+                tokenizer = AutoTokenizer.from_pretrained(model_path)
             model = AutoModelForCausalLM.from_pretrained(model_path,
                              revision = model_revision,
                              device_map='auto',
