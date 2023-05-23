@@ -25,8 +25,10 @@ def main():
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
     retriever = db.as_retriever()
-    # activate/deactivate the streaming StdOut callback for LLMs
+    
+    # Activate/deactivate the streaming StdOut callback for LLMs
     callbacks = [] if args.mute_stream else [StreamingStdOutCallbackHandler()]
+
     # Prepare the LLM
     match model_type:
         case "LlamaCpp":
@@ -35,12 +37,14 @@ def main():
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
         case _default:
             print(f"Model {model_type} not supported!")
-            exit;
+            exit
+
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
+
     # Interactive questions and answers
     while True:
-        query = input("\nEnter a query: ")
-        if query == "exit":
+        query = input("\nEnter a query (Type 'Exit' to stop): ")
+        if query.lower.strip() == "exit":
             break
 
         # Get the answer from the chain
@@ -58,6 +62,7 @@ def main():
             print("\n> " + document.metadata["source"] + ":")
             print(document.page_content)
 
+# Add command line arguments to the program
 def parse_arguments():
     parser = argparse.ArgumentParser(description='privateGPT: Ask questions to your documents without an internet connection, '
                                                  'using the power of LLMs.')
