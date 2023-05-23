@@ -5,8 +5,12 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
+from langchain.llms import HuggingFacePipeline
 import os
 import argparse
+
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+import torch
 
 load_dotenv()
 
@@ -15,6 +19,7 @@ persist_directory = os.environ.get('PERSIST_DIRECTORY')
 
 model_type = os.environ.get('MODEL_TYPE')
 model_path = os.environ.get('MODEL_PATH')
+model_revision = os.environ.get('MODEL_REVISION')
 model_n_ctx = os.environ.get('MODEL_N_CTX')
 
 from constants import CHROMA_SETTINGS
@@ -33,6 +38,19 @@ def main():
             llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
         case "GPT4All":
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
+        case type if type.lower().startswith('hf'):
+            tokenizer = AutoTokenizer.from_pretrained(model_path)
+            model = AutoModelForCausalLM.from_pretrained(model_path, revision = model_revision,
+                             torch_dtype = torch.float16 if type.count('16') else torch.float32)
+            if type.lower().count('cuda'):
+                device = 'cuda:0'
+                model.cuda()
+            else:
+                device = 'cpu'
+            pipe = pipeline('text-generation', model=model, tokenizer=tokenizer, max_new_tokens=100, device=device)
+            pipe.model.config.pad_token_id = pipe.model.config.eos_token_id
+            model_kwargs = {'device': device}
+            llm = HuggingFacePipeline(pipeline=pipe, model_kwargs=model_kwargs)
         case _default:
             print(f"Model {model_type} not supported!")
             exit;
