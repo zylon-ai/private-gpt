@@ -83,13 +83,16 @@ LOADER_MAPPING = {
 
 def load_single_document(file_path: str) -> Document:
     ext = "." + file_path.rsplit(".", 1)[-1]
-    if ext in LOADER_MAPPING:
-        loader_class, loader_args = LOADER_MAPPING[ext]
-        loader = loader_class(file_path, **loader_args)
-        return loader.load()[0]
+    loader_entry = LOADER_MAPPING.get(ext)
+    if not loader_entry or len(loader_entry) != 2:
+        raise ValueError(f"Invalid loader mapping format. The mapping should be in the format (document loader, arguments)")
 
-    print(f"Warning: Unsupported file extension '{ext}' for file {file_path}. Skipping this file.")
-    return None
+    loader_class, loader_args = loader_entry
+    if not callable(loader_class) or not hasattr(loader_class, "load"):
+        raise ValueError(f"No valid document loader class with method load() defined for '{ext}' type")
+
+    loader = loader_class(file_path, **loader_args)
+    return loader.load()[0]
 
 
 def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Document]:
@@ -107,8 +110,7 @@ def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Docum
         results = []
         with tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) as pbar:
             for i, doc in enumerate(pool.imap_unordered(load_single_document, filtered_files)):
-                if doc is not None:
-                    results.append(doc)
+                results.append(doc)
                 pbar.update()
 
     return results
