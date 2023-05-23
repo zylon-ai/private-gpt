@@ -76,7 +76,7 @@ LOADER_MAPPING = {
     ".pdf": (PDFMinerLoader, {}),
     ".ppt": (UnstructuredPowerPointLoader, {}),
     ".pptx": (UnstructuredPowerPointLoader, {}),
-    ".txt": (TextLoader, {}),
+    ".txt": (TextLoader, {"encoding": "utf8", "autodetect_encoding": True}),
     # Add more mappings for other file extensions and loaders as needed
 }
 
