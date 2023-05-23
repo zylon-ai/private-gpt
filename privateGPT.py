@@ -5,6 +5,8 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
+from langchain.chat_models import ChatOpenAI
+
 import os
 import argparse
 
@@ -16,6 +18,10 @@ persist_directory = os.environ.get('PERSIST_DIRECTORY')
 model_type = os.environ.get('MODEL_TYPE')
 model_path = os.environ.get('MODEL_PATH')
 model_n_ctx = os.environ.get('MODEL_N_CTX')
+
+base_path = os.environ.get('OPENAI_API_BASE', 'http://localhost:8080/v1')
+key = os.environ.get('OPENAI_API_KEY', '-')
+model_name = os.environ.get('MODEL_NAME', 'gpt-3.5-turbo')
 
 from constants import CHROMA_SETTINGS
 
@@ -33,6 +39,8 @@ def main():
             llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
         case "GPT4All":
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
+        case "OpenAI":
+            llm = ChatOpenAI(temperature=0, openai_api_base=base_path, openai_api_key=key, model_name=model_name)
         case _default:
             print(f"Model {model_type} not supported!")
             exit;
