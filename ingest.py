@@ -124,16 +124,14 @@ def load_documents(
     with Pool(processes=os.cpu_count()) as pool:
         results = []
         with (tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) if use_progress_bar else nullcontext()) as pbar:
+            progress_write=tqdm.write if use_progress_bar else print
             for file_path, doc in pool.imap_unordered(load_single_document, filtered_files):
                 results.append(doc)
                 if use_progress_bar:
                     pbar.update()
                 if report_processed_files:
                     msg = f"Processed '{file_path}'"
-                    if use_progress_bar:
-                        tqdm.write(msg)
-                    else:
-                        print(msg)
+                    progress_write(msg)
 
     return results
 
