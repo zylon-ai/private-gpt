@@ -139,6 +139,86 @@ def does_vectorstore_exist(persist_directory: str) -> bool:
                 return True
     return False
 
+
+def prompt_user():
+    """
+    This function prompts the user to select an existing directory or create a new one to store source material.
+    If an existing directory is selected, it checks if the directory is empty and prompts the user to create files
+    in the directory if it is empty. It sets the directory paths as environment variables and returns them.
+
+    Returns:
+    selected_directory_path (str): The path of the selected directory.
+    selected_db_path (str): The path of the database directory for the selected directory.
+    """
+
+    def _display_directories():
+        """
+        This function displays the list of existing directories in the ./sources directory.
+        """
+        print("Existing directories in ./sources:")
+        directories = os.listdir("./sources")
+        for index, directory in enumerate(directories, start=1):
+            print(f"{index}. {directory}")
+
+    def _create_directory(directory_name):
+        """
+        This function creates a new directory with the given directory_name in the ./sources directory.
+        It also creates a corresponding directory in the ./dbs directory for the database files.
+        It sets the directory paths as environment variables and returns them.
+
+        Parameters:
+        directory_name (str): The name for the new directory.
+
+        Returns:
+        directory_path (str): The path of the new directory.
+        db_path (str): The path of the database directory for the new directory.
+        """
+        directory_path = f"./sources/{directory_name}"
+        db_path = f"./dbs/{directory_name}"
+        os.makedirs(directory_path)
+        os.makedirs(db_path)
+        set_key('.env', 'SOURCE_DIRECTORY', directory_path)
+        set_key('.env', 'PERSIST_DIRECTORY', db_path)
+        print(f"Created new directory: {directory_path}")
+        return directory_path, db_path
+
+    while True:
+        print("Select an option or 'q' to quit:")
+        print("1. Select existing directory")
+        print("2. Create a new directory")
+        choice = input("Enter your choice (1 or 2): ")
+        if choice == "1":
+            _display_directories()
+            existing_directory = input("Enter the number of the existing directory: ")
+            try:
+                selected_directory = os.listdir("./sources")[int(existing_directory) - 1]
+                selected_directory_path = f"./sources/{selected_directory}"
+                selected_db_path = f"./dbs/{selected_directory}"
+                if not os.listdir(selected_directory_path):
+                    print(f"Error: Directory '{selected_directory}' is empty.")
+                    print("Please create files in the directory or choose another.")
+                else:
+                    if not os.path.exists(selected_db_path):
+                        os.makedirs(selected_db_path)
+                    set_key('.env', 'SOURCE_DIRECTORY', selected_directory_path)
+                    set_key('.env', 'PERSIST_DIRECTORY', selected_db_path)
+                    print(f"Selected directory: {selected_directory_path}")
+                    break
+            except (ValueError, IndexError):
+                print("Invalid directory number. Please try again.")
+        elif choice == "2":
+            new_directory_name = input("Enter the name for the new directory: ")
+            selected_directory_path, selected_db_path = _create_directory(new_directory_name)
+            input("Place your source material into the new folder and press enter to continue...")
+            break
+        elif choice == "q":
+            exit(0)
+        else:
+            print("Invalid choice. Please try again.")
+
+    return selected_directory_path, selected_db_path
+
+
 def main():
     # Create embeddings
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
@@ -164,57 +244,7 @@ def main():
 
 
 if __name__ == "__main__":
-    def _display_directories():
-        print("Existing directories in ./sources:")
-        directories = os.listdir("./sources")
-        for index, directory in enumerate(directories, start=1):
-            print(f"{index}. {directory}")
 
-    def _create_directory(directory_name):
-        directory_path = f"./sources/{directory_name}"
-        db_path = f"./dbs/{directory_name}"
-        os.makedirs(directory_path)
-        os.makedirs(db_path)
-        set_key('.env', 'SOURCE_DIRECTORY', directory_path)
-        set_key('.env', 'PERSIST_DIRECTORY', db_path)
-        print(f"Created new directory: {directory_path}")
-        return directory_path, db_path
+    source_directory, persist_directory = prompt_user()
 
-    def _prompt_user():
-        while True:
-            print("Select an option or 'q' to quit:")
-            print("1. Select existing directory")
-            print("2. Create a new directory")
-            choice = input("Enter your choice (1 or 2): ")
-            if choice == "1":
-                _display_directories()
-                existing_directory = input("Enter the number of the existing directory: ")
-                try:
-                    selected_directory = os.listdir("./sources")[int(existing_directory) - 1]
-                    selected_directory_path = f"./sources/{selected_directory}"
-                    selected_db_path = f"./dbs/{selected_directory}"
-                    if not os.listdir(selected_directory_path):
-                        print(f"Error: Directory '{selected_directory}' is empty.")
-                        print("Please create files in the directory or choose another.")
-                    else:
-                        if not os.path.exists(selected_db_path):
-                            os.makedirs(selected_db_path)
-                        set_key('.env', 'SOURCE_DIRECTORY', selected_directory_path)
-                        set_key('.env', 'PERSIST_DIRECTORY', selected_db_path)
-                        print(f"Selected directory: {selected_directory_path}")
-                        break
-                except (ValueError, IndexError):
-                    print("Invalid directory number. Please try again.")
-            elif choice == "2":
-                new_directory_name = input("Enter the name for the new directory: ")
-                selected_directory_path, selected_db_path = _create_directory(new_directory_name)
-                input("Place your source material into the new folder and press enter to continue...")
-                break
-            elif choice == "q":
-                exit(0)
-            else:
-                print("Invalid choice. Please try again.")
-        return selected_directory_path, selected_db_path
-
-    source_directory, persist_directory = _prompt_user()
     main()
