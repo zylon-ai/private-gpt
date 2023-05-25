@@ -32,7 +32,7 @@ This repo uses a [state of the union transcript](https://github.com/imartinez/pr
 
 ## Instructions for ingesting your own dataset
 
-Put any and all your files into the `source_documents` directory
+For each set of documents, create a new subfolder in the `sources` folder and place the files inside.
 
 The supported extensions are:
 
@@ -52,6 +52,7 @@ The supported extensions are:
    - `.txt`: Text file (UTF-8),
 
 Run the following command to ingest all the data.
+Follow the instructions to select the correct set of source documents.
 
 ```shell
 python ingest.py
@@ -60,6 +61,15 @@ python ingest.py
 Output should look like this:
 
 ```shell
+Select an option or 'q' to quit:
+1. Select existing directory
+2. Create a new directory
+Enter your choice (1 or 2): 1
+Existing directories in ./sources:
+1. state_of_the_union_2023
+2. GPT-4_tech_report
+Enter the number of the existing directory: 1
+Selected directory: ./sources/state_of_the_union_2023
 Creating new vectorstore
 Loading documents from source_documents
 Loading new documents: 100%|██████████████████████| 1/1 [00:01<00:00,  1.73s/it]
@@ -70,9 +80,9 @@ Using embedded DuckDB with persistence: data will be stored in: db
 Ingestion complete! You can now run privateGPT.py to query your documents
 ```
 
-It will create a `db` folder containing the local vectorstore. Will take 20-30 seconds per document, depending on the size of the document.
-You can ingest as many documents as you want, and all will be accumulated in the local embeddings database.
-If you want to start from an empty database, delete the `db` folder.
+It will create a subfolder in the `dbs` folder containing the local vectorstore. Will take 20-30 seconds per document, depending on the size of the document.
+You can ingest as many documents as you want, and all will be accumulated in the selected embeddings database.
+If you want to start from an empty database, delete the subfolder inside the `dbs` folder, or create a new one using the inject.py script.
 
 Note: during the ingest process no data leaves your local environment. You could ingest without an internet connection, except for the first time you run the ingest script, when the embeddings model is downloaded.
 
