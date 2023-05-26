@@ -82,7 +82,7 @@ LOADER_MAPPING = {
 
 
 def load_single_document(file_path: str) -> Document:
-    ext = "." + file_path.rsplit(".", 1)[-1]
+    ext = os.path.splitext(file_path)[-1]
     if ext in LOADER_MAPPING:
         loader_class, loader_args = LOADER_MAPPING[ext]
         loader = loader_class(file_path, **loader_args)
