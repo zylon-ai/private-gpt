@@ -82,7 +82,7 @@ Ingestion complete! You can now run privateGPT.py to query your documents
 
 It will create a subfolder in the `dbs` folder containing the local vectorstore. Will take 20-30 seconds per document, depending on the size of the document.
 You can ingest as many documents as you want, and all will be accumulated in the selected embeddings database.
-If you want to start from an empty database, delete the subfolder inside the `dbs` folder, or create a new one using the inject.py script.
+If you want to start from an empty database, delete the subfolder inside the `dbs` folder, or create a new one using the ingest.py script.
 
 Note: during the ingest process no data leaves your local environment. You could ingest without an internet connection, except for the first time you run the ingest script, when the embeddings model is downloaded.
 

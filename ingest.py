@@ -156,9 +156,10 @@ def prompt_user():
         This function displays the list of existing directories in the ./sources directory.
         """
         print("Existing directories in ./sources:")
-        directories = os.listdir("./sources")
+        directories = sorted((file for file in os.listdir("./sources") if (os.path.isdir(os.path.join("./sources", file)) and not file.startswith("."))), key=str.lower)
         for index, directory in enumerate(directories, start=1):
             print(f"{index}. {directory}")
+        return directories
 
     def _create_directory(directory_name):
         """
@@ -188,10 +189,10 @@ def prompt_user():
         print("2. Create a new directory")
         choice = input("Enter your choice (1 or 2): ")
         if choice == "1":
-            _display_directories()
+            directories = _display_directories()
             existing_directory = input("Enter the number of the existing directory: ")
             try:
-                selected_directory = os.listdir("./sources")[int(existing_directory) - 1]
+                selected_directory = directories[int(existing_directory) - 1]
                 selected_directory_path = f"./sources/{selected_directory}"
                 selected_db_path = f"./dbs/{selected_directory}"
                 if not os.listdir(selected_directory_path):
