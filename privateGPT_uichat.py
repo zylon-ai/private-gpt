@@ -73,7 +73,7 @@ def predict(
 def reset_textbox():
     return gr.update(value="")
 
-def main():
+def main(args):
     title = """<h1 align="center">Chat with privateGPT 🤖</h1>"""
 
     with gr.Blocks(
