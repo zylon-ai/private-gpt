@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import os
+import sys
 import glob
+import select
 from typing import List
 from dotenv import load_dotenv, set_key
 from multiprocessing import Pool
@@ -151,6 +153,19 @@ def prompt_user():
     selected_db_path (str): The path of the database directory for the selected directory.
     """
 
+    def _get_user_choice(timeout):
+        if not isinstance(timeout, int):
+            raise ValueError("Timeout value should be an integer.")
+        print("Select an option or 'q' to quit:")
+        print("1. Select an existing directory")
+        print("2. Create a new directory")
+        print(f"3. Use current source_directory: {source_directory}")
+        inputs = [sys.stdin]
+        readable, _, _ = select.select(inputs, [], [], timeout)
+        if readable:
+            return sys.stdin.readline().strip()
+        return "3"
+
     def _display_directories():
         """
         This function displays the list of existing directories in the ./sources directory.
@@ -184,10 +199,7 @@ def prompt_user():
         return directory_path, db_path
 
     while True:
-        print("Select an option or 'q' to quit:")
-        print("1. Select existing directory")
-        print("2. Create a new directory")
-        choice = input("Enter your choice (1 or 2): ")
+        choice = _get_user_choice(timeout=5)
         if choice == "1":
             directories = _display_directories()
             existing_directory = input("Enter the number of the existing directory: ")
@@ -212,6 +224,8 @@ def prompt_user():
             selected_directory_path, selected_db_path = _create_directory(new_directory_name)
             input("Place your source material into the new folder and press enter to continue...")
             break
+        elif choice == "3":
+            return source_directory, persist_directory
         elif choice == "q":
             exit(0)
         else:
