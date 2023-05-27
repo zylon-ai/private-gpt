@@ -26,19 +26,18 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
-from constants import CHROMA_SETTINGS
-
+from constants import get_chroma_settings, update_persist_directory
 
 load_dotenv()
 
-
 # Load environment variables
-persist_directory = os.environ.get('PERSIST_DIRECTORY')
+persist_directory = update_persist_directory()
 source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
 embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
 chunk_size = 500
 chunk_overlap = 50
 
+breakpoint()
 
 # Custom document loaders
 class MyElmLoader(UnstructuredEmailLoader):
@@ -241,7 +240,7 @@ def main():
     if does_vectorstore_exist(persist_directory):
         # Update and store locally vectorstore
         print(f"Appending to existing vectorstore at {persist_directory}")
-        db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
+        db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=get_chroma_settings)
         collection = db.get()
         texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
         print(f"Creating embeddings. May take some minutes...")
@@ -251,7 +250,7 @@ def main():
         print("Creating new vectorstore")
         texts = process_documents()
         print(f"Creating embeddings. May take some minutes...")
-        db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
+        db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=get_chroma_settings)
     db.persist()
     db = None
 
