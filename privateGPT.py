@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import os
+import shutil
+import requests
+from tqdm import tqdm
 from dotenv import load_dotenv
 from privateGPT.ingestor import Ingestor
 from privateGPT.chat import Chat
@@ -82,6 +85,36 @@ def reset():
     ingestor.reset()
 
     click.echo(f"Reset completed.")
+
+@cli.command()
+def init():
+    """Inititalize with default settings."""
+    if os.path.isfile('.env'):
+        print('.env already exists, cannot init.')
+        return
+
+    click.echo(f"Copying default configuration")
+    shutil.copyfile('example.env', '.env')
+    click.echo(f"Copying default configuration")
+
+    click.echo(f"Download default model")
+    url = 'https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin'
+    fname = 'models/ggml-gpt4all-j-v1.3-groovy.bin'
+    os.makedirs(os.path.dirname(fname), exist_ok=True)
+    resp = requests.get(url, stream=True)
+    total = int(resp.headers.get('content-length', 0))
+    with open(fname, 'wb') as file, tqdm(
+        desc=fname,
+        total=total,
+        unit='iB',
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as bar:
+        for data in resp.iter_content(chunk_size=1024):
+            size = file.write(data)
+            bar.update(size)
+
+    click.echo(f"Downloaded")
 
 if __name__ == '__main__':
     cli()
