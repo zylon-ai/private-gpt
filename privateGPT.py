@@ -62,5 +62,26 @@ def chat(mute_stream, hide_source):
 
     chat.chat(mute_stream, hide_source)
 
+@cli.command()
+def reset():
+    """Reset your database."""
+    persist_directory = os.environ.get('PERSIST_DIRECTORY')
+    source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
+    embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
+    chunk_size = 500
+    chunk_overlap = 50
+
+    ingestor = Ingestor(
+        persist_directory=persist_directory,
+        source_directory=source_directory,
+        embeddings_model_name=embeddings_model_name,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap
+    )
+
+    ingestor.reset()
+
+    click.echo(f"Reset completed.")
+
 if __name__ == '__main__':
     cli()

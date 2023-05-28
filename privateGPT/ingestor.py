@@ -162,3 +162,8 @@ class Ingestor:
         db = None
 
         print(f"Ingestion complete!")
+
+    def reset(self):
+        if does_vectorstore_exist(self.persist_directory):
+            db = Chroma(persist_directory=self.persist_directory, embedding_function=self.embeddings, client_settings=CHROMA_SETTINGS)
+            db._client.reset()
