@@ -1,76 +1,66 @@
 #!/usr/bin/env python3
-from dotenv import load_dotenv
-from langchain.chains import RetrievalQA
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-from langchain.vectorstores import Chroma
-from langchain.llms import GPT4All, LlamaCpp
 import os
-import argparse
+from dotenv import load_dotenv
+from privateGPT.ingestor import Ingestor
+from privateGPT.chat import Chat
+
+import click
 
 load_dotenv()
 
-embeddings_model_name = os.environ.get("EMBEDDINGS_MODEL_NAME")
-persist_directory = os.environ.get('PERSIST_DIRECTORY')
+@click.group(invoke_without_command=True)
+@click.pass_context
+def cli(ctx):
+    """Ask questions to your documents without an internet connection, using the power of LLMs."""
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(chat)
 
-model_type = os.environ.get('MODEL_TYPE')
-model_path = os.environ.get('MODEL_PATH')
-model_n_ctx = os.environ.get('MODEL_N_CTX')
-target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS',4))
+    pass
 
-from constants import CHROMA_SETTINGS
+@cli.command()
+def ingest():
+    """Ingest your documents."""
+    persist_directory = os.environ.get('PERSIST_DIRECTORY')
+    source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
+    embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
+    chunk_size = 500
+    chunk_overlap = 50
 
-def main():
-    # Parse the command line arguments
-    args = parse_arguments()
-    embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
-    db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
-    retriever = db.as_retriever(search_kwargs={"k": target_source_chunks})
-    # activate/deactivate the streaming StdOut callback for LLMs
-    callbacks = [] if args.mute_stream else [StreamingStdOutCallbackHandler()]
-    # Prepare the LLM
-    match model_type:
-        case "LlamaCpp":
-            llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
-        case "GPT4All":
-            llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
-        case _default:
-            print(f"Model {model_type} not supported!")
-            exit;
-    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
-    # Interactive questions and answers
-    while True:
-        query = input("\nEnter a query: ")
-        if query == "exit":
-            break
+    ingestor = Ingestor(
+        persist_directory=persist_directory,
+        source_directory=source_directory,
+        embeddings_model_name=embeddings_model_name,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap
+    )
 
-        # Get the answer from the chain
-        res = qa(query)
-        answer, docs = res['result'], [] if args.hide_source else res['source_documents']
+    ingestor.ingest()
 
-        # Print the result
-        print("\n\n> Question:")
-        print(query)
-        print("\n> Answer:")
-        print(answer)
+    click.echo(f"You can now run privateGPT.py to query your documents")
 
-        # Print the relevant sources used for the answer
-        for document in docs:
-            print("\n> " + document.metadata["source"] + ":")
-            print(document.page_content)
+@cli.command()
+@click.option('--mute-stream', '-M', is_flag=True, default=False, help='Use this flag to disable the streaming StdOut callback for LLMs.')
+@click.option('--hide-source', '-S', is_flag=True, default=False, help='Use this flag to disable printing of source documents used for answers.')
+def chat(mute_stream, hide_source):
+    """Query your documents."""
+    embeddings_model_name = os.environ.get("EMBEDDINGS_MODEL_NAME")
+    persist_directory = os.environ.get('PERSIST_DIRECTORY')
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='privateGPT: Ask questions to your documents without an internet connection, '
-                                                 'using the power of LLMs.')
-    parser.add_argument("--hide-source", "-S", action='store_true',
-                        help='Use this flag to disable printing of source documents used for answers.')
+    model_type = os.environ.get('MODEL_TYPE')
+    model_path = os.environ.get('MODEL_PATH')
+    model_n_ctx = os.environ.get('MODEL_N_CTX')
+    target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS',4))
 
-    parser.add_argument("--mute-stream", "-M",
-                        action='store_true',
-                        help='Use this flag to disable the streaming StdOut callback for LLMs.')
+    chat = Chat(
+        embeddings_model_name=embeddings_model_name,
+        persist_directory=persist_directory,
+        model_type=model_type,
+        model_path=model_path,
+        model_n_ctx=model_n_ctx,
+        target_source_chunks=target_source_chunks
+    )
 
-    return parser.parse_args()
+    chat.chat(mute_stream, hide_source)
 
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    cli()
