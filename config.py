@@ -1,5 +1,6 @@
 import argparse
 import os
+import pathlib
 from dotenv import load_dotenv
 from chromadb.config import Settings
 
@@ -28,7 +29,6 @@ parser.add_argument(
     "--hide-source",
     "-S",
     action="store_true",
-    type=bool,
     default=DEFAULT_HIDE_SOURCE_DOCUMENTS,
     help="Use this flag to disable printing of source documents used for answers.",
 )
@@ -36,15 +36,21 @@ parser.add_argument(
 parser.add_argument(
     "--mute-stream",
     "-M",
-    type=bool,
     default=DEFAULT_MUTE_STREAM,
     action="store_true",
     help="Use this flag to disable the streaming StdOut callback for LLMs.",
 )
 
-parser.add_argument("--persist_directory", default="db", help="Persist directory")
 parser.add_argument(
-    "--source_directory", default=DEFAULT_SOURCE_DIRECTORY, help="Source directory"
+    "--persist_directory",
+    default="db",
+    help="Persist directory",
+)
+parser.add_argument(
+    "--source_directory",
+    default=DEFAULT_SOURCE_DIRECTORY,
+    help="Source directory",
+    type=pathlib.Path,
 )
 parser.add_argument(
     "--embeddings_model_name",
@@ -52,10 +58,16 @@ parser.add_argument(
     help="Embeddings model name",
 )
 parser.add_argument(
-    "--chunk_size", type=int, default=DEFAULT_CHUNK_SIZE, help="Chunk size"
+    "--chunk_size",
+    type=int,
+    default=DEFAULT_CHUNK_SIZE,
+    help="Chunk size",
 )
 parser.add_argument(
-    "--chunk_overlap", type=int, default=DEFAULT_CHUNK_OVERLAP, help="Chunk overlap"
+    "--chunk_overlap",
+    type=int,
+    default=DEFAULT_CHUNK_OVERLAP,
+    help="Chunk overlap",
 )
 parser.add_argument(
     "--target_source_chunks",
@@ -64,7 +76,9 @@ parser.add_argument(
     help="Target source chunks",
 )
 parser.add_argument(
-    "--chroma_db_impl", default=DEFAULT_CHROMA_DB_IMPL, help="Chroma DB implementation"
+    "--chroma_db_impl",
+    default=DEFAULT_CHROMA_DB_IMPL,
+    help="Chroma DB implementation",
 )
 parser.add_argument(
     "--chroma_telemetry",
@@ -76,12 +90,25 @@ parser.add_argument(
     "--chroma_persist_directory",
     default=DEFAULT_CHROMA_PERSIST_DIRECTORY,
     help="Chroma persist directory",
+    type=pathlib.Path,
 )
-parser.add_argument("--model_type", default=DEFAULT_MODEL_TYPE, help="Model type")
 parser.add_argument(
-    "--model_path", default=DEFAULT_MODEL_PATH, help="Model path"
+    "--model_type",
+    default=DEFAULT_MODEL_TYPE,
+    help="Model type",
 )
-parser.add_argument("--model_n_ctx", type=int, default=DEFAULT_MODEL_N_CTX, help="Model n_ctx")
+parser.add_argument(
+    "--model_path",
+    default=DEFAULT_MODEL_PATH,
+    help="Model path",
+    type=pathlib.Path,
+)
+parser.add_argument(
+    "--model_n_ctx",
+    type=int,
+    default=DEFAULT_MODEL_N_CTX,
+    help="Model n_ctx",
+)
 
 args = parser.parse_args()
 
@@ -106,7 +133,7 @@ MODEL_N_CTX = os.environ.get("MODEL_N_CTX", args.model_n_ctx)
 
 CHROMA_SETTINGS = Settings(
     chroma_db_impl=CHROMA_DB_IMPL,
-    persist_directory=CHROMA_PERSIST_DIRECTORY,
+    persist_directory=CHROMA_PERSIST_DIRECTORY.as_posix(),
     anonymized_telemetry=CHROMA_TELEMETRY,
 )
 
