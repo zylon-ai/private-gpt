@@ -5,9 +5,10 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
+
 import os
 import argparse
-
+from check_lang import translate
 load_dotenv()
 
 embeddings_model_name = os.environ.get("EMBEDDINGS_MODEL_NAME")
@@ -40,6 +41,7 @@ def main():
         case _default:
             print(f"Model {model_type} not supported!")
             exit;
+    
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
     # Interactive questions and answers
     while True:
@@ -48,7 +50,7 @@ def main():
             break
 
         # Get the answer from the chain
-        res = qa(query)
+        res = qa(translate(query))
         answer, docs = res['result'], [] if args.hide_source else res['source_documents']
 
         # Print the relevant sources used for the answer
