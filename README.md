@@ -7,10 +7,14 @@ Built with [LangChain](https://github.com/hwchase17/langchain), [GPT4All](https:
 
 # Environment Setup
 In order to set your environment up to run the code here, first install all requirements:
-
-```shell
-pip3 install -r requirements.txt
-```
+- For NVIDIA GPUs (on Linux):
+   ```shell
+   sh ./install_nvidia.sh
+   ```
+- For CPU only setup:
+   ```shell
+   pip3 install -r requirements.txt
+   ```
 
 Then, download the LLM model and place it in a directory of your choice:
 - LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, just download it and reference it in your `.env` file.
@@ -23,16 +27,16 @@ MODEL_PATH: Path to your GPT4All or LlamaCpp supported LLM
 MODEL_N_CTX: Maximum token limit for the LLM model
 EMBEDDINGS_MODEL_NAME: SentenceTransformers embeddings model name (see https://www.sbert.net/docs/pretrained_models.html)
 TARGET_SOURCE_CHUNKS: The amount of chunks (sources) that will be used to answer a question
+N_BATCH: The number of tokens processed per request, increasing this value leads to an increase in resource utilisation. A lower value, on the other hand, slows down inference.
+USE_MLOCK: When this value is 1, the model is loaded entirely in RAM, reduces the read on disk, but uses more RAM
+N_GPU_LAYERS: If an Nvidia GPU is detected, this setting allocates part of the model to the video card to speed up processing time. If a value is set too high, and the video card is unable to support it, an error with `out of memory` will be thrown
 ```
 
 Note: because of the way `langchain` loads the `SentenceTransformers` embeddings, the first time you run the script it will require internet connection to download the embeddings model itself.
 
-## Test dataset
-This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
-
 ## Instructions for ingesting your own dataset
 
-Put any and all your files into the `source_documents` directory
+Put all the files you want to analyse in the `source_documents` folder
 
 The supported extensions are:
 
@@ -70,7 +74,7 @@ Using embedded DuckDB with persistence: data will be stored in: db
 Ingestion complete! You can now run privateGPT.py to query your documents
 ```
 
-It will create a `db` folder containing the local vectorstore. Will take 20-30 seconds per document, depending on the size of the document.
+It will create a `db` folder containing the local vectorstore. Will take 20-30 seconds per document (much less if you use an Nvidia GPU) , depending on the size of the document.
 You can ingest as many documents as you want, and all will be accumulated in the local embeddings database.
 If you want to start from an empty database, delete the `db` folder.
 
