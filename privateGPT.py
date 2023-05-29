@@ -29,21 +29,19 @@ def main():
     # activate/deactivate the streaming StdOut callback for LLMs
     callbacks = [] if args.mute_stream else [StreamingStdOutCallbackHandler()]
     # Prepare the LLM
-    match model_type:
-        case "LlamaCpp":
-            llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
-        case "GPT4All":
-            llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
-        case _default:
-            print(f"Model {model_type} not supported!")
-            exit;
+    if model_type == "LlamaCpp":
+        llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
+    elif model_type == "GPT4All":
+        llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
+    else:
+        print(f"Model {model_type} not supported!")
+        exit()
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
     # Interactive questions and answers
     while True:
         query = input("\nEnter a query: ")
         if query == "exit":
             break
-
         # Get the answer from the chain
         res = qa(query)
         answer, docs = res['result'], [] if args.hide_source else res['source_documents']
