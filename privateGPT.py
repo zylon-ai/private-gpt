@@ -52,16 +52,16 @@ def main():
         res = qa(query)
         answer, docs = res['result'], [] if args.hide_source else res['source_documents']
 
+        # Print the relevant sources used for the answer
+        for document in docs:
+            print("\n> " + document.metadata["source"] + ":")
+            print(document.page_content)
+        
         # Print the result
         print("\n\n> Question:")
         print(query)
         print("\n> Answer:")
         print(answer)
-
-        # Print the relevant sources used for the answer
-        for document in docs:
-            print("\n> " + document.metadata["source"] + ":")
-            print(document.page_content)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='privateGPT: Ask questions to your documents without an internet connection, '
