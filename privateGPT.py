@@ -7,6 +7,7 @@ from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
 import os
 import argparse
+from torch import cuda as torch_cuda
 
 load_dotenv()
 
@@ -16,14 +17,35 @@ persist_directory = os.environ.get('PERSIST_DIRECTORY')
 model_type = os.environ.get('MODEL_TYPE')
 model_path = os.environ.get('MODEL_PATH')
 model_n_ctx = os.environ.get('MODEL_N_CTX')
+is_gpu_enabled = (os.environ.get('IS_GPU_ENABLED', 'False').lower() == 'true')
 target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS',4))
-
 from constants import CHROMA_SETTINGS
+
+def get_gpu_memory() -> int:
+    """
+    Returns the amount of free memory in MB for each GPU.
+    """
+    return int(torch_cuda.mem_get_info()[0]/(1024**2))
+
+def calculate_layer_count() -> int | None:
+    """
+    Calculates the number of layers that can be used on the GPU.
+    """
+    if not is_gpu_enabled:
+        return None
+    LAYER_SIZE_MB = 120.6 # This is the size of a single layer on VRAM, and is an approximation.
+    # The current set value is for 7B models. For other models, this value should be changed.
+    LAYERS_TO_REDUCE = 6 # About 700 MB is needed for the LLM to run, so we reduce the layer count by 6 to be safe.
+    if (get_gpu_memory()//LAYER_SIZE_MB) - LAYERS_TO_REDUCE > 32:
+        return 32
+    else:
+        return (get_gpu_memory()//LAYER_SIZE_MB-LAYERS_TO_REDUCE)
 
 def main():
     # Parse the command line arguments
     args = parse_arguments()
-    embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
+    embeddings_kwargs = {'device': 'cuda'} if is_gpu_enabled else {}
+    embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name, model_kwargs=embeddings_kwargs)
     db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
     retriever = db.as_retriever(search_kwargs={"k": target_source_chunks})
     # activate/deactivate the streaming StdOut callback for LLMs
@@ -31,8 +53,11 @@ def main():
     # Prepare the LLM
     match model_type:
         case "LlamaCpp":
-            llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
+            llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False, n_gpu_layers=calculate_layer_count())
         case "GPT4All":
+            if is_gpu_enabled:
+                print("GPU is enabled, but GPT4All does not support GPU acceleration. Please use LlamaCpp instead.")
+                exit(1)
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
         case _default:
             print(f"Model {model_type} not supported!")
