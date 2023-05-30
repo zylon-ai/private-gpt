@@ -172,7 +172,6 @@ cython_debug/
 source_documents/
 other_documents/
 .gitignore
-source_documents/state_of_the_union.txt
 .vscode/
 ocrpdfs.sh
 st_privateGPT.py
