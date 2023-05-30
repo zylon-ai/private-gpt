@@ -9,7 +9,7 @@ Built with [LangChain](https://github.com/hwchase17/langchain), [GPT4All](https:
 In order to set your environment up to run the code here, first install all requirements:
 - For NVIDIA GPUs (on Linux):
    ```shell
-   sh ./install_nvidia.sh
+   sh ./install_cuda.sh
    ```
 - For CPU only setup:
    ```shell
