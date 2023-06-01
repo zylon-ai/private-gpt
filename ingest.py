@@ -37,7 +37,6 @@ embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
 chunk_size = 500
 chunk_overlap = 50
 
-breakpoint()
 
 # Custom document loaders
 class MyElmLoader(UnstructuredEmailLoader):
