@@ -168,7 +168,7 @@ def prompt_user():
         """
         This function displays the list of existing directories in the ./sources directory.
         """
-        print("\n\033[94mExisting directories in ./sources:\033[0m")
+        print("Existing directories in ./sources:")
         directories = sorted((file for file in os.listdir("./sources") if (os.path.isdir(os.path.join("./sources", file)) and not file.startswith("."))), key=str.lower)
         for index, directory in enumerate(directories, start=1):
             print(f"{index}. {directory}")
