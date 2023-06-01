@@ -7,6 +7,8 @@ from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
 import os
 import argparse
+import logging
+import sys
 
 load_dotenv()
 
@@ -23,6 +25,17 @@ from constants import CHROMA_SETTINGS
 def main():
     # Parse the command line arguments
     args = parse_arguments()
+
+    # Setup logging if enabled
+    if args.log_level is not None:
+        file_handler = logging.FileHandler(
+            filename=f'{os.path.basename(__file__)}.log')
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        handlers = [file_handler, stdout_handler]
+        logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+                            handlers=handlers, level=args.log_level, force=True)
+
+
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
     retriever = db.as_retriever(search_kwargs={"k": target_source_chunks})
@@ -64,10 +77,11 @@ def parse_arguments():
                                                  'using the power of LLMs.')
     parser.add_argument("--hide-source", "-S", action='store_true',
                         help='Use this flag to disable printing of source documents used for answers.')
-
     parser.add_argument("--mute-stream", "-M",
                         action='store_true',
                         help='Use this flag to disable the streaming StdOut callback for LLMs.')
+    parser.add_argument("--log-level", "-l", default=None,
+                        help='Set log level')
 
     return parser.parse_args()
 
