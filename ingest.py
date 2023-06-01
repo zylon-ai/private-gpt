@@ -26,12 +26,14 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
-from constants import get_chroma_settings, update_persist_directory
+from constants import CHROMA_SETTINGS
+
 
 load_dotenv()
 
+
 # Load environment variables
-persist_directory = update_persist_directory()
+persist_directory = os.environ.get('PERSIST_DIRECTORY')
 source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
 embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
 chunk_size = 500
@@ -168,7 +170,7 @@ def prompt_user():
         """
         This function displays the list of existing directories in the ./sources directory.
         """
-        print("Existing directories in ./sources:")
+        print("\n\033[94mExisting directories in ./sources:\033[0m")
         directories = sorted((file for file in os.listdir("./sources") if (os.path.isdir(os.path.join("./sources", file)) and not file.startswith("."))), key=str.lower)
         for index, directory in enumerate(directories, start=1):
             print(f"{index}. {directory}")
@@ -239,7 +241,7 @@ def main():
     if does_vectorstore_exist(persist_directory):
         # Update and store locally vectorstore
         print(f"Appending to existing vectorstore at {persist_directory}")
-        db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=get_chroma_settings)
+        db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
         collection = db.get()
         texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
         print(f"Creating embeddings. May take some minutes...")
@@ -249,7 +251,7 @@ def main():
         print("Creating new vectorstore")
         texts = process_documents()
         print(f"Creating embeddings. May take some minutes...")
-        db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=get_chroma_settings)
+        db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
     db.persist()
     db = None
 
