@@ -28,8 +28,10 @@ def main():
 
     # Setup logging if enabled
     if args.log_level is not None:
-        file_handler = logging.FileHandler(
-            filename=f'{os.path.basename(__file__)}.log')
+        log_dir = "logs"
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, f'{os.path.basename(__file__)}.log')
+        file_handler = logging.FileHandler(filename=log_path)
         stdout_handler = logging.StreamHandler(sys.stdout)
         handlers = [file_handler, stdout_handler]
         logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
