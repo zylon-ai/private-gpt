@@ -81,15 +81,14 @@ LOADER_MAPPING = {
 }
 
 
-def load_single_document(file_path: str) -> Document:
+def load_single_document(file_path: str) -> List[Document]:
     ext = "." + file_path.rsplit(".", 1)[-1]
     if ext in LOADER_MAPPING:
         loader_class, loader_args = LOADER_MAPPING[ext]
         loader = loader_class(file_path, **loader_args)
-        return loader.load()[0]
+        return loader.load()
 
     raise ValueError(f"Unsupported file extension '{ext}'")
-
 
 def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Document]:
     """
@@ -105,8 +104,8 @@ def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Docum
     with Pool(processes=os.cpu_count()) as pool:
         results = []
         with tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) as pbar:
-            for i, doc in enumerate(pool.imap_unordered(load_single_document, filtered_files)):
-                results.append(doc)
+            for i, docs in enumerate(pool.imap_unordered(load_single_document, filtered_files)):
+                results.extend(docs)
                 pbar.update()
 
     return results
