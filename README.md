@@ -97,7 +97,7 @@ Type `exit` to finish the script.
 
 
 ### CLI
-The script also supports optional command-line arguments to modify its behavior. You can see a full list of these arguments by running the command ```python privateGPT.py --help``` in your terminal.
+The script also supports optional command-line arguments to modify its behavior. You can see a full list of these arguments by running the command ```python privateGPT.py --help``` or ```python ingest.py --help``` in your terminal.
 
 
 # How does it work?

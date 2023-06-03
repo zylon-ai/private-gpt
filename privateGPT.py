@@ -5,8 +5,8 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
+from argsHandler import ArgsHandler
 import os
-import argparse
 
 load_dotenv()
 
@@ -16,13 +16,13 @@ persist_directory = os.environ.get('PERSIST_DIRECTORY')
 model_type = os.environ.get('MODEL_TYPE')
 model_path = os.environ.get('MODEL_PATH')
 model_n_ctx = os.environ.get('MODEL_N_CTX')
-target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS',4))
+target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS', 4))
 
 from constants import CHROMA_SETTINGS
 
 def main():
     # Parse the command line arguments
-    args = parse_arguments()
+    args = ArgsHandler.get_args(ArgsHandler.PRIVATE_GPT)
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
     retriever = db.as_retriever(search_kwargs={"k": target_source_chunks})
@@ -58,18 +58,6 @@ def main():
         for document in docs:
             print("\n> " + document.metadata["source"] + ":")
             print(document.page_content)
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='privateGPT: Ask questions to your documents without an internet connection, '
-                                                 'using the power of LLMs.')
-    parser.add_argument("--hide-source", "-S", action='store_true',
-                        help='Use this flag to disable printing of source documents used for answers.')
-
-    parser.add_argument("--mute-stream", "-M",
-                        action='store_true',
-                        help='Use this flag to disable the streaming StdOut callback for LLMs.')
-
-    return parser.parse_args()
 
 
 if __name__ == "__main__":

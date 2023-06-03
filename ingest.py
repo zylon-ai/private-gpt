@@ -25,15 +25,17 @@ from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
 from constants import CHROMA_SETTINGS
+from argsHandler import ArgsHandler
 
 
 load_dotenv()
+# Parse the command line arguments
+args = ArgsHandler.get_args(ArgsHandler.INGEST)
 
-
-# Load environment variables
-persist_directory = os.environ.get('PERSIST_DIRECTORY')
-source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
-embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
+# Load environment variables or use console arguments
+persist_directory = os.environ.get('PERSIST_DIRECTORY') if args.persist_dir is None else args.persist_dir
+source_directory = os.environ.get('SOURCE_DIRECTORY','source_documents') if args.source_dir is None else args.source_dir
+embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME') if args.embeddings_model is None else args.embeddings_model
 chunk_size = 500
 chunk_overlap = 50
 
