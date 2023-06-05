@@ -5,6 +5,7 @@ from typing import List
 from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
+from msg_parser.msg_parser import MsOxMessage
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -59,7 +60,31 @@ class MyElmLoader(UnstructuredEmailLoader):
             raise type(e)(f"{self.file_path}: {e}") from e
 
         return doc
+    
+class MSGLoader:
+    def __init__(self, file_path):
+        self.file_path = file_path
 
+    def load(self) -> List[Document]:
+        documents = []
+        msg_obj = MsOxMessage(self.file_path)
+        json_string = msg_obj.get_message_as_json()
+        msg_properties_dict = msg_obj.get_properties()
+        saved_path = os.path.join(source_directory, os.path.basename(self.file_path) + ".eml")
+        msg_obj.save_email_file(saved_path)
+
+        # Create a document using the retrieved content and metadata
+        document = Document(
+            content=json_string,
+            metadata={
+                "filename": self.file_path,
+                "properties": msg_properties_dict,
+                "saved_path": saved_path,
+                # Include any other relevant metadata
+            }
+        )
+        documents.append(document)
+        return documents
 
 # Map file extensions to document loaders and their arguments
 LOADER_MAPPING = {
@@ -77,6 +102,7 @@ LOADER_MAPPING = {
     ".ppt": (UnstructuredPowerPointLoader, {}),
     ".pptx": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
+    ".msg": (MSGLoader, {}),
     # Add more mappings for other file extensions and loaders as needed
 }
 
@@ -146,8 +172,20 @@ def main():
         # Update and store locally vectorstore
         print(f"Appending to existing vectorstore at {persist_directory}")
         db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
-        collection = db.get()
-        texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
+        existing_metadata = db.get()['metadatas']
+        
+        # Check for removed documents
+        removed_documents = []
+        for metadata in existing_metadata:
+            if not os.path.exists(metadata['source']):
+                removed_documents.append(metadata['id'])
+        
+        # Remove metadata and embeddings of removed documents
+        if removed_documents:
+            db.remove_documents(removed_documents)
+
+        # Load and process new documents
+        texts = process_documents([metadata['source'] for metadata in existing_metadata])
         print(f"Creating embeddings. May take some minutes...")
         db.add_documents(texts)
     else:
@@ -160,6 +198,7 @@ def main():
     db = None
 
     print(f"Ingestion complete! You can now run privateGPT.py to query your documents")
+
 
 
 if __name__ == "__main__":
