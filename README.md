@@ -95,7 +95,7 @@ Note: you could turn off your internet connection, and the script inference woul
 
 Type `exit` to finish the script.
 
-## Conservation UI chat
+## Conversation UI chat
 ```shell
 python privateGPT_uichat.py --server-name "0.0.0.0" --server-port 8071
 ```
