@@ -21,6 +21,22 @@ target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS',4))
 from constants import CHROMA_SETTINGS
 
 def main():
+    """
+    Runs the main program.
+    Args:
+      None
+    Returns:
+      None
+    Side Effects:
+      Prompts the user for a query and prints the answer and source documents.
+    Examples:
+      >>> main()
+      Enter a query: What is the capital of France?
+      > Question:
+      What is the capital of France?
+      > Answer:
+      Paris
+    """
     # Parse the command line arguments
     args = parse_arguments()
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
@@ -60,6 +76,18 @@ def main():
             print(document.page_content)
 
 def parse_arguments():
+    """
+    Parses the command line arguments.
+    Args:
+      None
+    Returns:
+      argparse.Namespace: The parsed arguments.
+    Side Effects:
+      None
+    Examples:
+      >>> parse_arguments()
+      Namespace(hide_source=False, mute_stream=False)
+    """
     parser = argparse.ArgumentParser(description='privateGPT: Ask questions to your documents without an internet connection, '
                                                  'using the power of LLMs.')
     parser.add_argument("--hide-source", "-S", action='store_true',

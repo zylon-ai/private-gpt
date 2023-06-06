@@ -40,10 +40,24 @@ chunk_overlap = 50
 
 # Custom document loaders
 class MyElmLoader(UnstructuredEmailLoader):
-    """Wrapper to fallback to text/plain when default does not work"""
+    """
+    Wrapper to fallback to text/plain when default does not work.
+    """
 
     def load(self) -> List[Document]:
-        """Wrapper adding fallback for elm without html"""
+        """
+        Wrapper adding fallback for elm without html.
+        Args:
+            self (MyElmLoader): The MyElmLoader instance.
+        Returns:
+            List[Document]: The list of documents.
+        Raises:
+            ValueError: If an unsupported file extension is encountered.
+        Examples:
+            >>> MyElmLoader.load(self)
+            [Document]
+        """
+
         try:
             try:
                 doc = UnstructuredEmailLoader.load(self)
@@ -82,6 +96,18 @@ LOADER_MAPPING = {
 
 
 def load_single_document(file_path: str) -> List[Document]:
+    """
+    Loads a single document from a file path.
+    Args:
+      file_path (str): The file path of the document.
+    Returns:
+      List[Document]: The list of documents.
+    Raises:
+      ValueError: If an unsupported file extension is encountered.
+    Examples:
+      >>> load_single_document('example.txt')
+      [Document]
+    """
     ext = "." + file_path.rsplit(".", 1)[-1]
     if ext in LOADER_MAPPING:
         loader_class, loader_args = LOADER_MAPPING[ext]
@@ -92,7 +118,15 @@ def load_single_document(file_path: str) -> List[Document]:
 
 def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Document]:
     """
-    Loads all documents from the source documents directory, ignoring specified files
+    Loads all documents from the source documents directory, ignoring specified files.
+    Args:
+      source_dir (str): The source directory of the documents.
+      ignored_files (List[str], optional): The list of files to ignore. Defaults to [].
+    Returns:
+      List[Document]: The list of documents.
+    Examples:
+      >>> load_documents('source_documents', ['example.txt'])
+      [Document]
     """
     all_files = []
     for ext in LOADER_MAPPING:
@@ -112,7 +146,14 @@ def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Docum
 
 def process_documents(ignored_files: List[str] = []) -> List[Document]:
     """
-    Load documents and split in chunks
+    Load documents and split in chunks.
+    Args:
+      ignored_files (List[str], optional): The list of files to ignore. Defaults to [].
+    Returns:
+      List[Document]: The list of documents.
+    Examples:
+      >>> process_documents(['example.txt'])
+      [Document]
     """
     print(f"Loading documents from {source_directory}")
     documents = load_documents(source_directory, ignored_files)
@@ -127,7 +168,14 @@ def process_documents(ignored_files: List[str] = []) -> List[Document]:
 
 def does_vectorstore_exist(persist_directory: str) -> bool:
     """
-    Checks if vectorstore exists
+    Checks if vectorstore exists.
+    Args:
+      persist_directory (str): The directory of the vectorstore.
+    Returns:
+      bool: True if vectorstore exists, False otherwise.
+    Examples:
+      >>> does_vectorstore_exist('persist_directory')
+      True
     """
     if os.path.exists(os.path.join(persist_directory, 'index')):
         if os.path.exists(os.path.join(persist_directory, 'chroma-collections.parquet')) and os.path.exists(os.path.join(persist_directory, 'chroma-embeddings.parquet')):
@@ -139,6 +187,12 @@ def does_vectorstore_exist(persist_directory: str) -> bool:
     return False
 
 def main():
+    """
+    Create embeddings, check if vectorstore exists, and update/create vectorstore.
+    Examples:
+      >>> main()
+      Ingestion complete! You can now run privateGPT.py to query your documents
+    """
     # Create embeddings
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
 
