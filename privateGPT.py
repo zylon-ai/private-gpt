@@ -43,6 +43,8 @@ def main():
         query = input("\nEnter a query: ")
         if query == "exit":
             break
+        if query.strip() == "":
+            continue
 
         # Get the answer from the chain
         res = qa(query)
