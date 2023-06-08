@@ -7,6 +7,9 @@ from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
 import os
 import argparse
+from constants import CHROMA_SETTINGS
+from time import time
+
 
 load_dotenv()
 
@@ -18,7 +21,6 @@ model_path = os.environ.get('MODEL_PATH')
 model_n_ctx = os.environ.get('MODEL_N_CTX')
 target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS',4))
 
-from constants import CHROMA_SETTINGS
 
 def main():
     # Parse the command line arguments
@@ -35,16 +37,20 @@ def main():
         case "GPT4All":
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
         case _default:
-            print(f"Model {model_type} not supported!")
-            exit;
+            raise Exception(f"Model {model_type} not supported!")
+
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
     # Interactive questions and answers
     while True:
         query = input("\nEnter a query: ")
         if query == "exit":
             break
+        elif not query.strip():
+            print("Empty ")
+            continue
 
         # Get the answer from the chain
+        start = time()
         res = qa(query)
         answer, docs = res['result'], [] if args.hide_source else res['source_documents']
 
@@ -53,15 +59,19 @@ def main():
         print(query)
         print("\n> Answer:")
         print(answer)
+        duration = int((time() - start) * 1000)
+        print(f"\n> Duration: {duration} ms")
 
         # Print the relevant sources used for the answer
         for document in docs:
             print("\n> " + document.metadata["source"] + ":")
             print(document.page_content)
 
+
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='privateGPT: Ask questions to your documents without an internet connection, '
-                                                 'using the power of LLMs.')
+    parser = argparse.ArgumentParser(
+        description='privateGPT: Ask questions to your documents without an internet connection,'
+                    ' using the power of LLMs.')
     parser.add_argument("--hide-source", "-S", action='store_true',
                         help='Use this flag to disable printing of source documents used for answers.')
 
