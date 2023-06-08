@@ -1,0 +1,80 @@
+Can I map tables and views from multiple schemas into one logical data model?
+No, all objects have to be from one schema.
+
+How is a database table represented in GoodData logical data model (LDM)?
+It is represented as a dataset. Columns are represented as fields in LDM. You can select which columns you will use in LDM.
+
+How is a database view represented  in GoodData logical data model (LDM)?
+It is represented as a dataset - similarly to a database table. You can select which columns you will use in LDM.
+
+What about database columns, how can they be represented in a logical data model?
+They are represented as fields. One column is usually represented by one field.
+
+How do I distinguish between different fields?
+Each field has a unique identifier which is used in metrics (MAQL) or on API to identify a field.
+
+What is an identifier in the logical data model?
+Identifier is a property of each field and each dataset. Each field has a unique identifier. Each dataset has a unique identifier.
+
+What properties does a field have?
+It has an identifier and a title. The title is a business name which can be understood by humans and can be used in a normal conversation. Identifiers are used to distinguish different fields. You use it to reference fields in MAQL or in API calls. Humans do not use identifiers in normal conversations. Developers do.
+
+Are all fields of the same type?
+No, some fields represent co called `facts`. A fact is a number - integer, double etc. You can then use facts in MAQL to compute metrics. Some fields represent attributes (sometimes called dimensions). You use attributes for slicing & dicing metrics. Then there are primary keys and references.
+
+Can I use database types I know from SQL in a logical data model?
+No, you can’t use the database types in a logical data model. Only attributes and facts are allowed in LDM.
+
+Can you give me an example of mapping between a table and a dataset?
+Sure, let’s assume the table was created with SQL DDL:
+CREATE TABLE IF NOT EXISTS public.user
+(
+user_pk BIGINT  DEFAULT "identity"(564593, 0, '1,1'::text)
+	,user_id VARCHAR(255)
+	,user_email VARCHAR(255)
+	,user_type VARCHAR(255)
+	,user_age INTEGER
+)
+
+Then in a logical data model it would consist of a dataset called `Users` with four fields. Attributes will be `user_pk`, `user_id`, `user_email`, `user_type`. There is one fact `user_age`.
+Primary key would be `user_pk`.
+
+What about dates, how are they represented in the LDM?
+Each column which has date or datetime type is represented by a new date dataset in the logical data model.
+
+When do I represent columns as multiple fields?
+You can use it when you need to use the column for computation as well as for slicing and dicing metrics. Then you have to create two fields mapped to the same database column. The columns should be INTEGER. Example could be column `age`, which will be represented as fact and as attribute in the LDM. Fact `f_age` will be used for computation whereas attribute `a_age` will be used for slicing and dicing.
+
+What about primary keys, how are they represented in the logical data model (LDM)?
+Yes, each dataset can have a primary key. It is one field.
+
+Does a logical data model support foreign keys?
+Yes, there are foreign keys; they always reference a primary key in a different dataset.
+
+Can I use compound keys?
+No, compound keys are not supported.
+
+Can I reference all columns in the target dataset with a foreign key?
+No, you have to always reference the primary key of the target dataset
+
+How to start a MAQL query?
+Always start with keyword `SELECT` like SELECT SUM({fact/identifier})
+
+How can I join multiple datasets in MAQL, should I use JOIN?
+It is not needed to use JOIN in MAQL. JOIN is done by the execution engine automatically.
+
+Can I use the names of columns in MAQL?
+No, you should use identifiers from the logical data model (LDM) instead.
+
+What does the identifier look like in MAQL?
+It starts with `{` and ends with `}` after `{` you should add type of the field from logical data model (LDM) - which is `fact` or `attribute` next you can use type `metric`. Finally write the name of the field from LDM. Good examples: {fact/field_name}, {attribute/different_name}, {metric/metric_name}. Bad examples: field_name, {attribute/fact/field_name}, {nějaký text
+
+How to get the sum of all values in the database column?
+You have to use the function SUM on the field in LDM which represents the column. Example: column `price` is represented in the LDM as fact with identifier `{fact/price}` then you can write MAQL query: SELECT SUM({fact/price}) to obtain correct result. Example 2: If you use the name of the column instead of an identifier like this: SELECT SUM(price) it will return an error.
+
+How to get count of all records in a dataset?
+There are two options:
+1. COUNT({attribute/attribute_id})
+  attribute_id must represent the primary key of corresponding dataset
+2. COUNT({dataset/dataset_id})
+  dataset_id represents the identifier of the dataset.
