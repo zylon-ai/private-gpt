@@ -24,8 +24,6 @@ def main():
     # Parse the command line arguments
     args = parse_arguments()
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
-    db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
-    retriever = db.as_retriever(search_kwargs={"k": target_source_chunks})
     # activate/deactivate the streaming StdOut callback for LLMs
     callbacks = [] if args.mute_stream else [StreamingStdOutCallbackHandler()]
     # Prepare the LLM
@@ -37,6 +35,29 @@ def main():
         case _default:
             print(f"Model {model_type} not supported!")
             exit;
+    vector_store_type = os.environ.get("VECTOR_STORE", "chroma")
+    if vector_store_type == "weaviate":
+        from adapters.weaviate_adapter import WeaviateVectorStoreAdapter
+
+        weaviate_url = os.environ.get("WEAVIATE_URL", "http://localhost:8080")
+
+        vector_store = WeaviateVectorStoreAdapter(weaviate_url, embedding=embeddings)
+
+        print(f"Using Weaviate vector store at {weaviate_url}")
+    elif vector_store_type == "chroma":
+        from adapters.chroma_adapter import ChromaVectorStoreAdapter
+
+        vector_store = ChromaVectorStoreAdapter(
+            persist_directory=persist_directory,
+            embedding_function=embeddings,
+            client_settings=CHROMA_SETTINGS,
+        )
+    else:
+        print(f"Vector store {vector_store_type} not supported!")
+        exit;
+
+    db = vector_store.db
+    retriever = db.as_retriever()
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
     # Interactive questions and answers
     while True:

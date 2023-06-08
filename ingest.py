@@ -142,7 +142,18 @@ def main():
     # Create embeddings
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
 
-    if does_vectorstore_exist(persist_directory):
+    vector_store_type = os.environ.get("VECTOR_STORE", "chroma")
+    if vector_store_type == "weaviate":
+        # Create and store remotely vectorstore
+        from adapters.weaviate_adapter import WeaviateVectorStoreAdapter
+        texts = process_documents()
+        weaviate_url = os.environ.get("WEAVIATE_URL", "http://localhost:8080")
+        vector_store = WeaviateVectorStoreAdapter(weaviate_url)
+        vector_store.from_documents(texts, embeddings)
+        print(
+            f"Ingested {len(texts)} document snippets from {source_directory} into Weaviate at {weaviate_url}"
+        )
+    elif vector_store_type == "chroma" and does_vectorstore_exist(persist_directory):
         # Update and store locally vectorstore
         print(f"Appending to existing vectorstore at {persist_directory}")
         db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
@@ -150,14 +161,18 @@ def main():
         texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
         print(f"Creating embeddings. May take some minutes...")
         db.add_documents(texts)
-    else:
+        db .persist()
+        db = None
+    elif vector_store_type == "chroma" and not does_vectorstore_exist(persist_directory):
         # Create and store locally vectorstore
         print("Creating new vectorstore")
         texts = process_documents()
         print(f"Creating embeddings. May take some minutes...")
         db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
-    db.persist()
-    db = None
+        db .persist()
+        db = None
+    else:
+        raise ValueError(f"Unsupported vectorstore type '{vector_store_type}'")
 
     print(f"Ingestion complete! You can now run privateGPT.py to query your documents")
 
