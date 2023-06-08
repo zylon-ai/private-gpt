@@ -1,0 +1,3 @@
+Let's have LDM with 1 dataset with ID=test containing 1 attribute with ID=a1 and 1 fact with ID=f1.
+Write a MAQL metric calculating count of records (rows) in dataset test.
+
