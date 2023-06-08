@@ -42,3 +42,12 @@ repos:
           - --ignore-words-list=hass,master
           - --skip="./.*"
           - --quiet-level=2
+  - repo: https://github.com/psf/black
+    rev: 23.3.0
+    hooks:
+      - id: black
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.272
+    hooks:
+      - id: ruff
+        args: [ "--fix", "--fixable", "I" ]

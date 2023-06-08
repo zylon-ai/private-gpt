@@ -1,6 +1,9 @@
 # OSX
 .DS_STORE
 
+.idea
+.ruff_cache
+
 # Models
 models/
 

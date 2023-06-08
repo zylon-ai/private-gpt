@@ -1,0 +1,21 @@
+[tool.ruff]
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    ".tox",
+    "build",
+    "dist",
+]
+line-length = 120
+select = [
+    "F", # pyflakes
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "I", # isort
+    "N" # naming
+]
+
+[tool.black]
+target-version = ['py311']
+line-length = 120
