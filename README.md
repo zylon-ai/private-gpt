@@ -15,7 +15,12 @@ pip3 install -r requirements.txt
 Then, download the LLM model and place it in a directory of your choice:
 - LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, just download it and reference it in your `.env` file.
 
-Rename `example.env` to `.env` and edit the variables appropriately.
+Copy the `example.env` template into `.env`
+```shell
+cp example.env .env
+```
+
+and edit the variables appropriately in the `.env` file.
 ```
 MODEL_TYPE: supports LlamaCpp or GPT4All
 PERSIST_DIRECTORY: is the folder you want your vectorstore in
