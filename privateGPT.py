@@ -7,6 +7,7 @@ from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
 import os
 import argparse
+import time
 
 load_dotenv()
 
@@ -47,13 +48,15 @@ def main():
             continue
 
         # Get the answer from the chain
+        start = time.time()
         res = qa(query)
         answer, docs = res['result'], [] if args.hide_source else res['source_documents']
+        end = time.time()
 
         # Print the result
         print("\n\n> Question:")
         print(query)
-        print("\n> Answer:")
+        print(f"\n> Answer (took {round(end - start, 2)} s.):")
         print(answer)
 
         # Print the relevant sources used for the answer
