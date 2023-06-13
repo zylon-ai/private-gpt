@@ -9,6 +9,7 @@ import os
 import argparse
 import logging
 import sys
+import time
 
 load_dotenv()
 
@@ -18,6 +19,7 @@ persist_directory = os.environ.get('PERSIST_DIRECTORY')
 model_type = os.environ.get('MODEL_TYPE')
 model_path = os.environ.get('MODEL_PATH')
 model_n_ctx = os.environ.get('MODEL_N_CTX')
+model_n_batch = int(os.environ.get('MODEL_N_BATCH',8))
 target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS',4))
 
 from constants import CHROMA_SETTINGS
@@ -46,9 +48,9 @@ def main():
     # Prepare the LLM
     match model_type:
         case "LlamaCpp":
-            llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, callbacks=callbacks, verbose=False)
+            llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, n_batch=model_n_batch, callbacks=callbacks, verbose=False)
         case "GPT4All":
-            llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
+            llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', n_batch=model_n_batch, callbacks=callbacks, verbose=False)
         case _default:
             print(f"Model {model_type} not supported!")
             exit;
@@ -58,15 +60,19 @@ def main():
         query = input("\nEnter a query: ")
         if query == "exit":
             break
+        if query.strip() == "":
+            continue
 
         # Get the answer from the chain
+        start = time.time()
         res = qa(query)
         answer, docs = res['result'], [] if args.hide_source else res['source_documents']
+        end = time.time()
 
         # Print the result
         print("\n\n> Question:")
         print(query)
-        print("\n> Answer:")
+        print(f"\n> Answer (took {round(end - start, 2)} s.):")
         print(answer)
 
         # Print the relevant sources used for the answer
