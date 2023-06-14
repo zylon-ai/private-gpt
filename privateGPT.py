@@ -35,7 +35,7 @@ def main():
         case "LlamaCpp":
             llm = LlamaCpp(model_path=model_path, n_ctx=model_n_ctx, n_batch=model_n_batch, callbacks=callbacks, verbose=False)
         case "GPT4All":
-            llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', n_batch=model_n_batch, callbacks=callbacks, verbose=False)
+            llm = GPT4All(model=model_path, n_threads=len(os.sched_getaffinity(0)), n_ctx=model_n_ctx, backend='gptj', n_batch=model_n_batch, callbacks=callbacks, verbose=False)
         case _default:
             print(f"Model {model_type} not supported!")
             exit;
