@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 from langchain.chains import RetrievalQA
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
 import os
 import argparse
@@ -20,14 +19,30 @@ model_n_ctx = os.environ.get('MODEL_N_CTX')
 model_n_batch = int(os.environ.get('MODEL_N_BATCH',8))
 target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS',4))
 
-from constants import CHROMA_SETTINGS
+try:
+    from chromadb.config import Settings
+
+    load_dotenv()
+
+    # Define the folder for storing database
+    PERSIST_DIRECTORY = os.environ.get('PERSIST_DIRECTORY')
+
+    # Define the Chroma settings
+    CHROMA_SETTINGS = Settings(
+            chroma_db_impl='duckdb+parquet',
+            persist_directory=PERSIST_DIRECTORY,
+            anonymized_telemetry=False
+    )
+    
+    _CHROMA_INSTALLED = True
+except ImportError:
+    _CHROMA_INSTALLED = False
+
 
 def main():
     # Parse the command line arguments
     args = parse_arguments()
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
-    db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
-    retriever = db.as_retriever(search_kwargs={"k": target_source_chunks})
     # activate/deactivate the streaming StdOut callback for LLMs
     callbacks = [] if args.mute_stream else [StreamingStdOutCallbackHandler()]
     # Prepare the LLM
@@ -39,6 +54,31 @@ def main():
         case _default:
             print(f"Model {model_type} not supported!")
             exit;
+    
+    vector_store_type = os.environ.get("VECTOR_STORE", "chroma")
+    if vector_store_type == "weaviate":
+        from adapters.deeplake_adapter import DeepLakeVectorStoreAdapter
+
+        dataset_path = os.environ.get("DEEPLAKE_DATASET_PATH", "deeplake")
+        overwrite = os.environ.get("DEEPLAKE_OVERWRITE", False)
+        vector_store = DeepLakeVectorStoreAdapter(dataset_path, embedding=embeddings, overwrite=overwrite)
+    
+    elif vector_store_type == "chroma":
+        if _CHROMA_INSTALLED is False:
+            raise ImportError("Could not import chroma python package. Please install it manually with `pip install chroma`.")
+        from adapters.chroma_adapter import ChromaVectorStoreAdapter
+
+        vector_store = ChromaVectorStoreAdapter(
+            persist_directory=persist_directory,
+            embedding_function=embeddings,
+            client_settings=CHROMA_SETTINGS,
+        )
+    else:
+        print(f"Vector store {vector_store_type} not supported!")
+        exit;
+    
+    db = vector_store.db
+    retriever = db.as_retriever()
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
     # Interactive questions and answers
     while True:

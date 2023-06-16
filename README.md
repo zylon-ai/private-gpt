@@ -6,6 +6,7 @@ Built with [LangChain](https://github.com/hwchase17/langchain), [GPT4All](https:
 <img width="902" alt="demo" src="https://user-images.githubusercontent.com/721666/236942256-985801c9-25b9-48ef-80be-3acbb4575164.png">
 
 # Environment Setup
+ad [this](docs/deeplake.md) first if you want to use with [DeepLake](https://activeloop.ai/).
 In order to set your environment up to run the code here, first install all requirements:
 
 ```shell
@@ -24,6 +25,7 @@ and edit the variables appropriately in the `.env` file.
 ```
 MODEL_TYPE: supports LlamaCpp or GPT4All
 PERSIST_DIRECTORY: is the folder you want your vectorstore in
+VECTOR_STORE: Supports DeepLake or Chroma
 MODEL_PATH: Path to your GPT4All or LlamaCpp supported LLM
 MODEL_N_CTX: Maximum token limit for the LLM model
 MODEL_N_BATCH: Number of tokens in the prompt that are fed into the model at a time. Optimal value differs a lot depending on the model (8 works well for GPT4All, and 1024 is better for LlamaCpp)
@@ -62,6 +64,13 @@ Run the following command to ingest all the data.
 ```shell
 python ingest.py
 ```
+
+If using `Chroma` this will create a `db` folder containing the local vectorstore. If using `DeepLake` this will create a `deeplake` folder containing the local vectorstore. Will take time, depending on the size of your documents.
+
+You can ingest as many documents as you want, and all will be accumulated in the local embeddings database.
+If you want to start from an empty database, you can either create a new `DeepLake` instance, with overwrite flag, or specify a new path. If working with `Chroma` you can delete the `db` folder.
+
+By default, the docker-compose file does not mount PERSISTENCE_DATA_PATH to the host machine's storage so removing and restarting the weaviate container will be the same as starting over with an empty database, Also an alternative to restarting the weaviate container is to use the python client i.e. `client.schema.delete_all()` to clear the database
 
 Output should look like this:
 
@@ -109,7 +118,7 @@ The script also supports optional command-line arguments to modify its behavior.
 # How does it work?
 Selecting the right local models and the power of `LangChain` you can run the entire pipeline locally, without any data leaving your environment, and with reasonable performance.
 
-- `ingest.py` uses `LangChain` tools to parse the document and create embeddings locally using `HuggingFaceEmbeddings` (`SentenceTransformers`). It then stores the result in a local vector database using `Chroma` vector store.
+- `ingest.py` uses `LangChain` tools to parse the document and create embeddings locally using `LlamaCppEmbeddings`. It then stores the result in a local vector database using either `Chroma` or `DeepLake`.
 - `privateGPT.py` uses a local LLM based on `GPT4All-J` or `LlamaCpp` to understand questions and create answers. The context for the answers is extracted from the local vector store using a similarity search to locate the right piece of context from the docs.
 - `GPT4All-J` wrapper was introduced in LangChain 0.0.162.
 
