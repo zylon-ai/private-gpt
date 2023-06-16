@@ -56,16 +56,16 @@ def main():
             exit;
     
     vector_store_type = os.environ.get("VECTOR_STORE", "chroma")
-    if vector_store_type == "weaviate":
+    if vector_store_type == "deeplake":
         from adapters.deeplake_adapter import DeepLakeVectorStoreAdapter
 
         dataset_path = os.environ.get("DEEPLAKE_DATASET_PATH", "deeplake")
         overwrite = os.environ.get("DEEPLAKE_OVERWRITE", False)
-        vector_store = DeepLakeVectorStoreAdapter(dataset_path, embedding=embeddings, overwrite=overwrite)
+        vector_store = DeepLakeVectorStoreAdapter(dataset_path, embedding_function=embeddings, overwrite=overwrite)
     
     elif vector_store_type == "chroma":
         if _CHROMA_INSTALLED is False:
-            raise ImportError("Could not import chroma python package. Please install it manually with `pip install chroma`.")
+            raise ImportError("Could not import chroma python package. Please install it manually with `pip install chromadb`.")
         from adapters.chroma_adapter import ChromaVectorStoreAdapter
 
         vector_store = ChromaVectorStoreAdapter(
