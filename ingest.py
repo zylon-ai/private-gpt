@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 import glob
-from typing import List
+from typing import List, Union
 from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
@@ -93,7 +93,7 @@ def load_single_document(file_path: str) -> Union[List[Document], Exception]:
             loader_class, loader_args = LOADER_MAPPING[ext]
             loader = loader_class(file_path, **loader_args)
             return loader.load()
-        except Exception as ex:
+        except DocumentLoadingError as ex:
             return DocumentLoadingError(f"Err on item {file_path}")
     else:
         raise DocumentLoadingError(f"Unsupported file extension '{ext}'")
