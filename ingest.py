@@ -5,6 +5,7 @@ from typing import List
 from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
+import logging
 
 from langchain.document_loaders import (
     CSVLoader,
@@ -29,6 +30,8 @@ from constants import CHROMA_SETTINGS
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 
 # Load environment variables
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
@@ -37,6 +40,8 @@ embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
 chunk_size = 500
 chunk_overlap = 50
 
+class DocumentLoadingError(Exception):
+    pass
 
 # Custom document loaders
 class MyElmLoader(UnstructuredEmailLoader):
@@ -81,14 +86,17 @@ LOADER_MAPPING = {
 }
 
 
-def load_single_document(file_path: str) -> List[Document]:
+def load_single_document(file_path: str) -> Union[List[Document], Exception]:
     ext = "." + file_path.rsplit(".", 1)[-1]
     if ext in LOADER_MAPPING:
-        loader_class, loader_args = LOADER_MAPPING[ext]
-        loader = loader_class(file_path, **loader_args)
-        return loader.load()
-
-    raise ValueError(f"Unsupported file extension '{ext}'")
+        try:
+            loader_class, loader_args = LOADER_MAPPING[ext]
+            loader = loader_class(file_path, **loader_args)
+            return loader.load()
+        except Exception as ex:
+            return DocumentLoadingError(f"Err on item {file_path}")
+    else:
+        raise DocumentLoadingError(f"Unsupported file extension '{ext}'")
 
 def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Document]:
     """
@@ -105,8 +113,11 @@ def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Docum
         results = []
         with tqdm(total=len(filtered_files), desc='Loading new documents', ncols=80) as pbar:
             for i, docs in enumerate(pool.imap_unordered(load_single_document, filtered_files)):
-                results.extend(docs)
-                pbar.update()
+                if isinstance(docs, DocumentLoadingError):
+                    logger.error("Got exception: {}".format(docs))
+                else:
+                    results.extend(docs)
+                    pbar.update()
 
     return results
 
@@ -114,15 +125,15 @@ def process_documents(ignored_files: List[str] = []) -> List[Document]:
     """
     Load documents and split in chunks
     """
-    print(f"Loading documents from {source_directory}")
+    logger.info(f"Loading documents from {source_directory}")
     documents = load_documents(source_directory, ignored_files)
     if not documents:
-        print("No new documents to load")
+        logger.info("No new documents to load")
         exit(0)
-    print(f"Loaded {len(documents)} new documents from {source_directory}")
+    logger.info(f"Loaded {len(documents)} new documents from {source_directory}")
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     texts = text_splitter.split_documents(documents)
-    print(f"Split into {len(texts)} chunks of text (max. {chunk_size} tokens each)")
+    logger.info(f"Split into {len(texts)} chunks of text (max. {chunk_size} tokens each)")
     return texts
 
 def does_vectorstore_exist(persist_directory: str) -> bool:
@@ -144,23 +155,24 @@ def main():
 
     if does_vectorstore_exist(persist_directory):
         # Update and store locally vectorstore
-        print(f"Appending to existing vectorstore at {persist_directory}")
+        logger.info(f"Appending to existing vectorstore at {persist_directory}")
         db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
         collection = db.get()
         texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
-        print(f"Creating embeddings. May take some minutes...")
+        logger.info(f"Creating embeddings. May take some minutes...")
         db.add_documents(texts)
     else:
         # Create and store locally vectorstore
-        print("Creating new vectorstore")
+        logger.info("Creating new vectorstore")
         texts = process_documents()
-        print(f"Creating embeddings. May take some minutes...")
+        logger.info(f"Creating embeddings. May take some minutes...")
         db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
     db.persist()
     db = None
 
-    print(f"Ingestion complete! You can now run privateGPT.py to query your documents")
+    logger.info(f"Ingestion complete! You can now run privateGPT.py to query your documents")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()
