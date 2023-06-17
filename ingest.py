@@ -93,7 +93,7 @@ def load_single_document(file_path: str) -> Union[List[Document], Exception]:
             loader_class, loader_args = LOADER_MAPPING[ext]
             loader = loader_class(file_path, **loader_args)
             return loader.load()
-        except DocumentLoadingError as ex:
+        except Exception as ex:
             return DocumentLoadingError(f"Err on item {file_path}")
     else:
         raise DocumentLoadingError(f"Unsupported file extension '{ext}'")
