@@ -1,9 +1,9 @@
-langchain==0.0.177
-gpt4all==0.2.3
+langchain==0.0.197
+gpt4all==0.3.4
 chromadb==0.3.23
 llama-cpp-python==0.1.50
 urllib3==2.0.2
-pdfminer.six==20221105
+PyMuPDF==1.22.3
 python-dotenv==1.0.0
 unstructured==0.6.6
 extract-msg==0.41.1
