@@ -3,6 +3,8 @@
 
 # Models
 models/
+source_git/
+source_documents/
 
 # Local Chroma db
 .chroma/
