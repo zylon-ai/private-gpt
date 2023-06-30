@@ -5,7 +5,7 @@ from typing import List
 from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
-
+from nltk.tokenize import punkt
 from langchain.document_loaders import (
     CSVLoader,
     EverNoteLoader,
