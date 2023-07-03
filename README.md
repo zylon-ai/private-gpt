@@ -1,7 +1,7 @@
 # secureGPT
 Ask your documents questions using the power of OpenAI's GPT models, without worrying about your data being used to train models.
 
-using Azure Enterprise OpenAI Service prompts (inputs) and completions (outputs), your embeddings, and your training data:
+Using Azure Enterprise OpenAI Service prompts (inputs) and completions (outputs), your embeddings, and your training data:
 * are NOT available to other customers.
 * are NOT available to OpenAI.
 * are NOT used to improve OpenAI models.
@@ -97,7 +97,7 @@ The script also supports optional command-line arguments to modify its behavior.
 # How does it work?
 
 - `ingest.py` uses `LangChain` tools to parse the document and create embeddings locally using `HuggingFaceEmbeddings` (`SentenceTransformers`). It then stores the result in a local vector database using `Chroma` vector store.
-- `secureGPT.py` uses a OpenAI's enterprise GPT model to understand questions and create answers. The context for the answers is extracted from the local vector store using a similarity search to locate the right piece of context from the docs.
+- `secureGPT.py` uses OpenAI's enterprise GPT model to understand questions and create answers. The context for the answers is extracted from the local vector store using a similarity search to locate the right piece of context from the docs.
 
 # System Requirements
 

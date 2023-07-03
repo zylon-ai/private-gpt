@@ -9,6 +9,8 @@ import os
 import argparse
 import time
 
+TOKENIZERS_PARALLELISM=False
+
 # from langchain import PromptTemplate
 
 load_dotenv()
