@@ -1,9 +1,15 @@
 # privateGPT
-Ask questions to your documents without an internet connection, using the power of LLMs. 100% private, no data leaves your execution environment at any point. You can ingest documents and ask questions without an internet connection!
+Ask questions to your documents using the power of OpenAI's GPT models, without worrying about your data being used to train models.
 
-Built with [LangChain](https://github.com/hwchase17/langchain), [GPT4All](https://github.com/nomic-ai/gpt4all), [LlamaCpp](https://github.com/ggerganov/llama.cpp), [Chroma](https://www.trychroma.com/) and [SentenceTransformers](https://www.sbert.net/).
-
-<img width="902" alt="demo" src="https://user-images.githubusercontent.com/721666/236942256-985801c9-25b9-48ef-80be-3acbb4575164.png">
+Your prompts (inputs) and completions (outputs), your embeddings, and your training data:
+* are NOT available to other customers.
+* are NOT available to OpenAI.
+* are NOT used to improve OpenAI models.
+* are NOT used to improve any Microsoft or 3rd party products or services.
+* are NOT used for automatically improving Azure OpenAI models for your use in your resource (The models are stateless, unless you explicitly fine-tune models with your training data).
+* Your fine-tuned Azure OpenAI models are available exclusively for your use.
+  
+The Azure OpenAI Service is fully controlled by Microsoft; Microsoft hosts the OpenAI models in Microsoft’s Azure environment and the Service does NOT interact with any services operated by OpenAI (e.g. ChatGPT, or the OpenAI API).
 
 # Environment Setup
 In order to set your environment up to run the code here, first install all requirements:
@@ -12,26 +18,10 @@ In order to set your environment up to run the code here, first install all requ
 pip3 install -r requirements.txt
 ```
 
-Then, download the LLM model and place it in a directory of your choice:
-- LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, just download it and reference it in your `.env` file.
-
-Copy the `example.env` template into `.env`
+Copy the `example.env` template into `.env` and update the values in angle brackets
 ```shell
 cp example.env .env
 ```
-
-and edit the variables appropriately in the `.env` file.
-```
-MODEL_TYPE: supports LlamaCpp or GPT4All
-PERSIST_DIRECTORY: is the folder you want your vectorstore in
-MODEL_PATH: Path to your GPT4All or LlamaCpp supported LLM
-MODEL_N_CTX: Maximum token limit for the LLM model
-MODEL_N_BATCH: Number of tokens in the prompt that are fed into the model at a time. Optimal value differs a lot depending on the model (8 works well for GPT4All, and 1024 is better for LlamaCpp)
-EMBEDDINGS_MODEL_NAME: SentenceTransformers embeddings model name (see https://www.sbert.net/docs/pretrained_models.html)
-TARGET_SOURCE_CHUNKS: The amount of chunks (sources) that will be used to answer a question
-```
-
-Note: because of the way `langchain` loads the `SentenceTransformers` embeddings, the first time you run the script it will require internet connection to download the embeddings model itself.
 
 ## Test dataset
 This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
@@ -73,7 +63,7 @@ Loaded 1 new documents from source_documents
 Split into 90 chunks of text (max. 500 tokens each)
 Creating embeddings. May take some minutes...
 Using embedded DuckDB with persistence: data will be stored in: db
-Ingestion complete! You can now run privateGPT.py to query your documents
+Ingestion complete! You can now run secureGPT.py to query your documents
 ```
 
 It will create a `db` folder containing the local vectorstore. Will take 20-30 seconds per document, depending on the size of the document.
@@ -86,7 +76,7 @@ Note: during the ingest process no data leaves your local environment. You could
 In order to ask a question, run a command like:
 
 ```shell
-python privateGPT.py
+python secureGPT.py
 ```
 
 And wait for the script to require your input.
@@ -95,46 +85,21 @@ And wait for the script to require your input.
 > Enter a query:
 ```
 
-Hit enter. You'll need to wait 20-30 seconds (depending on your machine) while the LLM model consumes the prompt and prepares the answer. Once done, it will print the answer and the 4 sources it used as context from your documents; you can then ask another question without re-running the script, just wait for the prompt again.
-
-Note: you could turn off your internet connection, and the script inference would still work. No data gets out of your local environment.
+Hit enter. It will print the answer and the 4 sources it used as context from your documents; you can then ask another question without re-running the script, just wait for the prompt again.
 
 Type `exit` to finish the script.
 
 
 ### CLI
-The script also supports optional command-line arguments to modify its behavior. You can see a full list of these arguments by running the command ```python privateGPT.py --help``` in your terminal.
+The script also supports optional command-line arguments to modify its behavior. You can see a full list of these arguments by running the command ```python secureGPT.py --help``` in your terminal.
 
 
 # How does it work?
-Selecting the right local models and the power of `LangChain` you can run the entire pipeline locally, without any data leaving your environment, and with reasonable performance.
 
 - `ingest.py` uses `LangChain` tools to parse the document and create embeddings locally using `HuggingFaceEmbeddings` (`SentenceTransformers`). It then stores the result in a local vector database using `Chroma` vector store.
-- `privateGPT.py` uses a local LLM based on `GPT4All-J` or `LlamaCpp` to understand questions and create answers. The context for the answers is extracted from the local vector store using a similarity search to locate the right piece of context from the docs.
-- `GPT4All-J` wrapper was introduced in LangChain 0.0.162.
+- `secureGPT.py` uses a OpenAI's enterprise GPT model to understand questions and create answers. The context for the answers is extracted from the local vector store using a similarity search to locate the right piece of context from the docs.
 
 # System Requirements
 
 ## Python Version
 To use this software, you must have Python 3.10 or later installed. Earlier versions of Python will not compile.
-
-## C++ Compiler
-If you encounter an error while building a wheel during the `pip install` process, you may need to install a C++ compiler on your computer.
-
-### For Windows 10/11
-To install a C++ compiler on Windows 10/11, follow these steps:
-
-1. Install Visual Studio 2022.
-2. Make sure the following components are selected:
-   * Universal Windows Platform development
-   * C++ CMake tools for Windows
-3. Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/).
-4. Run the installer and select the `gcc` component.
-
-## Mac Running Intel
-When running a Mac with Intel hardware (not M1), you may run into _clang: error: the clang compiler does not support '-march=native'_ during pip install.
-
-If so set your archflags during pip install. eg: _ARCHFLAGS="-arch x86_64" pip3 install -r requirements.txt_
-
-# Disclaimer
-This is a test project to validate the feasibility of a fully private solution for question answering using LLMs and Vector embeddings. It is not production ready, and it is not meant to be used in production. The models selection is not optimized for performance, but for privacy; but it is possible to use different models and vectorstores to improve performance.
