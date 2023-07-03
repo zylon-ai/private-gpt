@@ -1,7 +1,7 @@
-# privateGPT
-Ask questions to your documents using the power of OpenAI's GPT models, without worrying about your data being used to train models.
+# secureGPT
+Ask your documents questions using the power of OpenAI's GPT models, without worrying about your data being used to train models.
 
-Your prompts (inputs) and completions (outputs), your embeddings, and your training data:
+using Azure Enterprise OpenAI Service prompts (inputs) and completions (outputs), your embeddings, and your training data:
 * are NOT available to other customers.
 * are NOT available to OpenAI.
 * are NOT used to improve OpenAI models.
