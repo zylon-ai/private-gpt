@@ -1,7 +1,7 @@
 # secureGPT
 Ask your documents questions using the power of OpenAI's GPT models, without worrying about your data being used to train models.
 
-Using Azure Enterprise OpenAI Service prompts (inputs) and completions (outputs), your embeddings, and your training data:
+Azure Enterprise OpenAI Service prompts (inputs) and completions (outputs), your embeddings, and your training data:
 * are NOT available to other customers.
 * are NOT available to OpenAI.
 * are NOT used to improve OpenAI models.
@@ -12,6 +12,9 @@ Using Azure Enterprise OpenAI Service prompts (inputs) and completions (outputs)
 The Azure OpenAI Service is fully controlled by Microsoft; Microsoft hosts the OpenAI models in Microsoft’s Azure environment and the Service does NOT interact with any services operated by OpenAI (e.g. ChatGPT, or the OpenAI API).
 
 # Environment Setup
+
+Obtaining the Azure OpenAI key is not as simple as creating one, as you would for the OpenAI API key. You will need to sign into Azure, go to the OpenAI service, and fill out the form that is displayed. If done correctly, you should receive the following email: "Thank you for your application to join the limited access Azure OpenAI Service. We will review your application within approximately 10 business days". Once you have access and create your API Key, you will need to deploy the model that you want to use. For this project you will need to deploy the `text-davinci-003` model and name the deployment `text-davinci-003` as well. 
+
 In order to set your environment up to run the code here, first install all requirements:
 
 ```shell
@@ -98,8 +101,3 @@ The script also supports optional command-line arguments to modify its behavior.
 
 - `ingest.py` uses `LangChain` tools to parse the document and create embeddings locally using `HuggingFaceEmbeddings` (`SentenceTransformers`). It then stores the result in a local vector database using `Chroma` vector store.
 - `secureGPT.py` uses OpenAI's enterprise GPT model to understand questions and create answers. The context for the answers is extracted from the local vector store using a similarity search to locate the right piece of context from the docs.
-
-# System Requirements
-
-## Python Version
-To use this software, you must have Python 3.10 or later installed. Earlier versions of Python will not compile.
