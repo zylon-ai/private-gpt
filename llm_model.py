@@ -1,5 +1,6 @@
 import os
 import argparse
+import streamlit as st
 
 from dotenv import load_dotenv
 from langchain.chains import RetrievalQA
@@ -21,6 +22,7 @@ target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS',4))
 
 from constants import CHROMA_SETTINGS
 
+@st.cache_resource
 def create_qa():
     # Parse the command line arguments
     args = parse_arguments()
