@@ -67,7 +67,9 @@ def main():
 
         # Get the answer from the chain
         last_message = st.session_state.messages[-1]
-        res = qa(last_message["content"])
+
+        with st.spinner(text="En cours..."):
+          res = qa(last_message["content"])
 
         # translate here
         tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-fr")
