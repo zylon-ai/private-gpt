@@ -76,7 +76,7 @@ def main():
         tgt_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
         answer = tgt_text[0]
 
-        st.session_state.messages.append(answer)
+        st.session_state.messages.append({"role": "assistant", "content": answer})
         st.chat_message("assistant").write(answer)
 
 def parse_arguments():
