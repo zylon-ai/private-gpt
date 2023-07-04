@@ -59,7 +59,10 @@ def main():
 
         # Get the answer from the chain
         last_message = st.session_state.messages[-1]
-        res = qa(last_message["content"])
+
+        with st.spinner(text="In progress..."):
+          res = qa(last_message["content"])
+        
         answer = res['result']
 
         st.session_state.messages.append(answer)
