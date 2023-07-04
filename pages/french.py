@@ -9,6 +9,8 @@ import os
 import argparse
 import streamlit as st
 
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+
 load_dotenv()
 
 embeddings_model_name = os.environ.get("EMBEDDINGS_MODEL_NAME")
@@ -43,24 +45,36 @@ def main():
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
     
     with st.sidebar:
-        "[![Open repo in GitHub](https://github.com/AlleyCorpNord/privateChatbotGPT)](https://github.com/AlleyCorpNord/privateChatbotGPT)"
+        "[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/streamlit/llm-examples?quickstart=1)"
     
     # Interactive questions and answers
-    st.title("💬 Private Chatbot")
+    st.title("💬 Chatbot privé")
     if "messages" not in st.session_state:
-        st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
+        st.session_state["messages"] = [{"role": "assistant", "content": "Comment puis-je vous aider ?"}]
 
     for msg in st.session_state.messages:
         st.chat_message(msg["role"]).write(msg["content"])
 
+
     if prompt := st.chat_input():
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-fr-en")
+        model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-fr-en")
+        translated = model.generate(**tokenizer(prompt, return_tensors="pt", padding=True))
+        tgt_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
+    
+        st.session_state.messages.append({"role": "user", "content": tgt_text[0]})
         st.chat_message("user").write(prompt)
 
         # Get the answer from the chain
         last_message = st.session_state.messages[-1]
         res = qa(last_message["content"])
-        answer = res['result']
+
+        # translate here
+        tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-fr")
+        model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-fr")
+        translated = model.generate(**tokenizer(res['result'], return_tensors="pt", padding=True))
+        tgt_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
+        answer = tgt_text[0]
 
         st.session_state.messages.append(answer)
         st.chat_message("assistant").write(answer)
