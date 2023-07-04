@@ -90,22 +90,10 @@ Note: during the ingest process no data leaves your local environment. You could
 
 ## Ask questions to your documents, locally!
 
-In order to ask a question using the CLI, run the command:
+In order to ask a question, run the command:
 
 ```shell
-python privateGPT-CLI.py
-```
-
-And wait for the script to require your input.
-
-```plaintext
-> Enter a query:
-```
-
-OR if you prefer using a GUI, run the command:
-
-```shell
-streamlit run privateGPT-GUI.py
+streamlit run privateGPT.py
 ```
 
 Hit enter. You'll need to wait 20-30 seconds (depending on your machine) while the LLM model consumes the prompt and prepares the answer. Once done, it will print the answer and the 4 sources it used as context from your documents; you can then ask another question without re-running the script, just wait for the prompt again.
