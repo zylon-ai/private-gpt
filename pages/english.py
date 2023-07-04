@@ -9,8 +9,6 @@ import os
 import argparse
 import streamlit as st
 
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-
 load_dotenv()
 
 embeddings_model_name = os.environ.get("EMBEDDINGS_MODEL_NAME")
@@ -40,41 +38,29 @@ def main():
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', n_batch=model_n_batch, callbacks=callbacks, verbose=False)
         case _default:
             # raise exception if model_type is not supported
-            raise Exception(f"Le model {model_type} n'est pas supporté. Vous deviez choisir un model dans la liste suivante: LlamaCpp, GPT4All")
+            raise Exception(f"Model type {model_type} is not supported. Please choose one of the following: LlamaCpp, GPT4All")
         
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
     
     with st.sidebar:
-        "[![Ouverez le repo dans Github](https://github.com/codespaces/badge.svg)](https://github.com/AlleyCorpNord/privateChatbotGPT)"
+        "[![Open repo in GitHub](https://github.com/codespaces/badge.svg)](https://github.com/AlleyCorpNord/privateChatbotGPT)"
     
     # Interactive questions and answers
-    st.title("💬 Chatbot privé")
+    st.title("💬 Private Chatbot")
     if "messages" not in st.session_state:
-        st.session_state["messages"] = [{"role": "assistant", "content": "Comment puis-je vous aider ?"}]
+        st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
 
     for msg in st.session_state.messages:
         st.chat_message(msg["role"]).write(msg["content"])
 
-
     if prompt := st.chat_input():
-        tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-fr-en")
-        model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-fr-en")
-        translated = model.generate(**tokenizer(prompt, return_tensors="pt", padding=True))
-        tgt_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
-    
-        st.session_state.messages.append({"role": "user", "content": tgt_text[0]})
+        st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
 
         # Get the answer from the chain
         last_message = st.session_state.messages[-1]
         res = qa(last_message["content"])
-
-        # translate here
-        tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-fr")
-        model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-fr")
-        translated = model.generate(**tokenizer(res['result'], return_tensors="pt", padding=True))
-        tgt_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
-        answer = tgt_text[0]
+        answer = res['result']
 
         st.session_state.messages.append(answer)
         st.chat_message("assistant").write(answer)

@@ -12,3 +12,4 @@ pandoc==2.3
 pypandoc==1.11
 tqdm==4.65.0
 streamlit>=1.24.0
+st-pages==0.4.1
