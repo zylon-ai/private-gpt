@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
-import os
-import argparse
 import streamlit as st
 
-from llm_model import create_qa
+from llm_model import create_qa, translate
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-transformer_fr_en = "Helsinki-NLP/opus-mt-fr-en"
-transformer_en_fr = "Helsinki-NLP/opus-mt-en-fr"
+TRANSFORMER_FR_EN = "Helsinki-NLP/opus-mt-fr-en"
+TRANSFORMER_EN_FR = "Helsinki-NLP/opus-mt-en-fr"
 
 def main():
     qa = create_qa() 
@@ -24,14 +22,11 @@ def main():
     for msg in st.session_state.messages:
         st.chat_message(msg["role"]).write(msg["content"])
 
-
     if prompt := st.chat_input():
-        tokenizer = AutoTokenizer.from_pretrained(transformer_fr_en)
-        model = AutoModelForSeq2SeqLM.from_pretrained(transformer_fr_en)
-        translated = model.generate(**tokenizer(prompt, return_tensors="pt", padding=True))
-        tgt_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
-    
-        st.session_state.messages.append({"role": "user", "content": tgt_text[0]})
+
+        english_prompt = translate(prompt, TRANSFORMER_FR_EN)
+
+        st.session_state.messages.append({"role": "user", "content": english_prompt})
         st.chat_message("user").write(prompt)
 
         # Get the answer from the chain
@@ -41,27 +36,10 @@ def main():
           res = qa(last_message["content"])
 
         # translate here
-        tokenizer = AutoTokenizer.from_pretrained(transformer_en_fr)
-        model = AutoModelForSeq2SeqLM.from_pretrained(transformer_en_fr)
-        translated = model.generate(**tokenizer(res['result'], return_tensors="pt", padding=True))
-        tgt_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
-        answer = tgt_text[0]
+        answer = translate(res['result'], TRANSFORMER_EN_FR)
 
         st.session_state.messages.append({"role": "assistant", "content": answer})
         st.chat_message("assistant").write(answer)
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='privateGPT: Ask questions to your documents without an internet connection, '
-                                                 'using the power of LLMs.')
-    parser.add_argument("--hide-source", "-S", action='store_true',
-                        help='Use this flag to disable printing of source documents used for answers.')
-
-    parser.add_argument("--mute-stream", "-M",
-                        action='store_true',
-                        help='Use this flag to disable the streaming StdOut callback for LLMs.')
-
-    return parser.parse_args()
-
 
 if __name__ == "__main__":
     main()

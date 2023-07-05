@@ -1,6 +1,7 @@
 import os
 import argparse
 import streamlit as st
+import torch
 
 from dotenv import load_dotenv
 from langchain.chains import RetrievalQA
@@ -8,6 +9,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 load_dotenv()
 
 
@@ -55,3 +57,21 @@ def parse_arguments():
                         help='Use this flag to disable the streaming StdOut callback for LLMs.')
 
     return parser.parse_args()
+
+
+def get_torch_device():
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        return torch.device("mps")
+    else:
+        return torch.device("cpu")
+
+
+def translate(text, model_name):
+    device = get_torch_device()
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_name).to(device)
+    translated = model.generate(**tokenizer(text, return_tensors="pt", padding=True).to(device))
+    tgt_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
+    return tgt_text[0]
