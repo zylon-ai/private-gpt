@@ -9,7 +9,9 @@ import os
 import argparse
 import time
 
-load_dotenv()
+if not load_dotenv():
+    print("Could not load .env file or it is empty. Please check if it exists and is readable.")
+    exit(1)
 
 embeddings_model_name = os.environ.get("EMBEDDINGS_MODEL_NAME")
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
@@ -39,7 +41,7 @@ def main():
         case _default:
             # raise exception if model_type is not supported
             raise Exception(f"Model type {model_type} is not supported. Please choose one of the following: LlamaCpp, GPT4All")
-        
+
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
     # Interactive questions and answers
     while True:
