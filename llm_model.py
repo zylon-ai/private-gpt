@@ -19,7 +19,12 @@ persist_directory = os.environ.get('PERSIST_DIRECTORY')
 model_type = os.environ.get('MODEL_TYPE')
 model_path = os.environ.get('MODEL_PATH')
 model_n_ctx = os.environ.get('MODEL_N_CTX')
+model_n_predict = int(os.environ.get('MODEL_N_PREDICT', 256))
+model_temperature = float(os.environ.get('MODEL_TEMPERATURE', 0.8))
+model_top_p = float(os.environ.get('MODEL_TOP_P', 0.95))
 model_n_batch = int(os.environ.get('MODEL_N_BATCH',8))
+model_n_gpu_layers = os.environ.get('MODEL_N_GPU_LAYERS', None)
+model_n_gpu_layers = None if model_n_gpu_layers is None else int(model_n_gpu_layers)
 target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS',4))
 
 from constants import CHROMA_SETTINGS
@@ -36,9 +41,9 @@ def create_qa():
     # Prepare the LLM
     match model_type:
         case "LlamaCpp":
-            llm = LlamaCpp(temperature=0, model_path=model_path, n_ctx=model_n_ctx, n_batch=model_n_batch, callbacks=callbacks, verbose=False)
+            llm = LlamaCpp(temperature=model_temperature, top_p=model_top_p, model_path=model_path, n_ctx=model_n_ctx, n_batch=model_n_batch, n_gpu_layers=model_n_gpu_layers, callbacks=callbacks, verbose=False)
         case "GPT4All":
-            llm = GPT4All(temp=0, model=model_path, n_ctx=model_n_ctx, backend='gptj', n_batch=model_n_batch, callbacks=callbacks, verbose=False)
+            llm = GPT4All(temp=model_temperature, top_p=model_top_p, model=model_path, n_ctx=model_n_ctx, backend='gptj', n_batch=model_n_batch, n_predict=model_n_predict, callbacks=callbacks, verbose=False)
         case _default:
             # raise exception if model_type is not supported
             raise Exception(f"Model type {model_type} is not supported. Please choose one of the following: LlamaCpp, GPT4All")

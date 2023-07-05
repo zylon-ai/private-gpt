@@ -14,6 +14,12 @@ In order to set your environment up to run the code here, first install all requ
 pip3 install -r requirements.txt
 ```
 
+On MacOS with M1/M2 processors, to be able to use Llama.cpp models like [Vicuna 13b](https://huggingface.co/vicuna/ggml-vicuna-13b-1.1), you would need to reinstall the Python package `llama-cpp-python` properly (see [Langchain documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/llamacpp#installation-with-metal)):
+
+```shell
+CMAKE_ARGS="-DLLAMA_METAL=on" FORCE_CMAKE=1 pip install --upgrade --force-reinstall llama-cpp-python --no-cache-dir
+```
+
 Then, download the LLM model and place it in a directory of your choice:
 
 - LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, just download it and reference it in your `.env` file.
@@ -35,6 +41,10 @@ MODEL_N_BATCH: Number of tokens in the prompt that are fed into the model at a t
 EMBEDDINGS_MODEL_NAME: SentenceTransformers embeddings model name (see https://www.sbert.net/docs/pretrained_models.html)
 TARGET_SOURCE_CHUNKS: The amount of chunks (sources) that will be used to answer a question
 ```
+
+Other examples of configuration files are:
+* [`gpt4all.env`](./gpt4all.env): using the standard GPT4All model but with a limit in the maximum number of tokens to predict
+* [`vic13b.env`](./vic13b.env): using the Vicuna 13b model with 4bit-quantization
 
 Note: because of the way `langchain` loads the `SentenceTransformers` embeddings, the first time you run the script it will require internet connection to download the embeddings model itself.
 
@@ -95,16 +105,6 @@ In order to ask a question, run the command:
 ```shell
 streamlit run privateGPT.py
 ```
-
-Hit enter. You'll need to wait 20-30 seconds (depending on your machine) while the LLM model consumes the prompt and prepares the answer. Once done, it will print the answer and the 4 sources it used as context from your documents; you can then ask another question without re-running the script, just wait for the prompt again.
-
-Note: you could turn off your internet connection, and the script inference would still work. No data gets out of your local environment.
-
-Type `exit` to finish the script.
-
-### CLI
-
-The script also supports optional command-line arguments to modify its behavior. You can see a full list of these arguments by running the command `python privateGPT.py --help` in your terminal.
 
 # How does it work?
 
