@@ -7,6 +7,8 @@ import streamlit as st
 from llm_model import create_qa
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
+transformer_fr_en = "Helsinki-NLP/opus-mt-fr-en"
+transformer_en_fr = "Helsinki-NLP/opus-mt-en-fr"
 
 def main():
     qa = create_qa() 
@@ -24,8 +26,8 @@ def main():
 
 
     if prompt := st.chat_input():
-        tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-fr-en")
-        model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-fr-en")
+        tokenizer = AutoTokenizer.from_pretrained(transformer_fr_en)
+        model = AutoModelForSeq2SeqLM.from_pretrained(transformer_fr_en)
         translated = model.generate(**tokenizer(prompt, return_tensors="pt", padding=True))
         tgt_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
     
@@ -39,8 +41,8 @@ def main():
           res = qa(last_message["content"])
 
         # translate here
-        tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-fr")
-        model = AutoModelForSeq2SeqLM.from_pretrained("Helsinki-NLP/opus-mt-en-fr")
+        tokenizer = AutoTokenizer.from_pretrained(transformer_en_fr)
+        model = AutoModelForSeq2SeqLM.from_pretrained(transformer_en_fr)
         translated = model.generate(**tokenizer(res['result'], return_tensors="pt", padding=True))
         tgt_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
         answer = tgt_text[0]
