@@ -1,3 +1,6 @@
+# Directories
+source_documents/*
+
 # OSX
 .DS_STORE
 

@@ -26,7 +26,6 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
 from constants import CHROMA_SETTINGS
 
-
 load_dotenv()
 
 
