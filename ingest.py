@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 import os
 import glob
+import zipfile
 from typing import List
 from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
 
 from langchain.document_loaders import (
+    SlackDirectoryLoader,
     CSVLoader,
     EverNoteLoader,
     PyMuPDFLoader,
@@ -34,6 +36,7 @@ load_dotenv()
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
 source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
 embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
+loader_opt_baseurl = os.environ.get('LOADER_SLACK_BASEURL')
 chunk_size = 500
 chunk_overlap = 50
 
@@ -77,12 +80,20 @@ LOADER_MAPPING = {
     ".ppt": (UnstructuredPowerPointLoader, {}),
     ".pptx": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
+    ".zip": (SlackDirectoryLoader, {"workspace_url": loader_opt_baseurl}),
     # Add more mappings for other file extensions and loaders as needed
 }
 
 
 def load_single_document(file_path: str) -> List[Document]:
     ext = "." + file_path.rsplit(".", 1)[-1]
+
+    if ext == ".zip":
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            # Implements Slack Export format check
+            if 'channels.json' not in zip_ref.namelist():
+                raise ValueError(f"Unsupported file extension '{ext}' in file {file_path}. It does not seem to be a Slack export.")
+
     if ext in LOADER_MAPPING:
         loader_class, loader_args = LOADER_MAPPING[ext]
         loader = loader_class(file_path, **loader_args)

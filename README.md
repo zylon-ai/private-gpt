@@ -56,6 +56,7 @@ The supported extensions are:
    - `.pptx` : PowerPoint Document,
    - `.ppt` : PowerPoint Document,
    - `.txt`: Text file (UTF-8),
+   - `.zip`: Slack Export format (detected automatically, other zip files are unsupported),
 
 Run the following command to ingest all the data.
 
