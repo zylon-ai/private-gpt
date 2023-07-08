@@ -40,13 +40,13 @@ def prepare(args = default_args):
             # raise exception if model_type is not supported
             raise Exception(f"Model type {model_type} is not supported. Please choose one of the following: LlamaCpp, GPT4All")
     
-    qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
+    return RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
 
-def enquire(query):
+def enquire(chain, hide_source, query):
     # Get the answer from the chain
     start = time.time()
-    res = qa(query)
-    answer, docs = res['result'], [] if args.hide_source else res['source_documents']
+    res = chain(query)
+    answer, docs = res['result'], [] if hide_source else res['source_documents']
     end = time.time()
 
     # Print the result
@@ -64,7 +64,7 @@ def enquire(query):
 def main():
     # Parse the command line arguments
     args = parse_arguments()
-    prepare(args)
+    qa = prepare(args)
 
     # Interactive questions and answers
     while True:
@@ -74,7 +74,7 @@ def main():
         if query.strip() == "":
             continue
         
-        enquire(query)
+        enquire(qa, args.hide_source, query)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='privateGPT: Ask questions to your documents without an internet connection, '
