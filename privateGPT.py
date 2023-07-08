@@ -22,9 +22,9 @@ target_source_chunks = int(os.environ.get('TARGET_SOURCE_CHUNKS',4))
 
 from constants import CHROMA_SETTINGS
 
-def main():
-    # Parse the command line arguments
-    args = parse_arguments()
+default_args = argparse.Namespace(mute_stream=False, hide_source=False)
+
+def prepare(args = default_args):
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
     retriever = db.as_retriever(search_kwargs={"k": target_source_chunks})
@@ -39,8 +39,33 @@ def main():
         case _default:
             # raise exception if model_type is not supported
             raise Exception(f"Model type {model_type} is not supported. Please choose one of the following: LlamaCpp, GPT4All")
-        
+    
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
+
+def enquire(query):
+    # Get the answer from the chain
+    start = time.time()
+    res = qa(query)
+    answer, docs = res['result'], [] if args.hide_source else res['source_documents']
+    end = time.time()
+
+    # Print the result
+    print("\n\n> Question:")
+    print(query)
+    print(f"\n> Answer (took {round(end - start, 2)} s.):")
+    print(answer)
+
+    # Print the relevant sources used for the answer
+    for document in docs:
+        print("\n> " + document.metadata["source"] + ":")
+        print(document.page_content)
+
+
+def main():
+    # Parse the command line arguments
+    args = parse_arguments()
+    prepare(args)
+
     # Interactive questions and answers
     while True:
         query = input("\nEnter a query: ")
@@ -48,23 +73,8 @@ def main():
             break
         if query.strip() == "":
             continue
-
-        # Get the answer from the chain
-        start = time.time()
-        res = qa(query)
-        answer, docs = res['result'], [] if args.hide_source else res['source_documents']
-        end = time.time()
-
-        # Print the result
-        print("\n\n> Question:")
-        print(query)
-        print(f"\n> Answer (took {round(end - start, 2)} s.):")
-        print(answer)
-
-        # Print the relevant sources used for the answer
-        for document in docs:
-            print("\n> " + document.metadata["source"] + ":")
-            print(document.page_content)
+        
+        enquire(query)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='privateGPT: Ask questions to your documents without an internet connection, '
