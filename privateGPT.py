@@ -36,7 +36,7 @@ def main():
     elif model_type == "GPT4All":
             llm = GPT4All(model=model_path, n_ctx=model_n_ctx, backend='gptj', callbacks=callbacks, verbose=False)
     else:
-            print(f"Model {model_type} not supported!")
+            print(f"Model type {model_type} is not supported. Please choose one of the following: LlamaCpp, GPT4All")
             exit
         
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
