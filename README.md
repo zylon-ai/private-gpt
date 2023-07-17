@@ -12,6 +12,16 @@ In order to set your environment up to run the code here, first install all requ
 pip3 install -r requirements.txt
 ```
 
+*Alternative requirements installation with poetry*
+1. Install [poetry](https://python-poetry.org/docs/#installation)
+
+2. Run this commands
+```shell
+cd privateGPT
+poetry install
+poetry shell
+```
+
 Then, download the LLM model and place it in a directory of your choice:
 - LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, just download it and reference it in your `.env` file.
 
