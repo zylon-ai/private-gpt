@@ -47,6 +47,26 @@ python --version >nul 2>&1 && (
     exit /b 1
 )
 
+
+
+set /p use_venv="Do you want to use a virtual environment (venv) for the installation? (y/n): "
+if /i "%use_venv%"=="y" (
+    %PYTHON_COMMAND% -c "import venv" >nul 2>&1
+    if %errorlevel% NEQ 0 (
+        echo Error: 'venv' module is not installed. Please install it using 'pip install virtualenv'.
+        exit /b 1
+    )
+    echo Creating a virtual environment...
+    %PYTHON_COMMAND% -m venv venv
+    if exist "venv\Scripts\activate.bat" (
+        echo Activating the virtual environment...
+        call venv\Scripts\activate.bat
+    ) else (
+        echo Error: Virtual environment 'venv' not found.
+        exit /b 1
+    )
+)
+
 where nvcc >nul 2>&1
 if %errorlevel% equ 0 (
     nvcc --version | findstr /C:"release 11.8" >nul 2>&1

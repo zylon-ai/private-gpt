@@ -32,6 +32,7 @@ else
     fi
 fi
 
+
 python --version > /dev/null 2>&1
 if [ $? -eq 0 ]; then
     python -c "import sys; assert sys.version_info >= (3, 10), 'Error: Python version should be larger than 3.10.'" > /dev/null 2>&1
@@ -54,6 +55,26 @@ else
     exit 1
 fi
 
+read -p "Do you want to use a virtual environment (venv) for the installation? (y/n): " use_venv
+if [[ "$use_venv" == [Yy]* ]]; then
+    # Check if virtualenv module is installed
+    PYTHON_COMMAND -c "import venv" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Error: 'venv' module is not installed. Please install it using 'pip install virtualenv'."
+        exit 1
+    fi
+
+    echo "Creating a virtual environment..."
+    PYTHON_COMMAND -m venv venv
+
+    if [ -f "venv/bin/activate" ]; then
+        echo "Activating the virtual environment..."
+        source venv/bin/activate
+    else
+        echo "Error: Virtual environment 'venv' not found."
+        exit 1
+    fi
+fi
 nvcc --version > /dev/null 2>&1
 if [ $? -eq 0 ]; then
     nvcc --version | grep "release 11.8" > /dev/null 2>&1
