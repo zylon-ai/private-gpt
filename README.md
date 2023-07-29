@@ -63,6 +63,7 @@ Then run the following command to run the container and shell into it:
 
 Tip: Add a Docker volume to the directory where your dataset lives with another `--volume <src>:<dest>` and an optional readonly by adding `:ro`, or `<src>:<dest>:ro`
 
+`docker run -it --name privategpt --rm --volume ./:/code --volume <path-to-LLMs>:/llm:ro privategpt:latest bash`
 
 ## Test dataset
 This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
