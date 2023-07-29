@@ -5,12 +5,20 @@ Built with [LangChain](https://github.com/hwchase17/langchain), [GPT4All](https:
 
 <img width="902" alt="demo" src="https://user-images.githubusercontent.com/721666/236942256-985801c9-25b9-48ef-80be-3acbb4575164.png">
 
-# Environment Setup
+## Installation
+
+You can install locally, use Poetry, or optionally use the containerized version.
+
+### Local installation
+
+#### Environment Setup
 In order to set your environment up to run the code here, first install all requirements:
 
 ```shell
 pip3 install -r requirements.txt
 ```
+
+### Poetry installation
 
 *Alternative requirements installation with poetry*
 1. Install [poetry](https://python-poetry.org/docs/#installation)
@@ -42,6 +50,19 @@ TARGET_SOURCE_CHUNKS: The amount of chunks (sources) that will be used to answer
 ```
 
 Note: because of the way `langchain` loads the `SentenceTransformers` embeddings, the first time you run the script it will require internet connection to download the embeddings model itself.
+
+### Docker installation
+
+Run the following command from inside privateGPT/ to build the container:
+
+`docker build -t privategpt .`
+
+Then run the following command to run the container and shell into it:
+
+`docker run -it --name privategpt --rm --volume ./:/code privategpt:latest bash`
+
+Tip: Add a Docker volume to the directory where your dataset lives with another `--volume <src>:<dest>` and an optional readonly by adding `:ro`, or `<src>:<dest>:ro`
+
 
 ## Test dataset
 This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
