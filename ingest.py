@@ -155,8 +155,9 @@ def main():
         print(f"Appending to existing vectorstore at {persist_directory}")
         # db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
         db = Chroma(
-            client=client,
+            persist_directory=persist_directory,
             embedding_function=embeddings,
+            client=client,
         )
         collection = db.get()
         texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
@@ -169,10 +170,10 @@ def main():
         print(f"Creating embeddings. May take some minutes...")
         # db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
         db = Chroma.from_documents(
-            client=client,
             documents=texts,
             embedding=embeddings,
             persist_directory=persist_directory,
+            client=client,
         )
     db.persist()
     db = None

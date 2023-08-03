@@ -12,8 +12,8 @@ import chromadb
 from chromadb.config import Settings
 path='./db'
 settings = Settings(
-        persist_directory=path,
-        anonymized_telemetry=False
+    persist_directory=path,
+    anonymized_telemetry=False
 )
 
 client = chromadb.PersistentClient(settings=settings , path=path)
@@ -37,9 +37,9 @@ def main():
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     # db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
     db = Chroma(
-              persist_directory=persist_directory, 
-              client=client,
+              persist_directory=persist_directory,
               embedding_function=embeddings,
+              client=client,
           )
     retriever = db.as_retriever(search_kwargs={"k": target_source_chunks})
     # activate/deactivate the streaming StdOut callback for LLMs
