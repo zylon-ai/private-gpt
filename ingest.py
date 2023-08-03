@@ -25,7 +25,15 @@ from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
 from constants import CHROMA_SETTINGS
+import chromadb
+from chromadb.config import Settings
+path='./db'
+settings = Settings(
+        persist_directory=path,
+        anonymized_telemetry=False
+)
 
+client = chromadb.PersistentClient(settings=settings , path=path)
 
 load_dotenv()
 
@@ -145,7 +153,11 @@ def main():
     if does_vectorstore_exist(persist_directory):
         # Update and store locally vectorstore
         print(f"Appending to existing vectorstore at {persist_directory}")
-        db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
+        # db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
+        db = Chroma(
+            client=client,
+            embedding_function=embeddings,
+        )
         collection = db.get()
         texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
         print(f"Creating embeddings. May take some minutes...")
@@ -155,7 +167,13 @@ def main():
         print("Creating new vectorstore")
         texts = process_documents()
         print(f"Creating embeddings. May take some minutes...")
-        db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
+        # db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
+        db = Chroma.from_documents(
+            client=client,
+            documents=texts,
+            embedding=embeddings,
+            persist_directory=persist_directory,
+        )
     db.persist()
     db = None
 

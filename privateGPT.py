@@ -8,6 +8,15 @@ from langchain.llms import GPT4All, LlamaCpp
 import os
 import argparse
 import time
+import chromadb
+from chromadb.config import Settings
+path='./db'
+settings = Settings(
+        persist_directory=path,
+        anonymized_telemetry=False
+)
+
+client = chromadb.PersistentClient(settings=settings , path=path)
 
 load_dotenv()
 
@@ -26,7 +35,12 @@ def main():
     # Parse the command line arguments
     args = parse_arguments()
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
-    db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
+    # db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
+    db = Chroma(
+              persist_directory=persist_directory, 
+              client=client,
+              embedding_function=embeddings,
+          )
     retriever = db.as_retriever(search_kwargs={"k": target_source_chunks})
     # activate/deactivate the streaming StdOut callback for LLMs
     callbacks = [] if args.mute_stream else [StreamingStdOutCallbackHandler()]
