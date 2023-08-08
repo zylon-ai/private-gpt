@@ -35,6 +35,7 @@ load_dotenv()
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
 source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
 embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
+is_gpu_enabled = (os.environ.get('IS_GPU_ENABLED', 'False').lower() == 'true')
 chunk_size = 500
 chunk_overlap = 50
 
@@ -129,7 +130,8 @@ def process_documents(ignored_files: List[str] = []) -> List[Document]:
 def main():
     # Create embeddings
     ensure_integrity(persist_directory, True)
-    embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
+    embeddings_kwargs = {'device': 'cuda'} if is_gpu_enabled else {}
+    embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name, model_kwargs=embeddings_kwargs)
     db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
     collection = db.get()
     texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
