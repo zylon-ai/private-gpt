@@ -82,7 +82,7 @@ LOADER_MAPPING = {
 
 
 def load_single_document(file_path: str) -> List[Document]:
-    ext = "." + file_path.rsplit(".", 1)[-1]
+    ext = "." + file_path.rsplit(".", 1)[-1].lower()
     if ext in LOADER_MAPPING:
         loader_class, loader_args = LOADER_MAPPING[ext]
         loader = loader_class(file_path, **loader_args)
@@ -97,7 +97,10 @@ def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Docum
     all_files = []
     for ext in LOADER_MAPPING:
         all_files.extend(
-            glob.glob(os.path.join(source_dir, f"**/*{ext}"), recursive=True)
+            glob.glob(os.path.join(source_dir, f"**/*{ext.lower()}"), recursive=True)
+        )
+        all_files.extend(
+            glob.glob(os.path.join(source_dir, f"**/*{ext.upper()}"), recursive=True)
         )
     filtered_files = [file_path for file_path in all_files if file_path not in ignored_files]
 
