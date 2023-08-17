@@ -1,0 +1,13 @@
+services:
+  gpt:
+    container_name: gpt
+    stdin_open: true
+    tty: true
+    build:
+      context: .
+      dockerfile: Dockerfile
+      no_cache: false
+      tags:
+        - gpt
+    volumes:
+      - ./source_documents:/source_documents
