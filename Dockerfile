@@ -1,35 +1,41 @@
-#FROM alpine:3.17.5
-FROM ubuntu:22.04
+FROM python:3.11-slim
 
-# Copy all sources.
-COPY . .
-COPY sh/entrypoint.sh /
-COPY sh/ask_gpt /user/bin
-COPY sh/update_gpt /user/bin
+COPY *.py /
+COPY example.env .env
+COPY requirements.txt requirements.txt
+COPY pyproject.toml pyproject.toml
+COPY poetry.lock poetry.lock
 
 # Installing base dependecies
-RUN apt update && apt install -y wget python3 pip
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install build-essential gcc wget curl -y \
+    && apt-get clean
 
-# Upgrade pip
-RUN python3 -m pip install --upgrade pip
-
-# Installing python dependencies
-RUN pip3 install -r requirements.txt
+# Update pip
+RUN pip install --root-user-action=ignore --upgrade pip  \
+    && pip install --root-user-action=ignore -r requirements.txt
 
 # Download ggmml
 RUN mkdir "models"
 RUN wget https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin -P /models
 
 # Install poetry
-RUN pip install sentence_transformers poetry \
-    poetry install \
-    poetry shell
+RUN pip install sentence_transformers poetry
+RUN poetry env use python3.11
+RUN poetry config installer.max-workers 10
+RUN poetry --no-interaction --no-ansi -vvv --no-root install
 
-# ingest all the data
-RUN python3 /ingest.py
+# TODO: Fix next lines.
+#RUN useradd -ms /bin/bash python
+#USER python
+#WORKDIR /
+#RUN poetry shell
 
-# Copy envirnoment
-COPY example.env .env
+RUN echo "alias update_gpt='python3 /ingest.py'" >> ~/.bashrc  \
+    && echo "alias ask_gpt='python3 /privateGPT.py'" >> ~/.bashrc
 
-#CMD ["/bin/sh"]
-ENTRYPOINT ["/entrypoint.sh"]
+# Ingest all the data
+#RUN python ingest.py
+
+CMD ["/bin/bash"]
