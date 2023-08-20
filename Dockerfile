@@ -1,5 +1,7 @@
 FROM python:3.11-slim
 
+LABEL org.opencontainers.image.source=https://github.com/sedzisz/privategptid
+
 COPY *.py /
 COPY example.env .env
 COPY requirements.txt requirements.txt
