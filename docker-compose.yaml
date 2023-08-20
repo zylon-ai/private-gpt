@@ -1,6 +1,8 @@
+version: '3.7'
+
 services:
   private_gpt:
+    image: ghcr.io/sedzisz/privategptid:0.0.1
     container_name: privateGPT
-    image: privateGPT:0.0.1
     volumes:
       - ./source_documents:/source_documents

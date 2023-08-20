@@ -1,8 +1,0 @@
-services:
-  private_gpt:
-    container_name: privateGPT
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      - ./source_documents:/source_documents
