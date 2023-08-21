@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import os
 import glob
+import argparse
+
 from typing import List
 from dotenv import load_dotenv
 from multiprocessing import Pool
@@ -22,13 +24,14 @@ from langchain.document_loaders import (
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.vectorstores.redis import Redis
+from langchain.embeddings import HuggingFaceEmbeddings, OpenAIEmbeddings
 from langchain.docstore.document import Document
 from constants import CHROMA_SETTINGS
 
-
 load_dotenv()
 
+os.environ["OPENAI_API_KEY"] = "random-string"
 
 # Load environment variables
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
@@ -37,6 +40,13 @@ embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
 chunk_size = 500
 chunk_overlap = 50
 
+# Prem Variables
+redis_url = "redis://localhost:6379"
+
+# CLI Arguments
+parser = argparse.ArgumentParser(description="PrivateGPT with Multiple Backends")
+parser.add_argument("--backend", type=str, default="prem")
+args = parser.parse_args()
 
 # Custom document loaders
 class MyElmLoader(UnstructuredEmailLoader):
@@ -142,28 +152,33 @@ def does_vectorstore_exist(persist_directory: str) -> bool:
     return False
 
 def main():
-    # Create embeddings
-    embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
-
-    if does_vectorstore_exist(persist_directory):
-        # Update and store locally vectorstore
-        print(f"Appending to existing vectorstore at {persist_directory}")
-        db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
-        collection = db.get()
-        texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
-        print(f"Creating embeddings. May take some minutes...")
-        db.add_documents(texts)
-    else:
-        # Create and store locally vectorstore
-        print("Creating new vectorstore")
+    if args.backend == "prem":
+        embeddings = OpenAIEmbeddings(openai_api_base="http://localhost:8444/v1")
         texts = process_documents()
-        print(f"Creating embeddings. May take some minutes...")
-        db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
-    db.persist()
-    db = None
+        Redis.from_documents(texts, embeddings, redis_url=redis_url,  index_name="prem_private_gpt")
+
+    else:
+        # Create embeddings
+        embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
+
+        if does_vectorstore_exist(persist_directory):
+            # Update and store locally vectorstore
+            print(f"Appending to existing vectorstore at {persist_directory}")
+            db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS)
+            collection = db.get()
+            texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
+            print(f"Creating embeddings. May take some minutes...")
+            db.add_documents(texts)
+        else:
+            # Create and store locally vectorstore
+            print("Creating new vectorstore")
+            texts = process_documents()
+            print(f"Creating embeddings. May take some minutes...")
+            db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS)
+        db.persist()
+        db = None
 
     print(f"Ingestion complete! You can now run privateGPT.py to query your documents")
-
 
 if __name__ == "__main__":
     main()

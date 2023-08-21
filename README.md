@@ -115,6 +115,14 @@ Type `exit` to finish the script.
 ### CLI
 The script also supports optional command-line arguments to modify its behavior. You can see a full list of these arguments by running the command ```python privateGPT.py --help``` in your terminal.
 
+## Multiple Private Backends Support
+
+Provide `--backend` argument for both `ingest.py` and `privateGPT.py` to use a different backend. Currently supported backends are `prem` or `default`.
+
+### Backends
+
+- `default`: uses purely Python to interact and expose the models.
+- `prem`: uses [Prem](https://github.com/premAI-io/prem-app) in order to expose and serve the models with Docker. The `ingest.py` and `privateGPT.py` scripts are modified to use Prem as a backend. Check [here](https://dev.premai.io/docs/intro) to learn how to install and use Prem.
 
 # How does it work?
 Selecting the right local models and the power of `LangChain` you can run the entire pipeline locally, without any data leaving your environment, and with reasonable performance.
