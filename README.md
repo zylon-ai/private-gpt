@@ -119,6 +119,13 @@ The script also supports optional command-line arguments to modify its behavior.
 
 Provide `--backend` argument for both `ingest.py` and `privateGPT.py` to use a different backend. Currently supported backends are `prem` or `default`.
 
+E.g., to use `prem` backend:
+
+```bash
+ptyhon ingest.py --backend prem
+python privateGPT.py --backend prem
+```
+
 ### Backends
 
 - `default`: uses purely Python to interact and expose the models.
