@@ -36,6 +36,7 @@ def main():
         embeddings = OpenAIEmbeddings(openai_api_base="http://localhost:8444/v1")
         db = Redis(redis_url=redis_url, embedding_function=embeddings.embed_query, index_name="prem_private_gpt")
         retriever = db.as_retriever(search_kwargs={"k": target_source_chunks})
+        retriever.k = 1
 
     else:
         embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
