@@ -14,3 +14,4 @@ tqdm==4.65.0
 redis==5.0.0
 openai==0.27.8
 tiktoken==0.4.0
+sentence_transformers==2.2.2
