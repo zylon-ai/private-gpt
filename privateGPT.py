@@ -10,7 +10,9 @@ import os
 import argparse
 import time
 
-load_dotenv()
+if not load_dotenv():
+    print("Could not load .env file or it is empty. Please check if it exists and is readable.")
+    exit(1)
 
 embeddings_model_name = os.environ.get("EMBEDDINGS_MODEL_NAME")
 persist_directory = os.environ.get('PERSIST_DIRECTORY')

@@ -24,12 +24,13 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
+
+if not load_dotenv():
+    print("Could not load .env file or it is empty. Please check if it exists and is readable.")
+    exit(1)
+
 from constants import CHROMA_SETTINGS
 import chromadb
-
-
-load_dotenv()
-
 
 # Load environment variables
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
