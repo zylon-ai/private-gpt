@@ -115,6 +115,16 @@ Type `exit` to finish the script.
 ### CLI
 The script also supports optional command-line arguments to modify its behavior. You can see a full list of these arguments by running the command ```python privateGPT.py --help``` in your terminal.
 
+### API
+
+1. RUN python api.py
+2. Wait until the model get initialized
+3. Start testing:
+
+```sh
+curl -X POST http://localhost:5000/ask -H "Content-Type: application/json" -d '{"query": "YOUR_QUERY_HERE"}'
+```
+Replace YOUR_QUERY_HERE with the actual query you'd like to test with.
 
 # How does it work?
 Selecting the right local models and the power of `LangChain` you can run the entire pipeline locally, without any data leaving your environment, and with reasonable performance.
