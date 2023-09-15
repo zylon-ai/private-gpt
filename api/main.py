@@ -11,7 +11,7 @@ from llama_index.llms.llama_utils import messages_to_prompt, completion_to_promp
 
 llms = {}
 
-PORT = int(os.environ.get("PORT") or "8081")
+PORT = int(os.environ.get("PORT") or "8001")
 
 
 @asynccontextmanager
