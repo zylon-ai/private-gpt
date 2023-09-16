@@ -8,6 +8,9 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from llama_index.llms import LlamaCPP
 from llama_index.llms.llama_utils import messages_to_prompt, completion_to_prompt
+from pydantic import BaseModel
+
+from api.models import OpenAIChunk
 
 llms = {}
 
@@ -17,7 +20,6 @@ PORT = int(os.environ.get("PORT") or "8001")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     models_folder = Path(os.path.dirname(__file__)).parent.joinpath("models")
-    print(models_folder)
     llms["llama"] = LlamaCPP(
         # model_url="https://huggingface.co/TheBloke/Llama-2-7B-chat-GGUF/resolve/main/llama-2-7b-chat.Q4_0.gguf",
         model_path=f"{models_folder.absolute()}/llama-2-7b-chat.Q4_0.gguf",
@@ -45,7 +47,8 @@ def run_llm(question: str) -> AsyncGenerator:
     llm: LlamaCPP = llms["llama"]
     response_iter = llm.stream_complete(question)
     for response in response_iter:
-        yield f"data: {response.delta}\n\n"
+        yield f"data: {OpenAIChunk.simple_json_chunk(text=response.delta)}\n\n"
+    yield f"data: [DONE]\n\n"
 
 
 @app.get("/health")
@@ -53,9 +56,13 @@ def root() -> str:
     return "ok"
 
 
-@app.get("/")
-async def root(question: str) -> StreamingResponse:
-    return StreamingResponse(run_llm(question), media_type="text/event-stream")
+class InferenceBody(BaseModel):
+    prompt: str
+
+
+@app.post("/")
+async def inference(body: InferenceBody) -> StreamingResponse:
+    return StreamingResponse(run_llm(body.prompt), media_type="text/event-stream")
 
 
 if __name__ == "__main__":
