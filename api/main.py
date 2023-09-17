@@ -43,9 +43,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-def run_llm(question: str) -> AsyncGenerator:
+def run_llm(prompt: str) -> AsyncGenerator:
     llm: LlamaCPP = llms["llama"]
-    response_iter = llm.stream_complete(question)
+    truncated_prompt = prompt[:llm.context_window]
+    response_iter = llm.stream_complete(truncated_prompt)
     for response in response_iter:
         yield f"data: {OpenAIChunk.simple_json_chunk(text=response.delta)}\n\n"
     yield f"data: [DONE]\n\n"
