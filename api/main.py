@@ -10,7 +10,7 @@ from llama_index.llms import LlamaCPP
 from llama_index.llms.llama_utils import messages_to_prompt, completion_to_prompt
 from pydantic import BaseModel
 
-from api.models import OpenAIChunk
+from api.models import OpenAICompletion
 
 llms = {}
 
@@ -48,7 +48,7 @@ def run_llm(prompt: str) -> AsyncGenerator:
     truncated_prompt = prompt[:llm.context_window]
     response_iter = llm.stream_complete(truncated_prompt)
     for response in response_iter:
-        yield f"data: {OpenAIChunk.simple_json_chunk(text=response.delta)}\n\n"
+        yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
     yield f"data: [DONE]\n\n"
 
 
