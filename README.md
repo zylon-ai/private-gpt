@@ -7,14 +7,14 @@ Install `llama-cpp-python` on your venv
 For OSX, using Metal, run the following
 
 ```bash
-pip uninstall llama-cpp-python -y
-CMAKE_ARGS="-DLLAMA_METAL=on" pip install -U llama-cpp-python --no-cache-dir
+poetry remove llama-cpp-python
+CMAKE_ARGS="-DLLAMA_METAL=on" poetry add llama-cpp-python
 ```
 
-Install the rest of the requirements
+Install (or update) the rest of the requirements
 
 ```bash
-pip installl -r requirements.txt
+poetry install
 ```
 
 ### Download the LLMs

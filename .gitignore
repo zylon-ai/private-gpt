@@ -1,3 +1,22 @@
-.idea
-venv
-__pycache__
+.ruff_cache
+.pytest_cache
+
+# byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# unit tests / coverage reports
+/tests-results.xml
+/.coverage
+/coverage.xml
+/htmlcov/
+
+# pyenv
+/.python-version
+
+# IDE
+.idea/
+.vscode/
+
+# macOS
+.DS_Store
