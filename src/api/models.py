@@ -8,6 +8,7 @@ from dataclasses import dataclass
 @dataclass(kw_only=True)
 class OpenAIDelta:
     """A piece of completion that needs to be concatenated to get the full message."""
+
     content: str
 
 
@@ -29,6 +30,7 @@ class OpenAIChoice:
 
     Either the delta or the message will be present, but never both.
     """
+
     finish_reason: str | None = None
     delta: OpenAIDelta | None = None
     message: OpenAIMessage | None = None
@@ -44,15 +46,19 @@ class OpenAICompletion:
     choices: list[OpenAIChoice]
 
     @classmethod
-    def simple_json_delta(cls, *, text: str | None, finish_reason: str | None = None) -> str:
-        chunk = OpenAICompletion(id=str(uuid.uuid4()),
-                                 object="chat.completion.chunk",
-                                 created=int(time.time()),
-                                 model="llama-2",
-                                 choices=[
-                                     OpenAIChoice(
-                                         delta=OpenAIDelta(content=text),
-                                         finish_reason=finish_reason)
-                                 ])
+    def simple_json_delta(
+        cls, *, text: str | None, finish_reason: str | None = None
+    ) -> str:
+        chunk = OpenAICompletion(
+            id=str(uuid.uuid4()),
+            object="chat.completion.chunk",
+            created=int(time.time()),
+            model="llama-2",
+            choices=[
+                OpenAIChoice(
+                    delta=OpenAIDelta(content=text), finish_reason=finish_reason
+                )
+            ],
+        )
 
         return json.dumps(dataclasses.asdict(chunk))

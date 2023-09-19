@@ -45,7 +45,7 @@ def health_check_route() -> HealthRouteOutput:
 
 @app.post("/hello-world")
 def hello_world(
-        hello_world_input: HelloWorldRouteInput,
+    hello_world_input: HelloWorldRouteInput,
 ) -> HelloWorldRouteOutput:
     """Says hello to the name provided in the input.
 
@@ -93,7 +93,7 @@ app = FastAPI(lifespan=_lifespan)
 
 def _run_llm(prompt: str) -> AsyncGenerator:
     llm: LlamaCPP = llms["llama"]
-    truncated_prompt = prompt[:llm.context_window]
+    truncated_prompt = prompt[: llm.context_window]
     response_iter = llm.stream_complete(truncated_prompt)
     for response in response_iter:
         yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
