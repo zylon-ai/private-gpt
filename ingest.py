@@ -140,7 +140,6 @@ def batch_chromadb_insertions(chroma_client: API, documents: List[Document]) -> 
     for i in range(0, len(documents), max_batch_size):
         yield documents[i:i + max_batch_size]
 
-
 def does_vectorstore_exist(persist_directory: str, embeddings: HuggingFaceEmbeddings) -> bool:
     """
     Checks if vectorstore exists
@@ -177,6 +176,9 @@ def main():
         # Add the rest of batches of documents
         for batched_chromadb_insertion in batched_chromadb_insertions:
             db.add_documents(batched_chromadb_insertion)
+    db.persist()
+    db = None
+
 
     print(f"Ingestion complete! You can now run privateGPT.py to query your documents")
 
