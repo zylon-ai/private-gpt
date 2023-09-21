@@ -12,3 +12,5 @@ pandoc==2.3
 pypandoc==1.11
 tqdm==4.66.1
 sentence_transformers==2.2.2
+python-pptx==0.6.22
+python-docx==0.8.11

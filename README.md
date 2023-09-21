@@ -5,9 +5,26 @@ Ask questions to your documents without an internet connection, using the power 
 
 <img width="902" alt="demo" src="https://user-images.githubusercontent.com/721666/236942256-985801c9-25b9-48ef-80be-3acbb4575164.png">
 
-Built with [LangChain](https://github.com/hwchase17/langchain), [LlamaIndex](https://www.llamaindex.ai/), [GPT4All](https://github.com/nomic-ai/gpt4all), [LlamaCpp](https://github.com/ggerganov/llama.cpp), [Chroma](https://www.trychroma.com/) and [SentenceTransformers](https://www.sbert.net/).
+Note: a tutorial with screenshots (if you're more into that) exists [right here](https://beebom.com/how-train-ai-chatbot-using-privategpt-offline/) to help you go through basic setup and make your first query.
 
 # Environment Setup
+(First see [System Requirements](#system_requirements) below) 
+Create a virtual environment:
+```shell
+python -m venv .venv
+```
+
+And activate it:
+```shell
+.\.venv\Scripts\Activate.ps1
+```
+
+Make sure your pip is up to date:
+And activate it:
+```shell
+python -m pip install --upgrade pip
+```
+
 In order to set your environment up to run the code here, first install all requirements:
 
 ```shell
@@ -25,7 +42,7 @@ poetry shell
 ```
 
 Then, download the LLM model and place it in a directory of your choice:
-- LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, just download it and reference it in your `.env` file.
+- LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, download one from [here](https://gpt4all.io/index.html) and reference it in your `.env` file.
 
 Copy the `example.env` template into `.env`
 ```shell
@@ -125,7 +142,7 @@ Selecting the right local models and the power of `LangChain` you can run the en
 - `privateGPT.py` uses a local LLM based on `GPT4All-J` or `LlamaCpp` to understand questions and create answers. The context for the answers is extracted from the local vector store using a similarity search to locate the right piece of context from the docs.
 - `GPT4All-J` wrapper was introduced in LangChain 0.0.162.
 
-# System Requirements
+# <a name="system_requirements"></a>System Requirements
 
 ## Python Version
 To use this software, you must have Python 3.10 or later installed. Earlier versions of Python will not compile.
