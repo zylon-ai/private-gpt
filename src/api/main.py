@@ -99,7 +99,7 @@ app = FastAPI(lifespan=_lifespan)
 def _run_llm(prompt: str) -> AsyncGenerator:
     llm: CustomLLM = llms["llama"]
     truncated_prompt = prompt[: llm.context_window]
-    response_iter = llm.complete(truncated_prompt)
+    response_iter = llm.stream_complete(truncated_prompt)
     for response in response_iter:
         yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
     yield "data: [DONE]\n\n"
