@@ -37,6 +37,7 @@ from chromadb.api.segment import API
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
 source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
 embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
+is_gpu_enabled = (os.environ.get('IS_GPU_ENABLED', 'False').lower() == 'true')
 chunk_size = 500
 chunk_overlap = 50
 
@@ -151,14 +152,20 @@ def does_vectorstore_exist(persist_directory: str, embeddings: HuggingFaceEmbedd
 
 def main():
     # Create embeddings
-    embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
+    embeddings_kwargs = {'device': 'cuda'} if is_gpu_enabled else {}
+    embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name, model_kwargs=embeddings_kwargs)
     # Chroma client
     chroma_client = chromadb.PersistentClient(settings=CHROMA_SETTINGS , path=persist_directory)
 
     if does_vectorstore_exist(persist_directory, embeddings):
         # Update and store locally vectorstore
         print(f"Appending to existing vectorstore at {persist_directory}")
-        db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS, client=chroma_client)
+        try:
+            db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS, client=chroma_client)
+        except AssertionError as error:
+            print("An error occurred:", type(error).__name__, "–", error)
+            print("Please set IS_GPU_ENABLED to False in your .env file, or install CUDA compatible PyTorch as per README.")
+            exit(1)
         collection = db.get()
         documents = process_documents([metadata['source'] for metadata in collection['metadatas']])
         print(f"Creating embeddings. May take some minutes...")
@@ -172,13 +179,15 @@ def main():
         # Create the db with the first batch of documents to insert
         batched_chromadb_insertions = batch_chromadb_insertions(chroma_client, documents)
         first_insertion = next(batched_chromadb_insertions)
-        db = Chroma.from_documents(first_insertion, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS, client=chroma_client)
+        try:
+            db = Chroma.from_documents(first_insertion, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS, client=chroma_client)
+        except AssertionError as error:
+            print("An error occurred:", type(error).__name__, "–", error)
+            print("Please set IS_GPU_ENABLED to False in your .env file, or install CUDA compatible PyTorch as per README.")
+            exit(1)
         # Add the rest of batches of documents
         for batched_chromadb_insertion in batched_chromadb_insertions:
             db.add_documents(batched_chromadb_insertion)
-    db.persist()
-    db = None
-
 
     print(f"Ingestion complete! You can now run privateGPT.py to query your documents")
 

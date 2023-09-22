@@ -1,16 +1,59 @@
-langchain==0.0.274
-gpt4all==1.0.8
-chromadb==0.4.12
-llama-cpp-python==0.1.81
-urllib3==2.0.4
-PyMuPDF==1.23.1
-python-dotenv==1.0.0
-unstructured==0.10.8
-extract-msg==0.45.0
-tabulate==0.9.0
-pandoc==2.3
-pypandoc==1.11
-tqdm==4.66.1
-sentence_transformers==2.2.2
-python-pptx==0.6.22
-python-docx==0.8.11
+# Directly used
+    langchain==0.0.274
+        # Use LangChain with GPT4All and LLaMA type LLMs
+        gpt4all==1.0.8
+        llama-cpp-python==0.2.7
+
+    # Word Embeddings
+    chromadb==0.4.12
+
+    # Read environment variables from a .env file 
+    python-dotenv==1.0.0
+
+
+
+# Work with documents, data, for LLMs (following packages are used for langchain.document_loaders' / unstructured)
+    # text and image embeddings for langchain 
+    # https://python.langchain.com/docs/integrations/text_embedding/sentence_transformers
+    sentence_transformers==2.2.2
+    
+    # pdf
+    # https://api.python.langchain.com/en/latest/document_loaders/langchain.document_loaders.pdf.PyPDFLoader.html
+    PyMuPDF==1.23.1
+
+    # designed to help preprocess structure unstructured text documents for use in downstream machine learning tasks.
+    # https://github.com/Unstructured-IO/unstructured
+    # notably used by UnstructuredEmailLoader https://python.langchain.com/docs/integrations/document_loaders/email
+    unstructured==0.10.8
+
+    # used for conversion of files from one format to another (PDF, docx etc.) 
+    # used by unstructured
+    pypandoc==1.11
+
+    # https://python.langchain.com/docs/integrations/document_loaders/epub
+    pandoc==2.3
+
+    # used by UnstructuredPowerPointLoader
+    python-pptx==0.6.22
+
+    # used by UnstructuredWordDocumentLoader
+    python-docx==0.8.11
+
+#tabulate==0.9.0
+#already part of unstructured
+
+#extract-msg==0.45.0
+#used for extraction of key email data (from, to, cc, date, subject, body) and the email’s attachments.
+#can be used with langchain.document_loaders' OutlookMessageLoader; though the one in use now is UnstructuredEmailLoader, so not necessary
+
+#numpy==1.26.0
+# already a dependency for chromadb, langchain, llama-cpp-python, sentence-transformers
+
+#typing-extensions==4.6.0
+# already a dependency for chromadb, langchain, llama-cpp-python, sentence-transformers
+
+#tqdm==4.66.1
+# already a dependency for chromadb, gpt4all, sentence-transformers, unstructured
+
+#urllib3==2.0.4
+# already a dependency for chromadb, gpt4all, langchain, sentence-transformers, unstructured

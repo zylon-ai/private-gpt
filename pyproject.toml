@@ -1,28 +1,54 @@
 [tool.poetry]
-name = "privategpt"
-version = "0.1.0"
-description = ""
-authors = ["Ivan Martinez <ivanmartit@gmail.com>"]
+name = "PrivateGPT"
+version = "0.2.0"
+description = "Private 'ChatGPT'-like command-line utility. Creates word embeddings from private confidential sources \"ingested\" locally by a Large Language Model, to be used as a knowledge base to interactively answer questions."
+authors = ["Ivan Martinez <ivanmartit@gmail.com>, William FUCHS <william.fuchs@amadeus.com>"]
 license = "Apache Version 2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10,<3.13"
 langchain = "0.0.274"
 gpt4all = "1.0.8"
 chromadb = "0.4.12"
-llama-cpp-python = "0.1.81"
-urllib3 = "2.0.4"
+llama-cpp-python = "0.2.7"
 PyMuPDF = "1.23.1"
 python-dotenv = "^1.0.0"
 unstructured = "0.10.8"
-extract-msg = "0.45.0"
-tabulate = "^0.9.0"
 pandoc = "^2.3"
 pypandoc = "^1.11"
-tqdm = "4.66.1"
 sentence-transformers = "2.2.2"
+python-pptx = "0.6.22"
+python-docx = "0.8.11"
 
+scipy = "1.11.3"
+numpy = "^1.26.0,<1.28.0"
+
+[tool.poetry.group.cuda.dependencies]
+torch = {version = "2.0.1+cu118", source = "pytorch-gpu-src", optional = true, markers = "extra=='cuda'" }
+torchvision = {version = "0.15.2+cu118", source = "pytorch-gpu-src", optional = true, markers = "extra=='cuda'" }
+torchaudio = {version = "2.0.2+cu118", source = "pytorch-gpu-src", optional = true, markers = "extra=='cuda'" }
+
+[tool.poetry.group.cpu.dependencies]
+torch = {version = "2.0.1+cpu", source = "pytorch-cpu-src", optional = true, markers = "extra!='cuda'" }
+torchvision = {version = "0.15.2+cpu", source = "pytorch-cpu-src", optional = true, markers = "extra!='cuda'" }
+torchaudio = {version = "2.0.2+cpu", source = "pytorch-cpu-src", optional = true, markers = "extra!='cuda'" }
+
+
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
+
+[[tool.poetry.source]]
+name = "pytorch-gpu-src"
+url = "https://download.pytorch.org/whl/cu118"
+priority = "supplemental"
+
+[[tool.poetry.source]]
+name = "pytorch-cpu-src"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "supplemental"
 
 [build-system]
 requires = ["poetry-core"]
