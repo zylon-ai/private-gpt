@@ -3,18 +3,19 @@ import sys
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
-from llama_index.llms import CustomLLM, LlamaCPP
-from llama_index.llms.llama_utils import completion_to_prompt, messages_to_prompt
 from loguru import logger
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
 from src.api.models import OpenAICompletion
-from src.api.types import HealthRouteOutput, HelloWorldRouteInput, HelloWorldRouteOutput
-from src.constants import PROJECT_ROOT_PATH
 from src.api.sagemaker import SagemakerLLM
+from src.api.types import HealthRouteOutput, HelloWorldRouteInput, HelloWorldRouteOutput
+
+if TYPE_CHECKING:
+    from llama_index.llms import CustomLLM
 
 # Remove pre-configured logging handler
 logger.remove(0)
@@ -67,27 +68,27 @@ llms = {}
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    """models_folder = PROJECT_ROOT_PATH.joinpath("models")
-        llms["llama"] = LlamaCPP(
-        # model_url="https://huggingface.co/TheBloke/Llama-2-7B-chat-GGUF/resolve/main/llama-2-7b-chat.Q4_0.gguf",
-        model_path=f"{models_folder.absolute()}/llama-2-7b-chat.Q4_0.gguf",
-        temperature=0.1,
-        max_new_tokens=256,
-        # llama2 has a context window of 4096 tokens,
-        # but we set it lower to allow for some wiggle room
-        context_window=3900,
-        # kwargs to pass to __call__()
-        generate_kwargs={},
-        # kwargs to pass to __init__()
-        # set to at least 1 to use GPU
-        model_kwargs={"n_gpu_layers": 1},
-        # transform inputs into Llama2 format
-        messages_to_prompt=messages_to_prompt,
-        completion_to_prompt=completion_to_prompt,
-        verbose=True,
-    )"""
+    #models_folder = PROJECT_ROOT_PATH.joinpath("models")
+    #llms["llama"] = LlamaCPP(
+    ## model_url="https://huggingface.co/TheBloke/Llama-2-7B-chat-GGUF/resolve/main/llama-2-7b-chat.Q4_0.gguf",
+    #model_path=f"{models_folder.absolute()}/llama-2-7b-chat.Q4_0.gguf",
+    #temperature=0.1,
+    #max_new_tokens=256,
+    ## llama2 has a context window of 4096 tokens,
+    ## but we set it lower to allow for some wiggle room
+    #context_window=3900,
+    ## kwargs to pass to __call__()
+    #generate_kwargs={},
+    ## kwargs to pass to __init__()
+    ## set to at least 1 to use GPU
+    #model_kwargs={"n_gpu_layers": 1},
+    ## transform inputs into Llama2 format
+    #messages_to_prompt=messages_to_prompt,
+    #completion_to_prompt=completion_to_prompt,
+    #verbose=True,
+    #).
     llms["llama"] = SagemakerLLM(
-        endpoint_name="huggingface-pytorch-tgi-inference-2023-09-21-15-21-55-212"        
+        endpoint_name="huggingface-pytorch-tgi-inference-2023-09-21-15-21-55-212"
     )
     yield
 
@@ -98,7 +99,7 @@ app = FastAPI(lifespan=_lifespan)
 def _run_llm(prompt: str) -> AsyncGenerator:
     llm: CustomLLM = llms["llama"]
     truncated_prompt = prompt[: llm.context_window]
-    response_iter = llm.stream_complete(truncated_prompt)
+    response_iter = llm.complete(truncated_prompt)
     for response in response_iter:
         yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
     yield "data: [DONE]\n\n"
@@ -112,10 +113,6 @@ def root() -> str:
 class InferenceBody(BaseModel):
     prompt: str
 
-# Debug enpoint easier to use on the browser
-@app.get("/")
-async def root(question: str) -> StreamingResponse:
-    return StreamingResponse(_run_llm(question), media_type="text/event-stream")
 
 @app.post("/")
 async def inference(body: InferenceBody) -> StreamingResponse:

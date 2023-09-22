@@ -1,24 +1,26 @@
 import io
 import json
+from collections.abc import Callable
+from typing import Any
+
 import boto3
-from typing import Any, Callable, Dict, Optional
-from llama_index.callbacks import CallbackManager
 from llama_index.bridge.pydantic import Field
-from llama_index.llms.base import llm_completion_callback
+from llama_index.callbacks import CallbackManager
 from llama_index.llms import (
-    CustomLLM, 
-    CompletionResponse, 
+    CompletionResponse,
     CompletionResponseGen,
+    CustomLLM,
     LLMMetadata,
 )
+from llama_index.llms.base import llm_completion_callback
 from llama_index.llms.generic_utils import (
     messages_to_prompt as generic_messages_to_prompt,
 )
 
+
 class LineIterator:
-    """
-    A helper class for parsing the byte stream input from TGI container. 
-    
+    r"""A helper class for parsing the byte stream input from TGI container.
+
     The output of the model will be in the following format:
     ```
     b'data:{"token": {"text": " a"}}\n\n'
@@ -27,35 +29,39 @@ class LineIterator:
     b'}}'
     ...
     ```
-    
-    While usually each PayloadPart event from the event stream will contain a byte array 
-    with a full json, this is not guaranteed and some of the json objects may be split across
-    PayloadPart events. For example:
+
+    While usually each PayloadPart event from the event stream will contain a byte array
+    with a full json, this is not guaranteed and some of the json objects may be split
+    across PayloadPart events. For example:
     ```
     {'PayloadPart': {'Bytes': b'{"outputs": '}}
     {'PayloadPart': {'Bytes': b'[" problem"]}\n'}}
     ```
-    
+
     This class accounts for this by concatenating bytes written via the 'write' function
-    and then exposing a method which will return lines (ending with a '\n' character) within
-    the buffer via the 'scan_lines' function. It maintains the position of the last read 
-    position to ensure that previous bytes are not exposed again. It will also save any pending 
-    lines that doe not end with a '\n' to make sure truncations are concatinated
+    and then exposing a method which will return lines (ending with a '\n' character)
+    within the buffer via the 'scan_lines' function. It maintains the position of the
+    last read position to ensure that previous bytes are not exposed again. It will
+    also save any pending lines that doe not end with a '\n' to make sure truncations
+    are concatinated
     """
-    
+
     def __init__(self, stream):
+        """Line iterator initializer."""
         self.byte_iterator = iter(stream)
         self.buffer = io.BytesIO()
         self.read_pos = 0
 
     def __iter__(self):
+        """Self iterator."""
         return self
 
     def __next__(self):
+        """Next element from iterator."""
         while True:
             self.buffer.seek(self.read_pos)
             line = self.buffer.readline()
-            if line and line[-1] == ord('\n'):
+            if line and line[-1] == ord("\n"):
                 self.read_pos += len(line)
                 return line[:-1]
             try:
@@ -64,14 +70,14 @@ class LineIterator:
                 if self.read_pos < self.buffer.getbuffer().nbytes:
                     continue
                 raise
-            if 'PayloadPart' not in chunk:
+            if "PayloadPart" not in chunk:
                 print("Unknown event type:" + chunk)
                 continue
             self.buffer.seek(0, io.SEEK_END)
-            self.buffer.write(chunk['PayloadPart']['Bytes'])
+            self.buffer.write(chunk["PayloadPart"]["Bytes"])
 
 
-class SagemakerLLM(CustomLLM):    
+class SagemakerLLM(CustomLLM):
     """Sagemaker Inference Endpoint models.
 
     To use, you must supply the endpoint name from your deployed
@@ -88,10 +94,12 @@ class SagemakerLLM(CustomLLM):
     access the Sagemaker endpoint.
     See: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html
     """
+
     endpoint_name: str = Field(description="")
     temperature: float = Field(description="The temperature to use for sampling.")
     max_new_tokens: int = Field(description="The maximum number of tokens to generate.")
-    context_window: int = Field(description="The maximum number of context tokens for the model."
+    context_window: int = Field(
+        description="The maximum number of context tokens for the model."
     )
     messages_to_prompt: Callable = Field(
         description="The function to convert messages to a prompt.", exclude=True
@@ -99,33 +107,35 @@ class SagemakerLLM(CustomLLM):
     completion_to_prompt: Callable = Field(
         description="The function to convert a completion to a prompt.", exclude=True
     )
-    generate_kwargs: Dict[str, Any] = Field(
+    generate_kwargs: dict[str, Any] = Field(
         default_factory=dict, description="Kwargs used for generation."
     )
-    model_kwargs: Dict[str, Any] = Field(
+    model_kwargs: dict[str, Any] = Field(
         default_factory=dict, description="Kwargs used for model initialization."
     )
     verbose: bool = Field(description="Whether to print verbose output.")
 
-    _boto_client: Any = boto3.client('sagemaker-runtime') # TODO make it an optional field
-    
+    _boto_client: Any = boto3.client(
+        "sagemaker-runtime"
+    )  # TODO make it an optional field
+
     def __init__(
         self,
-        endpoint_name: Optional[str] = "",
+        endpoint_name: str | None = "",
         temperature: float = 0.1,
-        max_new_tokens: int = 256, # to review defaults
-        context_window: int = 2048, # to review defaults
-        messages_to_prompt: Optional[Callable] = None,
-        completion_to_prompt: Optional[Callable] = None,
-        callback_manager: Optional[CallbackManager] = None,
-        generate_kwargs: Optional[Dict[str, Any]] = None,
-        model_kwargs: Optional[Dict[str, Any]] = None,
+        max_new_tokens: int = 256,  # to review defaults
+        context_window: int = 2048,  # to review defaults
+        messages_to_prompt: Callable | None = None,
+        completion_to_prompt: Callable | None = None,
+        callback_manager: CallbackManager | None = None,
+        generate_kwargs: dict[str, Any] | None = None,
+        model_kwargs: dict[str, Any] | None = None,
         verbose: bool = True,
     ) -> None:
-        
+        """SagemakerLLM initializer."""
         model_kwargs = model_kwargs or {}
         model_kwargs.update({"n_ctx": context_window, "verbose": verbose})
-        
+
         messages_to_prompt = messages_to_prompt or generic_messages_to_prompt
         completion_to_prompt = completion_to_prompt or (lambda x: x)
 
@@ -156,15 +166,15 @@ class SagemakerLLM(CustomLLM):
             "temperature": self.temperature,
             "top_k": 50,
             "max_new_tokens": self.max_new_tokens,
-    }
+        }
 
     @property
     def metadata(self) -> LLMMetadata:
         """Get LLM metadata."""
-        return LLMMetadata(            
+        return LLMMetadata(
             context_window=self.context_window,
             num_output=self.max_new_tokens,
-            model_name="Sagemaker LLama 2"
+            model_name="Sagemaker LLama 2",
         )
 
     @llm_completion_callback()
@@ -175,28 +185,47 @@ class SagemakerLLM(CustomLLM):
         if not is_formatted:
             prompt = self.completion_to_prompt(prompt)
 
-        request_params = {'inputs': prompt, 'stream': False, 'parameters': self.inference_params}
-        resp = self._boto_client.invoke_endpoint_with_response_stream(EndpointName=self.endpoint_name, Body=json.dumps(request_params), ContentType='application/json')
+        request_params = {
+            "inputs": prompt,
+            "stream": False,
+            "parameters": self.inference_params,
+        }
+        resp = self._boto_client.invoke_endpoint(
+            EndpointName=self.endpoint_name,
+            Body=json.dumps(request_params),
+            ContentType="application/json",
+        )
 
-        return CompletionResponse(text=resp[0]["generated_text"], raw=resp)
-    
+        response_body = resp["Body"]
+        response_str = response_body.read().decode("utf-8")
+        response_dict = eval(response_str)
+
+        return CompletionResponse(text=response_dict[0]["generated_text"], raw=resp)
+
     @llm_completion_callback()
     def stream_complete(self, prompt: str, **kwargs: Any) -> CompletionResponseGen:
-
         def get_stream():
             text = ""
 
-            request_params = {'inputs': prompt, 'stream': True, 'parameters': self.inference_params}
-            resp = self._boto_client.invoke_endpoint_with_response_stream(EndpointName=self.endpoint_name, Body=json.dumps(request_params), ContentType='application/json')
-            
-            event_stream = resp['Body']
-            start_json = b'{'
-            stop_token = '<|endoftext|>'
+            request_params = {
+                "inputs": prompt,
+                "stream": True,
+                "parameters": self.inference_params,
+            }
+            resp = self._boto_client.invoke_endpoint_with_response_stream(
+                EndpointName=self.endpoint_name,
+                Body=json.dumps(request_params),
+                ContentType="application/json",
+            )
+
+            event_stream = resp["Body"]
+            start_json = b"{"
+            stop_token = "<|endoftext|>"
             for line in LineIterator(event_stream):
-                if line != b'' and start_json in line:
-                    data = json.loads(line[line.find(start_json):].decode('utf-8'))
-                    if data['token']['text'] != stop_token:
-                        delta = data['token']['text']
+                if line != b"" and start_json in line:
+                    data = json.loads(line[line.find(start_json) :].decode("utf-8"))
+                    if data["token"]["text"] != stop_token:
+                        delta = data["token"]["text"]
                         text += delta
                         yield CompletionResponse(delta=delta, text=text, raw=data)
 
