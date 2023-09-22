@@ -68,25 +68,25 @@ llms = {}
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    #models_folder = PROJECT_ROOT_PATH.joinpath("models")
-    #llms["llama"] = LlamaCPP(
+    # models_folder = PROJECT_ROOT_PATH.joinpath("models")
+    # llms["llama"] = LlamaCPP(
     ## model_url="https://huggingface.co/TheBloke/Llama-2-7B-chat-GGUF/resolve/main/llama-2-7b-chat.Q4_0.gguf",
-    #model_path=f"{models_folder.absolute()}/llama-2-7b-chat.Q4_0.gguf",
-    #temperature=0.1,
-    #max_new_tokens=256,
+    # model_path=f"{models_folder.absolute()}/llama-2-7b-chat.Q4_0.gguf",
+    # temperature=0.1,
+    # max_new_tokens=256,
     ## llama2 has a context window of 4096 tokens,
     ## but we set it lower to allow for some wiggle room
-    #context_window=3900,
+    # context_window=3900,
     ## kwargs to pass to __call__()
-    #generate_kwargs={},
+    # generate_kwargs={},
     ## kwargs to pass to __init__()
     ## set to at least 1 to use GPU
-    #model_kwargs={"n_gpu_layers": 1},
+    # model_kwargs={"n_gpu_layers": 1},
     ## transform inputs into Llama2 format
-    #messages_to_prompt=messages_to_prompt,
-    #completion_to_prompt=completion_to_prompt,
-    #verbose=True,
-    #).
+    # messages_to_prompt=messages_to_prompt,
+    # completion_to_prompt=completion_to_prompt,
+    # verbose=True,
+    # ).
     llms["llama"] = SagemakerLLM(
         endpoint_name="huggingface-pytorch-tgi-inference-2023-09-21-15-21-55-212"
     )
@@ -112,6 +112,11 @@ def root() -> str:
 
 class InferenceBody(BaseModel):
     prompt: str
+
+
+@app.get("/")
+async def inference_basic(question: str) -> StreamingResponse:
+    return StreamingResponse(_run_llm(question), media_type="text/event-stream")
 
 
 @app.post("/")

@@ -38,6 +38,7 @@ class LineIterator:
     {'PayloadPart': {'Bytes': b'[" problem"]}\n'}}
     ```
 
+
     This class accounts for this by concatenating bytes written via the 'write' function
     and then exposing a method which will return lines (ending with a '\n' character)
     within the buffer via the 'scan_lines' function. It maintains the position of the
@@ -221,6 +222,7 @@ class SagemakerLLM(CustomLLM):
             event_stream = resp["Body"]
             start_json = b"{"
             stop_token = "<|endoftext|>"
+
             for line in LineIterator(event_stream):
                 if line != b"" and start_json in line:
                     data = json.loads(line[line.find(start_json) :].decode("utf-8"))
