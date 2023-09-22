@@ -10,6 +10,7 @@ fastapi = { extras = ["all"], version = "^0.103.1" }
 loguru = "^0.7.0"
 llama-cpp-python = "^0.2.6"
 llama-index = "^0.8.29.post1"
+boto3 = "^1.28.52"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
