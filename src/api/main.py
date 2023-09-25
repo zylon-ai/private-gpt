@@ -88,7 +88,7 @@ async def _lifespan(app: FastAPI):
     # verbose=True,
     # ).
     llms["llama"] = SagemakerLLM(
-        endpoint_name="huggingface-pytorch-tgi-inference-2023-09-21-15-21-55-212"
+        endpoint_name="huggingface-pytorch-tgi-inference-2023-09-25-19-53-32-140"
     )
     yield
 
