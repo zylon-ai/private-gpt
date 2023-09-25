@@ -31,6 +31,7 @@ if not load_dotenv():
 
 from constants import CHROMA_SETTINGS
 import chromadb
+from chromadb.api.segment import API
 
 # Load environment variables
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
@@ -126,9 +127,19 @@ def process_documents(ignored_files: List[str] = []) -> List[Document]:
         exit(0)
     print(f"Loaded {len(documents)} new documents from {source_directory}")
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    texts = text_splitter.split_documents(documents)
-    print(f"Split into {len(texts)} chunks of text (max. {chunk_size} tokens each)")
-    return texts
+    documents = text_splitter.split_documents(documents)
+    print(f"Split into {len(documents)} chunks of text (max. {chunk_size} tokens each)")
+    return documents
+
+def batch_chromadb_insertions(chroma_client: API, documents: List[Document]) -> List[Document]:
+    """
+    Split the total documents to be inserted into batches of documents that the local chroma client can process
+    """
+    # Get max batch size.
+    max_batch_size = chroma_client.max_batch_size
+    for i in range(0, len(documents), max_batch_size):
+        yield documents[i:i + max_batch_size]
+
 
 def does_vectorstore_exist(persist_directory: str, embeddings: HuggingFaceEmbeddings) -> bool:
     """
@@ -150,17 +161,22 @@ def main():
         print(f"Appending to existing vectorstore at {persist_directory}")
         db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS, client=chroma_client)
         collection = db.get()
-        texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
+        documents = process_documents([metadata['source'] for metadata in collection['metadatas']])
         print(f"Creating embeddings. May take some minutes...")
-        db.add_documents(texts)
+        for batched_chromadb_insertion in batch_chromadb_insertions(chroma_client, documents):
+            db.add_documents(batched_chromadb_insertion)
     else:
         # Create and store locally vectorstore
         print("Creating new vectorstore")
-        texts = process_documents()
+        documents = process_documents()
         print(f"Creating embeddings. May take some minutes...")
-        db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS, client=chroma_client)
-    db.persist()
-    db = None
+        # Create the db with the first batch of documents to insert
+        batched_chromadb_insertions = batch_chromadb_insertions(chroma_client, documents)
+        first_insertion = next(batched_chromadb_insertions)
+        db = Chroma.from_documents(first_insertion, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS, client=chroma_client)
+        # Add the rest of batches of documents
+        for batched_chromadb_insertion in batched_chromadb_insertions:
+            db.add_documents(batched_chromadb_insertion)
 
     print(f"Ingestion complete! You can now run privateGPT.py to query your documents")
 
