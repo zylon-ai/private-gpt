@@ -136,8 +136,7 @@ def batch_chromadb_insertions(chroma_client: API, documents: List[Document]) -> 
     Split the total documents to be inserted into batches of documents that the local chroma client can process
     """
     # Get max batch size.
-    # Note: temp hack given max_batch_size is not yet exposed by ChromaDB API (WIP).
-    max_batch_size = chroma_client._producer.max_batch_size
+    max_batch_size = chroma_client.max_batch_size
     for i in range(0, len(documents), max_batch_size):
         yield documents[i:i + max_batch_size]
 
