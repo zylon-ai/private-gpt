@@ -9,7 +9,7 @@ from dataclasses import dataclass
 class OpenAIDelta:
     """A piece of completion that needs to be concatenated to get the full message."""
 
-    content: str
+    content: str | None
 
 
 @dataclass(kw_only=True)

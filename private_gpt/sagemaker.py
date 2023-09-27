@@ -118,7 +118,7 @@ class SagemakerLLM(CustomLLM):
     verbose: bool = Field(description="Whether to print verbose output.")
 
     _boto_client: Any = boto3.client(
-        "sagemaker-runtime"
+        "sagemaker-runtime",
     )  # TODO make it an optional field
 
     def __init__(

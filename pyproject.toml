@@ -11,6 +11,7 @@ loguru = "^0.7.2"
 llama-cpp-python = "^0.2.6"
 llama-index = "^0.8.29.post1"
 boto3 = "^1.28.52"
+injector = "^0.21.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"

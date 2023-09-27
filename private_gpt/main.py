@@ -10,9 +10,13 @@ from loguru import logger
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
-from src.api.models import OpenAICompletion
-from src.api.sagemaker import SagemakerLLM
-from src.api.types import HealthRouteOutput, HelloWorldRouteInput, HelloWorldRouteOutput
+from private_gpt.models import OpenAICompletion
+from private_gpt.sagemaker import SagemakerLLM
+from private_gpt.types import (
+    HealthRouteOutput,
+    HelloWorldRouteInput,
+    HelloWorldRouteOutput,
+)
 
 if TYPE_CHECKING:
     from llama_index.llms import CustomLLM
@@ -67,7 +71,7 @@ llms = {}
 
 
 @asynccontextmanager
-async def _lifespan(app: FastAPI):
+async def _lifespan(app: FastAPI) -> None:
     # models_folder = PROJECT_ROOT_PATH.joinpath("models")
     # llms["llama"] = LlamaCPP(
     ## model_url="https://huggingface.co/TheBloke/Llama-2-7B-chat-GGUF/resolve/main/llama-2-7b-chat.Q4_0.gguf",

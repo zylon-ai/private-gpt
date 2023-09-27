@@ -3,19 +3,20 @@
 ########################################################################################################################
 
 test:
-	poetry run pytest --cov src --cov-report term --cov-report=html --cov-report xml --junit-xml=tests-results.xml
+	poetry run pytest --cov private_gpt --cov-report term --cov-report=html --cov-report xml --junit-xml=tests-results.xml
 
 black:
 	poetry run black . --check
 
 ruff:
-	poetry run ruff check src tests
+	poetry run ruff check private_gpt tests
 
-fix-ruff:
-	poetry run ruff check src tests --fix
+fix:
+	poetry run black .
+	poetry run ruff check private_gpt tests --fix
 
 mypy:
-	poetry run mypy src
+	poetry run mypy private_gpt
 
 ########################################################################################################################
 # Api

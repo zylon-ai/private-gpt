@@ -1,5 +1,6 @@
 .ruff_cache
 .pytest_cache
+.mypy_cache
 
 # byte-compiled / optimized / DLL files
 __pycache__/
