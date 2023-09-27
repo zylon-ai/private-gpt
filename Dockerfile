@@ -1,6 +1,4 @@
 FROM python:3-slim-bullseye as builder
-
-WORKDIR /app
 ENV PYTHONPATH=/app
 # https://python-poetry.org/docs/configuration/#virtualenvsin-project
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
@@ -10,14 +8,13 @@ RUN pip install pipx
 RUN python3 -m pipx ensurepath
 RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
-
-# Install everything to build llama.cpp
+# Dependencies for llama-cpp
 RUN apt update && apt install -y libopenblas-dev ninja-build build-essential pkg-config wget
-RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip install llama_cpp_python --verbose
 
-# Freeze and install dependencies
+FROM builder as build
+WORKDIR /app
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-dev
+RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" poetry install --no-dev
 
 FROM python:3-slim-bullseye
 ENV PYTHONUNBUFFERED=1
@@ -29,7 +26,7 @@ RUN adduser --system worker
 WORKDIR /home/worker/app
 
 # Copy everything, including the virtual environment
-COPY --chown=worker --from=builder /app/.venv .venv
+COPY --chown=worker --from=build /app/.venv .venv
 COPY --chown=worker private_gpt private_gpt
 
 USER worker
