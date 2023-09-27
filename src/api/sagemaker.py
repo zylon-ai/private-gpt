@@ -13,8 +13,9 @@ from llama_index.llms import (
     LLMMetadata,
 )
 from llama_index.llms.base import llm_completion_callback
-from llama_index.llms.generic_utils import (
+from llama_index.llms.llama_utils import (
     messages_to_prompt as generic_messages_to_prompt,
+    completion_to_prompt as generic_completion_to_prompt
 )
 
 
@@ -124,7 +125,7 @@ class SagemakerLLM(CustomLLM):
         self,
         endpoint_name: str | None = "",
         temperature: float = 0.1,
-        max_new_tokens: int = 256,  # to review defaults
+        max_new_tokens: int = 512,  # to review defaults
         context_window: int = 2048,  # to review defaults
         messages_to_prompt: Callable | None = None,
         completion_to_prompt: Callable | None = None,
@@ -138,7 +139,7 @@ class SagemakerLLM(CustomLLM):
         model_kwargs.update({"n_ctx": context_window, "verbose": verbose})
 
         messages_to_prompt = messages_to_prompt or generic_messages_to_prompt
-        completion_to_prompt = completion_to_prompt or (lambda x: x)
+        completion_to_prompt = completion_to_prompt or generic_completion_to_prompt
 
         generate_kwargs = generate_kwargs or {}
         generate_kwargs.update(
@@ -191,6 +192,7 @@ class SagemakerLLM(CustomLLM):
             "stream": False,
             "parameters": self.inference_params,
         }
+
         resp = self._boto_client.invoke_endpoint(
             EndpointName=self.endpoint_name,
             Body=json.dumps(request_params),
@@ -201,7 +203,7 @@ class SagemakerLLM(CustomLLM):
         response_str = response_body.read().decode("utf-8")
         response_dict = eval(response_str)
 
-        return CompletionResponse(text=response_dict[0]["generated_text"], raw=resp)
+        return CompletionResponse(text=response_dict[0]["generated_text"][len(prompt):], raw=resp)
 
     @llm_completion_callback()
     def stream_complete(self, prompt: str, **kwargs: Any) -> CompletionResponseGen:
