@@ -8,9 +8,9 @@ authors = ["Zylon <hi@zylon.ai>"]
 python = "^3.11"
 fastapi = { extras = ["all"], version = "^0.103.1" }
 loguru = "^0.7.2"
-llama-cpp-python = "^0.2.6"
-llama-index = "^0.8.29.post1"
-boto3 = "^1.28.52"
+llama-cpp-python = "^0.2.7"
+llama-index = "^0.8.35"
+boto3 = "^1.28.56"
 injector = "^0.21.0"
 
 [tool.poetry.group.dev.dependencies]
@@ -75,8 +75,8 @@ ignore = [
     "D100",
     "D101",
     "D102",
-    "D103" # Documentation in all public functions/classes
-    # -> kind of redundant
+    "D103"
+    # -> "Missing docstring in public function too restrictive"
 ]
 
 [tool.ruff.pydocstyle]

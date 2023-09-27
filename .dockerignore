@@ -1,2 +1,7 @@
 venv
 models
+.github
+terraform
+tests
+Dockerfile
+Dockerfile.*
