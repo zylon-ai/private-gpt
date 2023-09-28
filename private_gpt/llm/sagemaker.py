@@ -1,22 +1,32 @@
+# mypy: ignore-errors
+from __future__ import annotations
+
 import io
 import json
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import boto3
+import boto3  # type: ignore
 from llama_index.bridge.pydantic import Field
-from llama_index.callbacks import CallbackManager
 from llama_index.llms import (
     CompletionResponse,
-    CompletionResponseGen,
     CustomLLM,
     LLMMetadata,
 )
 from llama_index.llms.base import llm_completion_callback
 from llama_index.llms.llama_utils import (
-    messages_to_prompt as generic_messages_to_prompt,
-    completion_to_prompt as generic_completion_to_prompt
+    completion_to_prompt as generic_completion_to_prompt,
 )
+from llama_index.llms.llama_utils import (
+    messages_to_prompt as generic_messages_to_prompt,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from llama_index.callbacks import CallbackManager
+    from llama_index.llms import (
+        CompletionResponseGen,
+    )
 
 
 class LineIterator:
@@ -48,17 +58,17 @@ class LineIterator:
     are concatinated
     """
 
-    def __init__(self, stream):
+    def __init__(self, stream: Any) -> None:
         """Line iterator initializer."""
         self.byte_iterator = iter(stream)
         self.buffer = io.BytesIO()
         self.read_pos = 0
 
-    def __iter__(self):
+    def __iter__(self) -> Any:
         """Self iterator."""
         return self
 
-    def __next__(self):
+    def __next__(self) -> Any:
         """Next element from iterator."""
         while True:
             self.buffer.seek(self.read_pos)
@@ -103,10 +113,10 @@ class SagemakerLLM(CustomLLM):
     context_window: int = Field(
         description="The maximum number of context tokens for the model."
     )
-    messages_to_prompt: Callable = Field(
+    messages_to_prompt: Callable[..., str] = Field(
         description="The function to convert messages to a prompt.", exclude=True
     )
-    completion_to_prompt: Callable = Field(
+    completion_to_prompt: Callable[..., str] = Field(
         description="The function to convert a completion to a prompt.", exclude=True
     )
     generate_kwargs: dict[str, Any] = Field(
@@ -127,8 +137,8 @@ class SagemakerLLM(CustomLLM):
         temperature: float = 0.1,
         max_new_tokens: int = 512,  # to review defaults
         context_window: int = 2048,  # to review defaults
-        messages_to_prompt: Callable | None = None,
-        completion_to_prompt: Callable | None = None,
+        messages_to_prompt: Any = None,
+        completion_to_prompt: Any = None,
         callback_manager: CallbackManager | None = None,
         generate_kwargs: dict[str, Any] | None = None,
         model_kwargs: dict[str, Any] | None = None,
@@ -203,7 +213,9 @@ class SagemakerLLM(CustomLLM):
         response_str = response_body.read().decode("utf-8")
         response_dict = eval(response_str)
 
-        return CompletionResponse(text=response_dict[0]["generated_text"][len(prompt):], raw=resp)
+        return CompletionResponse(
+            text=response_dict[0]["generated_text"][len(prompt) :], raw=resp
+        )
 
     @llm_completion_callback()
     def stream_complete(self, prompt: str, **kwargs: Any) -> CompletionResponseGen:

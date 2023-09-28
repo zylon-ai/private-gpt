@@ -1,25 +1,12 @@
 """FastAPI app creation, logger configuration and main API routes."""
 import sys
-import uuid
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING
+from typing import Any
 
 from fastapi import FastAPI
 from loguru import logger
-from pydantic import BaseModel
-from starlette.responses import StreamingResponse
 
-from private_gpt.models import OpenAICompletion
-from private_gpt.sagemaker import SagemakerLLM
-from private_gpt.types import (
-    HealthRouteOutput,
-    HelloWorldRouteInput,
-    HelloWorldRouteOutput,
-)
-
-if TYPE_CHECKING:
-    from llama_index.llms import CustomLLM
+from private_gpt.completions.routes import completions_router
+from private_gpt.webhook.webhook_router import webhook_router
 
 # Remove pre-configured logging handler
 logger.remove(0)
@@ -40,89 +27,9 @@ app = FastAPI()
 
 
 @app.get("/health")
-def health_check_route() -> HealthRouteOutput:
-    """Health check route to check that the API is up.
-
-    Returns:
-        a dict with a "status" key
-    """
-    return HealthRouteOutput(status="ok")
+def health() -> Any:
+    return {"status": "ok"}
 
 
-@app.post("/hello-world")
-def hello_world(
-    hello_world_input: HelloWorldRouteInput,
-) -> HelloWorldRouteOutput:
-    """Says hello to the name provided in the input.
-
-    Args:
-        hello_world_input: a dict with a "name" key
-
-    Returns:
-        a dict with a "message" key
-    """
-    with logger.contextualize(request_id=uuid.uuid4().hex):
-        response_message = f"Hello, {hello_world_input.name}!"
-        logger.info(f"Responding '{response_message}'")
-        return HelloWorldRouteOutput(message=response_message)
-
-
-llms = {}
-
-
-@asynccontextmanager
-async def _lifespan(app: FastAPI) -> None:
-    # models_folder = PROJECT_ROOT_PATH.joinpath("models")
-    # llms["llama"] = LlamaCPP(
-    ## model_url="https://huggingface.co/TheBloke/Llama-2-7B-chat-GGUF/resolve/main/llama-2-7b-chat.Q4_0.gguf",
-    # model_path=f"{models_folder.absolute()}/llama-2-7b-chat.Q4_0.gguf",
-    # temperature=0.1,
-    # max_new_tokens=256,
-    ## llama2 has a context window of 4096 tokens,
-    ## but we set it lower to allow for some wiggle room
-    # context_window=3900,
-    ## kwargs to pass to __call__()
-    # generate_kwargs={},
-    ## kwargs to pass to __init__()
-    ## set to at least 1 to use GPU
-    # model_kwargs={"n_gpu_layers": 1},
-    ## transform inputs into Llama2 format
-    # messages_to_prompt=messages_to_prompt,
-    # completion_to_prompt=completion_to_prompt,
-    # verbose=True,
-    # ).
-    llms["llama"] = SagemakerLLM(
-        endpoint_name="huggingface-pytorch-tgi-inference-2023-09-25-19-53-32-140"
-    )
-    yield
-
-
-app = FastAPI(lifespan=_lifespan)
-
-
-def _run_llm(prompt: str) -> AsyncGenerator:
-    llm: CustomLLM = llms["llama"]
-    truncated_prompt = prompt[: llm.context_window]
-    response_iter = llm.stream_complete(truncated_prompt)
-    for response in response_iter:
-        yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
-    yield "data: [DONE]\n\n"
-
-
-@app.get("/health")
-def root() -> str:
-    return "ok"
-
-
-class InferenceBody(BaseModel):
-    prompt: str
-
-
-@app.get("/")
-async def inference_basic(question: str) -> StreamingResponse:
-    return StreamingResponse(_run_llm(question), media_type="text/event-stream")
-
-
-@app.post("/")
-async def inference(body: InferenceBody) -> StreamingResponse:
-    return StreamingResponse(_run_llm(body.prompt), media_type="text/event-stream")
+app.include_router(completions_router)
+app.include_router(webhook_router)
