@@ -3,6 +3,9 @@
 ########################################################################################################################
 
 test:
+	PYTHONPATH=. poetry run pytest tests
+
+test-coverage:
 	PYTHONPATH=. poetry run pytest tests --cov private_gpt --cov-report term --cov-report=html --cov-report xml --junit-xml=tests-results.xml
 
 black:
