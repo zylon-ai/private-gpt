@@ -3,7 +3,7 @@
 ########################################################################################################################
 
 test:
-	poetry run pytest --cov private_gpt --cov-report term --cov-report=html --cov-report xml --junit-xml=tests-results.xml
+	PYTHONPATH=. poetry run pytest tests --cov private_gpt --cov-report term --cov-report=html --cov-report xml --junit-xml=tests-results.xml
 
 black:
 	poetry run black . --check

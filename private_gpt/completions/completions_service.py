@@ -1,4 +1,4 @@
-from injector import singleton
+from injector import inject, singleton
 from llama_index.llms import CompletionResponseGen, MockLLM
 
 from private_gpt.llm.sagemaker import SagemakerLLM
@@ -7,6 +7,7 @@ from private_gpt.util.lazy_dict import LazyDict
 
 @singleton
 class CompletionsService:
+    @inject
     def __init__(self) -> None:
         self._models = LazyDict(
             {
