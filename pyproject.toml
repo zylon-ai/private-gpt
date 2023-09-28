@@ -116,3 +116,8 @@ check_untyped_defs = true
 
 # Make __init__.py file optional for package definitions; if missing, mypy requires __init__.py at packages roots, see https://mypy.readthedocs.io/en/stable/running_mypy.html#mapping-file-paths-to-modules
 explicit_package_bases = true
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]

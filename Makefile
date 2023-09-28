@@ -14,6 +14,7 @@ ruff:
 fix:
 	poetry run black .
 	poetry run ruff check private_gpt tests --fix
+	poetry run mypy private_gpt
 
 mypy:
 	poetry run mypy private_gpt

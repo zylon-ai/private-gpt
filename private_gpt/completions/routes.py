@@ -7,7 +7,7 @@ from starlette.responses import StreamingResponse
 
 from private_gpt.completions.completions_service import CompletionsService
 from private_gpt.di import root_injector
-from private_gpt.dto.openai import OpenAICompletion
+from private_gpt.open_ai.openai_models import OpenAICompletion
 
 completions_router = APIRouter()
 

@@ -1,5 +1,5 @@
 from private_gpt.completions.completions_service import CompletionsService
-from tests import BaseTestCase
+from tests.common import BaseTestCase
 
 
 class TestCompletionsService(BaseTestCase):
