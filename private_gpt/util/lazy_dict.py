@@ -7,7 +7,7 @@ from private_gpt.typing import K, V
 class LazyDict(Generic[K, V]):
     """A lazy dictionary, thread-safe (but not very efficient).
 
-    Lambda values will be evaluated only once lazily.
+    Lambda values will be evaluated only once, lazily.
     """
 
     delegate: dict[K, V]
@@ -15,6 +15,9 @@ class LazyDict(Generic[K, V]):
     def __init__(self, delegate: dict[K, V]):
         self.lock = threading.Lock()
         self.delegate = delegate
+
+    def __setitem__(self, key: K, value: V) -> None:
+        self.delegate[key] = value
 
     def __getitem__(self, k: K) -> V:
         v = self.delegate[k]

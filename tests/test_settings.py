@@ -1,0 +1,5 @@
+from private_gpt.settings import settings
+
+
+def test_settings_are_loaded_and_merged():
+    assert settings.server.env_name == "test"

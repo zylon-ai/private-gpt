@@ -1,0 +1,7 @@
+server:
+  env_name: ${APP_ENV:prod}
+  port: ${PORT:8001}
+
+sagemaker:
+  enabled: false
+  endpoint_name: huggingface-pytorch-tgi-inference-2023-09-25-19-53-32-140

@@ -12,6 +12,7 @@ llama-cpp-python = "^0.2.7"
 llama-index = "^0.8.35"
 boto3 = "^1.28.56"
 injector = "^0.21.0"
+pyyaml = "^6.0.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
@@ -20,6 +21,7 @@ pre-commit = "^2"
 pytest = "^7"
 pytest-cov = "^3"
 ruff = "^0"
+types-pyyaml = "^6.0.12.12"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
