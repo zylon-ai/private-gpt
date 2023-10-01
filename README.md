@@ -1,5 +1,7 @@
 # private-gpt
 
+[![Tests](https://github.com/zylon-ai/private-gpt/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/zylon-ai/private-gpt/actions/workflows/tests.yml)
+
 ### Installation
 
 This project requires poetry: https://python-poetry.org/docs/
