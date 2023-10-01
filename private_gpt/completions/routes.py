@@ -30,7 +30,7 @@ async def basic_completions(prompt: str, model: str | None = None) -> StreamingR
 
 def _run_llm(body: CompletionsBody) -> StreamingResponse:
     service = root_injector.get(CompletionsService)
-    response_generator = service.stream_complete(body.prompt, model=body.model)
+    response_generator = service.stream_complete(body.prompt, model_name=body.model)
     return StreamingResponse(
         _to_openai_sse_stream(response_generator), media_type="text/event-stream"
     )

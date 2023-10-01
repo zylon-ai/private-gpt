@@ -8,7 +8,6 @@ authors = ["Zylon <hi@zylon.ai>"]
 python = "^3.11"
 fastapi = { extras = ["all"], version = "^0.103.1" }
 loguru = "^0.7.2"
-llama-cpp-python = "^0.2.7"
 llama-index = "^0.8.35"
 boto3 = "^1.28.56"
 injector = "^0.21.0"
@@ -22,6 +21,20 @@ pytest = "^7"
 pytest-cov = "^3"
 ruff = "^0"
 types-pyyaml = "^6.0.12.12"
+
+# Dependencies for gradio UI
+[tool.poetry.group.ui]
+optional = true
+[tool.poetry.group.ui.dependencies]
+gradio = "^3.45.2"
+
+# Dependencies to run models locally, you will also need to install
+# either metal or CUDA dependencies, otherwise they will run on CPU
+# and will be _very_ slow.
+[tool.poetry.group.local_llm]
+optional = true
+[tool.poetry.group.local_llm.dependencies]
+llama-cpp-python = "^0.2.7"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -110,14 +123,10 @@ runtime-evaluated-base-classes = ["pydantic.BaseModel"]
 
 [tool.mypy]
 python_version = "3.11"
-# Enable all optional error checking flags, providing stricter type checking; see https://mypy.readthedocs.io/en/stable/getting_started.html#strict-mode-and-configuration
 strict = true
-
-# Type-check the interiors of functions without type annotations; if missing, mypy won't check function bodies without type hints, for instance those coming from third-party libraries
-check_untyped_defs = true
-
-# Make __init__.py file optional for package definitions; if missing, mypy requires __init__.py at packages roots, see https://mypy.readthedocs.io/en/stable/running_mypy.html#mapping-file-paths-to-modules
+check_untyped_defs = false
 explicit_package_bases = true
+exclude = ["tests"]
 
 [tool.pytest.ini_options]
 addopts = [

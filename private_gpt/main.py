@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import FastAPI
 from loguru import logger
 
+from private_gpt import settings
 from private_gpt.completions.routes import completions_router
 from private_gpt.webhook.webhook_router import webhook_router
 
@@ -33,3 +34,9 @@ def health() -> Any:
 
 app.include_router(completions_router)
 app.include_router(webhook_router)
+
+
+if settings.settings.ui.enabled:
+    from private_gpt.ui.ui import mount_in_app
+
+    mount_in_app(app)
