@@ -2,6 +2,7 @@
 import sys
 from typing import Any
 
+import llama_index
 from fastapi import FastAPI
 from loguru import logger
 
@@ -23,6 +24,9 @@ logger.add(
         "ID: {extra[request_id]} - <level>{message}</level>"
     ),
 )
+
+# Add LlamaIndex simple observability
+llama_index.set_global_handler("simple")
 
 app = FastAPI()
 
