@@ -33,7 +33,7 @@ if not load_dotenv():
 from constants import CHROMA_SETTINGS
 import chromadb
 
-# Load environment variables
+#  Load environment variables
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
 source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
 embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
@@ -53,7 +53,7 @@ class MyElmLoader(UnstructuredEmailLoader):
             except ValueError as e:
                 if 'text/html content not found in email' in str(e):
                     # Try plain text
-                    self.unstructured_kwargs["content_source"]="text/plain"
+                    self.unstructured_kwargs["content_source"] = "text/plain"
                     doc = UnstructuredEmailLoader.load(self)
                 else:
                     raise
@@ -80,7 +80,7 @@ LOADER_MAPPING = {
     # ".ppt": (UnstructuredPowerPointLoader, {}),
     # ".pptx": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
-     ".py": (PythonLoader, {}),
+    ".py": (PythonLoader, {}),
     # Add more mappings for other file extensions and loaders as needed
 }
 
@@ -93,6 +93,7 @@ def load_single_document(file_path: str) -> List[Document]:
         return loader.load()
 
     raise ValueError(f"Unsupported file extension '{ext}'")
+
 
 def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Document]:
     """
@@ -117,6 +118,7 @@ def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Docum
 
     return results
 
+
 def process_documents(ignored_files: List[str] = []) -> List[Document]:
     """
     Load documents and split in chunks
@@ -132,6 +134,7 @@ def process_documents(ignored_files: List[str] = []) -> List[Document]:
     print(f"Split into {len(texts)} chunks of text (max. {chunk_size} tokens each)")
     return texts
 
+
 def does_vectorstore_exist(persist_directory: str, embeddings: HuggingFaceEmbeddings) -> bool:
     """
     Checks if vectorstore exists
@@ -141,16 +144,18 @@ def does_vectorstore_exist(persist_directory: str, embeddings: HuggingFaceEmbedd
         return False
     return True
 
+
 def main():
     # Create embeddings
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     # Chroma client
-    chroma_client = chromadb.PersistentClient(settings=CHROMA_SETTINGS , path=persist_directory)
+    chroma_client = chromadb.PersistentClient(settings=CHROMA_SETTINGS, path=persist_directory)
 
     if does_vectorstore_exist(persist_directory, embeddings):
         # Update and store locally vectorstore
         print(f"Appending to existing vectorstore at {persist_directory}")
-        db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS, client=chroma_client)
+        db = Chroma(persist_directory=persist_directory, embedding_function=embeddings, client_settings=CHROMA_SETTINGS,
+                    client=chroma_client)
         collection = db.get()
         texts = process_documents([metadata['source'] for metadata in collection['metadatas']])
         print(f"Creating embeddings. May take some minutes...")
@@ -160,7 +165,8 @@ def main():
         print("Creating new vectorstore")
         texts = process_documents()
         print(f"Creating embeddings. May take some minutes...")
-        db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory, client_settings=CHROMA_SETTINGS, client=chroma_client)
+        db = Chroma.from_documents(texts, embeddings, persist_directory=persist_directory,
+                                   client_settings=CHROMA_SETTINGS, client=chroma_client)
     db.persist()
     db = None
 
