@@ -36,6 +36,7 @@ import chromadb
 #  Load environment variables
 persist_directory = os.environ.get('PERSIST_DIRECTORY')
 source_directory = os.environ.get('SOURCE_DIRECTORY', 'source_documents')
+# source_directory = os.environ.get('source_documents')
 embeddings_model_name = os.environ.get('EMBEDDINGS_MODEL_NAME')
 chunk_size = 500
 chunk_overlap = 50
@@ -80,7 +81,7 @@ LOADER_MAPPING = {
     # ".ppt": (UnstructuredPowerPointLoader, {}),
     # ".pptx": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
-    ".py": (PythonLoader, {}),
+    # ".py": (PythonLoader, {})
     # Add more mappings for other file extensions and loaders as needed
 }
 

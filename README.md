@@ -83,7 +83,8 @@ Run the following command to ingest all the data.
 conda info --envs
 conda env create -f environment.yml
 source activate privateGPT
-
+#On .bashrc add the directory you want to add:
+export SOURCE_DIRECTORY="/home/nikos/Desktop/ML"
 python3 ingest.py
 
 ```
