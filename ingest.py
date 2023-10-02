@@ -77,11 +77,11 @@ LOADER_MAPPING = {
     # ".html": (UnstructuredHTMLLoader, {}),
     ".md": (UnstructuredMarkdownLoader, {}),
     # ".odt": (UnstructuredODTLoader, {}),
-    ".pdf": (PyMuPDFLoader, {}),
+    # ".pdf": (PyMuPDFLoader, {}), # Error : IndexError: list index out of range
     # ".ppt": (UnstructuredPowerPointLoader, {}),
     # ".pptx": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
-    # ".py": (PythonLoader, {})
+    ".py": (PythonLoader, {})
     # Add more mappings for other file extensions and loaders as needed
 }
 
@@ -94,7 +94,6 @@ def load_single_document(file_path: str) -> List[Document]:
         return loader.load()
 
     raise ValueError(f"Unsupported file extension '{ext}'")
-
 
 def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Document]:
     """
@@ -119,7 +118,6 @@ def load_documents(source_dir: str, ignored_files: List[str] = []) -> List[Docum
 
     return results
 
-
 def process_documents(ignored_files: List[str] = []) -> List[Document]:
     """
     Load documents and split in chunks
@@ -134,7 +132,6 @@ def process_documents(ignored_files: List[str] = []) -> List[Document]:
     texts = text_splitter.split_documents(documents)
     print(f"Split into {len(texts)} chunks of text (max. {chunk_size} tokens each)")
     return texts
-
 
 def does_vectorstore_exist(persist_directory: str, embeddings: HuggingFaceEmbeddings) -> bool:
     """
