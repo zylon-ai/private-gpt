@@ -9,21 +9,19 @@ class ServerSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    default_llm: str
+    mode: str
 
 
-class LocalLLMSettings(BaseModel):
-    enabled: bool
+class LocalSettings(BaseModel):
     model_name: str
+    persist_dir: str
 
 
 class SagemakerSettings(BaseModel):
-    enabled: bool
     endpoint_name: str
 
 
 class OpenAISettings(BaseModel):
-    enabled: bool
     api_key: str
 
 
@@ -36,7 +34,7 @@ class Settings(BaseModel):
     server: ServerSettings
     ui: UISettings
     llm: LLMSettings
-    local_llm: LocalLLMSettings
+    local: LocalSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
 

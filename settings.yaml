@@ -7,16 +7,14 @@ ui:
   path: /
 
 llm:
-  default_llm: mock
+  mode: mock
 
-local_llm:
-  enabled: false
+local:
   model_name: llama-2-7b-chat.Q4_0.gguf
+  persist_dir: ./storage
 
 sagemaker:
-  enabled: false
   endpoint_name: huggingface-pytorch-tgi-inference-2023-09-25-19-53-32-140
 
 openai:
-  enabled: false
   api_key: ${OPENAI_API_KEY:}

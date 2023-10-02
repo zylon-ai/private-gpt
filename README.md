@@ -9,10 +9,10 @@ This project requires poetry: https://python-poetry.org/docs/
 Install the dependencies with.
 
 ```bash
-poetry install --with ui,local_llm
+poetry install --with ui,local
 ```
 
-The `ui` and `local_llm` are optional groups if you need that functionality.
+The `ui` and `local` are optional groups if you need that functionality.
 
 ### Settings
 
@@ -76,9 +76,9 @@ In your `settings-local.yaml` configure the model to use it:
 
 ```yaml
 llm:
-  default_llm: local_llm # Use the local model by default
+  default_llm: local # Use the local model by default
 
-local_llm:
+local:
   enabled: true
   model_name: mistral-7b-instruct-v0.1.Q4_0.gguf # The name of the model you downloaded
 ```
