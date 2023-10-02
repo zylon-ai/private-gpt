@@ -79,7 +79,13 @@ The supported extensions are:
 Run the following command to ingest all the data.
 
 ```shell
-python ingest.py
+
+conda info --envs
+conda env create -f environment.yml
+source activate privateGPT
+
+python3 ingest.py
+
 ```
 
 Output should look like this:
@@ -105,7 +111,7 @@ Note: during the ingest process no data leaves your local environment. You could
 In order to ask a question, run a command like:
 
 ```shell
-python privateGPT.py
+python3 privateGPT.py
 ```
 
 And wait for the script to require your input.

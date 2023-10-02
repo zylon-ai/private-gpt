@@ -1,0 +1,26 @@
+name: privateGPT
+channels:
+- defaults
+dependencies:
+- _libgcc_mutex=0.1=main
+- bzip2=1.0.8=h7b6447c_0
+- ca-certificates=2023.08.22=h06a4308_0
+- ld_impl_linux-64=2.38=h1181459_1
+- libffi=3.3=he6710b0_2
+- libgcc-ng=9.1.0=hdf63c60_0
+- libstdcxx-ng=9.1.0=hdf63c60_0
+- libuuid=1.0.3=h7f8727e_2
+- ncurses=6.3=h7f8727e_2
+- openssl=1.1.1w=h7f8727e_0
+- pip=23.2.1=py310h06a4308_0
+- python=3.10.4=h12debd9_0
+- readline=8.1.2=h7f8727e_1
+- setuptools=68.0.0=py310h06a4308_0
+- sqlite=3.38.5=hc218d9a_0
+- tk=8.6.12=h1ccaba5_0
+- tzdata=2023c=h04d1e81_0
+- wheel=0.38.4=py310h06a4308_0
+- xz=5.2.5=h7f8727e_1
+- zlib=1.2.12=h7f8727e_2
+prefix: ~/anaconda3/envs/privateGPT
+
