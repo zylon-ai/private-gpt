@@ -18,6 +18,7 @@ from langchain.document_loaders import (
     UnstructuredODTLoader,
     UnstructuredPowerPointLoader,
     UnstructuredWordDocumentLoader,
+    PythonLoader
 )
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -65,7 +66,7 @@ class MyElmLoader(UnstructuredEmailLoader):
 
 # Map file extensions to document loaders and their arguments
 LOADER_MAPPING = {
-    # ".csv": (CSVLoader, {}), # THROWS error does to None
+    # ".csv": (CSVLoader, {}), # THROWS error to None
     # ".docx": (Docx2txtLoader, {}),
     ".doc": (UnstructuredWordDocumentLoader, {}),
     # ".docx": (UnstructuredWordDocumentLoader, {}), # THROWS error
@@ -79,6 +80,7 @@ LOADER_MAPPING = {
     # ".ppt": (UnstructuredPowerPointLoader, {}),
     # ".pptx": (UnstructuredPowerPointLoader, {}),
     ".txt": (TextLoader, {"encoding": "utf8"}),
+     ".py": (PythonLoader, {}),
     # Add more mappings for other file extensions and loaders as needed
 }
 
