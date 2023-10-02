@@ -5,21 +5,21 @@ import gradio as gr  # type: ignore
 from fastapi import FastAPI
 from llama_index.llms import ChatMessage, MessageRole
 
-from private_gpt.completions.completions_service import CompletionsService
 from private_gpt.di import root_injector
 from private_gpt.ingest.ingest_service import IngestService
+from private_gpt.llm.llm_service import LLMService
 from private_gpt.query.query_service import QueryService
 from private_gpt.settings import settings
 
-completion_service = root_injector.get(CompletionsService)
+completion_service = root_injector.get(LLMService)
 query_service = root_injector.get(QueryService)
 ingest_service = root_injector.get(IngestService)
 
 
-async def _chat(message: str, history: list[list[str]], mode: str, *_) -> Any:
+async def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
     match mode:
         case "Query Documents":
-            response = query_service.stream_chat(message)
+            response = await query_service.stream_chat(message)
 
         case "LLM Chat":
             history_messages: list[ChatMessage] = list(
@@ -36,14 +36,16 @@ async def _chat(message: str, history: list[list[str]], mode: str, *_) -> Any:
                 )
             )
             # max 20 messages to try to avoid context overflow
-            response = await completion_service.stream_chat(message, history_messages[:20])
+            response = await completion_service.stream_chat(
+                message, history_messages[:20]
+            )
     full_response = ""
     async for response_delta in response:
         full_response += response_delta.delta or ""
         yield full_response
 
 
-def _list_ingested_files():
+def _list_ingested_files() -> str:
     files = ingest_service.list()
     return "\n".join(files)
 

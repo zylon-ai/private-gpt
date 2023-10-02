@@ -7,8 +7,8 @@ from fastapi import FastAPI
 from loguru import logger
 
 from private_gpt import settings
-from private_gpt.completions.routes import completions_router
 from private_gpt.ingest.routes import ingest_router
+from private_gpt.llm.routes import completions_router
 from private_gpt.webhook.webhook_router import webhook_router
 
 # Remove pre-configured logging handler

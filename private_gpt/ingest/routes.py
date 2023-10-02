@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, UploadFile
 
 from private_gpt.di import root_injector
@@ -7,7 +9,7 @@ ingest_router = APIRouter()
 
 
 @ingest_router.post("/ingest")
-async def ingest(file: UploadFile):
+async def ingest(file: UploadFile) -> dict[str, Any]:
     service = root_injector.get(IngestService)
     service.ingest(file.file)
     return {"filename": file.filename}
