@@ -23,3 +23,6 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# Chroma db
+/chroma/
