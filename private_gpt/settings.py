@@ -14,7 +14,7 @@ class LLMSettings(BaseModel):
 
 class LocalLLMSettings(BaseModel):
     enabled: bool
-    model_name: str
+    model_file: str
 
 
 class SagemakerSettings(BaseModel):

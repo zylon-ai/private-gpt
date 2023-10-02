@@ -20,6 +20,7 @@ pre-commit = "^2"
 pytest = "^7"
 pytest-cov = "^3"
 ruff = "^0"
+pytest-asyncio = "^0.21.1"
 types-pyyaml = "^6.0.12.12"
 
 # Dependencies for gradio UI
@@ -129,6 +130,7 @@ explicit_package_bases = true
 exclude = ["tests"]
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 addopts = [
     "--import-mode=importlib",
 ]

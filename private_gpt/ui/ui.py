@@ -12,7 +12,7 @@ from private_gpt.settings import settings
 completion_service = root_injector.get(CompletionsService)
 
 
-def _chat(message: str, history: list[list[str]]) -> Any:
+async def _chat(message: str, history: list[list[str]]) -> Any:
     history_messages: list[ChatMessage] = list(
         itertools.chain(
             *[
@@ -27,9 +27,9 @@ def _chat(message: str, history: list[list[str]]) -> Any:
     new_message = ChatMessage(content=message, role=MessageRole.USER)
     # max 20 messages to try to avoid context overflow
     messages = [*history_messages[:20], new_message]
-    response = completion_service.stream_chat(messages)
+    response = await completion_service.stream_chat(messages)
     full_response = ""
-    for response_delta in response:
+    async for response_delta in response:
         full_response += response_delta.delta or ""
         yield full_response
 

@@ -1,11 +1,33 @@
-from collections.abc import Sequence
+import asyncio
+from collections.abc import AsyncGenerator, Sequence
 
 from injector import inject, singleton
-from llama_index.llms import CompletionResponseGen, MockLLM, OpenAI
-from llama_index.llms.base import LLM, ChatMessage, ChatResponseGen
+from llama_index.llms import MockLLM, OpenAI
+from llama_index.llms.base import (
+    LLM,
+    ChatMessage,
+    ChatResponseAsyncGen,
+    CompletionResponseAsyncGen,
+)
 
 from private_gpt.constants import MODELS_PATH
 from private_gpt.settings import settings
+from private_gpt.typing import T
+
+
+async def _yielding_if_cpu_bound(
+    model_name: str, source_generator: AsyncGenerator[T, None]
+) -> AsyncGenerator[T, None]:
+    """Yield the main loop for CPU bound tasks, that is, the model is running locally.
+
+    When running models locally the main loop (like fastapi) will block
+    if we don't yield control at some point making it "buffer" the whole stream.
+    """
+    cpu_bound = model_name in ("local_llm", "mock")
+    async for item in source_generator:
+        yield item
+        if cpu_bound:
+            await asyncio.sleep(0)
 
 
 @singleton
@@ -26,11 +48,12 @@ class CompletionsService:
             )
 
             self._models["local_llm"] = LlamaCPP(
-                model_path=str(MODELS_PATH / settings.local_llm.model_name),
+                model_path=str(MODELS_PATH / settings.local_llm.model_file),
                 temperature=0.1,
                 # llama2 has a context window of 4096 tokens,
                 # but we set it lower to allow for some wiggle room
                 context_window=3900,
+                max_new_tokens=500,
                 generate_kwargs={},
                 # set to at least 1 to use GPU
                 model_kwargs={"n_gpu_layers": 1},
@@ -51,19 +74,21 @@ class CompletionsService:
         if settings.openai.enabled:
             self._models["openai"] = OpenAI(api_key=settings.openai.api_key)
 
-    def stream_complete(
+    async def stream_complete(
         self, prompt: str, *, model_name: str | None = None
-    ) -> CompletionResponseGen:
+    ) -> CompletionResponseAsyncGen:
         if model_name is None:
             model_name = settings.llm.default_llm
 
         model = self._models[model_name]
-        return model.stream_complete(prompt)
+        stream = await model.astream_complete(prompt)
+        return _yielding_if_cpu_bound(model_name, stream)
 
-    def stream_chat(
+    async def stream_chat(
         self, messages: Sequence[ChatMessage], *, model_name: str | None = None
-    ) -> ChatResponseGen:
+    ) -> ChatResponseAsyncGen:
         if model_name is None:
             model_name = settings.llm.default_llm
         model = self._models[model_name]
-        return model.stream_chat(messages)
+        stream_task = await asyncio.to_thread(model.astream_chat, messages)
+        return _yielding_if_cpu_bound(model_name, await stream_task)

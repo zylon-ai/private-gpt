@@ -11,7 +11,7 @@ llm:
 
 local_llm:
   enabled: false
-  model_name: llama-2-7b-chat.Q4_0.gguf
+  model_file: llama-2-7b-chat.Q4_0.gguf
 
 sagemaker:
   enabled: false
