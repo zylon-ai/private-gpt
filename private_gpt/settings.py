@@ -13,7 +13,7 @@ class LLMSettings(BaseModel):
 
 
 class LocalSettings(BaseModel):
-    model_name: str
+    model_file: str
     persist_dir: str
 
 

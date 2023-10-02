@@ -16,10 +16,11 @@ query_service = root_injector.get(QueryService)
 ingest_service = root_injector.get(IngestService)
 
 
-def _chat(message: str, history: list[list[str]], mode: str, *_) -> Any:
+async def _chat(message: str, history: list[list[str]], mode: str, *_) -> Any:
     match mode:
         case "Query Documents":
             response = query_service.stream_chat(message)
+
         case "LLM Chat":
             history_messages: list[ChatMessage] = list(
                 itertools.chain(
@@ -35,9 +36,9 @@ def _chat(message: str, history: list[list[str]], mode: str, *_) -> Any:
                 )
             )
             # max 20 messages to try to avoid context overflow
-            response = completion_service.stream_chat(message, history_messages[:20])
+            response = await completion_service.stream_chat(message, history_messages[:20])
     full_response = ""
-    for response_delta in response:
+    async for response_delta in response:
         full_response += response_delta.delta or ""
         yield full_response
 
