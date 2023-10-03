@@ -10,8 +10,6 @@
     # Read environment variables from a .env file 
     python-dotenv==1.0.0
 
-
-
 # Work with documents, data, for LLMs (following packages are used for langchain.document_loaders' / unstructured)
     # text and image embeddings for langchain 
     # https://python.langchain.com/docs/integrations/text_embedding/sentence_transformers
@@ -38,22 +36,3 @@
 
     # used by UnstructuredWordDocumentLoader
     python-docx==0.8.11
-
-#tabulate==0.9.0
-#already part of unstructured
-
-#extract-msg==0.45.0
-#used for extraction of key email data (from, to, cc, date, subject, body) and the email’s attachments.
-#can be used with langchain.document_loaders' OutlookMessageLoader; though the one in use now is UnstructuredEmailLoader, so not necessary
-
-#numpy==1.26.0
-# already a dependency for chromadb, langchain, llama-cpp-python, sentence-transformers
-
-#typing-extensions==4.6.0
-# already a dependency for chromadb, langchain, llama-cpp-python, sentence-transformers
-
-#tqdm==4.66.1
-# already a dependency for chromadb, gpt4all, sentence-transformers, unstructured
-
-#urllib3==2.0.4
-# already a dependency for chromadb, gpt4all, langchain, sentence-transformers, unstructured
