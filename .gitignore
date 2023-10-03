@@ -25,4 +25,8 @@ __pycache__/
 .DS_Store
 
 # Chroma db
-/chroma/
+/local_data/
+/chroma_db/
+
+# Local node storage
+/storage/

@@ -6,7 +6,7 @@ from llama_index.llms.base import (
 )
 
 from private_gpt.llm.llm_service import LLMService
-from private_gpt.llm.vector_store_service import VectorStoreService
+from private_gpt.vector_store.vector_store_service import VectorStoreService
 
 
 @singleton
