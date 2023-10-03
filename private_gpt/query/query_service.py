@@ -37,7 +37,8 @@ class QueryService:
         message = (
             "Here is some context:\n"
             + context
-            + "\n\n Using only the previous context, answer this question: "
+            + "\n\n Using only the previous context, answer the following question. "
+            "Just answer directly without explaining how you got to it. Here is the question: "
             + query
         )
         return await self.llm_service.stream_chat(message)
