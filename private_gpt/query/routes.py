@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from starlette.responses import StreamingResponse
+from fastapi.responses import StreamingResponse
 
 from private_gpt.di import root_injector
 from private_gpt.open_ai.openai_models import to_openai_sse_stream
