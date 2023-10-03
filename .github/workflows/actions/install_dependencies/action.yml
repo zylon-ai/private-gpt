@@ -24,6 +24,16 @@ runs:
       with:
         python-version: ${{ inputs.python_version }}
         cache: "poetry"
+    - name: Install llama-cpp
+      shell: bash
+      run: |
+        sudo apt update && apt install -y \
+          libopenblas-dev\
+          ninja-build\
+          build-essential\
+          pkg-config\
+          wget
     - name: Install Dependencies
       run: poetry install --with local,ui --no-root
       shell: bash
+
