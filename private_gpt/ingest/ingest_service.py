@@ -53,12 +53,11 @@ class IngestService:
         return file.name
 
     def list(self) -> set[str]:
-        file_names = []
         try:
             docstore = self.storage_context.docstore
             file_names = {
                 ref_doc.metadata["file_name"] for ref_doc in docstore.docs.values()
             }
         except ValueError:
-            pass
+            file_names = set()
         return file_names
