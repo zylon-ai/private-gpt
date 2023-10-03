@@ -7,12 +7,11 @@ from llama_index import (
     SimpleDirectoryReader,
     StorageContext,
     VectorStoreIndex,
-    load_index_from_storage,
 )
 from llama_index.node_parser import SentenceWindowNodeParser
 
-from private_gpt.node_store.node_store_service import NodeStoreService
 from private_gpt.llm.llm_service import LLMService
+from private_gpt.node_store.node_store_service import NodeStoreService
 from private_gpt.vector_store.vector_store_service import VectorStoreService
 
 

@@ -1,12 +1,16 @@
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from injector import inject, singleton
-from llama_index import ServiceContext, VectorStoreIndex, StorageContext
-from llama_index.schema import NodeWithScore, RelatedNodeInfo
+from llama_index import ServiceContext, StorageContext, VectorStoreIndex
+from llama_index.schema import NodeWithScore
 
 from private_gpt.llm.llm_service import LLMService
 from private_gpt.node_store.node_store_service import NodeStoreService
 from private_gpt.vector_store.vector_store_service import VectorStoreService
+
+if TYPE_CHECKING:
+    from llama_index.schema import RelatedNodeInfo
 
 
 @dataclass
