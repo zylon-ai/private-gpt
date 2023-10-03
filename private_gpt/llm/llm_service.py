@@ -80,6 +80,6 @@ class LLMService:
     ) -> ChatResponseAsyncGen:
         if history is None:
             history = []
-        all_messages = [ChatMessage(content=message), *history]
+        all_messages = [*history, ChatMessage(content=message)]
         stream = await self.llm.astream_chat(all_messages)
         return _yielding_if_cpu_bound(stream)
