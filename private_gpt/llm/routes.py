@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -9,6 +11,7 @@ from private_gpt.open_ai.openai_models import to_openai_sse_stream
 completions_router = APIRouter()
 
 
+@dataclass
 class CompletionsBody(BaseModel):
     prompt: str
 
