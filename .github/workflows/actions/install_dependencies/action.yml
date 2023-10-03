@@ -15,8 +15,6 @@ runs:
   steps:
     - name: cuda-toolkit
       uses: Jimver/cuda-toolkit@v0.2.11
-      with:
-        cuda: 9.2
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
