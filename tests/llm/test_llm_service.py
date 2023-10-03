@@ -1,6 +1,4 @@
-import openai.openai_response
 from fastapi.testclient import TestClient
-from openai.api_requestor import parse_stream
 
 from private_gpt.llm.llm_service import LLMService
 from tests.fixtures.mock_injector import MockInjector
