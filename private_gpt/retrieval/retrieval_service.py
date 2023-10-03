@@ -36,7 +36,7 @@ class RetrievalService:
             service_context=self.query_service_context,
             show_progress=True,
         )
-        nodes = index.as_retriever(similarity_top_k=limit).retrieve(query)
+        nodes = await index.as_retriever(similarity_top_k=limit).aretrieve(query)
         nodes.sort(key=lambda n: n.score or 0.0, reverse=True)
         retrieved_nodes = []
         for node in nodes:
