@@ -13,6 +13,10 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: cuda-toolkit
+      uses: Jimver/cuda-toolkit@v0.2.11
+      with:
+        cuda: 9.2
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
@@ -24,16 +28,7 @@ runs:
       with:
         python-version: ${{ inputs.python_version }}
         cache: "poetry"
-    - name: Install llama-cpp
-      shell: bash
-      run: |
-        sudo apt update && sudo apt install -y \
-          libopenblas-dev\
-          ninja-build\
-          build-essential\
-          pkg-config\
-          wget
     - name: Install Dependencies
-      run: poetry install --with local,ui --no-root
+      run: poetry install --with ui --no-root
       shell: bash
 
