@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from injector import inject, singleton
 from llama_index import ServiceContext, VectorStoreIndex
-from llama_index.schema import NodeWithScore
 
 from private_gpt.llm.llm_service import LLMService
 from private_gpt.llm.vector_store_service import VectorStoreService
@@ -15,10 +14,6 @@ class RetrievedNode:
     text: str
     previous_texts: list[str] | None
     next_texts: list[str] | None
-
-
-def _sort_nodes(node: NodeWithScore) -> float:
-    return node.score
 
 
 @singleton
@@ -42,13 +37,12 @@ class RetrievalService:
             show_progress=True,
         )
         nodes = index.as_retriever(similarity_top_k=limit).retrieve(query)
-        nodes.sort(key=_sort_nodes, reverse=True)
+        nodes.sort(key=lambda n: n.score or 0.0, reverse=True)
         retrieved_nodes = []
-        index.docstore.get_nodes()
         for node in nodes:
             retrieved_nodes.append(
                 RetrievedNode(
-                    score=node.score,
+                    score=node.score or 0.0,
                     name=node.metadata["file_name"],
                     text=node.get_content(),
                     previous_texts=None,
