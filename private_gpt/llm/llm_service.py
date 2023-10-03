@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import AsyncGenerator, Sequence
 
 from injector import inject, singleton
+from llama_index.llms import MockLLM
 from llama_index.llms.base import (
     LLM,
     ChatMessage,
@@ -67,6 +68,8 @@ class LLMService:
 
                 openai_settings = settings.openai.api_key
                 self.llm = OpenAI(api_key=openai_settings)
+            case "mock":
+                self.llm = MockLLM()
 
     async def stream_complete(self, message: str) -> CompletionResponseAsyncGen:
         stream = await self.llm.astream_complete(message)

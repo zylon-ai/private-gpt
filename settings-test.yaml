@@ -1,2 +1,6 @@
 server:
   env_name: test
+
+
+llm:
+  mode: mock
