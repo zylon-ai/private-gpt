@@ -27,7 +27,7 @@ runs:
     - name: Install llama-cpp
       shell: bash
       run: |
-        sudo apt update && apt install -y \
+        sudo apt update && sudo apt install -y \
           libopenblas-dev\
           ninja-build\
           build-essential\
