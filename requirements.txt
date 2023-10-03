@@ -17,7 +17,7 @@
     
     # pdf
     # https://api.python.langchain.com/en/latest/document_loaders/langchain.document_loaders.pdf.PyPDFLoader.html
-    PyMuPDF==1.23.1
+    PyMuPDF==1.23.3
 
     # designed to help preprocess structure unstructured text documents for use in downstream machine learning tasks.
     # https://github.com/Unstructured-IO/unstructured
