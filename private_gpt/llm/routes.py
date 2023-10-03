@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from private_gpt.di import root_injector
 from private_gpt.llm.llm_service import LLMService
