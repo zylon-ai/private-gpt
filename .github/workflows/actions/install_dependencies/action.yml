@@ -13,6 +13,10 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Free Disk Space (Ubuntu)
+      uses: jlumbroso/free-disk-space@main
+      with:
+        tool-cache: false
     - name: cuda-toolkit
       uses: Jimver/cuda-toolkit@v0.2.11
     - name: Install Poetry
