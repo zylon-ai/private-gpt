@@ -9,7 +9,7 @@ query_router = APIRouter()
 
 
 @query_router.get("/query")
-def basic_completions(query: str) -> StreamingResponse:
+def contextualized_query(query: str) -> StreamingResponse:
     service = root_injector.get(QueryService)
     stream = service.stream_complete(query)
     return StreamingResponse(
