@@ -8,8 +8,8 @@ from loguru import logger
 
 from private_gpt import settings
 from private_gpt.ingest.routes import ingest_router
-from private_gpt.query.routes import query_router
 from private_gpt.llm.routes import completions_router
+from private_gpt.query.routes import query_router
 from private_gpt.retrieval.routes import retrieval_router
 from private_gpt.webhook.webhook_router import webhook_router
 

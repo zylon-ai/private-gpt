@@ -1,18 +1,18 @@
+from typing import TYPE_CHECKING
+
 from injector import inject, singleton
 from llama_index import ServiceContext, VectorStoreIndex
-from llama_index.chat_engine import ContextChatEngine
 from llama_index.chat_engine.types import ChatMode
 from llama_index.llms.base import (
     ChatMessage,
-    ChatResponseGen,
-    CompletionResponseGen,
-    MessageRole,
 )
-from llama_index.query_engine import RetrieverQueryEngine
 from llama_index.types import TokenGen
 
 from private_gpt.llm.llm_service import LLMService
 from private_gpt.vector_store.vector_store_service import VectorStoreService
+
+if TYPE_CHECKING:
+    from llama_index.response.schema import StreamingResponse
 
 
 @singleton
@@ -34,7 +34,8 @@ class QueryService:
 
     def stream_complete(self, prompt: str) -> TokenGen:
         query_engine = self.index.as_query_engine(streaming=True)
-        return query_engine.query(prompt).response_gen
+        response: StreamingResponse = query_engine.query(prompt)  # type: ignore
+        return response.response_gen
 
     def stream_chat(
         self, query: str, history: list[ChatMessage] | None = None

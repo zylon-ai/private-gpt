@@ -48,12 +48,12 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
 
     match mode:
         case "Query Documents":
-            response_stream = query_service.stream_chat(message, build_history())
-            yield from yield_deltas(response_stream)
+            query_stream = query_service.stream_chat(message, build_history())
+            yield from yield_deltas(query_stream)
 
         case "LLM Chat":
-            response_stream = completion_service.stream_chat(message, build_history())
-            yield from yield_deltas(response_stream)
+            llm_stream = completion_service.stream_chat(message, build_history())
+            yield from yield_deltas(llm_stream)
 
         case "Query Chunks":
             response = retrieval_service.retrieve_relevant_nodes(
