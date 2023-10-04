@@ -8,6 +8,7 @@ from loguru import logger
 
 from private_gpt import settings
 from private_gpt.ingest.routes import ingest_router
+from private_gpt.query.routes import query_router
 from private_gpt.llm.routes import completions_router
 from private_gpt.retrieval.routes import retrieval_router
 from private_gpt.webhook.webhook_router import webhook_router
@@ -39,6 +40,7 @@ def health() -> Any:
 
 
 app.include_router(ingest_router)
+app.include_router(query_router)
 app.include_router(retrieval_router)
 app.include_router(completions_router)
 app.include_router(webhook_router)

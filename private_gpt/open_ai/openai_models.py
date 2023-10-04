@@ -67,17 +67,12 @@ class OpenAICompletion:
         return json.dumps(dataclasses.asdict(chunk))
 
 
-async def to_openai_sse_stream_async(
-    response_generator: AsyncIterator[CompletionResponse | ChatResponse],
-) -> AsyncIterator[str]:
-    async for response in response_generator:
-        yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
-    yield "data: [DONE]\n\n"
-
-
-async def to_openai_sse_stream(
-    response_generator: Iterator[CompletionResponse | ChatResponse],
+def to_openai_sse_stream(
+    response_generator: Iterator[str | CompletionResponse],
 ) -> AsyncIterator[str]:
     for response in response_generator:
-        yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
+        if isinstance(response, CompletionResponse):
+            yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
+        else:
+            yield f"data: {OpenAICompletion.simple_json_delta(text=response)}\n\n"
     yield "data: [DONE]\n\n"
