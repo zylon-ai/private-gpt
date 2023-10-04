@@ -45,7 +45,7 @@ class RetrievalService:
 
     def _get_sibling_nodes_text(
         self, node_with_score: NodeWithScore, related_number: int, forward: bool = True
-    ):
+    ) -> list[str]:
         explored_nodes_texts = []
         current_node = node_with_score.node
         for _ in range(related_number):

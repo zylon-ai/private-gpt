@@ -1,4 +1,5 @@
 import itertools
+import json
 from typing import Any
 
 import gradio as gr  # type: ignore
@@ -9,16 +10,20 @@ from private_gpt.di import root_injector
 from private_gpt.ingest.ingest_service import IngestService
 from private_gpt.llm.llm_service import LLMService
 from private_gpt.query.query_service import QueryService
+from private_gpt.retrieval.retrieval_service import RetrievalService
 from private_gpt.settings import settings
 
 completion_service = root_injector.get(LLMService)
 query_service = root_injector.get(QueryService)
 ingest_service = root_injector.get(IngestService)
+retrieval_service = root_injector.get(RetrievalService)
 
 
 async def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
+    stream_response = False
     match mode:
         case "Query Documents":
+            stream_response = True
             response = await query_service.stream_chat(message)
 
         case "LLM Chat":
@@ -36,13 +41,22 @@ async def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> A
                 )
             )
             # max 20 messages to try to avoid context overflow
+            stream_response = True
             response = await completion_service.stream_chat(
                 message, history_messages[:20]
             )
-    full_response = ""
-    async for response_delta in response:
-        full_response += response_delta.delta or ""
-        yield full_response
+
+        case "Query Chunks":
+            stream_response = False
+            response = await retrieval_service.retrieve_relevant_nodes(message, 2, 1)
+
+    if stream_response:
+        full_response = ""
+        async for response_delta in response:
+            full_response += response_delta.delta or ""
+            yield full_response
+    else:
+        yield "```" + json.dumps([node.__dict__ for node in response], indent=2)
 
 
 def _list_ingested_files() -> str:
@@ -67,7 +81,7 @@ with gr.Blocks() as blocks:
 
     # Action dropdown
     dropdown = gr.components.Dropdown(
-        choices=["Query Documents", "LLM Chat"],
+        choices=["Query Documents", "LLM Chat", "Query Chunks"],
         label="Mode",
         value="Query Documents",
         render=False,
