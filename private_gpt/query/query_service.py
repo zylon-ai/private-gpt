@@ -41,7 +41,7 @@ class QueryService:
         self, query: str, history: list[ChatMessage] | None = None
     ) -> TokenGen:
         context_chat_engine = self.index.as_chat_engine(
-            chat_mode=ChatMode.BEST, streaming=True
+            chat_mode=ChatMode.CONDENSE_QUESTION, streaming=True
         )
         result = context_chat_engine.stream_chat(query, history)
         return result.response_gen
