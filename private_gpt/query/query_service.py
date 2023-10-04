@@ -1,8 +1,10 @@
 from injector import inject, singleton
 from llama_index import ServiceContext, VectorStoreIndex
 from llama_index.llms.base import (
-    ChatResponseAsyncGen,
-    CompletionResponseAsyncGen,
+    ChatMessage,
+    ChatResponseGen,
+    CompletionResponseGen,
+    MessageRole,
 )
 
 from private_gpt.llm.llm_service import LLMService
@@ -21,10 +23,12 @@ class QueryService:
             llm=llm_service.llm, embed_model="local"
         )
 
-    async def stream_complete(self, prompt: str) -> CompletionResponseAsyncGen:
-        return await self.llm_service.stream_complete(prompt)
+    def stream_complete(self, prompt: str) -> CompletionResponseGen:
+        return self.llm_service.stream_complete(prompt)
 
-    async def stream_chat(self, query: str) -> ChatResponseAsyncGen:
+    def stream_chat(
+        self, query: str, history: list[ChatMessage] | None = None
+    ) -> ChatResponseGen:
         index = VectorStoreIndex.from_vector_store(
             self.vector_store_service.vector_store,
             service_context=self.query_service_context,
@@ -33,12 +37,22 @@ class QueryService:
         nodes = index.as_retriever().retrieve(query)
         nodes_content = [node.get_content() for node in nodes]
         context = "\n\n".join(nodes_content)
-        print(context)
-        message = (
-            "Here is some context:\n"
-            + context
-            + "\n\n Using only the previous context, answer the following question. "
-            "Just answer directly without explaining how you got to it. Here is the question: "
-            + query
+
+        system_message_content = "\n".join(
+            [
+                "Answer questions using the information below when relevant:",
+                "--------",
+                context,
+                "--------",
+            ]
         )
-        return await self.llm_service.stream_chat(message)
+
+        system_message = ChatMessage(
+            content=system_message_content, role=MessageRole.SYSTEM
+        )
+
+        if history is None:
+            history = []
+        history = [system_message, *history]
+
+        return self.llm_service.stream_chat(query, history)

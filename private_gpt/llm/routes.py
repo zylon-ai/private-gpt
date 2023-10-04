@@ -17,18 +17,18 @@ class CompletionsBody(BaseModel):
 
 
 @completions_router.post("/completions")
-async def completions(body: CompletionsBody) -> StreamingResponse:
-    return await _run_llm(body.prompt)
+def completions(body: CompletionsBody) -> StreamingResponse:
+    return _run_llm(body.prompt)
 
 
 @completions_router.get("/completions")
-async def basic_completions(prompt: str) -> StreamingResponse:
-    return await _run_llm(prompt)
+def basic_completions(prompt: str) -> StreamingResponse:
+    return _run_llm(prompt)
 
 
-async def _run_llm(prompt: str) -> StreamingResponse:
+def _run_llm(prompt: str) -> StreamingResponse:
     service = root_injector.get(LLMService)
-    stream = await service.stream_complete(prompt)
+    stream = service.stream_complete(prompt)
     return StreamingResponse(
         to_openai_sse_stream(stream), media_type="text/event-stream"
     )

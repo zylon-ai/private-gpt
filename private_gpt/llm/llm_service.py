@@ -6,8 +6,8 @@ from llama_index.llms import MockLLM
 from llama_index.llms.base import (
     LLM,
     ChatMessage,
-    ChatResponseAsyncGen,
-    CompletionResponseAsyncGen,
+    ChatResponseGen,
+    CompletionResponseGen,
 )
 from llama_index.llms.llama_utils import completion_to_prompt, messages_to_prompt
 from llama_index.vector_stores.types import VectorStore
@@ -57,6 +57,7 @@ class LLMService:
                     completion_to_prompt=completion_to_prompt,
                     verbose=True,
                 )
+
             case "sagemaker":
                 from private_gpt.llm.custom.sagemaker import SagemakerLLM
 
@@ -71,15 +72,15 @@ class LLMService:
             case "mock":
                 self.llm = MockLLM()
 
-    async def stream_complete(self, message: str) -> CompletionResponseAsyncGen:
-        stream = await self.llm.astream_complete(message)
-        return _yielding_if_cpu_bound(stream)
+    def stream_complete(self, message: str) -> CompletionResponseGen:
+        stream = self.llm.stream_complete(message)
+        return stream
 
-    async def stream_chat(
+    def stream_chat(
         self, message: str, history: Sequence[ChatMessage] | None = None
-    ) -> ChatResponseAsyncGen:
+    ) -> ChatResponseGen:
         if history is None:
             history = []
         all_messages = [*history, ChatMessage(content=message)]
-        stream = await self.llm.astream_chat(all_messages)
-        return _yielding_if_cpu_bound(stream)
+        stream = self.llm.stream_chat(all_messages)
+        return stream

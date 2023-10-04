@@ -4,23 +4,23 @@ from private_gpt.llm.llm_service import LLMService
 from tests.fixtures.mock_injector import MockInjector
 
 
-async def test_llm_service_produces_a_stream(injector: MockInjector) -> None:
+def test_llm_service_produces_a_stream(injector: MockInjector) -> None:
     service = injector.get(LLMService)
-    stream = await service.stream_complete("test")
-    text = "".join([message.delta or "" async for message in stream])
+    stream = service.stream_complete("test")
+    text = "".join([message.delta or "" for message in stream])
     assert text == "test"
 
 
-async def test_llm_service_chat_produces_a_stream(
+def test_llm_service_chat_produces_a_stream(
     injector: MockInjector,
 ) -> None:
     service = injector.get(LLMService)
-    stream = await service.stream_chat("test")
-    response = "".join([response.delta or "" async for response in stream])
+    stream = service.stream_chat("test")
+    response = "".join([response.delta or "" for response in stream])
     assert response == "user: test\nassistant: "
 
 
-async def test_llm_endpoint_produces_sse_stream(test_client: TestClient) -> None:
+def test_llm_endpoint_produces_sse_stream(test_client: TestClient) -> None:
     response = test_client.get("/completions?prompt=test")
 
     raw_events = response.text.split("\n\n")

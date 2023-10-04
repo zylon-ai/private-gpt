@@ -2,7 +2,7 @@ import dataclasses
 import json
 import time
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 
 from llama_index.llms import ChatResponse, CompletionResponse
@@ -67,9 +67,17 @@ class OpenAICompletion:
         return json.dumps(dataclasses.asdict(chunk))
 
 
-async def to_openai_sse_stream(
+async def to_openai_sse_stream_async(
     response_generator: AsyncIterator[CompletionResponse | ChatResponse],
 ) -> AsyncIterator[str]:
     async for response in response_generator:
+        yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
+    yield "data: [DONE]\n\n"
+
+
+async def to_openai_sse_stream(
+    response_generator: Iterator[CompletionResponse | ChatResponse],
+) -> AsyncIterator[str]:
+    for response in response_generator:
         yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
     yield "data: [DONE]\n\n"

@@ -7,4 +7,4 @@ webhook_router = APIRouter()
 
 @webhook_router.post("/webhook")
 def register_webhook() -> Any:
-    return {"message": "TODO: Webhook registered"}
+    return {"message": "TODO: Not implemented yet"}

@@ -1,10 +1,11 @@
 import itertools
 import json
+from collections.abc import Iterable
 from typing import Any
 
 import gradio as gr  # type: ignore
 from fastapi import FastAPI
-from llama_index.llms import ChatMessage, MessageRole
+from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 
 from private_gpt.di import root_injector
 from private_gpt.ingest.ingest_service import IngestService
@@ -19,44 +20,46 @@ ingest_service = root_injector.get(IngestService)
 retrieval_service = root_injector.get(RetrievalService)
 
 
-async def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
-    stream_response = False
+def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
+    def yield_deltas(stream: Iterable[ChatResponse | str]) -> Iterable[str]:
+        full_response: str = ""
+        for delta in stream:
+            if isinstance(delta, str):
+                full_response += str(delta)
+            elif isinstance(delta, ChatResponse):
+                full_response += delta.delta or ""
+            yield full_response
+
+    def build_history() -> list[ChatMessage]:
+        history_messages: list[ChatMessage] = list(
+            itertools.chain(
+                *[
+                    [
+                        ChatMessage(content=interaction[0], role=MessageRole.USER),
+                        ChatMessage(content=interaction[1], role=MessageRole.ASSISTANT),
+                    ]
+                    for interaction in history
+                ]
+            )
+        )
+
+        # max 20 messages to try to avoid context overflow
+        return history_messages[:20]
+
     match mode:
         case "Query Documents":
-            stream_response = True
-            response = await query_service.stream_chat(message)
+            response_stream = query_service.stream_chat(message, build_history())
+            yield from yield_deltas(response_stream)
 
         case "LLM Chat":
-            history_messages: list[ChatMessage] = list(
-                itertools.chain(
-                    *[
-                        [
-                            ChatMessage(content=interaction[0], role=MessageRole.USER),
-                            ChatMessage(
-                                content=interaction[1], role=MessageRole.ASSISTANT
-                            ),
-                        ]
-                        for interaction in history
-                    ]
-                )
-            )
-            # max 20 messages to try to avoid context overflow
-            stream_response = True
-            response = await completion_service.stream_chat(
-                message, history_messages[:20]
-            )
+            response_stream = completion_service.stream_chat(message, build_history())
+            yield from yield_deltas(response_stream)
 
         case "Query Chunks":
-            stream_response = False
-            response = await retrieval_service.retrieve_relevant_nodes(message, 2, 1)
-
-    if stream_response:
-        full_response = ""
-        async for response_delta in response:
-            full_response += response_delta.delta or ""
-            yield full_response
-    else:
-        yield "```" + json.dumps([node.__dict__ for node in response], indent=2)
+            response = retrieval_service.retrieve_relevant_nodes(
+                message, 2, 1
+            ).__iter__()
+            yield "```" + json.dumps([node.__dict__ for node in response], indent=2)
 
 
 def _list_ingested_files() -> str:

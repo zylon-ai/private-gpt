@@ -64,7 +64,7 @@ class RetrievalService:
 
         return explored_nodes_texts
 
-    async def retrieve_relevant_nodes(
+    def retrieve_relevant_nodes(
         self, query: str, limit: int = 10, context_size: int = 0
     ) -> list[RetrievedNode]:
         index = VectorStoreIndex.from_vector_store(
@@ -73,7 +73,7 @@ class RetrievalService:
             service_context=self.query_service_context,
             show_progress=True,
         )
-        nodes = await index.as_retriever(similarity_top_k=limit).aretrieve(query)
+        nodes = index.as_retriever(similarity_top_k=limit).retrieve(query)
         nodes.sort(key=lambda n: n.score or 0.0, reverse=True)
         retrieved_nodes = []
         for node in nodes:

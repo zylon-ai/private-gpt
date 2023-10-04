@@ -9,9 +9,9 @@ query_router = APIRouter()
 
 
 @query_router.get("/query")
-async def basic_completions(query: str) -> StreamingResponse:
+def basic_completions(query: str) -> StreamingResponse:
     service = root_injector.get(QueryService)
-    stream = await service.stream_complete(query)
+    stream = service.stream_complete(query)
     return StreamingResponse(
         to_openai_sse_stream(stream), media_type="text/event-stream"
     )

@@ -10,6 +10,7 @@ from llama_index import (
 )
 from llama_index.node_parser import SentenceWindowNodeParser
 
+from private_gpt.constants import LOCAL_DATA_PATH
 from private_gpt.llm.llm_service import LLMService
 from private_gpt.node_store.node_store_service import NodeStoreService
 from private_gpt.vector_store.vector_store_service import VectorStoreService
@@ -49,7 +50,7 @@ class IngestService:
             show_progress=True,
         )
         # persist the index and nodes
-        self.storage_context.persist()
+        self.storage_context.persist(persist_dir=LOCAL_DATA_PATH)
         return file.name
 
     def list(self) -> set[str]:

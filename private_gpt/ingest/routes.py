@@ -9,7 +9,7 @@ ingest_router = APIRouter()
 
 
 @ingest_router.post("/ingest")
-async def ingest(file: UploadFile) -> dict[str, Any]:
+def ingest(file: UploadFile) -> dict[str, Any]:
     service = root_injector.get(IngestService)
     service.ingest(file.file)
     return {"filename": file.filename}

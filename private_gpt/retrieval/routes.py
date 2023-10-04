@@ -19,9 +19,7 @@ class RetrieveBody(BaseModel):
 
 
 @retrieval_router.post("/retrieve")
-async def retrieve(body: RetrieveBody) -> JSONResponse:
+def retrieve(body: RetrieveBody) -> JSONResponse:
     service = root_injector.get(RetrievalService)
-    results = await service.retrieve_relevant_nodes(
-        body.query, body.limit, body.context_size
-    )
+    results = service.retrieve_relevant_nodes(body.query, body.limit, body.context_size)
     return JSONResponse(content=jsonable_encoder(results))
