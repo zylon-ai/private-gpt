@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from private_gpt.util.settings_loader import load_active_profiles
+from private_gpt.settings.settings_loader import load_active_profiles
 
 
 class ServerSettings(BaseModel):

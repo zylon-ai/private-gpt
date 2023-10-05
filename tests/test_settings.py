@@ -1,4 +1,4 @@
-from private_gpt.settings import settings
+from private_gpt.settings.settings import settings
 
 
 def test_settings_are_loaded_and_merged() -> None:

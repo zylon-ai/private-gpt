@@ -7,7 +7,7 @@ from typing import Any
 from pydantic.v1.utils import deep_update, unique_list
 
 from private_gpt.constants import PROJECT_ROOT_PATH
-from private_gpt.util.yaml import load_yaml_with_envvars
+from private_gpt.settings.yaml import load_yaml_with_envvars
 
 _settings_folder = os.environ.get("PGPT_SETTINGS_FOLDER", PROJECT_ROOT_PATH)
 

@@ -24,7 +24,7 @@ class OpenAIMessage:
     """
 
     role: str
-    content: str
+    content: str | None
 
 
 @dataclass(kw_only=True)
@@ -49,15 +49,29 @@ class OpenAICompletion:
     choices: list[OpenAIChoice]
 
     @classmethod
-    def from_response(
-        cls,
-        text: str | None,
-        finish_reason: str | None = None,
-        chunked: bool = False,
+    def from_text(
+        cls, text: str | None, finish_reason: str | None = None
     ) -> "OpenAICompletion":
         return OpenAICompletion(
             id=str(uuid.uuid4()),
-            object="chat.completion.chunk" if chunked else "chat.completion",
+            object="chat.completion",
+            created=int(time.time()),
+            model="private-gpt",
+            choices=[
+                OpenAIChoice(
+                    message=OpenAIMessage(role="assistant", content=text),
+                    finish_reason=finish_reason,
+                )
+            ],
+        )
+
+    @classmethod
+    def json_from_delta(
+        cls, *, text: str | None, finish_reason: str | None = None
+    ) -> str:
+        chunk = OpenAICompletion(
+            id=str(uuid.uuid4()),
+            object="chat.completion.chunk",
             created=int(time.time()),
             model="private-gpt",
             choices=[
@@ -68,19 +82,14 @@ class OpenAICompletion:
             ],
         )
 
-    @classmethod
-    def simple_json_delta(
-        cls, *, text: str | None, finish_reason: str | None = None
-    ) -> str:
-        chunk = cls.from_response(text, finish_reason, True)
-
         return json.dumps(dataclasses.asdict(chunk))
 
 
-def to_openai_response(response: ChatResponse) -> OpenAICompletion:
-    return OpenAICompletion.from_response(
-        response.message.content, finish_reason="stop"
-    )
+def to_openai_response(response: str | ChatResponse) -> OpenAICompletion:
+    if isinstance(response, ChatResponse):
+        return OpenAICompletion.from_text(response.delta, finish_reason="stop")
+    else:
+        return OpenAICompletion.from_text(response, finish_reason="stop")
 
 
 def to_openai_sse_stream(
@@ -88,8 +97,8 @@ def to_openai_sse_stream(
 ) -> Iterator[str]:
     for response in response_generator:
         if isinstance(response, CompletionResponse | ChatResponse):
-            yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
+            yield f"data: {OpenAICompletion.json_from_delta(text=response.delta)}\n\n"
         else:
-            yield f"data: {OpenAICompletion.simple_json_delta(text=response)}\n\n"
-    yield f"data: {OpenAICompletion.simple_json_delta(text=None, finish_reason='stop')}\n\n"
+            yield f"data: {OpenAICompletion.json_from_delta(text=response)}\n\n"
+    yield f"data: {OpenAICompletion.json_from_delta(text=None, finish_reason='stop')}\n\n"
     yield "data: [DONE]\n\n"

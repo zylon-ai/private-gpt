@@ -6,11 +6,11 @@ import llama_index
 from fastapi import FastAPI
 from loguru import logger
 
-from private_gpt import settings
-from private_gpt.ingest.routes import ingest_router
-from private_gpt.llm.routes import completions_router
-from private_gpt.query.routes import query_router
-from private_gpt.retrieval.routes import retrieval_router
+from private_gpt.server.chat.routes import chat_router
+from private_gpt.server.chunks.routes import chunks_router
+from private_gpt.server.completions.routes import completions_router
+from private_gpt.server.ingest.routes import ingest_router
+from private_gpt.settings.settings import settings
 
 # Remove pre-configured logging handler
 logger.remove(0)
@@ -38,13 +38,13 @@ def health() -> Any:
     return {"status": "ok"}
 
 
-app.include_router(ingest_router)
-app.include_router(query_router)
-app.include_router(retrieval_router)
 app.include_router(completions_router)
+app.include_router(chat_router)
+app.include_router(chunks_router)
+app.include_router(ingest_router)
 
 
-if settings.settings.ui.enabled:
+if settings.ui.enabled:
     from private_gpt.ui.ui import mount_in_app
 
     mount_in_app(app)

@@ -8,16 +8,15 @@ from fastapi import FastAPI
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 
 from private_gpt.di import root_injector
-from private_gpt.ingest.ingest_service import IngestService
-from private_gpt.llm.llm_service import LLMService
-from private_gpt.query.query_service import QueryService
-from private_gpt.retrieval.retrieval_service import RetrievalService
-from private_gpt.settings import settings
+from private_gpt.open_ai.extensions.context_files import ContextFiles
+from private_gpt.server.chat.chat_service import ChatService
+from private_gpt.server.chunks.chunks_service import ChunksService
+from private_gpt.server.ingest.ingest_service import IngestService
+from private_gpt.settings.settings import settings
 
-completion_service = root_injector.get(LLMService)
-query_service = root_injector.get(QueryService)
 ingest_service = root_injector.get(IngestService)
-retrieval_service = root_injector.get(RetrievalService)
+chat_service = root_injector.get(ChatService)
+chunks_service = root_injector.get(ChunksService)
 
 
 def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
@@ -46,19 +45,26 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
         # max 20 messages to try to avoid context overflow
         return history_messages[:20]
 
+    new_message = ChatMessage(content=message, role=MessageRole.USER)
+    all_messages = [*build_history(), new_message]
     match mode:
         case "Query Documents":
-            query_stream = query_service.stream_chat(message, build_history())
+            query_stream = chat_service.stream_chat(
+                messages=all_messages,
+                context_files=ContextFiles(),  # TODO Create an actual object
+            )
             yield from yield_deltas(query_stream)
 
         case "LLM Chat":
-            new_message = ChatMessage(content=message, role=MessageRole.USER)
-            llm_stream = completion_service.stream_chat([*build_history(), new_message])
+            llm_stream = chat_service.stream_chat(messages=all_messages)
             yield from yield_deltas(llm_stream)
 
         case "Query Chunks":
-            response = retrieval_service.retrieve_relevant_nodes(
-                message, 2, 1
+            response = chunks_service.retrieve_relevant(
+                text=message,
+                context_files=ContextFiles(),  # TODO Create an actual object
+                limit=2,
+                context_size=1,
             ).__iter__()
             yield "```" + json.dumps([node.__dict__ for node in response], indent=2)
 

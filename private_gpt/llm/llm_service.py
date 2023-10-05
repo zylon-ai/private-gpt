@@ -1,42 +1,15 @@
-import asyncio
-from collections.abc import AsyncGenerator, Sequence
-
 from injector import inject, singleton
 from llama_index.llms import MockLLM
-from llama_index.llms.base import (
-    LLM,
-    ChatMessage,
-    ChatResponseGen,
-    CompletionResponseGen,
-    ChatResponse,
-)
+from llama_index.llms.base import LLM
 from llama_index.llms.llama_utils import completion_to_prompt, messages_to_prompt
-from llama_index.vector_stores.types import VectorStore
 
 from private_gpt.constants import MODELS_PATH
-from private_gpt.settings import settings
-from private_gpt.typing import T
-
-
-async def _yielding_if_cpu_bound(
-    source_generator: AsyncGenerator[T, None]
-) -> AsyncGenerator[T, None]:
-    """Yield the main loop for CPU bound tasks, that is, the model is running locally.
-
-    When running models locally the main loop (like fastapi) will block
-    if we don't yield control at some point making it "buffer" the whole stream.
-    """
-    cpu_bound = settings.llm.mode == "local"
-    async for item in source_generator:
-        yield item
-        if cpu_bound:
-            await asyncio.sleep(0)
+from private_gpt.settings.settings import settings
 
 
 @singleton
 class LLMService:
     llm: LLM
-    vector_store: VectorStore
 
     @inject
     def __init__(self) -> None:
@@ -72,15 +45,3 @@ class LLMService:
                 self.llm = OpenAI(api_key=openai_settings)
             case "mock":
                 self.llm = MockLLM()
-
-    def stream_complete(self, message: str) -> CompletionResponseGen:
-        stream = self.llm.stream_complete(message)
-        return stream
-
-    def stream_chat(self, messages: Sequence[ChatMessage]) -> ChatResponseGen:
-        stream = self.llm.stream_chat(messages)
-        return stream
-
-    def chat(self, messages: Sequence[ChatMessage]) -> ChatResponse:
-        response = self.llm.chat(messages)
-        return response

@@ -1,0 +1,44 @@
+import time
+import uuid
+from dataclasses import dataclass
+
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+from private_gpt.di import root_injector
+from private_gpt.open_ai.extensions.context_files import ContextFiles
+from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
+
+chunks_router = APIRouter(prefix="/v1")
+
+
+@dataclass
+class ChunksBody(BaseModel):
+    text: str
+    context_files: ContextFiles
+    limit: int = 10
+    context_size: int = 0
+
+
+@dataclass
+class ChunksResponse:
+    id: str
+    object: str
+    created: int
+    model: str
+    chunks: list[Chunk]
+
+
+@chunks_router.post("/chunks")
+def chunks_retrieval(body: ChunksBody) -> ChunksResponse:
+    service = root_injector.get(ChunksService)
+    results = service.retrieve_relevant(
+        body.text, body.context_files, body.limit, body.context_size
+    )
+    return ChunksResponse(
+        id=str(uuid.uuid4()),
+        object="file.chunk",
+        created=int(time.time()),
+        model="private-gpt",
+        chunks=results,
+    )

@@ -5,7 +5,7 @@ import pytest
 from injector import Provider, ScopeDecorator, singleton
 
 from private_gpt.di import create_application_injector
-from private_gpt.typing import T
+from private_gpt.utils.typing import T
 
 
 class MockInjector:
