@@ -5,7 +5,7 @@ import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from llama_index.llms import CompletionResponse
+from llama_index.llms import ChatResponse, CompletionResponse
 
 
 @dataclass(kw_only=True)
@@ -68,10 +68,10 @@ class OpenAICompletion:
 
 
 def to_openai_sse_stream(
-    response_generator: Iterator[str | CompletionResponse],
+    response_generator: Iterator[str | CompletionResponse | ChatResponse],
 ) -> Iterator[str]:
     for response in response_generator:
-        if isinstance(response, CompletionResponse):
+        if isinstance(response, CompletionResponse | ChatResponse):
             yield f"data: {OpenAICompletion.simple_json_delta(text=response.delta)}\n\n"
         else:
             yield f"data: {OpenAICompletion.simple_json_delta(text=response)}\n\n"

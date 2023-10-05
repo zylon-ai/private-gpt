@@ -76,11 +76,6 @@ class LLMService:
         stream = self.llm.stream_complete(message)
         return stream
 
-    def stream_chat(
-        self, message: str, history: Sequence[ChatMessage] | None = None
-    ) -> ChatResponseGen:
-        if history is None:
-            history = []
-        all_messages = [*history, ChatMessage(content=message)]
-        stream = self.llm.stream_chat(all_messages)
+    def stream_chat(self, messages: Sequence[ChatMessage]) -> ChatResponseGen:
+        stream = self.llm.stream_chat(messages)
         return stream

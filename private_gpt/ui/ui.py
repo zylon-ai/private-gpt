@@ -52,7 +52,8 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
             yield from yield_deltas(query_stream)
 
         case "LLM Chat":
-            llm_stream = completion_service.stream_chat(message, build_history())
+            new_message = ChatMessage(content=message, role=MessageRole.USER)
+            llm_stream = completion_service.stream_chat([*build_history(), new_message])
             yield from yield_deltas(llm_stream)
 
         case "Query Chunks":
