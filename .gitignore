@@ -20,13 +20,12 @@ __pycache__/
 # IDE
 .idea/
 .vscode/
+.run/
+
 
 # macOS
 .DS_Store
 
-# Chroma db
+# local rag storage
 /local_data/
 /chroma_db/
-
-# Local node storage
-/storage/
