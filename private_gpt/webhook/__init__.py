@@ -1,1 +1,0 @@
-"""Webhook configuration endpoints."""
