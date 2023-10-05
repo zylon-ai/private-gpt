@@ -8,6 +8,7 @@ from llama_index.llms.base import (
     ChatMessage,
     ChatResponseGen,
     CompletionResponseGen,
+    ChatResponse,
 )
 from llama_index.llms.llama_utils import completion_to_prompt, messages_to_prompt
 from llama_index.vector_stores.types import VectorStore
@@ -79,3 +80,7 @@ class LLMService:
     def stream_chat(self, messages: Sequence[ChatMessage]) -> ChatResponseGen:
         stream = self.llm.stream_chat(messages)
         return stream
+
+    def chat(self, messages: Sequence[ChatMessage]) -> ChatResponse:
+        response = self.llm.chat(messages)
+        return response
