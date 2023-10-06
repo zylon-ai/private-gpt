@@ -10,10 +10,12 @@ from llama_index import (
 )
 from llama_index.node_parser import SentenceWindowNodeParser
 
+from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.node_store.node_store_component import NodeStoreComponent
+from private_gpt.components.vector_store.vector_store_component import (
+    VectorStoreComponent,
+)
 from private_gpt.constants import LOCAL_DATA_PATH
-from private_gpt.llm.llm_service import LLMService
-from private_gpt.node_store.node_store_service import NodeStoreService
-from private_gpt.vector_store.vector_store_service import VectorStoreService
 
 
 @singleton
@@ -22,15 +24,15 @@ class IngestService:
     @inject
     def __init__(
         self,
-        llm_service: LLMService,
-        vector_store_service: VectorStoreService,
-        node_store_service: NodeStoreService,
+        llm_component: LLMComponent,
+        vector_store_component: VectorStoreComponent,
+        node_store_component: NodeStoreComponent,
     ) -> None:
-        self.llm_service = llm_service
+        self.llm_service = llm_component
         self.storage_context = StorageContext.from_defaults(
-            vector_store=vector_store_service.vector_store,
-            docstore=node_store_service.doc_store,
-            index_store=node_store_service.index_store,
+            vector_store=vector_store_component.vector_store,
+            docstore=node_store_component.doc_store,
+            index_store=node_store_component.index_store,
         )
         self.ingest_service_context = ServiceContext.from_defaults(
             llm=self.llm_service.llm,

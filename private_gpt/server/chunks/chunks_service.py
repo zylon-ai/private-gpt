@@ -6,11 +6,14 @@ from llama_index import ServiceContext, StorageContext, VectorStoreIndex
 from llama_index.indices.vector_store import VectorIndexRetriever
 from llama_index.schema import NodeWithScore
 
-from private_gpt.llm.llm_service import LLMService
-from private_gpt.node_store.node_store_service import NodeStoreService
-from private_gpt.node_store.node_utils import get_context_nodes
+from private_gpt.components.embedding.embedding_component import EmbeddingComponent
+from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.node_store.node_store_component import NodeStoreComponent
+from private_gpt.components.node_store.node_utils import get_context_nodes
+from private_gpt.components.vector_store.vector_store_component import (
+    VectorStoreComponent,
+)
 from private_gpt.open_ai.extensions.context_files import ContextFiles
-from private_gpt.vector_store.vector_store_service import VectorStoreService
 
 if TYPE_CHECKING:
     from llama_index.schema import RelatedNodeInfo
@@ -30,20 +33,19 @@ class ChunksService:
     @inject
     def __init__(
         self,
-        llm_service: LLMService,
-        vector_store_service: VectorStoreService,
-        node_store_service: NodeStoreService,
+        llm_component: LLMComponent,
+        vector_store_component: VectorStoreComponent,
+        embedding_component: EmbeddingComponent,
+        node_store_component: NodeStoreComponent,
     ) -> None:
-        self.llm_service = llm_service
-        self.vector_store_service = vector_store_service
-        self.node_store_service = node_store_service
+        self.vector_store_service = vector_store_component
         self.storage_context = StorageContext.from_defaults(
-            vector_store=vector_store_service.vector_store,
-            docstore=node_store_service.doc_store,
-            index_store=node_store_service.index_store,
+            vector_store=vector_store_component.vector_store,
+            docstore=node_store_component.doc_store,
+            index_store=node_store_component.index_store,
         )
         self.query_service_context = ServiceContext.from_defaults(
-            llm=llm_service.llm, embed_model="local"
+            llm=llm_component.llm, embed_model=embedding_component.embedding_model
         )
 
     def _get_sibling_nodes_text(

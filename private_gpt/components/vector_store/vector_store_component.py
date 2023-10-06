@@ -7,8 +7,7 @@ from private_gpt.constants import LOCAL_DATA_PATH
 
 
 @singleton
-class VectorStoreService:
-
+class VectorStoreComponent:
     vector_store: VectorStore
 
     @inject

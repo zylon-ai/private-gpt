@@ -9,6 +9,7 @@ from loguru import logger
 from private_gpt.server.chat.routes import chat_router
 from private_gpt.server.chunks.routes import chunks_router
 from private_gpt.server.completions.routes import completions_router
+from private_gpt.server.embeddings.routes import embeddings_router
 from private_gpt.server.ingest.routes import ingest_router
 from private_gpt.settings.settings import settings
 
@@ -42,6 +43,7 @@ app.include_router(completions_router)
 app.include_router(chat_router)
 app.include_router(chunks_router)
 app.include_router(ingest_router)
+app.include_router(embeddings_router)
 
 
 if settings.ui.enabled:

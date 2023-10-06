@@ -7,7 +7,7 @@ from private_gpt.constants import LOCAL_DATA_PATH
 
 
 @singleton
-class NodeStoreService:
+class NodeStoreComponent:
     index_store: BaseIndexStore
     doc_store: BaseDocumentStore
 

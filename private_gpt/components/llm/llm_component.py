@@ -8,7 +8,7 @@ from private_gpt.settings.settings import settings
 
 
 @singleton
-class LLMService:
+class LLMComponent:
     llm: LLM
 
     @inject
@@ -33,7 +33,7 @@ class LLMService:
                 )
 
             case "sagemaker":
-                from private_gpt.llm.custom.sagemaker import SagemakerLLM
+                from private_gpt.components.llm.custom.sagemaker import SagemakerLLM
 
                 self.llm = SagemakerLLM(
                     endpoint_name=settings.sagemaker.endpoint_name,
