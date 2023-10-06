@@ -19,7 +19,6 @@ from private_gpt.constants import LOCAL_DATA_PATH
 
 
 @singleton
-@dataclass
 class IngestService:
     @inject
     def __init__(
