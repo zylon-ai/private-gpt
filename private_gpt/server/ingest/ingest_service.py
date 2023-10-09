@@ -10,6 +10,7 @@ from llama_index import (
 from llama_index.node_parser import SentenceWindowNodeParser
 from pydantic import BaseModel
 
+from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.vector_store.vector_store_component import (
@@ -30,6 +31,7 @@ class IngestService:
         self,
         llm_component: LLMComponent,
         vector_store_component: VectorStoreComponent,
+        embedding_component: EmbeddingComponent,
         node_store_component: NodeStoreComponent,
     ) -> None:
         self.llm_service = llm_component
@@ -40,7 +42,7 @@ class IngestService:
         )
         self.ingest_service_context = ServiceContext.from_defaults(
             llm=self.llm_service.llm,
-            embed_model="local",
+            embed_model=embedding_component.embedding_model,
             node_parser=SentenceWindowNodeParser.from_defaults(),
         )
 
