@@ -17,7 +17,7 @@ class ChunksBody(BaseModel):
     text: str
     context_filter: ContextFilter | None = None
     limit: int = 10
-    context_size: int = 0
+    prev_next_chunks: int = 0
 
 
 @dataclass
@@ -33,7 +33,7 @@ class ChunksResponse:
 def chunks_retrieval(body: ChunksBody) -> ChunksResponse:
     service = root_injector.get(ChunksService)
     results = service.retrieve_relevant(
-        body.text, body.context_filter, body.limit, body.context_size
+        body.text, body.context_filter, body.limit, body.prev_next_chunks
     )
     return ChunksResponse(
         id=str(uuid.uuid4()),

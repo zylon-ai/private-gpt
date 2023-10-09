@@ -66,7 +66,7 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
             response = chunks_service.retrieve_relevant(
                 text=message,
                 limit=2,
-                context_size=1,
+                prev_next_chunks=1,
             ).__iter__()
             yield "```" + json.dumps([node.__dict__ for node in response], indent=2)
 

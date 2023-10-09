@@ -73,7 +73,7 @@ class ChunksService:
         text: str,
         context_filter: ContextFilter | None = None,
         limit: int = 10,
-        context_size: int = 0,
+        prev_next_chunks: int = 0,
     ) -> list[Chunk]:
         index = VectorStoreIndex.from_vector_store(
             self.vector_store_component.vector_store,
@@ -97,9 +97,9 @@ class ChunksService:
                     doc_name=node.metadata["file_name"],
                     text=node.get_content(),
                     previous_texts=self._get_sibling_nodes_text(
-                        node, context_size, False
+                        node, prev_next_chunks, False
                     ),
-                    next_texts=self._get_sibling_nodes_text(node, context_size),
+                    next_texts=self._get_sibling_nodes_text(node, prev_next_chunks),
                 )
             )
 
