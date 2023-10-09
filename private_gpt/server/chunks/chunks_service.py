@@ -11,7 +11,7 @@ from private_gpt.components.node_store.node_store_component import NodeStoreComp
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
-from private_gpt.open_ai.extensions.context_docs import ContextDocs
+from private_gpt.open_ai.extensions.context_filter import ContextFilter
 
 if TYPE_CHECKING:
     from llama_index.schema import RelatedNodeInfo
@@ -71,7 +71,7 @@ class ChunksService:
     def retrieve_relevant(
         self,
         text: str,
-        context_docs: ContextDocs,
+        context_filter: ContextFilter | None = None,
         limit: int = 10,
         context_size: int = 0,
     ) -> list[Chunk]:
@@ -82,7 +82,7 @@ class ChunksService:
             show_progress=True,
         )
         vector_index_retriever = self.vector_store_component.get_retriever(
-            index=index, context_docs=context_docs, similarity_top_k=limit
+            index=index, context_filter=context_filter, similarity_top_k=limit
         )
         nodes = vector_index_retriever.retrieve(text)
         nodes.sort(key=lambda n: n.score or 0.0, reverse=True)

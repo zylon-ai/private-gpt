@@ -14,7 +14,7 @@ from private_gpt.components.node_store.node_store_component import NodeStoreComp
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
-from private_gpt.open_ai.extensions.context_docs import ContextDocs
+from private_gpt.open_ai.extensions.context_filter import ContextFilter
 
 if TYPE_CHECKING:
     from llama_index.chat_engine.types import (
@@ -53,12 +53,12 @@ class ChatService:
     def _chat_with_contex(
         self,
         message: str,
-        context_docs: ContextDocs,
+        context_filter: ContextFilter,
         chat_history: Sequence[ChatMessage] | None = None,
         streaming: bool = False,
     ) -> Any:
         vector_index_retriever = self.vector_store_component.get_retriever(
-            index=self.index, context_docs=context_docs
+            index=self.index, context_filter=context_filter
         )
         chat_engine = ContextChatEngine.from_defaults(
             retriever=vector_index_retriever,
@@ -74,14 +74,15 @@ class ChatService:
     def stream_chat(
         self,
         messages: list[ChatMessage],
-        context_docs: ContextDocs | None = None,
+        use_context: bool = False,
+        context_filter: ContextFilter | None = None,
     ) -> TokenGen:
-        if context_docs:
+        if use_context:
             last_message = messages[-1].content
             response: StreamingAgentChatResponse = self._chat_with_contex(
                 message=last_message if last_message is not None else "",
                 chat_history=messages[:-1],
-                context_docs=context_docs,
+                context_filter=context_filter,
                 streaming=True,
             )
             response_gen = response.response_gen
@@ -93,14 +94,15 @@ class ChatService:
     def chat(
         self,
         messages: list[ChatMessage],
-        context_docs: ContextDocs | None = None,
+        use_context: bool = False,
+        context_filter: ContextFilter | None = None,
     ) -> str:
-        if context_docs:
+        if use_context:
             last_message = messages[-1].content
             wrapped_response: AgentChatResponse = self._chat_with_contex(
                 message=last_message if last_message is not None else "",
                 chat_history=messages[:-1],
-                context_docs=context_docs,
+                context_filter=context_filter,
                 streaming=False,
             )
             response = wrapped_response.response

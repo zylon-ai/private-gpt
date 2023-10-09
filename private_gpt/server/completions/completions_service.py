@@ -12,7 +12,7 @@ from private_gpt.components.node_store.node_store_component import NodeStoreComp
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
-from private_gpt.open_ai.extensions.context_docs import ContextDocs
+from private_gpt.open_ai.extensions.context_filter import ContextFilter
 
 if TYPE_CHECKING:
     from llama_index.response import Response
@@ -47,10 +47,10 @@ class CompletionsService:
         )
 
     def _complete_with_contex(
-        self, prompt: str, context_docs: ContextDocs, streaming: bool = False
+        self, prompt: str, context_filter: ContextFilter, streaming: bool = False
     ) -> Any:
         vector_index_retriever = self.vector_store_component.get_retriever(
-            index=self.index, context_docs=context_docs
+            index=self.index, context_filter=context_filter
         )
         query_engine = RetrieverQueryEngine.from_args(
             retriever=vector_index_retriever,
@@ -60,11 +60,14 @@ class CompletionsService:
         return query_engine.query(prompt)
 
     def stream_complete(
-        self, prompt: str, context_docs: ContextDocs | None = None
+        self,
+        prompt: str,
+        use_context: bool = False,
+        context_filter: ContextFilter | None = None,
     ) -> TokenGen:
-        if context_docs:
+        if use_context:
             response: StreamingResponse = self._complete_with_contex(
-                prompt, context_docs, True
+                prompt, context_filter, True
             )
             response_gen = response.response_gen
         else:
@@ -72,10 +75,15 @@ class CompletionsService:
             response_gen = stream_completion_response_to_tokens(stream)
         return response_gen
 
-    def complete(self, prompt: str, context_docs: ContextDocs | None = None) -> str:
-        if context_docs:
+    def complete(
+        self,
+        prompt: str,
+        use_context: bool = False,
+        context_filter: ContextFilter | None = None,
+    ) -> str:
+        if use_context:
             complete_response: Response = self._complete_with_contex(
-                prompt, context_docs, False
+                prompt, context_filter, False
             )
             complete_text = complete_response.response
             response = complete_text if complete_text is not None else ""

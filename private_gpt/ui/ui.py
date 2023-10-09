@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 
 from private_gpt.di import root_injector
-from private_gpt.open_ai.extensions.context_docs import ContextDocs
+from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chat.chat_service import ChatService
 from private_gpt.server.chunks.chunks_service import ChunksService
 from private_gpt.server.ingest.ingest_service import IngestService
@@ -51,18 +51,20 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
         case "Query Documents":
             query_stream = chat_service.stream_chat(
                 messages=all_messages,
-                context_docs=ContextDocs(docs_ids="all"),
+                use_context=True,
             )
             yield from yield_deltas(query_stream)
 
         case "LLM Chat":
-            llm_stream = chat_service.stream_chat(messages=all_messages)
+            llm_stream = chat_service.stream_chat(
+                messages=all_messages,
+                use_context=False,
+            )
             yield from yield_deltas(llm_stream)
 
         case "Query Chunks":
             response = chunks_service.retrieve_relevant(
                 text=message,
-                context_docs=ContextDocs(docs_ids="all"),
                 limit=2,
                 context_size=1,
             ).__iter__()

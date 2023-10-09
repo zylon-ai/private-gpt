@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
 from private_gpt.di import root_injector
-from private_gpt.open_ai.extensions.context_docs import ContextDocs
+from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.open_ai.openai_models import (
     OpenAICompletion,
     OpenAIMessage,
@@ -21,7 +21,8 @@ chat_router = APIRouter(prefix="/v1")
 @dataclass
 class ChatBody(BaseModel):
     messages: list[OpenAIMessage]
-    context_docs: ContextDocs | None = None
+    use_context: bool = False
+    context_filter: ContextFilter | None = None
     stream: bool | None = False
 
 
@@ -32,10 +33,12 @@ def chat_completion(body: ChatBody) -> OpenAICompletion | StreamingResponse:
         ChatMessage(content=m.content, role=MessageRole(m.role)) for m in body.messages
     ]
     if body.stream:
-        stream = service.stream_chat(all_messages, body.context_docs)
+        stream = service.stream_chat(
+            all_messages, body.use_context, body.context_filter
+        )
         return StreamingResponse(
             to_openai_sse_stream(stream), media_type="text/event-stream"
         )
     else:
-        response = service.chat(all_messages, body.context_docs)
+        response = service.chat(all_messages, body.use_context, body.context_filter)
         return to_openai_response(response)
