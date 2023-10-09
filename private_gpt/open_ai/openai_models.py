@@ -54,7 +54,7 @@ class OpenAICompletion:
     ) -> "OpenAICompletion":
         return OpenAICompletion(
             id=str(uuid.uuid4()),
-            object="chat.completion",
+            object="completion",
             created=int(time.time()),
             model="private-gpt",
             choices=[
@@ -71,7 +71,7 @@ class OpenAICompletion:
     ) -> str:
         chunk = OpenAICompletion(
             id=str(uuid.uuid4()),
-            object="chat.completion.chunk",
+            object="completion.chunk",
             created=int(time.time()),
             model="private-gpt",
             choices=[

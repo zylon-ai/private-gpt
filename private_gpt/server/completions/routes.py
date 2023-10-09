@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
 from private_gpt.di import root_injector
-from private_gpt.open_ai.extensions.context_files import ContextFiles
+from private_gpt.open_ai.extensions.context_docs import ContextDocs
 from private_gpt.open_ai.openai_models import (
     OpenAICompletion,
     to_openai_response,
@@ -19,7 +19,7 @@ completions_router = APIRouter(prefix="/v1")
 @dataclass
 class CompletionsBody(BaseModel):
     prompt: str
-    context_files: ContextFiles | None = None
+    context_docs: ContextDocs | None = None
     stream: bool | None = False
 
 
@@ -27,10 +27,10 @@ class CompletionsBody(BaseModel):
 def prompt_completion(body: CompletionsBody) -> OpenAICompletion | StreamingResponse:
     service = root_injector.get(CompletionsService)
     if body.stream:
-        stream = service.stream_complete(body.prompt, body.context_files)
+        stream = service.stream_complete(body.prompt, body.context_docs)
         return StreamingResponse(
             to_openai_sse_stream(stream), media_type="text/event-stream"
         )
     else:
-        response = service.complete(body.prompt, body.context_files)
+        response = service.complete(body.prompt, body.context_docs)
         return to_openai_response(response)

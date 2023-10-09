@@ -10,11 +10,10 @@ from llama_index.types import TokenGen
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
-from private_gpt.components.node_store.node_utils import get_context_nodes
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
-from private_gpt.open_ai.extensions.context_files import ContextFiles
+from private_gpt.open_ai.extensions.context_docs import ContextDocs
 
 if TYPE_CHECKING:
     from llama_index.response import Response
@@ -32,6 +31,7 @@ class CompletionsService:
         node_store_component: NodeStoreComponent,
     ) -> None:
         self.llm_service = llm_component
+        self.vector_store_component = vector_store_component
         self.storage_context = StorageContext.from_defaults(
             vector_store=vector_store_component.vector_store,
             docstore=node_store_component.doc_store,
@@ -48,11 +48,10 @@ class CompletionsService:
         )
 
     def _complete_with_contex(
-        self, prompt: str, context_files: ContextFiles, streaming: bool = False
+        self, prompt: str, context_docs: ContextDocs, streaming: bool = False
     ) -> Any:
-        node_ids = get_context_nodes(context_files, self.storage_context.docstore)
-        vector_index_retriever = VectorIndexRetriever(
-            index=self.index, node_ids=node_ids
+        vector_index_retriever = self.vector_store_component.get_retriever(
+            index=self.index, context_docs=context_docs
         )
         query_engine = RetrieverQueryEngine.from_args(
             retriever=vector_index_retriever,
@@ -62,11 +61,11 @@ class CompletionsService:
         return query_engine.query(prompt)
 
     def stream_complete(
-        self, prompt: str, context_files: ContextFiles | None = None
+        self, prompt: str, context_docs: ContextDocs | None = None
     ) -> TokenGen:
-        if context_files:
+        if context_docs:
             response: StreamingResponse = self._complete_with_contex(
-                prompt, context_files, True
+                prompt, context_docs, True
             )
             response_gen = response.response_gen
         else:
@@ -74,10 +73,10 @@ class CompletionsService:
             response_gen = stream_completion_response_to_tokens(stream)
         return response_gen
 
-    def complete(self, prompt: str, context_files: ContextFiles | None = None) -> str:
-        if context_files:
+    def complete(self, prompt: str, context_docs: ContextDocs | None = None) -> str:
+        if context_docs:
             complete_response: Response = self._complete_with_contex(
-                prompt, context_files, False
+                prompt, context_docs, False
             )
             complete_text = complete_response.response
             response = complete_text if complete_text is not None else ""

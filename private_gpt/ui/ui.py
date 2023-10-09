@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 
 from private_gpt.di import root_injector
-from private_gpt.open_ai.extensions.context_files import ContextFiles
+from private_gpt.open_ai.extensions.context_docs import ContextDocs
 from private_gpt.server.chat.chat_service import ChatService
 from private_gpt.server.chunks.chunks_service import ChunksService
 from private_gpt.server.ingest.ingest_service import IngestService
@@ -51,7 +51,7 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
         case "Query Documents":
             query_stream = chat_service.stream_chat(
                 messages=all_messages,
-                context_files=ContextFiles(),  # TODO Create an actual object
+                context_docs=ContextDocs(docs_ids="all"),
             )
             yield from yield_deltas(query_stream)
 
@@ -62,7 +62,7 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
         case "Query Chunks":
             response = chunks_service.retrieve_relevant(
                 text=message,
-                context_files=ContextFiles(),  # TODO Create an actual object
+                context_docs=ContextDocs(docs_ids="all"),
                 limit=2,
                 context_size=1,
             ).__iter__()
@@ -70,7 +70,10 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
 
 
 def _list_ingested_files() -> str:
-    files = ingest_service.list()
+    files = {
+        ingested_document.doc_metadata["file_name"]
+        for ingested_document in ingest_service.list_ingested()
+    }
     return "\n".join(files)
 
 

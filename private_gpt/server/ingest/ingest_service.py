@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import BinaryIO
+from typing import BinaryIO, Dict, Any
 
 from injector import inject, singleton
 from llama_index import (
@@ -9,6 +9,7 @@ from llama_index import (
     VectorStoreIndex,
 )
 from llama_index.node_parser import SentenceWindowNodeParser
+from pydantic import BaseModel, ConfigDict
 
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
@@ -16,6 +17,12 @@ from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
 from private_gpt.constants import LOCAL_DATA_PATH
+
+
+@dataclass
+class IngestedDoc:
+    doc_id: str
+    doc_metadata: Dict
 
 
 @singleton
@@ -39,9 +46,12 @@ class IngestService:
             node_parser=SentenceWindowNodeParser.from_defaults(),
         )
 
-    def ingest(self, file: BinaryIO) -> str:
+    def ingest(self, file: BinaryIO) -> list[str]:
         # load file into a LlamaIndex document
         documents = SimpleDirectoryReader(input_files=[file.name]).load_data()
+        # add doc node id to the metadata, to be able to filter during retrieval
+        for document in documents:
+            document.metadata["doc_id"] = document.doc_id
         # create vectorStore index
         VectorStoreIndex.from_documents(
             documents,
@@ -52,14 +62,23 @@ class IngestService:
         )
         # persist the index and nodes
         self.storage_context.persist(persist_dir=LOCAL_DATA_PATH)
-        return file.name
+        return [document.doc_id for document in documents]
 
-    def list(self) -> set[str]:
+    def list_ingested(self) -> list[IngestedDoc]:
+        ingested_docs = []
         try:
             docstore = self.storage_context.docstore
-            file_names = {
-                ref_doc.metadata["file_name"] for ref_doc in docstore.docs.values()
-            }
+            ingested_docs_ids = {node.ref_doc_id for node in docstore.docs.values()}
+            for doc_id in ingested_docs_ids:
+                doc_metadata = docstore.get_ref_doc_info(ref_doc_id=doc_id).metadata
+                # Remove unwanted info from metadata in case it exists. TODO make it a constant
+                doc_metadata.pop("doc_id", None)
+                doc_metadata.pop("window", None)
+                doc_metadata.pop("original_text", None)
+                ingested_docs.append(
+                    IngestedDoc(doc_id=doc_id, doc_metadata=doc_metadata)
+                )
+            return ingested_docs
         except ValueError:
-            file_names = set()
-        return file_names
+            pass
+        return ingested_docs

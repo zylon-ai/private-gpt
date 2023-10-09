@@ -12,11 +12,10 @@ from llama_index.types import TokenGen
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
-from private_gpt.components.node_store.node_utils import get_context_nodes
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
-from private_gpt.open_ai.extensions.context_files import ContextFiles
+from private_gpt.open_ai.extensions.context_docs import ContextDocs
 
 if TYPE_CHECKING:
     from llama_index.chat_engine.types import (
@@ -36,6 +35,7 @@ class ChatService:
         node_store_component: NodeStoreComponent,
     ) -> None:
         self.llm_service = llm_component
+        self.vector_store_component = vector_store_component
         self.storage_context = StorageContext.from_defaults(
             vector_store=vector_store_component.vector_store,
             docstore=node_store_component.doc_store,
@@ -54,13 +54,12 @@ class ChatService:
     def _chat_with_contex(
         self,
         message: str,
-        context_files: ContextFiles,
+        context_docs: ContextDocs,
         chat_history: Sequence[ChatMessage] | None = None,
         streaming: bool = False,
     ) -> Any:
-        node_ids = get_context_nodes(context_files, self.storage_context.docstore)
-        vector_index_retriever = VectorIndexRetriever(
-            index=self.index, node_ids=node_ids
+        vector_index_retriever = self.vector_store_component.get_retriever(
+            index=self.index, context_docs=context_docs
         )
         chat_engine = ContextChatEngine.from_defaults(
             retriever=vector_index_retriever,
@@ -76,14 +75,14 @@ class ChatService:
     def stream_chat(
         self,
         messages: list[ChatMessage],
-        context_files: ContextFiles | None = None,
+        context_docs: ContextDocs | None = None,
     ) -> TokenGen:
-        if context_files:
+        if context_docs:
             last_message = messages[-1].content
             response: StreamingAgentChatResponse = self._chat_with_contex(
                 message=last_message if last_message is not None else "",
                 chat_history=messages[:-1],
-                context_files=context_files,
+                context_docs=context_docs,
                 streaming=True,
             )
             response_gen = response.response_gen
@@ -95,14 +94,14 @@ class ChatService:
     def chat(
         self,
         messages: list[ChatMessage],
-        context_files: ContextFiles | None = None,
+        context_docs: ContextDocs | None = None,
     ) -> str:
-        if context_files:
+        if context_docs:
             last_message = messages[-1].content
             wrapped_response: AgentChatResponse = self._chat_with_contex(
                 message=last_message if last_message is not None else "",
                 chat_history=messages[:-1],
-                context_files=context_files,
+                context_docs=context_docs,
                 streaming=False,
             )
             response = wrapped_response.response
