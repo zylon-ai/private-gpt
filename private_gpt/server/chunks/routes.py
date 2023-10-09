@@ -1,6 +1,5 @@
 import time
 import uuid
-from dataclasses import dataclass
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -12,7 +11,6 @@ from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
 chunks_router = APIRouter(prefix="/v1")
 
 
-@dataclass
 class ChunksBody(BaseModel):
     text: str
     context_filter: ContextFilter | None = None
@@ -20,8 +18,7 @@ class ChunksBody(BaseModel):
     prev_next_chunks: int = 0
 
 
-@dataclass
-class ChunksResponse:
+class ChunksResponse(BaseModel):
     id: str
     object: str
     created: int

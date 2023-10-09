@@ -1,9 +1,9 @@
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from injector import inject, singleton
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
 from llama_index.schema import NodeWithScore
+from pydantic import BaseModel
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
@@ -17,8 +17,7 @@ if TYPE_CHECKING:
     from llama_index.schema import RelatedNodeInfo
 
 
-@dataclass
-class Chunk:
+class Chunk(BaseModel):
     score: float
     doc_id: str
     doc_name: str

@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import Any, BinaryIO
 
 from injector import inject, singleton
@@ -9,6 +8,7 @@ from llama_index import (
     VectorStoreIndex,
 )
 from llama_index.node_parser import SentenceWindowNodeParser
+from pydantic import BaseModel
 
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
@@ -18,8 +18,7 @@ from private_gpt.components.vector_store.vector_store_component import (
 from private_gpt.constants import LOCAL_DATA_PATH
 
 
-@dataclass
-class IngestedDoc:
+class IngestedDoc(BaseModel):
     doc_id: str
     doc_metadata: dict[str, Any] | None = None
 

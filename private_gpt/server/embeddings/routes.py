@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -9,20 +7,17 @@ from private_gpt.server.embeddings.embeddings_service import EmbeddingsService
 embeddings_router = APIRouter(prefix="/v1")
 
 
-@dataclass
 class EmbeddingsBody(BaseModel):
     input: str | list[str]
 
 
-@dataclass
-class Embedding:
+class Embedding(BaseModel):
     index: int
     object: str
     embedding: list[float]
 
 
-@dataclass
-class EmbeddingsResponse:
+class EmbeddingsResponse(BaseModel):
     object: str
     model: str
     data: list[Embedding]
