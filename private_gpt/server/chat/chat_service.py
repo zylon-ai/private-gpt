@@ -53,7 +53,7 @@ class ChatService:
     def _chat_with_contex(
         self,
         message: str,
-        context_filter: ContextFilter,
+        context_filter: ContextFilter | None = None,
         chat_history: Sequence[ChatMessage] | None = None,
         streaming: bool = False,
     ) -> Any:

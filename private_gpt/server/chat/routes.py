@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from fastapi import APIRouter
 from llama_index.llms import ChatMessage, MessageRole
 from pydantic import BaseModel
@@ -18,12 +16,11 @@ from private_gpt.server.chat.chat_service import ChatService
 chat_router = APIRouter(prefix="/v1")
 
 
-@dataclass
 class ChatBody(BaseModel):
     messages: list[OpenAIMessage]
     use_context: bool = False
+    stream: bool = False
     context_filter: ContextFilter | None = None
-    stream: bool | None = False
 
 
 @chat_router.post("/chat/completions", response_model=None)

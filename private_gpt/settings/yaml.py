@@ -9,7 +9,9 @@ _env_replace_matcher = re.compile(r"\$\{(\w|_)+(:(\w|_)*)?}")
 
 
 @typing.no_type_check  # pyaml does not have good hints, everything is Any
-def load_yaml_with_envvars(stream: TextIO) -> dict[str, Any]:
+def load_yaml_with_envvars(
+    stream: TextIO, environ: dict[str, Any] = os.environ
+) -> dict[str, Any]:
     """Load yaml file with environment variable expansion.
 
     The pattern ${VAR} or ${VAR:default} will be replaced with
@@ -22,7 +24,7 @@ def load_yaml_with_envvars(stream: TextIO) -> dict[str, Any]:
         value = str(node.value).removeprefix("${").removesuffix("}")
         split = value.split(":")
         env_var = split[0]
-        value = os.environ.get(env_var)
+        value = environ.get(env_var)
         default = None if len(split) == 1 else split[1]
         if value is None and default is None:
             raise ValueError(

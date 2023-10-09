@@ -1,22 +1,18 @@
-import dataclasses
-import json
 import time
 import uuid
 from collections.abc import Iterator
-from dataclasses import dataclass
 
 from llama_index.llms import ChatResponse, CompletionResponse
+from pydantic import BaseModel
 
 
-@dataclass(kw_only=True)
-class OpenAIDelta:
+class OpenAIDelta(BaseModel):
     """A piece of completion that needs to be concatenated to get the full message."""
 
     content: str | None
 
 
-@dataclass(kw_only=True)
-class OpenAIMessage:
+class OpenAIMessage(BaseModel):
     """Inference result, with the source of the message.
 
     Role could be the assistant or system
@@ -27,8 +23,7 @@ class OpenAIMessage:
     content: str | None
 
 
-@dataclass(kw_only=True)
-class OpenAIChoice:
+class OpenAIChoice(BaseModel):
     """Response from AI.
 
     Either the delta or the message will be present, but never both.
@@ -40,8 +35,7 @@ class OpenAIChoice:
     index: int = 0
 
 
-@dataclass(kw_only=True)
-class OpenAICompletion:
+class OpenAICompletion(BaseModel):
     id: str
     object: str
     created: int
@@ -82,7 +76,7 @@ class OpenAICompletion:
             ],
         )
 
-        return json.dumps(dataclasses.asdict(chunk))
+        return chunk.model_dump_json()
 
 
 def to_openai_response(response: str | ChatResponse) -> OpenAICompletion:

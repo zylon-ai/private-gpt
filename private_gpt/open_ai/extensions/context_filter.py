@@ -1,6 +1,5 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 
 
-@dataclass
-class ContextFilter:
+class ContextFilter(BaseModel):
     docs_ids: list[str] | None = None

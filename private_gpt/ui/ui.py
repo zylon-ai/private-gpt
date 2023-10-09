@@ -8,7 +8,6 @@ from fastapi import FastAPI
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 
 from private_gpt.di import root_injector
-from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chat.chat_service import ChatService
 from private_gpt.server.chunks.chunks_service import ChunksService
 from private_gpt.server.ingest.ingest_service import IngestService
