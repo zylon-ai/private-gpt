@@ -1,3 +1,5 @@
+import typing
+
 import chromadb
 from injector import inject, singleton
 from llama_index import VectorStoreIndex
@@ -9,6 +11,7 @@ from private_gpt.constants import LOCAL_DATA_PATH
 from private_gpt.open_ai.extensions.context_docs import ContextDocs
 
 
+@typing.no_type_check
 def _chromadb_doc_id_metadata_filter(context_docs: ContextDocs) -> dict | None:
     if context_docs.docs_ids is None or len(context_docs.docs_ids) < 1:
         return {"doc_id": "-"}
@@ -44,7 +47,7 @@ class VectorStoreComponent:
     def get_retriever(
         index: VectorStoreIndex, context_docs: ContextDocs, similarity_top_k: int = 2
     ) -> VectorIndexRetriever:
-        # TODO this 'where' is specific to chromadb. Implement other vector stores filters
+        # TODO this 'where' is specific to chromadb. Implement other vector stores
         return VectorIndexRetriever(
             index=index,
             similarity_top_k=similarity_top_k,

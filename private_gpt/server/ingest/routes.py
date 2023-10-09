@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-from typing import Any
 
 from fastapi import APIRouter, UploadFile
 
 from private_gpt.di import root_injector
-from private_gpt.server.ingest.ingest_service import IngestService, IngestedDoc
+from private_gpt.server.ingest.ingest_service import IngestedDoc, IngestService
 
 ingest_router = APIRouter(prefix="/v1")
 

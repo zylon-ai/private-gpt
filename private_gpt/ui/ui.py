@@ -70,10 +70,11 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
 
 
 def _list_ingested_files() -> str:
-    files = {
-        ingested_document.doc_metadata["file_name"]
-        for ingested_document in ingest_service.list_ingested()
-    }
+    files = set()
+    for ingested_document in ingest_service.list_ingested():
+        if ingested_document.doc_metadata is not None:
+            files.add(ingested_document.doc_metadata["file_name"])
+
     return "\n".join(files)
 
 

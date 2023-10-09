@@ -3,9 +3,7 @@ from typing import TYPE_CHECKING
 
 from injector import inject, singleton
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
-from llama_index.indices.vector_store import VectorIndexRetriever
 from llama_index.schema import NodeWithScore
-from llama_index.vector_stores import MetadataFilters
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
@@ -91,10 +89,11 @@ class ChunksService:
 
         retrieved_nodes = []
         for node in nodes:
+            doc_id = node.node.ref_doc_id if node.node.ref_doc_id is not None else "-"
             retrieved_nodes.append(
                 Chunk(
                     score=node.score or 0.0,
-                    doc_id=node.node.ref_doc_id,
+                    doc_id=doc_id,
                     doc_name=node.metadata["file_name"],
                     text=node.get_content(),
                     previous_texts=self._get_sibling_nodes_text(

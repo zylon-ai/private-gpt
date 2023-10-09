@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any
 from injector import inject, singleton
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
 from llama_index.chat_engine import ContextChatEngine
-from llama_index.indices.vector_store import VectorIndexRetriever
 from llama_index.llm_predictor.utils import stream_chat_response_to_tokens
 from llama_index.llms import ChatMessage
 from llama_index.types import TokenGen

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import BinaryIO, Dict, Any
+from typing import Any, BinaryIO
 
 from injector import inject, singleton
 from llama_index import (
@@ -9,7 +9,6 @@ from llama_index import (
     VectorStoreIndex,
 )
 from llama_index.node_parser import SentenceWindowNodeParser
-from pydantic import BaseModel, ConfigDict
 
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
@@ -22,7 +21,7 @@ from private_gpt.constants import LOCAL_DATA_PATH
 @dataclass
 class IngestedDoc:
     doc_id: str
-    doc_metadata: Dict
+    doc_metadata: dict[str, Any] | None = None
 
 
 @singleton
@@ -68,13 +67,22 @@ class IngestService:
         ingested_docs = []
         try:
             docstore = self.storage_context.docstore
-            ingested_docs_ids = {node.ref_doc_id for node in docstore.docs.values()}
+            ingested_docs_ids: set[str] = set()
+
+            for node in docstore.docs.values():
+                if node.ref_doc_id is not None:
+                    ingested_docs_ids.add(node.ref_doc_id)
+
             for doc_id in ingested_docs_ids:
-                doc_metadata = docstore.get_ref_doc_info(ref_doc_id=doc_id).metadata
-                # Remove unwanted info from metadata in case it exists. TODO make it a constant
-                doc_metadata.pop("doc_id", None)
-                doc_metadata.pop("window", None)
-                doc_metadata.pop("original_text", None)
+                ref_doc_info = docstore.get_ref_doc_info(ref_doc_id=doc_id)
+                doc_metadata = None
+                if ref_doc_info is not None:
+                    doc_metadata = ref_doc_info.metadata
+                    # Remove unwanted info from metadata in case it exists.
+                    # TODO make the list a constant
+                    doc_metadata.pop("doc_id", None)
+                    doc_metadata.pop("window", None)
+                    doc_metadata.pop("original_text", None)
                 ingested_docs.append(
                     IngestedDoc(doc_id=doc_id, doc_metadata=doc_metadata)
                 )
