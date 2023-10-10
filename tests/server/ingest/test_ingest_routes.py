@@ -2,24 +2,16 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from private_gpt.server.ingest.routes import IngestResponse
+from tests.fixtures.ingest_helper import IngestHelper
 
 
-def test_ingest_accepts_txt_files(test_client: TestClient) -> None:
+def test_ingest_accepts_txt_files(ingest_helper: IngestHelper) -> None:
     path = Path(__file__).parents[0] / "test.txt"
-    files = {"file": ("test.txt", path.open("rb"))}
-    response = test_client.post("/v1/ingest", files=files)
-
-    assert response.status_code == 200
-    ingest_result = IngestResponse.model_validate(response.json())
+    ingest_result = ingest_helper.ingest_file(path)
     assert len(ingest_result.documents) == 1
 
 
-def test_ingest_accepts_pdf_files(test_client: TestClient) -> None:
+def test_ingest_accepts_pdf_files(ingest_helper: IngestHelper) -> None:
     path = Path(__file__).parents[0] / "test.pdf"
-    files = {"file": ("test.pdf", path.open("rb"))}
-    response = test_client.post("/v1/ingest", files=files)
-
-    assert response.status_code == 200
-    ingest_result = IngestResponse.model_validate(response.json())
+    ingest_result = ingest_helper.ingest_file(path)
     assert len(ingest_result.documents) == 1
