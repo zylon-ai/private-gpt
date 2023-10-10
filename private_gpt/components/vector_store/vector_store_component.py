@@ -7,8 +7,8 @@ from llama_index.indices.vector_store import VectorIndexRetriever
 from llama_index.vector_stores import ChromaVectorStore
 from llama_index.vector_stores.types import VectorStore
 
-from private_gpt.constants import LOCAL_DATA_PATH
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
+from private_gpt.paths import local_data_path
 
 
 @typing.no_type_check
@@ -37,7 +37,7 @@ class VectorStoreComponent:
     @inject
     def __init__(self) -> None:
         db = chromadb.PersistentClient(
-            path=str((LOCAL_DATA_PATH / "chroma_db").absolute())
+            path=str((local_data_path / "chroma_db").absolute())
         )
         chroma_collection = db.get_or_create_collection(
             "make_this_parameterizable_per_api_call"

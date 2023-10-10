@@ -6,6 +6,7 @@ from private_gpt.settings.settings_loader import load_active_profiles
 class ServerSettings(BaseModel):
     env_name: str
     port: int
+    local_data_folder: str
 
 
 class LLMSettings(BaseModel):

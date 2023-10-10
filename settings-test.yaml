@@ -1,5 +1,6 @@
 server:
   env_name: test
+  local_data_folder: local_data/tests
 
 
 llm:

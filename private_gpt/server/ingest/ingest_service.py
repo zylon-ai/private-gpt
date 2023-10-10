@@ -20,7 +20,7 @@ from private_gpt.components.node_store.node_store_component import NodeStoreComp
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
-from private_gpt.constants import LOCAL_DATA_PATH
+from private_gpt.paths import local_data_path
 
 if TYPE_CHECKING:
     from llama_index.readers.base import BaseReader
@@ -101,7 +101,7 @@ class IngestService:
             show_progress=True,
         )
         # persist the index and nodes
-        self.storage_context.persist(persist_dir=LOCAL_DATA_PATH)
+        self.storage_context.persist(persist_dir=local_data_path)
         return [document.doc_id for document in documents]
 
     def list_ingested(self) -> list[IngestedDoc]:

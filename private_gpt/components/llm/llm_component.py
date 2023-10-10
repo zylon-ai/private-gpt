@@ -3,7 +3,7 @@ from llama_index.llms import MockLLM
 from llama_index.llms.base import LLM
 from llama_index.llms.llama_utils import completion_to_prompt, messages_to_prompt
 
-from private_gpt.constants import MODELS_PATH
+from private_gpt.paths import models_path
 from private_gpt.settings.settings import settings
 
 
@@ -18,7 +18,7 @@ class LLMComponent:
                 from llama_index.llms import LlamaCPP
 
                 self.llm = LlamaCPP(
-                    model_path=str(MODELS_PATH / settings.local.model_file),
+                    model_path=str(models_path / settings.local.model_file),
                     temperature=0.1,
                     # llama2 has a context window of 4096 tokens,
                     # but we set it lower to allow for some wiggle room

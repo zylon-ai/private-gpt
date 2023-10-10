@@ -1,7 +1,5 @@
 from pathlib import Path
 
-from fastapi.testclient import TestClient
-
 from tests.fixtures.ingest_helper import IngestHelper
 
 
