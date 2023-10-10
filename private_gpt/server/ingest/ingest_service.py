@@ -30,6 +30,14 @@ class IngestedDoc(BaseModel):
     doc_id: str
     doc_metadata: dict[str, Any] | None = None
 
+    @staticmethod
+    def curate_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+        """Remove unwanted metadata keys."""
+        metadata.pop("doc_id", None)
+        metadata.pop("window", None)
+        metadata.pop("original_text", None)
+        return metadata
+
 
 @singleton
 class IngestService:
@@ -53,7 +61,7 @@ class IngestService:
             node_parser=SentenceWindowNodeParser.from_defaults(),
         )
 
-    def ingest(self, file_name: str, file_data: AnyStr | Path) -> list[str]:
+    def ingest(self, file_name: str, file_data: AnyStr | Path) -> list[IngestedDoc]:
         extension = Path(file_name).suffix
         reader_cls = DEFAULT_FILE_READER_CLS.get(extension)
         documents: list[Document]
@@ -89,7 +97,7 @@ class IngestService:
             document.metadata["file_name"] = file_name
         return self._save_docs(documents)
 
-    def _save_docs(self, documents: list[Document]) -> list[str]:
+    def _save_docs(self, documents: list[Document]) -> list[IngestedDoc]:
         for document in documents:
             document.metadata["doc_id"] = document.doc_id
         # create vectorStore index
@@ -102,7 +110,13 @@ class IngestService:
         )
         # persist the index and nodes
         self.storage_context.persist(persist_dir=local_data_path)
-        return [document.doc_id for document in documents]
+        return [
+            IngestedDoc(
+                doc_id=document.doc_id,
+                doc_metadata=IngestedDoc.curate_metadata(document.metadata),
+            )
+            for document in documents
+        ]
 
     def list_ingested(self) -> list[IngestedDoc]:
         ingested_docs = []
@@ -117,13 +131,8 @@ class IngestService:
             for doc_id in ingested_docs_ids:
                 ref_doc_info = docstore.get_ref_doc_info(ref_doc_id=doc_id)
                 doc_metadata = None
-                if ref_doc_info is not None:
-                    doc_metadata = ref_doc_info.metadata
-                    # Remove unwanted info from metadata in case it exists.
-                    # TODO make the list a constant
-                    doc_metadata.pop("doc_id", None)
-                    doc_metadata.pop("window", None)
-                    doc_metadata.pop("original_text", None)
+                if ref_doc_info is not None and ref_doc_info.metadata is not None:
+                    doc_metadata = IngestedDoc.curate_metadata(ref_doc_info.metadata)
                 ingested_docs.append(
                     IngestedDoc(doc_id=doc_id, doc_metadata=doc_metadata)
                 )

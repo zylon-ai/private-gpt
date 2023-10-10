@@ -36,8 +36,7 @@ class OpenAIChoice(BaseModel):
 
 
 class OpenAICompletion(BaseModel):
-    """
-    Clone of OpenAI Completion model.
+    """Clone of OpenAI Completion model.
 
     For more information see: https://platform.openai.com/docs/api-reference/chat/object
     """

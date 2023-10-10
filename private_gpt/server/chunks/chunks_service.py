@@ -12,6 +12,7 @@ from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
+from private_gpt.server.ingest.ingest_service import IngestedDoc
 
 if TYPE_CHECKING:
     from llama_index.schema import RelatedNodeInfo
@@ -19,8 +20,7 @@ if TYPE_CHECKING:
 
 class Chunk(BaseModel):
     score: float
-    doc_id: str
-    doc_name: str
+    document: IngestedDoc
     text: str
     previous_texts: list[str] | None
     next_texts: list[str] | None
@@ -92,8 +92,7 @@ class ChunksService:
             retrieved_nodes.append(
                 Chunk(
                     score=node.score or 0.0,
-                    doc_id=doc_id,
-                    doc_name=node.metadata["file_name"],
+                    document=IngestedDoc(doc_id=doc_id, doc_metadata=node.metadata),
                     text=node.get_content(),
                     previous_texts=self._get_sibling_nodes_text(
                         node, prev_next_chunks, False

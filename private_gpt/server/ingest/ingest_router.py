@@ -10,7 +10,7 @@ ingest_router = APIRouter(prefix="/v1")
 class IngestResponse(BaseModel):
     object: str
     model: str
-    documents: list[str]
+    documents: list[IngestedDoc]
 
 
 @ingest_router.post("/ingest")
@@ -18,9 +18,9 @@ def ingest(file: UploadFile) -> IngestResponse:
     service = root_injector.get(IngestService)
     if file.filename is None:
         raise HTTPException(400, "No file name provided")
-    documents_ids = service.ingest(file.filename, file.file.read())
+    ingested_documents = service.ingest(file.filename, file.file.read())
     return IngestResponse(
-        object="document-id", model="private-gpt", documents=documents_ids
+        object="document-id", model="private-gpt", documents=ingested_documents
     )
 
 
