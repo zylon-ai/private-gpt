@@ -64,7 +64,6 @@ class ChatService:
             retriever=vector_index_retriever,
             service_context=self.service_context,
         )
-        self.index.as_chat_engine()
         if streaming:
             result = chat_engine.stream_chat(message, chat_history)
         else:

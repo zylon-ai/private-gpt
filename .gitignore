@@ -21,6 +21,7 @@ __pycache__/
 .idea/
 .vscode/
 /.run/
+.fleet/
 
 # macOS
 .DS_Store
