@@ -1,5 +1,4 @@
-
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from private_gpt.di import root_injector
@@ -17,7 +16,9 @@ class IngestResponse(BaseModel):
 @ingest_router.post("/ingest")
 def ingest(file: UploadFile) -> IngestResponse:
     service = root_injector.get(IngestService)
-    documents_ids = service.ingest_uploaded_file(file.filename, file.file)
+    if file.filename is None:
+        raise HTTPException(400, "No file name provided")
+    documents_ids = service.ingest(file.filename, file.file.read())
     return IngestResponse(
         object="document-id", model="private-gpt", documents=documents_ids
     )

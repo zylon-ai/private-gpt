@@ -1,7 +1,8 @@
 import itertools
 import json
 from collections.abc import Iterable
-from typing import Any
+from pathlib import Path
+from typing import Any, TextIO
 
 import gradio as gr  # type: ignore
 from fastapi import FastAPI
@@ -74,7 +75,9 @@ def _list_ingested_files() -> str:
     files = set()
     for ingested_document in ingest_service.list_ingested():
         if ingested_document.doc_metadata is not None:
-            files.add(ingested_document.doc_metadata["file_name"])
+            files.add(
+                ingested_document.doc_metadata.get("file_name") or "[FILE NAME MISSING]"
+            )
 
     return "\n".join(files)
 
@@ -90,9 +93,18 @@ with gr.Blocks() as blocks:
         interactive=False,
     )
     upload_button = gr.components.UploadButton(
-        "Click to Upload a File", file_count="single", size="sm", render=False
+        "Click to Upload a File",
+        type="file",
+        file_count="single",
+        size="sm",
+        render=False,
     )
-    upload_button.upload(ingest_service.ingest_local_file, upload_button)
+
+    def _upload_file(file: TextIO) -> None:
+        path = Path(file.name)
+        ingest_service.ingest(file_name=path.name, file_data=path)
+
+    upload_button.upload(_upload_file, upload_button)
 
     # Action dropdown
     dropdown = gr.components.Dropdown(

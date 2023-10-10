@@ -1,11 +1,11 @@
+import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO
+from typing import TYPE_CHECKING, Any, AnyStr
 
 from injector import inject, singleton
 from llama_index import (
     Document,
     ServiceContext,
-    SimpleDirectoryReader,
     StorageContext,
     StringIterableReader,
     VectorStoreIndex,
@@ -53,24 +53,40 @@ class IngestService:
             node_parser=SentenceWindowNodeParser.from_defaults(),
         )
 
-    def ingest_uploaded_file(self, file_name: str | None, data: BinaryIO) -> list[str]:
-        extension = Path(file_name or "no_name.txt").suffix
+    def ingest(self, file_name: str, file_data: AnyStr | Path) -> list[str]:
+        extension = Path(file_name).suffix
         reader_cls = DEFAULT_FILE_READER_CLS.get(extension)
         documents: list[Document]
         if reader_cls is None:
-            # Read as a plain text file
+            # Read as a plain text
             string_reader = StringIterableReader()
-            documents = string_reader.load_data([data.read().decode("utf-8")])
+            if isinstance(file_data, Path):
+                text = file_data.read_text()
+                documents = string_reader.load_data([text])
+            elif isinstance(file_data, bytes):
+                documents = string_reader.load_data([file_data.decode("utf-8")])
+            elif isinstance(file_data, str):
+                documents = string_reader.load_data([file_data])
+            else:
+                raise ValueError(f"Unsupported data type {type(file_data)}")
         else:
             reader: BaseReader = reader_cls()
-            documents = reader.load_data(data)
+            if isinstance(file_data, Path):
+                # Already a path, nothing to do
+                documents = reader.load_data(file_data)
+            else:
+                # llama-index mainly supports reading from files, so
+                # we have to create a tmp file to read for it to work
+                with tempfile.NamedTemporaryFile() as tmp:
+                    path_to_tmp = Path(tmp.name)
+                    if isinstance(file_data, bytes):
+                        path_to_tmp.write_bytes(file_data)
+                    else:
+                        path_to_tmp.write_text(str(file_data))
+                    documents = reader.load_data(path_to_tmp)
 
-        return self._save_docs(documents)
-
-    def ingest_local_file(self, file: BinaryIO) -> list[str]:
-        # load file into a LlamaIndex document
-        documents = SimpleDirectoryReader(input_files=[file.name]).load_data()
-        # add doc node id to the metadata, to be able to filter during retrieval
+        for document in documents:
+            document.metadata["file_name"] = file_name
         return self._save_docs(documents)
 
     def _save_docs(self, documents: list[Document]) -> list[str]:
