@@ -7,7 +7,7 @@ from private_gpt.open_ai.openai_models import (
     OpenAICompletion,
     OpenAIMessage,
 )
-from private_gpt.server.chat.routes import ChatBody, chat_completion
+from private_gpt.server.chat.chat_router import ChatBody, chat_completion
 
 completions_router = APIRouter(prefix="/v1")
 

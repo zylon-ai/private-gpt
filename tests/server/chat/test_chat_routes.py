@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from private_gpt.open_ai.openai_models import OpenAICompletion, OpenAIMessage
-from private_gpt.server.chat.routes import ChatBody
+from private_gpt.server.chat.chat_router import ChatBody
 
 
 def test_chat_route_produces_a_stream(test_client: TestClient) -> None:

@@ -22,6 +22,24 @@ class ChatBody(BaseModel):
     stream: bool = False
     context_filter: ContextFilter | None = None
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": "How do you fry an egg?",
+                        }
+                    ],
+                    "stream": False,
+                    "use_context": False,
+                    "context_filter": None,
+                }
+            ]
+        }
+    }
+
 
 @chat_router.post("/chat/completions", response_model=None)
 def chat_completion(body: ChatBody) -> OpenAICompletion | StreamingResponse:

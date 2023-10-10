@@ -1,6 +1,9 @@
 from fastapi.testclient import TestClient
 
-from private_gpt.server.embeddings.routes import EmbeddingsBody, EmbeddingsResponse
+from private_gpt.server.embeddings.embeddings_router import (
+    EmbeddingsBody,
+    EmbeddingsResponse,
+)
 
 
 def test_embeddings_generation(test_client: TestClient) -> None:

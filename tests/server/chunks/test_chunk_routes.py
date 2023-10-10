@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from private_gpt.server.chunks.routes import ChunksBody, ChunksResponse
+from private_gpt.server.chunks.chunks_router import ChunksBody, ChunksResponse
 from tests.fixtures.ingest_helper import IngestHelper
 
 

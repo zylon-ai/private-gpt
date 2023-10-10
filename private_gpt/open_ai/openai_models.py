@@ -3,7 +3,7 @@ import uuid
 from collections.abc import Iterator
 
 from llama_index.llms import ChatResponse, CompletionResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class OpenAIDelta(BaseModel):
@@ -19,7 +19,7 @@ class OpenAIMessage(BaseModel):
     (providing a default response, not AI generated).
     """
 
-    role: str
+    role: str = Field(str, enum=["assistant", "system", "user"])
     content: str | None
 
 
