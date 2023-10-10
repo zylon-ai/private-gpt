@@ -1,5 +1,5 @@
 from injector import inject, singleton
-from llama_index.embeddings import resolve_embed_model, HuggingFaceEmbedding
+from llama_index.embeddings import HuggingFaceEmbedding
 from llama_index.embeddings.base import BaseEmbedding
 
 from private_gpt.paths import models_path
