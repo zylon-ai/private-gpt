@@ -41,7 +41,11 @@ class ChatBody(BaseModel):
     }
 
 
-@chat_router.post("/chat/completions", response_model=None)
+@chat_router.post(
+    "/chat/completions",
+    response_model=None,
+    responses={200: {"model": OpenAICompletion}},
+)
 def chat_completion(body: ChatBody) -> OpenAICompletion | StreamingResponse:
     service = root_injector.get(ChatService)
     all_messages = [

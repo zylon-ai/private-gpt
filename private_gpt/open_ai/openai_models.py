@@ -19,7 +19,7 @@ class OpenAIMessage(BaseModel):
     (providing a default response, not AI generated).
     """
 
-    role: str = Field(str, enum=["assistant", "system", "user"])
+    role: str = Field(default="user", enum=["assistant", "system", "user"])
     content: str | None
 
 
@@ -36,10 +36,16 @@ class OpenAIChoice(BaseModel):
 
 
 class OpenAICompletion(BaseModel):
+    """
+    Clone of OpenAI Completion model.
+
+    For more information see: https://platform.openai.com/docs/api-reference/chat/object
+    """
+
     id: str
-    object: str
-    created: int
-    model: str
+    object: str = Field("completion", enum=["completion", "completion.chunk"])
+    created: int = Field(..., examples=[1623340000])
+    model: str = Field("private-gpt", enum=["private-gpt"])
     choices: list[OpenAIChoice]
 
     @classmethod

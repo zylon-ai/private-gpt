@@ -19,7 +19,13 @@ class CompletionsBody(BaseModel):
     stream: bool = False
 
 
-@completions_router.post("/completions", response_model=None)
+@completions_router.post(
+    "/completions",
+    response_model=None,
+    deprecated=True,
+    summary="This endpoint exists only for OpenAI compatibility. Use /chat/completions instead.",
+    responses={200: {"model": OpenAICompletion}},
+)
 def prompt_completion(body: CompletionsBody) -> OpenAICompletion | StreamingResponse:
     """Deprecated. Use /chat/completions instead.
 
