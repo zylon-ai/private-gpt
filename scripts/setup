@@ -1,5 +1,29 @@
-#!/bin/bash
-cd "$(dirname $0)/.."
-wget -P models -c -nc https://huggingface.co/TheBloke/Llama-2-7B-chat-GGUF/resolve/main/llama-2-7b-chat.Q4_0.gguf
-wget -P models -c -nc https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_0.gguf
+#!/usr/bin/env python3
+import os
+from huggingface_hub import hf_hub_download
+from llama_index.embeddings import HuggingFaceEmbedding
 
+from private_gpt.paths import models_path
+from private_gpt.settings.settings import settings
+
+if settings.llm.mode == "local":
+    print("Downloading models for local execution...")
+
+    os.makedirs(models_path, exist_ok=True)
+
+    # Download Embedding model
+    embed_model = HuggingFaceEmbedding(
+        model_name=settings.local.embedding_hf_model_name, cache_folder=str(models_path)
+    )
+
+    print("Embedding model downloaded!\n")
+
+    # Download LLM and create a symlink to the model file
+    hf_hub_download(
+        repo_id=settings.local.llm_hf_repo_id,
+        filename=settings.local.llm_hf_model_file,
+        cache_dir=models_path,
+        local_dir=models_path,
+    )
+
+    print("LLM model downloaded!\nAll set!")

@@ -6,7 +6,6 @@ from private_gpt.settings.settings_loader import load_active_profiles
 class ServerSettings(BaseModel):
     env_name: str
     port: int
-    local_data_folder: str
 
 
 class LLMSettings(BaseModel):
@@ -14,8 +13,9 @@ class LLMSettings(BaseModel):
 
 
 class LocalSettings(BaseModel):
-    model_file: str
-    persist_dir: str
+    llm_hf_repo_id: str
+    llm_hf_model_file: str
+    embedding_hf_model_name: str
 
 
 class SagemakerSettings(BaseModel):

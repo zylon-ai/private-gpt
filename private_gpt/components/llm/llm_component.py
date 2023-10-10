@@ -18,7 +18,7 @@ class LLMComponent:
                 from llama_index.llms import LlamaCPP
 
                 self.llm = LlamaCPP(
-                    model_path=str(models_path / settings.local.model_file),
+                    model_path=str(models_path / settings.local.llm_hf_model_file),
                     temperature=0.1,
                     # llama2 has a context window of 4096 tokens,
                     # but we set it lower to allow for some wiggle room

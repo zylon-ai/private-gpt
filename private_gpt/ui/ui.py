@@ -68,7 +68,11 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
                 limit=2,
                 prev_next_chunks=1,
             ).__iter__()
-            yield "```" + json.dumps([node.__dict__ for node in response], indent=2)
+            yield "```" + json.dumps(
+                [node.__dict__ for node in response],
+                default=lambda o: o.__dict__,
+                indent=2,
+            )
 
 
 def _list_ingested_files() -> str:
