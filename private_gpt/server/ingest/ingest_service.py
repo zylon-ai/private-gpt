@@ -1,13 +1,17 @@
-from typing import Any, BinaryIO
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, BinaryIO
 
 from injector import inject, singleton
 from llama_index import (
+    Document,
     ServiceContext,
     SimpleDirectoryReader,
     StorageContext,
+    StringIterableReader,
     VectorStoreIndex,
 )
 from llama_index.node_parser import SentenceWindowNodeParser
+from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
 from pydantic import BaseModel
 
 from private_gpt.components.llm.llm_component import LLMComponent
@@ -16,6 +20,9 @@ from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
 from private_gpt.constants import LOCAL_DATA_PATH
+
+if TYPE_CHECKING:
+    from llama_index.readers.base import BaseReader
 
 
 class IngestedDoc(BaseModel):
@@ -44,10 +51,27 @@ class IngestService:
             node_parser=SentenceWindowNodeParser.from_defaults(),
         )
 
-    def ingest(self, file: BinaryIO) -> list[str]:
+    def ingest_uploaded_file(self, file_name: str | None, data: BinaryIO) -> list[str]:
+        extension = Path(file_name or "no_name.txt").suffix
+        reader_cls = DEFAULT_FILE_READER_CLS.get(extension)
+        documents: list[Document]
+        if reader_cls is None:
+            # Read as a plain text file
+            string_reader = StringIterableReader()
+            documents = string_reader.load_data([data.read().decode("utf-8")])
+        else:
+            reader: BaseReader = reader_cls()
+            documents = reader.load_data(data)
+
+        return self._save_docs(documents)
+
+    def ingest_local_file(self, file: BinaryIO) -> list[str]:
         # load file into a LlamaIndex document
         documents = SimpleDirectoryReader(input_files=[file.name]).load_data()
         # add doc node id to the metadata, to be able to filter during retrieval
+        return self._save_docs(documents)
+
+    def _save_docs(self, documents: list[Document]) -> list[str]:
         for document in documents:
             document.metadata["doc_id"] = document.doc_id
         # create vectorStore index

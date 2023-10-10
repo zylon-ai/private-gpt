@@ -92,7 +92,7 @@ with gr.Blocks() as blocks:
     upload_button = gr.components.UploadButton(
         "Click to Upload a File", file_count="single", size="sm", render=False
     )
-    upload_button.upload(ingest_service.ingest, upload_button)
+    upload_button.upload(ingest_service.ingest_local_file, upload_button)
 
     # Action dropdown
     dropdown = gr.components.Dropdown(

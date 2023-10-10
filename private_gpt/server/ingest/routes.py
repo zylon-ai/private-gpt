@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 
 from fastapi import APIRouter, UploadFile
+from pydantic import BaseModel
 
 from private_gpt.di import root_injector
 from private_gpt.server.ingest.ingest_service import IngestedDoc, IngestService
@@ -8,8 +8,7 @@ from private_gpt.server.ingest.ingest_service import IngestedDoc, IngestService
 ingest_router = APIRouter(prefix="/v1")
 
 
-@dataclass
-class IngestResponse:
+class IngestResponse(BaseModel):
     object: str
     model: str
     documents: list[str]
@@ -18,7 +17,7 @@ class IngestResponse:
 @ingest_router.post("/ingest")
 def ingest(file: UploadFile) -> IngestResponse:
     service = root_injector.get(IngestService)
-    documents_ids = service.ingest(file.file)
+    documents_ids = service.ingest_uploaded_file(file.filename, file.file)
     return IngestResponse(
         object="document-id", model="private-gpt", documents=documents_ids
     )
