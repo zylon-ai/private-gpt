@@ -40,6 +40,7 @@ optional = true
 llama-cpp-python = "^0.2.7"
 sentence-transformers = "^2.2.2"
 chromadb = "^0.4.13"
+huggingface-hub = "^0.18.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -135,6 +136,8 @@ exclude = ["tests"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+testpaths = ["tests"]
+rootdir = "."
 addopts = [
     "--import-mode=importlib",
 ]
