@@ -25,7 +25,3 @@ __pycache__/
 
 # macOS
 .DS_Store
-
-# local rag storage
-/local_data/
-/chroma_db/
