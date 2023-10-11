@@ -100,9 +100,9 @@ class IngestService:
     def _save_docs(self, documents: list[Document]) -> list[IngestedDoc]:
         for document in documents:
             document.metadata["doc_id"] = document.doc_id
-            # We don't want the Embeddings to receive contain this metadata, as it'd impact the search
+            # We don't want the Embeddings search to receive this metadata
             document.excluded_embed_metadata_keys = ["doc_id"]
-            # We don't want the LLM to receive these metadata in the context, as it may trick the LLM
+            # We don't want the LLM to receive these metadata in the context
             document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
         # create vectorStore index
         VectorStoreIndex.from_documents(
