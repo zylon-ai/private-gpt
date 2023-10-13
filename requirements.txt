@@ -12,3 +12,4 @@ pandoc==2.3
 pypandoc==1.11
 tqdm==4.66.1
 sentence_transformers==2.2.2
+colorama>=0.4.3

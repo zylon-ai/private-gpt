@@ -5,6 +5,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
 from langchain.llms import GPT4All, LlamaCpp
+from colorama import Fore, Back, Style
 import chromadb
 import os
 import argparse
@@ -47,7 +48,7 @@ def main():
     qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents= not args.hide_source)
     # Interactive questions and answers
     while True:
-        query = input("\nEnter a query: ")
+        query = input(f"\n{Fore.GREEN}Enter a query: {Fore.YELLOW}")
         if query == "exit":
             break
         if query.strip() == "":
@@ -55,6 +56,7 @@ def main():
 
         # Get the answer from the chain
         start = time.time()
+        print(Style.RESET_ALL)
         res = qa(query)
         answer, docs = res['result'], [] if args.hide_source else res['source_documents']
         end = time.time()
@@ -62,12 +64,12 @@ def main():
         # Print the result
         print("\n\n> Question:")
         print(query)
-        print(f"\n> Answer (took {round(end - start, 2)} s.):")
-        print(answer)
+        print(f"\n{Fore.BLUE}{Style.BRIGHT} Answer (took {round(end - start, 2)} s.):")
+        print(f"{Fore.YELLOW}{Style.NORMAL}{answer}{Style.RESET_ALL}")
 
         # Print the relevant sources used for the answer
         for document in docs:
-            print("\n> " + document.metadata["source"] + ":")
+            print(f"\n{Fore.GREEN}Source: {document.metadata['source']}{Style.RESET_ALL}")
             print(document.page_content)
 
 def parse_arguments():
