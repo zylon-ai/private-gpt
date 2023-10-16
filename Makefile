@@ -28,10 +28,8 @@ check:
 run:
 	poetry run python -m private_gpt
 
+dev-windows:
+	(set PGPT_PROFILES=local & poetry run python -m uvicorn private_gpt.main:app --reload --port 8001)
+
 dev:
 	PYTHONUNBUFFERED=1 PGPT_PROFILES=local poetry run python -m uvicorn private_gpt.main:app --reload --port 8001
-
-install-mac:
-	CMAKE_ARGS="-DLLAMA_METAL=on" poetry install
-
-install-windows:

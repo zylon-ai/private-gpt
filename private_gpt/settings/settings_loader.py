@@ -41,6 +41,7 @@ def load_profile(profile: str) -> dict[str, Any]:
 
 def load_active_profiles() -> dict[str, Any]:
     """Load active profiles and merge them."""
+    print(f"Starting application with profiles: {active_profiles}")
     loaded_profiles = [load_profile(profile) for profile in active_profiles]
     merged: dict[str, Any] = functools.reduce(deep_update, loaded_profiles, {})
     return merged

@@ -24,8 +24,8 @@ class LLMComponent:
                     # but we set it lower to allow for some wiggle room
                     context_window=3900,
                     generate_kwargs={},
-                    # set to at least 1 to use GPU
-                    model_kwargs={"n_gpu_layers": 1},
+                    # All to GPU
+                    model_kwargs={"n_gpu_layers": -1},
                     # transform inputs into Llama2 format
                     messages_to_prompt=messages_to_prompt,
                     completion_to_prompt=completion_to_prompt,

@@ -5,7 +5,7 @@ description = "Private GPT"
 authors = ["Zylon <hi@zylon.ai>"]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.13"
 fastapi = { extras = ["all"], version = "^0.103.1" }
 loguru = "^0.7.2"
 boto3 = "^1.28.56"
@@ -31,16 +31,14 @@ optional = true
 [tool.poetry.group.ui.dependencies]
 gradio = "^3.45.2"
 
-# Dependencies to run models locally, you will also need to install
-# either metal or CUDA dependencies, otherwise they will run on CPU
-# and will be _very_ slow.
 [tool.poetry.group.local]
 optional = true
 [tool.poetry.group.local.dependencies]
-llama-cpp-python = "^0.2.7"
 sentence-transformers = "^2.2.2"
 chromadb = "^0.4.13"
-huggingface-hub = "^0.18.0"
+transformers = "^4.34.0"
+numpy = "1.26.0"
+llama-cpp-python = "^0.2.11"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -137,7 +135,6 @@ exclude = ["tests"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-rootdir = "."
 addopts = [
     "--import-mode=importlib",
 ]

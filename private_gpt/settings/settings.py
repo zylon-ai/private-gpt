@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from private_gpt.settings.settings_loader import load_active_profiles
 
@@ -9,7 +9,7 @@ class ServerSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: str
+    mode: str = Field(enum=["local", "open_ai", "sagemaker", "mock"])
 
 
 class LocalSettings(BaseModel):

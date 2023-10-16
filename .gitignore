@@ -1,3 +1,5 @@
+.venv
+
 settings-local.yaml
 
 .ruff_cache
