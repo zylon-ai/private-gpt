@@ -13,7 +13,7 @@ class IngestResponse(BaseModel):
     documents: list[IngestedDoc]
 
 
-@ingest_router.post("/ingest")
+@ingest_router.post("/ingest", tags=["Ingestion"])
 def ingest(file: UploadFile) -> IngestResponse:
     service = root_injector.get(IngestService)
     if file.filename is None:
@@ -24,7 +24,7 @@ def ingest(file: UploadFile) -> IngestResponse:
     )
 
 
-@ingest_router.get("/ingest/list")
+@ingest_router.get("/ingest/list", tags=["Ingestion"])
 def list_ingested() -> list[IngestedDoc]:
     service = root_injector.get(IngestService)
     ingested_docs = service.list_ingested()

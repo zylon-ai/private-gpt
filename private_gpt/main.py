@@ -4,6 +4,7 @@ from typing import Any
 
 import llama_index
 from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
 from loguru import logger
 
 from private_gpt.server.chat.chat_router import chat_router
@@ -35,11 +36,15 @@ llama_index.set_global_handler("simple")
 description = """
 PrivateGPT API helps you do awesome stuff. 🚀
 
-## Section 1
+## Installation and Setup
 
 Add here intro **section 1**.
 
-## Section 2
+## Gradio Client
+
+Add here intro **section 2**.
+
+## API:
 
 Add here intro **section 2**.
 
@@ -47,22 +52,78 @@ Add here intro **section 2**.
 * **List item 2** lorem ipsum.
 """
 
-app = FastAPI(
-    title="PrivateGPT",
-    description=description,
-    version="0.1.0",
-    summary="PrivateGPT Summary",
-    contact={
-        "url": "https://github.com/imartinez/privateGPT",
+tags_metadata = [
+    {
+        "name": "Ingestion",
+        "description": "Lorem ipsum",
+        "externalDocs": {
+            "description": "Items external docs",
+            "url": "https://fastapi.tiangolo.com/",
+        },
     },
-    license_info={
-        "name": "Apache 2.0",
-        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    {
+        "name": "Completions",
+        "description": "Lorem ipsum",
+        "externalDocs": {
+            "description": "Items external docs",
+            "url": "https://fastapi.tiangolo.com/",
+        },
     },
-)
+    {
+        "name": "Embeddings",
+        "description": "Lorem ipsum",
+        "externalDocs": {
+            "description": "Items external docs",
+            "url": "https://fastapi.tiangolo.com/",
+        },
+    },
+    {
+        "name": "Chunks",
+        "description": "Lorem ipsum",
+        "externalDocs": {
+            "description": "Items external docs",
+            "url": "https://fastapi.tiangolo.com/",
+        },
+    },
+    {
+        "name": "Health",
+        "description": "Lorem ipsum",
+    },
+]
+
+app = FastAPI()
 
 
-@app.get("/health")
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="PrivateGPT",
+        description=description,
+        version="0.1.0",
+        summary="PrivateGPT Summary",
+        contact={
+            "url": "https://github.com/imartinez/privateGPT",
+        },
+        license_info={
+            "name": "Apache 2.0",
+            "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+        },
+        routes=app.routes,
+        tags=tags_metadata,
+    )
+    # openapi_schema["info"]["x-logo"] = {
+    #     "url": "https://raw.githubusercontent.com/zylon-ai/private-gpt/main/docs/logo.png"
+    # }
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
+
+
+@app.get("/health", tags=["Health"], description="Blavla")
 def health() -> Any:
     return {"status": "ok"}
 

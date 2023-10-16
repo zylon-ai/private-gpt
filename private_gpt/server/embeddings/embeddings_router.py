@@ -23,7 +23,7 @@ class EmbeddingsResponse(BaseModel):
     data: list[Embedding]
 
 
-@embeddings_router.post("/embeddings")
+@embeddings_router.post("/embeddings", tags=["Embeddings"])
 def embeddings_generation(body: EmbeddingsBody) -> EmbeddingsResponse:
     service = root_injector.get(EmbeddingsService)
     input_texts = body.input if isinstance(body.input, list) else [body.input]

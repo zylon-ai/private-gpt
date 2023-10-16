@@ -25,6 +25,7 @@ class CompletionsBody(BaseModel):
     deprecated=True,
     summary="This endpoint exists only for OpenAI compatibility. Use /chat/completions instead.",
     responses={200: {"model": OpenAICompletion}},
+    tags=["Completions"],
 )
 def prompt_completion(body: CompletionsBody) -> OpenAICompletion | StreamingResponse:
     """Deprecated. Use /chat/completions instead.

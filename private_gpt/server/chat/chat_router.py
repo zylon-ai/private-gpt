@@ -45,6 +45,7 @@ class ChatBody(BaseModel):
     "/chat/completions",
     response_model=None,
     responses={200: {"model": OpenAICompletion}},
+    tags=["Completions"],
 )
 def chat_completion(body: ChatBody) -> OpenAICompletion | StreamingResponse:
     service = root_injector.get(ChatService)

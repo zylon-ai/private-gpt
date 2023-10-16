@@ -11,12 +11,19 @@
       "name": "Apache 2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
     },
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "x-logo": {
+      "url": "/private-gpt/docs/logo.png"
+    }
   },
   "paths": {
     "/health": {
       "get": {
+        "tags": [
+          "users"
+        ],
         "summary": "Health",
+        "description": "Blavla",
         "operationId": "health_health_get",
         "responses": {
           "200": {
@@ -799,5 +806,13 @@
         "title": "ValidationError"
       }
     }
-  }
+  },
+  "x-tagGroups": [
+    {
+      "name": "General",
+      "tags": [
+        "users"
+      ]
+    }
+  ]
 }

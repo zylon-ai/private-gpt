@@ -26,7 +26,7 @@ class ChunksResponse(BaseModel):
     chunks: list[Chunk]
 
 
-@chunks_router.post("/chunks")
+@chunks_router.post("/chunks", tags=["Chunks"])
 def chunks_retrieval(body: ChunksBody) -> ChunksResponse:
     service = root_injector.get(ChunksService)
     results = service.retrieve_relevant(
