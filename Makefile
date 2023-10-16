@@ -33,3 +33,6 @@ dev-windows:
 
 dev:
 	PYTHONUNBUFFERED=1 PGPT_PROFILES=local poetry run python -m uvicorn private_gpt.main:app --reload --port 8001
+
+api-docs:
+	poetry run python scripts/extract-openapi.py private_gpt.main:app --out docs/openapi.json
