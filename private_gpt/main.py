@@ -94,7 +94,7 @@ tags_metadata = [
 app = FastAPI()
 
 
-def custom_openapi():
+def custom_openapi() -> dict[str, Any]:
     if app.openapi_schema:
         return app.openapi_schema
     openapi_schema = get_openapi(
@@ -110,7 +110,7 @@ def custom_openapi():
             "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
         },
         routes=app.routes,
-        tags=tags_metadata,
+        tags=tags_metadata,  # type: ignore
     )
     # openapi_schema["info"]["x-logo"] = {
     #     "url": "https://raw.githubusercontent.com/zylon-ai/private-gpt/main/docs/logo.png"
@@ -118,9 +118,6 @@ def custom_openapi():
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
-
-
-app.openapi = custom_openapi
 
 
 @app.get("/health", tags=["Health"], description="Blavla")

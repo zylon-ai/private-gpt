@@ -11,7 +11,10 @@ class ServerSettings(BaseModel):
 
 
 class DataSettings(BaseModel):
-    local_data_folder: str = Field(description="Relative path to local storage.")
+    local_data_folder: str = Field(
+        description="Path to local storage."
+        "It will be treated as an absolute path if it starts with /"
+    )
 
 
 class LLMSettings(BaseModel):

@@ -1,3 +1,6 @@
+# Any args passed to the make script, use with $(call args, default_value)
+args = `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
+
 ########################################################################################################################
 # Quality checks
 ########################################################################################################################
@@ -25,6 +28,10 @@ check:
 	make format
 	make mypy
 
+########################################################################################################################
+# Run
+########################################################################################################################
+
 run:
 	poetry run python -m private_gpt
 
@@ -34,5 +41,12 @@ dev-windows:
 dev:
 	PYTHONUNBUFFERED=1 PGPT_PROFILES=local poetry run python -m uvicorn private_gpt.main:app --reload --port 8001
 
+########################################################################################################################
+# Misc
+########################################################################################################################
+
 api-docs:
 	poetry run python scripts/extract-openapi.py private_gpt.main:app --out docs/openapi.json
+
+ingest:
+	@poetry run python scripts/ingest_folder.py $(call args)

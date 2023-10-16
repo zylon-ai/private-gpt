@@ -15,6 +15,9 @@ python-multipart = "^0.0.6"
 pypdf = "^3.16.2"
 llama-index = "v0.8.35"
 chromadb = "^0.4.13"
+watchdog = "^3.0.0"
+transformers = "^4.34.0"
+torch = "^2.1.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
@@ -36,7 +39,6 @@ gradio = "^3.45.2"
 optional = true
 [tool.poetry.group.local.dependencies]
 sentence-transformers = "^2.2.2"
-transformers = "^4.34.0"
 numpy = "1.26.0"
 llama-cpp-python = "^0.2.11"
 

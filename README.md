@@ -2,9 +2,9 @@
 
 [![Tests](https://github.com/zylon-ai/private-gpt/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/zylon-ai/private-gpt/actions/workflows/tests.yml)
 
-### Installation
+## Installation
 
-#### Base requirements to run PrivateGPT
+### Base requirements to run PrivateGPT
 
 * Python 3.11
 * Poetry: https://python-poetry.org/docs/
@@ -12,7 +12,7 @@
   windows: (Using chocolatey) `choco install make`
   osx: (Using homebrew): `brew install make`
 
-#### Install dependencies
+### Install dependencies
 
 Install the dependencies with.
 
@@ -46,7 +46,7 @@ later profiles properties overriding values of earlier ones.
 
 During testing, the `test` profile will be active along with the default.
 
-#### Environment variables expansion
+### Environment variables expansion
 
 Configuration files can contain environment variables,
 they will be expanded at runtime.
@@ -62,7 +62,7 @@ server:
   port: ${PORT:8001}
 ```
 
-### Running with a local LLM
+## Running with a local LLM
 
 For PrivateGPT to run fully locally GPU acceleration is required
 (CPU execution is possible, but very slow), however,
@@ -103,7 +103,7 @@ poetry install --with local
 
 If you are ok with CPU execution, you can skip the rest of this section.
 
-#### OSX
+### OSX
 
 You will need to build `llama.cpp` with metal support. to do that run:
 
@@ -111,7 +111,7 @@ You will need to build `llama.cpp` with metal support. to do that run:
 CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
 ```
 
-#### Windows
+### Windows
 
 Windows GPU support is done through CUDA or similar open source technologies.
 Follow the instructions on the original [llama.cpp](https://github.com/ggerganov/llama.cpp) repo to install the required
@@ -138,8 +138,20 @@ llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, co
 AVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | NEON = 0 | ARM_FMA = 0 | F16C = 1 | FP16_VA = 0 | WASM_SIMD = 0 | BLAS = 1 | SSE3 = 1 | SSSE3 = 0 | VSX = 0 | 
 ```
 
-#### Linux
+### Linux
 
 🚧 Under construction 🚧
 
+## RAG 
 
+### Ingesting data
+
+You can ingest a folder (containing pdf, text files, etc) and optionally
+watch changes on it with the command:
+
+```bash
+make ingest /path/to/folder -- --watch
+```
+
+After ingestion is complete, you should be able to chat with your documents
+by navigating to http://localhost:8001 and using the option `Query documents`
