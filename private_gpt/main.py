@@ -31,7 +31,35 @@ logger.add(
 # Add LlamaIndex simple observability
 llama_index.set_global_handler("simple")
 
-app = FastAPI()
+# Start the API
+description = """
+PrivateGPT API helps you do awesome stuff. 🚀
+
+## Section 1
+
+Add here intro **section 1**.
+
+## Section 2
+
+Add here intro **section 2**.
+
+* **List item 1** lorem ipsum.
+* **List item 2** lorem ipsum.
+"""
+
+app = FastAPI(
+    title="PrivateGPT",
+    description=description,
+    version="0.1.0",
+    summary="PrivateGPT Summary",
+    contact={
+        "url": "https://github.com/imartinez/privateGPT",
+    },
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    },
+)
 
 
 @app.get("/health")

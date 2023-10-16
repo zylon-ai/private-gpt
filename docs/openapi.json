@@ -1,7 +1,16 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "FastAPI",
+    "title": "PrivateGPT",
+    "summary": "PrivateGPT Summary",
+    "description": "\nPrivateGPT API helps you do awesome stuff. \ud83d\ude80\n\n## Section 1\n\nAdd here intro **section 1**.\n\n## Section 2\n\nAdd here intro **section 2**.\n\n* **List item 1** lorem ipsum.\n* **List item 2** lorem ipsum.\n",
+    "contact": {
+      "url": "https://github.com/imartinez/privateGPT"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    },
     "version": "0.1.0"
   },
   "paths": {
