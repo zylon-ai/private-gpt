@@ -1,0 +1,803 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PrivateGPT",
+    "summary": "PrivateGPT Summary",
+    "description": "\nPrivateGPT API helps you do awesome stuff. \ud83d\ude80\n\n## Section 1\n\nAdd here intro **section 1**.\n\n## Section 2\n\nAdd here intro **section 2**.\n\n* **List item 1** lorem ipsum.\n* **List item 2** lorem ipsum.\n",
+    "contact": {
+      "url": "https://github.com/imartinez/privateGPT"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/completions": {
+      "post": {
+        "summary": "This endpoint exists only for OpenAI compatibility. Use /chat/completions instead.",
+        "description": "Deprecated. Use /chat/completions instead.\n\nThis endpoint only exists for openai compatibility.",
+        "operationId": "prompt_completion_v1_completions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletionsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAICompletion"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "summary": "Chat Completion",
+        "operationId": "chat_completion_v1_chat_completions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAICompletion"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chunks": {
+      "post": {
+        "summary": "Chunks Retrieval",
+        "operationId": "chunks_retrieval_v1_chunks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChunksBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChunksResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ingest": {
+      "post": {
+        "summary": "Ingest",
+        "operationId": "ingest_v1_ingest_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_ingest_v1_ingest_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ingest/list": {
+      "get": {
+        "summary": "List Ingested",
+        "operationId": "list_ingested_v1_ingest_list_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IngestedDoc"
+                  },
+                  "type": "array",
+                  "title": "Response List Ingested V1 Ingest List Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/embeddings": {
+      "post": {
+        "summary": "Embeddings Generation",
+        "operationId": "embeddings_generation_v1_embeddings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmbeddingsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmbeddingsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_ingest_v1_ingest_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_ingest_v1_ingest_post"
+      },
+      "ChatBody": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/OpenAIMessage"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "use_context": {
+            "type": "boolean",
+            "title": "Use Context",
+            "default": false
+          },
+          "stream": {
+            "type": "boolean",
+            "title": "Stream",
+            "default": false
+          },
+          "context_filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "title": "ChatBody",
+        "examples": [
+          {
+            "messages": [
+              {
+                "content": "How do you fry an egg?",
+                "role": "user"
+              }
+            ],
+            "stream": false,
+            "use_context": false
+          }
+        ]
+      },
+      "Chunk": {
+        "properties": {
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "document": {
+            "$ref": "#/components/schemas/IngestedDoc"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "previous_texts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Texts"
+          },
+          "next_texts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Texts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score",
+          "document",
+          "text",
+          "previous_texts",
+          "next_texts"
+        ],
+        "title": "Chunk"
+      },
+      "ChunksBody": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "context_filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "default": 10
+          },
+          "prev_next_chunks": {
+            "type": "integer",
+            "title": "Prev Next Chunks",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ChunksBody"
+      },
+      "ChunksResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "object": {
+            "type": "string",
+            "title": "Object"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/Chunk"
+            },
+            "type": "array",
+            "title": "Chunks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "object",
+          "created",
+          "model",
+          "chunks"
+        ],
+        "title": "ChunksResponse"
+      },
+      "CompletionsBody": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "use_context": {
+            "type": "boolean",
+            "title": "Use Context",
+            "default": false
+          },
+          "context_filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stream": {
+            "type": "boolean",
+            "title": "Stream",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "CompletionsBody"
+      },
+      "ContextFilter": {
+        "properties": {
+          "docs_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docs Ids"
+          }
+        },
+        "type": "object",
+        "title": "ContextFilter"
+      },
+      "Embedding": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "object": {
+            "type": "string",
+            "title": "Object"
+          },
+          "embedding": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Embedding"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "object",
+          "embedding"
+        ],
+        "title": "Embedding"
+      },
+      "EmbeddingsBody": {
+        "properties": {
+          "input": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input"
+        ],
+        "title": "EmbeddingsBody"
+      },
+      "EmbeddingsResponse": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "title": "Object"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Embedding"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "object",
+          "model",
+          "data"
+        ],
+        "title": "EmbeddingsResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IngestResponse": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "title": "Object"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/IngestedDoc"
+            },
+            "type": "array",
+            "title": "Documents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "object",
+          "model",
+          "documents"
+        ],
+        "title": "IngestResponse"
+      },
+      "IngestedDoc": {
+        "properties": {
+          "doc_id": {
+            "type": "string",
+            "title": "Doc Id"
+          },
+          "doc_metadata": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doc Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "doc_id"
+        ],
+        "title": "IngestedDoc"
+      },
+      "OpenAIChoice": {
+        "properties": {
+          "finish_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish Reason"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpenAIDelta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpenAIMessage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "OpenAIChoice",
+        "description": "Response from AI.\n\nEither the delta or the message will be present, but never both."
+      },
+      "OpenAICompletion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "completion",
+              "completion.chunk"
+            ],
+            "title": "Object",
+            "default": "completion"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created",
+            "examples": [
+              1623340000
+            ]
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "private-gpt"
+            ],
+            "title": "Model",
+            "default": "private-gpt"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/OpenAIChoice"
+            },
+            "type": "array",
+            "title": "Choices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created",
+          "choices"
+        ],
+        "title": "OpenAICompletion",
+        "description": "Clone of OpenAI Completion model.\n\nFor more information see: https://platform.openai.com/docs/api-reference/chat/object"
+      },
+      "OpenAIDelta": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "OpenAIDelta",
+        "description": "A piece of completion that needs to be concatenated to get the full message."
+      },
+      "OpenAIMessage": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "assistant",
+              "system",
+              "user"
+            ],
+            "title": "Role",
+            "default": "user"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "OpenAIMessage",
+        "description": "Inference result, with the source of the message.\n\nRole could be the assistant or system\n(providing a default response, not AI generated)."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
