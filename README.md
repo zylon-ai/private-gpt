@@ -65,7 +65,7 @@ server:
 ### Running with a local LLM
 
 For PrivateGPT to run fully locally GPU acceleration is required
-(CPU execution is possible, but extremely slow), however,
+(CPU execution is possible, but very slow), however,
 typical Macbook laptops or window desktops with mid-range GPUs lack VRAM to run
 even the smallest LLMs. For that reason
 **local execution is only supported for models compatible with [llama.cpp](https://github.com/ggerganov/llama.cpp)**
@@ -103,7 +103,7 @@ poetry install --with local
 
 If you are ok with CPU execution, you can skip the rest of this section.
 
-* OSX
+#### OSX
 
 You will need to build `llama.cpp` with metal support. to do that run:
 
@@ -111,13 +111,13 @@ You will need to build `llama.cpp` with metal support. to do that run:
 CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
 ```
 
-* Windows
+#### Windows
 
 Windows GPU support is done through CUDA or similar open source technologies.
 Follow the instructions on the original [llama.cpp](https://github.com/ggerganov/llama.cpp) repo to install the required
 dependencies.
 
-Some tips to get it working with an NVIDA card and CUDA:
+Some tips to get it working with an NVIDIA card and CUDA:
 
 * Install latest VS2022 (and build tools) https://visualstudio.microsoft.com/vs/community/
 * Install CUDA toolkit https://developer.nvidia.com/cuda-downloads
