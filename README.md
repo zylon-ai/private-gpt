@@ -138,5 +138,8 @@ llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, co
 AVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | NEON = 0 | ARM_FMA = 0 | F16C = 1 | FP16_VA = 0 | WASM_SIMD = 0 | BLAS = 1 | SSE3 = 1 | SSSE3 = 0 | VSX = 0 | 
 ```
 
+#### Linux
+
+🚧 Under construction 🚧
 
 
