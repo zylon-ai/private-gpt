@@ -4,8 +4,14 @@ from private_gpt.settings.settings_loader import load_active_profiles
 
 
 class ServerSettings(BaseModel):
-    env_name: str
-    port: int
+    env_name: str = Field(
+        description="Name of the environment (prod, staging, local...)"
+    )
+    port: int = Field("Port of PrivateGPT FastAPI server, defaults to 8001")
+
+
+class DataSettings(BaseModel):
+    local_data_folder: str = Field(description="Relative path to local storage.")
 
 
 class LLMSettings(BaseModel):
@@ -33,6 +39,7 @@ class UISettings(BaseModel):
 
 class Settings(BaseModel):
     server: ServerSettings
+    data: DataSettings
     ui: UISettings
     llm: LLMSettings
     local: LocalSettings

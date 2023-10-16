@@ -2,6 +2,9 @@ server:
   env_name: ${APP_ENV:prod}
   port: ${PORT:8001}
 
+data:
+  local_data_folder: local_data/private_gpt
+
 ui:
   enabled: true
   path: /
