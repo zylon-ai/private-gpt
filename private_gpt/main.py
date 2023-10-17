@@ -53,7 +53,7 @@ tags_metadata = [
     },
     {
         "name": "Context Chunks",
-        "description": "Low-level API that given a query return relevant chunks of text coming from the ingested"
+        "description": "Low-level API that given a query return relevant chunks of text coming from the ingested "
         "documents.",
     },
     {
