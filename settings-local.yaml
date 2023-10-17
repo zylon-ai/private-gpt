@@ -1,3 +1,5 @@
 server:
   env_name: ${APP_ENV:local}
 
+llm:
+  mode: local

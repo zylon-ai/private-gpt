@@ -1,6 +1,6 @@
 .venv
 
-settings-local.yaml
+settings-me.yaml
 
 .ruff_cache
 .pytest_cache
