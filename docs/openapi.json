@@ -1,26 +1,14 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "PrivateGPT",
-    "summary": "PrivateGPT Summary",
-    "description": "\nPrivateGPT API helps you do awesome stuff. \ud83d\ude80\n\n## Section 1\n\nAdd here intro **section 1**.\n\n## Section 2\n\nAdd here intro **section 2**.\n\n* **List item 1** lorem ipsum.\n* **List item 2** lorem ipsum.\n",
-    "contact": {
-      "url": "https://github.com/imartinez/privateGPT"
-    },
-    "license": {
-      "name": "Apache 2.0",
-      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
-    },
-    "version": "0.1.0",
-    "x-logo": {
-      "url": "/private-gpt/docs/logo.png"
-    }
+    "title": "FastAPI",
+    "version": "0.1.0"
   },
   "paths": {
     "/health": {
       "get": {
         "tags": [
-          "users"
+          "Health"
         ],
         "summary": "Health",
         "description": "Blavla",
@@ -41,6 +29,9 @@
     },
     "/v1/completions": {
       "post": {
+        "tags": [
+          "Completions"
+        ],
         "summary": "This endpoint exists only for OpenAI compatibility. Use /chat/completions instead.",
         "description": "Deprecated. Use /chat/completions instead.\n\nThis endpoint only exists for openai compatibility.",
         "operationId": "prompt_completion_v1_completions_post",
@@ -81,6 +72,9 @@
     },
     "/v1/chat/completions": {
       "post": {
+        "tags": [
+          "Completions"
+        ],
         "summary": "Chat Completion",
         "operationId": "chat_completion_v1_chat_completions_post",
         "requestBody": {
@@ -119,6 +113,9 @@
     },
     "/v1/chunks": {
       "post": {
+        "tags": [
+          "Chunks"
+        ],
         "summary": "Chunks Retrieval",
         "operationId": "chunks_retrieval_v1_chunks_post",
         "requestBody": {
@@ -157,6 +154,9 @@
     },
     "/v1/ingest": {
       "post": {
+        "tags": [
+          "Ingestion"
+        ],
         "summary": "Ingest",
         "operationId": "ingest_v1_ingest_post",
         "requestBody": {
@@ -195,6 +195,9 @@
     },
     "/v1/ingest/list": {
       "get": {
+        "tags": [
+          "Ingestion"
+        ],
         "summary": "List Ingested",
         "operationId": "list_ingested_v1_ingest_list_get",
         "responses": {
@@ -217,6 +220,9 @@
     },
     "/v1/embeddings": {
       "post": {
+        "tags": [
+          "Embeddings"
+        ],
         "summary": "Embeddings Generation",
         "operationId": "embeddings_generation_v1_embeddings_post",
         "requestBody": {
@@ -806,13 +812,5 @@
         "title": "ValidationError"
       }
     }
-  },
-  "x-tagGroups": [
-    {
-      "name": "General",
-      "tags": [
-        "users"
-      ]
-    }
-  ]
+  }
 }

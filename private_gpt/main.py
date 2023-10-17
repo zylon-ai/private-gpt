@@ -34,9 +34,8 @@ logger.add(
 llama_index.set_global_handler("simple")
 
 # Start the API
-with open(docs_path / "description.md") as f:
-    description = f.read()
-    f.close()
+with open(docs_path / "description.md") as description_file:
+    description = description_file.read()
 
 tags_metadata = [
     {

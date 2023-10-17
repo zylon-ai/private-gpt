@@ -46,7 +46,7 @@ dev:
 ########################################################################################################################
 
 api-docs:
-	poetry run python scripts/extract-openapi.py private_gpt.main:app --out docs/openapi.json
+	poetry run python scripts/extract_openapi.py private_gpt.main:app --out docs/openapi.json
 
 ingest:
 	@poetry run python scripts/ingest_folder.py $(call args)
