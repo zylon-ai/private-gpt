@@ -19,8 +19,8 @@ chat_router = APIRouter(prefix="/v1")
 class ChatBody(BaseModel):
     messages: list[OpenAIMessage]
     use_context: bool = False
-    stream: bool = False
     context_filter: ContextFilter | None = None
+    stream: bool = False
 
     model_config = {
         "json_schema_extra": {
@@ -33,8 +33,10 @@ class ChatBody(BaseModel):
                         }
                     ],
                     "stream": False,
-                    "use_context": False,
-                    "context_filter": None,
+                    "use_context": True,
+                    "context_filter": {
+                        "docs_ids": ["c202d5e6-7b69-4869-81cc-dd574ee8ee11"]
+                    },
                 }
             ]
         }
@@ -48,18 +50,19 @@ class ChatBody(BaseModel):
     tags=["Completions"],
 )
 def chat_completion(body: ChatBody) -> OpenAICompletion | StreamingResponse:
-    """Given a list of messages comprising a conversation, the model will return a response. If `use_context` is
-    set to `true`, the model will use context coming from the ingested documents to create the response. The
-    documents being used can be filtered using the `context_filter` and passing the document IDs to be used.
-    Ingested documents IDs can be found using `/ingest/list` endpoint. If you want all ingested documents to be
-    used, remove `context_filter` altogether.
+    """Given a list of messages comprising a conversation, return a response.
 
-    When using `'stream': true`, the API will return data chunks following
-    [OpenAI's streaming model](https://platform.openai.com/docs/api-reference/chat/streaming):
-    ```
-    {"id":"12345","object":"completion.chunk","created":1694268190,
-    "model":"private-gpt","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}
-    ```
+    If `use_context` is set to `true`, the model will use context coming
+    from the ingested documents to create the response. The documents being used can
+    be filtered using the `context_filter` and passing the document IDs to be used.
+    Ingested documents IDs can be found using `/ingest/list` endpoint. If you want
+    all ingested documents to be used, remove `context_filter` altogether.
+
+    When using `'stream': true`, the API will return data chunks following [OpenAI's
+    streaming model](https://platform.openai.com/docs/api-reference/chat/streaming):
+    ``` {"id":"12345","object":"completion.chunk","created":1694268190,
+    "model":"private-gpt","choices":[{"index":0,"delta":{"content":"Hello"},
+    "finish_reason":null}]} ```
     """
     service = root_injector.get(ChatService)
     all_messages = [

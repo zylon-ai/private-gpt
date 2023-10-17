@@ -126,6 +126,7 @@
           "Context Chunks"
         ],
         "summary": "Chunks Retrieval",
+        "description": "Given a `text`, returns the most relevant chunks of texts from the ingested documents. The returned information\ncan be used to generate prompts that can be passed to `/completions` or `/chat/completions` APIs.\nNote: it is usually a very fast API, because only the Embeddings model is involved, not the LLM.\nThe returned information contains the relevant chunk `text` together with the source `document` it is coming from.\nIt also contains a score that can be used to compare different results.\n\nThe max number of chunks to be returned is set using the `limit` param.\n\nPrevious and next chunks (pieces of text that appear right before or after in the document) can be fetched by\nusing the `prev_next_chunks` field.\n\nThe documents being used can be filtered using the `context_filter` and passing the document IDs to be used.\nIngested documents IDs can be found using `/ingest/list` endpoint. If you want all ingested documents to be\nused, remove `context_filter` altogether.",
         "operationId": "chunks_retrieval_v1_chunks_post",
         "requestBody": {
           "content": {
@@ -301,11 +302,6 @@
             "title": "Use Context",
             "default": false
           },
-          "stream": {
-            "type": "boolean",
-            "title": "Stream",
-            "default": false
-          },
           "context_filter": {
             "anyOf": [
               {
@@ -315,6 +311,11 @@
                 "type": "null"
               }
             ]
+          },
+          "stream": {
+            "type": "boolean",
+            "title": "Stream",
+            "default": false
           }
         },
         "type": "object",
@@ -324,6 +325,11 @@
         "title": "ChatBody",
         "examples": [
           {
+            "context_filter": {
+              "docs_ids": [
+                "c202d5e6-7b69-4869-81cc-dd574ee8ee11"
+              ]
+            },
             "messages": [
               {
                 "content": "How do you fry an egg?",
@@ -331,7 +337,7 @@
               }
             ],
             "stream": false,
-            "use_context": false
+            "use_context": true
           }
         ]
       },
@@ -339,14 +345,20 @@
         "properties": {
           "score": {
             "type": "number",
-            "title": "Score"
+            "title": "Score",
+            "examples": [
+              0.023
+            ]
           },
           "document": {
             "$ref": "#/components/schemas/IngestedDoc"
           },
           "text": {
             "type": "string",
-            "title": "Text"
+            "title": "Text",
+            "examples": [
+              "Outbound sales increased 20%, driven by new leads."
+            ]
           },
           "previous_texts": {
             "anyOf": [
@@ -360,7 +372,13 @@
                 "type": "null"
               }
             ],
-            "title": "Previous Texts"
+            "title": "Previous Texts",
+            "examples": [
+              [
+                "SALES REPORT 2023",
+                "Inbound didn't show major changes."
+              ]
+            ]
           },
           "next_texts": {
             "anyOf": [
@@ -374,7 +392,13 @@
                 "type": "null"
               }
             ],
-            "title": "Next Texts"
+            "title": "Next Texts",
+            "examples": [
+              [
+                "New leads came from Google Ads campaign.",
+                "The campaign was run by the Marketing Department"
+              ]
+            ]
           }
         },
         "type": "object",
@@ -391,7 +415,10 @@
         "properties": {
           "text": {
             "type": "string",
-            "title": "Text"
+            "title": "Text",
+            "examples": [
+              "Q3 2023 sales"
+            ]
           },
           "context_filter": {
             "anyOf": [
@@ -411,7 +438,10 @@
           "prev_next_chunks": {
             "type": "integer",
             "title": "Prev Next Chunks",
-            "default": 0
+            "default": 0,
+            "examples": [
+              2
+            ]
           }
         },
         "type": "object",
@@ -428,14 +458,23 @@
           },
           "object": {
             "type": "string",
+            "enum": [
+              "file.chunk"
+            ],
             "title": "Object"
           },
           "created": {
             "type": "integer",
-            "title": "Created"
+            "title": "Created",
+            "examples": [
+              1623340000
+            ]
           },
           "model": {
             "type": "string",
+            "enum": [
+              "private-gpt"
+            ],
             "title": "Model"
           },
           "chunks": {
@@ -487,7 +526,14 @@
         "required": [
           "prompt"
         ],
-        "title": "CompletionsBody"
+        "title": "CompletionsBody",
+        "examples": [
+          {
+            "prompt": "How do you fry an egg?",
+            "stream": false,
+            "use_context": false
+          }
+        ]
       },
       "ContextFilter": {
         "properties": {
@@ -503,10 +549,18 @@
                 "type": "null"
               }
             ],
-            "title": "Docs Ids"
+            "title": "Docs Ids",
+            "examples": [
+              [
+                "c202d5e6-7b69-4869-81cc-dd574ee8ee11"
+              ]
+            ]
           }
         },
         "type": "object",
+        "required": [
+          "docs_ids"
+        ],
         "title": "ContextFilter"
       },
       "Embedding": {

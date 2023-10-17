@@ -15,15 +15,20 @@ class IngestResponse(BaseModel):
 
 @ingest_router.post("/ingest", tags=["Ingestion"])
 def ingest(file: UploadFile) -> IngestResponse:
-    """
-    Ingests and processes a file, storing its chunks to be used as context in `/chat/completions`,
-    `/completions`, and `/chunks` APIs. Most common document formats are supported, but you may be prompted to install
-    an extra dependency to manage a specific file type.
+    """Ingests and processes a file, storing its chunks to be used as context.
 
-    A file can generate different Documents (for example a PDF generates one Document per page). All Documents IDs
-    are returned in the response, together with the extracted Metadata (which is later used to improve
-    context retrieval). Those IDs can be used to filter the context used to create responses
-    in `/chat/completions`, `/completions`, and `/chunks` APIs.
+    The context obtained from files is later used in
+    `/chat/completions`, `/completions`, and `/chunks` APIs.
+
+    Most common document
+    formats are supported, but you may be prompted to install an extra dependency to
+    manage a specific file type.
+
+    A file can generate different Documents (for example a PDF generates one Document
+    per page). All Documents IDs are returned in the response, together with the
+    extracted Metadata (which is later used to improve context retrieval). Those IDs
+    can be used to filter the context used to create responses in
+    `/chat/completions`, `/completions`, and `/chunks` APIs.
     """
     service = root_injector.get(IngestService)
     if file.filename is None:
@@ -36,8 +41,8 @@ def ingest(file: UploadFile) -> IngestResponse:
 
 @ingest_router.get("/ingest/list", tags=["Ingestion"])
 def list_ingested() -> list[IngestedDoc]:
-    """
-    Lists already ingested Documents including their Document ID and metadata.
+    """Lists already ingested Documents including their Document ID and metadata.
+
     Those IDs can be used to filter the context used to create responses
     in `/chat/completions`, `/completions`, and `/chunks` APIs.
     """
