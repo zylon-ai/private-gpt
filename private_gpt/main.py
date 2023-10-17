@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from loguru import logger
 
+from private_gpt.paths import docs_path
 from private_gpt.server.chat.chat_router import chat_router
 from private_gpt.server.chunks.chunks_router import chunks_router
 from private_gpt.server.completions.completions_router import completions_router
@@ -33,24 +34,9 @@ logger.add(
 llama_index.set_global_handler("simple")
 
 # Start the API
-description = """
-PrivateGPT API helps you do awesome stuff. 🚀
-
-## Installation and Setup
-
-Add here intro **section 1**.
-
-## Gradio Client
-
-Add here intro **section 2**.
-
-## API:
-
-Add here intro **section 2**.
-
-* **List item 1** lorem ipsum.
-* **List item 2** lorem ipsum.
-"""
+description_file = open(docs_path / "description.md", "r")
+description = description_file.read()
+description_file.close()
 
 tags_metadata = [
     {
@@ -118,6 +104,9 @@ def custom_openapi() -> dict[str, Any]:
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 
 @app.get("/health", tags=["Health"], description="Blavla")

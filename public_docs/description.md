@@ -1,8 +1,10 @@
-# private-gpt
+PrivateGPT API helps you do awesome stuff. 🚀
+    
+## Quick Local Setup
 
-[![Tests](https://github.com/zylon-ai/private-gpt/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/zylon-ai/private-gpt/actions/workflows/tests.yml)
+TBD
 
-### Installation
+## Installation and Setup
 
 #### Base requirements to run PrivateGPT
 
