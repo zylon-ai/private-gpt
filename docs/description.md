@@ -180,7 +180,8 @@ PGPT_PROFILES=local poetry run python -m private_gpt
 ```
 
 When the server is started it will print a log *Application startup complete*. 
-Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs to try the API using Swagger UI.
+Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section)to try the API 
+using Swagger UI.
 
 ### Local server using OpenAI as LLM
 
@@ -209,8 +210,8 @@ or
 We'll support using OpenAI embeddings in a future release.
 
 When the server is started it will print a log *Application startup complete*. 
-Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs to try the API. You'll
-notice the speed and quality of response is higher, given you are using OpenAI's LLM. 
+Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API. 
+You'll notice the speed and quality of response is higher, given you are using OpenAI's LLM. 
 
 ### Use AWS's Sagemaker
 
@@ -222,7 +223,7 @@ notice the speed and quality of response is higher, given you are using OpenAI's
 
 ## Deployment options
 
-🚧 Under construction 🚧 
+🚧 We are working on Dockerized deployment guidelines 🚧 
 
 ## Ingesting local documents
 
@@ -238,3 +239,6 @@ by navigating to http://localhost:8001 and using the option `Query documents`,
 or using the completions / chat API.
 
 ## API
+
+As explained in the introduction, the API contains high level APIs (ingestion and chat/completions) and low level APIs
+(embeddings and chunk retrieval). In this section the different specific API calls are explained:

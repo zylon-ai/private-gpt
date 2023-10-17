@@ -34,46 +34,37 @@ logger.add(
 llama_index.set_global_handler("simple")
 
 # Start the API
-description_file = open(docs_path / "description.md", "r")
-description = description_file.read()
-description_file.close()
+with open(docs_path / "description.md") as f:
+    description = f.read()
+    f.close()
 
 tags_metadata = [
     {
         "name": "Ingestion",
-        "description": "Lorem ipsum",
-        "externalDocs": {
-            "description": "Items external docs",
-            "url": "https://fastapi.tiangolo.com/",
-        },
+        "description": "High-level APIs covering document ingestion -internally managing document parsing, splitting, "
+        "metadata extraction, embedding generation and storage- and ingested documents CRUD. "
+        "Each ingested document is identified by an ID that can be used to filter the context "
+        "used in *Completions* and *Chunks* APIs.",
     },
     {
         "name": "Completions",
-        "description": "Lorem ipsum",
-        "externalDocs": {
-            "description": "Items external docs",
-            "url": "https://fastapi.tiangolo.com/",
-        },
+        "description": "High-level APIs covering Chat and Completions. They follow OpenAI's format, extending it to "
+        "allow using the context coming from ingested documents to create the response. Internally "
+        "manage context retrieval, prompt engineering and the response generation.",
+    },
+    {
+        "name": "Context Chunks",
+        "description": "Low-level API that given a query return relevant chunks of text coming from the ingested"
+        "documents.",
     },
     {
         "name": "Embeddings",
-        "description": "Lorem ipsum",
-        "externalDocs": {
-            "description": "Items external docs",
-            "url": "https://fastapi.tiangolo.com/",
-        },
-    },
-    {
-        "name": "Chunks",
-        "description": "Lorem ipsum",
-        "externalDocs": {
-            "description": "Items external docs",
-            "url": "https://fastapi.tiangolo.com/",
-        },
+        "description": "Low-level API to obtain the vector representation of a given text, using an Embeddings model. "
+        "Follows OpenAI's embeddings API format.",
     },
     {
         "name": "Health",
-        "description": "Lorem ipsum",
+        "description": "Simple health API to make sure the server is up and running.",
     },
 ]
 
@@ -96,7 +87,7 @@ def custom_openapi() -> dict[str, Any]:
             "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
         },
         routes=app.routes,
-        tags=tags_metadata,  # type: ignore
+        tags=tags_metadata,
     )
     # openapi_schema["info"]["x-logo"] = {
     #     "url": "https://raw.githubusercontent.com/zylon-ai/private-gpt/main/docs/logo.png"
@@ -106,7 +97,7 @@ def custom_openapi() -> dict[str, Any]:
     return app.openapi_schema
 
 
-app.openapi = custom_openapi
+app.openapi = custom_openapi  # type: ignore[method-assign]
 
 
 @app.get("/health", tags=["Health"], description="Blavla")

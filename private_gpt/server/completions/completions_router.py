@@ -22,8 +22,7 @@ class CompletionsBody(BaseModel):
 @completions_router.post(
     "/completions",
     response_model=None,
-    deprecated=True,
-    summary="This endpoint exists only for OpenAI compatibility. Use /chat/completions instead.",
+    summary="Completion",
     responses={200: {"model": OpenAICompletion}},
     tags=["Completions"],
 )

@@ -29,7 +29,7 @@ class OpenAIChoice(BaseModel):
     Either the delta or the message will be present, but never both.
     """
 
-    finish_reason: str | None = None
+    finish_reason: str | None = Field(examples=["stop"])
     delta: OpenAIDelta | None = None
     message: OpenAIMessage | None = None
     index: int = 0
@@ -44,7 +44,7 @@ class OpenAICompletion(BaseModel):
     id: str
     object: str = Field("completion", enum=["completion", "completion.chunk"])
     created: int = Field(..., examples=[1623340000])
-    model: str = Field("private-gpt", enum=["private-gpt"])
+    model: str = Field(enum=["private-gpt"])
     choices: list[OpenAIChoice]
 
     @classmethod
