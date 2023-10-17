@@ -1,40 +1,39 @@
 ## PrivateGPT
 
-PrivateGPT provides an **API** containing all the building blocks required to build 
+PrivateGPT provides an **API** containing all the building blocks required to build
 **private, context-aware AI applications**. The API follows and extends OpenAI API standard, and supports
 both normal and streaming responses.
 
-The API is divided in two logical blocks: 
-- High-level API, abstracting all the complexity of a RAG (Retrieval Augmented Generation) pipeline implementation:
-  - Ingestion of documents: internally managing document parsing, splitting, metadata extraction, 
-embedding generation and storage.
-  - Chat & Completions using context from ingested documents: abstracting the retrieval of context, the prompt
-engineering and the response generation. 
-- Low-level API, allowing advanced users to implement their own complex pipelines:
-  - Embeddings generation: based on a piece of text. 
-  - Contextual chunks retrieval: given a query, returns the most relevant chunks of text from the ingested
-documents.
+The API is divided in two logical blocks:
 
-A working **Gradio UI client** is provided to test the API, together with a set of useful tools such as bulk 
+- High-level API, abstracting all the complexity of a RAG (Retrieval Augmented Generation) pipeline implementation:
+    - Ingestion of documents: internally managing document parsing, splitting, metadata extraction,
+      embedding generation and storage.
+    - Chat & Completions using context from ingested documents: abstracting the retrieval of context, the prompt
+      engineering and the response generation.
+- Low-level API, allowing advanced users to implement their own complex pipelines:
+    - Embeddings generation: based on a piece of text.
+    - Contextual chunks retrieval: given a query, returns the most relevant chunks of text from the ingested
+      documents.
+
+A working **Gradio UI client** is provided to test the API, together with a set of useful tools such as bulk
 model download script, ingestion script, documents folder watch, etc.
 
-> By checking the codebase you'll notice PrivateGPT is engineered following best software development 
-practices as it is intended for production use.
+> By checking the codebase you'll notice PrivateGPT is engineered following best software development
+> practices as it is intended for production use.
 
 ## Installation and Settings
 
-### (Optional) Enable a virtual environment
+### Base requirements to build PrivateGPT
 
-It is strongly recommended to use a virtual Python environment to avoid problems with dependencies and Python versions.
-Use any virtual environment tool of your choice - we recommend [pyenv](https://github.com/pyenv/pyenv). 
-
-### Base requirements to run PrivateGPT
-
-* Python 3.11
+* Python 3.11. Ideally through python version manager like pyenv. Python 3.12 should work too. Earlier python versions
+  are not supported.
+    * osx/linux: [pyenv](https://github.com/pyenv/pyenv)
+    * windows: [pyenv-win](https://github.com/pyenv-win/pyenv-win)
 * Poetry: https://python-poetry.org/docs/
 * [Optional] Install `make` for scripts:
-  windows: (Using chocolatey) `choco install make`
-  osx: (Using homebrew): `brew install make`
+    * osx: (Using homebrew): `brew install make`
+    * windows: (Using chocolatey) `choco install make`
 
 ### Install dependencies
 
@@ -45,13 +44,13 @@ poetry install --with ui
 ```
 
 Verify everything is working by running `make run` (or `poetry run python -m private_gpt`) and navigate to
-http://localhost:8001. You should see a [Gradio](https://gradio.app/) UI configured with a mock LLM that will
-echo back the input.
+http://localhost:8001. You should see a [Gradio UI](https://gradio.app/) **configured with a mock LLM** that will
+echo back the input. Later we'll see how to configure a real LLM.
 
 ### Settings
 
 > Note: the default settings of PrivateGPT work out-of-the-box for a 100% local setup. Skip this section if you just
-want to test PrivateGPT locally, and come back later to learn about the extensibility options. 
+> want to test PrivateGPT locally, and come back later to learn about more configuration options.
 
 PrivateGPT is configured through *profiles* that are defined using yaml files, and selected through env variables.
 The full list of properties configurable can be found in `settings.yaml`
@@ -59,7 +58,7 @@ The full list of properties configurable can be found in `settings.yaml`
 #### env var `PGPT_SETTINGS_FOLDER`
 
 The location of the settings folder. Defaults to the root of the project.
-Should contain the default `settings.yaml` and any other `settings-{profile}.yaml`. 
+Should contain the default `settings.yaml` and any other `settings-{profile}.yaml`.
 
 #### env var `PGPT_PROFILES`
 
@@ -93,6 +92,12 @@ server:
 
 ### Local LLM requirements
 
+Install extra dependencies for local execution:
+
+```bash
+poetry install --with local
+```
+
 For PrivateGPT to run fully locally GPU acceleration is required
 (CPU execution is possible, but very slow), however,
 typical Macbook laptops or window desktops with mid-range GPUs lack VRAM to run
@@ -111,17 +116,13 @@ the embedding and the LLM model and place them in the correct location (under `m
 poetry run python scripts/setup
 ```
 
-Install extra dependencies for local execution:
 
-```bash
-poetry install --with local
-```
 
 If you are ok with CPU execution, you can skip the rest of this section.
 
 #### OSX GPU support
 
-You will need to build `llama.cpp` with metal support. to do that run:
+You will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with metal support. to do that run:
 
 ```bash
 CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
@@ -156,7 +157,7 @@ AVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | 
 
 #### Linux GPU support
 
-🚧 Under construction 🚧 
+🚧 Under construction 🚧
 
 ## Running the Server
 
@@ -173,26 +174,26 @@ configuration files. By default, it will enable both the API and the Gradio UI. 
 PGPT_PROFILES=local make run
 ``` 
 
-or 
+or
 
 ```
 PGPT_PROFILES=local poetry run python -m private_gpt
 ```
 
-When the server is started it will print a log *Application startup complete*. 
-Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section)to try the API 
+When the server is started it will print a log *Application startup complete*.
+Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section)to try the API
 using Swagger UI.
 
 ### Local server using OpenAI as LLM
 
 If you cannot run a local model (because you don't have a GPU, for example) or for testing purposes, you may
-decide to run PrivateGPT using OpenAI as the LLM. 
+decide to run PrivateGPT using OpenAI as the LLM.
 
 In order to do so, create a profile `settings-openai.yaml` with the following contents:
 
 ```yaml
 llm:
-  mode: openai  
+  mode: openai
 
 openai:
   api_key: <your_openai_api_key>  # You could skip this configuration and use the OPENAI_API_KEY env var instead
@@ -200,34 +201,34 @@ openai:
 
 And run PrivateGPT loading that profile you just created:
 
-```PGPT_PROFILES=openai make run``` 
+```PGPT_PROFILES=openai make run```
 
-or 
+or
 
 ```PGPT_PROFILES=openai poetry run python -m private_gpt```
 
-> Note this will still use the local Embeddings model, as it is ok to use it on a CPU. 
-We'll support using OpenAI embeddings in a future release.
+> Note this will still use the local Embeddings model, as it is ok to use it on a CPU.
+> We'll support using OpenAI embeddings in a future release.
 
-When the server is started it will print a log *Application startup complete*. 
-Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API. 
-You'll notice the speed and quality of response is higher, given you are using OpenAI's LLM. 
+When the server is started it will print a log *Application startup complete*.
+Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
+You'll notice the speed and quality of response is higher, given you are using OpenAI's LLM.
 
 ### Use AWS's Sagemaker
 
-🚧 Under construction 🚧 
+🚧 Under construction 🚧
 
 ## Gradio UI user manual
 
-🚧 Under construction 🚧 
+🚧 Under construction 🚧
 
 ## Deployment options
 
-🚧 We are working on Dockerized deployment guidelines 🚧 
+🚧 We are working on Dockerized deployment guidelines 🚧
 
 ## Ingesting local documents
 
-When you are running PrivateGPT in a fully local setup, you can ingest a full folder (containing pdf, text files, etc.) 
+When you are running PrivateGPT in a fully local setup, you can ingest a full folder (containing pdf, text files, etc.)
 and optionally watch changes on it with the command:
 
 ```bash
@@ -235,7 +236,7 @@ make ingest /path/to/folder -- --watch
 ```
 
 After ingestion is complete, you should be able to chat with your documents
-by navigating to http://localhost:8001 and using the option `Query documents`, 
+by navigating to http://localhost:8001 and using the option `Query documents`,
 or using the completions / chat API.
 
 ## API
