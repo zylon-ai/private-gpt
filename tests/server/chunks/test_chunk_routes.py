@@ -15,4 +15,4 @@ def test_chunks_retrieval(test_client: TestClient, ingest_helper: IngestHelper) 
     response = test_client.post("/v1/chunks", json=body.model_dump())
     assert response.status_code == 200
     chunk_response = ChunksResponse.model_validate(response.json())
-    assert len(chunk_response.chunks) > 0
+    assert len(chunk_response.data) > 0

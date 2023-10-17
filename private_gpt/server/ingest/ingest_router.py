@@ -8,9 +8,9 @@ ingest_router = APIRouter(prefix="/v1")
 
 
 class IngestResponse(BaseModel):
-    object: str = Field(enum=["document-id"])
+    object: str = Field(enum=["list"])
     model: str = Field(enum=["private-gpt"])
-    documents: list[IngestedDoc]
+    data: list[IngestedDoc]
 
 
 @ingest_router.post("/ingest", tags=["Ingestion"])
@@ -34,18 +34,16 @@ def ingest(file: UploadFile) -> IngestResponse:
     if file.filename is None:
         raise HTTPException(400, "No file name provided")
     ingested_documents = service.ingest(file.filename, file.file.read())
-    return IngestResponse(
-        object="document-id", model="private-gpt", documents=ingested_documents
-    )
+    return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
 
 
 @ingest_router.get("/ingest/list", tags=["Ingestion"])
-def list_ingested() -> list[IngestedDoc]:
+def list_ingested() -> IngestResponse:
     """Lists already ingested Documents including their Document ID and metadata.
 
     Those IDs can be used to filter the context used to create responses
     in `/chat/completions`, `/completions`, and `/chunks` APIs.
     """
     service = root_injector.get(IngestService)
-    ingested_docs = service.list_ingested()
-    return ingested_docs
+    ingested_documents = service.list_ingested()
+    return IngestResponse(object="list", model="private-gpt", data=ingested_documents)

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 
 class Chunk(BaseModel):
+    object: str = Field(enum=["context.chunk"])
     score: float = Field(examples=[0.023])
     document: IngestedDoc
     text: str = Field(examples=["Outbound sales increased 20%, driven by new leads."])
@@ -100,8 +101,13 @@ class ChunksService:
             doc_id = node.node.ref_doc_id if node.node.ref_doc_id is not None else "-"
             retrieved_nodes.append(
                 Chunk(
+                    object="context.chunk",
                     score=node.score or 0.0,
-                    document=IngestedDoc(doc_id=doc_id, doc_metadata=node.metadata),
+                    document=IngestedDoc(
+                        object="ingest.document",
+                        doc_id=doc_id,
+                        doc_metadata=node.metadata,
+                    ),
                     text=node.get_content(),
                     previous_texts=self._get_sibling_nodes_text(
                         node, prev_next_chunks, False

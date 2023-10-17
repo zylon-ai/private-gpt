@@ -16,11 +16,9 @@ The API is divided in two logical blocks:
     - Contextual chunks retrieval: given a query, returns the most relevant chunks of text from the ingested
       documents.
 
-A working **Gradio UI client** is provided to test the API, together with a set of useful tools such as bulk
-model download script, ingestion script, documents folder watch, etc.
-
-> By checking the codebase you'll notice PrivateGPT is engineered following best software development
-> practices as it is intended for production use.
+> A working **Gradio UI client** is provided to test the API, together with a set of 
+useful tools such as bulk model download script, ingestion script, documents folder 
+watch, etc.
 
 ## Installation and Settings
 

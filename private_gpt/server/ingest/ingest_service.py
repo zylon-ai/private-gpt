@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 
 class IngestedDoc(BaseModel):
+    object: str = Field(enum=["ingest.document"])
     doc_id: str = Field(examples=["c202d5e6-7b69-4869-81cc-dd574ee8ee11"])
     doc_metadata: dict[str, Any] | None = Field(
         examples=[
@@ -116,13 +117,14 @@ class IngestService:
             documents,
             storage_context=self.storage_context,
             service_context=self.ingest_service_context,
-            store_nodes_override=True,  # Force store nodes in index store and document store
+            store_nodes_override=True,  # Force store nodes in index and document stores
             show_progress=True,
         )
         # persist the index and nodes
         self.storage_context.persist(persist_dir=local_data_path)
         return [
             IngestedDoc(
+                object="ingest.document",
                 doc_id=document.doc_id,
                 doc_metadata=IngestedDoc.curate_metadata(document.metadata),
             )
@@ -145,7 +147,11 @@ class IngestService:
                 if ref_doc_info is not None and ref_doc_info.metadata is not None:
                     doc_metadata = IngestedDoc.curate_metadata(ref_doc_info.metadata)
                 ingested_docs.append(
-                    IngestedDoc(doc_id=doc_id, doc_metadata=doc_metadata)
+                    IngestedDoc(
+                        object="ingest.document",
+                        doc_id=doc_id,
+                        doc_metadata=doc_metadata,
+                    )
                 )
             return ingested_docs
         except ValueError:

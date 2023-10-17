@@ -60,9 +60,11 @@ def chat_completion(body: ChatBody) -> OpenAICompletion | StreamingResponse:
 
     When using `'stream': true`, the API will return data chunks following [OpenAI's
     streaming model](https://platform.openai.com/docs/api-reference/chat/streaming):
-    ``` {"id":"12345","object":"completion.chunk","created":1694268190,
+    ```
+    {"id":"12345","object":"completion.chunk","created":1694268190,
     "model":"private-gpt","choices":[{"index":0,"delta":{"content":"Hello"},
-    "finish_reason":null}]} ```
+    "finish_reason":null}]}
+    ```
     """
     service = root_injector.get(ChatService)
     all_messages = [

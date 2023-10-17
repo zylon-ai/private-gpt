@@ -1,6 +1,3 @@
-import time
-import uuid
-
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
@@ -19,11 +16,9 @@ class ChunksBody(BaseModel):
 
 
 class ChunksResponse(BaseModel):
-    id: str
-    object: str = Field(enum=["file.chunk"])
-    created: int = Field(..., examples=[1623340000])
+    object: str = Field(enum=["list"])
     model: str = Field(enum=["private-gpt"])
-    chunks: list[Chunk]
+    data: list[Chunk]
 
 
 @chunks_router.post("/chunks", tags=["Context Chunks"])
@@ -52,9 +47,7 @@ def chunks_retrieval(body: ChunksBody) -> ChunksResponse:
         body.text, body.context_filter, body.limit, body.prev_next_chunks
     )
     return ChunksResponse(
-        id=str(uuid.uuid4()),
-        object="file.chunk",
-        created=int(time.time()),
+        object="list",
         model="private-gpt",
-        chunks=results,
+        data=results,
     )
