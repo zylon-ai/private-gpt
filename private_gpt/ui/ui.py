@@ -64,7 +64,7 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
             )
             yield from yield_deltas(llm_stream)
 
-        case "Query Chunks":
+        case "Context Chunks":
             response = chunks_service.retrieve_relevant(
                 text=message,
                 limit=2,
