@@ -75,59 +75,60 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
             )
 
 
-def _list_ingested_files() -> str:
+def _list_ingested_files() -> list[str]:
     files = set()
     for ingested_document in ingest_service.list_ingested():
         if ingested_document.doc_metadata is not None:
             files.add(
                 ingested_document.doc_metadata.get("file_name") or "[FILE NAME MISSING]"
             )
+    return list(files)
 
-    return "\n".join(files)
+
+# Global state
+_uploaded_file_list = [[row] for row in _list_ingested_files()]
 
 
-with gr.Blocks() as blocks:
-    # Upload button
-    file_output = gr.components.Textbox(
-        label="Ingested files",
-        render=False,
-        value=_list_ingested_files,
-        every=5,
-        lines=5,
-        interactive=False,
-    )
-    upload_button = gr.components.UploadButton(
-        "Click to Upload a File",
-        type="file",
-        file_count="single",
-        size="sm",
-        render=False,
-    )
+def _upload_file(file: TextIO) -> list[list[str]]:
+    path = Path(file.name)
+    ingest_service.ingest(file_name=path.name, file_data=path)
+    _uploaded_file_list.append([path.name])
+    return _uploaded_file_list
 
-    def _upload_file(file: TextIO) -> None:
-        path = Path(file.name)
-        ingest_service.ingest(file_name=path.name, file_data=path)
 
-    upload_button.upload(_upload_file, upload_button)
-
-    # Action dropdown
-    dropdown = gr.components.Dropdown(
-        choices=["Query Documents", "LLM Chat", "Query Chunks"],
-        label="Mode",
-        value="Query Documents",
-        render=False,
-    )
-
-    # Chat
-    chat_box = gr.ChatInterface(
-        fn=_chat,
-        examples=[],
-        title="PrivateGPT",
-        analytics_enabled=False,
-        additional_inputs=[dropdown, upload_button, file_output],
-    )
+with gr.Blocks() as blocks, gr.Row():
+    with gr.Column(scale=3, variant="panel"):
+        mode = gr.Radio(
+            ["Query Documents", "LLM Chat", "Query Chunks"],
+            label="Mode",
+            value="Query Documents",
+        )
+        upload_button = gr.components.UploadButton(
+            "Upload a File",
+            type="file",
+            file_count="single",
+            size="sm",
+        )
+        ingested_dataset = gr.List(
+            _uploaded_file_list,
+            headers=["File name"],
+            label="Ingested Files",
+            interactive=False,
+            render=False,  # Rendered under the button
+        )
+        upload_button.upload(
+            _upload_file, inputs=upload_button, outputs=ingested_dataset
+        )
+        ingested_dataset.render()
+    with gr.Column(scale=7, variant="panel"):
+        chatbot = gr.ChatInterface(_chat, additional_inputs=[mode, upload_button])
 
 
 def mount_in_app(app: FastAPI) -> None:
     blocks.queue()
     gr.mount_gradio_app(app, blocks, path=settings.ui.path)
+
+
+if __name__ == "__main__":
+    blocks.queue()
+    blocks.launch(debug=True)

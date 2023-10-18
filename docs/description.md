@@ -16,13 +16,13 @@ The API is divided in two logical blocks:
     - Contextual chunks retrieval: given a query, returns the most relevant chunks of text from the ingested
       documents.
 
-> A working **Gradio UI client** is provided to test the API, together with a set of 
-useful tools such as bulk model download script, ingestion script, documents folder 
-watch, etc.
+> A working **Gradio UI client** is provided to test the API, together with a set of
+> useful tools such as bulk model download script, ingestion script, documents folder
+> watch, etc.
 
 ## Installation and Settings
 
-### Base requirements to build PrivateGPT
+### Base requirements to run PrivateGPT
 
 * Python 3.11. Ideally through python version manager like pyenv. Python 3.12 should work too. Earlier python versions
   are not supported.
@@ -90,6 +90,18 @@ server:
 
 ### Local LLM requirements
 
+#### Known issues
+
+Execution of LLMs locally still has a lot of sharp edges, specially when running on non Linux platforms.
+You might encounter several issues:
+
+* Performance: RAM or VRAM usage is very high, your computer might experience slowdowns or even crashes.
+* GPU Virtualization on Windows and OSX: Simply not possible with docker desktop, you have to run the server directly on
+  the host.
+* Building errors: Some of PrivateGPT dependencies need to build native code, and they might fail on some platforms.
+  Most likely you are missing some dev tools in your machine (updated C++ compiler, CUDA is not on PATH, etc.).
+  If you encounter any of these issues, please open an issue and we'll try to help.
+
 Install extra dependencies for local execution:
 
 ```bash
@@ -114,9 +126,14 @@ the embedding and the LLM model and place them in the correct location (under `m
 poetry run python scripts/setup
 ```
 
-
-
 If you are ok with CPU execution, you can skip the rest of this section.
+
+As stated before, llama.cpp is required and in
+particular [llama-cpp-python](https://github.com/abetlen/llama-cpp-python)
+is used.
+
+> It's highly encouraged that you fully read llama-cpp and llama-cpp-python documentation relevant to your platform.
+> Running into installation issues is very likely, and you'll need to troubleshoot them yourself.
 
 #### OSX GPU support
 
@@ -132,7 +149,7 @@ Windows GPU support is done through CUDA or similar open source technologies.
 Follow the instructions on the original [llama.cpp](https://github.com/ggerganov/llama.cpp) repo to install the required
 dependencies.
 
-Some tips to get it working with an NVIDIA card and CUDA:
+Some tips to get it working with an NVIDIA card and CUDA (Tested on Windows 10 with CUDA 11.5 RTX 3070):
 
 * Install latest VS2022 (and build tools) https://visualstudio.microsoft.com/vs/community/
 * Install CUDA toolkit https://developer.nvidia.com/cuda-downloads
@@ -152,6 +169,10 @@ time you start the server `BLAS = 1`.
 llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, context: 762.87 MB)
 AVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | NEON = 0 | ARM_FMA = 0 | F16C = 1 | FP16_VA = 0 | WASM_SIMD = 0 | BLAS = 1 | SSE3 = 1 | SSSE3 = 0 | VSX = 0 | 
 ```
+
+Note that llama.cpp offloads matrix calculations to the GPU but the performance is
+still hit heavily due to latency between CPU and GPU communication. You might need to tweak
+batch sizes and other parameters to get the best performance for your particular system.
 
 #### Linux GPU support
 
@@ -179,7 +200,7 @@ PGPT_PROFILES=local poetry run python -m private_gpt
 ```
 
 When the server is started it will print a log *Application startup complete*.
-Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section)to try the API
+Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API
 using Swagger UI.
 
 ### Local server using OpenAI as LLM
@@ -210,7 +231,8 @@ or
 
 When the server is started it will print a log *Application startup complete*.
 Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
-You'll notice the speed and quality of response is higher, given you are using OpenAI's LLM.
+You'll notice the speed and quality of response is higher, given you are using OpenAI's servers for the heavy
+computations.
 
 ### Use AWS's Sagemaker
 
@@ -224,9 +246,19 @@ You'll notice the speed and quality of response is higher, given you are using O
 
 🚧 We are working on Dockerized deployment guidelines 🚧
 
-## Ingesting local documents
+## Ingesting & Managing Documents
 
-When you are running PrivateGPT in a fully local setup, you can ingest a full folder (containing pdf, text files, etc.)
+🚧 Document Update and Delete are still WIP. 🚧
+
+The ingestion of documents can be done in different ways:
+* Using the `/ingest` API
+* Using the Gradio UI
+* Using the Bulk Local Ingestion functionality (check next section)
+
+### Bulk Local Ingestion
+
+When you are running PrivateGPT in a fully local setup, you can ingest a complete folder for convenience (containing
+pdf, text files, etc.)
 and optionally watch changes on it with the command:
 
 ```bash
@@ -237,7 +269,12 @@ After ingestion is complete, you should be able to chat with your documents
 by navigating to http://localhost:8001 and using the option `Query documents`,
 or using the completions / chat API.
 
+### Reset Local documents database
+
+When running in a local setup, you can remove all ingested documents by simply 
+deleting all contents of `local_data` folder (except .gitignore). 
+
 ## API
 
 As explained in the introduction, the API contains high level APIs (ingestion and chat/completions) and low level APIs
-(embeddings and chunk retrieval). In this section the different specific API calls are explained:
+(embeddings and chunk retrieval). In this section the different specific API calls are explained.

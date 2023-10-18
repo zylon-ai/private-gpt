@@ -14,7 +14,9 @@ class EmbeddingComponent:
     def __init__(self) -> None:
         match settings.llm.mode:
             case "mock":
-                self.embedding_model = MockEmbedding(30)
+                # Not a random number, is the dimensionality used by
+                # the default embedding model
+                self.embedding_model = MockEmbedding(384)
             case _:
                 from llama_index.embeddings import HuggingFaceEmbedding
 

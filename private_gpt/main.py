@@ -96,8 +96,11 @@ def custom_openapi() -> dict[str, Any]:
         routes=app.routes,
         tags=tags_metadata,
     )
-    # openapi_schema["info"]["x-logo"] = { "url":
-    # "https://raw.githubusercontent.com/zylon-ai/private-gpt/main/docs/logo.png" }
+    openapi_schema["info"]["x-logo"] = {
+        "url": "https://lh3.googleusercontent.com/drive-viewer"
+        "/AK7aPaD_iNlMoTquOBsw4boh4tIYxyEuhz6EtEs8nzq3yNkNAK00xGj"
+        "E1KUCmPJSk3TYOjcs6tReG6w_cLu1S7L_gPgT9z52iw=s2560"
+    }
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
