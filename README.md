@@ -64,7 +64,7 @@ Interested in contributing to PrivateGPT? We have the following challenges ahead
 - In “model” return the actual LLM or Embeddings model name used
 
 ### New features
-- Implement concurrency lock to avoid errors when there are several calls to the model
+- Implement concurrency lock to avoid errors when there are several calls to the local LlamaCPP model
 - API key-based request control to the API 
 - CORS support
 - Support for Sagemaker
@@ -75,9 +75,9 @@ Interested in contributing to PrivateGPT? We have the following challenges ahead
 - Lazy load LLMs
 
 ### Project Infrastructure
-- Create a “wipe” shortcut in make to remove all contents of local_data folder except .gitignore
-- Packaged version as a local desktop app
-- Dockerize
+- Create a “wipe” shortcut in `make` to remove all contents of local_data folder except .gitignore
+- Packaged version as a local desktop app (windows executable, mac app, linux app)
+- Dockerize the application for platforms outside linux (Docker Desktop for Mac and Windows)
 
 ## 💬 Community 
 Join the conversation around PrivateGPT on our:
