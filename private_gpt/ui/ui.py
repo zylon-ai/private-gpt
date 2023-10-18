@@ -117,7 +117,7 @@ with gr.Blocks(
     with gr.Row():
         with gr.Column(scale=3, variant="compact"):
             mode = gr.Radio(
-                ["Query Documents", "LLM Chat", "Query Chunks"],
+                ["Query Documents", "LLM Chat", "Context Chunks"],
                 label="Mode",
                 value="Query Documents",
             )
