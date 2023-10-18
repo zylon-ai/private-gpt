@@ -139,7 +139,11 @@ with gr.Blocks(
             )
             ingested_dataset.render()
         with gr.Column(scale=7):
-            chatbot = gr.ChatInterface(_chat, additional_inputs=[mode, upload_button])
+            chatbot = gr.ChatInterface(
+                _chat,
+                chatbot=gr.Chatbot(label="Chat", show_copy_button=True, render=False),
+                additional_inputs=[mode, upload_button],
+            )
 
 
 def mount_in_app(app: FastAPI) -> None:
