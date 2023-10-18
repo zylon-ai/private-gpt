@@ -1,4 +1,4 @@
-## PrivateGPT
+## Introduction
 
 PrivateGPT provides an **API** containing all the building blocks required to build
 **private, context-aware AI applications**. The API follows and extends OpenAI API standard, and supports
@@ -240,7 +240,41 @@ computations.
 
 ## Gradio UI user manual
 
-🚧 Under construction 🚧
+Gradio UI is a ready to use way of testing most of PrivateGPT API functionalities.
+
+### Execution Modes
+
+It has 3 modes of execution (you can select in the top-left):
+* Query Documents: uses the context from the 
+  ingested documents to answer the questions posted in the chat. It also takes
+  into account previous chat messages as context. 
+  * Makes use of `/chat/completions` API with `use_context=true` and no 
+    `context_filter`.
+* LLM Chat: simple, non-contextual chat with the LLM. The ingested documents won't
+  be taken into account, only the previous messages.
+  * Makes use of `/chat/completions` API with `use_context=false`.
+* Context Chunks: returns the JSON representation of the 2 most related text
+  chunks, together with their metadata, source document and previous and next 
+  chunks. 
+  * Makes use of `/chunks` API with no `context_filter`, `limit=2` and 
+    `prev_next_chunks=1`. 
+
+### Document Ingestion
+
+Ingest documents by using the `Upload a File` button. You can check the progress of 
+the ingestion in the console logs of the server. 
+
+The list of ingested files is shown below the button.
+
+If you want to delete the ingested documents, refer to *Reset Local documents 
+database* section in the documentation.
+
+### Chat
+
+Normal chat interface, self-explanatory ;) 
+
+You can check the actual prompt being passed to the LLM by looking at the logs of 
+the server. We'll add better observability in future releases.
 
 ## Deployment options
 
