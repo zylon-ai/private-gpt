@@ -242,7 +242,7 @@ computations.
 
 Gradio UI is a ready to use way of testing most of PrivateGPT API functionalities.
 
-![Gradio PrivateGPT](https://lh3.googleusercontent.com/drive-viewer/AK7aPaB2MTTKvf95S3Iroe9XYPh8SCElCOoKEDUaG2F4Hf5_ihzFFfhT3dWlQ9pk2uE3LqYqtjlFMUV_zT8xFJMoJw-XlclE3w=s1600)
+![Gradio PrivateGPT](https://lh3.googleusercontent.com/drive-viewer/AK7aPaBTlIX9j5nsQ87XvcRgf3vhv6UG6pgy4j4IH5mYIo6dHcfJ5IUMiVHoqyQwjTnjRITxYTQ3TcF3pfPXyyWB3HS8hKMWDA=s1600)
 
 ### Execution Modes
 
