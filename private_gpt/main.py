@@ -85,7 +85,10 @@ def custom_openapi() -> dict[str, Any]:
         title="PrivateGPT",
         description=description,
         version="0.1.0",
-        summary="PrivateGPT Summary",
+        summary="PrivateGPT is a production-ready AI project that allows you to "
+        "ask questions to your documents using the power of Large Language "
+        "Models (LLMs), even in scenarios without Internet connection. "
+        "100% private, no data leaves your execution environment at any point.",
         contact={
             "url": "https://github.com/imartinez/privateGPT",
         },

@@ -6,6 +6,7 @@ from typing import Any, TextIO
 
 import gradio as gr  # type: ignore
 from fastapi import FastAPI
+from gradio.themes.utils.colors import slate  # type: ignore
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 
 from private_gpt.di import root_injector
@@ -13,6 +14,7 @@ from private_gpt.server.chat.chat_service import ChatService
 from private_gpt.server.chunks.chunks_service import ChunksService
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.settings.settings import settings
+from private_gpt.ui.images import logo_svg
 
 ingest_service = root_injector.get(IngestService)
 chat_service = root_injector.get(ChatService)
@@ -96,32 +98,48 @@ def _upload_file(file: TextIO) -> list[list[str]]:
     return _uploaded_file_list
 
 
-with gr.Blocks() as blocks, gr.Row():
-    with gr.Column(scale=3, variant="panel"):
-        mode = gr.Radio(
-            ["Query Documents", "LLM Chat", "Query Chunks"],
-            label="Mode",
-            value="Query Documents",
-        )
-        upload_button = gr.components.UploadButton(
-            "Upload a File",
-            type="file",
-            file_count="single",
-            size="sm",
-        )
-        ingested_dataset = gr.List(
-            _uploaded_file_list,
-            headers=["File name"],
-            label="Ingested Files",
-            interactive=False,
-            render=False,  # Rendered under the button
-        )
-        upload_button.upload(
-            _upload_file, inputs=upload_button, outputs=ingested_dataset
-        )
-        ingested_dataset.render()
-    with gr.Column(scale=7, variant="panel"):
-        chatbot = gr.ChatInterface(_chat, additional_inputs=[mode, upload_button])
+with gr.Blocks(
+    theme=gr.themes.Soft(primary_hue=slate),
+    css=".logo { "
+    "display:flex;"
+    "background-color: #C7BAFF;"
+    "height: 80px;"
+    "border-radius: 8px;"
+    "align-content: center;"
+    "justify-content: center;"
+    "align-items: center;"
+    "}"
+    ".logo img { height: 25% }",
+) as blocks:
+    with gr.Blocks(), gr.Row():
+        gr.HTML(f"<div class='logo'/><img src={logo_svg} alt=PrivateGPT></div")
+
+    with gr.Row():
+        with gr.Column(scale=3, variant="compact"):
+            mode = gr.Radio(
+                ["Query Documents", "LLM Chat", "Query Chunks"],
+                label="Mode",
+                value="Query Documents",
+            )
+            upload_button = gr.components.UploadButton(
+                "Upload a File",
+                type="file",
+                file_count="single",
+                size="sm",
+            )
+            ingested_dataset = gr.List(
+                _uploaded_file_list,
+                headers=["File name"],
+                label="Ingested Files",
+                interactive=False,
+                render=False,  # Rendered under the button
+            )
+            upload_button.upload(
+                _upload_file, inputs=upload_button, outputs=ingested_dataset
+            )
+            ingested_dataset.render()
+        with gr.Column(scale=7):
+            chatbot = gr.ChatInterface(_chat, additional_inputs=[mode, upload_button])
 
 
 def mount_in_app(app: FastAPI) -> None:
