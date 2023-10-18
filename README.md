@@ -39,7 +39,7 @@ Please check it out for the latest updates!
 Generative AI is a game changer for our society, but adoption in companies of all size and data-sensitive
 domains like healthcare or legal is limited by a clear concern: **privacy**. 
 Not being able to ensure that your data is fully under your control when using third-party AI tools 
-is a risks these industries cannot allow.
+is a risk those industries cannot take.
 
 ### Primordial version
 The first version of PrivateGPT was launched in May 2023 as a novel approach to address the privacy 
@@ -71,11 +71,33 @@ Stay tuned to our [releases](TBD) to check all the new features and changes incl
 Full documentation on installation, dependencies, configuration, running the server, deployment options,
 ingesting local documents, API details and UI features can be found here: https://docs.privategpt.dev/
 
-This documentation is automatically generated every time the server is launched. You can find the script
-in charge of doing so in `scripts/extract_openapi.py`
-
 ## 🧩 Architecture
-TBD
+Conceptually, PrivateGPT is an API that wraps a RAG pipeline and exposes its 
+primitives.
+* The API is built using [FastAPI](https://fastapi.tiangolo.com/) and follows 
+  [OpenAI's API scheme](https://platform.openai.com/docs/api-reference).
+* The RAG pipeline is based on [LlamaIndex](https://www.llamaindex.ai/).
+
+The design of PrivateGPT allows to easily extend and adapt both the API and the 
+RAG implementation. Some key architectural decisions are:
+* Dependency Injection, decoupling the different componentes and layers.
+* Usage of LlamaIndex abstractions such as `LLM`, `BaseEmbedding` or `VectorStore`, 
+  making it immediate to change the actual implementations of those abstractions. 
+* Simplicity, adding as few layers and new abstractions as possible. 
+* Ready to use, providing a full implementation of the API and RAG 
+  pipeline. 
+
+Main building blocks:
+* APIs are defined in `private_gpt:server:<api>`. Each package contains an
+  `<api>_router.py` (FastAPI layer) and an `<api>_service.py` (the
+  service implementation). Each *Service* uses LlamaIndex base abstractions instead 
+  of specific implementations,
+  decoupling the actual implementation from its usage.
+* Components are placed in 
+  `private_gpt:components:<component>`. Each *Component* is in charge of providing 
+  actual implementations to the base abstractions used in the Services - for example 
+  `LLMComponent` is in charge of providing an actual implementation of an `LLM` 
+  (for example `LlamaCPP` or `OpenAI`).
 
 ## 💡 Contributing
 Interested in contributing to PrivateGPT? We have the following challenges ahead of us in case 
