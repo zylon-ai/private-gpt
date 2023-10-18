@@ -1,6 +1,6 @@
 # 🔒 PrivateGPT 📑
 
-<img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaDEVquu0igr1Bgkq8dCR2z4RDMXDd9JTbIV1LtZhxadIm-jmoTZnku3UrRMf4OWx-o_MkbpmOmcu7TJ9f3tNrAfSUumvQ=s1600">
+<img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaBlEalyM8tpzyXYhPLuNeMEPX4zAAhv07MH8n7N539hUU3U5UhDuBEpydUvOcibiKkpz5vSKIInh2th8krE2OD8HrPxKw=s1600">
 
 PrivateGPT is a production-ready AI project that allows you to ask questions to your documents using the power of Large Language Models (LLMs), even in scenarios without Internet connection. 
 100% private, no data leaves your execution environment at any point.
@@ -82,7 +82,7 @@ Interested in contributing to PrivateGPT? We have the following challenges ahead
 ## 💬 Community 
 Join the conversation around PrivateGPT on our:
 - [Twitter (aka X)](https://twitter.com/ivanmartit)
-- [Discord](https://discord.com/channels/1164200432894234644/1164200433779212400)
+- [Discord](https://discord.gg/HytQDxAx)
 
 ## 📖 Citation
 Reference to cite if you use PrivateGPT in a paper:
