@@ -246,7 +246,16 @@ computations.
 
 🚧 We are working on Dockerized deployment guidelines 🚧
 
-## Ingesting local documents
+## Ingesting & Managing Documents
+
+🚧 Document Update and Delete are still WIP. 🚧
+
+The ingestion of documents can be done in different ways:
+* Using the `/ingest` API
+* Using the Gradio UI
+* Using the Bulk Local Ingestion functionality (check next section)
+
+### Bulk Local Ingestion
 
 When you are running PrivateGPT in a fully local setup, you can ingest a complete folder for convenience (containing
 pdf, text files, etc.)
@@ -259,6 +268,11 @@ make ingest /path/to/folder -- --watch
 After ingestion is complete, you should be able to chat with your documents
 by navigating to http://localhost:8001 and using the option `Query documents`,
 or using the completions / chat API.
+
+### Reset Local documents database
+
+When running in a local setup, you can remove all ingested documents by simply 
+deleting all contents of `local_data` folder (except .gitignore). 
 
 ## API
 
