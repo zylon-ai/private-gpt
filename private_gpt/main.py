@@ -12,6 +12,7 @@ from private_gpt.server.chat.chat_router import chat_router
 from private_gpt.server.chunks.chunks_router import chunks_router
 from private_gpt.server.completions.completions_router import completions_router
 from private_gpt.server.embeddings.embeddings_router import embeddings_router
+from private_gpt.server.health.health_router import health_router
 from private_gpt.server.ingest.ingest_router import ingest_router
 from private_gpt.settings.settings import settings
 
@@ -40,25 +41,32 @@ with open(docs_path / "description.md") as description_file:
 tags_metadata = [
     {
         "name": "Ingestion",
-        "description": "High-level APIs covering document ingestion -internally managing document parsing, splitting, "
-        "metadata extraction, embedding generation and storage- and ingested documents CRUD. "
-        "Each ingested document is identified by an ID that can be used to filter the context "
+        "description": "High-level APIs covering document ingestion -internally "
+        "managing document parsing, splitting,"
+        "metadata extraction, embedding generation and storage- and ingested "
+        "documents CRUD."
+        "Each ingested document is identified by an ID that can be used to filter the "
+        "context"
         "used in *Completions* and *Chunks* APIs.",
     },
     {
         "name": "Completions",
-        "description": "High-level APIs covering Chat and Completions. They follow OpenAI's format, extending it to "
-        "allow using the context coming from ingested documents to create the response. Internally "
+        "description": "High-level APIs covering Chat and Completions. They follow "
+        "OpenAI's format, extending it to"
+        "allow using the context coming from ingested documents to create the "
+        "response. Internally"
         "manage context retrieval, prompt engineering and the response generation.",
     },
     {
         "name": "Context Chunks",
-        "description": "Low-level API that given a query return relevant chunks of text coming from the ingested "
+        "description": "Low-level API that given a query return relevant chunks of "
+        "text coming from the ingested"
         "documents.",
     },
     {
         "name": "Embeddings",
-        "description": "Low-level API to obtain the vector representation of a given text, using an Embeddings model. "
+        "description": "Low-level API to obtain the vector representation of a given "
+        "text, using an Embeddings model."
         "Follows OpenAI's embeddings API format.",
     },
     {
@@ -88,9 +96,8 @@ def custom_openapi() -> dict[str, Any]:
         routes=app.routes,
         tags=tags_metadata,
     )
-    # openapi_schema["info"]["x-logo"] = {
-    #     "url": "https://raw.githubusercontent.com/zylon-ai/private-gpt/main/docs/logo.png"
-    # }
+    # openapi_schema["info"]["x-logo"] = { "url":
+    # "https://raw.githubusercontent.com/zylon-ai/private-gpt/main/docs/logo.png" }
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
@@ -98,17 +105,12 @@ def custom_openapi() -> dict[str, Any]:
 
 app.openapi = custom_openapi  # type: ignore[method-assign]
 
-
-@app.get("/health", tags=["Health"], description="Blavla")
-def health() -> Any:
-    return {"status": "ok"}
-
-
 app.include_router(completions_router)
 app.include_router(chat_router)
 app.include_router(chunks_router)
 app.include_router(ingest_router)
 app.include_router(embeddings_router)
+app.include_router(health_router)
 
 
 if settings.ui.enabled:

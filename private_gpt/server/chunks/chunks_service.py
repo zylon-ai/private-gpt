@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from injector import inject, singleton
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
 from llama_index.schema import NodeWithScore
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
@@ -19,11 +19,21 @@ if TYPE_CHECKING:
 
 
 class Chunk(BaseModel):
-    score: float
+    object: str = Field(enum=["context.chunk"])
+    score: float = Field(examples=[0.023])
     document: IngestedDoc
-    text: str
-    previous_texts: list[str] | None
-    next_texts: list[str] | None
+    text: str = Field(examples=["Outbound sales increased 20%, driven by new leads."])
+    previous_texts: list[str] | None = Field(
+        examples=[["SALES REPORT 2023", "Inbound didn't show major changes."]]
+    )
+    next_texts: list[str] | None = Field(
+        examples=[
+            [
+                "New leads came from Google Ads campaign.",
+                "The campaign was run by the Marketing Department",
+            ]
+        ]
+    )
 
 
 @singleton
@@ -91,8 +101,13 @@ class ChunksService:
             doc_id = node.node.ref_doc_id if node.node.ref_doc_id is not None else "-"
             retrieved_nodes.append(
                 Chunk(
+                    object="context.chunk",
                     score=node.score or 0.0,
-                    document=IngestedDoc(doc_id=doc_id, doc_metadata=node.metadata),
+                    document=IngestedDoc(
+                        object="ingest.document",
+                        doc_id=doc_id,
+                        doc_metadata=node.metadata,
+                    ),
                     text=node.get_content(),
                     previous_texts=self._get_sibling_nodes_text(
                         node, prev_next_chunks, False

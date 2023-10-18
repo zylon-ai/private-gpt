@@ -12,7 +12,7 @@ from llama_index import (
 )
 from llama_index.node_parser import SentenceWindowNodeParser
 from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
@@ -27,8 +27,16 @@ if TYPE_CHECKING:
 
 
 class IngestedDoc(BaseModel):
-    doc_id: str
-    doc_metadata: dict[str, Any] | None = None
+    object: str = Field(enum=["ingest.document"])
+    doc_id: str = Field(examples=["c202d5e6-7b69-4869-81cc-dd574ee8ee11"])
+    doc_metadata: dict[str, Any] | None = Field(
+        examples=[
+            {
+                "page_label": "2",
+                "file_name": "Sales Report Q3 2023.pdf",
+            }
+        ]
+    )
 
     @staticmethod
     def curate_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
@@ -109,13 +117,14 @@ class IngestService:
             documents,
             storage_context=self.storage_context,
             service_context=self.ingest_service_context,
-            store_nodes_override=True,  # Force store nodes in index store and document store
+            store_nodes_override=True,  # Force store nodes in index and document stores
             show_progress=True,
         )
         # persist the index and nodes
         self.storage_context.persist(persist_dir=local_data_path)
         return [
             IngestedDoc(
+                object="ingest.document",
                 doc_id=document.doc_id,
                 doc_metadata=IngestedDoc.curate_metadata(document.metadata),
             )
@@ -138,7 +147,11 @@ class IngestService:
                 if ref_doc_info is not None and ref_doc_info.metadata is not None:
                     doc_metadata = IngestedDoc.curate_metadata(ref_doc_info.metadata)
                 ingested_docs.append(
-                    IngestedDoc(doc_id=doc_id, doc_metadata=doc_metadata)
+                    IngestedDoc(
+                        object="ingest.document",
+                        doc_id=doc_id,
+                        doc_metadata=doc_metadata,
+                    )
                 )
             return ingested_docs
         except ValueError:
