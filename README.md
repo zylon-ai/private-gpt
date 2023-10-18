@@ -1,4 +1,6 @@
-# PrivateGPT
+# 🔒 PrivateGPT 📑
+
+<img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaDEVquu0igr1Bgkq8dCR2z4RDMXDd9JTbIV1LtZhxadIm-jmoTZnku3UrRMf4OWx-o_MkbpmOmcu7TJ9f3tNrAfSUumvQ=s1600">
 
 PrivateGPT is a production-ready AI project that allows you to ask questions to your documents using the power of Large Language Models (LLMs), even in scenarios without Internet connection. 
 100% private, no data leaves your execution environment at any point.
@@ -17,8 +19,6 @@ The API is divided into two logical blocks:
 
 In addition to this, a working [Gradio UI](https://www.gradio.app/) client is provided to test the API, together with a set of useful tools such as bulk model download script, ingestion script, documents folder watch, etc.
 
-<img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaDEVquu0igr1Bgkq8dCR2z4RDMXDd9JTbIV1LtZhxadIm-jmoTZnku3UrRMf4OWx-o_MkbpmOmcu7TJ9f3tNrAfSUumvQ=s1600">
-
 > 👂 **Need help applying PrivateGPT to your specific use case?** [Let us know more about it](https://forms.gle/4cSDmH13RZBHV9at7) and we'll try to help! We are refining PrivateGPT through your feedback.
 
 ## 🎞️ Overview
@@ -35,7 +35,7 @@ This was done by leveraging existing technologies developed by the thriving Open
 That version, which rapidly became a go-to project for privacy-sensitive setups and served as the seed for thousands of local-focused generative AI projects, was the foundation of what PrivateGPT is becoming nowadays; 
 thus a simpler and more educational implementation to understand the basic concepts required to build a fully local -and therefore, private- chatGPT-like tool.
 
-If you want to keep experimenting with it, we have saved it in the [primordial branch](TBD) of the project.
+If you want to keep experimenting with it, we have saved it in the [primordial branch](https://github.com/imartinez/privateGPT/branches) of the project.
 
 ### Present and Future of PrivateGPT
 PrivateGPT is now evolving towards becoming a gateway to generative AI models and primitives, including completions, document ingestion, RAG pipelines and other low-level building blocks. 
@@ -44,18 +44,45 @@ We want to make easier for any developer to build AI applications and experience
 Stay tuned to our [releases](TBD) to check all the new features and changes included.
 
 ## 📄 Documentation
-Full documentation on installation, dependencies, configuration, running the server, deployment options, ingesting local documents and API details can be found here: https://docs.privategpt.dev/
+Full documentation on installation, dependencies, configuration, running the server, deployment options, ingesting local documents, API details and UI features can be found here: https://docs.privategpt.dev/
 
 This documentation is automatically generated every time the server is launched. You can find the script in charge of doing so in `scripts/extract_openapi.py`
 
-## Architecture
+## 🧩 Architecture
 TBD
 
 ## 💡 Contributing
-Interested in contributing to PrivateGPT? See our Contribution Guide for more details -> TBD
+Interested in contributing to PrivateGPT? We have the following challenges ahead of us in case you want to give a hand: 
 
-### TODOs
-TBD
+### Improvements
+- Code documentation
+- Expose execution parameters such as top_p, temperature, max_tokens... in Completions and Chat Completions
+- Expose chunk size in Ingest API
+- Implement Update and Delete document in Ingest API
+- Add information about tokens consumption in each response
+- Add to Completion APIs (chat and completion) the context docs used to answer the question
+- In “model” return the actual LLM or Embeddings model name used
+
+### New features
+- Implement concurrency lock to avoid errors when there are several calls to the model
+- API key-based request control to the API 
+- CORS support
+- Support for Sagemaker
+- Support Function calling
+- Add md5 to check files already ingested
+- Select a document to query in the UI
+- Better observability of the RAG pipeline
+- Lazy load LLMs
+
+### Project Infrastructure
+- Create a “wipe” shortcut in make to remove all contents of local_data folder except .gitignore
+- Packaged version as a local desktop app
+- Dockerize
+
+## 💬 Community 
+Join the conversation around PrivateGPT on our:
+- [Twitter (aka X)](https://twitter.com/ivanmartit)
+- [Discord](https://discord.com/channels/1164200432894234644/1164200433779212400)
 
 ## 📖 Citation
 Reference to cite if you use PrivateGPT in a paper:
