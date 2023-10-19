@@ -132,7 +132,7 @@ you want to give a hand:
 ## 💬 Community 
 Join the conversation around PrivateGPT on our:
 - [Twitter (aka X)](https://twitter.com/ivanmartit)
-- [Discord](https://discord.gg/HytQDxAx)
+- [Discord](https://discord.gg/bK6mRVpErU)
 
 ## 📖 Citation
 Reference to cite if you use PrivateGPT in a paper:
