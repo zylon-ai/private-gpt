@@ -20,6 +20,40 @@ The API is divided in two logical blocks:
 > useful tools such as bulk model download script, ingestion script, documents folder
 > watch, etc.
 
+## Quick Local Installation steps
+The steps in `Installation and Settings` section are better explained and cover more 
+setup scenarios. But if you are looking for a quick setup guide, here it is:
+
+```
+# Clone the repo
+git clone https://github.com/imartinez/privateGPT
+cd privateGPT
+
+# Install Python 3.11
+pyenv install 3.11
+pyenv local 3.11
+
+# Install dependencies
+poetry install --with ui,local
+
+# Download Embedding and LLM models
+poetry run python scripts/setup
+
+# (Optional) For Mac with Metal GPU, enable it. Check Installation and Settings section 
+to know how to enable GPU on other platforms
+CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
+
+# Run the local server  
+PGPT_PROFILES=local make run
+
+# Note: on Mac with Metal you should see a ggml_metal_add_buffer log, stating GPU is 
+being used
+
+# Navigate to the UI and try it out! 
+http://localhost:8001/
+```
+
+
 ## Installation and Settings
 
 ### Base requirements to run PrivateGPT
@@ -137,7 +171,8 @@ is used.
 
 #### OSX GPU support
 
-You will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with metal support. to do that run:
+You will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with 
+metal support. To do that run:
 
 ```bash
 CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
