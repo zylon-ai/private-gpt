@@ -142,7 +142,7 @@ with gr.Blocks(
             chatbot = gr.ChatInterface(
                 _chat,
                 chatbot=gr.Chatbot(
-                    label="Chat",
+                    label=f"LLM: {settings.llm.mode}",
                     show_copy_button=True,
                     render=False,
                     avatar_images=(
