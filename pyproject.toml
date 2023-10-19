@@ -1,29 +1,141 @@
 [tool.poetry]
-name = "privategpt"
+name = "private-gpt"
 version = "0.1.0"
-description = ""
-authors = ["Ivan Martinez <ivanmartit@gmail.com>"]
-license = "Apache Version 2.0"
-readme = "README.md"
+description = "Private GPT"
+authors = ["Zylon <hi@zylon.ai>"]
 
 [tool.poetry.dependencies]
-python = "^3.10"
-langchain = "0.0.274"
-gpt4all = "1.0.8"
-chromadb = "0.4.12"
-llama-cpp-python = "0.1.81"
-urllib3 = "2.0.4"
-PyMuPDF = "1.23.1"
-python-dotenv = "^1.0.0"
-unstructured = "0.10.8"
-extract-msg = "0.45.0"
-tabulate = "^0.9.0"
-pandoc = "^2.3"
-pypandoc = "^1.11"
-tqdm = "4.66.1"
-sentence-transformers = "2.2.2"
+python = ">=3.11,<3.13"
+fastapi = { extras = ["all"], version = "^0.103.1" }
+loguru = "^0.7.2"
+boto3 = "^1.28.56"
+injector = "^0.21.0"
+pyyaml = "^6.0.1"
+python-multipart = "^0.0.6"
+pypdf = "^3.16.2"
+llama-index = "v0.8.35"
+chromadb = "^0.4.13"
+watchdog = "^3.0.0"
+transformers = "^4.34.0"
+torch = "^2.1.0"
 
+[tool.poetry.group.dev.dependencies]
+black = "^22"
+mypy = "^1.2"
+pre-commit = "^2"
+pytest = "^7"
+pytest-cov = "^3"
+ruff = "^0"
+pytest-asyncio = "^0.21.1"
+types-pyyaml = "^6.0.12.12"
+
+# Dependencies for gradio UI
+[tool.poetry.group.ui]
+optional = true
+[tool.poetry.group.ui.dependencies]
+gradio = "^3.45.2"
+
+[tool.poetry.group.local]
+optional = true
+[tool.poetry.group.local.dependencies]
+sentence-transformers = "^2.2.2"
+numpy = "1.26.0"
+llama-cpp-python = "^0.2.11"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+# Packages configs
+
+## coverage
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+skip_empty = true
+precision = 2
+
+## black
+
+[tool.black]
+target-version = ['py311']
+
+## ruff
+# Recommended ruff config for now, to be updated as we go along.
+[tool.ruff]
+target-version = 'py311'
+
+# See all rules at https://beta.ruff.rs/docs/rules/
+select = [
+    "E", # pycodestyle
+    "W", # pycodestyle
+    "F", # Pyflakes
+    "B", # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "D", # pydocstyle
+    "I", # isort
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+    "TID", # flake8-tidy-imports
+    "Q", # flake8-quotes
+    "UP", # pyupgrade
+    "PT", # flake8-pytest-style
+    "RUF", # Ruff-specific rules
+]
+
+ignore = [
+    "E501", # "Line too long"
+    # -> line length already regulated by black
+    "PT011", # "pytest.raises() should specify expected exception"
+    # -> would imply to update tests every time you update exception message
+    "SIM102", # "Use a single `if` statement instead of nested `if` statements"
+    # -> too restrictive,
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107"
+    # -> "Missing docstring in public function too restrictive"
+]
+
+[tool.ruff.pydocstyle]
+# Automatically disable rules that are incompatible with Google docstring convention
+convention = "google"
+
+[tool.ruff.pycodestyle]
+max-doc-length = 88
+
+[tool.ruff.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.flake8-type-checking]
+strict = true
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+# Pydantic needs to be able to evaluate types at runtime
+# see https://pypi.org/project/flake8-type-checking/ for flake8-type-checking documentation
+# see https://beta.ruff.rs/docs/settings/#flake8-type-checking-runtime-evaluated-base-classes for ruff documentation
+
+[tool.ruff.per-file-ignores]
+# Allow missing docstrings for tests
+"tests/**/*.py" = ["D1"]
+
+## mypy
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+check_untyped_defs = false
+explicit_package_bases = true
+exclude = ["tests"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = [
+    "--import-mode=importlib",
+]

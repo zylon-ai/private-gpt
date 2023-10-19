@@ -1,0 +1,9 @@
+.venv
+models
+.github
+.vscode
+.DS_Store
+terraform
+tests
+Dockerfile
+Dockerfile.*

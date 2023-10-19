@@ -1,152 +1,158 @@
-# privateGPT
-Ask questions to your documents without an internet connection, using the power of LLMs. 100% private, no data leaves your execution environment at any point. You can ingest documents and ask questions without an internet connection!
+# 🔒 PrivateGPT 📑
 
-> :ear: **Need help applying PrivateGPT to your specific use case?** [Let us know more about it](https://forms.gle/4cSDmH13RZBHV9at7) and we'll try to help! We are refining PrivateGPT through your feedback.
+<img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaBasLxbp49Hrwnmi_Ctii1oIM18nFJrBO0ERSE3wpkS-syjiQBE32_tUSdqnjn6etUDjUSkdJeFa8acqRb0lZbkZ6CyAw=s1600">
 
-<img width="902" alt="demo" src="https://user-images.githubusercontent.com/721666/236942256-985801c9-25b9-48ef-80be-3acbb4575164.png">
+PrivateGPT is a production-ready AI project that allows you to ask questions to your documents using the power
+of Large Language Models (LLMs), even in scenarios without Internet connection. 100% private, no data leaves your
+execution environment at any point.
 
-Built with [LangChain](https://github.com/hwchase17/langchain), [LlamaIndex](https://www.llamaindex.ai/), [GPT4All](https://github.com/nomic-ai/gpt4all), [LlamaCpp](https://github.com/ggerganov/llama.cpp), [Chroma](https://www.trychroma.com/) and [SentenceTransformers](https://www.sbert.net/).
+The project provides an API offering all the primitives required to build private, context-aware AI applications.
+It follows and extends [OpenAI API standard](https://openai.com/blog/openai-api),
+and supports both normal and streaming responses.
 
-# Environment Setup
-In order to set your environment up to run the code here, first install all requirements:
+The API is divided into two logical blocks:
 
-```shell
-pip3 install -r requirements.txt
+**High-level API**, which abstracts all the complexity of a RAG (Retrieval Augmented Generation)
+pipeline implementation:
+- Ingestion of documents: internally managing document parsing,
+splitting, metadata extraction, embedding generation and storage.
+- Chat & Completions using context from ingested documents:
+abstracting the retrieval of context, the prompt engineering and the response generation.
+
+**Low-level API**, which allows advanced users to implement their own complex pipelines:
+- Embeddings generation: based on a piece of text.
+- Contextual chunks retrieval: given a query, returns the most relevant chunks of text from the ingested documents.
+
+In addition to this, a working [Gradio UI](https://www.gradio.app/)
+client is provided to test the API, together with a set of useful tools such as bulk model
+download script, ingestion script, documents folder watch, etc.
+
+> 👂 **Need help applying PrivateGPT to your specific use case?**
+> [Let us know more about it](https://forms.gle/4cSDmH13RZBHV9at7)
+> and we'll try to help! We are refining PrivateGPT through your feedback.
+
+## 🎞️ Overview
+DISCLAIMER: This README is not updated as frequently as the [documentation](https://docs.privategpt.dev/).
+Please check it out for the latest updates!
+
+### Motivation behind PrivateGPT
+Generative AI is a game changer for our society, but adoption in companies of all size and data-sensitive
+domains like healthcare or legal is limited by a clear concern: **privacy**.
+Not being able to ensure that your data is fully under your control when using third-party AI tools
+is a risk those industries cannot take.
+
+### Primordial version
+The first version of PrivateGPT was launched in May 2023 as a novel approach to address the privacy
+concern by using LLMs in a complete offline way.
+This was done by leveraging existing technologies developed by the thriving Open Source AI community:
+[LangChain](https://github.com/hwchase17/langchain), [LlamaIndex](https://www.llamaindex.ai/),
+[GPT4All](https://github.com/nomic-ai/gpt4all),
+[LlamaCpp](https://github.com/ggerganov/llama.cpp),
+[Chroma](https://www.trychroma.com/)
+and [SentenceTransformers](https://www.sbert.net/).
+
+That version, which rapidly became a go-to project for privacy-sensitive setups and served as the seed
+for thousands of local-focused generative AI projects, was the foundation of what PrivateGPT is becoming nowadays;
+thus a simpler and more educational implementation to understand the basic concepts required
+to build a fully local -and therefore, private- chatGPT-like tool.
+
+If you want to keep experimenting with it, we have saved it in the
+[primordial branch](https://github.com/imartinez/privateGPT/branches) of the project.
+
+> It is strongly recommended to do a clean clone and install of this new version of
+PrivateGPT if you come from the previous, primordial version.
+
+### Present and Future of PrivateGPT
+PrivateGPT is now evolving towards becoming a gateway to generative AI models and primitives, including
+completions, document ingestion, RAG pipelines and other low-level building blocks.
+We want to make easier for any developer to build AI applications and experiences, as well as providing
+a suitable extensive architecture for the community to keep contributing.
+
+Stay tuned to our [releases](https://github.com/imartinez/privateGPT/releases) to check all the new features and changes included.
+
+## 📄 Documentation
+Full documentation on installation, dependencies, configuration, running the server, deployment options,
+ingesting local documents, API details and UI features can be found here: https://docs.privategpt.dev/
+
+## 🧩 Architecture
+Conceptually, PrivateGPT is an API that wraps a RAG pipeline and exposes its
+primitives.
+* The API is built using [FastAPI](https://fastapi.tiangolo.com/) and follows
+  [OpenAI's API scheme](https://platform.openai.com/docs/api-reference).
+* The RAG pipeline is based on [LlamaIndex](https://www.llamaindex.ai/).
+
+The design of PrivateGPT allows to easily extend and adapt both the API and the
+RAG implementation. Some key architectural decisions are:
+* Dependency Injection, decoupling the different componentes and layers.
+* Usage of LlamaIndex abstractions such as `LLM`, `BaseEmbedding` or `VectorStore`,
+  making it immediate to change the actual implementations of those abstractions.
+* Simplicity, adding as few layers and new abstractions as possible.
+* Ready to use, providing a full implementation of the API and RAG
+  pipeline.
+
+Main building blocks:
+* APIs are defined in `private_gpt:server:<api>`. Each package contains an
+  `<api>_router.py` (FastAPI layer) and an `<api>_service.py` (the
+  service implementation). Each *Service* uses LlamaIndex base abstractions instead
+  of specific implementations,
+  decoupling the actual implementation from its usage.
+* Components are placed in
+  `private_gpt:components:<component>`. Each *Component* is in charge of providing
+  actual implementations to the base abstractions used in the Services - for example
+  `LLMComponent` is in charge of providing an actual implementation of an `LLM`
+  (for example `LlamaCPP` or `OpenAI`).
+
+## 💡 Contributing
+Contributions are welcomed! To ensure code quality we have enabled several format and
+typing checks, just run `make check` before committing to make sure your code is ok.
+Remember to test your code! You'll find a tests folder with helpers, and you can run
+tests using `make test` command.
+
+Interested in contributing to PrivateGPT? We have the following challenges ahead of us in case
+you want to give a hand:
+
+### Improvements
+- Better RAG pipeline implementation (improvements to both indexing and querying stages)
+- Code documentation
+- Expose execution parameters such as top_p, temperature, max_tokens... in Completions and Chat Completions
+- Expose chunk size in Ingest API
+- Implement Update and Delete document in Ingest API
+- Add information about tokens consumption in each response
+- Add to Completion APIs (chat and completion) the context docs used to answer the question
+- In “model” field return the actual LLM or Embeddings model name used
+
+### Features
+- Implement concurrency lock to avoid errors when there are several calls to the local LlamaCPP model
+- API key-based request control to the API
+- CORS support
+- Support for Sagemaker
+- Support Function calling
+- Add md5 to check files already ingested
+- Select a document to query in the UI
+- Better observability of the RAG pipeline
+
+### Project Infrastructure
+- Create a “wipe” shortcut in `make` to remove all contents of local_data folder except .gitignore
+- Packaged version as a local desktop app (windows executable, mac app, linux app)
+- Dockerize the application for platforms outside linux (Docker Desktop for Mac and Windows)
+- Document how to deploy to AWS, GCP and Azure.
+
+##
+
+## 💬 Community
+Join the conversation around PrivateGPT on our:
+- [Twitter (aka X)](https://twitter.com/PrivateGPT_AI)
+- [Discord](https://discord.gg/bK6mRVpErU)
+
+## 📖 Citation
+Reference to cite if you use PrivateGPT in a paper:
+
 ```
-
-*Alternative requirements installation with poetry*
-1. Install [poetry](https://python-poetry.org/docs/#installation)
-
-2. Run this commands
-```shell
-cd privateGPT
-poetry install
-poetry shell
+@software{PrivateGPT_2023,
+authors = {Martinez, I., Gallego, D. Orgaz, P.},
+month = {5},
+title = {PrivateGPT},
+url = {https://github.com/imartinez/privateGPT},
+year = {2023}
+}
 ```
-
-Then, download the LLM model and place it in a directory of your choice:
-- LLM: default to [ggml-gpt4all-j-v1.3-groovy.bin](https://gpt4all.io/models/ggml-gpt4all-j-v1.3-groovy.bin). If you prefer a different GPT4All-J compatible model, just download it and reference it in your `.env` file.
-
-Copy the `example.env` template into `.env`
-```shell
-cp example.env .env
-```
-
-and edit the variables appropriately in the `.env` file.
-```
-MODEL_TYPE: supports LlamaCpp or GPT4All
-PERSIST_DIRECTORY: is the folder you want your vectorstore in
-MODEL_PATH: Path to your GPT4All or LlamaCpp supported LLM
-MODEL_N_CTX: Maximum token limit for the LLM model
-MODEL_N_BATCH: Number of tokens in the prompt that are fed into the model at a time. Optimal value differs a lot depending on the model (8 works well for GPT4All, and 1024 is better for LlamaCpp)
-EMBEDDINGS_MODEL_NAME: SentenceTransformers embeddings model name (see https://www.sbert.net/docs/pretrained_models.html)
-TARGET_SOURCE_CHUNKS: The amount of chunks (sources) that will be used to answer a question
-```
-
-Note: because of the way `langchain` loads the `SentenceTransformers` embeddings, the first time you run the script it will require internet connection to download the embeddings model itself.
-
-## Test dataset
-This repo uses a [state of the union transcript](https://github.com/imartinez/privateGPT/blob/main/source_documents/state_of_the_union.txt) as an example.
-
-## Instructions for ingesting your own dataset
-
-Put any and all your files into the `source_documents` directory
-
-The supported extensions are:
-
-   - `.csv`: CSV,
-   - `.docx`: Word Document,
-   - `.doc`: Word Document,
-   - `.enex`: EverNote,
-   - `.eml`: Email,
-   - `.epub`: EPub,
-   - `.html`: HTML File,
-   - `.md`: Markdown,
-   - `.msg`: Outlook Message,
-   - `.odt`: Open Document Text,
-   - `.pdf`: Portable Document Format (PDF),
-   - `.pptx` : PowerPoint Document,
-   - `.ppt` : PowerPoint Document,
-   - `.txt`: Text file (UTF-8),
-
-Run the following command to ingest all the data.
-
-```shell
-python ingest.py
-```
-
-Output should look like this:
-
-```shell
-Creating new vectorstore
-Loading documents from source_documents
-Loading new documents: 100%|██████████████████████| 1/1 [00:01<00:00,  1.73s/it]
-Loaded 1 new documents from source_documents
-Split into 90 chunks of text (max. 500 tokens each)
-Creating embeddings. May take some minutes...
-Using embedded DuckDB with persistence: data will be stored in: db
-Ingestion complete! You can now run privateGPT.py to query your documents
-```
-
-It will create a `db` folder containing the local vectorstore. Will take 20-30 seconds per document, depending on the size of the document.
-You can ingest as many documents as you want, and all will be accumulated in the local embeddings database.
-If you want to start from an empty database, delete the `db` folder.
-
-Note: during the ingest process no data leaves your local environment. You could ingest without an internet connection, except for the first time you run the ingest script, when the embeddings model is downloaded.
-
-## Ask questions to your documents, locally!
-In order to ask a question, run a command like:
-
-```shell
-python privateGPT.py
-```
-
-And wait for the script to require your input.
-
-```plaintext
-> Enter a query:
-```
-
-Hit enter. You'll need to wait 20-30 seconds (depending on your machine) while the LLM model consumes the prompt and prepares the answer. Once done, it will print the answer and the 4 sources it used as context from your documents; you can then ask another question without re-running the script, just wait for the prompt again.
-
-Note: you could turn off your internet connection, and the script inference would still work. No data gets out of your local environment.
-
-Type `exit` to finish the script.
-
-
-### CLI
-The script also supports optional command-line arguments to modify its behavior. You can see a full list of these arguments by running the command ```python privateGPT.py --help``` in your terminal.
-
-
-# How does it work?
-Selecting the right local models and the power of `LangChain` you can run the entire pipeline locally, without any data leaving your environment, and with reasonable performance.
-
-- `ingest.py` uses `LangChain` tools to parse the document and create embeddings locally using `HuggingFaceEmbeddings` (`SentenceTransformers`). It then stores the result in a local vector database using `Chroma` vector store.
-- `privateGPT.py` uses a local LLM based on `GPT4All-J` or `LlamaCpp` to understand questions and create answers. The context for the answers is extracted from the local vector store using a similarity search to locate the right piece of context from the docs.
-- `GPT4All-J` wrapper was introduced in LangChain 0.0.162.
-
-# System Requirements
-
-## Python Version
-To use this software, you must have Python 3.10 or later installed. Earlier versions of Python will not compile.
-
-## C++ Compiler
-If you encounter an error while building a wheel during the `pip install` process, you may need to install a C++ compiler on your computer.
-
-### For Windows 10/11
-To install a C++ compiler on Windows 10/11, follow these steps:
-
-1. Install Visual Studio 2022.
-2. Make sure the following components are selected:
-   * Universal Windows Platform development
-   * C++ CMake tools for Windows
-3. Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/).
-4. Run the installer and select the `gcc` component.
-
-## Mac Running Intel
-When running a Mac with Intel hardware (not M1), you may run into _clang: error: the clang compiler does not support '-march=native'_ during pip install.
-
-If so set your archflags during pip install. eg: _ARCHFLAGS="-arch x86_64" pip3 install -r requirements.txt_
-
-# Disclaimer
-This is a test project to validate the feasibility of a fully private solution for question answering using LLMs and Vector embeddings. It is not production ready, and it is not meant to be used in production. The models selection is not optimized for performance, but for privacy; but it is possible to use different models and vectorstores to improve performance.
