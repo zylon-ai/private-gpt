@@ -1,0 +1,8 @@
+server:
+  env_name: test
+
+data:
+  local_data_folder: local_data/tests
+
+llm:
+  mode: mock

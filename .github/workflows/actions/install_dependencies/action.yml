@@ -1,0 +1,30 @@
+name: "Install Dependencies"
+description: "Action to build the project dependencies from the main versions"
+inputs:
+  python_version:
+    required: true
+    type: string
+    default: "3.11.4"
+  poetry_version:
+    required: true
+    type: string
+    default: "1.5.1"
+
+runs:
+  using: composite
+  steps:
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ inputs.poetry_version }}
+        virtualenvs-create: true
+        virtualenvs-in-project: false
+        installer-parallel: true
+    - uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python_version }}
+        cache: "poetry"
+    - name: Install Dependencies
+      run: poetry install --with ui --no-root
+      shell: bash
+

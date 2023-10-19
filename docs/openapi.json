@@ -1,0 +1,959 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PrivateGPT",
+    "summary": "PrivateGPT is a production-ready AI project that allows you to ask questions to your documents using the power of Large Language Models (LLMs), even in scenarios without Internet connection. 100% private, no data leaves your execution environment at any point.",
+    "description": "## Introduction\n\nPrivateGPT provides an **API** containing all the building blocks required to build\n**private, context-aware AI applications**. The API follows and extends OpenAI API standard, and supports\nboth normal and streaming responses.\n\nThe API is divided in two logical blocks:\n\n- High-level API, abstracting all the complexity of a RAG (Retrieval Augmented Generation) pipeline implementation:\n    - Ingestion of documents: internally managing document parsing, splitting, metadata extraction,\n      embedding generation and storage.\n    - Chat & Completions using context from ingested documents: abstracting the retrieval of context, the prompt\n      engineering and the response generation.\n- Low-level API, allowing advanced users to implement their own complex pipelines:\n    - Embeddings generation: based on a piece of text.\n    - Contextual chunks retrieval: given a query, returns the most relevant chunks of text from the ingested\n      documents.\n\n> A working **Gradio UI client** is provided to test the API, together with a set of\n> useful tools such as bulk model download script, ingestion script, documents folder\n> watch, etc.\n\n## Quick Local Installation steps\nThe steps in `Installation and Settings` section are better explained and cover more \nsetup scenarios. But if you are looking for a quick setup guide, here it is:\n\n```\n# Clone the repo\ngit clone https://github.com/imartinez/privateGPT\ncd privateGPT\n\n# Install Python 3.11\npyenv install 3.11\npyenv local 3.11\n\n# Install dependencies\npoetry install --with ui,local\n\n# Download Embedding and LLM models\npoetry run python scripts/setup\n\n# (Optional) For Mac with Metal GPU, enable it. Check Installation and Settings section \nto know how to enable GPU on other platforms\nCMAKE_ARGS=\"-DLLAMA_METAL=on\" pip install --force-reinstall --no-cache-dir llama-cpp-python\n\n# Run the local server  \nPGPT_PROFILES=local make run\n\n# Note: on Mac with Metal you should see a ggml_metal_add_buffer log, stating GPU is \nbeing used\n\n# Navigate to the UI and try it out! \nhttp://localhost:8001/\n```\n\n\n## Installation and Settings\n\n### Base requirements to run PrivateGPT\n\n* Git clone PrivateGPT repository, and navigate to it:\n```\n  git clone https://github.com/imartinez/privateGPT\n  cd privateGPT\n```\n* Install Python 3.11. Ideally through a python version manager like `pyenv`. \n  Python 3.12 \n  should work too. Earlier python versions are not supported.\n    * osx/linux: [pyenv](https://github.com/pyenv/pyenv)\n    * windows: [pyenv-win](https://github.com/pyenv-win/pyenv-win)\n  \n```  \npyenv install 3.11\npyenv local 3.11\n```\n* Install [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) for dependency management: \n  \n* Install `make` for scripts:\n    * osx: (Using homebrew): `brew install make`\n    * windows: (Using chocolatey) `choco install make`\n\n### Install dependencies\n\nInstall the dependencies:\n\n```bash\npoetry install --with ui\n```\n\nVerify everything is working by running `make run` (or `poetry run python -m private_gpt`) and navigate to\nhttp://localhost:8001. You should see a [Gradio UI](https://gradio.app/) **configured with a mock LLM** that will\necho back the input. Later we'll see how to configure a real LLM.\n\n### Settings\n\n> Note: the default settings of PrivateGPT work out-of-the-box for a 100% local setup. Skip this section if you just\n> want to test PrivateGPT locally, and come back later to learn about more configuration options.\n\nPrivateGPT is configured through *profiles* that are defined using yaml files, and selected through env variables.\nThe full list of properties configurable can be found in `settings.yaml`\n\n#### env var `PGPT_SETTINGS_FOLDER`\n\nThe location of the settings folder. Defaults to the root of the project.\nShould contain the default `settings.yaml` and any other `settings-{profile}.yaml`.\n\n#### env var `PGPT_PROFILES`\n\nBy default, the profile definition in `settings.yaml` is loaded.\nUsing this env var you can load additional profiles; format is a comma separated list of profile names.\nThis will merge `settings-{profile}.yaml` on top of the base settings file.\n\nFor example:\n`PGPT_PROFILES=local,cuda` will load `settings-local.yaml`\nand `settings-cuda.yaml`, their contents will be merged with\nlater profiles properties overriding values of earlier ones like `settings.yaml`.\n\nDuring testing, the `test` profile will be active along with the default, therefore `settings-test.yaml`\nfile is required.\n\n#### Environment variables expansion\n\nConfiguration files can contain environment variables,\nthey will be expanded at runtime.\n\nExpansion must follow the pattern `${VARIABLE_NAME:default_value}`.\n\nFor example, the following configuration will use the value of the `PORT`\nenvironment variable or `8001` if it's not set.\nMissing variables with no default will produce an error.\n\n```yaml\nserver:\n  port: ${PORT:8001}\n```\n\n### Local LLM requirements\n\nInstall extra dependencies for local execution:\n\n```bash\npoetry install --with local\n```\n\nFor PrivateGPT to run fully locally GPU acceleration is required\n(CPU execution is possible, but very slow), however,\ntypical Macbook laptops or window desktops with mid-range GPUs lack VRAM to run\neven the smallest LLMs. For that reason\n**local execution is only supported for models compatible with [llama.cpp](https://github.com/ggerganov/llama.cpp)**\n\nThese two models are known to work well:\n\n* https://huggingface.co/TheBloke/Llama-2-7B-chat-GGUF\n* https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF (recommended)\n\nTo ease the installation process, use the `setup` script that will download both\nthe embedding and the LLM model and place them in the correct location (under `models` folder):\n\n```bash\npoetry run python scripts/setup\n```\n\nIf you are ok with CPU execution, you can skip the rest of this section.\n\nAs stated before, llama.cpp is required and in\nparticular [llama-cpp-python](https://github.com/abetlen/llama-cpp-python)\nis used.\n\n> It's highly encouraged that you fully read llama-cpp and llama-cpp-python documentation relevant to your platform.\n> Running into installation issues is very likely, and you'll need to troubleshoot them yourself.\n\n#### OSX GPU support\n\nYou will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with \nmetal support. To do that run:\n\n```bash\nCMAKE_ARGS=\"-DLLAMA_METAL=on\" pip install --force-reinstall --no-cache-dir llama-cpp-python\n```\n\n#### Windows GPU support\n\nWindows GPU support is done through CUDA or similar open source technologies.\nFollow the instructions on the original [llama.cpp](https://github.com/ggerganov/llama.cpp) repo to install the required\ndependencies.\n\nSome tips to get it working with an NVIDIA card and CUDA (Tested on Windows 10 with CUDA 11.5 RTX 3070):\n\n* Install latest VS2022 (and build tools) https://visualstudio.microsoft.com/vs/community/\n* Install CUDA toolkit https://developer.nvidia.com/cuda-downloads\n* [Optional] Install CMake to troubleshoot building issues by compiling llama.cpp directly https://cmake.org/download/\n\nIf you have all required dependencies properly configured running the\nfollowing powershell command should succeed.\n\n```powershell\n$env:CMAKE_ARGS='-DLLAMA_CUBLAS=on'; poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python\n```\n\nIf your installation was correct, you should see a message similar to the following next\ntime you start the server `BLAS = 1`.\n\n```\nllama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, context: 762.87 MB)\nAVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | NEON = 0 | ARM_FMA = 0 | F16C = 1 | FP16_VA = 0 | WASM_SIMD = 0 | BLAS = 1 | SSE3 = 1 | SSSE3 = 0 | VSX = 0 | \n```\n\nNote that llama.cpp offloads matrix calculations to the GPU but the performance is\nstill hit heavily due to latency between CPU and GPU communication. You might need to tweak\nbatch sizes and other parameters to get the best performance for your particular system.\n\n#### Linux GPU support\n\n\ud83d\udea7 Under construction \ud83d\udea7\n\n#### Known issues and Troubleshooting\n\nExecution of LLMs locally still has a lot of sharp edges, specially when running on non Linux platforms.\nYou might encounter several issues:\n\n* Performance: RAM or VRAM usage is very high, your computer might experience slowdowns or even crashes.\n* GPU Virtualization on Windows and OSX: Simply not possible with docker desktop, you have to run the server directly on\n  the host.\n* Building errors: Some of PrivateGPT dependencies need to build native code, and they might fail on some platforms.\n  Most likely you are missing some dev tools in your machine (updated C++ compiler, CUDA is not on PATH, etc.).\n  If you encounter any of these issues, please open an issue and we'll try to help.\n\n#### Troubleshooting: C++ Compiler\nIf you encounter an error while building a wheel during the `pip install` process, you may need to install a C++ compiler on your computer.\n\n**For Windows 10/11**\n\nTo install a C++ compiler on Windows 10/11, follow these steps:\n\n1. Install Visual Studio 2022.\n2. Make sure the following components are selected:\n   * Universal Windows Platform development\n   * C++ CMake tools for Windows\n3. Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/).\n4. Run the installer and select the `gcc` component.\n\n#### Troubleshooting: Mac Running Intel\nWhen running a Mac with Intel hardware (not M1), you may run into _clang: error: the clang compiler does not support '-march=native'_ during pip install.\n\nIf so set your archflags during pip install. eg: _ARCHFLAGS=\"-arch x86_64\" pip3 install -r requirements.txt_\n\n## Running the Server\n\nAfter following the installation steps you should be ready to go. Here are some common run setups:\n\n### Running 100% locally\n\nMake sure you have followed the *Local LLM requirements* section before moving on.\n\nThis command will start PrivateGPT using the `settings.yaml` (default profile) together with the `settings-local.yaml`\nconfiguration files. By default, it will enable both the API and the Gradio UI. Run:\n\n```\nPGPT_PROFILES=local make run\n``` \n\nor\n\n```\nPGPT_PROFILES=local poetry run python -m private_gpt\n```\n\nWhen the server is started it will print a log *Application startup complete*.\nNavigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API\nusing Swagger UI.\n\n### Local server using OpenAI as LLM\n\nIf you cannot run a local model (because you don't have a GPU, for example) or for testing purposes, you may\ndecide to run PrivateGPT using OpenAI as the LLM.\n\nIn order to do so, create a profile `settings-openai.yaml` with the following contents:\n\n```yaml\nllm:\n  mode: openai\n\nopenai:\n  api_key: <your_openai_api_key>  # You could skip this configuration and use the OPENAI_API_KEY env var instead\n```\n\nAnd run PrivateGPT loading that profile you just created:\n\n```PGPT_PROFILES=openai make run```\n\nor\n\n```PGPT_PROFILES=openai poetry run python -m private_gpt```\n\n> Note this will still use the local Embeddings model, as it is ok to use it on a CPU.\n> We'll support using OpenAI embeddings in a future release.\n\nWhen the server is started it will print a log *Application startup complete*.\nNavigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.\nYou'll notice the speed and quality of response is higher, given you are using OpenAI's servers for the heavy\ncomputations.\n\n### Use AWS's Sagemaker\n\n\ud83d\udea7 Under construction \ud83d\udea7\n\n## Gradio UI user manual\n\nGradio UI is a ready to use way of testing most of PrivateGPT API functionalities.\n\n![Gradio PrivateGPT](https://lh3.googleusercontent.com/drive-viewer/AK7aPaBTlIX9j5nsQ87XvcRgf3vhv6UG6pgy4j4IH5mYIo6dHcfJ5IUMiVHoqyQwjTnjRITxYTQ3TcF3pfPXyyWB3HS8hKMWDA=s1600)\n\n### Execution Modes\n\nIt has 3 modes of execution (you can select in the top-left):\n* Query Documents: uses the context from the \n  ingested documents to answer the questions posted in the chat. It also takes\n  into account previous chat messages as context. \n  * Makes use of `/chat/completions` API with `use_context=true` and no \n    `context_filter`.\n* LLM Chat: simple, non-contextual chat with the LLM. The ingested documents won't\n  be taken into account, only the previous messages.\n  * Makes use of `/chat/completions` API with `use_context=false`.\n* Context Chunks: returns the JSON representation of the 2 most related text\n  chunks, together with their metadata, source document and previous and next \n  chunks. \n  * Makes use of `/chunks` API with no `context_filter`, `limit=2` and \n    `prev_next_chunks=1`. \n\n### Document Ingestion\n\nIngest documents by using the `Upload a File` button. You can check the progress of \nthe ingestion in the console logs of the server. \n\nThe list of ingested files is shown below the button.\n\nIf you want to delete the ingested documents, refer to *Reset Local documents \ndatabase* section in the documentation.\n\n### Chat\n\nNormal chat interface, self-explanatory ;) \n\nYou can check the actual prompt being passed to the LLM by looking at the logs of \nthe server. We'll add better observability in future releases.\n\n## Deployment options\n\n\ud83d\udea7 We are working on Dockerized deployment guidelines \ud83d\udea7\n\n## Observability\n\nBasic logs are enabled using LlamaIndex \nbasic logging (for example ingestion progress or LLM prompts and answers). \n\n\ud83d\udea7 We are working on improved Observability. \ud83d\udea7 \n\n## Ingesting & Managing Documents\n\n\ud83d\udea7 Document Update and Delete are still WIP. \ud83d\udea7\n\nThe ingestion of documents can be done in different ways:\n* Using the `/ingest` API\n* Using the Gradio UI\n* Using the Bulk Local Ingestion functionality (check next section)\n\n### Bulk Local Ingestion\n\nWhen you are running PrivateGPT in a fully local setup, you can ingest a complete folder for convenience (containing\npdf, text files, etc.)\nand optionally watch changes on it with the command:\n\n```bash\nmake ingest /path/to/folder -- --watch\n```\n\nAfter ingestion is complete, you should be able to chat with your documents\nby navigating to http://localhost:8001 and using the option `Query documents`,\nor using the completions / chat API.\n\n### Reset Local documents database\n\nWhen running in a local setup, you can remove all ingested documents by simply \ndeleting all contents of `local_data` folder (except .gitignore). \n\n## API\n\nAs explained in the introduction, the API contains high level APIs (ingestion and chat/completions) and low level APIs\n(embeddings and chunk retrieval). In this section the different specific API calls are explained.",
+    "contact": {
+      "url": "https://github.com/imartinez/privateGPT"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "0.1.0",
+    "x-logo": {
+      "url": "https://lh3.googleusercontent.com/drive-viewer/AK7aPaD_iNlMoTquOBsw4boh4tIYxyEuhz6EtEs8nzq3yNkNAK00xGjE1KUCmPJSk3TYOjcs6tReG6w_cLu1S7L_gPgT9z52iw=s2560"
+    }
+  },
+  "paths": {
+    "/v1/completions": {
+      "post": {
+        "tags": [
+          "Contextual Completions"
+        ],
+        "summary": "Completion",
+        "description": "We recommend most users use our Chat completions API.\n\nGiven a prompt, the model will return one predicted completion. If `use_context`\nis set to `true`, the model will use context coming from the ingested documents\nto create the response. The documents being used can be filtered using the\n`context_filter` and passing the document IDs to be used. Ingested documents IDs\ncan be found using `/ingest/list` endpoint. If you want all ingested documents to\nbe used, remove `context_filter` altogether.\n\nWhen using `'stream': true`, the API will return data chunks following [OpenAI's\nstreaming model](https://platform.openai.com/docs/api-reference/chat/streaming):\n```\n{\"id\":\"12345\",\"object\":\"completion.chunk\",\"created\":1694268190,\n\"model\":\"private-gpt\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello\"},\n\"finish_reason\":null}]}\n```",
+        "operationId": "prompt_completion_v1_completions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletionsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAICompletion"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "tags": [
+          "Contextual Completions"
+        ],
+        "summary": "Chat Completion",
+        "description": "Given a list of messages comprising a conversation, return a response.\n\nIf `use_context` is set to `true`, the model will use context coming\nfrom the ingested documents to create the response. The documents being used can\nbe filtered using the `context_filter` and passing the document IDs to be used.\nIngested documents IDs can be found using `/ingest/list` endpoint. If you want\nall ingested documents to be used, remove `context_filter` altogether.\n\nWhen using `'stream': true`, the API will return data chunks following [OpenAI's\nstreaming model](https://platform.openai.com/docs/api-reference/chat/streaming):\n```\n{\"id\":\"12345\",\"object\":\"completion.chunk\",\"created\":1694268190,\n\"model\":\"private-gpt\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello\"},\n\"finish_reason\":null}]}\n```",
+        "operationId": "chat_completion_v1_chat_completions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAICompletion"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/chunks": {
+      "post": {
+        "tags": [
+          "Context Chunks"
+        ],
+        "summary": "Chunks Retrieval",
+        "description": "Given a `text`, returns the most relevant chunks from the ingested documents.\n\nThe returned information can be used to generate prompts that can be\npassed to `/completions` or `/chat/completions` APIs. Note: it is usually a very\nfast API, because only the Embeddings model is involved, not the LLM. The\nreturned information contains the relevant chunk `text` together with the source\n`document` it is coming from. It also contains a score that can be used to\ncompare different results.\n\nThe max number of chunks to be returned is set using the `limit` param.\n\nPrevious and next chunks (pieces of text that appear right before or after in the\ndocument) can be fetched by using the `prev_next_chunks` field.\n\nThe documents being used can be filtered using the `context_filter` and passing\nthe document IDs to be used. Ingested documents IDs can be found using\n`/ingest/list` endpoint. If you want all ingested documents to be used,\nremove `context_filter` altogether.",
+        "operationId": "chunks_retrieval_v1_chunks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChunksBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChunksResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ingest": {
+      "post": {
+        "tags": [
+          "Ingestion"
+        ],
+        "summary": "Ingest",
+        "description": "Ingests and processes a file, storing its chunks to be used as context.\n\nThe context obtained from files is later used in\n`/chat/completions`, `/completions`, and `/chunks` APIs.\n\nMost common document\nformats are supported, but you may be prompted to install an extra dependency to\nmanage a specific file type.\n\nA file can generate different Documents (for example a PDF generates one Document\nper page). All Documents IDs are returned in the response, together with the\nextracted Metadata (which is later used to improve context retrieval). Those IDs\ncan be used to filter the context used to create responses in\n`/chat/completions`, `/completions`, and `/chunks` APIs.",
+        "operationId": "ingest_v1_ingest_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_ingest_v1_ingest_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ingest/list": {
+      "get": {
+        "tags": [
+          "Ingestion"
+        ],
+        "summary": "List Ingested",
+        "description": "Lists already ingested Documents including their Document ID and metadata.\n\nThose IDs can be used to filter the context used to create responses\nin `/chat/completions`, `/completions`, and `/chunks` APIs.",
+        "operationId": "list_ingested_v1_ingest_list_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/embeddings": {
+      "post": {
+        "tags": [
+          "Embeddings"
+        ],
+        "summary": "Embeddings Generation",
+        "description": "Get a vector representation of a given input.\n\nThat vector representation can be easily consumed\nby machine learning models and algorithms.",
+        "operationId": "embeddings_generation_v1_embeddings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmbeddingsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmbeddingsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health",
+        "description": "Return ok if the system is up.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_ingest_v1_ingest_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_ingest_v1_ingest_post"
+      },
+      "ChatBody": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/OpenAIMessage"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "use_context": {
+            "type": "boolean",
+            "title": "Use Context",
+            "default": false
+          },
+          "context_filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stream": {
+            "type": "boolean",
+            "title": "Stream",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "title": "ChatBody",
+        "examples": [
+          {
+            "context_filter": {
+              "docs_ids": [
+                "c202d5e6-7b69-4869-81cc-dd574ee8ee11"
+              ]
+            },
+            "messages": [
+              {
+                "content": "How do you fry an egg?",
+                "role": "user"
+              }
+            ],
+            "stream": false,
+            "use_context": true
+          }
+        ]
+      },
+      "Chunk": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "context.chunk"
+            ],
+            "title": "Object"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "examples": [
+              0.023
+            ]
+          },
+          "document": {
+            "$ref": "#/components/schemas/IngestedDoc"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "examples": [
+              "Outbound sales increased 20%, driven by new leads."
+            ]
+          },
+          "previous_texts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Texts",
+            "examples": [
+              [
+                "SALES REPORT 2023",
+                "Inbound didn't show major changes."
+              ]
+            ]
+          },
+          "next_texts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Texts",
+            "examples": [
+              [
+                "New leads came from Google Ads campaign.",
+                "The campaign was run by the Marketing Department"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "object",
+          "score",
+          "document",
+          "text",
+          "previous_texts",
+          "next_texts"
+        ],
+        "title": "Chunk"
+      },
+      "ChunksBody": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "examples": [
+              "Q3 2023 sales"
+            ]
+          },
+          "context_filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "default": 10
+          },
+          "prev_next_chunks": {
+            "type": "integer",
+            "title": "Prev Next Chunks",
+            "default": 0,
+            "examples": [
+              2
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ChunksBody"
+      },
+      "ChunksResponse": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ],
+            "title": "Object"
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "private-gpt"
+            ],
+            "title": "Model"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Chunk"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "object",
+          "model",
+          "data"
+        ],
+        "title": "ChunksResponse"
+      },
+      "CompletionsBody": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "use_context": {
+            "type": "boolean",
+            "title": "Use Context",
+            "default": false
+          },
+          "context_filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stream": {
+            "type": "boolean",
+            "title": "Stream",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "CompletionsBody",
+        "examples": [
+          {
+            "prompt": "How do you fry an egg?",
+            "stream": false,
+            "use_context": false
+          }
+        ]
+      },
+      "ContextFilter": {
+        "properties": {
+          "docs_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docs Ids",
+            "examples": [
+              [
+                "c202d5e6-7b69-4869-81cc-dd574ee8ee11"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "docs_ids"
+        ],
+        "title": "ContextFilter"
+      },
+      "Embedding": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "embedding"
+            ],
+            "title": "Object"
+          },
+          "embedding": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Embedding",
+            "examples": [
+              [
+                0.0023064255,
+                -0.009327292
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "object",
+          "embedding"
+        ],
+        "title": "Embedding"
+      },
+      "EmbeddingsBody": {
+        "properties": {
+          "input": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input"
+        ],
+        "title": "EmbeddingsBody"
+      },
+      "EmbeddingsResponse": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ],
+            "title": "Object"
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "private-gpt"
+            ],
+            "title": "Model"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Embedding"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "object",
+          "model",
+          "data"
+        ],
+        "title": "EmbeddingsResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse"
+      },
+      "IngestResponse": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ],
+            "title": "Object"
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "private-gpt"
+            ],
+            "title": "Model"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/IngestedDoc"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "object",
+          "model",
+          "data"
+        ],
+        "title": "IngestResponse"
+      },
+      "IngestedDoc": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "ingest.document"
+            ],
+            "title": "Object"
+          },
+          "doc_id": {
+            "type": "string",
+            "title": "Doc Id",
+            "examples": [
+              "c202d5e6-7b69-4869-81cc-dd574ee8ee11"
+            ]
+          },
+          "doc_metadata": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doc Metadata",
+            "examples": [
+              {
+                "file_name": "Sales Report Q3 2023.pdf",
+                "page_label": "2"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "object",
+          "doc_id",
+          "doc_metadata"
+        ],
+        "title": "IngestedDoc"
+      },
+      "OpenAIChoice": {
+        "properties": {
+          "finish_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finish Reason",
+            "examples": [
+              "stop"
+            ]
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpenAIDelta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpenAIMessage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "finish_reason"
+        ],
+        "title": "OpenAIChoice",
+        "description": "Response from AI.\n\nEither the delta or the message will be present, but never both."
+      },
+      "OpenAICompletion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "completion",
+              "completion.chunk"
+            ],
+            "title": "Object",
+            "default": "completion"
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created",
+            "examples": [
+              1623340000
+            ]
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "private-gpt"
+            ],
+            "title": "Model"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/OpenAIChoice"
+            },
+            "type": "array",
+            "title": "Choices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created",
+          "model",
+          "choices"
+        ],
+        "title": "OpenAICompletion",
+        "description": "Clone of OpenAI Completion model.\n\nFor more information see: https://platform.openai.com/docs/api-reference/chat/object"
+      },
+      "OpenAIDelta": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "OpenAIDelta",
+        "description": "A piece of completion that needs to be concatenated to get the full message."
+      },
+      "OpenAIMessage": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "assistant",
+              "system",
+              "user"
+            ],
+            "title": "Role",
+            "default": "user"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "OpenAIMessage",
+        "description": "Inference result, with the source of the message.\n\nRole could be the assistant or system\n(providing a default response, not AI generated)."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Ingestion",
+      "description": "High-level APIs covering document ingestion -internally managing document parsing, splitting,metadata extraction, embedding generation and storage- and ingested documents CRUD.Each ingested document is identified by an ID that can be used to filter the contextused in *Contextual Completions* and *Context Chunks* APIs."
+    },
+    {
+      "name": "Contextual Completions",
+      "description": "High-level APIs covering contextual Chat and Completions. They follow OpenAI's format, extending it to allow using the context coming from ingested documents to create the response. Internallymanage context retrieval, prompt engineering and the response generation."
+    },
+    {
+      "name": "Context Chunks",
+      "description": "Low-level API that given a query return relevant chunks of text coming from the ingesteddocuments."
+    },
+    {
+      "name": "Embeddings",
+      "description": "Low-level API to obtain the vector representation of a given text, using an Embeddings model.Follows OpenAI's embeddings API format."
+    },
+    {
+      "name": "Health",
+      "description": "Simple health API to make sure the server is up and running."
+    }
+  ]
+}
