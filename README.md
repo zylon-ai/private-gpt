@@ -104,13 +104,14 @@ Interested in contributing to PrivateGPT? We have the following challenges ahead
 you want to give a hand: 
 
 ### Improvements
+- Better RAG pipeline implementation (improvements to both indexing and querying stages)
 - Code documentation
 - Expose execution parameters such as top_p, temperature, max_tokens... in Completions and Chat Completions
 - Expose chunk size in Ingest API
 - Implement Update and Delete document in Ingest API
 - Add information about tokens consumption in each response
 - Add to Completion APIs (chat and completion) the context docs used to answer the question
-- In “model” return the actual LLM or Embeddings model name used
+- In “model” field return the actual LLM or Embeddings model name used
 
 ### New features
 - Implement concurrency lock to avoid errors when there are several calls to the local LlamaCPP model
@@ -121,12 +122,12 @@ you want to give a hand:
 - Add md5 to check files already ingested
 - Select a document to query in the UI
 - Better observability of the RAG pipeline
-- Lazy load LLMs
 
 ### Project Infrastructure
 - Create a “wipe” shortcut in `make` to remove all contents of local_data folder except .gitignore
 - Packaged version as a local desktop app (windows executable, mac app, linux app)
 - Dockerize the application for platforms outside linux (Docker Desktop for Mac and Windows)
+- Document how to deploy to AWS, GCP and Azure.
 
 ## 💬 Community 
 Join the conversation around PrivateGPT on our:
