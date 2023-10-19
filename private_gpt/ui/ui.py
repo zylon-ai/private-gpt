@@ -141,7 +141,17 @@ with gr.Blocks(
         with gr.Column(scale=7):
             chatbot = gr.ChatInterface(
                 _chat,
-                chatbot=gr.Chatbot(label="Chat", show_copy_button=True, render=False),
+                chatbot=gr.Chatbot(
+                    label="Chat",
+                    show_copy_button=True,
+                    render=False,
+                    avatar_images=(
+                        None,
+                        "https://lh3.googleusercontent.com/drive-viewer/AK7aPa"
+                        "AicXck0k68nsscyfKrb18o9ak3BSaWM_Qzm338cKoQlw72Bp0UKN84"
+                        "IFZjXjZApY01mtnUXDeL4qzwhkALoe_53AhwCg=s2560",
+                    ),
+                ),
                 additional_inputs=[mode, upload_button],
             )
 
@@ -153,4 +163,4 @@ def mount_in_app(app: FastAPI) -> None:
 
 if __name__ == "__main__":
     blocks.queue()
-    blocks.launch(debug=True)
+    blocks.launch(debug=False, show_api=False)
