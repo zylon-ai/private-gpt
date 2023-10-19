@@ -1,8 +1,9 @@
-name: Tests
+name: tests
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
 
 concurrency:
