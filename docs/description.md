@@ -348,6 +348,13 @@ the server. We'll add better observability in future releases.
 
 🚧 We are working on Dockerized deployment guidelines 🚧
 
+## Observability
+
+Basic logs are enabled using LlamaIndex 
+basic logging (for example ingestion progress or LLM prompts and answers). 
+
+🚧 We are working on improved Observability. 🚧 
+
 ## Ingesting & Managing Documents
 
 🚧 Document Update and Delete are still WIP. 🚧
