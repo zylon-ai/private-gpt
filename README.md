@@ -1,5 +1,9 @@
 # 🔒 PrivateGPT 📑
 
+> [!NOTE]  
+> Just looking for the docs? Go here: https://docs.privategpt.dev/
+
+
 <img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaBasLxbp49Hrwnmi_Ctii1oIM18nFJrBO0ERSE3wpkS-syjiQBE32_tUSdqnjn6etUDjUSkdJeFa8acqRb0lZbkZ6CyAw=s1600">
 
 PrivateGPT is a production-ready AI project that allows you to ask questions to your documents using the power
