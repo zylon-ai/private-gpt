@@ -34,6 +34,7 @@ The API is divided in two logical blocks:
   should work too. Earlier python versions are not supported.
     * osx/linux: [pyenv](https://github.com/pyenv/pyenv)
     * windows: [pyenv-win](https://github.com/pyenv-win/pyenv-win)
+  
 ```  
 pyenv install 3.11
 pyenv local 3.11
@@ -100,18 +101,6 @@ server:
 ```
 
 ### Local LLM requirements
-
-#### Known issues
-
-Execution of LLMs locally still has a lot of sharp edges, specially when running on non Linux platforms.
-You might encounter several issues:
-
-* Performance: RAM or VRAM usage is very high, your computer might experience slowdowns or even crashes.
-* GPU Virtualization on Windows and OSX: Simply not possible with docker desktop, you have to run the server directly on
-  the host.
-* Building errors: Some of PrivateGPT dependencies need to build native code, and they might fail on some platforms.
-  Most likely you are missing some dev tools in your machine (updated C++ compiler, CUDA is not on PATH, etc.).
-  If you encounter any of these issues, please open an issue and we'll try to help.
 
 Install extra dependencies for local execution:
 
@@ -188,6 +177,37 @@ batch sizes and other parameters to get the best performance for your particular
 #### Linux GPU support
 
 🚧 Under construction 🚧
+
+#### Known issues and Troubleshooting
+
+Execution of LLMs locally still has a lot of sharp edges, specially when running on non Linux platforms.
+You might encounter several issues:
+
+* Performance: RAM or VRAM usage is very high, your computer might experience slowdowns or even crashes.
+* GPU Virtualization on Windows and OSX: Simply not possible with docker desktop, you have to run the server directly on
+  the host.
+* Building errors: Some of PrivateGPT dependencies need to build native code, and they might fail on some platforms.
+  Most likely you are missing some dev tools in your machine (updated C++ compiler, CUDA is not on PATH, etc.).
+  If you encounter any of these issues, please open an issue and we'll try to help.
+
+#### Troubleshooting: C++ Compiler
+If you encounter an error while building a wheel during the `pip install` process, you may need to install a C++ compiler on your computer.
+
+**For Windows 10/11**
+
+To install a C++ compiler on Windows 10/11, follow these steps:
+
+1. Install Visual Studio 2022.
+2. Make sure the following components are selected:
+   * Universal Windows Platform development
+   * C++ CMake tools for Windows
+3. Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/).
+4. Run the installer and select the `gcc` component.
+
+#### Troubleshooting: Mac Running Intel
+When running a Mac with Intel hardware (not M1), you may run into _clang: error: the clang compiler does not support '-march=native'_ during pip install.
+
+If so set your archflags during pip install. eg: _ARCHFLAGS="-arch x86_64" pip3 install -r requirements.txt_
 
 ## Running the Server
 
