@@ -65,7 +65,7 @@ completions, document ingestion, RAG pipelines and other low-level building bloc
 We want to make easier for any developer to build AI applications and experiences, as well as providing
 a suitable extensive architecture for the community to keep contributing.   
 
-Stay tuned to our [releases](TBD) to check all the new features and changes included.
+Stay tuned to our [releases](https://github.com/imartinez/privateGPT/releases) to check all the new features and changes included.
 
 ## 📄 Documentation
 Full documentation on installation, dependencies, configuration, running the server, deployment options,
