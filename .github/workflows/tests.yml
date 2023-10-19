@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/workflows/actions/install_dependencies
       - name: run test
-        run: make test
+        run: make test-coverage
       # Run even if make test fails for coverage reports
       # TODO: select a better xml results displayer
       - name: Archive test results coverage results
