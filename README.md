@@ -57,7 +57,7 @@ thus a simpler and more educational implementation to understand the basic conce
 to build a fully local -and therefore, private- chatGPT-like tool.
 
 If you want to keep experimenting with it, we have saved it in the
-[primordial branch](https://github.com/imartinez/privateGPT/branches) of the project.
+[primordial branch](https://github.com/imartinez/privateGPT/tree/primordial) of the project.
 
 > It is strongly recommended to do a clean clone and install of this new version of
 PrivateGPT if you come from the previous, primordial version.
