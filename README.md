@@ -100,6 +100,11 @@ Main building blocks:
   (for example `LlamaCPP` or `OpenAI`).
 
 ## 💡 Contributing
+Contributions are welcomed! To ensure code quality we have enabled several format and
+typing checks, just run `make check` before committing to make sure your code is ok.
+Remember to test your code! You'll find a tests folder with helpers, and you can run
+tests using `make test` command.
+
 Interested in contributing to PrivateGPT? We have the following challenges ahead of us in case 
 you want to give a hand: 
 
@@ -128,6 +133,8 @@ you want to give a hand:
 - Packaged version as a local desktop app (windows executable, mac app, linux app)
 - Dockerize the application for platforms outside linux (Docker Desktop for Mac and Windows)
 - Document how to deploy to AWS, GCP and Azure.
+
+## 
 
 ## 💬 Community 
 Join the conversation around PrivateGPT on our:
