@@ -1,6 +1,6 @@
 # 🔒 PrivateGPT 📑
 
-<img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaBlEalyM8tpzyXYhPLuNeMEPX4zAAhv07MH8n7N539hUU3U5UhDuBEpydUvOcibiKkpz5vSKIInh2th8krE2OD8HrPxKw=s1600">
+<img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaAM4K7FmXEec9OVbqs9B08zF7_NIOpIyjuwmoaYBMsOMIpcz46RcwgAgxlOMkqcNIpuHfnEK_xna2esIDsFeEdjmaM1=s1600">
 
 PrivateGPT is a production-ready AI project that allows you to ask questions to your documents using the power 
 of Large Language Models (LLMs), even in scenarios without Internet connection. 100% private, no data leaves your 
