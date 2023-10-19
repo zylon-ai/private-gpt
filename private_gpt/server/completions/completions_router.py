@@ -36,7 +36,7 @@ class CompletionsBody(BaseModel):
     response_model=None,
     summary="Completion",
     responses={200: {"model": OpenAICompletion}},
-    tags=["Completions"],
+    tags=["Contextual Completions"],
 )
 def prompt_completion(body: CompletionsBody) -> OpenAICompletion | StreamingResponse:
     """We recommend most users use our Chat completions API.

@@ -47,12 +47,12 @@ tags_metadata = [
         "documents CRUD."
         "Each ingested document is identified by an ID that can be used to filter the "
         "context"
-        "used in *Completions* and *Chunks* APIs.",
+        "used in *Contextual Completions* and *Context Chunks* APIs.",
     },
     {
-        "name": "Completions",
-        "description": "High-level APIs covering Chat and Completions. They follow "
-        "OpenAI's format, extending it to"
+        "name": "Contextual Completions",
+        "description": "High-level APIs covering contextual Chat and Completions. They "
+        "follow OpenAI's format, extending it to "
         "allow using the context coming from ingested documents to create the "
         "response. Internally"
         "manage context retrieval, prompt engineering and the response generation.",
