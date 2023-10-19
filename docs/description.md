@@ -24,12 +24,14 @@ The API is divided in two logical blocks:
 
 ### Base requirements to run PrivateGPT
 
-* Python 3.11. Ideally through python version manager like pyenv. Python 3.12 should work too. Earlier python versions
-  are not supported.
+* Git clone PrivateGPT repository: 
+  git clone https://github.com/imartinez/privateGPT
+* Install Python 3.11. Ideally through a python version manager like `pyenv`. Python 3.12 
+  should work too. Earlier python versions are not supported.
     * osx/linux: [pyenv](https://github.com/pyenv/pyenv)
     * windows: [pyenv-win](https://github.com/pyenv-win/pyenv-win)
-* Poetry: https://python-poetry.org/docs/
-* [Optional] Install `make` for scripts:
+* Poetry: https://python-poetry.org/docs/#installing-with-the-official-installer
+* Install `make` for scripts:
     * osx: (Using homebrew): `brew install make`
     * windows: (Using chocolatey) `choco install make`
 
