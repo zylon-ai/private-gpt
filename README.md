@@ -59,6 +59,9 @@ to build a fully local -and therefore, private- chatGPT-like tool.
 If you want to keep experimenting with it, we have saved it in the
 [primordial branch](https://github.com/imartinez/privateGPT/branches) of the project.
 
+> It is strongly recommended to do a clean clone and install of this new version of
+PrivateGPT if you come from the previous, primordial version.
+
 ### Present and Future of PrivateGPT
 PrivateGPT is now evolving towards becoming a gateway to generative AI models and primitives, including
 completions, document ingestion, RAG pipelines and other low-level building blocks.
@@ -118,7 +121,7 @@ you want to give a hand:
 - Add to Completion APIs (chat and completion) the context docs used to answer the question
 - In “model” field return the actual LLM or Embeddings model name used
 
-### New features
+### Features
 - Implement concurrency lock to avoid errors when there are several calls to the local LlamaCPP model
 - API key-based request control to the API
 - CORS support
