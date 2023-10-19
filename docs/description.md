@@ -178,9 +178,9 @@ metal support. To do that run:
 CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
 ```
 
-#### Windows GPU support
+#### Windows NVIDIA GPU support
 
-Windows GPU support is done through CUDA or similar open source technologies.
+Windows GPU support is done through CUDA.
 Follow the instructions on the original [llama.cpp](https://github.com/ggerganov/llama.cpp) repo to install the required
 dependencies.
 
@@ -188,6 +188,7 @@ Some tips to get it working with an NVIDIA card and CUDA (Tested on Windows 10 w
 
 * Install latest VS2022 (and build tools) https://visualstudio.microsoft.com/vs/community/
 * Install CUDA toolkit https://developer.nvidia.com/cuda-downloads
+* Verify your installation is correct by running `nvcc --version` and `nvidia-smi`, ensure your CUDA version is up to date and your GPU is detected.
 * [Optional] Install CMake to troubleshoot building issues by compiling llama.cpp directly https://cmake.org/download/
 
 If you have all required dependencies properly configured running the
@@ -209,9 +210,31 @@ Note that llama.cpp offloads matrix calculations to the GPU but the performance 
 still hit heavily due to latency between CPU and GPU communication. You might need to tweak
 batch sizes and other parameters to get the best performance for your particular system.
 
-#### Linux GPU support
+#### Linux NVIDIA GPU support and Windows-WSL
 
-🚧 Under construction 🚧
+Linux GPU support is done through CUDA.
+Follow the instructions on the original [llama.cpp](https://github.com/ggerganov/llama.cpp) repo to install the required external
+dependencies. 
+
+Some tips:
+
+* Make sure you have an up-to-date C++ compiler
+* Install CUDA toolkit https://developer.nvidia.com/cuda-downloads
+* Verify your installation is correct by running `nvcc --version` and `nvidia-smi`, ensure your CUDA version is up to date and your GPU is detected.
+
+After that running the following command in the repository will install llama.cpp with GPU support:
+
+`
+CMAKE_ARGS='-DLLAMA_CUBLAS=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python
+`
+
+If your installation was correct, you should see a message similar to the following next
+time you start the server `BLAS = 1`.
+
+```
+llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, context: 762.87 MB)
+AVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | NEON = 0 | ARM_FMA = 0 | F16C = 1 | FP16_VA = 0 | WASM_SIMD = 0 | BLAS = 1 | SSE3 = 1 | SSSE3 = 0 | VSX = 0 | 
+```
 
 #### Known issues and Troubleshooting
 
