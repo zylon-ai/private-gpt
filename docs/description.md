@@ -74,6 +74,8 @@ pyenv install 3.11
 pyenv local 3.11
 ```
 * Install [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) for dependency management: 
+
+* Install a C++ compiler. See [Troubleshooting: C++ Compiler](#troubleshooting-c-compiler) for more details.
   
 * Install `make` for scripts:
     * osx: (Using homebrew): `brew install make`
@@ -261,6 +263,10 @@ To install a C++ compiler on Windows 10/11, follow these steps:
    * C++ CMake tools for Windows
 3. Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/).
 4. Run the installer and select the `gcc` component.
+
+** For OSX **
+
+1. 
 
 #### Troubleshooting: Mac Running Intel
 When running a Mac with Intel hardware (not M1), you may run into _clang: error: the clang compiler does not support '-march=native'_ during pip install.
