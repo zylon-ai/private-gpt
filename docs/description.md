@@ -21,7 +21,8 @@ The API is divided in two logical blocks:
 > watch, etc.
 
 ## Quick Local Installation steps
-The steps in `Installation and Settings` section are better explained and cover more 
+
+The steps in `Installation and Settings` section are better explained and cover more
 setup scenarios. But if you are looking for a quick setup guide, here it is:
 
 ```
@@ -53,28 +54,32 @@ being used
 http://localhost:8001/
 ```
 
-
 ## Installation and Settings
 
 ### Base requirements to run PrivateGPT
 
 * Git clone PrivateGPT repository, and navigate to it:
+
 ```
   git clone https://github.com/imartinez/privateGPT
   cd privateGPT
 ```
-* Install Python 3.11. Ideally through a python version manager like `pyenv`. 
-  Python 3.12 
+
+* Install Python 3.11. Ideally through a python version manager like `pyenv`.
+  Python 3.12
   should work too. Earlier python versions are not supported.
     * osx/linux: [pyenv](https://github.com/pyenv/pyenv)
     * windows: [pyenv-win](https://github.com/pyenv-win/pyenv-win)
-  
+
 ```  
 pyenv install 3.11
 pyenv local 3.11
 ```
-* Install [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) for dependency management: 
-  
+
+* Install [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) for dependency management:
+
+* Have a valid C++ compiler like gcc. See [Troubleshooting: C++ Compiler](#troubleshooting-c-compiler) for more details.
+
 * Install `make` for scripts:
     * osx: (Using homebrew): `brew install make`
     * windows: (Using chocolatey) `choco install make`
@@ -171,16 +176,16 @@ is used.
 
 #### OSX GPU support
 
-You will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with 
+You will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with
 metal support. To do that run:
 
 ```bash
 CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
 ```
 
-#### Windows GPU support
+#### Windows NVIDIA GPU support
 
-Windows GPU support is done through CUDA or similar open source technologies.
+Windows GPU support is done through CUDA.
 Follow the instructions on the original [llama.cpp](https://github.com/ggerganov/llama.cpp) repo to install the required
 dependencies.
 
@@ -188,6 +193,8 @@ Some tips to get it working with an NVIDIA card and CUDA (Tested on Windows 10 w
 
 * Install latest VS2022 (and build tools) https://visualstudio.microsoft.com/vs/community/
 * Install CUDA toolkit https://developer.nvidia.com/cuda-downloads
+* Verify your installation is correct by running `nvcc --version` and `nvidia-smi`, ensure your CUDA version is up to
+  date and your GPU is detected.
 * [Optional] Install CMake to troubleshoot building issues by compiling llama.cpp directly https://cmake.org/download/
 
 If you have all required dependencies properly configured running the
@@ -209,9 +216,33 @@ Note that llama.cpp offloads matrix calculations to the GPU but the performance 
 still hit heavily due to latency between CPU and GPU communication. You might need to tweak
 batch sizes and other parameters to get the best performance for your particular system.
 
-#### Linux GPU support
+#### Linux NVIDIA GPU support and Windows-WSL
 
-🚧 Under construction 🚧
+Linux GPU support is done through CUDA.
+Follow the instructions on the original [llama.cpp](https://github.com/ggerganov/llama.cpp) repo to install the required
+external
+dependencies.
+
+Some tips:
+
+* Make sure you have an up-to-date C++ compiler
+* Install CUDA toolkit https://developer.nvidia.com/cuda-downloads
+* Verify your installation is correct by running `nvcc --version` and `nvidia-smi`, ensure your CUDA version is up to
+  date and your GPU is detected.
+
+After that running the following command in the repository will install llama.cpp with GPU support:
+
+`
+CMAKE_ARGS='-DLLAMA_CUBLAS=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python
+`
+
+If your installation was correct, you should see a message similar to the following next
+time you start the server `BLAS = 1`.
+
+```
+llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, context: 762.87 MB)
+AVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | NEON = 0 | ARM_FMA = 0 | F16C = 1 | FP16_VA = 0 | WASM_SIMD = 0 | BLAS = 1 | SSE3 = 1 | SSSE3 = 0 | VSX = 0 | 
+```
 
 #### Known issues and Troubleshooting
 
@@ -226,7 +257,9 @@ You might encounter several issues:
   If you encounter any of these issues, please open an issue and we'll try to help.
 
 #### Troubleshooting: C++ Compiler
-If you encounter an error while building a wheel during the `pip install` process, you may need to install a C++ compiler on your computer.
+
+If you encounter an error while building a wheel during the `pip install` process, you may need to install a C++
+compiler on your computer.
 
 **For Windows 10/11**
 
@@ -234,13 +267,20 @@ To install a C++ compiler on Windows 10/11, follow these steps:
 
 1. Install Visual Studio 2022.
 2. Make sure the following components are selected:
-   * Universal Windows Platform development
-   * C++ CMake tools for Windows
+    * Universal Windows Platform development
+    * C++ CMake tools for Windows
 3. Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/).
 4. Run the installer and select the `gcc` component.
 
+** For OSX **
+
+1. Check if you have a C++ compiler installed, Xcode might have done it for you. for example running `gcc`.
+2. If not, you can install clang or gcc with homebrew `brew install gcc`
+
 #### Troubleshooting: Mac Running Intel
-When running a Mac with Intel hardware (not M1), you may run into _clang: error: the clang compiler does not support '-march=native'_ during pip install.
+
+When running a Mac with Intel hardware (not M1), you may run into _clang: error: the clang compiler does not support '
+-march=native'_ during pip install.
 
 If so set your archflags during pip install. eg: _ARCHFLAGS="-arch x86_64" pip3 install -r requirements.txt_
 
@@ -313,35 +353,36 @@ Gradio UI is a ready to use way of testing most of PrivateGPT API functionalitie
 ### Execution Modes
 
 It has 3 modes of execution (you can select in the top-left):
-* Query Documents: uses the context from the 
+
+* Query Documents: uses the context from the
   ingested documents to answer the questions posted in the chat. It also takes
-  into account previous chat messages as context. 
-  * Makes use of `/chat/completions` API with `use_context=true` and no 
-    `context_filter`.
+  into account previous chat messages as context.
+    * Makes use of `/chat/completions` API with `use_context=true` and no
+      `context_filter`.
 * LLM Chat: simple, non-contextual chat with the LLM. The ingested documents won't
   be taken into account, only the previous messages.
-  * Makes use of `/chat/completions` API with `use_context=false`.
+    * Makes use of `/chat/completions` API with `use_context=false`.
 * Context Chunks: returns the JSON representation of the 2 most related text
-  chunks, together with their metadata, source document and previous and next 
-  chunks. 
-  * Makes use of `/chunks` API with no `context_filter`, `limit=2` and 
-    `prev_next_chunks=1`. 
+  chunks, together with their metadata, source document and previous and next
+  chunks.
+    * Makes use of `/chunks` API with no `context_filter`, `limit=2` and
+      `prev_next_chunks=1`.
 
 ### Document Ingestion
 
-Ingest documents by using the `Upload a File` button. You can check the progress of 
-the ingestion in the console logs of the server. 
+Ingest documents by using the `Upload a File` button. You can check the progress of
+the ingestion in the console logs of the server.
 
 The list of ingested files is shown below the button.
 
-If you want to delete the ingested documents, refer to *Reset Local documents 
+If you want to delete the ingested documents, refer to *Reset Local documents
 database* section in the documentation.
 
 ### Chat
 
-Normal chat interface, self-explanatory ;) 
+Normal chat interface, self-explanatory ;)
 
-You can check the actual prompt being passed to the LLM by looking at the logs of 
+You can check the actual prompt being passed to the LLM by looking at the logs of
 the server. We'll add better observability in future releases.
 
 ## Deployment options
@@ -350,16 +391,17 @@ the server. We'll add better observability in future releases.
 
 ## Observability
 
-Basic logs are enabled using LlamaIndex 
-basic logging (for example ingestion progress or LLM prompts and answers). 
+Basic logs are enabled using LlamaIndex
+basic logging (for example ingestion progress or LLM prompts and answers).
 
-🚧 We are working on improved Observability. 🚧 
+🚧 We are working on improved Observability. 🚧
 
 ## Ingesting & Managing Documents
 
 🚧 Document Update and Delete are still WIP. 🚧
 
 The ingestion of documents can be done in different ways:
+
 * Using the `/ingest` API
 * Using the Gradio UI
 * Using the Bulk Local Ingestion functionality (check next section)
@@ -380,8 +422,8 @@ or using the completions / chat API.
 
 ### Reset Local documents database
 
-When running in a local setup, you can remove all ingested documents by simply 
-deleting all contents of `local_data` folder (except .gitignore). 
+When running in a local setup, you can remove all ingested documents by simply
+deleting all contents of `local_data` folder (except .gitignore).
 
 ## API
 
