@@ -266,7 +266,7 @@ To install a C++ compiler on Windows 10/11, follow these steps:
 
 ** For OSX **
 
-1. 
+1. You can install clang with homebrew `brew install clang`
 
 #### Troubleshooting: Mac Running Intel
 When running a Mac with Intel hardware (not M1), you may run into _clang: error: the clang compiler does not support '-march=native'_ during pip install.
