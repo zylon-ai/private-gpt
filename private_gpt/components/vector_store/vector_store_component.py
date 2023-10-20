@@ -4,9 +4,9 @@ import chromadb
 from injector import inject, singleton
 from llama_index import VectorStoreIndex
 from llama_index.indices.vector_store import VectorIndexRetriever
-from llama_index.vector_stores import ChromaVectorStore
 from llama_index.vector_stores.types import VectorStore
 
+from private_gpt.components.vector_store.batched_chroma import BatchedChromaVectorStore
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.paths import local_data_path
 
@@ -36,14 +36,16 @@ class VectorStoreComponent:
 
     @inject
     def __init__(self) -> None:
-        db = chromadb.PersistentClient(
+        chroma_client = chromadb.PersistentClient(
             path=str((local_data_path / "chroma_db").absolute())
         )
-        chroma_collection = db.get_or_create_collection(
+        chroma_collection = chroma_client.get_or_create_collection(
             "make_this_parameterizable_per_api_call"
         )  # TODO
 
-        self.vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+        self.vector_store = BatchedChromaVectorStore(
+            chroma_client=chroma_client, chroma_collection=chroma_collection
+        )
 
     @staticmethod
     def get_retriever(
