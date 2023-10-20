@@ -5,7 +5,7 @@ description = "Private GPT"
 authors = ["Zylon <hi@zylon.ai>"]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.13"
+python = ">=3.11,<3.12"
 fastapi = { extras = ["all"], version = "^0.103.1" }
 loguru = "^0.7.2"
 boto3 = "^1.28.56"
@@ -13,7 +13,7 @@ injector = "^0.21.0"
 pyyaml = "^6.0.1"
 python-multipart = "^0.0.6"
 pypdf = "^3.16.2"
-llama-index = "v0.8.35"
+llama-index = "0.8.47"
 chromadb = "^0.4.13"
 watchdog = "^3.0.0"
 transformers = "^4.34.0"
