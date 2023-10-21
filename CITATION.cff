@@ -16,6 +16,7 @@ authors:
     email: danielgallegovico@gmail.com
   - given-names: Pablo
     family-names: Orgaz
+    email: pabloogc+gh@gmail.com
 repository-code: 'https://github.com/imartinez/privateGPT'
 license: Apache-2.0
 date-released: '2023-05-02'
