@@ -149,14 +149,24 @@ Join the conversation around PrivateGPT on our:
 - [Discord](https://discord.gg/bK6mRVpErU)
 
 ## 📖 Citation
-Reference to cite if you use PrivateGPT in a paper:
+If you use PrivateGPT in a paper, check out the [Citation file](CITATION.cff) for the correct citation.  
+You can also use the "Cite this repository" button in this repo to get the citation in different formats.
 
-```
-@software{PrivateGPT_2023,
-authors = {Martinez, I., Gallego, D. Orgaz, P.},
-month = {5},
-title = {PrivateGPT},
+Here are a couple of examples:
+
+#### BibTeX
+```bibtex
+@software{Martinez_Toro_PrivateGPT_2023,
+author = {Martínez Toro, Iván and Gallego Vico, Daniel and Orgaz, Pablo},
+license = {Apache-2.0},
+month = may,
+title = {{PrivateGPT}},
 url = {https://github.com/imartinez/privateGPT},
 year = {2023}
 }
+```
+
+#### APA
+```
+Martínez Toro, I., Gallego Vico, D., & Orgaz, P. (2023). PrivateGPT [Computer software]. https://github.com/imartinez/privateGPT
 ```
