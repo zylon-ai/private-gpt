@@ -1,0 +1,25 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: PrivateGPT
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Iván
+    family-names: Martínez Toro
+    email: ivanmartit@gmail.com
+    orcid: 'https://orcid.org/0009-0004-5065-2311'
+  - family-names: Gallego Vico
+    given-names: Daniel
+    email: danielgallegovico@gmail.com
+    orcid: 'https://orcid.org/0009-0006-8582-4384'
+  - given-names: Pablo
+    family-names: Orgaz
+    email: pabloogc+gh@gmail.com
+    orcid: 'https://orcid.org/0009-0008-0080-1437'
+repository-code: 'https://github.com/imartinez/privateGPT'
+license: Apache-2.0
+date-released: '2023-05-02'
