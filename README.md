@@ -87,7 +87,7 @@ primitives.
 
 The design of PrivateGPT allows to easily extend and adapt both the API and the
 RAG implementation. Some key architectural decisions are:
-* Dependency Injection, decoupling the different componentes and layers.
+* Dependency Injection, decoupling the different components and layers.
 * Usage of LlamaIndex abstractions such as `LLM`, `BaseEmbedding` or `VectorStore`,
   making it immediate to change the actual implementations of those abstractions.
 * Simplicity, adding as few layers and new abstractions as possible.
