@@ -6,12 +6,12 @@
 
 <img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaBasLxbp49Hrwnmi_Ctii1oIM18nFJrBO0ERSE3wpkS-syjiQBE32_tUSdqnjn6etUDjUSkdJeFa8acqRb0lZbkZ6CyAw=s1600">
 
-PrivateGPT is a production-ready AI project that allows you to ask questions to your documents using the power
-of Large Language Models (LLMs), even in scenarios without Internet connection. 100% private, no data leaves your
+PrivateGPT is a production-ready AI project that allows you to ask questions about your documents using the power
+of Large Language Models (LLMs), even in scenarios without an Internet connection. 100% private, no data leaves your
 execution environment at any point.
 
 The project provides an API offering all the primitives required to build private, context-aware AI applications.
-It follows and extends [OpenAI API standard](https://openai.com/blog/openai-api),
+It follows and extends the [OpenAI API standard](https://openai.com/blog/openai-api),
 and supports both normal and streaming responses.
 
 The API is divided into two logical blocks:
@@ -40,14 +40,14 @@ DISCLAIMER: This README is not updated as frequently as the [documentation](http
 Please check it out for the latest updates!
 
 ### Motivation behind PrivateGPT
-Generative AI is a game changer for our society, but adoption in companies of all size and data-sensitive
+Generative AI is a game changer for our society, but adoption in companies of all sizes and data-sensitive
 domains like healthcare or legal is limited by a clear concern: **privacy**.
 Not being able to ensure that your data is fully under your control when using third-party AI tools
 is a risk those industries cannot take.
 
 ### Primordial version
 The first version of PrivateGPT was launched in May 2023 as a novel approach to address the privacy
-concern by using LLMs in a complete offline way.
+concerns by using LLMs in a complete offline way.
 This was done by leveraging existing technologies developed by the thriving Open Source AI community:
 [LangChain](https://github.com/hwchase17/langchain), [LlamaIndex](https://www.llamaindex.ai/),
 [GPT4All](https://github.com/nomic-ai/gpt4all),
@@ -69,10 +69,10 @@ PrivateGPT if you come from the previous, primordial version.
 ### Present and Future of PrivateGPT
 PrivateGPT is now evolving towards becoming a gateway to generative AI models and primitives, including
 completions, document ingestion, RAG pipelines and other low-level building blocks.
-We want to make easier for any developer to build AI applications and experiences, as well as providing
+We want to make it easier for any developer to build AI applications and experiences, as well as provide
 a suitable extensive architecture for the community to keep contributing.
 
-Stay tuned to our [releases](https://github.com/imartinez/privateGPT/releases) to check all the new features and changes included.
+Stay tuned to our [releases](https://github.com/imartinez/privateGPT/releases) to check out all the new features and changes included.
 
 ## 📄 Documentation
 Full documentation on installation, dependencies, configuration, running the server, deployment options,
