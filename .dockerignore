@@ -3,6 +3,9 @@ models
 .github
 .vscode
 .DS_Store
+.mypy_cache
+.ruff_cache
+local_data
 terraform
 tests
 Dockerfile
