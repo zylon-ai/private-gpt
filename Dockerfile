@@ -36,7 +36,8 @@ EXPOSE 8080
 RUN adduser --system worker
 WORKDIR /home/worker/app
 
-RUN mkdir "local_data"; chown worker local_data
+RUN mkdir local_data; chown worker local_data
+RUN mkdir models; chown worker models
 COPY --chown=worker --from=dependencies /home/worker/app/.venv/ .venv
 COPY --chown=worker private_gpt/ private_gpt
 COPY --chown=worker docs/ docs

@@ -18,10 +18,18 @@ def test_environment_variables_are_loaded() -> None:
 
 def test_environment_defaults_variables_are_loaded() -> None:
     sample_yaml = """
-    replaced: ${TEST_REPLACE_ME:default}
+    replaced: ${PGPT_EMBEDDING_HF_MODEL_NAME:BAAI/bge-small-en-v1.5}
     """
     loaded = load_yaml_with_envvars(io.StringIO(sample_yaml), {})
-    assert loaded["replaced"] == "default"
+    assert loaded["replaced"] == "BAAI/bge-small-en-v1.5"
+
+
+def test_environment_defaults_variables_are_loaded_with_duplicated_delimiters() -> None:
+    sample_yaml = """
+    replaced: ${PGPT_EMBEDDING_HF_MODEL_NAME::duped::}
+    """
+    loaded = load_yaml_with_envvars(io.StringIO(sample_yaml), {})
+    assert loaded["replaced"] == ":duped::"
 
 
 def test_environment_without_defaults_fails() -> None:
