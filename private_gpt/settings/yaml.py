@@ -5,12 +5,12 @@ from typing import Any, TextIO
 
 from yaml import SafeLoader
 
-_env_replace_matcher = re.compile(r"\$\{(\w|_)+(:(\w|_)*)?}")
+_env_replace_matcher = re.compile(r"\$\{(\w|_)+:?.*}")
 
 
 @typing.no_type_check  # pyaml does not have good hints, everything is Any
 def load_yaml_with_envvars(
-    stream: TextIO, environ: dict[str, Any] = os.environ
+        stream: TextIO, environ: dict[str, Any] = os.environ
 ) -> dict[str, Any]:
     """Load yaml file with environment variable expansion.
 
@@ -22,7 +22,7 @@ def load_yaml_with_envvars(
     def load_env_var(_, node) -> str:
         """Extract the matched value, expand env variable, and replace the match."""
         value = str(node.value).removeprefix("${").removesuffix("}")
-        split = value.split(":")
+        split = value.split(":", 1)
         env_var = split[0]
         value = environ.get(env_var)
         default = None if len(split) == 1 else split[1]
