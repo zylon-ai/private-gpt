@@ -21,8 +21,6 @@ from llama_index.llms.llama_utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from llama_index.callbacks import CallbackManager
     from llama_index.llms import (
         CompletionResponseGen,
@@ -113,10 +111,10 @@ class SagemakerLLM(CustomLLM):
     context_window: int = Field(
         description="The maximum number of context tokens for the model."
     )
-    messages_to_prompt: Callable[..., str] = Field(
+    messages_to_prompt: Any = Field(
         description="The function to convert messages to a prompt.", exclude=True
     )
-    completion_to_prompt: Callable[..., str] = Field(
+    completion_to_prompt: Any = Field(
         description="The function to convert a completion to a prompt.", exclude=True
     )
     generate_kwargs: dict[str, Any] = Field(

@@ -23,10 +23,7 @@ FROM base as dependencies
 WORKDIR /home/worker/app
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry install --with local
 RUN poetry install --with ui
-RUN CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS"\
-    poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python
 
 FROM base as app
 
@@ -39,9 +36,11 @@ EXPOSE 8080
 RUN adduser --system worker
 WORKDIR /home/worker/app
 
-# Copy everything, including the virtual environment
-COPY --chown=worker --from=dependencies /home/worker/app .
-COPY --chown=worker . .
+RUN mkdir "local_data"; chown worker local_data
+COPY --chown=worker --from=dependencies /home/worker/app/.venv/ .venv
+COPY --chown=worker private_gpt/ private_gpt
+COPY --chown=worker docs/ docs
+COPY --chown=worker *.yaml *.md ./
 
 USER worker
 ENTRYPOINT .venv/bin/python -m private_gpt
