@@ -17,7 +17,8 @@ llama-index = "0.8.47"
 chromadb = "^0.4.13"
 watchdog = "^3.0.0"
 transformers = "^4.34.0"
-torch = "^2.1.0"
+# https://stackoverflow.com/questions/76327419/valueerror-libcublas-so-0-9-not-found-in-the-system-path
+torch = ">=2.0.0, !=2.0.1, !=2.1.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
