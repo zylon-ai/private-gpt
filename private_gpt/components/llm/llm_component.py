@@ -37,6 +37,8 @@ class LLMComponent:
 
                 self.llm = SagemakerLLM(
                     endpoint_name=settings.sagemaker.endpoint_name,
+                    messages_to_prompt=messages_to_prompt,
+                    completion_to_prompt=completion_to_prompt,
                 )
             case "openai":
                 from llama_index.llms import OpenAI
