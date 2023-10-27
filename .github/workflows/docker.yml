@@ -1,10 +1,8 @@
 name: Create and publish a Docker image
 
-#on:
-#  release:
-#    types: [ published ]
-
 on:
+  release:
+    types: [ published ]
   push:
     branches:
       - main
@@ -48,6 +46,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: false
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
