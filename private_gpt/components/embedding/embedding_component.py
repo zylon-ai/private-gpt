@@ -13,7 +13,7 @@ class EmbeddingComponent:
     @inject
     def __init__(self) -> None:
         match settings.llm.mode:
-            case "local":
+            case "local" | "sagemaker":
                 from llama_index.embeddings import HuggingFaceEmbedding
 
                 self.embedding_model = HuggingFaceEmbedding(
