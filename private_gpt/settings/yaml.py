@@ -10,7 +10,7 @@ _env_replace_matcher = re.compile(r"\$\{(\w|_)+:?.*}")
 
 @typing.no_type_check  # pyaml does not have good hints, everything is Any
 def load_yaml_with_envvars(
-        stream: TextIO, environ: dict[str, Any] = os.environ
+    stream: TextIO, environ: dict[str, Any] = os.environ
 ) -> dict[str, Any]:
     """Load yaml file with environment variable expansion.
 

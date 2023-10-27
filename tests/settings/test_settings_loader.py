@@ -32,7 +32,6 @@ def test_environment_defaults_variables_are_loaded_with_duplicated_delimiters() 
     assert loaded["replaced"] == ":duped::"
 
 
-
 def test_environment_without_defaults_fails() -> None:
     sample_yaml = """
     replaced: ${TEST_REPLACE_ME}
