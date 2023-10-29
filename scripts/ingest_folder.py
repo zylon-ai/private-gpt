@@ -1,12 +1,12 @@
 import argparse
-import sys
+import logging
 from pathlib import Path
-
-from loguru import logger
 
 from private_gpt.di import root_injector
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.server.ingest.ingest_watcher import IngestWatcher
+
+logger = logging.getLogger(__name__)
 
 ingest_service = root_injector.get(IngestService)
 
@@ -26,28 +26,17 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-# Set up loguru logging
-# Remove pre-configured logging handler
-logger.remove(0)
-# For console colorized output without line and function info:
-logger.add(
-    sys.stdout,
-    level="INFO",
-    colorize=True,
-    format=(
-        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-        "<level>{level: <8}</level> | "
-        "<level>{message}</level>"
-    ),
-)
-# For file output, using a clear and timestamped format:
+# Set up logging to a file if a path is provided
 if args.log_file:
-    logger.add(
-        args.log_file,
-        rotation="10 MB",
-        level="INFO",
-        format="[{time:YYYY-MM-DD HH:mm:ss}] [{level}] {message}",
+    file_handler = logging.FileHandler(args.log_file, mode="a")
+    file_handler.setFormatter(
+        logging.Formatter(
+            "[%(asctime)s.%(msecs)03d] [%(levelname)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
     )
+    logger.addHandler(file_handler)
+
 
 total_documents = 0
 current_document_count = 0
