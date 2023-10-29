@@ -1,11 +1,9 @@
 """FastAPI app creation, logger configuration and main API routes."""
-import sys
 from typing import Any
 
 import llama_index
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from loguru import logger
 
 from private_gpt.paths import docs_path
 from private_gpt.server.chat.chat_router import chat_router
@@ -15,21 +13,6 @@ from private_gpt.server.embeddings.embeddings_router import embeddings_router
 from private_gpt.server.health.health_router import health_router
 from private_gpt.server.ingest.ingest_router import ingest_router
 from private_gpt.settings.settings import settings
-
-# Remove pre-configured logging handler
-logger.remove(0)
-# Create a new logging handler same as the pre-configured one but with the extra
-# attribute `request_id`
-logger.add(
-    sys.stdout,
-    level="INFO",
-    format=(
-        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-        "<level>{level: <8}</level> | "
-        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
-        "ID: {extra[request_id]} - <level>{message}</level>"
-    ),
-)
 
 # Add LlamaIndex simple observability
 llama_index.set_global_handler("simple")
