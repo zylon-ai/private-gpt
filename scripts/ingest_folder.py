@@ -1,7 +1,8 @@
 import argparse
-from loguru import logger
 import sys
 from pathlib import Path
+
+from loguru import logger
 
 from private_gpt.di import root_injector
 from private_gpt.server.ingest.ingest_service import IngestService
@@ -21,7 +22,7 @@ parser.add_argument(
     "--log-file",
     help="Optional path to a log file. If provided, logs will be written to this file.",
     type=str,
-    default=None
+    default=None,
 )
 args = parser.parse_args()
 
@@ -29,7 +30,11 @@ args = parser.parse_args()
 # Remove pre-configured logging handler
 logger.remove(0)
 # For console colorized output without line and function info:
-logger.add(sys.stdout, level="INFO", colorize=True, format=(
+logger.add(
+    sys.stdout,
+    level="INFO",
+    colorize=True,
+    format=(
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
         "<level>{level: <8}</level> | "
         "<level>{message}</level>"
@@ -37,13 +42,18 @@ logger.add(sys.stdout, level="INFO", colorize=True, format=(
 )
 # For file output, using a clear and timestamped format:
 if args.log_file:
-    logger.add(args.log_file, rotation="10 MB", level="INFO", format="[{time:YYYY-MM-DD HH:mm:ss}] [{level}] {message}")
+    logger.add(
+        args.log_file,
+        rotation="10 MB",
+        level="INFO",
+        format="[{time:YYYY-MM-DD HH:mm:ss}] [{level}] {message}",
+    )
 
 total_documents = 0
 current_document_count = 0
 
 
-def count_documents(folder_path: Path) -> int:
+def count_documents(folder_path: Path) -> None:
     global total_documents
     for file_path in folder_path.iterdir():
         if file_path.is_file():
