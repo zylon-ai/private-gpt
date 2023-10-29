@@ -416,6 +416,12 @@ and optionally watch changes on it with the command:
 make ingest /path/to/folder -- --watch
 ```
 
+To log the processed and failed files to an additional file, use:
+
+```bash
+make ingest /path/to/folder -- --watch --log-file /path/to/log/file.log
+```
+
 After ingestion is complete, you should be able to chat with your documents
 by navigating to http://localhost:8001 and using the option `Query documents`,
 or using the completions / chat API.
