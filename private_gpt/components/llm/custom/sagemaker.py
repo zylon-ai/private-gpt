@@ -27,7 +27,7 @@ if TYPE_CHECKING:
         CompletionResponseGen,
     )
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class LineIterator:
@@ -84,7 +84,7 @@ class LineIterator:
                     continue
                 raise
             if "PayloadPart" not in chunk:
-                log.warning("Unknown event type=%s", chunk)
+                logger.warning("Unknown event type=%s", chunk)
                 continue
             self.buffer.seek(0, io.SEEK_END)
             self.buffer.write(chunk["PayloadPart"]["Bytes"])
