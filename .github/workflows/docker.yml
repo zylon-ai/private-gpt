@@ -3,10 +3,7 @@ name: Create and publish a Docker image
 on:
   release:
     types: [ published ]
-  push:
-    branches:
-      - main
-  pull_request:
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
