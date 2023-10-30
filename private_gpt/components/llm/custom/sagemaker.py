@@ -4,7 +4,7 @@ from __future__ import annotations
 import io
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Sequence
 
 import boto3  # type: ignore
 from llama_index.bridge.pydantic import Field
@@ -13,7 +13,9 @@ from llama_index.llms import (
     CustomLLM,
     LLMMetadata,
 )
-from llama_index.llms.base import llm_completion_callback
+from llama_index.llms.base import llm_completion_callback, llm_chat_callback, ChatMessage, ChatResponse, ChatResponseGen
+from llama_index.llms.generic_utils import completion_response_to_chat_response, \
+    stream_completion_response_to_chat_response
 from llama_index.llms.llama_utils import (
     completion_to_prompt as generic_completion_to_prompt,
 )
@@ -133,17 +135,17 @@ class SagemakerLLM(CustomLLM):
     )  # TODO make it an optional field
 
     def __init__(
-        self,
-        endpoint_name: str | None = "",
-        temperature: float = 0.1,
-        max_new_tokens: int = 512,  # to review defaults
-        context_window: int = 2048,  # to review defaults
-        messages_to_prompt: Any = None,
-        completion_to_prompt: Any = None,
-        callback_manager: CallbackManager | None = None,
-        generate_kwargs: dict[str, Any] | None = None,
-        model_kwargs: dict[str, Any] | None = None,
-        verbose: bool = True,
+            self,
+            endpoint_name: str | None = "",
+            temperature: float = 0.1,
+            max_new_tokens: int = 512,  # to review defaults
+            context_window: int = 2048,  # to review defaults
+            messages_to_prompt: Any = None,
+            completion_to_prompt: Any = None,
+            callback_manager: CallbackManager | None = None,
+            generate_kwargs: dict[str, Any] | None = None,
+            model_kwargs: dict[str, Any] | None = None,
+            verbose: bool = True,
     ) -> None:
         """SagemakerLLM initializer."""
         model_kwargs = model_kwargs or {}
@@ -215,7 +217,7 @@ class SagemakerLLM(CustomLLM):
         response_dict = eval(response_str)
 
         return CompletionResponse(
-            text=response_dict[0]["generated_text"][len(prompt) :], raw=resp
+            text=response_dict[0]["generated_text"][len(prompt):], raw=resp
         )
 
     @llm_completion_callback()
@@ -240,10 +242,24 @@ class SagemakerLLM(CustomLLM):
 
             for line in LineIterator(event_stream):
                 if line != b"" and start_json in line:
-                    data = json.loads(line[line.find(start_json) :].decode("utf-8"))
+                    data = json.loads(line[line.find(start_json):].decode("utf-8"))
                     if data["token"]["text"] != stop_token:
                         delta = data["token"]["text"]
                         text += delta
                         yield CompletionResponse(delta=delta, text=text, raw=data)
 
         return get_stream()
+
+    @llm_chat_callback()
+    def chat(self, messages: Sequence[ChatMessage], **kwargs: Any) -> ChatResponse:
+        prompt = self.messages_to_prompt(messages)
+        completion_response = self.complete(prompt, formatted=True, **kwargs)
+        return completion_response_to_chat_response(completion_response)
+
+    @llm_chat_callback()
+    def stream_chat(
+            self, messages: Sequence[ChatMessage], **kwargs: Any
+    ) -> ChatResponseGen:
+        prompt = self.messages_to_prompt(messages)
+        completion_response = self.stream_complete(prompt, formatted=True, **kwargs)
+        return stream_completion_response_to_chat_response(completion_response)
