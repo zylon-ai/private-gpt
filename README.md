@@ -170,3 +170,186 @@ year = {2023}
 ```
 Martínez Toro, I., Gallego Vico, D., & Orgaz, P. (2023). PrivateGPT [Computer software]. https://github.com/imartinez/privateGPT
 ```
+
+
+
+################################################  Installation on Debian 11 Command line fallow the instructions  ########################
+
+
+To install and run the `privateGPT` project on Debian 11, you can follow these step-by-step instructions:
+
+1. **Install Dependencies:**
+
+   First, ensure you have some basic dependencies installed on your system. Open a terminal and run the following commands:
+
+   ```bash
+   sudo apt update
+   sudo apt install -y git make build-essential zlib1g-dev libssl-dev libbz2-dev \
+                    libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev \
+                    libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python-openssl \
+                    libxml2-dev libxmlsec1-dev libffi-dev libcairo2-dev pkg-config
+   ```
+
+   These packages are required for building Python, managing dependencies, and running the project.
+
+2. **Clone the Repository:**
+
+   Navigate to the directory where you want to clone the `privateGPT` repository and execute the following commands:
+
+   ```bash
+   git clone https://github.com/imartinez/privateGPT
+   cd privateGPT
+   ```
+
+3. **Install Python 3.11:**
+
+   To install Python 3.11 using `pyenv`, follow these steps:
+
+   ```bash
+   # Install pyenv
+   curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+
+   # Update your shell profile (e.g., .bashrc or .zshrc)
+   echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> ~/.bashrc
+   echo 'eval "$(pyenv init --path)"' >> ~/.bashrc
+   echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
+   source ~/.bashrc
+
+   # Install Python 3.11
+   pyenv install 3.11
+   pyenv local 3.11
+   ```
+
+4. **Install Poetry:**
+
+   Install `poetry`, a Python package manager and dependency manager, using `pip`:
+
+   ```bash
+   pip install poetry
+   ```
+
+5. **Install Additional Dependencies:**
+
+   Install the project's dependencies with the following command:
+
+   ```bash
+   poetry install --with ui,local
+   ```
+
+6. **Download Embedding and LLM Models:**
+
+   Download the necessary models by running:
+
+   ```bash
+   poetry run python scripts/setup
+   ```
+
+7. **Install llama-cpp-python (Optional):**
+
+   If you're using a Mac with a Metal GPU, you can enable GPU support with `llama-cpp-python`. Run this command:
+
+   ```bash
+   CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
+   ```
+
+8. **Run the Local Server:**
+
+   Start the local server by running the following command:
+
+   ```bash
+   PGPT_PROFILES=local make run
+   ```
+
+9. **Access the UI:**
+
+   Open a web browser and navigate to the following URL to access the `privateGPT` user interface:
+
+   ```
+   http://localhost:8001/
+   ```
+
+   You should now be able to try out the application.
+
+That's it! You have successfully installed and run the `privateGPT` project on Debian 11. Make sure to follow any additional configuration or setup instructions specific to your use case, especially if you are working with GPU support on a platform other than macOS.
+
+
+
+
+It appears that you don't have `pyenv` installed on your system. To install `pyenv`, you can follow these steps:
+
+1. **Install `pyenv`:**
+
+   Open a terminal and run the following commands to install `pyenv`:
+
+   ```bash
+   curl https://pyenv.run | bash
+   ```
+
+   This command will download and install `pyenv`.
+
+2. **Update Your Shell Configuration:**
+
+   After installing `pyenv`, you need to update your shell configuration file (e.g., `~/.bashrc` or `~/.zshrc`) to include `pyenv` in your path. Here's how you can do it for `bash`:
+
+   ```bash
+   echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> ~/.bashrc
+   echo 'eval "$(pyenv init --path)"' >> ~/.bashrc
+   echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+   If you're using `zsh`, replace `~/.bashrc` with `~/.zshrc` in the above commands.
+
+3. **Verify `pyenv` Installation:**
+
+   To verify that `pyenv` is installed correctly, run:
+
+   ```bash
+   pyenv --version
+   ```
+
+   You should see the `pyenv` version information.
+
+4. **Install Python 3.11:**
+
+   Now that you have `pyenv` installed, you can proceed to install Python 3.11 as mentioned in the previous instructions:
+
+   ```bash
+   pyenv install 3.11
+   ```
+
+5. **Set Python 3.11 as the Local Version:**
+
+   Set Python 3.11 as the local version for your project:
+
+   ```bash
+   pyenv local 3.11
+   ```
+
+6. **Verify the Python Version:**
+
+   Verify that Python 3.11 is now the active version for your project by running:
+
+   ```bash
+   python --version
+   ```
+
+   It should display Python 3.11.
+
+7. **Reinstall Dependencies:**
+
+   After switching to Python 3.11, you may need to reinstall the project's dependencies. Run the following command again:
+
+   ```bash
+   poetry install --with ui,local
+   ```
+
+8. **Run the Project:**
+
+   Finally, try running the project again:
+
+   ```bash
+   PGPT_PROFILES=local make run
+   ```
+
+These steps should help you set up `pyenv` and resolve the compatibility issue with Python versions for the `privateGPT` project on your Debian 11 system.
