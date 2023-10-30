@@ -19,9 +19,9 @@ The API is divided into two logical blocks:
 **High-level API**, which abstracts all the complexity of a RAG (Retrieval Augmented Generation)
 pipeline implementation:
 - Ingestion of documents: internally managing document parsing,
-splitting, metadata extraction, embedding generation and storage.
+splitting, metadata extraction, embedding generation, and storage.
 - Chat & Completions using context from ingested documents:
-abstracting the retrieval of context, the prompt engineering and the response generation.
+abstracting the retrieval of context, the prompt engineering, and the response generation.
 
 **Low-level API**, which allows advanced users to implement their own complex pipelines:
 - Embeddings generation: based on a piece of text.
