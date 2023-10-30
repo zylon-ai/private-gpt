@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 import boto3  # type: ignore
@@ -25,6 +26,8 @@ if TYPE_CHECKING:
     from llama_index.llms import (
         CompletionResponseGen,
     )
+
+logger = logging.getLogger(__name__)
 
 
 class LineIterator:
@@ -81,7 +84,7 @@ class LineIterator:
                     continue
                 raise
             if "PayloadPart" not in chunk:
-                print("Unknown event type:" + chunk)
+                logger.warning("Unknown event type=%s", chunk)
                 continue
             self.buffer.seek(0, io.SEEK_END)
             self.buffer.write(chunk["PayloadPart"]["Bytes"])

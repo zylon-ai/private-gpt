@@ -1,4 +1,5 @@
 import functools
+import logging
 import os
 import sys
 from pathlib import Path
@@ -8,6 +9,8 @@ from pydantic.v1.utils import deep_update, unique_list
 
 from private_gpt.constants import PROJECT_ROOT_PATH
 from private_gpt.settings.yaml import load_yaml_with_envvars
+
+logger = logging.getLogger(__name__)
 
 _settings_folder = os.environ.get("PGPT_SETTINGS_FOLDER", PROJECT_ROOT_PATH)
 
@@ -41,7 +44,7 @@ def load_profile(profile: str) -> dict[str, Any]:
 
 def load_active_profiles() -> dict[str, Any]:
     """Load active profiles and merge them."""
-    print(f"Starting application with profiles: {active_profiles}")
+    logger.info("Starting application with profiles=%s", active_profiles)
     loaded_profiles = [load_profile(profile) for profile in active_profiles]
     merged: dict[str, Any] = functools.reduce(deep_update, loaded_profiles, {})
     return merged
