@@ -1,0 +1,29 @@
+name: Close Old/Inactive Issues
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs every day at midnight UTC
+
+jobs:
+  close-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for old/inactive issues
+        id: check-issues
+        run: |
+          echo "::set-output name=timestamp::$(date -d '30 days ago' +'%Y-%m-%dT%H:%M:%SZ')"
+          issues=$(gh issue list --state all --json number,title,created_at,updated_at -q "is:issue is:open updated:<${{ steps.check-issues.outputs.timestamp }}")
+          echo "::set-output name=issues::${issues}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Close old/inactive issues
+        if: steps.check-issues.outputs.issues != ''
+        run: |
+          echo "${{ steps.check-issues.outputs.issues }}" | while read -r issue; do
+            issue_number=$(echo "$issue" | awk '{print $1}')
+            echo "Closing issue #$issue_number"
+            gh issue close $issue_number
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
