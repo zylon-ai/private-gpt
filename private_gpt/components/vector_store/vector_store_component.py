@@ -1,6 +1,7 @@
 import typing
 
 import chromadb
+from chromadb.config import Settings
 from injector import inject, singleton
 from llama_index import VectorStoreIndex
 from llama_index.indices.vector_store import VectorIndexRetriever
@@ -36,8 +37,10 @@ class VectorStoreComponent:
 
     @inject
     def __init__(self) -> None:
+        chroma_settings = Settings(anonymized_telemetry=False)
         chroma_client = chromadb.PersistentClient(
-            path=str((local_data_path / "chroma_db").absolute())
+            path=str((local_data_path / "chroma_db").absolute()),
+            settings=chroma_settings,
         )
         chroma_collection = chroma_client.get_or_create_collection(
             "make_this_parameterizable_per_api_call"
