@@ -4,7 +4,7 @@ from __future__ import annotations
 import io
 import json
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import boto3  # type: ignore
 from llama_index.bridge.pydantic import Field
@@ -30,7 +30,6 @@ from llama_index.llms.llama_utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Any
 
     from llama_index.callbacks import CallbackManager
     from llama_index.llms import (
