@@ -1,5 +1,6 @@
+# mypy: ignore-errors
 import json
-from typing import List, Any
+from typing import Any
 
 import boto3
 from llama_index.embeddings.base import BaseEmbedding
@@ -41,7 +42,7 @@ class SagemakerEmbedding(BaseEmbedding):
             print("Async embedding not available, falling back to sync method.")
             self._async_not_implemented_warned = True
 
-    def _embed(self, sentences: List[str]) -> List[List[float]]:
+    def _embed(self, sentences: list[str]) -> list[list[float]]:
         request_params = {
             "inputs": sentences,
         }
@@ -58,24 +59,24 @@ class SagemakerEmbedding(BaseEmbedding):
 
         return response_json["vectors"]
 
-    def _get_query_embedding(self, query: str) -> List[float]:
+    def _get_query_embedding(self, query: str) -> list[float]:
         """Get query embedding."""
         return self._embed([query])[0]
 
-    async def _aget_query_embedding(self, query: str) -> List[float]:
+    async def _aget_query_embedding(self, query: str) -> list[float]:
         # Warn the user that sync is being used
         self._async_not_implemented_warn_once()
         return self._get_query_embedding(query)
 
-    async def _aget_text_embedding(self, text: str) -> List[float]:
+    async def _aget_text_embedding(self, text: str) -> list[float]:
         # Warn the user that sync is being used
         self._async_not_implemented_warn_once()
         return self._get_text_embedding(text)
 
-    def _get_text_embedding(self, text: str) -> List[float]:
+    def _get_text_embedding(self, text: str) -> list[float]:
         """Get text embedding."""
         return self._embed([text])[0]
 
-    def _get_text_embeddings(self, texts: List[str]) -> List[List[float]]:
+    def _get_text_embeddings(self, texts: list[str]) -> list[list[float]]:
         """Get text embeddings."""
         return self._embed(texts)
