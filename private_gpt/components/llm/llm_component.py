@@ -36,7 +36,7 @@ class LLMComponent:
                 from private_gpt.components.llm.custom.sagemaker import SagemakerLLM
 
                 self.llm = SagemakerLLM(
-                    endpoint_name=settings.sagemaker.endpoint_name,
+                    endpoint_name=settings.sagemaker.llm_endpoint_name,
                 )
             case "openai":
                 from llama_index.llms import OpenAI
