@@ -1,3 +1,4 @@
+import logging
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AnyStr
@@ -24,6 +25,8 @@ from private_gpt.paths import local_data_path
 
 if TYPE_CHECKING:
     from llama_index.readers.base import BaseReader
+
+logger = logging.getLogger(__name__)
 
 
 class IngestedDoc(BaseModel):
@@ -70,6 +73,7 @@ class IngestService:
         )
 
     def ingest(self, file_name: str, file_data: AnyStr | Path) -> list[IngestedDoc]:
+        logger.info("Ingesting file_name=%s", file_name)
         extension = Path(file_name).suffix
         reader_cls = DEFAULT_FILE_READER_CLS.get(extension)
         documents: list[Document]
@@ -100,7 +104,9 @@ class IngestService:
                     else:
                         path_to_tmp.write_text(str(file_data))
                     documents = reader.load_data(path_to_tmp)
-
+        logger.info(
+            "Transformed file=%s into count=%s documents", file_data, len(documents)
+        )
         for document in documents:
             document.metadata["file_name"] = file_name
         return self._save_docs(documents)
@@ -153,7 +159,20 @@ class IngestService:
                         doc_metadata=doc_metadata,
                     )
                 )
-            return ingested_docs
         except ValueError:
+            logger.warning("Got an exception when getting list of docs", exc_info=True)
             pass
+        logger.debug("Found count=%s ingested documents", len(ingested_docs))
         return ingested_docs
+
+    def delete(self, doc_id: str) -> None:
+        """Delete an ingested document.
+
+        :raises ValueError: if the document does not exist
+        """
+        logger.info("Deleting the ingested document=%s in the doc store", doc_id)
+        self.storage_context.docstore.delete_ref_doc(doc_id)
+        # FIXME the documents are only deleted, and not in the vector store
+        #  or index store
+        # self.storage_context.vector_store.delete(doc_id)
+        # self.storage_context.index_store.delete_index_struct(doc_id)
