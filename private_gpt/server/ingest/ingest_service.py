@@ -10,6 +10,7 @@ from llama_index import (
     StorageContext,
     StringIterableReader,
     VectorStoreIndex,
+    load_index_from_storage,
 )
 from llama_index.node_parser import SentenceWindowNodeParser
 from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
@@ -170,9 +171,15 @@ class IngestService:
 
         :raises ValueError: if the document does not exist
         """
-        logger.info("Deleting the ingested document=%s in the doc store", doc_id)
-        self.storage_context.docstore.delete_ref_doc(doc_id)
-        # FIXME the documents are only deleted, and not in the vector store
-        #  or index store
-        # self.storage_context.vector_store.delete(doc_id)
-        # self.storage_context.index_store.delete_index_struct(doc_id)
+        logger.info(
+            "Deleting the ingested document=%s in the doc and index store", doc_id
+        )
+
+        # Load the index with store_nodes_override=True to be able to delete them
+        index = load_index_from_storage(self.storage_context, store_nodes_override=True)
+
+        # Delete the document from the index
+        index.delete_ref_doc(doc_id, delete_from_docstore=True)
+
+        # Save the index
+        self.storage_context.persist(persist_dir=local_data_path)

@@ -58,10 +58,4 @@ def delete_ingested(doc_id: str) -> None:
     from the directory specified in your configuration)
     """
     service = root_injector.get(IngestService)
-    try:
-        service.delete(doc_id)
-    except ValueError as err:
-        raise HTTPException(
-            404, f"Document={doc_id} not found in the datastore"
-        ) from err
-    return
+    service.delete(doc_id)
