@@ -111,7 +111,7 @@ with gr.Blocks(
     "}"
     ".logo img { height: 25% }",
 ) as blocks:
-    with gr.Blocks(), gr.Row():
+    with gr.Row():
         gr.HTML(f"<div class='logo'/><img src={logo_svg} alt=PrivateGPT></div")
 
     with gr.Row():
