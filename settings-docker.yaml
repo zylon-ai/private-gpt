@@ -11,7 +11,8 @@ local:
   embedding_hf_model_name: ${PGPT_EMBEDDING_HF_MODEL_NAME:BAAI/bge-small-en-v1.5}
 
 sagemaker:
-  endpoint_name: ${PGPT_SAGEMAKER_ENDPOINT_NAME:}
+  llm_endpoint_name: ${PGPT_SAGEMAKER_LLM_ENDPOINT_NAME:}
+  embedding_endpoint_name: ${PGPT_SAGEMAKER_EMBEDDING_ENDPOINT_NAME:}
 
 ui:
   enabled: true

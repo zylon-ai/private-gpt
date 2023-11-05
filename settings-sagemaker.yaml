@@ -1,0 +1,14 @@
+server:
+  env_name: ${APP_ENV:prod}
+  port: ${PORT:8001}
+
+ui:
+  enabled: true
+  path: /
+
+llm:
+  mode: sagemaker
+
+sagemaker:
+  llm_endpoint_name: huggingface-pytorch-tgi-inference-2023-09-25-19-53-32-140
+  embedding_endpoint_name: huggingface-pytorch-inference-2023-11-03-07-41-36-479

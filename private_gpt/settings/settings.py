@@ -28,7 +28,8 @@ class LocalSettings(BaseModel):
 
 
 class SagemakerSettings(BaseModel):
-    endpoint_name: str
+    llm_endpoint_name: str
+    embedding_endpoint_name: str
 
 
 class OpenAISettings(BaseModel):

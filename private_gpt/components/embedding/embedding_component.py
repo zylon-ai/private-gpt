@@ -13,12 +13,21 @@ class EmbeddingComponent:
     @inject
     def __init__(self) -> None:
         match settings.llm.mode:
-            case "local" | "sagemaker":
+            case "local":
                 from llama_index.embeddings import HuggingFaceEmbedding
 
                 self.embedding_model = HuggingFaceEmbedding(
                     model_name=settings.local.embedding_hf_model_name,
                     cache_folder=str(models_cache_path),
+                )
+            case "sagemaker":
+
+                from private_gpt.components.embedding.custom.sagemaker import (
+                    SagemakerEmbedding,
+                )
+
+                self.embedding_model = SagemakerEmbedding(
+                    endpoint_name=settings.sagemaker.embedding_endpoint_name,
                 )
             case "openai":
                 from llama_index import OpenAIEmbedding
