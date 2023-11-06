@@ -47,3 +47,14 @@ def list_ingested() -> IngestResponse:
     service = root_injector.get(IngestService)
     ingested_documents = service.list_ingested()
     return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
+
+
+@ingest_router.delete("/ingest/{doc_id}", tags=["Ingestion"])
+def delete_ingested(doc_id: str) -> None:
+    """Delete the specified ingested Document.
+
+    The `doc_id` can be obtained from the `GET /ingest/list` endpoint.
+    The document will be effectively deleted from your storage context.
+    """
+    service = root_injector.get(IngestService)
+    service.delete(doc_id)

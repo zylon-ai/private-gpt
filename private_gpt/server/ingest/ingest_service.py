@@ -1,3 +1,4 @@
+import logging
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AnyStr
@@ -9,6 +10,7 @@ from llama_index import (
     StorageContext,
     StringIterableReader,
     VectorStoreIndex,
+    load_index_from_storage,
 )
 from llama_index.node_parser import SentenceWindowNodeParser
 from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
@@ -24,6 +26,8 @@ from private_gpt.paths import local_data_path
 
 if TYPE_CHECKING:
     from llama_index.readers.base import BaseReader
+
+logger = logging.getLogger(__name__)
 
 
 class IngestedDoc(BaseModel):
@@ -70,6 +74,7 @@ class IngestService:
         )
 
     def ingest(self, file_name: str, file_data: AnyStr | Path) -> list[IngestedDoc]:
+        logger.info("Ingesting file_name=%s", file_name)
         extension = Path(file_name).suffix
         reader_cls = DEFAULT_FILE_READER_CLS.get(extension)
         documents: list[Document]
@@ -100,7 +105,9 @@ class IngestService:
                     else:
                         path_to_tmp.write_text(str(file_data))
                     documents = reader.load_data(path_to_tmp)
-
+        logger.info(
+            "Transformed file=%s into count=%s documents", file_name, len(documents)
+        )
         for document in documents:
             document.metadata["file_name"] = file_name
         return self._save_docs(documents)
@@ -153,7 +160,26 @@ class IngestService:
                         doc_metadata=doc_metadata,
                     )
                 )
-            return ingested_docs
         except ValueError:
+            logger.warning("Got an exception when getting list of docs", exc_info=True)
             pass
+        logger.debug("Found count=%s ingested documents", len(ingested_docs))
         return ingested_docs
+
+    def delete(self, doc_id: str) -> None:
+        """Delete an ingested document.
+
+        :raises ValueError: if the document does not exist
+        """
+        logger.info(
+            "Deleting the ingested document=%s in the doc and index store", doc_id
+        )
+
+        # Load the index with store_nodes_override=True to be able to delete them
+        index = load_index_from_storage(self.storage_context, store_nodes_override=True)
+
+        # Delete the document from the index
+        index.delete_ref_doc(doc_id, delete_from_docstore=True)
+
+        # Save the index
+        self.storage_context.persist(persist_dir=local_data_path)
