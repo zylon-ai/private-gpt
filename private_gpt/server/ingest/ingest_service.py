@@ -1,4 +1,5 @@
 import tempfile
+import chardet # Chardet must be put in requirements or manually install with pip install chardet
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AnyStr
 
@@ -77,7 +78,10 @@ class IngestService:
             # Read as a plain text
             string_reader = StringIterableReader()
             if isinstance(file_data, Path):
-                text = file_data.read_text()
+                with open(file_data, 'rb') as f2:
+                    result2 = chardet.detect(f2.read())
+                text = file_data.read_text(encoding=result2['encoding'])
+                #text = file_data.read_text()
                 documents = string_reader.load_data([text])
             elif isinstance(file_data, bytes):
                 documents = string_reader.load_data([file_data.decode("utf-8")])
