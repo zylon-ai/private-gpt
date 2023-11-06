@@ -3,7 +3,7 @@ import logging
 import os
 
 # Set to 'DEBUG' to have extensive logging turned on, even for libraries
-ROOT_LOG_LEVEL = "DEBUG"
+ROOT_LOG_LEVEL = "INFO"
 
 PRETTY_LOG_FORMAT = (
     "%(asctime)s.%(msecs)03d [%(levelname)-8s] %(name)+25s - %(message)s"
