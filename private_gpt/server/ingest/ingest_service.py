@@ -106,7 +106,7 @@ class IngestService:
                         path_to_tmp.write_text(str(file_data))
                     documents = reader.load_data(path_to_tmp)
         logger.info(
-            "Transformed file=%s into count=%s documents", file_data, len(documents)
+            "Transformed file=%s into count=%s documents", file_name, len(documents)
         )
         for document in documents:
             document.metadata["file_name"] = file_name
