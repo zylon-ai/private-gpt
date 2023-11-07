@@ -25,3 +25,5 @@ jobs:
         stale-pr-message: 'Stale pull request'
         stale-issue-label: 'stale'
         stale-pr-label: 'stale'
+        exempt-issue-labels: 'autorelease: pending'
+        exempt-pr-labels: 'autorelease: pending'
