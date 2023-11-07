@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, AnyStr
 from injector import inject, singleton
 from llama_index import (
     Document,
+    JSONReader,
     ServiceContext,
     StorageContext,
     StringIterableReader,
@@ -13,7 +14,9 @@ from llama_index import (
     load_index_from_storage,
 )
 from llama_index.node_parser import SentenceWindowNodeParser
-from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
+from llama_index.readers.file.base import (
+    DEFAULT_FILE_READER_CLS as ORIGINAL_DEFAULT_FILE_READER_CLS,
+)
 from pydantic import BaseModel, Field
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
@@ -26,6 +29,14 @@ from private_gpt.paths import local_data_path
 
 if TYPE_CHECKING:
     from llama_index.readers.base import BaseReader
+
+# Patching the default file reader to support other file types
+DEFAULT_FILE_READER_CLS = ORIGINAL_DEFAULT_FILE_READER_CLS.copy()
+DEFAULT_FILE_READER_CLS.update(
+    {
+        ".json": JSONReader,
+    }
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +90,10 @@ class IngestService:
         reader_cls = DEFAULT_FILE_READER_CLS.get(extension)
         documents: list[Document]
         if reader_cls is None:
+            logger.debug(
+                "No reader found for extension=%s, using default string reader",
+                extension,
+            )
             # Read as a plain text
             string_reader = StringIterableReader()
             if isinstance(file_data, Path):
@@ -91,6 +106,7 @@ class IngestService:
             else:
                 raise ValueError(f"Unsupported data type {type(file_data)}")
         else:
+            logger.debug("Specific reader found for extension=%s", extension)
             reader: BaseReader = reader_cls()
             if isinstance(file_data, Path):
                 # Already a path, nothing to do
