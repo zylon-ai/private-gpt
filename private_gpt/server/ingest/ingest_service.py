@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, AnyStr
 from injector import inject, singleton
 from llama_index import (
     Document,
+    JSONReader,
     ServiceContext,
     StorageContext,
     StringIterableReader,
@@ -26,6 +27,14 @@ from private_gpt.paths import local_data_path
 
 if TYPE_CHECKING:
     from llama_index.readers.base import BaseReader
+
+# Patching the default file reader to support other file types
+FILE_READER_CLS = DEFAULT_FILE_READER_CLS.copy()
+FILE_READER_CLS.update(
+    {
+        ".json": JSONReader,
+    }
+)
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +85,13 @@ class IngestService:
     def ingest(self, file_name: str, file_data: AnyStr | Path) -> list[IngestedDoc]:
         logger.info("Ingesting file_name=%s", file_name)
         extension = Path(file_name).suffix
-        reader_cls = DEFAULT_FILE_READER_CLS.get(extension)
+        reader_cls = FILE_READER_CLS.get(extension)
         documents: list[Document]
         if reader_cls is None:
+            logger.debug(
+                "No reader found for extension=%s, using default string reader",
+                extension,
+            )
             # Read as a plain text
             string_reader = StringIterableReader()
             if isinstance(file_data, Path):
@@ -91,6 +104,7 @@ class IngestService:
             else:
                 raise ValueError(f"Unsupported data type {type(file_data)}")
         else:
+            logger.debug("Specific reader found for extension=%s", extension)
             reader: BaseReader = reader_cls()
             if isinstance(file_data, Path):
                 # Already a path, nothing to do
