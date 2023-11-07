@@ -14,9 +14,7 @@ from llama_index import (
     load_index_from_storage,
 )
 from llama_index.node_parser import SentenceWindowNodeParser
-from llama_index.readers.file.base import (
-    DEFAULT_FILE_READER_CLS as ORIGINAL_DEFAULT_FILE_READER_CLS,
-)
+from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
 from pydantic import BaseModel, Field
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
@@ -31,8 +29,8 @@ if TYPE_CHECKING:
     from llama_index.readers.base import BaseReader
 
 # Patching the default file reader to support other file types
-DEFAULT_FILE_READER_CLS = ORIGINAL_DEFAULT_FILE_READER_CLS.copy()
-DEFAULT_FILE_READER_CLS.update(
+FILE_READER_CLS = DEFAULT_FILE_READER_CLS.copy()
+FILE_READER_CLS.update(
     {
         ".json": JSONReader,
     }
@@ -87,7 +85,7 @@ class IngestService:
     def ingest(self, file_name: str, file_data: AnyStr | Path) -> list[IngestedDoc]:
         logger.info("Ingesting file_name=%s", file_name)
         extension = Path(file_name).suffix
-        reader_cls = DEFAULT_FILE_READER_CLS.get(extension)
+        reader_cls = FILE_READER_CLS.get(extension)
         documents: list[Document]
         if reader_cls is None:
             logger.debug(
