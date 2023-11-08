@@ -21,6 +21,7 @@ jobs:
     - uses: actions/stale@v8
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
+        days-before-stale: 15
         stale-issue-message: 'Stale issue'
         stale-pr-message: 'Stale pull request'
         stale-issue-label: 'stale'
