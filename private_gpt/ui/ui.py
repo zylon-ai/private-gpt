@@ -1,5 +1,4 @@
 import itertools
-import json
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, TextIO
@@ -50,7 +49,7 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
     new_message = ChatMessage(content=message, role=MessageRole.USER)
     all_messages = [*build_history(), new_message]
     match mode:
-        case "Query Documents":
+        case "Query Docs":
             query_stream = chat_service.stream_chat(
                 messages=all_messages,
                 use_context=True,
@@ -64,16 +63,16 @@ def _chat(message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
             )
             yield from yield_deltas(llm_stream)
 
-        case "Context Chunks":
+        case "Search in Docs":
             response = chunks_service.retrieve_relevant(
-                text=message,
-                limit=2,
-                prev_next_chunks=1,
-            ).__iter__()
-            yield "```" + json.dumps(
-                [node.__dict__ for node in response],
-                default=lambda o: o.__dict__,
-                indent=2,
+                text=message, limit=4, prev_next_chunks=0
+            )
+
+            yield "\n\n\n".join(
+                f"{index}. **{chunk.document.doc_metadata['file_name'] if chunk.document.doc_metadata else ''} "
+                f"(page {chunk.document.doc_metadata['page_label'] if chunk.document.doc_metadata else ''})**\n "
+                f"{chunk.text}"
+                for index, chunk in enumerate(response, start=1)
             )
 
 
@@ -117,9 +116,9 @@ with gr.Blocks(
     with gr.Row():
         with gr.Column(scale=3, variant="compact"):
             mode = gr.Radio(
-                ["Query Documents", "LLM Chat", "Context Chunks"],
+                ["Query Docs", "Search in Docs", "LLM Chat"],
                 label="Mode",
-                value="Query Documents",
+                value="Query Docs",
             )
             upload_button = gr.components.UploadButton(
                 "Upload a File",
