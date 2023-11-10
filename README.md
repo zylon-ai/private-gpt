@@ -1,7 +1,8 @@
 # 🔒 PrivateGPT 📑
 
-> [!NOTE]  
-> Just looking for the docs? Go here: https://docs.privategpt.dev/
+> Install & usage docs: https://docs.privategpt.dev/
+> 
+> Join the community: [Twitter](https://twitter.com/PrivateGPT_AI) & [Discord](https://discord.gg/bK6mRVpErU)
 
 
 <img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaBasLxbp49Hrwnmi_Ctii1oIM18nFJrBO0ERSE3wpkS-syjiQBE32_tUSdqnjn6etUDjUSkdJeFa8acqRb0lZbkZ6CyAw=s1600">
