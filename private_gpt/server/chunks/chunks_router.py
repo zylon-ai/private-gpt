@@ -1,13 +1,14 @@
 from typing import Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from private_gpt.di import root_injector
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
+from private_gpt.server.utils.auth import authenticated
 
-chunks_router = APIRouter(prefix="/v1")
+chunks_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
 
 class ChunksBody(BaseModel):
