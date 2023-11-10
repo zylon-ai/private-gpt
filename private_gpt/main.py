@@ -105,15 +105,16 @@ app.include_router(ingest_router)
 app.include_router(embeddings_router)
 app.include_router(health_router)
 
-# Enable CORS. See https://fastapi.tiangolo.com/tutorial/cors/
-# This setup is aggressive, and you might want to restrict it to fit your needs.
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if settings.server.cors.enabled:
+    logger.debug("Setting up CORS middleware")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_credentials=settings.server.cors.allow_credentials,
+        allow_origins=settings.server.cors.allow_origins,
+        allow_origin_regex=settings.server.cors.allow_origin_regex,
+        allow_methods=settings.server.cors.allow_methods,
+        allow_headers=settings.server.cors.allow_headers,
+    )
 
 
 if settings.ui.enabled:
