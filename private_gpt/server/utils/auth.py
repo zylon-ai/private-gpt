@@ -12,6 +12,11 @@ Authorization can be done by following fastapi's guides:
 * https://fastapi.tiangolo.com/tutorial/security/
 * https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-in-path-operation-decorators/
 """
+# mypy: ignore-errors
+# Disabled mypy error: All conditional function variants must have identical signatures
+# We are changing the implementation of the authenticated method, based on
+# the config. If the auth is not enabled, we are not defining the complex method
+# with its dependencies.
 import logging
 import secrets
 from typing import Annotated
@@ -47,7 +52,7 @@ if not settings.server.auth.enabled:
     )
 
     # Define a dummy authentication method that always returns True.
-    def authenticated(_simple_authentication: bool) -> bool:
+    def authenticated() -> bool:
         """Check if the request is authenticated."""
         return True
 
