@@ -4,6 +4,7 @@ from typing import Any
 
 import llama_index
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from private_gpt.paths import docs_path
@@ -103,6 +104,16 @@ app.include_router(chunks_router)
 app.include_router(ingest_router)
 app.include_router(embeddings_router)
 app.include_router(health_router)
+
+# Enable CORS. See https://fastapi.tiangolo.com/tutorial/cors/
+# This setup is aggressive, and you might want to restrict it to fit your needs.
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 if settings.ui.enabled:
