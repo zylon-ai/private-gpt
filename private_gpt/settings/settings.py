@@ -54,8 +54,8 @@ class AuthSettings(BaseModel):
     )
     secret: str = Field(
         description="The secret to be used for authentication. "
-                    "It can be any non-blank string. For HTTP basic authentication, "
-                    "this value should be the whole 'Authorization' header that is expected"
+        "It can be any non-blank string. For HTTP basic authentication, "
+        "this value should be the whole 'Authorization' header that is expected"
     )
 
 
@@ -68,7 +68,8 @@ class ServerSettings(BaseModel):
         description="CORS configuration", default=CorsSettings(enabled=False)
     )
     auth: AuthSettings = Field(
-        description="Authentication configuration", default_factory=lambda: AuthSettings(enabled=False, secret="secret-key")
+        description="Authentication configuration",
+        default_factory=lambda: AuthSettings(enabled=False, secret="secret-key"),
     )
 
 

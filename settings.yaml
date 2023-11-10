@@ -10,6 +10,7 @@ server:
     enabled: false
     # python -c 'import base64; print("Basic " + base64.b64encode("secret:key".encode()).decode())'
     # 'secret' is the username and 'key' is the password for basic auth by default
+    # If the auth is enabled, this value must be set in the "Authorization" header of the request.
     secret: "Basic c2VjcmV0OmtleQ=="
 
 data:

@@ -17,14 +17,15 @@ import secrets
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException
+
 from private_gpt.settings.settings import settings
 
 # 401 signify that the request requires authentication.
-# 403 signify that the authenticated user is not authorized to perform the requested operation.
+# 403 signify that the authenticated user is not authorized to perform the operation.
 NOT_AUTHENTICATED = HTTPException(
     status_code=401,
     detail="Not authenticated",
-    headers={"WWW-Authenticate": 'Basic realm="All the API", charset="UTF-8"'}
+    headers={"WWW-Authenticate": 'Basic realm="All the API", charset="UTF-8"'},
 )
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ if not settings.server.auth.enabled:
     )
 
     # Define a dummy authentication method that always returns True.
-    def authenticated() -> True:
+    def authenticated(_simple_authentication: bool) -> bool:
         """Check if the request is authenticated."""
         return True
 
@@ -56,7 +57,7 @@ else:
     # Method to be used as a dependency to check if the request is authenticated.
     def authenticated(
         _simple_authentication: Annotated[bool, Depends(_simple_authentication)]
-    ) -> True:
+    ) -> bool:
         """Check if the request is authenticated."""
         if not settings.server.auth.enabled:
             return True
