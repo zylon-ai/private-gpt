@@ -108,4 +108,5 @@ app.include_router(health_router)
 if settings.ui.enabled:
     logger.debug("Importing the UI module")
     from private_gpt.ui.ui import PrivateGptUi
+
     PrivateGptUi().mount_in_app(app)

@@ -1,6 +1,4 @@
-"""
-This file should be imported only and only if you want to run the UI locally.
-"""
+"""This file should be imported only and only if you want to run the UI locally."""
 import itertools
 import logging
 from collections.abc import Iterable
@@ -19,17 +17,14 @@ from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.settings.settings import settings
 from private_gpt.ui.images import logo_svg
 
-
 logger = logging.getLogger(__name__)
 
 
 class PrivateGptUi:
-    def __init__(self):
+    def __init__(self) -> None:
         self._ingest_service = root_injector.get(IngestService)
         self._chat_service = root_injector.get(ChatService)
         self._chunks_service = root_injector.get(ChunksService)
-
-        self._uploaded_file_list = [[row] for row in self._list_ingested_files()]
 
         # Cache the UI blocks
         self._ui_block = None
@@ -50,7 +45,9 @@ class PrivateGptUi:
                     *[
                         [
                             ChatMessage(content=interaction[0], role=MessageRole.USER),
-                            ChatMessage(content=interaction[1], role=MessageRole.ASSISTANT),
+                            ChatMessage(
+                                content=interaction[1], role=MessageRole.ASSISTANT
+                            ),
                         ]
                         for interaction in history
                     ]
@@ -89,35 +86,36 @@ class PrivateGptUi:
                     for index, chunk in enumerate(response, start=1)
                 )
 
-    def _list_ingested_files(self) -> list[str]:
+    def _list_ingested_files(self) -> list[list[str]]:
         files = set()
         for ingested_document in self._ingest_service.list_ingested():
-            if ingested_document.doc_metadata is not None:
-                files.add(
-                    ingested_document.doc_metadata.get("file_name") or "[FILE NAME MISSING]"
-                )
-        return list(files)
+            if ingested_document.doc_metadata is None:
+                # Skipping documents without metadata
+                continue
+            file_name = ingested_document.doc_metadata.get(
+                "file_name", "[FILE NAME MISSING]"
+            )
+            files.add(file_name)
+        return [[row] for row in files]
 
-    def _upload_file(self, file: TextIO) -> list[list[str]]:
+    def _upload_file(self, file: TextIO) -> None:
         path = Path(file.name)
         self._ingest_service.ingest(file_name=path.name, file_data=path)
-        self._uploaded_file_list.append([path.name])
-        return self._uploaded_file_list
 
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
         with gr.Blocks(
-                theme=gr.themes.Soft(primary_hue=slate),
-                css=".logo { "
-                    "display:flex;"
-                    "background-color: #C7BAFF;"
-                    "height: 80px;"
-                    "border-radius: 8px;"
-                    "align-content: center;"
-                    "justify-content: center;"
-                    "align-items: center;"
-                    "}"
-                    ".logo img { height: 25% }",
+            theme=gr.themes.Soft(primary_hue=slate),
+            css=".logo { "
+            "display:flex;"
+            "background-color: #C7BAFF;"
+            "height: 80px;"
+            "border-radius: 8px;"
+            "align-content: center;"
+            "justify-content: center;"
+            "align-items: center;"
+            "}"
+            ".logo img { height: 25% }",
         ) as blocks:
             with gr.Row():
                 gr.HTML(f"<div class='logo'/><img src={logo_svg} alt=PrivateGPT></div")
@@ -136,18 +134,24 @@ class PrivateGptUi:
                         size="sm",
                     )
                     ingested_dataset = gr.List(
-                        self._uploaded_file_list,
+                        self._list_ingested_files,
                         headers=["File name"],
                         label="Ingested Files",
                         interactive=False,
                         render=False,  # Rendered under the button
                     )
                     upload_button.upload(
-                        self._upload_file, inputs=upload_button, outputs=ingested_dataset
+                        self._upload_file,
+                        inputs=upload_button,
+                        outputs=ingested_dataset,
+                    )
+                    ingested_dataset.change(
+                        self._list_ingested_files,
+                        outputs=ingested_dataset,
                     )
                     ingested_dataset.render()
                 with gr.Column(scale=7):
-                    chatbot = gr.ChatInterface(
+                    _ = gr.ChatInterface(
                         self._chat,
                         chatbot=gr.Chatbot(
                             label=f"LLM: {settings.llm.mode}",
