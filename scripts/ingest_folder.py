@@ -69,8 +69,10 @@ def _do_ingest(changed_path: Path) -> None:
             logger.info(f"Started ingesting {changed_path}")
             ingest_service.ingest(changed_path.name, changed_path)
             logger.info(f"Completed ingesting {changed_path}")
-    except Exception as e:
-        logger.error(f"Failed to ingest document: {changed_path}. Error: {e}")
+    except Exception:
+        logger.exception(
+            f"Failed to ingest document: {changed_path}, find the exception attached"
+        )
 
 
 path = Path(args.folder)
