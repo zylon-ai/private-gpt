@@ -129,7 +129,6 @@ you want to give a hand:
 ### Features
 - Implement concurrency lock to avoid errors when there are several calls to the local LlamaCPP model
 - API key-based request control to the API
-- CORS support
 - Support for Sagemaker
 - Support Function calling
 - Add md5 to check files already ingested
