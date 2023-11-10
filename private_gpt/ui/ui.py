@@ -20,6 +20,9 @@ from private_gpt.ui.images import logo_svg
 logger = logging.getLogger(__name__)
 
 
+UI_TAB_TITLE = "My Private GPT"
+
+
 class PrivateGptUi:
     def __init__(self) -> None:
         self._ingest_service = root_injector.get(IngestService)
@@ -105,6 +108,7 @@ class PrivateGptUi:
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
         with gr.Blocks(
+            title=UI_TAB_TITLE,
             theme=gr.themes.Soft(primary_hue=slate),
             css=".logo { "
             "display:flex;"
