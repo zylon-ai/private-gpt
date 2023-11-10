@@ -4,6 +4,7 @@ from typing import Any
 
 import llama_index
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from private_gpt.paths import docs_path
@@ -103,6 +104,17 @@ app.include_router(chunks_router)
 app.include_router(ingest_router)
 app.include_router(embeddings_router)
 app.include_router(health_router)
+
+if settings.server.cors.enabled:
+    logger.debug("Setting up CORS middleware")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_credentials=settings.server.cors.allow_credentials,
+        allow_origins=settings.server.cors.allow_origins,
+        allow_origin_regex=settings.server.cors.allow_origin_regex,
+        allow_methods=settings.server.cors.allow_methods,
+        allow_headers=settings.server.cors.allow_headers,
+    )
 
 
 if settings.ui.enabled:
