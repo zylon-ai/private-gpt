@@ -11,7 +11,7 @@ from gradio.themes.utils.colors import slate  # type: ignore
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 
 from private_gpt.di import root_injector
-from private_gpt.server.chat.chat_service import ChatService
+from private_gpt.server.chat.chat_service import ChatService, CompletionGen
 from private_gpt.server.chunks.chunks_service import ChunksService
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.settings.settings import settings
@@ -33,14 +33,35 @@ class PrivateGptUi:
         self._ui_block = None
 
     def _chat(self, message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
-        def yield_deltas(stream: Iterable[ChatResponse | str]) -> Iterable[str]:
+        def yield_deltas(completion_gen: CompletionGen) -> Iterable[str]:
             full_response: str = ""
+            stream = completion_gen.response
             for delta in stream:
                 if isinstance(delta, str):
                     full_response += str(delta)
                 elif isinstance(delta, ChatResponse):
                     full_response += delta.delta or ""
                 yield full_response
+
+            if completion_gen.sources:
+                full_response += "\n\n Sources: \n"
+                sources = (
+                    {
+                        "file": chunk.document.doc_metadata["file_name"]
+                        if chunk.document.doc_metadata
+                        else "",
+                        "page": chunk.document.doc_metadata["page_label"]
+                        if chunk.document.doc_metadata
+                        else "",
+                    }
+                    for chunk in completion_gen.sources
+                )
+                sources_text = "\n\n\n".join(
+                    f"{index}. {source['file']} (page {source['page']})"
+                    for index, source in enumerate(sources, start=1)
+                )
+                full_response += sources_text
+            yield full_response
 
         def build_history() -> list[ChatMessage]:
             history_messages: list[ChatMessage] = list(

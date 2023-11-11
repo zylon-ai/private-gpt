@@ -5,6 +5,8 @@ from collections.abc import Iterator
 from llama_index.llms import ChatResponse, CompletionResponse
 from pydantic import BaseModel, Field
 
+from private_gpt.server.chunks.chunks_service import Chunk
+
 
 class OpenAIDelta(BaseModel):
     """A piece of completion that needs to be concatenated to get the full message."""
@@ -27,11 +29,13 @@ class OpenAIChoice(BaseModel):
     """Response from AI.
 
     Either the delta or the message will be present, but never both.
+    Sources used will be returned in case context retrieval was enabled.
     """
 
     finish_reason: str | None = Field(examples=["stop"])
     delta: OpenAIDelta | None = None
     message: OpenAIMessage | None = None
+    sources: list[Chunk] | None = None
     index: int = 0
 
 
@@ -49,7 +53,10 @@ class OpenAICompletion(BaseModel):
 
     @classmethod
     def from_text(
-        cls, text: str | None, finish_reason: str | None = None
+        cls,
+        text: str | None,
+        finish_reason: str | None = None,
+        sources: list[Chunk] | None = None,
     ) -> "OpenAICompletion":
         return OpenAICompletion(
             id=str(uuid.uuid4()),
@@ -60,13 +67,18 @@ class OpenAICompletion(BaseModel):
                 OpenAIChoice(
                     message=OpenAIMessage(role="assistant", content=text),
                     finish_reason=finish_reason,
+                    sources=sources,
                 )
             ],
         )
 
     @classmethod
     def json_from_delta(
-        cls, *, text: str | None, finish_reason: str | None = None
+        cls,
+        *,
+        text: str | None,
+        finish_reason: str | None = None,
+        sources: list[Chunk] | None = None,
     ) -> str:
         chunk = OpenAICompletion(
             id=str(uuid.uuid4()),
@@ -77,6 +89,7 @@ class OpenAICompletion(BaseModel):
                 OpenAIChoice(
                     delta=OpenAIDelta(content=text),
                     finish_reason=finish_reason,
+                    sources=sources,
                 )
             ],
         )
@@ -84,20 +97,25 @@ class OpenAICompletion(BaseModel):
         return chunk.model_dump_json()
 
 
-def to_openai_response(response: str | ChatResponse) -> OpenAICompletion:
+def to_openai_response(
+    response: str | ChatResponse, sources: list[Chunk] | None = None
+) -> OpenAICompletion:
     if isinstance(response, ChatResponse):
         return OpenAICompletion.from_text(response.delta, finish_reason="stop")
     else:
-        return OpenAICompletion.from_text(response, finish_reason="stop")
+        return OpenAICompletion.from_text(
+            response, finish_reason="stop", sources=sources
+        )
 
 
 def to_openai_sse_stream(
     response_generator: Iterator[str | CompletionResponse | ChatResponse],
+    sources: list[Chunk] | None = None,
 ) -> Iterator[str]:
     for response in response_generator:
         if isinstance(response, CompletionResponse | ChatResponse):
             yield f"data: {OpenAICompletion.json_from_delta(text=response.delta)}\n\n"
         else:
-            yield f"data: {OpenAICompletion.json_from_delta(text=response)}\n\n"
+            yield f"data: {OpenAICompletion.json_from_delta(text=response, sources=sources)}\n\n"
     yield f"data: {OpenAICompletion.json_from_delta(text=None, finish_reason='stop')}\n\n"
     yield "data: [DONE]\n\n"

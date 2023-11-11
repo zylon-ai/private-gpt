@@ -16,6 +16,7 @@ class CompletionsBody(BaseModel):
     prompt: str
     use_context: bool = False
     context_filter: ContextFilter | None = None
+    include_sources: bool = True
     stream: bool = False
 
     model_config = {
@@ -25,6 +26,7 @@ class CompletionsBody(BaseModel):
                     "prompt": "How do you fry an egg?",
                     "stream": False,
                     "use_context": False,
+                    "include_sources": False,
                 }
             ]
         }
@@ -48,6 +50,9 @@ def prompt_completion(body: CompletionsBody) -> OpenAICompletion | StreamingResp
     can be found using `/ingest/list` endpoint. If you want all ingested documents to
     be used, remove `context_filter` altogether.
 
+    When using `'include_sources': true`, the API will return the source Chunks used
+    to create the response, which come from the context provided.
+
     When using `'stream': true`, the API will return data chunks following [OpenAI's
     streaming model](https://platform.openai.com/docs/api-reference/chat/streaming):
     ```
@@ -61,6 +66,7 @@ def prompt_completion(body: CompletionsBody) -> OpenAICompletion | StreamingResp
         messages=[message],
         use_context=body.use_context,
         stream=body.stream,
+        include_sources=body.include_sources,
         context_filter=body.context_filter,
     )
     return chat_completion(chat_body)

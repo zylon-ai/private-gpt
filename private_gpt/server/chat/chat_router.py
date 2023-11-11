@@ -20,6 +20,7 @@ class ChatBody(BaseModel):
     messages: list[OpenAIMessage]
     use_context: bool = False
     context_filter: ContextFilter | None = None
+    include_sources: bool = True
     stream: bool = False
 
     model_config = {
@@ -34,6 +35,7 @@ class ChatBody(BaseModel):
                     ],
                     "stream": False,
                     "use_context": True,
+                    "include_sources": True,
                     "context_filter": {
                         "docs_ids": ["c202d5e6-7b69-4869-81cc-dd574ee8ee11"]
                     },
@@ -58,6 +60,9 @@ def chat_completion(body: ChatBody) -> OpenAICompletion | StreamingResponse:
     Ingested documents IDs can be found using `/ingest/list` endpoint. If you want
     all ingested documents to be used, remove `context_filter` altogether.
 
+    When using `'include_sources': true`, the API will return the source Chunks used
+    to create the response, which come from the context provided.
+
     When using `'stream': true`, the API will return data chunks following [OpenAI's
     streaming model](https://platform.openai.com/docs/api-reference/chat/streaming):
     ```
@@ -71,12 +76,18 @@ def chat_completion(body: ChatBody) -> OpenAICompletion | StreamingResponse:
         ChatMessage(content=m.content, role=MessageRole(m.role)) for m in body.messages
     ]
     if body.stream:
-        stream = service.stream_chat(
+        completion_gen = service.stream_chat(
             all_messages, body.use_context, body.context_filter
         )
         return StreamingResponse(
-            to_openai_sse_stream(stream), media_type="text/event-stream"
+            to_openai_sse_stream(
+                completion_gen.response,
+                completion_gen.sources if body.include_sources else None,
+            ),
+            media_type="text/event-stream",
         )
     else:
-        response = service.chat(all_messages, body.use_context, body.context_filter)
-        return to_openai_response(response)
+        completion = service.chat(all_messages, body.use_context, body.context_filter)
+        return to_openai_response(
+            completion.response, completion.sources if body.include_sources else None
+        )
