@@ -44,12 +44,12 @@ class BatchedChromaVectorStore(ChromaVectorStore):
         )
         self.chroma_client = chroma_client
 
-    def add(self, nodes: list[BaseNode]) -> list[str]:
+    def add(self, nodes: list[BaseNode], **add_kwargs: Any) -> list[str]:
         """Add nodes to index, batching the insertion to avoid issues.
 
         Args:
             nodes: List[BaseNode]: list of nodes with embeddings
-
+            add_kwargs: _
         """
         if not self.chroma_client:
             raise ValueError("Client not initialized")

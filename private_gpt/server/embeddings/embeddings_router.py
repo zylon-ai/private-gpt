@@ -1,5 +1,7 @@
+from typing import Literal
+
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from private_gpt.di import root_injector
 from private_gpt.server.embeddings.embeddings_service import (
@@ -15,8 +17,8 @@ class EmbeddingsBody(BaseModel):
 
 
 class EmbeddingsResponse(BaseModel):
-    object: str = Field(enum=["list"])
-    model: str = Field(enum=["private-gpt"])
+    object: Literal["list"]
+    model: Literal["private-gpt"]
     data: list[Embedding]
 
 
