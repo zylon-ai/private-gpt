@@ -12,7 +12,7 @@ injector = "^0.21.0"
 pyyaml = "^6.0.1"
 python-multipart = "^0.0.6"
 pypdf = "^3.16.2"
-llama-index = "0.8.47"
+llama-index = "0.8.67"
 chromadb = "^0.4.13"
 watchdog = "^3.0.0"
 
