@@ -276,7 +276,7 @@ To install a C++ compiler on Windows 10/11, follow these steps:
 3. Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/).
 4. Run the installer and select the `gcc` component.
 
-** For OSX **
+**For OSX**
 
 1. Check if you have a C++ compiler installed, Xcode might have done it for you. for example running `gcc`.
 2. If not, you can install clang or gcc with homebrew `brew install gcc`
