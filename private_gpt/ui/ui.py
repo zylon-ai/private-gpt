@@ -20,7 +20,7 @@ from private_gpt.ui.images import logo_svg
 logger = logging.getLogger(__name__)
 
 
-UI_TAB_TITLE = "My Private GPT"
+UI_TAB_TITLE = "Saimon"
 
 
 class PrivateGptUi:
@@ -112,7 +112,7 @@ class PrivateGptUi:
             theme=gr.themes.Soft(primary_hue=slate),
             css=".logo { "
             "display:flex;"
-            "background-color: #C7BAFF;"
+            "background-color: #000000;"
             "height: 80px;"
             "border-radius: 8px;"
             "align-content: center;"
@@ -120,16 +120,17 @@ class PrivateGptUi:
             "align-items: center;"
             "}"
             ".logo img { height: 25% }",
+            title="Saimon"
         ) as blocks:
             with gr.Row():
-                gr.HTML(f"<div class='logo'/><img src={logo_svg} alt=PrivateGPT></div")
+                gr.HTML(f"<div class='logo'/><h1>Saimon</h1></div")
 
             with gr.Row():
                 with gr.Column(scale=3, variant="compact"):
                     mode = gr.Radio(
                         ["Query Docs", "Search in Docs", "LLM Chat"],
                         label="Mode",
-                        value="Query Docs",
+                        value="LLM Chat",
                     )
                     upload_button = gr.components.UploadButton(
                         "Upload a File",

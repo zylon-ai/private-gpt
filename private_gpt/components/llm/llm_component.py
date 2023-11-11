@@ -23,6 +23,7 @@ class LLMComponent:
                     # llama2 has a context window of 4096 tokens,
                     # but we set it lower to allow for some wiggle room
                     context_window=3900,
+                    max_new_tokens=4096,
                     generate_kwargs={},
                     # All to GPU
                     model_kwargs={"n_gpu_layers": -1},
