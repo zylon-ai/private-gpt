@@ -174,6 +174,10 @@ is used.
 > It's highly encouraged that you fully read llama-cpp and llama-cpp-python documentation relevant to your platform.
 > Running into installation issues is very likely, and you'll need to troubleshoot them yourself.
 
+#### Customizing low level parameters
+
+Currently not all the parameters of llama-cpp and llama-cpp-python are available at PrivateGPT's `settings.yaml` file. In case you need to customize parameters such as the number of layers loaded into the GPU, you might change these at the `llm_component.py` file under the `private_gpt/components/llm/llm_component.py`. If you are getting an out of memory error, you might also try a smaller model or stick to the proposed recommended models, instead of custom tuning the parameters.
+
 #### OSX GPU support
 
 You will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with
