@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from injector import inject, singleton
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class Chunk(BaseModel):
-    object: str = Field(enum=["context.chunk"])
+    object: Literal["context.chunk"]
     score: float = Field(examples=[0.023])
     document: IngestedDoc
     text: str = Field(examples=["Outbound sales increased 20%, driven by new leads."])

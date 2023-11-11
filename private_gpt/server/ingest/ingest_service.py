@@ -1,7 +1,7 @@
 import logging
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AnyStr
+from typing import TYPE_CHECKING, Any, AnyStr, Literal
 
 from injector import inject, singleton
 from llama_index import (
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 class IngestedDoc(BaseModel):
-    object: str = Field(enum=["ingest.document"])
+    object: Literal["ingest.document"]
     doc_id: str = Field(examples=["c202d5e6-7b69-4869-81cc-dd574ee8ee11"])
     doc_metadata: dict[str, Any] | None = Field(
         examples=[

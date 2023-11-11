@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from private_gpt.settings.settings_loader import load_active_profiles
@@ -57,7 +59,7 @@ class DataSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: str = Field(enum=["local", "open_ai", "sagemaker", "mock"])
+    mode: Literal["local", "open_ai", "sagemaker", "mock"]
 
 
 class LocalSettings(BaseModel):

@@ -46,8 +46,11 @@ class VectorStoreComponent:
             "make_this_parameterizable_per_api_call"
         )  # TODO
 
-        self.vector_store = BatchedChromaVectorStore(
-            chroma_client=chroma_client, chroma_collection=chroma_collection
+        self.vector_store = typing.cast(
+            VectorStore,
+            BatchedChromaVectorStore(
+                chroma_client=chroma_client, chroma_collection=chroma_collection
+            ),
         )
 
     @staticmethod

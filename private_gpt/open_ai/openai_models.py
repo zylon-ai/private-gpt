@@ -1,6 +1,7 @@
 import time
 import uuid
 from collections.abc import Iterator
+from typing import Literal
 
 from llama_index.llms import ChatResponse, CompletionResponse
 from pydantic import BaseModel, Field
@@ -21,7 +22,7 @@ class OpenAIMessage(BaseModel):
     (providing a default response, not AI generated).
     """
 
-    role: str = Field(default="user", enum=["assistant", "system", "user"])
+    role: Literal["assistant", "system", "user"] = Field(default="user")
     content: str | None
 
 
@@ -46,9 +47,9 @@ class OpenAICompletion(BaseModel):
     """
 
     id: str
-    object: str = Field("completion", enum=["completion", "completion.chunk"])
+    object: Literal["completion", "completion.chunk"] = Field(default="completion")
     created: int = Field(..., examples=[1623340000])
-    model: str = Field(enum=["private-gpt"])
+    model: Literal["private-gpt"]
     choices: list[OpenAIChoice]
 
     @classmethod

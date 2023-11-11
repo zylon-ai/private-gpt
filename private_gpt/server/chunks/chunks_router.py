@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
@@ -16,8 +18,8 @@ class ChunksBody(BaseModel):
 
 
 class ChunksResponse(BaseModel):
-    object: str = Field(enum=["list"])
-    model: str = Field(enum=["private-gpt"])
+    object: Literal["list"]
+    model: Literal["private-gpt"]
     data: list[Chunk]
 
 
