@@ -1,4 +1,7 @@
+import tempfile
 from pathlib import Path
+
+from fastapi.testclient import TestClient
 
 from tests.fixtures.ingest_helper import IngestHelper
 
@@ -13,3 +16,21 @@ def test_ingest_accepts_pdf_files(ingest_helper: IngestHelper) -> None:
     path = Path(__file__).parents[0] / "test.pdf"
     ingest_result = ingest_helper.ingest_file(path)
     assert len(ingest_result.data) == 1
+
+
+def test_ingest_list_returns_something_after_ingestion(
+    test_client: TestClient, ingest_helper: IngestHelper
+) -> None:
+    response_before = test_client.get("/v1/ingest/list")
+    count_ingest_before = len(response_before.json()["data"])
+    with tempfile.NamedTemporaryFile("w", suffix=".txt") as test_file:
+        test_file.write("Foo bar; hello there!")
+        test_file.flush()
+        test_file.seek(0)
+        ingest_result = ingest_helper.ingest_file(Path(test_file.name))
+    assert len(ingest_result.data) == 1, "The temp doc should have been ingested"
+    response_after = test_client.get("/v1/ingest/list")
+    count_ingest_after = len(response_after.json()["data"])
+    assert (
+        count_ingest_after == count_ingest_before + 1
+    ), "The temp doc should be returned"

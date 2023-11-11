@@ -38,8 +38,6 @@ logger = logging.getLogger(__name__)
 
 def _simple_authentication(authorization: Annotated[str, Header()] = "") -> bool:
     """Check if the request is authenticated."""
-    if not settings.server.auth.enabled:
-        return True
     if not secrets.compare_digest(authorization, settings.server.auth.secret):
         # If the "Authorization" header is not the expected one, raise an exception.
         raise NOT_AUTHENTICATED
@@ -64,8 +62,7 @@ else:
         _simple_authentication: Annotated[bool, Depends(_simple_authentication)]
     ) -> bool:
         """Check if the request is authenticated."""
-        if not settings.server.auth.enabled:
-            return True
+        assert settings.server.auth.enabled
         if not _simple_authentication:
             raise NOT_AUTHENTICATED
         return True
