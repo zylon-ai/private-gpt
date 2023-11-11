@@ -24,16 +24,32 @@ class Chunk(BaseModel):
     document: IngestedDoc
     text: str = Field(examples=["Outbound sales increased 20%, driven by new leads."])
     previous_texts: list[str] | None = Field(
-        examples=[["SALES REPORT 2023", "Inbound didn't show major changes."]]
+        default=None,
+        examples=[["SALES REPORT 2023", "Inbound didn't show major changes."]],
     )
     next_texts: list[str] | None = Field(
+        default=None,
         examples=[
             [
                 "New leads came from Google Ads campaign.",
                 "The campaign was run by the Marketing Department",
             ]
-        ]
+        ],
     )
+
+    @classmethod
+    def from_node(cls: type["Chunk"], node: NodeWithScore) -> "Chunk":
+        doc_id = node.node.ref_doc_id if node.node.ref_doc_id is not None else "-"
+        return cls(
+            object="context.chunk",
+            score=node.score or 0.0,
+            document=IngestedDoc(
+                object="ingest.document",
+                doc_id=doc_id,
+                doc_metadata=node.metadata,
+            ),
+            text=node.get_content(),
+        )
 
 
 @singleton
@@ -98,22 +114,11 @@ class ChunksService:
 
         retrieved_nodes = []
         for node in nodes:
-            doc_id = node.node.ref_doc_id if node.node.ref_doc_id is not None else "-"
-            retrieved_nodes.append(
-                Chunk(
-                    object="context.chunk",
-                    score=node.score or 0.0,
-                    document=IngestedDoc(
-                        object="ingest.document",
-                        doc_id=doc_id,
-                        doc_metadata=node.metadata,
-                    ),
-                    text=node.get_content(),
-                    previous_texts=self._get_sibling_nodes_text(
-                        node, prev_next_chunks, False
-                    ),
-                    next_texts=self._get_sibling_nodes_text(node, prev_next_chunks),
-                )
+            chunk = Chunk.from_node(node)
+            chunk.previous_texts = self._get_sibling_nodes_text(
+                node, prev_next_chunks, False
             )
+            chunk.next_texts = self._get_sibling_nodes_text(node, prev_next_chunks)
+            retrieved_nodes.append(chunk)
 
         return retrieved_nodes

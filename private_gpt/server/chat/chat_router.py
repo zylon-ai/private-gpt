@@ -71,12 +71,13 @@ def chat_completion(body: ChatBody) -> OpenAICompletion | StreamingResponse:
         ChatMessage(content=m.content, role=MessageRole(m.role)) for m in body.messages
     ]
     if body.stream:
-        stream = service.stream_chat(
+        completion_gen = service.stream_chat(
             all_messages, body.use_context, body.context_filter
         )
         return StreamingResponse(
-            to_openai_sse_stream(stream), media_type="text/event-stream"
+            to_openai_sse_stream(completion_gen.response, completion_gen.sources),
+            media_type="text/event-stream",
         )
     else:
-        response = service.chat(all_messages, body.use_context, body.context_filter)
-        return to_openai_response(response)
+        completion = service.chat(all_messages, body.use_context, body.context_filter)
+        return to_openai_response(completion.response, completion.sources)
