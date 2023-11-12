@@ -1,0 +1,8 @@
+# Using https://github.com/tiangolo/fastapi/blob/master/docs/en/mkdocs.yml as an inspiration
+site_name: privateGPT documentation
+plugins:
+  # pip install mkdocs-swagger-ui-tag - found in https://tools.openapis.org/categories/documentation.html
+  - swagger-ui-tag # https://github.com/blueswen/mkdocs-swagger-ui-tag
+
+repo_name: imartinez/privateGPT
+repo_url: https://github.com/imartinez/privateGPT

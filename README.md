@@ -79,6 +79,14 @@ Stay tuned to our [releases](https://github.com/imartinez/privateGPT/releases) t
 Full documentation on installation, dependencies, configuration, running the server, deployment options,
 ingesting local documents, API details and UI features can be found here: https://docs.privategpt.dev/
 
+### Local documentation
+
+```bash
+pip install mkdocs mkdocs-swagger-ui-tag
+
+mkdocs serve -w docs/
+```
+
 ## 🧩 Architecture
 Conceptually, PrivateGPT is an API that wraps a RAG pipeline and exposes its
 primitives.

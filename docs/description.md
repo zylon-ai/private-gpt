@@ -25,7 +25,7 @@ The API is divided in two logical blocks:
 The steps in `Installation and Settings` section are better explained and cover more
 setup scenarios. But if you are looking for a quick setup guide, here it is:
 
-```
+```bash
 # Clone the repo
 git clone https://github.com/imartinez/privateGPT
 cd privateGPT
@@ -60,7 +60,7 @@ http://localhost:8001/
 
 * Git clone PrivateGPT repository, and navigate to it:
 
-```
+```bash
   git clone https://github.com/imartinez/privateGPT
   cd privateGPT
 ```
@@ -71,7 +71,7 @@ http://localhost:8001/
     * osx/linux: [pyenv](https://github.com/pyenv/pyenv)
     * windows: [pyenv-win](https://github.com/pyenv-win/pyenv-win)
 
-```  
+```bash
 pyenv install 3.11
 pyenv local 3.11
 ```
@@ -236,9 +236,9 @@ Some tips:
 
 After that running the following command in the repository will install llama.cpp with GPU support:
 
-`
+```bash
 CMAKE_ARGS='-DLLAMA_CUBLAS=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python
-`
+```
 
 If your installation was correct, you should see a message similar to the following next
 time you start the server `BLAS = 1`.
@@ -299,13 +299,13 @@ Make sure you have followed the *Local LLM requirements* section before moving o
 This command will start PrivateGPT using the `settings.yaml` (default profile) together with the `settings-local.yaml`
 configuration files. By default, it will enable both the API and the Gradio UI. Run:
 
-```
+```bash
 PGPT_PROFILES=local make run
 ``` 
 
 or
 
-```
+```bash
 PGPT_PROFILES=local poetry run python -m private_gpt
 ```
 
@@ -330,11 +330,11 @@ openai:
 
 And run PrivateGPT loading that profile you just created:
 
-```PGPT_PROFILES=openai make run```
+`PGPT_PROFILES=openai make run`
 
 or
 
-```PGPT_PROFILES=openai poetry run python -m private_gpt```
+`PGPT_PROFILES=openai poetry run python -m private_gpt`
 
 > Note this will still use the local Embeddings model, as it is ok to use it on a CPU.
 > We'll support using OpenAI embeddings in a future release.
