@@ -1,7 +1,6 @@
 from typing import Literal
 
-from fastapi import APIRouter, Request
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
