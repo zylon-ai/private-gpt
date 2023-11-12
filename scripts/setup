@@ -9,9 +9,9 @@ from private_gpt.settings.settings import settings
 os.makedirs(models_path, exist_ok=True)
 embedding_path = models_path / "embedding"
 
-print(f"Downloading embedding {settings.local.embedding_hf_model_name}")
+print(f"Downloading embedding {settings().local.embedding_hf_model_name}")
 snapshot_download(
-    repo_id=settings.local.embedding_hf_model_name,
+    repo_id=settings().local.embedding_hf_model_name,
     cache_dir=models_cache_path,
     local_dir=embedding_path,
 )
@@ -20,8 +20,8 @@ print("Downloading models for local execution...")
 
 # Download LLM and create a symlink to the model file
 hf_hub_download(
-    repo_id=settings.local.llm_hf_repo_id,
-    filename=settings.local.llm_hf_model_file,
+    repo_id=settings().local.llm_hf_repo_id,
+    filename=settings().local.llm_hf_model_file,
     cache_dir=models_cache_path,
     local_dir=models_path,
 )

@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from private_gpt.settings.settings_loader import load_active_profiles
+from private_gpt.settings.settings_loader import load_active_settings
 
 
 class CorsSettings(BaseModel):
@@ -114,4 +114,29 @@ class Settings(BaseModel):
     openai: OpenAISettings
 
 
-settings = Settings(**load_active_profiles())
+"""
+This is visible just for DI or testing purposes.
+
+Use dependency injection or `settings()` method instead.
+"""
+unsafe_settings = load_active_settings()
+
+"""
+This is visible just for DI or testing purposes.
+
+Use dependency injection or `settings()` method instead.
+"""
+unsafe_typed_settings = Settings(**unsafe_settings)
+
+
+def settings() -> Settings:
+    """Get the current loaded settings from the DI container.
+
+    This method exists to keep compatibility with the existing code,
+    that require global access to the settings.
+
+    For regular components use dependency injection instead.
+    """
+    from private_gpt.di import global_injector
+
+    return global_injector.get(Settings)

@@ -38,13 +38,13 @@ logger = logging.getLogger(__name__)
 
 def _simple_authentication(authorization: Annotated[str, Header()] = "") -> bool:
     """Check if the request is authenticated."""
-    if not secrets.compare_digest(authorization, settings.server.auth.secret):
+    if not secrets.compare_digest(authorization, settings().server.auth.secret):
         # If the "Authorization" header is not the expected one, raise an exception.
         raise NOT_AUTHENTICATED
     return True
 
 
-if not settings.server.auth.enabled:
+if not settings().server.auth.enabled:
     logger.debug(
         "Defining a dummy authentication mechanism for fastapi, always authenticating requests"
     )
@@ -62,7 +62,7 @@ else:
         _simple_authentication: Annotated[bool, Depends(_simple_authentication)]
     ) -> bool:
         """Check if the request is authenticated."""
-        assert settings.server.auth.enabled
+        assert settings().server.auth.enabled
         if not _simple_authentication:
             raise NOT_AUTHENTICATED
         return True

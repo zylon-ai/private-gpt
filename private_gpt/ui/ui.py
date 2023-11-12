@@ -8,10 +8,11 @@ from typing import Any, TextIO
 import gradio as gr  # type: ignore
 from fastapi import FastAPI
 from gradio.themes.utils.colors import slate  # type: ignore
+from injector import inject, singleton
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 from pydantic import BaseModel
 
-from private_gpt.di import root_injector
+from private_gpt.di import global_injector
 from private_gpt.server.chat.chat_service import ChatService, CompletionGen
 from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
 from private_gpt.server.ingest.ingest_service import IngestService
@@ -48,11 +49,18 @@ class Source(BaseModel):
         return curated_sources
 
 
+@singleton
 class PrivateGptUi:
-    def __init__(self) -> None:
-        self._ingest_service = root_injector.get(IngestService)
-        self._chat_service = root_injector.get(ChatService)
-        self._chunks_service = root_injector.get(ChunksService)
+    @inject
+    def __init__(
+        self,
+        ingest_service: IngestService,
+        chat_service: ChatService,
+        chunks_service: ChunksService,
+    ) -> None:
+        self._ingest_service = ingest_service
+        self._chat_service = chat_service
+        self._chunks_service = chunks_service
 
         # Cache the UI blocks
         self._ui_block = None
@@ -198,7 +206,7 @@ class PrivateGptUi:
                     _ = gr.ChatInterface(
                         self._chat,
                         chatbot=gr.Chatbot(
-                            label=f"LLM: {settings.llm.mode}",
+                            label=f"LLM: {settings().llm.mode}",
                             show_copy_button=True,
                             render=False,
                             avatar_images=(
@@ -217,16 +225,15 @@ class PrivateGptUi:
             self._ui_block = self._build_ui_blocks()
         return self._ui_block
 
-    def mount_in_app(self, app: FastAPI) -> None:
+    def mount_in_app(self, app: FastAPI, path: str) -> None:
         blocks = self.get_ui_blocks()
         blocks.queue()
-        base_path = settings.ui.path
-        logger.info("Mounting the gradio UI, at path=%s", base_path)
-        gr.mount_gradio_app(app, blocks, path=base_path)
+        logger.info("Mounting the gradio UI, at path=%s", path)
+        gr.mount_gradio_app(app, blocks, path=path)
 
 
 if __name__ == "__main__":
-    ui = PrivateGptUi()
+    ui = global_injector.get(PrivateGptUi)
     _blocks = ui.get_ui_blocks()
     _blocks.queue()
     _blocks.launch(debug=False, show_api=False)

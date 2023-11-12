@@ -4,7 +4,7 @@ from llama_index.llms.base import LLM
 from llama_index.llms.llama_utils import completion_to_prompt, messages_to_prompt
 
 from private_gpt.paths import models_path
-from private_gpt.settings.settings import settings
+from private_gpt.settings.settings import Settings
 
 
 @singleton
@@ -12,7 +12,7 @@ class LLMComponent:
     llm: LLM
 
     @inject
-    def __init__(self) -> None:
+    def __init__(self, settings: Settings) -> None:
         match settings.llm.mode:
             case "local":
                 from llama_index.llms import LlamaCPP

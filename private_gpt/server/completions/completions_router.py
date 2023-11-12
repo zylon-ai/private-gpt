@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
@@ -41,7 +41,9 @@ class CompletionsBody(BaseModel):
     responses={200: {"model": OpenAICompletion}},
     tags=["Contextual Completions"],
 )
-def prompt_completion(body: CompletionsBody) -> OpenAICompletion | StreamingResponse:
+def prompt_completion(
+    request: Request, body: CompletionsBody
+) -> OpenAICompletion | StreamingResponse:
     """We recommend most users use our Chat completions API.
 
     Given a prompt, the model will return one predicted completion. If `use_context`
@@ -70,4 +72,4 @@ def prompt_completion(body: CompletionsBody) -> OpenAICompletion | StreamingResp
         include_sources=body.include_sources,
         context_filter=body.context_filter,
     )
-    return chat_completion(chat_body)
+    return chat_completion(request, chat_body)

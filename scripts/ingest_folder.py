@@ -2,13 +2,13 @@ import argparse
 import logging
 from pathlib import Path
 
-from private_gpt.di import root_injector
+from private_gpt.di import global_injector
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.server.ingest.ingest_watcher import IngestWatcher
 
 logger = logging.getLogger(__name__)
 
-ingest_service = root_injector.get(IngestService)
+ingest_service = global_injector.get(IngestService)
 
 parser = argparse.ArgumentParser(prog="ingest_folder.py")
 parser.add_argument("folder", help="Folder to ingest")

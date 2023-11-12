@@ -5,8 +5,12 @@ server:
     # Dummy secrets used for tests
     secret: "foo bar; dummy secret"
 
+
 data:
   local_data_folder: local_data/tests
 
 llm:
   mode: mock
+
+ui:
+  enabled: false

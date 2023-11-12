@@ -1,15 +1,14 @@
 import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from private_gpt.main import app
+from private_gpt.launcher import create_app
+from tests.fixtures.mock_injector import MockInjector
 
 
 @pytest.fixture()
-def current_test_app() -> FastAPI:
-    return app
+def test_client(request: pytest.FixtureRequest, injector: MockInjector) -> TestClient:
+    if request is not None and hasattr(request, "param"):
+        injector.bind_settings(request.param or {})
 
-
-@pytest.fixture()
-def test_client() -> TestClient:
-    return TestClient(app)
+    app_under_test = create_app(injector.test_injector)
+    return TestClient(app_under_test)
