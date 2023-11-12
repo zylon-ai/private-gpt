@@ -120,7 +120,6 @@ class PrivateGptUi:
             "align-items: center;"
             "}"
             ".logo img { height: 25% }",
-            title="Saimon"
         ) as blocks:
             with gr.Row():
                 gr.HTML(f"<div class='logo'/><h1>Saimon</h1></div")
