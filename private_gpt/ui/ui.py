@@ -32,18 +32,8 @@ class Source(BaseModel):
     class Config:
         frozen = True
 
-
-class PrivateGptUi:
-    def __init__(self) -> None:
-        self._ingest_service = root_injector.get(IngestService)
-        self._chat_service = root_injector.get(ChatService)
-        self._chunks_service = root_injector.get(ChunksService)
-
-        # Cache the UI blocks
-        self._ui_block = None
-
     @staticmethod
-    def _curate_sources(sources: list[Chunk]) -> set[Source]:
+    def curate_sources(sources: list[Chunk]) -> set["Source"]:
         return {
             Source(
                 file=chunk.document.doc_metadata["file_name"]
@@ -59,6 +49,16 @@ class PrivateGptUi:
             for chunk in sources
         }
 
+
+class PrivateGptUi:
+    def __init__(self) -> None:
+        self._ingest_service = root_injector.get(IngestService)
+        self._chat_service = root_injector.get(ChatService)
+        self._chunks_service = root_injector.get(ChunksService)
+
+        # Cache the UI blocks
+        self._ui_block = None
+
     def _chat(self, message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
         def yield_deltas(completion_gen: CompletionGen) -> Iterable[str]:
             full_response: str = ""
@@ -72,7 +72,7 @@ class PrivateGptUi:
 
             if completion_gen.sources:
                 full_response += SOURCES_SEPARATOR
-                cur_sources = self._curate_sources(completion_gen.sources)
+                cur_sources = Source.curate_sources(completion_gen.sources)
                 sources_text = "\n\n\n".join(
                     f"{index}. {source.file} (page {source.page})"
                     for index, source in enumerate(cur_sources, start=1)
@@ -122,7 +122,7 @@ class PrivateGptUi:
                     text=message, limit=4, prev_next_chunks=0
                 )
 
-                sources = self._curate_sources(response)
+                sources = Source.curate_sources(response)
 
                 yield "\n\n\n".join(
                     f"{index}. **{source.file} "
