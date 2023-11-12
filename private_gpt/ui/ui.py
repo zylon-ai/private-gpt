@@ -34,20 +34,18 @@ class Source(BaseModel):
 
     @staticmethod
     def curate_sources(sources: list[Chunk]) -> set["Source"]:
-        return {
-            Source(
-                file=chunk.document.doc_metadata["file_name"]
-                if chunk.document.doc_metadata
-                and "file_name" in chunk.document.doc_metadata
-                else "-",
-                page=chunk.document.doc_metadata["page_label"]
-                if chunk.document.doc_metadata
-                and "page_label" in chunk.document.doc_metadata
-                else "-",
-                text=chunk.text,
-            )
-            for chunk in sources
-        }
+        curated_sources = set()
+
+        for chunk in sources:
+            doc_metadata = chunk.document.doc_metadata
+
+            file_name = doc_metadata.get("file_name", "-") if doc_metadata else "-"
+            page_label = doc_metadata.get("page_label", "-") if doc_metadata else "-"
+
+            source = Source(file=file_name, page=page_label, text=chunk.text)
+            curated_sources.add(source)
+
+        return curated_sources
 
 
 class PrivateGptUi:
