@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
@@ -8,8 +8,9 @@ from private_gpt.open_ai.openai_models import (
     OpenAIMessage,
 )
 from private_gpt.server.chat.chat_router import ChatBody, chat_completion
+from private_gpt.server.utils.auth import authenticated
 
-completions_router = APIRouter(prefix="/v1")
+completions_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
 
 class CompletionsBody(BaseModel):

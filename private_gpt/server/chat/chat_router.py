@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from llama_index.llms import ChatMessage, MessageRole
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
@@ -12,8 +12,9 @@ from private_gpt.open_ai.openai_models import (
     to_openai_sse_stream,
 )
 from private_gpt.server.chat.chat_service import ChatService
+from private_gpt.server.utils.auth import authenticated
 
-chat_router = APIRouter(prefix="/v1")
+chat_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
 
 class ChatBody(BaseModel):

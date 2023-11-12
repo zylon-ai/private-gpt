@@ -15,7 +15,8 @@ class CorsSettings(BaseModel):
 
     enabled: bool = Field(
         description="Flag indicating if CORS headers are set or not."
-        "If set to True, the CORS headers will be set to allow all origins, methods and headers."
+        "If set to True, the CORS headers will be set to allow all origins, methods and headers.",
+        default=False,
     )
     allow_credentials: bool = Field(
         description="Indicate that cookies should be supported for cross-origin requests",
@@ -41,6 +42,23 @@ class CorsSettings(BaseModel):
     )
 
 
+class AuthSettings(BaseModel):
+    """Authentication configuration.
+
+    The implementation of the authentication strategy must
+    """
+
+    enabled: bool = Field(
+        description="Flag indicating if authentication is enabled or not.",
+        default=False,
+    )
+    secret: str = Field(
+        description="The secret to be used for authentication. "
+        "It can be any non-blank string. For HTTP basic authentication, "
+        "this value should be the whole 'Authorization' header that is expected"
+    )
+
+
 class ServerSettings(BaseModel):
     env_name: str = Field(
         description="Name of the environment (prod, staging, local...)"
@@ -48,6 +66,10 @@ class ServerSettings(BaseModel):
     port: int = Field(description="Port of PrivateGPT FastAPI server, defaults to 8001")
     cors: CorsSettings = Field(
         description="CORS configuration", default=CorsSettings(enabled=False)
+    )
+    auth: AuthSettings = Field(
+        description="Authentication configuration",
+        default_factory=lambda: AuthSettings(enabled=False, secret="secret-key"),
     )
 
 
