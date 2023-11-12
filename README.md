@@ -136,7 +136,6 @@ you want to give a hand:
 - Better observability of the RAG pipeline
 
 ### Project Infrastructure
-- Create a “wipe” shortcut in `make` to remove all contents of local_data folder except .gitignore
 - Packaged version as a local desktop app (windows executable, mac app, linux app)
 - Dockerize the application for platforms outside linux (Docker Desktop for Mac and Windows)
 - Document how to deploy to AWS, GCP and Azure.
