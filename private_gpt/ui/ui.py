@@ -25,10 +25,6 @@ UI_TAB_TITLE = "My Private GPT"
 SOURCES_SEPARATOR = "\n\n Sources: \n"
 
 
-class Singleton:
-    pass
-
-
 class Source(BaseModel):
     file: str
     page: str
