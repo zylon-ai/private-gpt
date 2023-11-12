@@ -3,7 +3,7 @@ from llama_index import MockEmbedding
 from llama_index.embeddings.base import BaseEmbedding
 
 from private_gpt.paths import models_cache_path
-from private_gpt.settings.settings import settings
+from private_gpt.settings.settings import Settings
 
 
 @singleton
@@ -11,7 +11,7 @@ class EmbeddingComponent:
     embedding_model: BaseEmbedding
 
     @inject
-    def __init__(self) -> None:
+    def __init__(self, settings: Settings) -> None:
         match settings.llm.mode:
             case "local":
                 from llama_index.embeddings import HuggingFaceEmbedding
