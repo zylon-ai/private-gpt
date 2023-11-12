@@ -2,12 +2,9 @@ from fastapi.testclient import TestClient
 
 from private_gpt.open_ai.openai_models import OpenAICompletion, OpenAIMessage
 from private_gpt.server.chat.chat_router import ChatBody
-from tests.fixtures.mock_injector import MockInjector
 
 
-def test_chat_route_produces_a_stream(
-    test_client: TestClient, injector: MockInjector
-) -> None:
+def test_chat_route_produces_a_stream(test_client: TestClient) -> None:
     body = ChatBody(
         messages=[OpenAIMessage(content="test", role="user")],
         use_context=False,
