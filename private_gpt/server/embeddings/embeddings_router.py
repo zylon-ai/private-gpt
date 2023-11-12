@@ -1,5 +1,6 @@
 from typing import Literal
 
+from fastapi import APIRouter, Depends
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
@@ -7,8 +8,9 @@ from private_gpt.server.embeddings.embeddings_service import (
     Embedding,
     EmbeddingsService,
 )
+from private_gpt.server.utils.auth import authenticated
 
-embeddings_router = APIRouter(prefix="/v1")
+embeddings_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
 
 class EmbeddingsBody(BaseModel):

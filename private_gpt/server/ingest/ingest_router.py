@@ -1,11 +1,12 @@
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
 from private_gpt.server.ingest.ingest_service import IngestedDoc, IngestService
+from private_gpt.server.utils.auth import authenticated
 
-ingest_router = APIRouter(prefix="/v1")
+ingest_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
 
 class IngestResponse(BaseModel):
