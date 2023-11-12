@@ -133,14 +133,27 @@ class IngestService:
             document.excluded_embed_metadata_keys = ["doc_id"]
             # We don't want the LLM to receive these metadata in the context
             document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
-        # create vectorStore index
-        VectorStoreIndex.from_documents(
-            documents,
-            storage_context=self.storage_context,
-            service_context=self.ingest_service_context,
-            store_nodes_override=True,  # Force store nodes in index and document stores
-            show_progress=True,
-        )
+
+        try:
+            # Load the index from storage and insert new documents,
+            index = load_index_from_storage(
+                storage_context=self.storage_context,
+                service_context=self.ingest_service_context,
+                store_nodes_override=True,  # Force store nodes in index and document stores
+                show_progress=True,
+            )
+            for doc in documents:
+                index.insert(doc)
+        except ValueError:
+            # Or create a new one if there is none
+            VectorStoreIndex.from_documents(
+                documents,
+                storage_context=self.storage_context,
+                service_context=self.ingest_service_context,
+                store_nodes_override=True,  # Force store nodes in index and document stores
+                show_progress=True,
+            )
+
         # persist the index and nodes
         self.storage_context.persist(persist_dir=local_data_path)
         return [
