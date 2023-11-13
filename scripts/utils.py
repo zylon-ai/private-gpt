@@ -16,6 +16,7 @@ def wipe():
                 os.remove(file_path)
             elif os.path.isdir(file_path):
                 shutil.rmtree(file_path)
+            print(f" - Deleted {file_path}")
         except PermissionError:
             print(
                 f"PermissionError: Unable to remove {file_path}. It is in use by another process."
@@ -29,6 +30,6 @@ if __name__ == "__main__":
     }
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", help="select a mode to run", choices=["wipe"])
+    parser.add_argument("mode", help="select a mode to run", choices=list(commands.keys()))
     args = parser.parse_args()
     commands[args.mode.lower()]()
