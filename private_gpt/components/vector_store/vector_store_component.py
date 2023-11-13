@@ -62,7 +62,7 @@ class VectorStoreComponent:
             case "qdrant":
                 try:
                     from llama_index.vector_stores.qdrant import QdrantVectorStore
-                    from qdrant_client import QdrantClient
+                    from qdrant_client import QdrantClient  # type: ignore
                 except ImportError as e:
                     raise ImportError(
                         "'qdrant_client' is not installed."
