@@ -84,6 +84,10 @@ class LLMSettings(BaseModel):
     mode: Literal["local", "openai", "sagemaker", "mock"]
 
 
+class VectorstoreSettings(BaseModel):
+    database: Literal["chroma", "qdrant"]
+
+
 class LocalSettings(BaseModel):
     llm_hf_repo_id: str
     llm_hf_model_file: str
@@ -104,6 +108,53 @@ class UISettings(BaseModel):
     path: str
 
 
+class QdrantSettings(BaseModel):
+    location: str | None = Field(
+        None,
+        description=(
+            "If `:memory:` - use in-memory Qdrant instance.\n"
+            "If `str` - use it as a `url` parameter.\n"
+        ),
+    )
+    url: str | None = Field(
+        None,
+        description=(
+            "Either host or str of 'Optional[scheme], host, Optional[port], Optional[prefix]'."
+        ),
+    )
+    port: int | None = Field(6333, description="Port of the REST API interface.")
+    grpc_port: int | None = Field(6334, description="Port of the gRPC interface.")
+    prefer_grpc: bool | None = Field(
+        False,
+        description="If `true` - use gRPC interface whenever possible in custom methods.",
+    )
+    https: bool | None = Field(
+        None,
+        description="If `true` - use HTTPS(SSL) protocol.",
+    )
+    api_key: str | None = Field(
+        None,
+        description="API key for authentication in Qdrant Cloud.",
+    )
+    prefix: str | None = Field(
+        None,
+        description=(
+            "Prefix to add to the REST URL path."
+            "Example: `service/v1` will result in "
+            "'http://localhost:6333/service/v1/{qdrant-endpoint}' for REST API."
+        ),
+    )
+    timeout: float | None = Field(
+        None,
+        description="Timeout for REST and gRPC API requests.",
+    )
+    host: str | None = Field(
+        None,
+        description="Host name of Qdrant service. If url and host are None, set to 'localhost'.",
+    )
+    path: str | None = Field(None, description="Persistence path for QdrantLocal.")
+
+
 class Settings(BaseModel):
     server: ServerSettings
     data: DataSettings
@@ -112,6 +163,8 @@ class Settings(BaseModel):
     local: LocalSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
+    vectorstore: VectorstoreSettings
+    qdrant: QdrantSettings | None = None
 
 
 """

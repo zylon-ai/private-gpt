@@ -15,6 +15,7 @@ pypdf = "^3.16.2"
 llama-index = "0.8.67"
 chromadb = "^0.4.13"
 watchdog = "^3.0.0"
+qdrant-client = {version = "^1.6.4", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
@@ -41,6 +42,9 @@ sentence-transformers = "^2.2.2"
 # https://stackoverflow.com/questions/76327419/valueerror-libcublas-so-0-9-not-found-in-the-system-path
 torch = ">=2.0.0, !=2.0.1, !=2.1.0"
 transformers = "^4.34.0"
+
+[tool.poetry.extras]
+qdrant = ["qdrant-client"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
