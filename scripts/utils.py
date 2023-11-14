@@ -30,6 +30,8 @@ if __name__ == "__main__":
     }
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", help="select a mode to run", choices=list(commands.keys()))
+    parser.add_argument(
+        "mode", help="select a mode to run", choices=list(commands.keys())
+    )
     args = parser.parse_args()
     commands[args.mode.lower()]()

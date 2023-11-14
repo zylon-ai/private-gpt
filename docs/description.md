@@ -462,6 +462,11 @@ or using the completions / chat API.
 When running in a local setup, you can remove all ingested documents by simply
 deleting all contents of `local_data` folder (except .gitignore).
 
+To simplify this process, you can use the command:
+```bash
+make wipe
+```
+
 ## API
 
 As explained in the introduction, the API contains high level APIs (ingestion and chat/completions) and low level APIs
