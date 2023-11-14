@@ -1,0 +1,1024 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+      "title": "PrivateGPT",
+      "summary": "PrivateGPT is a production-ready AI project that allows you to ask questions to your documents using the power of Large Language Models (LLMs), even in scenarios without Internet connection. 100% private, no data leaves your execution environment at any point.",
+      "description": "",
+      "contact": {
+        "url": "https://github.com/imartinez/privateGPT"
+      },
+      "license": {
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+      },
+      "version": "0.1.0",
+      "x-logo": {
+        "url": "https://lh3.googleusercontent.com/drive-viewer/AK7aPaD_iNlMoTquOBsw4boh4tIYxyEuhz6EtEs8nzq3yNkNAK00xGjE1KUCmPJSk3TYOjcs6tReG6w_cLu1S7L_gPgT9z52iw=s2560"
+      }
+    },
+    "paths": {
+      "/v1/completions": {
+        "post": {
+          "tags": [
+            "Contextual Completions"
+          ],
+          "summary": "Completion",
+          "description": "We recommend most users use our Chat completions API.\n\nGiven a prompt, the model will return one predicted completion. If `use_context`\nis set to `true`, the model will use context coming from the ingested documents\nto create the response. The documents being used can be filtered using the\n`context_filter` and passing the document IDs to be used. Ingested documents IDs\ncan be found using `/ingest/list` endpoint. If you want all ingested documents to\nbe used, remove `context_filter` altogether.\n\nWhen using `'include_sources': true`, the API will return the source Chunks used\nto create the response, which come from the context provided.\n\nWhen using `'stream': true`, the API will return data chunks following [OpenAI's\nstreaming model](https://platform.openai.com/docs/api-reference/chat/streaming):\n```\n{\"id\":\"12345\",\"object\":\"completion.chunk\",\"created\":1694268190,\n\"model\":\"private-gpt\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello\"},\n\"finish_reason\":null}]}\n```",
+          "operationId": "prompt_completion_v1_completions_post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletionsBody"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/OpenAICompletion"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/v1/chat/completions": {
+        "post": {
+          "tags": [
+            "Contextual Completions"
+          ],
+          "summary": "Chat Completion",
+          "description": "Given a list of messages comprising a conversation, return a response.\n\nIf `use_context` is set to `true`, the model will use context coming\nfrom the ingested documents to create the response. The documents being used can\nbe filtered using the `context_filter` and passing the document IDs to be used.\nIngested documents IDs can be found using `/ingest/list` endpoint. If you want\nall ingested documents to be used, remove `context_filter` altogether.\n\nWhen using `'include_sources': true`, the API will return the source Chunks used\nto create the response, which come from the context provided.\n\nWhen using `'stream': true`, the API will return data chunks following [OpenAI's\nstreaming model](https://platform.openai.com/docs/api-reference/chat/streaming):\n```\n{\"id\":\"12345\",\"object\":\"completion.chunk\",\"created\":1694268190,\n\"model\":\"private-gpt\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello\"},\n\"finish_reason\":null}]}\n```",
+          "operationId": "chat_completion_v1_chat_completions_post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatBody"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/OpenAICompletion"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/v1/chunks": {
+        "post": {
+          "tags": [
+            "Context Chunks"
+          ],
+          "summary": "Chunks Retrieval",
+          "description": "Given a `text`, returns the most relevant chunks from the ingested documents.\n\nThe returned information can be used to generate prompts that can be\npassed to `/completions` or `/chat/completions` APIs. Note: it is usually a very\nfast API, because only the Embeddings model is involved, not the LLM. The\nreturned information contains the relevant chunk `text` together with the source\n`document` it is coming from. It also contains a score that can be used to\ncompare different results.\n\nThe max number of chunks to be returned is set using the `limit` param.\n\nPrevious and next chunks (pieces of text that appear right before or after in the\ndocument) can be fetched by using the `prev_next_chunks` field.\n\nThe documents being used can be filtered using the `context_filter` and passing\nthe document IDs to be used. Ingested documents IDs can be found using\n`/ingest/list` endpoint. If you want all ingested documents to be used,\nremove `context_filter` altogether.",
+          "operationId": "chunks_retrieval_v1_chunks_post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChunksBody"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ChunksResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/v1/ingest": {
+        "post": {
+          "tags": [
+            "Ingestion"
+          ],
+          "summary": "Ingest",
+          "description": "Ingests and processes a file, storing its chunks to be used as context.\n\nThe context obtained from files is later used in\n`/chat/completions`, `/completions`, and `/chunks` APIs.\n\nMost common document\nformats are supported, but you may be prompted to install an extra dependency to\nmanage a specific file type.\n\nA file can generate different Documents (for example a PDF generates one Document\nper page). All Documents IDs are returned in the response, together with the\nextracted Metadata (which is later used to improve context retrieval). Those IDs\ncan be used to filter the context used to create responses in\n`/chat/completions`, `/completions`, and `/chunks` APIs.",
+          "operationId": "ingest_v1_ingest_post",
+          "requestBody": {
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "$ref": "#/components/schemas/Body_ingest_v1_ingest_post"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/IngestResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/v1/ingest/list": {
+        "get": {
+          "tags": [
+            "Ingestion"
+          ],
+          "summary": "List Ingested",
+          "description": "Lists already ingested Documents including their Document ID and metadata.\n\nThose IDs can be used to filter the context used to create responses\nin `/chat/completions`, `/completions`, and `/chunks` APIs.",
+          "operationId": "list_ingested_v1_ingest_list_get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/IngestResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/v1/ingest/{doc_id}": {
+        "delete": {
+          "tags": [
+            "Ingestion"
+          ],
+          "summary": "Delete Ingested",
+          "description": "Delete the specified ingested Document.\n\nThe `doc_id` can be obtained from the `GET /ingest/list` endpoint.\nThe document will be effectively deleted from your storage context.",
+          "operationId": "delete_ingested_v1_ingest__doc_id__delete",
+          "parameters": [
+            {
+              "name": "doc_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "title": "Doc Id"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {}
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/v1/embeddings": {
+        "post": {
+          "tags": [
+            "Embeddings"
+          ],
+          "summary": "Embeddings Generation",
+          "description": "Get a vector representation of a given input.\n\nThat vector representation can be easily consumed\nby machine learning models and algorithms.",
+          "operationId": "embeddings_generation_v1_embeddings_post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmbeddingsBody"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EmbeddingsResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/health": {
+        "get": {
+          "tags": [
+            "Health"
+          ],
+          "summary": "Health",
+          "description": "Return ok if the system is up.",
+          "operationId": "health_health_get",
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HealthResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "Body_ingest_v1_ingest_post": {
+          "properties": {
+            "file": {
+              "type": "string",
+              "format": "binary",
+              "title": "File"
+            }
+          },
+          "type": "object",
+          "required": [
+            "file"
+          ],
+          "title": "Body_ingest_v1_ingest_post"
+        },
+        "ChatBody": {
+          "properties": {
+            "messages": {
+              "items": {
+                "$ref": "#/components/schemas/OpenAIMessage"
+              },
+              "type": "array",
+              "title": "Messages"
+            },
+            "use_context": {
+              "type": "boolean",
+              "title": "Use Context",
+              "default": false
+            },
+            "context_filter": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ContextFilter"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "include_sources": {
+              "type": "boolean",
+              "title": "Include Sources",
+              "default": true
+            },
+            "stream": {
+              "type": "boolean",
+              "title": "Stream",
+              "default": false
+            }
+          },
+          "type": "object",
+          "required": [
+            "messages"
+          ],
+          "title": "ChatBody",
+          "examples": [
+            {
+              "context_filter": {
+                "docs_ids": [
+                  "c202d5e6-7b69-4869-81cc-dd574ee8ee11"
+                ]
+              },
+              "include_sources": true,
+              "messages": [
+                {
+                  "content": "How do you fry an egg?",
+                  "role": "user"
+                }
+              ],
+              "stream": false,
+              "use_context": true
+            }
+          ]
+        },
+        "Chunk": {
+          "properties": {
+            "object": {
+              "type": "string",
+              "enum": [
+                "context.chunk"
+              ],
+              "title": "Object"
+            },
+            "score": {
+              "type": "number",
+              "title": "Score",
+              "examples": [
+                0.023
+              ]
+            },
+            "document": {
+              "$ref": "#/components/schemas/IngestedDoc"
+            },
+            "text": {
+              "type": "string",
+              "title": "Text",
+              "examples": [
+                "Outbound sales increased 20%, driven by new leads."
+              ]
+            },
+            "previous_texts": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Previous Texts",
+              "examples": [
+                [
+                  "SALES REPORT 2023",
+                  "Inbound didn't show major changes."
+                ]
+              ]
+            },
+            "next_texts": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Next Texts",
+              "examples": [
+                [
+                  "New leads came from Google Ads campaign.",
+                  "The campaign was run by the Marketing Department"
+                ]
+              ]
+            }
+          },
+          "type": "object",
+          "required": [
+            "object",
+            "score",
+            "document",
+            "text"
+          ],
+          "title": "Chunk"
+        },
+        "ChunksBody": {
+          "properties": {
+            "text": {
+              "type": "string",
+              "title": "Text",
+              "examples": [
+                "Q3 2023 sales"
+              ]
+            },
+            "context_filter": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ContextFilter"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "title": "Limit",
+              "default": 10
+            },
+            "prev_next_chunks": {
+              "type": "integer",
+              "title": "Prev Next Chunks",
+              "default": 0,
+              "examples": [
+                2
+              ]
+            }
+          },
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "title": "ChunksBody"
+        },
+        "ChunksResponse": {
+          "properties": {
+            "object": {
+              "type": "string",
+              "enum": [
+                "list"
+              ],
+              "title": "Object"
+            },
+            "model": {
+              "type": "string",
+              "enum": [
+                "private-gpt"
+              ],
+              "title": "Model"
+            },
+            "data": {
+              "items": {
+                "$ref": "#/components/schemas/Chunk"
+              },
+              "type": "array",
+              "title": "Data"
+            }
+          },
+          "type": "object",
+          "required": [
+            "object",
+            "model",
+            "data"
+          ],
+          "title": "ChunksResponse"
+        },
+        "CompletionsBody": {
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "title": "Prompt"
+            },
+            "use_context": {
+              "type": "boolean",
+              "title": "Use Context",
+              "default": false
+            },
+            "context_filter": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ContextFilter"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "include_sources": {
+              "type": "boolean",
+              "title": "Include Sources",
+              "default": true
+            },
+            "stream": {
+              "type": "boolean",
+              "title": "Stream",
+              "default": false
+            }
+          },
+          "type": "object",
+          "required": [
+            "prompt"
+          ],
+          "title": "CompletionsBody",
+          "examples": [
+            {
+              "include_sources": false,
+              "prompt": "How do you fry an egg?",
+              "stream": false,
+              "use_context": false
+            }
+          ]
+        },
+        "ContextFilter": {
+          "properties": {
+            "docs_ids": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Docs Ids",
+              "examples": [
+                [
+                  "c202d5e6-7b69-4869-81cc-dd574ee8ee11"
+                ]
+              ]
+            }
+          },
+          "type": "object",
+          "required": [
+            "docs_ids"
+          ],
+          "title": "ContextFilter"
+        },
+        "Embedding": {
+          "properties": {
+            "index": {
+              "type": "integer",
+              "title": "Index"
+            },
+            "object": {
+              "type": "string",
+              "enum": [
+                "embedding"
+              ],
+              "title": "Object"
+            },
+            "embedding": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array",
+              "title": "Embedding",
+              "examples": [
+                [
+                  0.0023064255,
+                  -0.009327292
+                ]
+              ]
+            }
+          },
+          "type": "object",
+          "required": [
+            "index",
+            "object",
+            "embedding"
+          ],
+          "title": "Embedding"
+        },
+        "EmbeddingsBody": {
+          "properties": {
+            "input": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ],
+              "title": "Input"
+            }
+          },
+          "type": "object",
+          "required": [
+            "input"
+          ],
+          "title": "EmbeddingsBody"
+        },
+        "EmbeddingsResponse": {
+          "properties": {
+            "object": {
+              "type": "string",
+              "enum": [
+                "list"
+              ],
+              "title": "Object"
+            },
+            "model": {
+              "type": "string",
+              "enum": [
+                "private-gpt"
+              ],
+              "title": "Model"
+            },
+            "data": {
+              "items": {
+                "$ref": "#/components/schemas/Embedding"
+              },
+              "type": "array",
+              "title": "Data"
+            }
+          },
+          "type": "object",
+          "required": [
+            "object",
+            "model",
+            "data"
+          ],
+          "title": "EmbeddingsResponse"
+        },
+        "HTTPValidationError": {
+          "properties": {
+            "detail": {
+              "items": {
+                "$ref": "#/components/schemas/ValidationError"
+              },
+              "type": "array",
+              "title": "Detail"
+            }
+          },
+          "type": "object",
+          "title": "HTTPValidationError"
+        },
+        "HealthResponse": {
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "ok"
+              ],
+              "title": "Status"
+            }
+          },
+          "type": "object",
+          "required": [
+            "status"
+          ],
+          "title": "HealthResponse"
+        },
+        "IngestResponse": {
+          "properties": {
+            "object": {
+              "type": "string",
+              "enum": [
+                "list"
+              ],
+              "title": "Object"
+            },
+            "model": {
+              "type": "string",
+              "enum": [
+                "private-gpt"
+              ],
+              "title": "Model"
+            },
+            "data": {
+              "items": {
+                "$ref": "#/components/schemas/IngestedDoc"
+              },
+              "type": "array",
+              "title": "Data"
+            }
+          },
+          "type": "object",
+          "required": [
+            "object",
+            "model",
+            "data"
+          ],
+          "title": "IngestResponse"
+        },
+        "IngestedDoc": {
+          "properties": {
+            "object": {
+              "type": "string",
+              "enum": [
+                "ingest.document"
+              ],
+              "title": "Object"
+            },
+            "doc_id": {
+              "type": "string",
+              "title": "Doc Id",
+              "examples": [
+                "c202d5e6-7b69-4869-81cc-dd574ee8ee11"
+              ]
+            },
+            "doc_metadata": {
+              "anyOf": [
+                {
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Doc Metadata",
+              "examples": [
+                {
+                  "file_name": "Sales Report Q3 2023.pdf",
+                  "page_label": "2"
+                }
+              ]
+            }
+          },
+          "type": "object",
+          "required": [
+            "object",
+            "doc_id",
+            "doc_metadata"
+          ],
+          "title": "IngestedDoc"
+        },
+        "OpenAIChoice": {
+          "properties": {
+            "finish_reason": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Finish Reason",
+              "examples": [
+                "stop"
+              ]
+            },
+            "delta": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/OpenAIDelta"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "message": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/OpenAIMessage"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sources": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/Chunk"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sources"
+            },
+            "index": {
+              "type": "integer",
+              "title": "Index",
+              "default": 0
+            }
+          },
+          "type": "object",
+          "required": [
+            "finish_reason"
+          ],
+          "title": "OpenAIChoice",
+          "description": "Response from AI.\n\nEither the delta or the message will be present, but never both.\nSources used will be returned in case context retrieval was enabled."
+        },
+        "OpenAICompletion": {
+          "properties": {
+            "id": {
+              "type": "string",
+              "title": "Id"
+            },
+            "object": {
+              "type": "string",
+              "enum": [
+                "completion",
+                "completion.chunk"
+              ],
+              "title": "Object",
+              "default": "completion"
+            },
+            "created": {
+              "type": "integer",
+              "title": "Created",
+              "examples": [
+                1623340000
+              ]
+            },
+            "model": {
+              "type": "string",
+              "enum": [
+                "private-gpt"
+              ],
+              "title": "Model"
+            },
+            "choices": {
+              "items": {
+                "$ref": "#/components/schemas/OpenAIChoice"
+              },
+              "type": "array",
+              "title": "Choices"
+            }
+          },
+          "type": "object",
+          "required": [
+            "id",
+            "created",
+            "model",
+            "choices"
+          ],
+          "title": "OpenAICompletion",
+          "description": "Clone of OpenAI Completion model.\n\nFor more information see: https://platform.openai.com/docs/api-reference/chat/object"
+        },
+        "OpenAIDelta": {
+          "properties": {
+            "content": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Content"
+            }
+          },
+          "type": "object",
+          "required": [
+            "content"
+          ],
+          "title": "OpenAIDelta",
+          "description": "A piece of completion that needs to be concatenated to get the full message."
+        },
+        "OpenAIMessage": {
+          "properties": {
+            "role": {
+              "type": "string",
+              "enum": [
+                "assistant",
+                "system",
+                "user"
+              ],
+              "title": "Role",
+              "default": "user"
+            },
+            "content": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Content"
+            }
+          },
+          "type": "object",
+          "required": [
+            "content"
+          ],
+          "title": "OpenAIMessage",
+          "description": "Inference result, with the source of the message.\n\nRole could be the assistant or system\n(providing a default response, not AI generated)."
+        },
+        "ValidationError": {
+          "properties": {
+            "loc": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "type": "array",
+              "title": "Location"
+            },
+            "msg": {
+              "type": "string",
+              "title": "Message"
+            },
+            "type": {
+              "type": "string",
+              "title": "Error Type"
+            }
+          },
+          "type": "object",
+          "required": [
+            "loc",
+            "msg",
+            "type"
+          ],
+          "title": "ValidationError"
+        }
+      }
+    },
+    "tags": [
+      {
+        "name": "Ingestion",
+        "description": "High-level APIs covering document ingestion -internally managing document parsing, splitting,metadata extraction, embedding generation and storage- and ingested documents CRUD.Each ingested document is identified by an ID that can be used to filter the contextused in *Contextual Completions* and *Context Chunks* APIs."
+      },
+      {
+        "name": "Contextual Completions",
+        "description": "High-level APIs covering contextual Chat and Completions. They follow OpenAI's format, extending it to allow using the context coming from ingested documents to create the response. Internallymanage context retrieval, prompt engineering and the response generation."
+      },
+      {
+        "name": "Context Chunks",
+        "description": "Low-level API that given a query return relevant chunks of text coming from the ingesteddocuments."
+      },
+      {
+        "name": "Embeddings",
+        "description": "Low-level API to obtain the vector representation of a given text, using an Embeddings model.Follows OpenAI's embeddings API format."
+      },
+      {
+        "name": "Health",
+        "description": "Simple health API to make sure the server is up and running."
+      }
+    ]
+  }
