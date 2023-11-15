@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  preview-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install Fern
+        run: npm install -g fern-api
+
+      - name: Generate Documentation Preview with Fern
+        id: generate_docs
+        env:
+          FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
+        run: |
+          output=$(fern generate --docs --preview)
+          echo "$output"
+          # Extract the URL
+          preview_url=$(echo "$output" | grep -oP '(?<=Published docs to )https://[^\s]*')
+          # Set the output for the step
+          echo "::set-output name=preview_url::$preview_url"
+      - name: Comment PR with URL using github-actions bot
+        uses: actions/github-script@v4
+        if: ${{ steps.generate_docs.outputs.preview_url }}
+        with:
+          script: |
+            const preview_url = '${{ steps.generate_docs.outputs.preview_url }}';
+            const issue_number = context.issue.number;
+            github.issues.createComment({
+              ...context.repo,
+              issue_number: issue_number,
+              body: `Published docs preview URL: ${preview_url}`
+            })
