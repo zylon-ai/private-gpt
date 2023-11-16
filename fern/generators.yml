@@ -1,11 +1,8 @@
-generators:
-  groups:
-    public:
+groups:
+  public:
+    generators:
       - name: fernapi/fern-python-sdk
         version: 0.6.2
         output:
-          location: pypi
-          package-name: privategpt
-          token: ${PYPI_TOKEN}
-        github:
-          repository: imartinez/privateGPT-python
+          location: local-file-system
+          path: ../../pgpt-sdk/python
