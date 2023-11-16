@@ -1,0 +1,37 @@
+## Ingesting & Managing Documents
+
+The ingestion of documents can be done in different ways:
+
+* Using the `/ingest` API
+* Using the Gradio UI
+* Using the Bulk Local Ingestion functionality (check next section)
+
+### Bulk Local Ingestion
+
+When you are running PrivateGPT in a fully local setup, you can ingest a complete folder for convenience (containing
+pdf, text files, etc.)
+and optionally watch changes on it with the command:
+
+```bash
+make ingest /path/to/folder -- --watch
+```
+
+To log the processed and failed files to an additional file, use:
+
+```bash
+make ingest /path/to/folder -- --watch --log-file /path/to/log/file.log
+```
+
+After ingestion is complete, you should be able to chat with your documents
+by navigating to http://localhost:8001 and using the option `Query documents`,
+or using the completions / chat API.
+
+### Reset Local documents database
+
+When running in a local setup, you can remove all ingested documents by simply
+deleting all contents of `local_data` folder (except .gitignore).
+
+To simplify this process, you can use the command:
+```bash
+make wipe
+```
