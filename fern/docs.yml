@@ -1,0 +1,48 @@
+instances:
+  - url: privategpt.docs.buildwithfern.com
+    custom-domain: docs.privategpt.dev
+
+title: PrivateGPT | Docs
+
+navigation:
+  - section: Getting started
+    contents: 
+      - page: Welcome 
+        path: ./docs/pages/welcome.mdx
+      - page: Quickstart
+        path: ./docs/pages/quickstart.mdx
+      - page: Installation
+        path: ./docs/pages/installation.mdx
+      - page: LLMs
+        path: ./docs/pages/llms.mdx
+      - page: Vector Stores
+        path: ./docs/pages/vectordb.mdx
+  - section: Usage
+    contents:
+      - page: UI manual
+        path: ./docs/pages/ui.mdx
+      - page: Ingestion & Doc mgmt
+        path: ./docs/pages/ingestion.mdx
+      - page: SDKs
+        path: ./docs/pages/sdks.mdx
+  - api: API Reference
+
+navbar-links: 
+  - type: secondary
+    text: Contact us
+    url: "mailto:hello@zylon.ai"
+  - type: primary
+    text: Join the Discord
+    url: https://discord.com/invite/bK6mRVpErU
+
+colors:
+  accentPrimary:
+    dark: "#C6BBFF"
+    light: "#756E98"
+
+logo:
+  dark: ./docs/assets/logo_light.png
+  light: ./docs/assets/logo_dark.png
+  height: 50
+
+favicon: ./docs/assets/favicon.ico

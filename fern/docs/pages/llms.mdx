@@ -1,0 +1,83 @@
+## Running the Server
+
+PrivateGPT supports running with different LLMs & setups.
+
+### Local models
+
+Both the LLM and the Embeddings model will run locally.
+
+Make sure you have followed the *Local LLM requirements* section before moving on.
+
+This command will start PrivateGPT using the `settings.yaml` (default profile) together with the `settings-local.yaml`
+configuration files. By default, it will enable both the API and the Gradio UI. Run:
+
+```bash
+PGPT_PROFILES=local make run
+```
+
+or
+
+```bash
+PGPT_PROFILES=local poetry run python -m private_gpt
+```
+
+When the server is started it will print a log *Application startup complete*.
+Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API
+using Swagger UI.
+
+### Using OpenAI
+
+If you cannot run a local model (because you don't have a GPU, for example) or for testing purposes, you may
+decide to run PrivateGPT using OpenAI as the LLM and Embeddings model.
+
+In order to do so, create a profile `settings-openai.yaml` with the following contents:
+
+```yaml
+llm:
+  mode: openai
+
+openai:
+  api_key: <your_openai_api_key>  # You could skip this configuration and use the OPENAI_API_KEY env var instead
+```
+
+And run PrivateGPT loading that profile you just created:
+
+`PGPT_PROFILES=openai make run`
+
+or
+
+`PGPT_PROFILES=openai poetry run python -m private_gpt`
+
+When the server is started it will print a log *Application startup complete*.
+Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
+You'll notice the speed and quality of response is higher, given you are using OpenAI's servers for the heavy
+computations.
+
+### Using AWS Sagemaker
+
+For a fully private & performant setup, you can choose to have both your LLM and Embeddings model deployed using Sagemaker.
+
+Note: how to deploy models on Sagemaker is out of the scope of this documentation.
+
+In order to do so, create a profile `settings-sagemaker.yaml` with the following contents (remember to
+update the values of the llm_endpoint_name and embedding_endpoint_name to yours):
+
+```yaml
+llm:
+  mode: sagemaker
+
+sagemaker:
+  llm_endpoint_name: huggingface-pytorch-tgi-inference-2023-09-25-19-53-32-140
+  embedding_endpoint_name: huggingface-pytorch-inference-2023-11-03-07-41-36-479
+```
+
+And run PrivateGPT loading that profile you just created:
+
+`PGPT_PROFILES=sagemaker make run`
+
+or
+
+`PGPT_PROFILES=sagemaker poetry run python -m private_gpt`
+
+When the server is started it will print a log *Application startup complete*.
+Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
