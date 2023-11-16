@@ -259,7 +259,7 @@ poetry install --extras qdrant
 
 By default Qdrant tries to connect to an instance at `http://localhost:3000`.
 
-Qdrant settings can be configured by setting values to the `qdrant` propery in the `settings.yaml` file.
+Qdrant settings can be configured by setting values to the `qdrant` property in the `settings.yaml` file.
 
 The available configuration options are:
 | Field        | Description |
@@ -275,6 +275,7 @@ The available configuration options are:
 | timeout      | Timeout for REST and gRPC API requests.<br>Default: 5.0 seconds for REST and unlimited for gRPC |
 | host         | Host name of Qdrant service. If url and host are not set, defaults to 'localhost'.|
 | path         | Persistence path for QdrantLocal. Eg. `local_data/private_gpt/qdrant`|
+| force_disable_check_same_thread         | Force disable check_same_thread for QdrantLocal sqlite connection.|
 
 #### Known issues and Troubleshooting
 
