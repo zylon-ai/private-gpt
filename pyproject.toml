@@ -15,7 +15,7 @@ pypdf = "^3.16.2"
 llama-index = "0.8.67"
 chromadb = "^0.4.13"
 watchdog = "^3.0.0"
-qdrant-client = {version = "^1.6.4", optional = true}
+qdrant-client = {version = "^1.6.9", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
