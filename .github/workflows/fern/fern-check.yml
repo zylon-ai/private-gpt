@@ -1,4 +1,4 @@
-name: ci
+name: fern check
 
 on:
   pull_request:

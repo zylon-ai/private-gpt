@@ -1,4 +1,4 @@
-name: ci
+name: deploy preview docs
 
 on:
   pull_request:
