@@ -50,3 +50,6 @@ api-docs:
 
 ingest:
 	@poetry run python scripts/ingest_folder.py $(call args)
+
+wipe:
+	poetry run python scripts/utils.py wipe
