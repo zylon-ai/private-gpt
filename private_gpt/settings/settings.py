@@ -153,6 +153,13 @@ class QdrantSettings(BaseModel):
         description="Host name of Qdrant service. If url and host are None, set to 'localhost'.",
     )
     path: str | None = Field(None, description="Persistence path for QdrantLocal.")
+    force_disable_check_same_thread: bool | None = Field(
+        True,
+        description=(
+            "For QdrantLocal, force disable check_same_thread. Default: `True`"
+            "Only use this if you can guarantee that you can resolve the thread safety outside QdrantClient."
+        ),
+    )
 
 
 class Settings(BaseModel):
