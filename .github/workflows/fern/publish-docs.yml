@@ -3,7 +3,9 @@ name: publish docs
 on: 
   push: 
     branches: 
-      - main 
+      - main
+    paths:
+      - "fern/**"
 
 jobs:
   publish-docs:
