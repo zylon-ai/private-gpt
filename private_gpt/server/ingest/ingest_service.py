@@ -112,13 +112,17 @@ class IngestService:
             else:
                 # llama-index mainly supports reading from files, so
                 # we have to create a tmp file to read for it to work
-                with tempfile.NamedTemporaryFile() as tmp:
-                    path_to_tmp = Path(tmp.name)
-                    if isinstance(file_data, bytes):
-                        path_to_tmp.write_bytes(file_data)
-                    else:
-                        path_to_tmp.write_text(str(file_data))
-                    documents = reader.load_data(path_to_tmp)
+                # delete=False to avoid a Windows 11 permission error.
+                with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                    try:
+                        path_to_tmp = Path(tmp.name)
+                        if isinstance(file_data, bytes):
+                            path_to_tmp.write_bytes(file_data)
+                        else:
+                            path_to_tmp.write_text(str(file_data))
+                        documents = reader.load_data(path_to_tmp)
+                    finally:
+                        path_to_tmp.unlink()
         logger.info(
             "Transformed file=%s into count=%s documents", file_name, len(documents)
         )
