@@ -1,10 +1,82 @@
+# Main Fern configuration file
 instances:
   - url: privategpt.docs.buildwithfern.com
     custom-domain: docs.privategpt.dev
 
 title: PrivateGPT | Docs
 
+# The tabs definition, in the top left corner
+tabs:
+  overview:
+    display-name: Overview
+    icon: "fa-solid fa-home"
+  installation:
+    display-name: Installation
+    icon: "fa-solid fa-download"
+  manual:
+    display-name: Manual
+    icon: "fa-solid fa-book"
+  recipes:
+    display-name: Recipes
+    icon: "fa-solid fa-flask"
+  api-reference:
+    display-name: API Reference
+    icon: "fa-solid fa-file-contract"
+
+# Definition of tabs contents, will be displayed on the left side of the page, below all tabs
 navigation:
+  # The default tab
+  - tab: overview
+    layout:
+      - section: Welcome
+        contents:
+          - page: Welcome
+            path: ./docs/pages/overview/welcome.mdx
+  # How to install privateGPT, with FAQ and troubleshooting
+  - tab: installation
+    layout:
+      - section: Getting started
+        contents:
+          - page: Installation
+            path: ./docs/pages/installation.mdx
+  # Manual of privateGPT: how to use it and configure it
+  - tab: manual
+    layout:
+      - section: Ingestion
+        contents:
+          - page: Ingestion
+            path: ./docs/pages/manual/ingestion.mdx
+      - section: Document management
+        contents:
+          - page: Vector Stores
+            path: ./docs/pages/manual/vectordb.mdx
+      - section: Large Language Models
+        contents:
+          - page: Large Language Model (LLM)
+            path: ./docs/pages/manual/llms.mdx
+      - section: User interface
+        contents:
+          - page: User interface (Gradio) Manual
+            path: ./docs/pages/manual/ui.mdx
+  # Small code snippet or example of usage to help users
+  - tab: recipes
+    layout:
+      - section: Choice of LLM
+        contents:
+          # TODO: add recipes
+          - page: List of LLMs
+            path: ./docs/pages/recipes/list-llm.mdx
+  # More advanced usage of privateGPT, by API
+  - tab: api-reference
+    layout:
+      - section: API Reference
+        contents:
+          - page : API Reference
+            path: ./docs/pages/api-reference/api-reference.mdx
+          - page: SDKs
+            path: ./docs/pages/api-reference/sdks.mdx
+      - api: API Reference
+
   - section: Getting started
     contents: 
       - page: Welcome 
@@ -23,11 +95,14 @@ navigation:
         path: ./docs/pages/ui.mdx
       - page: Ingestion & Doc mgmt
         path: ./docs/pages/ingestion.mdx
-      - page: SDKs
-        path: ./docs/pages/sdks.mdx
   - api: API Reference
 
-navbar-links: 
+# Definition of the navbar, will be displayed in the top right corner.
+# `type:primary` is always displayed at the most right side of the navbar
+navbar-links:
+  - type: secondary
+    text: Github
+    url: "https://github.com/imartinez/privateGPT"
   - type: secondary
     text: Contact us
     url: "mailto:hello@zylon.ai"
