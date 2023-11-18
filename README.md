@@ -11,8 +11,7 @@
 > 
 > Join the community: [Twitter](https://twitter.com/PrivateGPT_AI) & [Discord](https://discord.gg/bK6mRVpErU)
 
-
-<img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaBasLxbp49Hrwnmi_Ctii1oIM18nFJrBO0ERSE3wpkS-syjiQBE32_tUSdqnjn6etUDjUSkdJeFa8acqRb0lZbkZ6CyAw=s1600">
+![Gradio UI](/fern/docs/assets/ui.png?raw=true)
 
 PrivateGPT is a production-ready AI project that allows you to ask questions about your documents using the power
 of Large Language Models (LLMs), even in scenarios without an Internet connection. 100% private, no data leaves your
