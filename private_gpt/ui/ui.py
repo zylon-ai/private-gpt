@@ -155,9 +155,12 @@ class PrivateGptUi:
             files.add(file_name)
         return [[row] for row in files]
 
-    def _upload_file(self, file: str) -> None:
-        path = Path(file)
-        self._ingest_service.ingest(file_name=path.name, file_data=path)
+    def _upload_file(self, files: list[str]) -> None:
+        logger.debug("Loading count=%s files", len(files))
+        for file in files:
+            logger.info("Loading file=%s", file)
+            path = Path(file)
+            self._ingest_service.ingest(file_name=path.name, file_data=path)
 
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
@@ -186,9 +189,9 @@ class PrivateGptUi:
                         value="Query Docs",
                     )
                     upload_button = gr.components.UploadButton(
-                        "Upload a File",
+                        "Upload File(s)",
                         type="filepath",
-                        file_count="single",
+                        file_count="multiple",
                         size="sm",
                     )
                     ingested_dataset = gr.List(
