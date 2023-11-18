@@ -35,6 +35,15 @@
             },
             "required": true
           },
+          "x-fern-streaming": {
+            "stream-condition": "$request.stream",
+            "response": {
+              "$ref": "#/components/schemas/OpenAICompletion"
+            },
+            "response-stream": {
+              "$ref": "#/components/schemas/OpenAICompletion"
+            }
+          },
           "responses": {
             "200": {
               "description": "Successful Response",
@@ -76,6 +85,15 @@
               }
             },
             "required": true
+          },
+          "x-fern-streaming": {
+            "stream-condition": "$request.stream",
+            "response": {
+              "$ref": "#/components/schemas/OpenAICompletion"
+            },
+            "response-stream": {
+              "$ref": "#/components/schemas/OpenAICompletion"
+            }
           },
           "responses": {
             "200": {
