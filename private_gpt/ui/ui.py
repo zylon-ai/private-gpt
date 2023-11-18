@@ -3,7 +3,7 @@ import itertools
 import logging
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any
 
 import gradio as gr  # type: ignore
 from fastapi import FastAPI
@@ -155,8 +155,8 @@ class PrivateGptUi:
             files.add(file_name)
         return [[row] for row in files]
 
-    def _upload_file(self, file: TextIO) -> None:
-        path = Path(file.name)
+    def _upload_file(self, file: str) -> None:
+        path = Path(file)
         self._ingest_service.ingest(file_name=path.name, file_data=path)
 
     def _build_ui_blocks(self) -> gr.Blocks:
@@ -187,7 +187,7 @@ class PrivateGptUi:
                     )
                     upload_button = gr.components.UploadButton(
                         "Upload a File",
-                        type="file",
+                        type="filepath",
                         file_count="single",
                         size="sm",
                     )
