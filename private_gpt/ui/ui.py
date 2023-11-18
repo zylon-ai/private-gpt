@@ -12,6 +12,7 @@ from injector import inject, singleton
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 from pydantic import BaseModel
 
+from private_gpt.constants import PROJECT_ROOT_PATH
 from private_gpt.di import global_injector
 from private_gpt.server.chat.chat_service import ChatService, CompletionGen
 from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
@@ -21,7 +22,12 @@ from private_gpt.ui.images import logo_svg
 
 logger = logging.getLogger(__name__)
 
+THIS_DIRECTORY_RELATIVE = Path(__file__).parent.relative_to(PROJECT_ROOT_PATH)
+# Should be "private_gpt/ui/avatar-bot.ico"
+AVATAR_BOT = THIS_DIRECTORY_RELATIVE / "avatar-bot.ico"
+
 UI_TAB_TITLE = "My Private GPT"
+
 SOURCES_SEPARATOR = "\n\n Sources: \n"
 
 
@@ -211,9 +217,7 @@ class PrivateGptUi:
                             render=False,
                             avatar_images=(
                                 None,
-                                "https://lh3.googleusercontent.com/drive-viewer/AK7aPa"
-                                "AicXck0k68nsscyfKrb18o9ak3BSaWM_Qzm338cKoQlw72Bp0UKN84"
-                                "IFZjXjZApY01mtnUXDeL4qzwhkALoe_53AhwCg=s2560",
+                                AVATAR_BOT,
                             ),
                         ),
                         additional_inputs=[mode, upload_button],
