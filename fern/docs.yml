@@ -38,7 +38,7 @@ navigation:
       - section: Getting started
         contents:
           - page: Installation
-            path: ./docs/pages/installation.mdx
+            path: ./docs/pages/installation/installation.mdx
   # Manual of privateGPT: how to use it and configure it
   - tab: manual
     layout:
@@ -54,7 +54,7 @@ navigation:
         contents:
           - page: Large Language Model (LLM)
             path: ./docs/pages/manual/llms.mdx
-      - section: User interface
+      - section: User Interface
         contents:
           - page: User interface (Gradio) Manual
             path: ./docs/pages/manual/ui.mdx
@@ -76,26 +76,6 @@ navigation:
           - page: SDKs
             path: ./docs/pages/api-reference/sdks.mdx
       - api: API Reference
-
-  - section: Getting started
-    contents: 
-      - page: Welcome 
-        path: ./docs/pages/welcome.mdx
-      - page: Quickstart
-        path: ./docs/pages/quickstart.mdx
-      - page: Installation
-        path: ./docs/pages/installation.mdx
-      - page: LLMs
-        path: ./docs/pages/llms.mdx
-      - page: Vector Stores
-        path: ./docs/pages/vectordb.mdx
-  - section: Usage
-    contents:
-      - page: UI manual
-        path: ./docs/pages/ui.mdx
-      - page: Ingestion & Doc mgmt
-        path: ./docs/pages/ingestion.mdx
-  - api: API Reference
 
 # Definition of the navbar, will be displayed in the top right corner.
 # `type:primary` is always displayed at the most right side of the navbar
