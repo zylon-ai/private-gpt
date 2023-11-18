@@ -3,7 +3,7 @@ import itertools
 import logging
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any
 
 import gradio as gr  # type: ignore
 from fastapi import FastAPI
@@ -155,9 +155,12 @@ class PrivateGptUi:
             files.add(file_name)
         return [[row] for row in files]
 
-    def _upload_file(self, file: TextIO) -> None:
-        path = Path(file.name)
-        self._ingest_service.ingest(file_name=path.name, file_data=path)
+    def _upload_file(self, files: list[str]) -> None:
+        logger.debug("Loading count=%s files", len(files))
+        for file in files:
+            logger.info("Loading file=%s", file)
+            path = Path(file)
+            self._ingest_service.ingest(file_name=path.name, file_data=path)
 
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
@@ -186,9 +189,9 @@ class PrivateGptUi:
                         value="Query Docs",
                     )
                     upload_button = gr.components.UploadButton(
-                        "Upload a File",
-                        type="file",
-                        file_count="single",
+                        "Upload File(s)",
+                        type="filepath",
+                        file_count="multiple",
                         size="sm",
                     )
                     ingested_dataset = gr.List(

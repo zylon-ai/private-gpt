@@ -1,10 +1,10 @@
 # 🔒 PrivateGPT 📑
 
-![Tests](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml/badge.svg)
-![Website](https://img.shields.io/website?up_message=check%20it&down_message=down&url=https%3A%2F%2Fdocs.privategpt.dev%2F&label=Documentation)
+[![Tests](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml/badge.svg)](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml?query=branch%3Amain)
+[![Website](https://img.shields.io/website?up_message=check%20it&down_message=down&url=https%3A%2F%2Fdocs.privategpt.dev%2F&label=Documentation)](https://docs.privategpt.dev/)
 
-![Discord](https://img.shields.io/discord/1164200432894234644?logo=discord&label=PrivateGPT)
-![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/PrivateGPT_AI)
+[![Discord](https://img.shields.io/discord/1164200432894234644?logo=discord&label=PrivateGPT)](https://discord.gg/bK6mRVpErU)
+[![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/PrivateGPT_AI)](https://twitter.com/PrivateGPT_AI)
 
 
 > Install & usage docs: https://docs.privategpt.dev/
