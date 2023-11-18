@@ -1,7 +1,7 @@
 ## Local Installation steps
 
-The steps in `Installation and Settings` section are better explained and cover more
-setup scenarios. But if you are looking for a quick setup guide, here it is:
+The steps in [Installation](/installation) section are better explained and cover more
+setup scenarios (MacOS, Windows, Linux). But if you are looking for a quick setup guide, here it is:
 
 ```bash
 # Clone the repo
@@ -23,7 +23,7 @@ to know how to enable GPU on other platforms
 CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
 
 # Run the local server  
-PGPT_PROFILES=local make run
+make run
 
 # Note: on Mac with Metal you should see a ggml_metal_add_buffer log, stating GPU is 
 being used
@@ -31,6 +31,22 @@ being used
 # Navigate to the UI and try it out! 
 http://localhost:8001/
 ```
+
+You like one-liners, have python3.11 installed, and you are running a UNIX (MacOS & Linux) system?
+You can run it on **CPU** in few lines:
+```bash
+git clone https://github.com/imartinez/privateGPT && cd privateGPT && \
+python3.11 -m venv .venv && source .venv/bin/activate && \
+pip install --upgrade pip poetry && poetry install --with ui,local && ./scripts/setup
+
+# Launch the privateGPT API server **and** the gradio UI
+python3.11 -m private_gpt
+
+# In another terminal, create a new browser window on your private GPT!
+open http:////127.0.0.1:8001/
+```
+
+**You want to run it on GPU(s)?** Please check the more detailed [installation guide](/installation).
 
 ## API
 
