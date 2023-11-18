@@ -32,6 +32,8 @@ navigation:
         contents:
           - page: Welcome
             path: ./docs/pages/overview/welcome.mdx
+          - page: Quickstart
+            path: ./docs/pages/overview/quickstart.mdx
   # How to install privateGPT, with FAQ and troubleshooting
   - tab: installation
     layout:
