@@ -1,5 +1,12 @@
 # 🔒 PrivateGPT 📑
 
+![Tests](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml/badge.svg)
+![Website](https://img.shields.io/website?up_message=check%20it&down_message=down&url=https%3A%2F%2Fdocs.privategpt.dev%2F&label=Documentation)
+
+![Discord](https://img.shields.io/discord/1164200432894234644?logo=discord&label=PrivateGPT)
+![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/PrivateGPT_AI)
+
+
 > Install & usage docs: https://docs.privategpt.dev/
 > 
 > Join the community: [Twitter](https://twitter.com/PrivateGPT_AI) & [Discord](https://discord.gg/bK6mRVpErU)
