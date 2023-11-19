@@ -1,0 +1,28 @@
+## List of working LLM
+
+**Do you have any working combination of LLM and embeddings?**
+Please open a PR to add it to the list, and come on our Discord to tell us about it!
+
+## Example of configuration
+
+You might want to change the prompt depending on the language and model you are using.
+
+### English, with instructions
+
+`settings-en.yaml`:
+```yml
+local:
+  llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.1-GGUF
+  llm_hf_model_file: mistral-7b-instruct-v0.1.Q4_K_M.gguf
+  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+```
+
+### French, with instructions
+
+`settings-fr.yaml`:
+```yml
+local:
+  llm_hf_repo_id: TheBloke/Vigogne-2-7B-Instruct-GGUF
+  llm_hf_model_file: vigogne-2-7b-instruct.Q4_K_M.gguf
+  embedding_hf_model_name: dangvantuan/sentence-camembert-base
+```

@@ -9,9 +9,8 @@
   cd privateGPT
 ```
 
-* Install Python 3.11. Ideally through a python version manager like `pyenv`.
-  Python 3.12
-  should work too. Earlier python versions are not supported.
+* Install Python `3.11` (*if you do not have it already*). Ideally through a python version manager like `pyenv`.
+  Python 3.12 should work too. Earlier python versions are not supported.
     * osx/linux: [pyenv](https://github.com/pyenv/pyenv)
     * windows: [pyenv-win](https://github.com/pyenv-win/pyenv-win)
 
@@ -38,52 +37,16 @@ poetry install --with ui
 
 Verify everything is working by running `make run` (or `poetry run python -m private_gpt`) and navigate to
 http://localhost:8001. You should see a [Gradio UI](https://gradio.app/) **configured with a mock LLM** that will
-echo back the input. Later we'll see how to configure a real LLM.
+echo back the input. Below we'll see how to configure a real LLM.
 
 ### Settings
 
 <Callout intent="info">
-The default settings of PrivateGPT work out-of-the-box for a 100% local setup. Skip this section if you just want to test PrivateGPT locally, and come back later to learn about more configuration options.
+The default settings of PrivateGPT should work out-of-the-box for a 100% local setup. **However**, as is, it runs exclusively on your CPU.
+Skip this section if you just want to test PrivateGPT locally, and come back later to learn about more configuration options (and have better performances).
 </Callout>
 
 <br />
-
-PrivateGPT is configured through *profiles* that are defined using yaml files, and selected through env variables. The full list of properties configurable can be found in `settings.yaml`
-
-#### env var `PGPT_SETTINGS_FOLDER`
-
-The location of the settings folder. Defaults to the root of the project.
-Should contain the default `settings.yaml` and any other `settings-{profile}.yaml`.
-
-#### env var `PGPT_PROFILES`
-
-By default, the profile definition in `settings.yaml` is loaded.
-Using this env var you can load additional profiles; format is a comma separated list of profile names.
-This will merge `settings-{profile}.yaml` on top of the base settings file.
-
-For example:
-`PGPT_PROFILES=local,cuda` will load `settings-local.yaml`
-and `settings-cuda.yaml`, their contents will be merged with
-later profiles properties overriding values of earlier ones like `settings.yaml`.
-
-During testing, the `test` profile will be active along with the default, therefore `settings-test.yaml`
-file is required.
-
-#### Environment variables expansion
-
-Configuration files can contain environment variables,
-they will be expanded at runtime.
-
-Expansion must follow the pattern `${VARIABLE_NAME:default_value}`.
-
-For example, the following configuration will use the value of the `PORT`
-environment variable or `8001` if it's not set.
-Missing variables with no default will produce an error.
-
-```yaml
-server:
-  port: ${PORT:8001}
-```
 
 ### Local LLM requirements
 
@@ -122,16 +85,32 @@ is used.
 
 #### Customizing low level parameters
 
-Currently not all the parameters of llama-cpp and llama-cpp-python are available at PrivateGPT's `settings.yaml` file. In case you need to customize parameters such as the number of layers loaded into the GPU, you might change these at the `llm_component.py` file under the `private_gpt/components/llm/llm_component.py`. If you are getting an out of memory error, you might also try a smaller model or stick to the proposed recommended models, instead of custom tuning the parameters.
+Currently, not all the parameters of `llama.cpp` and `llama-cpp-python` are available at PrivateGPT's `settings.yaml` file.
+In case you need to customize parameters such as the number of layers loaded into the GPU, you might change
+these at the `llm_component.py` file under the `private_gpt/components/llm/llm_component.py`.
+
+If you are getting an out of memory error, you might also try a smaller model or stick to the proposed
+recommended models, instead of custom tuning the parameters.
 
 #### OSX GPU support
 
-You will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with
-metal support. To do that run:
+You will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with metal support.
 
+To do that, you need to install `llama.cpp` python's binding `llama-cpp-python` through pip, with the compilation flag
+that activate `METAL`: you have to pass `-DLLAMA_METAL=on` to the CMake command tha `pip` runs for you (see below).
+
+In other words, one should simply run:
 ```bash
 CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
 ```
+
+The above command will force the re-installation of `llama-cpp-python` with `METAL` support by compiling
+`llama.cpp` locally with your `METAL` libraries (shipped by default with your macOS).
+
+More information is available in the documentation of the libraries themselves:
+* [llama-cpp-python](https://github.com/abetlen/llama-cpp-python#installation-with-hardware-acceleration)
+* [llama-cpp-python's documentation](https://llama-cpp-python.readthedocs.io/en/latest/#installation-with-hardware-acceleration)
+* [llama.cpp](https://github.com/ggerganov/llama.cpp#build)
 
 #### Windows NVIDIA GPU support
 
@@ -157,7 +136,7 @@ $env:CMAKE_ARGS='-DLLAMA_CUBLAS=on'; poetry run pip install --force-reinstall --
 If your installation was correct, you should see a message similar to the following next
 time you start the server `BLAS = 1`.
 
-```
+```console
 llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, context: 762.87 MB)
 AVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | NEON = 0 | ARM_FMA = 0 | F16C = 1 | FP16_VA = 0 | WASM_SIMD = 0 | BLAS = 1 | SSE3 = 1 | SSSE3 = 0 | VSX = 0 |
 ```
@@ -194,7 +173,7 @@ llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, co
 AVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | NEON = 0 | ARM_FMA = 0 | F16C = 1 | FP16_VA = 0 | WASM_SIMD = 0 | BLAS = 1 | SSE3 = 1 | SSSE3 = 0 | VSX = 0 |
 ```
 
-#### Known issues and Troubleshooting
+### Known issues and Troubleshooting
 
 Execution of LLMs locally still has a lot of sharp edges, specially when running on non Linux platforms.
 You might encounter several issues:
@@ -205,6 +184,11 @@ You might encounter several issues:
 * Building errors: Some of PrivateGPT dependencies need to build native code, and they might fail on some platforms.
   Most likely you are missing some dev tools in your machine (updated C++ compiler, CUDA is not on PATH, etc.).
   If you encounter any of these issues, please open an issue and we'll try to help.
+
+One of the first reflex to adopt is: get more information.
+If, during your installation, something does not go as planned, retry in *verbose* mode, and see what goes wrong.
+
+For example, when installing packages with `pip install`, you can add the option `-vvv` to show the details of the installation.
 
 #### Troubleshooting: C++ Compiler
 
@@ -222,9 +206,10 @@ To install a C++ compiler on Windows 10/11, follow these steps:
 3. Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/).
 4. Run the installer and select the `gcc` component.
 
-** For OSX **
+**For OSX**
 
-1. Check if you have a C++ compiler installed, Xcode might have done it for you. for example running `gcc`.
+1. Check if you have a C++ compiler installed, `Xcode` should have done it for you. To install Xcode, go to the App
+   Store and search for Xcode and install it. **Or** you can install the command line tools by running `xcode-select --install`.
 2. If not, you can install clang or gcc with homebrew `brew install gcc`
 
 #### Troubleshooting: Mac Running Intel

@@ -1,0 +1,78 @@
+# Ingesting & Managing Documents
+
+The ingestion of documents can be done in different ways:
+
+* Using the `/ingest` API
+* Using the Gradio UI
+* Using the Bulk Local Ingestion functionality (check next section)
+
+## Bulk Local Ingestion
+
+When you are running PrivateGPT in a fully local setup, you can ingest a complete folder for convenience (containing
+pdf, text files, etc.)
+and optionally watch changes on it with the command:
+
+```bash
+make ingest /path/to/folder -- --watch
+```
+
+To log the processed and failed files to an additional file, use:
+
+```bash
+make ingest /path/to/folder -- --watch --log-file /path/to/log/file.log
+```
+
+After ingestion is complete, you should be able to chat with your documents
+by navigating to http://localhost:8001 and using the option `Query documents`,
+or using the completions / chat API.
+
+## Ingestion troubleshooting
+
+Are you running out of memory when ingesting files?
+
+To do not run out of memory, you should ingest your documents without the LLM loaded in your (video) memory.
+To do so, you should change your configuration to set `llm.mode: mock`.
+
+In other words, you should update your `settings.yaml` (or your custom configuration file) to set the
+following **before** ingesting your documents:
+```yaml
+llm:
+  mode: mock
+```
+
+Once your documents are ingested, you can set the `llm.mode` value back to `local` (or your previous custom value).
+
+You can also use the existing `PGPT_PROFILES=mock` that will set the `llm.mode` to `mock` for you.
+
+## Supported file formats
+
+privateGPT by default supports all the file formats that contains clear text (for example, `.txt` files, `.html`, etc.).
+However, these text based file formats as only considered as text files, and are not pre-processed in any other way.
+
+It also supports the following file formats:
+* `.hwp`
+* `.pdf`
+* `.docx`
+* `.pptx`
+* `.ppt`
+* `.pptm`
+* `.jpg`
+* `.png`
+* `.jpeg`
+* `.mp3`
+* `.mp4`
+* `.csv`
+* `.epub`
+* `.md`
+* `.mbox`
+* `.ipynb`
+* `.json`
+
+**Please note the following nuance**: while `privateGPT` supports these file formats, it **might** require additional
+dependencies to be installed in your python's virtual environment.
+For example, if you try to ingest `.epub` files, `privateGPT` might fail to do it, and will instead display an
+explanatory error asking you to download the necessary dependencies to install this file format.
+
+
+**Other file formats might work**, but they will be considered as plain text
+files (in other words, they will be ingested as `.txt` files).
