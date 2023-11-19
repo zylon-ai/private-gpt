@@ -94,12 +94,23 @@ recommended models, instead of custom tuning the parameters.
 
 #### OSX GPU support
 
-You will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with
-metal support. To do that run:
+You will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with metal support.
 
+To do that, you need to install `llama.cpp` python's binding `llama-cpp-python` through pip, with the compilation flag
+that activate `METAL`: you have to pass `-DLLAMA_METAL=on` to the CMake command tha `pip` runs for you (see below).
+
+In other words, one should simply run:
 ```bash
 CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
 ```
+
+The above command will force the re-installation of `llama-cpp-python` with `METAL` support by compiling
+`llama.cpp` locally with your `METAL` libraries (shipped by default with your macOS).
+
+More information is available in the documentation of the libraries themselves:
+* [llama-cpp-python](https://github.com/abetlen/llama-cpp-python#installation-with-hardware-acceleration)
+* [llama-cpp-python's documentation](https://llama-cpp-python.readthedocs.io/en/latest/#installation-with-hardware-acceleration)
+* [llama.cpp](https://github.com/ggerganov/llama.cpp#build)
 
 #### Windows NVIDIA GPU support
 
@@ -195,9 +206,10 @@ To install a C++ compiler on Windows 10/11, follow these steps:
 3. Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/).
 4. Run the installer and select the `gcc` component.
 
-** For OSX **
+**For OSX**
 
-1. Check if you have a C++ compiler installed, Xcode might have done it for you. for example running `gcc`.
+1. Check if you have a C++ compiler installed, `Xcode` should have done it for you. To install Xcode, go to the App
+   Store and search for Xcode and install it. **Or** you can install the command line tools by running `xcode-select --install`.
 2. If not, you can install clang or gcc with homebrew `brew install gcc`
 
 #### Troubleshooting: Mac Running Intel
