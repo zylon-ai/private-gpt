@@ -71,9 +71,9 @@ navigation:
   # More advanced usage of privateGPT, by API
   - tab: api-reference
     layout:
-      - section: API Reference
+      - section: Overview
         contents:
-          - page : API Reference
+          - page : API Reference overview
             path: ./docs/pages/api-reference/api-reference.mdx
           - page: SDKs
             path: ./docs/pages/api-reference/sdks.mdx
