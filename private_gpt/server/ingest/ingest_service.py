@@ -14,6 +14,8 @@ from llama_index import (
     VectorStoreIndex,
     load_index_from_storage,
 )
+from llama_index.data_structs import IndexDict
+from llama_index.indices.base import BaseIndex
 from llama_index.node_parser import SentenceWindowNodeParser
 from llama_index.readers import JSONReader, StringIterableReader
 from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
@@ -111,12 +113,13 @@ def _load_file_to_documents(file_name: str, file_data: AnyStr | Path) -> list[Do
             path_to_tmp.unlink()
 
 
-def _transform_file_into_documents(file_name: str, file_data: AnyStr | Path) -> list[Document]:
+def _transform_file_into_documents(
+    file_name: str, file_data: AnyStr | Path
+) -> list[Document]:
     documents = _load_file_to_documents(file_name, file_data)
     for document in documents:
         document.metadata["file_name"] = file_name
     return documents
-
 
 
 @singleton
@@ -143,10 +146,8 @@ class IngestService:
 
         self._index = self._initialize_index()
 
-    def _initialize_index(self):
-        """
-        Initialize the index from the storage context.
-        """
+    def _initialize_index(self) -> BaseIndex[IndexDict]:
+        """Initialize the index from the storage context."""
         try:
             # Load the index with store_nodes_override=True to be able to delete them
             index = load_index_from_storage(
@@ -168,7 +169,7 @@ class IngestService:
             index.storage_context.persist(persist_dir=local_data_path)
         return index
 
-    def _save_index(self):
+    def _save_index(self) -> None:
         self._index.storage_context.persist(persist_dir=local_data_path)
 
     def ingest(self, file_name: str, file_data: AnyStr | Path) -> list[IngestedDoc]:
@@ -180,13 +181,19 @@ class IngestService:
         logger.debug("Saving the documents in the index and doc store")
         return self._save_docs(documents)
 
-    def bulk_ingest(self, files: list[tuple[str, AnyStr | Path]]) -> list[IngestedDoc]:
+    def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[IngestedDoc]:
         logger.info("Ingesting file_names=%s", [f[0] for f in files])
 
         with multiprocessing.Pool(processes=BULK_INGEST_WORKER_NUM) as pool:
-            documents = list(itertools.chain.from_iterable(pool.starmap(_transform_file_into_documents, files)))
+            documents = list(
+                itertools.chain.from_iterable(
+                    pool.starmap(_transform_file_into_documents, files)
+                )
+            )
         logger.info(
-            "Transformed count=%s files into count=%s documents", len(files), len(documents)
+            "Transformed count=%s files into count=%s documents",
+            len(files),
+            len(documents),
         )
         return self._save_docs(documents)
 
