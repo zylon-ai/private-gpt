@@ -1,39 +1,10 @@
 ## Local Installation steps
 
 The steps in [Installation](/installation) section are better explained and cover more
-setup scenarios (MacOS, Windows, Linux). But if you are looking for a quick setup guide, here it is:
+setup scenarios (macOS, Windows, Linux).
+But if you like one-liners, have python3.11 installed, and you are running a UNIX (macOS or Linux)
+system, you can get up and running on CPU in few lines:
 
-```bash
-# Clone the repo
-git clone https://github.com/imartinez/privateGPT
-cd privateGPT
-
-# Install Python 3.11
-pyenv install 3.11
-pyenv local 3.11
-
-# Install dependencies
-poetry install --with ui,local
-
-# Download Embedding and LLM models
-poetry run python scripts/setup
-
-# (Optional) For Mac with Metal GPU, enable it. Check Installation and Settings section 
-to know how to enable GPU on other platforms
-CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
-
-# Run the local server  
-make run
-
-# Note: on Mac with Metal you should see a ggml_metal_add_buffer log, stating GPU is 
-being used
-
-# Navigate to the UI and try it out! 
-http://localhost:8001/
-```
-
-You like one-liners, have python3.11 installed, and you are running a UNIX (MacOS & Linux) system?
-You can run it on **CPU** in few lines:
 ```bash
 git clone https://github.com/imartinez/privateGPT && cd privateGPT && \
 python3.11 -m venv .venv && source .venv/bin/activate && \
@@ -46,9 +17,5 @@ python3.11 -m private_gpt
 open http:////127.0.0.1:8001/
 ```
 
-**You want to run it on GPU(s)?** Please check the more detailed [installation guide](/installation).
-
-## API
-
-As explained in the introduction, the API contains high level APIs (ingestion and chat/completions) and low level APIs
-(embeddings and chunk retrieval). In this section the different specific API calls are explained.
+The above is not working, or it is too slow, so **you want to run it on GPU(s)**?
+Please check the more detailed [installation guide](/installation).
