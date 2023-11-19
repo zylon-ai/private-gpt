@@ -51,6 +51,8 @@ def count_documents(folder_path: Path) -> None:
             count_documents(file_path)
 
 
+# TODO refactor to parse the file tree, and transform it into a list of files to ingest
+#      then, use the ingest_service.bulk_ingest method
 def _recursive_ingest_folder(folder_path: Path) -> None:
     global current_document_count, total_documents
     for file_path in folder_path.iterdir():
