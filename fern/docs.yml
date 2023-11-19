@@ -54,9 +54,9 @@ navigation:
         contents:
           - page: Vector Stores
             path: ./docs/pages/manual/vectordb.mdx
-      - section: Large Language Models
+      - section: Advanced Setup
         contents:
-          - page: Large Language Model (LLM)
+          - page: LLM Backends
             path: ./docs/pages/manual/llms.mdx
       - section: User Interface
         contents:
