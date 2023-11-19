@@ -6,14 +6,13 @@ from typing import TYPE_CHECKING, Any, AnyStr, Literal
 from injector import inject, singleton
 from llama_index import (
     Document,
-    JSONReader,
     ServiceContext,
     StorageContext,
-    StringIterableReader,
     VectorStoreIndex,
     load_index_from_storage,
 )
 from llama_index.node_parser import SentenceWindowNodeParser
+from llama_index.readers import JSONReader, StringIterableReader
 from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
 from pydantic import BaseModel, Field
 
