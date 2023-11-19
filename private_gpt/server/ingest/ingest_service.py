@@ -121,6 +121,7 @@ class IngestService:
                             path_to_tmp.write_text(str(file_data))
                         documents = reader.load_data(path_to_tmp)
                     finally:
+                        tmp.close()
                         path_to_tmp.unlink()
         logger.info(
             "Transformed file=%s into count=%s documents", file_name, len(documents)
