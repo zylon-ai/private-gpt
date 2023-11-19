@@ -1,0 +1,15 @@
+services:
+  private-gpt:
+    build:
+      context: ../privategpt
+      dockerfile: Dockerfile.local
+    volumes:
+      - ../privategpt/local_data/:/home/worker/app/local_data
+      - ../privategpt/models/:/home/worker/app/models
+    ports:
+      - 127.0.0.1:8080:8001
+    environment:
+      PORT: 8001
+      PGPT_PROFILES: docker
+      PGPT_MODE: local
+
