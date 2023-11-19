@@ -1,4 +1,4 @@
-## Ingesting & Managing Documents
+# Ingesting & Managing Documents
 
 The ingestion of documents can be done in different ways:
 
@@ -6,7 +6,7 @@ The ingestion of documents can be done in different ways:
 * Using the Gradio UI
 * Using the Bulk Local Ingestion functionality (check next section)
 
-### Bulk Local Ingestion
+## Bulk Local Ingestion
 
 When you are running PrivateGPT in a fully local setup, you can ingest a complete folder for convenience (containing
 pdf, text files, etc.)
@@ -26,15 +26,23 @@ After ingestion is complete, you should be able to chat with your documents
 by navigating to http://localhost:8001 and using the option `Query documents`,
 or using the completions / chat API.
 
-### Reset Local documents database
+## Ingestion troubleshooting
 
-When running in a local setup, you can remove all ingested documents by simply
-deleting all contents of `local_data` folder (except .gitignore).
+Are you running out of memory when ingesting files?
 
-To simplify this process, you can use the command:
-```bash
-make wipe
+To do not run out of memory, you should ingest your documents without the LLM loaded in your (video) memory.
+To do so, you should change your configuration to set `llm.mode: mock`.
+
+In other words, you should update your `settings.yaml` (or your custom configuration file) to set the
+following **before** ingesting your documents:
+```yaml
+llm:
+  mode: mock
 ```
+
+Once your documents are ingested, you can set the `llm.mode` value back to `local` (or your previous custom value).
+
+You can also use the existing `PGPT_PROFILES=mock` that will set the `llm.mode` to `mock` for you.
 
 ## Supported file formats
 

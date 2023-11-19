@@ -44,11 +44,13 @@ navigation:
   # Manual of privateGPT: how to use it and configure it
   - tab: manual
     layout:
-      - section: Ingestion
+      - section: Document management
         contents:
           - page: Ingestion
             path: ./docs/pages/manual/ingestion.mdx
-      - section: Document management
+          - page: Deletion
+            path: ./docs/pages/manual/ingestion-reset.mdx
+      - section: Storage
         contents:
           - page: Vector Stores
             path: ./docs/pages/manual/vectordb.mdx
