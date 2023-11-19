@@ -38,6 +38,20 @@ FILE_READER_CLS.update(
 logger = logging.getLogger(__name__)
 
 
+class StringIterableReaderHelper:
+    @staticmethod
+    def tweak_data(file_data: AnyStr | Path) -> list[str]:
+        if isinstance(file_data, Path):
+            text = file_data.read_text()
+            return [text]
+        elif isinstance(file_data, bytes):
+            return [file_data.decode("utf-8")]
+        elif isinstance(file_data, str):
+            return [file_data]
+        else:
+            raise ValueError(f"Unsupported data type {type(file_data)}")
+
+
 class IngestedDoc(BaseModel):
     object: Literal["ingest.document"]
     doc_id: str = Field(examples=["c202d5e6-7b69-4869-81cc-dd574ee8ee11"])
@@ -53,9 +67,8 @@ class IngestedDoc(BaseModel):
     @staticmethod
     def curate_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
         """Remove unwanted metadata keys."""
-        metadata.pop("doc_id", None)
-        metadata.pop("window", None)
-        metadata.pop("original_text", None)
+        for key in ["doc_id", "window", "original_text"]:
+            metadata.pop(key, None)
         return metadata
 
 
@@ -81,6 +94,36 @@ class IngestService:
             node_parser=SentenceWindowNodeParser.from_defaults(),
         )
 
+        self._index = self._initialize_index()
+
+    def _initialize_index(self):
+        """
+        Initialize the index from the storage context.
+        """
+        try:
+            # Load the index with store_nodes_override=True to be able to delete them
+            index = load_index_from_storage(
+                storage_context=self.storage_context,
+                service_context=self.ingest_service_context,
+                store_nodes_override=True,  # Force store nodes in index and document stores
+                show_progress=True,
+            )
+        except ValueError:
+            # There are no index in the storage context, creating a new one
+            logger.info("Creating a new vector store index")
+            index = VectorStoreIndex.from_documents(
+                [],
+                storage_context=self.storage_context,
+                service_context=self.ingest_service_context,
+                store_nodes_override=True,  # Force store nodes in index and document stores
+                show_progress=True,
+            )
+            index.storage_context.persist(persist_dir=local_data_path)
+        return index
+
+    def _save_index(self):
+        self._index.storage_context.persist(persist_dir=local_data_path)
+
     def ingest(self, file_name: str, file_data: AnyStr | Path) -> list[IngestedDoc]:
         logger.info("Ingesting file_name=%s", file_name)
         extension = Path(file_name).suffix
@@ -93,15 +136,7 @@ class IngestService:
             )
             # Read as a plain text
             string_reader = StringIterableReader()
-            if isinstance(file_data, Path):
-                text = file_data.read_text()
-                documents = string_reader.load_data([text])
-            elif isinstance(file_data, bytes):
-                documents = string_reader.load_data([file_data.decode("utf-8")])
-            elif isinstance(file_data, str):
-                documents = string_reader.load_data([file_data])
-            else:
-                raise ValueError(f"Unsupported data type {type(file_data)}")
+            documents = string_reader.load_data(StringIterableReaderHelper.tweak_data(file_data))
         else:
             logger.debug("Specific reader found for extension=%s", extension)
             reader: BaseReader = reader_cls()
@@ -126,6 +161,7 @@ class IngestService:
         logger.info(
             "Transformed file=%s into count=%s documents", file_name, len(documents)
         )
+        logger.debug("Saving the documents in the index and doc store")
         for document in documents:
             document.metadata["file_name"] = file_name
         return self._save_docs(documents)
@@ -137,29 +173,12 @@ class IngestService:
             document.excluded_embed_metadata_keys = ["doc_id"]
             # We don't want the LLM to receive these metadata in the context
             document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
-
-        try:
-            # Load the index from storage and insert new documents,
-            index = load_index_from_storage(
-                storage_context=self.storage_context,
-                service_context=self.ingest_service_context,
-                store_nodes_override=True,  # Force store nodes in index and document stores
-                show_progress=True,
-            )
-            for doc in documents:
-                index.insert(doc)
-        except ValueError:
-            # Or create a new one if there is none
-            VectorStoreIndex.from_documents(
-                documents,
-                storage_context=self.storage_context,
-                service_context=self.ingest_service_context,
-                store_nodes_override=True,  # Force store nodes in index and document stores
-                show_progress=True,
-            )
-
+        logger.debug("Inserting the documents in the index")
+        for doc in documents:
+            self._index.insert(doc)
+        logger.debug("Storing the documents in the doc store")
         # persist the index and nodes
-        self.storage_context.persist(persist_dir=local_data_path)
+        self._save_index()
         return [
             IngestedDoc(
                 object="ingest.document",
@@ -206,16 +225,8 @@ class IngestService:
             "Deleting the ingested document=%s in the doc and index store", doc_id
         )
 
-        # Load the index with store_nodes_override=True to be able to delete them
-        index = load_index_from_storage(
-            storage_context=self.storage_context,
-            service_context=self.ingest_service_context,
-            store_nodes_override=True,  # Force store nodes in index and document stores
-            show_progress=True,
-        )
-
         # Delete the document from the index
-        index.delete_ref_doc(doc_id, delete_from_docstore=True)
+        self._index.delete_ref_doc(doc_id, delete_from_docstore=True)
 
         # Save the index
-        self.storage_context.persist(persist_dir=local_data_path)
+        self._save_index()
