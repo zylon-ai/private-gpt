@@ -12,7 +12,7 @@ injector = "^0.21.0"
 pyyaml = "^6.0.1"
 python-multipart = "^0.0.6"
 pypdf = "^3.16.2"
-llama-index = "0.8.67"
+llama-index = { extras = ["local_models"], version = "0.9.3" }
 chromadb = "^0.4.13"
 watchdog = "^3.0.0"
 qdrant-client = {version = "^1.6.9", optional = true}
