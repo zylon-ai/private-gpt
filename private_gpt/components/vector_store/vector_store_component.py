@@ -72,6 +72,7 @@ class VectorStoreComponent:
             case "qdrant":
                 from llama_index.vector_stores.qdrant import QdrantVectorStore
                 from qdrant_client import QdrantClient
+
                 if settings.qdrant is None:
                     logger.info(
                         "Qdrant config not found. Using default settings."
