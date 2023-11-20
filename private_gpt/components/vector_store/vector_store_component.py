@@ -1,8 +1,6 @@
 import logging
 import typing
 
-import chromadb
-from chromadb.config import Settings as ChromaSettings
 from injector import inject, singleton
 from llama_index import VectorStoreIndex
 from llama_index.indices.vector_store import VectorIndexRetriever
@@ -43,6 +41,18 @@ class VectorStoreComponent:
     def __init__(self, settings: Settings) -> None:
         match settings.vectorstore.database:
             case "chroma":
+                try:
+                    import chromadb  # type: ignore
+                    from chromadb.config import (  # type: ignore
+                        Settings as ChromaSettings,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "'chromadb' is not installed."
+                        "To use PrivateGPT with Chroma, install the 'chroma' extra."
+                        "`poetry install --extras chroma`"
+                    ) from e
+
                 chroma_settings = ChromaSettings(anonymized_telemetry=False)
                 chroma_client = chromadb.PersistentClient(
                     path=str((local_data_path / "chroma_db").absolute()),
@@ -60,15 +70,9 @@ class VectorStoreComponent:
                 )
 
             case "qdrant":
-                try:
-                    from llama_index.vector_stores.qdrant import QdrantVectorStore
-                    from qdrant_client import QdrantClient  # type: ignore
-                except ImportError as e:
-                    raise ImportError(
-                        "'qdrant_client' is not installed."
-                        "To use PrivateGPT with Qdrant, install the 'qdrant' extra."
-                        "`poetry install --extras qdrant`"
-                    ) from e
+                from llama_index.vector_stores.qdrant import QdrantVectorStore
+                from qdrant_client import QdrantClient
+
                 if settings.qdrant is None:
                     logger.info(
                         "Qdrant config not found. Using default settings."
@@ -99,11 +103,16 @@ class VectorStoreComponent:
         context_filter: ContextFilter | None = None,
         similarity_top_k: int = 2,
     ) -> VectorIndexRetriever:
-        # TODO this 'where' is specific to chromadb. Implement other vector stores
+        # This way we support qdrant (using doc_ids) and chroma (using where clause)
         return VectorIndexRetriever(
             index=index,
             similarity_top_k=similarity_top_k,
+            doc_ids=context_filter.docs_ids if context_filter else None,
             vector_store_kwargs={
                 "where": _chromadb_doc_id_metadata_filter(context_filter)
             },
         )
+
+    def close(self) -> None:
+        if hasattr(self.vector_store.client, "close"):
+            self.vector_store.client.close()

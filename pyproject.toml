@@ -13,9 +13,9 @@ pyyaml = "^6.0.1"
 python-multipart = "^0.0.6"
 pypdf = "^3.16.2"
 llama-index = { extras = ["local_models"], version = "0.9.3" }
-chromadb = "^0.4.13"
 watchdog = "^3.0.0"
-qdrant-client = {version = "^1.6.9", optional = true}
+qdrant-client = "^1.6.9"
+chromadb = {version = "^0.4.13", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
@@ -44,7 +44,7 @@ torch = ">=2.0.0, !=2.0.1, !=2.1.0"
 transformers = "^4.34.0"
 
 [tool.poetry.extras]
-qdrant = ["qdrant-client"]
+chroma = ["chromadb"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -135,6 +135,7 @@ python_version = "3.11"
 strict = true
 check_untyped_defs = false
 explicit_package_bases = true
+warn_unused_ignores = false
 exclude = ["tests"]
 
 [tool.pytest.ini_options]

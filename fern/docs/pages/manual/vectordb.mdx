@@ -1,15 +1,16 @@
 ## Vectorstores
-PrivateGPT supports [Chroma](https://www.trychroma.com/), [Qdrant](https://qdrant.tech/) as vectorstore providers. Chroma being the default.
+PrivateGPT supports [Qdrant](https://qdrant.tech/) and [Chroma](https://www.trychroma.com/) as vectorstore providers. Qdrant being the default.
+
+In order to select one or the other, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant` or `chroma`.
+
+```yaml
+vectorstore:
+  database: qdrant
+```
 
 ### Qdrant configuration
 
-To enable Qdrant, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant` and install the `qdrant` extra.
-
-```bash
-poetry install --extras qdrant
-```
-
-By default Qdrant tries to connect to an instance at `http://localhost:3000`.
+To enable Qdrant, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant`.
 
 Qdrant settings can be configured by setting values to the `qdrant` property in the `settings.yaml` file.
 
@@ -28,3 +29,22 @@ The available configuration options are:
 | host         | Host name of Qdrant service. If url and host are not set, defaults to 'localhost'.|
 | path         | Persistence path for QdrantLocal. Eg. `local_data/private_gpt/qdrant`|
 | force_disable_check_same_thread         | Force disable check_same_thread for QdrantLocal sqlite connection, defaults to True.|
+
+By default Qdrant tries to connect to an instance of Qdrant server at `http://localhost:3000`.
+
+To obtain a local setup (disk-based database) without running a Qdrant server, configure the `qdrant.path` value in settings.yaml:
+
+```yaml
+qdrant:
+  path: local_data/private_gpt/qdrant
+```
+
+### Chroma configuration
+
+To enable Chroma, set the `vectorstore.database` property in the `settings.yaml` file to `chroma` and install the `chroma` extra.
+
+```bash
+poetry install --extras chroma
+```
+
+By default `chroma` will use a disk-based database stored in local_data_path / "chroma_db" (being local_data_path defined in settings.yaml)

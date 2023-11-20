@@ -207,7 +207,12 @@ class IngestService:
         )
 
         # Load the index with store_nodes_override=True to be able to delete them
-        index = load_index_from_storage(self.storage_context, store_nodes_override=True)
+        index = load_index_from_storage(
+            storage_context=self.storage_context,
+            service_context=self.ingest_service_context,
+            store_nodes_override=True,  # Force store nodes in index and document stores
+            show_progress=True,
+        )
 
         # Delete the document from the index
         index.delete_ref_doc(doc_id, delete_from_docstore=True)

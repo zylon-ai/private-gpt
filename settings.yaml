@@ -24,7 +24,10 @@ llm:
   mode: local
 
 vectorstore:
-  database: chroma
+  database: qdrant
+
+qdrant:
+  path: local_data/private_gpt/qdrant
 
 local:
   llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.1-GGUF
