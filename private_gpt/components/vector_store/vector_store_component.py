@@ -70,15 +70,8 @@ class VectorStoreComponent:
                 )
 
             case "qdrant":
-                try:
-                    from llama_index.vector_stores.qdrant import QdrantVectorStore
-                    from qdrant_client import QdrantClient
-                except ImportError as e:
-                    raise ImportError(
-                        "'qdrant_client' is not installed."
-                        "To use PrivateGPT with Qdrant, install the 'qdrant' extra."
-                        "`poetry install --extras qdrant`"
-                    ) from e
+                from llama_index.vector_stores.qdrant import QdrantVectorStore
+                from qdrant_client import QdrantClient
                 if settings.qdrant is None:
                     logger.info(
                         "Qdrant config not found. Using default settings."
