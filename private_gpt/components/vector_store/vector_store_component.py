@@ -109,10 +109,11 @@ class VectorStoreComponent:
         context_filter: ContextFilter | None = None,
         similarity_top_k: int = 2,
     ) -> VectorIndexRetriever:
-        # TODO this 'where' is specific to chromadb. Implement other vector stores
+        # This way we support qdrant (using doc_ids) and chroma (using where clause)
         return VectorIndexRetriever(
             index=index,
             similarity_top_k=similarity_top_k,
+            doc_ids=context_filter.docs_ids if context_filter else None,
             vector_store_kwargs={
                 "where": _chromadb_doc_id_metadata_filter(context_filter)
             },
