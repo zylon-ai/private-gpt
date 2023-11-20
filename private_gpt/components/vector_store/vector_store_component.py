@@ -1,8 +1,6 @@
 import logging
 import typing
 
-import chromadb
-from chromadb.config import Settings as ChromaSettings
 from injector import inject, singleton
 from llama_index import VectorStoreIndex
 from llama_index.indices.vector_store import VectorIndexRetriever
@@ -43,6 +41,18 @@ class VectorStoreComponent:
     def __init__(self, settings: Settings) -> None:
         match settings.vectorstore.database:
             case "chroma":
+                try:
+                    import chromadb
+                    from chromadb.config import (
+                        Settings as ChromaSettings,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "'chromadb' is not installed."
+                        "To use PrivateGPT with Chroma, install the 'chroma' extra."
+                        "`poetry install --extras chroma`"
+                    ) from e
+
                 chroma_settings = ChromaSettings(anonymized_telemetry=False)
                 chroma_client = chromadb.PersistentClient(
                     path=str((local_data_path / "chroma_db").absolute()),
@@ -62,7 +72,7 @@ class VectorStoreComponent:
             case "qdrant":
                 try:
                     from llama_index.vector_stores.qdrant import QdrantVectorStore
-                    from qdrant_client import QdrantClient  # type: ignore
+                    from qdrant_client import QdrantClient
                 except ImportError as e:
                     raise ImportError(
                         "'qdrant_client' is not installed."
