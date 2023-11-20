@@ -117,3 +117,7 @@ class VectorStoreComponent:
                 "where": _chromadb_doc_id_metadata_filter(context_filter)
             },
         )
+
+    def close(self) -> None:
+        if hasattr(self.vector_store.client, "close"):
+            self.vector_store.client.close()
