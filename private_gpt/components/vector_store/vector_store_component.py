@@ -42,8 +42,8 @@ class VectorStoreComponent:
         match settings.vectorstore.database:
             case "chroma":
                 try:
-                    import chromadb
-                    from chromadb.config import (
+                    import chromadb  # type: ignore
+                    from chromadb.config import (  # type: ignore
                         Settings as ChromaSettings,
                     )
                 except ImportError as e:

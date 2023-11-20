@@ -135,6 +135,7 @@ python_version = "3.11"
 strict = true
 check_untyped_defs = false
 explicit_package_bases = true
+warn_unused_ignores = false
 exclude = ["tests"]
 
 [tool.pytest.ini_options]
