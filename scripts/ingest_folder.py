@@ -38,54 +38,65 @@ if args.log_file:
     logger.addHandler(file_handler)
 
 
-total_documents = 0
-current_document_count = 0
+class LocalIngestWorker:
+    def __init__(self, ingest_service: IngestService) -> None:
+        self.ingest_service = ingest_service
 
+        self.total_documents = 0
+        self.current_document_count = 0
 
-def count_documents(folder_path: Path) -> None:
-    global total_documents
-    for file_path in folder_path.iterdir():
-        if file_path.is_file():
-            total_documents += 1
-        elif file_path.is_dir():
-            count_documents(file_path)
+    def ingest(self, file_path):
+        ingest_service.ingest(file_path.name, file_path)
 
+    def count_documents(self, folder_path: Path) -> None:
+        for file_path in folder_path.iterdir():
+            if file_path.is_file():
+                self.total_documents += 1
+            elif file_path.is_dir():
+                self.count_documents(file_path)
 
-# TODO refactor to parse the file tree, and transform it into a list of files to ingest
-#      then, use the ingest_service.bulk_ingest method
-def _recursive_ingest_folder(folder_path: Path) -> None:
-    global current_document_count, total_documents
-    for file_path in folder_path.iterdir():
-        if file_path.is_file():
-            current_document_count += 1
-            progress_msg = f"Document {current_document_count} of {total_documents} ({(current_document_count / total_documents) * 100:.2f}%)"
-            logger.info(progress_msg)
-            _do_ingest(file_path)
-        elif file_path.is_dir():
-            _recursive_ingest_folder(file_path)
+    def ingest_folder(self, folder_path: Path) -> None:
+        # Count total documents before ingestion
+        self.count_documents(folder_path)
+        self._recursive_ingest_folder(folder_path)
 
+    # TODO refactor to parse the file tree, and transform it into a list of files to ingest
+    #      then, use the ingest_service.bulk_ingest method
+    def _recursive_ingest_folder(self, folder_path: Path) -> None:
+        for file_path in folder_path.iterdir():
+            if file_path.is_file():
+                self.current_document_count += 1
+                pct = f"{(self.current_document_count / self.total_documents) * 100:.2f}"
+                progress_msg = f"Document {self.current_document_count} of {self.total_documents} ({pct}%)"
+                logger.info(progress_msg)
+                self._do_ingest(file_path)
+            elif file_path.is_dir():
+                self._recursive_ingest_folder(file_path)
 
-def _do_ingest(changed_path: Path) -> None:
-    try:
-        if changed_path.exists():
-            logger.info(f"Started ingesting {changed_path}")
-            ingest_service.ingest(changed_path.name, changed_path)
-            logger.info(f"Completed ingesting {changed_path}")
-    except Exception:
-        logger.exception(
-            f"Failed to ingest document: {changed_path}, find the exception attached"
-        )
+    def ingest_on_watch(self, changed_path: Path) -> None:
+        logger.info("Detected change in at path=%s, ingesting", changed_path)
+        self._do_ingest(changed_path)
+
+    def _do_ingest(self, changed_path: Path) -> None:
+        try:
+            if changed_path.exists():
+                logger.info(f"Started ingesting {changed_path}")
+                self.ingest_service.ingest(changed_path.name, changed_path)
+                logger.info(f"Completed ingesting {changed_path}")
+        except Exception:
+            logger.exception(
+                f"Failed to ingest document: {changed_path}, find the exception attached"
+            )
 
 
 path = Path(args.folder)
 if not path.exists():
     raise ValueError(f"Path {args.folder} does not exist")
 
-# Count total documents before ingestion
-count_documents(path)
+worker = LocalIngestWorker(ingest_service)
+worker.ingest_folder(path)
 
-_recursive_ingest_folder(path)
 if args.watch:
     logger.info(f"Watching {args.folder} for changes, press Ctrl+C to stop...")
-    watcher = IngestWatcher(args.folder, _do_ingest)
+    watcher = IngestWatcher(args.folder, worker.ingest_on_watch)
     watcher.start()
