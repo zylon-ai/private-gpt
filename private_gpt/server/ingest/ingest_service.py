@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 import os
 import tempfile
+
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AnyStr, Literal
 
@@ -119,7 +120,17 @@ def _transform_file_into_documents(
     documents = _load_file_to_documents(file_name, file_data)
     for document in documents:
         document.metadata["file_name"] = file_name
+    _exclude_metadata(documents)
     return documents
+
+
+def _exclude_metadata(documents: list[Document]) -> None:
+    for document in documents:
+        document.metadata["doc_id"] = document.doc_id
+        # We don't want the Embeddings search to receive this metadata
+        document.excluded_embed_metadata_keys = ["doc_id"]
+        # We don't want the LLM to receive these metadata in the context
+        document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
 
 
 @singleton
