@@ -12,10 +12,10 @@ injector = "^0.21.0"
 pyyaml = "^6.0.1"
 python-multipart = "^0.0.6"
 pypdf = "^3.16.2"
-llama-index = "0.8.67"
-chromadb = "^0.4.13"
+llama-index = { extras = ["local_models"], version = "0.9.3" }
 watchdog = "^3.0.0"
-qdrant-client = {version = "^1.6.4", optional = true}
+qdrant-client = "^1.6.9"
+chromadb = {version = "^0.4.13", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
@@ -31,7 +31,7 @@ types-pyyaml = "^6.0.12.12"
 [tool.poetry.group.ui]
 optional = true
 [tool.poetry.group.ui.dependencies]
-gradio = "^3.45.2"
+gradio = "^4.4.1"
 
 [tool.poetry.group.local]
 optional = true
@@ -44,7 +44,7 @@ torch = ">=2.0.0, !=2.0.1, !=2.1.0"
 transformers = "^4.34.0"
 
 [tool.poetry.extras]
-qdrant = ["qdrant-client"]
+chroma = ["chromadb"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -135,6 +135,7 @@ python_version = "3.11"
 strict = true
 check_untyped_defs = false
 explicit_package_bases = true
+warn_unused_ignores = false
 exclude = ["tests"]
 
 [tool.pytest.ini_options]

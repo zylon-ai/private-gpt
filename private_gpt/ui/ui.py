@@ -3,7 +3,7 @@ import itertools
 import logging
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any
 
 import gradio as gr  # type: ignore
 from fastapi import FastAPI
@@ -12,6 +12,7 @@ from injector import inject, singleton
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 from pydantic import BaseModel
 
+from private_gpt.constants import PROJECT_ROOT_PATH
 from private_gpt.di import global_injector
 from private_gpt.server.chat.chat_service import ChatService, CompletionGen
 from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
@@ -21,7 +22,12 @@ from private_gpt.ui.images import logo_svg
 
 logger = logging.getLogger(__name__)
 
+THIS_DIRECTORY_RELATIVE = Path(__file__).parent.relative_to(PROJECT_ROOT_PATH)
+# Should be "private_gpt/ui/avatar-bot.ico"
+AVATAR_BOT = THIS_DIRECTORY_RELATIVE / "avatar-bot.ico"
+
 UI_TAB_TITLE = "My Private GPT"
+
 SOURCES_SEPARATOR = "\n\n Sources: \n"
 
 
@@ -149,9 +155,12 @@ class PrivateGptUi:
             files.add(file_name)
         return [[row] for row in files]
 
-    def _upload_file(self, file: TextIO) -> None:
-        path = Path(file.name)
-        self._ingest_service.ingest(file_name=path.name, file_data=path)
+    def _upload_file(self, files: list[str]) -> None:
+        logger.debug("Loading count=%s files", len(files))
+        for file in files:
+            logger.info("Loading file=%s", file)
+            path = Path(file)
+            self._ingest_service.ingest(file_name=path.name, file_data=path)
 
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
@@ -180,9 +189,9 @@ class PrivateGptUi:
                         value="Query Docs",
                     )
                     upload_button = gr.components.UploadButton(
-                        "Upload a File",
-                        type="file",
-                        file_count="single",
+                        "Upload File(s)",
+                        type="filepath",
+                        file_count="multiple",
                         size="sm",
                     )
                     ingested_dataset = gr.List(
@@ -211,9 +220,7 @@ class PrivateGptUi:
                             render=False,
                             avatar_images=(
                                 None,
-                                "https://lh3.googleusercontent.com/drive-viewer/AK7aPa"
-                                "AicXck0k68nsscyfKrb18o9ak3BSaWM_Qzm338cKoQlw72Bp0UKN84"
-                                "IFZjXjZApY01mtnUXDeL4qzwhkALoe_53AhwCg=s2560",
+                                AVATAR_BOT,
                             ),
                         ),
                         additional_inputs=[mode, upload_button],

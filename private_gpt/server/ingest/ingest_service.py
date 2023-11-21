@@ -6,14 +6,13 @@ from typing import TYPE_CHECKING, Any, AnyStr, Literal
 from injector import inject, singleton
 from llama_index import (
     Document,
-    JSONReader,
     ServiceContext,
     StorageContext,
-    StringIterableReader,
     VectorStoreIndex,
     load_index_from_storage,
 )
 from llama_index.node_parser import SentenceWindowNodeParser
+from llama_index.readers import JSONReader, StringIterableReader
 from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
 from pydantic import BaseModel, Field
 
@@ -112,13 +111,18 @@ class IngestService:
             else:
                 # llama-index mainly supports reading from files, so
                 # we have to create a tmp file to read for it to work
-                with tempfile.NamedTemporaryFile() as tmp:
-                    path_to_tmp = Path(tmp.name)
-                    if isinstance(file_data, bytes):
-                        path_to_tmp.write_bytes(file_data)
-                    else:
-                        path_to_tmp.write_text(str(file_data))
-                    documents = reader.load_data(path_to_tmp)
+                # delete=False to avoid a Windows 11 permission error.
+                with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                    try:
+                        path_to_tmp = Path(tmp.name)
+                        if isinstance(file_data, bytes):
+                            path_to_tmp.write_bytes(file_data)
+                        else:
+                            path_to_tmp.write_text(str(file_data))
+                        documents = reader.load_data(path_to_tmp)
+                    finally:
+                        tmp.close()
+                        path_to_tmp.unlink()
         logger.info(
             "Transformed file=%s into count=%s documents", file_name, len(documents)
         )
@@ -203,7 +207,12 @@ class IngestService:
         )
 
         # Load the index with store_nodes_override=True to be able to delete them
-        index = load_index_from_storage(self.storage_context, store_nodes_override=True)
+        index = load_index_from_storage(
+            storage_context=self.storage_context,
+            service_context=self.ingest_service_context,
+            store_nodes_override=True,  # Force store nodes in index and document stores
+            show_progress=True,
+        )
 
         # Delete the document from the index
         index.delete_ref_doc(doc_id, delete_from_docstore=True)

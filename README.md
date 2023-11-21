@@ -1,11 +1,17 @@
 # 🔒 PrivateGPT 📑
 
+[![Tests](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml/badge.svg)](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml?query=branch%3Amain)
+[![Website](https://img.shields.io/website?up_message=check%20it&down_message=down&url=https%3A%2F%2Fdocs.privategpt.dev%2F&label=Documentation)](https://docs.privategpt.dev/)
+
+[![Discord](https://img.shields.io/discord/1164200432894234644?logo=discord&label=PrivateGPT)](https://discord.gg/bK6mRVpErU)
+[![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/PrivateGPT_AI)](https://twitter.com/PrivateGPT_AI)
+
+
 > Install & usage docs: https://docs.privategpt.dev/
 > 
 > Join the community: [Twitter](https://twitter.com/PrivateGPT_AI) & [Discord](https://discord.gg/bK6mRVpErU)
 
-
-<img width="900"  alt="demo" src="https://lh3.googleusercontent.com/drive-viewer/AK7aPaBasLxbp49Hrwnmi_Ctii1oIM18nFJrBO0ERSE3wpkS-syjiQBE32_tUSdqnjn6etUDjUSkdJeFa8acqRb0lZbkZ6CyAw=s1600">
+![Gradio UI](/fern/docs/assets/ui.png?raw=true)
 
 PrivateGPT is a production-ready AI project that allows you to ask questions about your documents using the power
 of Large Language Models (LLMs), even in scenarios without an Internet connection. 100% private, no data leaves your
@@ -136,7 +142,6 @@ you want to give a hand:
 - Better observability of the RAG pipeline
 
 ### Project Infrastructure
-- Create a “wipe” shortcut in `make` to remove all contents of local_data folder except .gitignore
 - Packaged version as a local desktop app (windows executable, mac app, linux app)
 - Dockerize the application for platforms outside linux (Docker Desktop for Mac and Windows)
 - Document how to deploy to AWS, GCP and Azure.

@@ -1,0 +1,21 @@
+## Local Installation steps
+
+The steps in [Installation](/installation) section are better explained and cover more
+setup scenarios (macOS, Windows, Linux).
+But if you like one-liners, have python3.11 installed, and you are running a UNIX (macOS or Linux)
+system, you can get up and running on CPU in few lines:
+
+```bash
+git clone https://github.com/imartinez/privateGPT && cd privateGPT && \
+python3.11 -m venv .venv && source .venv/bin/activate && \
+pip install --upgrade pip poetry && poetry install --with ui,local && ./scripts/setup
+
+# Launch the privateGPT API server **and** the gradio UI
+python3.11 -m private_gpt
+
+# In another terminal, create a new browser window on your private GPT!
+open http:////127.0.0.1:8001/
+```
+
+The above is not working, or it is too slow, so **you want to run it on GPU(s)**?
+Please check the more detailed [installation guide](/installation).

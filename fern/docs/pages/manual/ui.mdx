@@ -1,0 +1,39 @@
+## Gradio UI user manual
+
+Gradio UI is a ready to use way of testing most of PrivateGPT API functionalities.
+
+![Gradio PrivateGPT](https://lh3.googleusercontent.com/drive-viewer/AK7aPaD_Hc-A8A9ooMe-hPgm_eImgsbxAjb__8nFYj8b_WwzvL1Gy90oAnp1DfhPaN6yGiEHCOXs0r77W1bYHtPzlVwbV7fMsA=s1600)
+
+### Execution Modes
+
+It has 3 modes of execution (you can select in the top-left):
+
+* Query Docs: uses the context from the
+  ingested documents to answer the questions posted in the chat. It also takes
+  into account previous chat messages as context.
+    * Makes use of `/chat/completions` API with `use_context=true` and no
+      `context_filter`.
+* Search in Docs: fast search that returns the 4 most related text
+  chunks, together with their source document and page.
+    * Makes use of `/chunks` API with no `context_filter`, `limit=4` and
+      `prev_next_chunks=0`.
+* LLM Chat: simple, non-contextual chat with the LLM. The ingested documents won't
+  be taken into account, only the previous messages.
+    * Makes use of `/chat/completions` API with `use_context=false`.
+
+### Document Ingestion
+
+Ingest documents by using the `Upload a File` button. You can check the progress of
+the ingestion in the console logs of the server.
+
+The list of ingested files is shown below the button.
+
+If you want to delete the ingested documents, refer to *Reset Local documents
+database* section in the documentation.
+
+### Chat
+
+Normal chat interface, self-explanatory ;)
+
+You can check the actual prompt being passed to the LLM by looking at the logs of
+the server. We'll add better observability in future releases.
