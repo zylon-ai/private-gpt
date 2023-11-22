@@ -7,6 +7,7 @@ from llama_index.llms import ChatResponse, CompletionResponse
 from pydantic import BaseModel, Field
 
 from private_gpt.server.chunks.chunks_service import Chunk
+from private_gpt.settings.settings import settings
 
 
 class OpenAIDelta(BaseModel):
@@ -49,7 +50,7 @@ class OpenAICompletion(BaseModel):
     id: str
     object: Literal["completion", "completion.chunk"] = Field(default="completion")
     created: int = Field(..., examples=[1623340000])
-    model: Literal["private-gpt"]
+    model: Literal[(settings.local.llm_hf_repo_id + " - " + settings.local.llm_hf_model_file + " - " + settings.local.embedding_hf_model_name)]
     choices: list[OpenAIChoice]
 
     @classmethod
@@ -63,7 +64,7 @@ class OpenAICompletion(BaseModel):
             id=str(uuid.uuid4()),
             object="completion",
             created=int(time.time()),
-            model="private-gpt",
+            model=(settings.local.llm_hf_repo_id + " - " + settings.local.llm_hf_model_file + " - " + settings.local.embedding_hf_model_name),
             choices=[
                 OpenAIChoice(
                     message=OpenAIMessage(role="assistant", content=text),
@@ -85,7 +86,7 @@ class OpenAICompletion(BaseModel):
             id=str(uuid.uuid4()),
             object="completion.chunk",
             created=int(time.time()),
-            model="private-gpt",
+            model=(settings.local.llm_hf_repo_id + " - " + settings.local.llm_hf_model_file + " - " + settings.local.embedding_hf_model_name),
             choices=[
                 OpenAIChoice(
                     delta=OpenAIDelta(content=text),

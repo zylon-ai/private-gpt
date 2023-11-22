@@ -5,13 +5,14 @@ from pydantic import BaseModel
 
 from private_gpt.server.ingest.ingest_service import IngestedDoc, IngestService
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.settings.settings import settings
 
 ingest_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
 
 class IngestResponse(BaseModel):
     object: Literal["list"]
-    model: Literal["private-gpt"]
+    model: Literal[(settings.local.llm_hf_repo_id + " - " + settings.local.llm_hf_model_file + " - " + settings.local.embedding_hf_model_name)]
     data: list[IngestedDoc]
 
 
@@ -36,7 +37,7 @@ def ingest(request: Request, file: UploadFile) -> IngestResponse:
     if file.filename is None:
         raise HTTPException(400, "No file name provided")
     ingested_documents = service.ingest(file.filename, file.file.read())
-    return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
+    return IngestResponse(object="list", model=(settings.local.llm_hf_repo_id + " - " + settings.local.llm_hf_model_file + " - " + settings.local.embedding_hf_model_name), data=ingested_documents)
 
 
 @ingest_router.get("/ingest/list", tags=["Ingestion"])
@@ -48,7 +49,7 @@ def list_ingested(request: Request) -> IngestResponse:
     """
     service = request.state.injector.get(IngestService)
     ingested_documents = service.list_ingested()
-    return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
+    return IngestResponse(object="list", model=(settings.local.llm_hf_repo_id + " - " + settings.local.llm_hf_model_file + " - " + settings.local.embedding_hf_model_name), data=ingested_documents)
 
 
 @ingest_router.delete("/ingest/{doc_id}", tags=["Ingestion"])

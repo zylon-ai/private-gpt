@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.settings.settings import settings
 
 chunks_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
@@ -19,7 +20,7 @@ class ChunksBody(BaseModel):
 
 class ChunksResponse(BaseModel):
     object: Literal["list"]
-    model: Literal["private-gpt"]
+    model: Literal[(settings.local.llm_hf_repo_id + " - " + settings.local.llm_hf_model_file + " - " + settings.local.embedding_hf_model_name)]
     data: list[Chunk]
 
 
@@ -50,6 +51,6 @@ def chunks_retrieval(request: Request, body: ChunksBody) -> ChunksResponse:
     )
     return ChunksResponse(
         object="list",
-        model="private-gpt",
+        model=(settings.local.llm_hf_repo_id + " - " + settings.local.llm_hf_model_file + " - " + settings.local.embedding_hf_model_name),
         data=results,
     )

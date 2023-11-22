@@ -8,6 +8,7 @@ from private_gpt.server.embeddings.embeddings_service import (
     EmbeddingsService,
 )
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.settings.settings import settings
 
 embeddings_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
@@ -18,7 +19,7 @@ class EmbeddingsBody(BaseModel):
 
 class EmbeddingsResponse(BaseModel):
     object: Literal["list"]
-    model: Literal["private-gpt"]
+    model: Literal[(settings.local.llm_hf_repo_id + " - " + settings.local.llm_hf_model_file + " - " + settings.local.embedding_hf_model_name)]
     data: list[Embedding]
 
 
@@ -32,4 +33,4 @@ def embeddings_generation(request: Request, body: EmbeddingsBody) -> EmbeddingsR
     service = request.state.injector.get(EmbeddingsService)
     input_texts = body.input if isinstance(body.input, list) else [body.input]
     embeddings = service.texts_embeddings(input_texts)
-    return EmbeddingsResponse(object="list", model="private-gpt", data=embeddings)
+    return EmbeddingsResponse(object="list", model=(settings.local.llm_hf_repo_id + " - " + settings.local.llm_hf_model_file + " - " + settings.local.embedding_hf_model_name), data=embeddings)

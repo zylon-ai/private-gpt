@@ -69,7 +69,7 @@ def chat_completion(
     streaming model](https://platform.openai.com/docs/api-reference/chat/streaming):
     ```
     {"id":"12345","object":"completion.chunk","created":1694268190,
-    "model":"private-gpt","choices":[{"index":0,"delta":{"content":"Hello"},
+    "model":(settings.local.llm_hf_repo_id + " - " + settings.local.llm_hf_model_file + " - " + settings.local.embedding_hf_model_name),"choices":[{"index":0,"delta":{"content":"Hello"},
     "finish_reason":null}]}
     ```
     """
