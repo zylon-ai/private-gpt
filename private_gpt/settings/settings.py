@@ -81,7 +81,7 @@ class DataSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: Literal["local", "openai", "sagemaker", "mock"]
+    mode: Literal["local", "openai", "sagemaker", "mock", "hybrid"]
 
 
 class VectorstoreSettings(BaseModel):

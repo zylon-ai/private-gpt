@@ -45,3 +45,8 @@ class LLMComponent:
                 self.llm = OpenAI(api_key=openai_settings)
             case "mock":
                 self.llm = MockLLM()
+            case "hybrid":
+                from llama_index.llms import OpenAI
+
+                openai_settings = settings.openai.api_key
+                self.llm = OpenAI(api_key=openai_settings)

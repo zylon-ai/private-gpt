@@ -21,7 +21,6 @@ class EmbeddingComponent:
                     cache_folder=str(models_cache_path),
                 )
             case "sagemaker":
-
                 from private_gpt.components.embedding.custom.sagemaker import (
                     SagemakerEmbedding,
                 )
@@ -38,3 +37,10 @@ class EmbeddingComponent:
                 # Not a random number, is the dimensionality used by
                 # the default embedding model
                 self.embedding_model = MockEmbedding(384)
+            case "hybrid":
+                from llama_index.embeddings import HuggingFaceEmbedding
+
+                self.embedding_model = HuggingFaceEmbedding(
+                    model_name=settings.local.embedding_hf_model_name,
+                    cache_folder=str(models_cache_path),
+                )
