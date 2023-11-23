@@ -10,6 +10,7 @@ from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
 
+
 @singleton
 class LLMComponent:
     llm: LLM
@@ -17,7 +18,7 @@ class LLMComponent:
     @inject
     def __init__(self, settings: Settings) -> None:
         llm_mode = settings.llm.mode
-        logger.info(f"Initializing the LLM in mode=%s", llm_mode)
+        logger.info("Initializing the LLM in mode=%s", llm_mode)
         match settings.llm.mode:
             case "local":
                 from llama_index.llms import LlamaCPP

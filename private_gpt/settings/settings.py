@@ -97,6 +97,7 @@ class LocalSettings(BaseModel):
 class EmbeddingSettings(BaseModel):
     mode: Literal["local", "openai", "sagemaker", "mock"]
 
+
 class SagemakerSettings(BaseModel):
     llm_endpoint_name: str
     embedding_endpoint_name: str
