@@ -1,0 +1,7 @@
+server:
+  env_name: ${APP_ENV:local}
+
+llm:
+  mode: mock
+embedding:
+  mode: local
