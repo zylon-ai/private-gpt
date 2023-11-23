@@ -12,7 +12,7 @@ class EmbeddingComponent:
 
     @inject
     def __init__(self, settings: Settings) -> None:
-        match settings.llm.mode:
+        match settings.embedding.mode:
             case "local":
                 from llama_index.embeddings import HuggingFaceEmbedding
 
