@@ -91,7 +91,26 @@ class VectorstoreSettings(BaseModel):
 class LocalSettings(BaseModel):
     llm_hf_repo_id: str
     llm_hf_model_file: str
-    embedding_hf_model_name: str
+    embedding_hf_model_name: str = Field(
+        description="Name of the HuggingFace model to use for embeddings"
+    )
+    prompt_style: Literal["default", "llama2", "tag"] = Field(
+        "llama2",
+        description=(
+            "The prompt style to use for the chat engine. "
+            "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
+            "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
+            "If `tag` - use the tag prompt style from the llama_index. It should look like <|role|>: message. \n"
+            "`llama2` is the historic behaviour. `default` should work better with any model."
+        ),
+    )
+    system_prompt: str | None = Field(
+        None,
+        description=(
+            "The system prompt to use for the chat engine. "
+            "If none is given - use the default prompt from the llama_index."
+        ),
+    )
 
 
 class SagemakerSettings(BaseModel):
