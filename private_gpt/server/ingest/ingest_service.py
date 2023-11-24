@@ -4,7 +4,7 @@ import multiprocessing
 import os
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AnyStr, Literal
+from typing import Any, BinaryIO, Literal
 
 from injector import inject, singleton
 from llama_index import (
@@ -29,9 +29,6 @@ from private_gpt.components.vector_store.vector_store_component import (
 )
 from private_gpt.paths import local_data_path
 
-if TYPE_CHECKING:
-    from llama_index.readers.base import BaseReader
-
 # Patching the default file reader to support other file types
 FILE_READER_CLS = DEFAULT_FILE_READER_CLS.copy()
 FILE_READER_CLS.update(
@@ -43,20 +40,6 @@ FILE_READER_CLS.update(
 BULK_INGEST_WORKER_NUM = max((os.cpu_count() or 1) - 1, 1)
 
 logger = logging.getLogger(__name__)
-
-
-class StringIterableReaderHelper:
-    @staticmethod
-    def tweak_data(file_data: AnyStr | Path) -> list[str]:
-        if isinstance(file_data, Path):
-            text = file_data.read_text()
-            return [text]
-        elif isinstance(file_data, bytes):
-            return [file_data.decode("utf-8")]
-        elif isinstance(file_data, str):
-            return [file_data]
-        else:
-            raise ValueError(f"Unsupported data type {type(file_data)}")
 
 
 class IngestedDoc(BaseModel):
@@ -79,57 +62,48 @@ class IngestedDoc(BaseModel):
         return metadata
 
 
-def _load_file_to_documents(file_name: str, file_data: AnyStr | Path) -> list[Document]:
-    logger.debug("Transforming file_name=%s into documents", file_name)
-    extension = Path(file_name).suffix
-    reader_cls = FILE_READER_CLS.get(extension)
-    if reader_cls is None:
-        logger.debug(
-            "No reader found for extension=%s, using default string reader",
-            extension,
-        )
-        # Read as a plain text
-        string_reader = StringIterableReader()
-        return string_reader.load_data(StringIterableReaderHelper.tweak_data(file_data))
+class IngestionHelper:
+    """
+    Helper class to transform a file into a list of documents.
 
-    logger.debug("Specific reader found for extension=%s", extension)
-    reader: BaseReader = reader_cls()
-    if isinstance(file_data, Path):
-        # Already a path, just have to load it
-        return reader.load_data(file_data)
-    # llama-index mainly supports reading from files, so
-    # we have to create a tmp file to read for it to work
-    # delete=False to avoid a Windows 11 permission error.
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        try:
-            path_to_tmp = Path(tmp.name)
-            if isinstance(file_data, bytes):
-                path_to_tmp.write_bytes(file_data)
-            else:
-                path_to_tmp.write_text(str(file_data))
-            return reader.load_data(path_to_tmp)
-        finally:
-            tmp.close()
-            path_to_tmp.unlink()
+    This class should be used to transform a file into a list of documents.
+    These methods are thread-safe (and multiprocessing-safe).
+    """
+    @staticmethod
+    def transform_file_into_documents(
+        file_name: str, file_data: Path
+    ) -> list[Document]:
+        documents = IngestionHelper._load_file_to_documents(file_name, file_data)
+        for document in documents:
+            document.metadata["file_name"] = file_name
+        IngestionHelper._exclude_metadata(documents)
+        return documents
 
+    @staticmethod
+    def _load_file_to_documents(file_name: str, file_data: Path) -> list[Document]:
+        logger.debug("Transforming file_name=%s into documents", file_name)
+        extension = Path(file_name).suffix
+        reader_cls = FILE_READER_CLS.get(extension)
+        if reader_cls is None:
+            logger.debug(
+                "No reader found for extension=%s, using default string reader",
+                extension,
+            )
+            # Read as a plain text
+            string_reader = StringIterableReader()
+            return string_reader.load_data([file_data.read_text()])
 
-def _transform_file_into_documents(
-    file_name: str, file_data: AnyStr | Path
-) -> list[Document]:
-    documents = _load_file_to_documents(file_name, file_data)
-    for document in documents:
-        document.metadata["file_name"] = file_name
-    _exclude_metadata(documents)
-    return documents
+        logger.debug("Specific reader found for extension=%s", extension)
+        return reader_cls().load_data(file_data)
 
-
-def _exclude_metadata(documents: list[Document]) -> None:
-    for document in documents:
-        document.metadata["doc_id"] = document.doc_id
-        # We don't want the Embeddings search to receive this metadata
-        document.excluded_embed_metadata_keys = ["doc_id"]
-        # We don't want the LLM to receive these metadata in the context
-        document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
+    @staticmethod
+    def _exclude_metadata(documents: list[Document]) -> None:
+        for document in documents:
+            document.metadata["doc_id"] = document.doc_id
+            # We don't want the Embeddings search to receive this metadata
+            document.excluded_embed_metadata_keys = ["doc_id"]
+            # We don't want the LLM to receive these metadata in the context
+            document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
 
 
 @singleton
@@ -182,14 +156,35 @@ class IngestService:
     def _save_index(self) -> None:
         self._index.storage_context.persist(persist_dir=local_data_path)
 
-    def ingest(self, file_name: str, file_data: AnyStr | Path) -> list[IngestedDoc]:
+    def ingest(self, file_name: str, file_data: Path) -> list[IngestedDoc]:
         logger.info("Ingesting file_name=%s", file_name)
-        documents = _transform_file_into_documents(file_name, file_data)
+        documents = IngestionHelper.transform_file_into_documents(file_name, file_data)
         logger.info(
             "Transformed file=%s into count=%s documents", file_name, len(documents)
         )
         logger.debug("Saving the documents in the index and doc store")
         return self._save_docs(documents)
+
+    def ingest_bin_data(
+        self, file_name: str, raw_file_data: BinaryIO
+    ) -> list[IngestedDoc]:
+        logger.debug("Ingesting binary data with file_name=%s", file_name)
+        file_data = raw_file_data.read()
+        logger.debug("Got file data of size=%s to ingest", len(file_data))
+        # llama-index mainly supports reading from files, so
+        # we have to create a tmp file to read for it to work
+        # delete=False to avoid a Windows 11 permission error.
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            try:
+                path_to_tmp = Path(tmp.name)
+                if isinstance(file_data, bytes):
+                    path_to_tmp.write_bytes(file_data)
+                else:
+                    path_to_tmp.write_text(str(file_data))
+                return self.ingest(file_name, path_to_tmp)
+            finally:
+                tmp.close()
+                path_to_tmp.unlink()
 
     def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[IngestedDoc]:
         logger.info("Ingesting file_names=%s", [f[0] for f in files])
@@ -197,7 +192,7 @@ class IngestService:
         with multiprocessing.Pool(processes=BULK_INGEST_WORKER_NUM) as pool:
             documents = list(
                 itertools.chain.from_iterable(
-                    pool.starmap(_transform_file_into_documents, files)
+                    pool.starmap(IngestionHelper.transform_file_into_documents, files)
                 )
             )
         logger.info(
