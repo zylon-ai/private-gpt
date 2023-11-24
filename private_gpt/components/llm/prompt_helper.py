@@ -141,7 +141,6 @@ class TagPromptStyle(AbstractPromptStyleWithSystemPrompt):
 
     def _completion_to_prompt(self, completion: str) -> str:
         return (
-            "<s> "
             f"<|system|>: {self.system_prompt.strip()}\n"
             f"<|user|>: {completion.strip()}\n"
             "<|assistant|>: "
