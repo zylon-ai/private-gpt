@@ -11,7 +11,7 @@ from llama_index import (
     VectorStoreIndex,
     load_index_from_storage,
 )
-from llama_index.node_parser import SentenceWindowNodeParser
+from llama_index.node_parser import SentenceSplitter, SentenceWindowNodeParser
 from llama_index.readers import JSONReader, StringIterableReader
 from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
 from pydantic import BaseModel, Field
@@ -130,7 +130,9 @@ class IngestService:
             document.metadata["file_name"] = file_name
         return self._save_docs(documents)
 
-    def _save_docs(self, documents: list[Document]) -> list[IngestedDoc]:
+    def _save_docs(
+            self, documents: list[Document], chunksize: int = 512
+    ) -> list[IngestedDoc]:
         for document in documents:
             document.metadata["doc_id"] = document.doc_id
             # We don't want the Embeddings search to receive this metadata
@@ -150,13 +152,12 @@ class IngestService:
                 index.insert(doc)
         except ValueError:
             # Or create a new one if there is none
-            VectorStoreIndex.from_documents(
-                documents,
-                storage_context=self.storage_context,
-                service_context=self.ingest_service_context,
-                store_nodes_override=True,  # Force store nodes in index and document stores
-                show_progress=True,
+            parser = SentenceSplitter(
+                chunk_size=chunksize,
+                include_prev_next_rel=False,
             )
+            nodes = parser.get_nodes_from_documents(documents)
+            VectorStoreIndex(nodes)
 
         # persist the index and nodes
         self.storage_context.persist(persist_dir=local_data_path)
