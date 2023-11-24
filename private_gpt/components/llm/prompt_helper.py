@@ -176,3 +176,4 @@ def get_prompt_style(
         return Llama2PromptStyle
     elif prompt_style == "tag":
         return TagPromptStyle
+    raise ValueError(f"Unknown prompt_style='{prompt_style}'")
