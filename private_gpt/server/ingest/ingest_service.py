@@ -11,6 +11,7 @@ from llama_index import (
     VectorStoreIndex,
     load_index_from_storage,
 )
+from llama_index.constants import DEFAULT_CHUNK_SIZE
 from llama_index.node_parser import SentenceSplitter, SentenceWindowNodeParser
 from llama_index.readers import JSONReader, StringIterableReader
 from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
@@ -131,7 +132,7 @@ class IngestService:
         return self._save_docs(documents)
 
     def _save_docs(
-            self, documents: list[Document], chunksize: int = 512
+            self, documents: list[Document], chunksize: int = DEFAULT_CHUNK_SIZE
     ) -> list[IngestedDoc]:
         for document in documents:
             document.metadata["doc_id"] = document.doc_id
