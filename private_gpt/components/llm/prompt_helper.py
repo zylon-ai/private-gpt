@@ -31,7 +31,7 @@ class AbstractPromptStyle(abc.ABC):
 
     @abc.abstractmethod
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        pass
+        logger.debug("Initializing prompt_style=%s", self.__class__.__name__)
 
     @abc.abstractmethod
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
@@ -53,11 +53,12 @@ class AbstractPromptStyle(abc.ABC):
 
 
 class AbstractPromptStyleWithSystemPrompt(AbstractPromptStyle, abc.ABC):
-    _DEFAULT_PROMPT = DEFAULT_SYSTEM_PROMPT
+    _DEFAULT_SYSTEM_PROMPT = DEFAULT_SYSTEM_PROMPT
 
-    def __init__(self, system_prompt: str | None) -> None:
+    def __init__(self, default_system_prompt: str | None) -> None:
         super().__init__()
-        self.system_prompt = system_prompt
+        logger.debug("Got default_system_prompt='%s'", default_system_prompt)
+        self.default_system_prompt = default_system_prompt
 
 
 class DefaultPromptStyle(AbstractPromptStyle):
@@ -70,6 +71,7 @@ class DefaultPromptStyle(AbstractPromptStyle):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
+        # Hacky way to override the functions
         # Override the functions to be None, and pass None to the LLM.
         self.messages_to_prompt = None  # type: ignore[method-assign, assignment]
         self.completion_to_prompt = None  # type: ignore[method-assign, assignment]
@@ -92,15 +94,15 @@ class Llama2PromptStyle(AbstractPromptStyleWithSystemPrompt):
     ```
     """
 
-    def __init__(self, system_prompt: str | None = None) -> None:
+    def __init__(self, default_system_prompt: str | None = None) -> None:
         # If no system prompt is given, the default one of the implementation is used.
-        super().__init__(system_prompt=system_prompt)
+        super().__init__(default_system_prompt=default_system_prompt)
 
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
-        return messages_to_prompt(messages, self.system_prompt)
+        return messages_to_prompt(messages, self.default_system_prompt)
 
     def _completion_to_prompt(self, completion: str) -> str:
-        return completion_to_prompt(completion, self.system_prompt)
+        return completion_to_prompt(completion, self.default_system_prompt)
 
 
 class TagPromptStyle(AbstractPromptStyleWithSystemPrompt):
@@ -113,14 +115,16 @@ class TagPromptStyle(AbstractPromptStyleWithSystemPrompt):
     (possibly with context and question)
     <|assistant|>: assistant (model) response here.
     ```
+
+    FIXME: should we add surrounding `<s>` and `</s>` tags, like in llama2?
     """
 
-    def __init__(self, system_prompt: str | None = None) -> None:
+    def __init__(self, default_system_prompt: str | None = None) -> None:
         # We have to define a default system prompt here as the LLM will not
         # use the default llama_utils functions.
-        system_prompt = system_prompt or self._DEFAULT_PROMPT
-        super().__init__(system_prompt)
-        self.system_prompt: str = system_prompt
+        default_system_prompt = default_system_prompt or self._DEFAULT_SYSTEM_PROMPT
+        super().__init__(default_system_prompt)
+        self.system_prompt: str = default_system_prompt
 
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
         messages = list(messages)
@@ -147,15 +151,11 @@ class TagPromptStyle(AbstractPromptStyleWithSystemPrompt):
     def _format_messages_to_prompt(messages: list[ChatMessage]) -> str:
         """Format message to prompt with `<|ROLE|>: MSG` style."""
         assert messages[0].role == MessageRole.SYSTEM
-        prompt = "<s> "
+        prompt = ""
         for message in messages:
             role = message.role
             content = message.content or ""
             message_from_user = f"<|{role.lower()}|>: {content.strip()}"
-
-            if message.role == MessageRole.ASSISTANT:
-                # we need to add a newline after the assistant message
-                message_from_user += "</s>"
             message_from_user += "\n"
             prompt += message_from_user
         # we are missing the last <|assistant|> tag that will trigger a completion

@@ -100,15 +100,17 @@ class LocalSettings(BaseModel):
             "The prompt style to use for the chat engine. "
             "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
             "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
-            "If `tag` - use the tag prompt style from the llama_index. It should look like <|role|>: message. \n"
-            "`llama2` is the historic behaviour. `default` should work better with any model."
+            "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
+            "`llama2` is the historic behaviour. `default` might work better with your custom models."
         ),
     )
-    system_prompt: str | None = Field(
+    default_system_prompt: str | None = Field(
         None,
         description=(
-            "The system prompt to use for the chat engine. "
-            "If none is given - use the default prompt from the llama_index."
+            "The default system prompt to use for the chat engine. "
+            "If none is given - use the default system prompt (from the llama_index). "
+            "Please note that the default prompt might not be the same for all prompt styles. "
+            "Also note that this is only used if the first message is not a system message. "
         ),
     )
 
