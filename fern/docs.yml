@@ -3,7 +3,7 @@ instances:
   - url: privategpt.docs.buildwithfern.com
     custom-domain: docs.privategpt.dev
 
-title: PrivateGPT | Docs
+title: PrivateGPT | Test
 
 # The tabs definition, in the top left corner
 tabs:
