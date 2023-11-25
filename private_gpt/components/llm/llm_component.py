@@ -1,8 +1,8 @@
 from injector import inject, singleton
 from llama_index.llms import MockLLM
 from llama_index.llms.base import LLM
-from llama_index.llms.llama_utils import completion_to_prompt, messages_to_prompt
 
+from private_gpt.components.llm.prompt_helper import get_prompt_style
 from private_gpt.paths import models_path
 from private_gpt.settings.settings import Settings
 
@@ -17,6 +17,11 @@ class LLMComponent:
             case "local":
                 from llama_index.llms import LlamaCPP
 
+                prompt_style_cls = get_prompt_style(settings.local.prompt_style)
+                prompt_style = prompt_style_cls(
+                    default_system_prompt=settings.local.default_system_prompt
+                )
+
                 self.llm = LlamaCPP(
                     model_path=str(models_path / settings.local.llm_hf_model_file),
                     temperature=0.1,
@@ -27,8 +32,8 @@ class LLMComponent:
                     # All to GPU
                     model_kwargs={"n_gpu_layers": -1},
                     # transform inputs into Llama2 format
-                    messages_to_prompt=messages_to_prompt,
-                    completion_to_prompt=completion_to_prompt,
+                    messages_to_prompt=prompt_style.messages_to_prompt,
+                    completion_to_prompt=prompt_style.completion_to_prompt,
                     verbose=True,
                 )
 

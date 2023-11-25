@@ -1,7 +1,40 @@
-## List of working LLM
+# List of working LLM
 
 **Do you have any working combination of LLM and embeddings?**
 Please open a PR to add it to the list, and come on our Discord to tell us about it!
+
+## Prompt style
+
+LLMs might have been trained with different prompt styles.
+The prompt style is the way the prompt is written, and how the system message is injected in the prompt.
+
+For example, `llama2` looks like this:
+```text
+<s>[INST] <<SYS>>
+{{ system_prompt }}
+<</SYS>>
+
+{{ user_message }} [/INST]
+```
+
+While `default` (the `llama_index` default) looks like this:
+```text
+system: {{ system_prompt }}
+user: {{ user_message }}
+assistant: {{ assistant_message }}
+```
+
+And the "`tag`" style looks like this:
+
+```text
+<|system|>: {{ system_prompt }}
+<|user|>: {{ user_message }}
+<|assistant|>: {{ assistant_message }}
+```
+
+Some LLMs will not understand this prompt style, and will not work (returning nothing).
+You can try to change the prompt style to `default` (or `tag`) in the settings, and it will
+change the way the messages are formatted to be passed to the LLM.
 
 ## Example of configuration
 
@@ -15,6 +48,7 @@ local:
   llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.1-GGUF
   llm_hf_model_file: mistral-7b-instruct-v0.1.Q4_K_M.gguf
   embedding_hf_model_name: BAAI/bge-small-en-v1.5
+  prompt_style: "llama2"
 ```
 
 ### French, with instructions
@@ -25,4 +59,26 @@ local:
   llm_hf_repo_id: TheBloke/Vigogne-2-7B-Instruct-GGUF
   llm_hf_model_file: vigogne-2-7b-instruct.Q4_K_M.gguf
   embedding_hf_model_name: dangvantuan/sentence-camembert-base
+  prompt_style: "default"
+  # prompt_style: "tag" # also works
+  # The default system prompt is injected only when the `prompt_style` != default, and there are no system message in the discussion
+  # default_system_prompt: Vous êtes un assistant IA qui répond à la question posée à la fin en utilisant le contexte suivant. Si vous ne connaissez pas la réponse, dites simplement que vous ne savez pas, n'essayez pas d'inventer une réponse. Veuillez répondre exclusivement en français.
+```
+
+You might want to change the prompt as the one above might not directly answer your question.
+You can read online about how to write a good prompt, but in a nutshell, make it (extremely) directive.
+
+You can try and troubleshot your prompt by writing multiline requests in the UI, while
+writing your interaction with the model, for example:
+
+```text
+Tu es un programmeur senior qui programme en python et utilise le framework fastapi. Ecrit moi un serveur qui retourne "hello world".
+```
+
+Another example:
+```text
+Context: None
+Situation: tu es au milieu d'un champ.
+Tache: va a la rivière, en bas du champ.
+Décrit comment aller a la rivière.
 ```

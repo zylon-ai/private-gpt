@@ -44,6 +44,10 @@ navigation:
   # Manual of privateGPT: how to use it and configure it
   - tab: manual
     layout:
+      - section: General configuration
+        contents:
+          - page: Configuration
+            path: ./docs/pages/manual/settings.mdx
       - section: Document management
         contents:
           - page: Ingestion
