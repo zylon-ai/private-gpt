@@ -52,6 +52,7 @@ class IngestionHelper:
 
     @staticmethod
     def _exclude_metadata(documents: list[Document]) -> None:
+        logger.debug("Excluding metadata from count=%s documents", len(documents))
         for document in documents:
             document.metadata["doc_id"] = document.doc_id
             # We don't want the Embeddings search to receive this metadata

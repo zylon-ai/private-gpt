@@ -1,5 +1,4 @@
 import logging
-import os
 import tempfile
 from pathlib import Path
 from typing import BinaryIO
@@ -19,8 +18,6 @@ from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
 from private_gpt.server.ingest.model import IngestedDoc
-
-BULK_INGEST_WORKER_NUM = max((os.cpu_count() or 1) - 1, 1)
 
 logger = logging.getLogger(__name__)
 

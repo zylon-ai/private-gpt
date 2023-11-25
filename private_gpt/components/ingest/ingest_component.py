@@ -130,13 +130,6 @@ class SimpleIngestComponent(BaseIngestComponentWithIndex):
         return saved_documents
 
     def _save_docs(self, documents: list[Document]) -> list[Document]:
-        logger.debug("Modifying metadata of count=%s documents", len(documents))
-        for document in documents:
-            document.metadata["doc_id"] = document.doc_id
-            # We don't want the Embeddings search to receive this metadata
-            document.excluded_embed_metadata_keys = ["doc_id"]
-            # We don't want the LLM to receive these metadata in the context
-            document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
         logger.debug("Transforming count=%s documents into nodes", len(documents))
         with self._index_thread_lock:
             for document in documents:
@@ -194,13 +187,6 @@ class MultiWorkerIngestComponent(BaseIngestComponentWithIndex):
         return self._save_docs(documents)
 
     def _save_docs(self, documents: list[Document]) -> list[Document]:
-        logger.debug("Modifying metadata of count=%s documents", len(documents))
-        for document in documents:
-            document.metadata["doc_id"] = document.doc_id
-            # We don't want the Embeddings search to receive this metadata
-            document.excluded_embed_metadata_keys = ["doc_id"]
-            # We don't want the LLM to receive these metadata in the context
-            document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
         logger.debug("Transforming count=%s documents into nodes", len(documents))
         nodes = run_transformations(
             documents,  # type: ignore[arg-type]
@@ -290,13 +276,6 @@ class ParallelizedIngestComponent(BaseIngestComponentWithIndex):
         return documents
 
     def _save_docs(self, documents: list[Document]) -> list[Document]:
-        logger.debug("Modifying metadata of count=%s documents", len(documents))
-        for document in documents:
-            document.metadata["doc_id"] = document.doc_id
-            # We don't want the Embeddings search to receive this metadata
-            document.excluded_embed_metadata_keys = ["doc_id"]
-            # We don't want the LLM to receive these metadata in the context
-            document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
         logger.debug("Transforming count=%s documents into nodes", len(documents))
         nodes = run_transformations(
             documents,  # type: ignore[arg-type]
