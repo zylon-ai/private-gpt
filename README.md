@@ -55,12 +55,6 @@ is a risk those industries cannot take.
 ### Primordial version
 The first version of PrivateGPT was launched in May 2023 as a novel approach to address the privacy
 concerns by using LLMs in a complete offline way.
-This was done by leveraging existing technologies developed by the thriving Open Source AI community:
-[LangChain](https://github.com/hwchase17/langchain), [LlamaIndex](https://www.llamaindex.ai/),
-[GPT4All](https://github.com/nomic-ai/gpt4all),
-[LlamaCpp](https://github.com/ggerganov/llama.cpp),
-[Chroma](https://www.trychroma.com/)
-and [SentenceTransformers](https://www.sbert.net/).
 
 That version, which rapidly became a go-to project for privacy-sensitive setups and served as the seed
 for thousands of local-focused generative AI projects, was the foundation of what PrivateGPT is becoming nowadays;
@@ -119,34 +113,11 @@ typing checks, just run `make check` before committing to make sure your code is
 Remember to test your code! You'll find a tests folder with helpers, and you can run
 tests using `make test` command.
 
-Interested in contributing to PrivateGPT? We have the following challenges ahead of us in case
-you want to give a hand:
+Don't know what to contribute? Here is the public 
+[Project Board](https://github.com/users/imartinez/projects/3) with several ideas. 
 
-### Improvements
-- Better RAG pipeline implementation (improvements to both indexing and querying stages)
-- Code documentation
-- Expose execution parameters such as top_p, temperature, max_tokens... in Completions and Chat Completions
-- Expose chunk size in Ingest API
-- Implement Update and Delete document in Ingest API
-- Add information about tokens consumption in each response
-- Add to Completion APIs (chat and completion) the context docs used to answer the question
-- In “model” field return the actual LLM or Embeddings model name used
-
-### Features
-- Implement concurrency lock to avoid errors when there are several calls to the local LlamaCPP model
-- API key-based request control to the API
-- Support for Sagemaker
-- Support Function calling
-- Add md5 to check files already ingested
-- Select a document to query in the UI
-- Better observability of the RAG pipeline
-
-### Project Infrastructure
-- Packaged version as a local desktop app (windows executable, mac app, linux app)
-- Dockerize the application for platforms outside linux (Docker Desktop for Mac and Windows)
-- Document how to deploy to AWS, GCP and Azure.
-
-##
+Head over to Discord 
+#contributors channel and ask for write permissions on that Github project.
 
 ## 💬 Community
 Join the conversation around PrivateGPT on our:
@@ -175,3 +146,16 @@ year = {2023}
 ```
 Martínez Toro, I., Gallego Vico, D., & Orgaz, P. (2023). PrivateGPT [Computer software]. https://github.com/imartinez/privateGPT
 ```
+
+## 🤗 Partners & Supporters
+PrivateGPT is actively supported by the teams behind:
+* [Qdrant](https://qdrant.tech/), providing the default vector database
+* [Fern](https://buildwithfern.com/), providing Documentation and SDKs
+* [LlamaIndex](https://www.llamaindex.ai/), providing the base RAG framework and abstractions
+
+This project has been strongly influenced and supported by other amazing projects like 
+[LangChain](https://github.com/hwchase17/langchain),
+[GPT4All](https://github.com/nomic-ai/gpt4all),
+[LlamaCpp](https://github.com/ggerganov/llama.cpp),
+[Chroma](https://www.trychroma.com/)
+and [SentenceTransformers](https://www.sbert.net/).
