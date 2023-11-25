@@ -148,7 +148,7 @@ Martínez Toro, I., Gallego Vico, D., & Orgaz, P. (2023). PrivateGPT [Computer s
 ```
 
 ## 🤗 Partners & Supporters
-PrivateGPT is actively supported by the team's behind:
+PrivateGPT is actively supported by the teams behind:
 * [Qdrant](https://qdrant.tech/), providing the default vector database
 * [Fern](https://buildwithfern.com/), providing Documentation and SDKs
 * [LlamaIndex](https://www.llamaindex.ai/), providing the base RAG framework and abstractions
