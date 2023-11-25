@@ -1,7 +1,7 @@
 name: deploy preview docs
 
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - main
     paths:
@@ -28,7 +28,7 @@ jobs:
         env:
           FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
         run: |
-          output=$(fern generate --docs --preview --log-level debug)
+          output=$(fern generate --docs --preview)
           echo "$output"
           # Extract the URL
           preview_url=$(echo "$output" | grep -oP '(?<=Published docs to )https://[^\s]*')
