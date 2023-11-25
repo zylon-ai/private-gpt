@@ -1,109 +1,28 @@
-import itertools
 import logging
-import multiprocessing
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, BinaryIO, Literal
+from typing import BinaryIO
 
 from injector import inject, singleton
 from llama_index import (
-    Document,
     ServiceContext,
     StorageContext,
-    VectorStoreIndex,
-    load_index_from_storage,
 )
-from llama_index.data_structs import IndexDict
-from llama_index.indices.base import BaseIndex
 from llama_index.node_parser import SentenceWindowNodeParser
-from llama_index.readers import JSONReader, StringIterableReader
-from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
-from pydantic import BaseModel, Field
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
+from private_gpt.components.ingest.ingest_component import SimpleIngestComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
-from private_gpt.paths import local_data_path
-
-# Patching the default file reader to support other file types
-FILE_READER_CLS = DEFAULT_FILE_READER_CLS.copy()
-FILE_READER_CLS.update(
-    {
-        ".json": JSONReader,
-    }
-)
+from private_gpt.server.ingest.model import IngestedDoc
 
 BULK_INGEST_WORKER_NUM = max((os.cpu_count() or 1) - 1, 1)
 
 logger = logging.getLogger(__name__)
-
-
-class IngestedDoc(BaseModel):
-    object: Literal["ingest.document"]
-    doc_id: str = Field(examples=["c202d5e6-7b69-4869-81cc-dd574ee8ee11"])
-    doc_metadata: dict[str, Any] | None = Field(
-        examples=[
-            {
-                "page_label": "2",
-                "file_name": "Sales Report Q3 2023.pdf",
-            }
-        ]
-    )
-
-    @staticmethod
-    def curate_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
-        """Remove unwanted metadata keys."""
-        for key in ["doc_id", "window", "original_text"]:
-            metadata.pop(key, None)
-        return metadata
-
-
-class IngestionHelper:
-    """
-    Helper class to transform a file into a list of documents.
-
-    This class should be used to transform a file into a list of documents.
-    These methods are thread-safe (and multiprocessing-safe).
-    """
-    @staticmethod
-    def transform_file_into_documents(
-        file_name: str, file_data: Path
-    ) -> list[Document]:
-        documents = IngestionHelper._load_file_to_documents(file_name, file_data)
-        for document in documents:
-            document.metadata["file_name"] = file_name
-        IngestionHelper._exclude_metadata(documents)
-        return documents
-
-    @staticmethod
-    def _load_file_to_documents(file_name: str, file_data: Path) -> list[Document]:
-        logger.debug("Transforming file_name=%s into documents", file_name)
-        extension = Path(file_name).suffix
-        reader_cls = FILE_READER_CLS.get(extension)
-        if reader_cls is None:
-            logger.debug(
-                "No reader found for extension=%s, using default string reader",
-                extension,
-            )
-            # Read as a plain text
-            string_reader = StringIterableReader()
-            return string_reader.load_data([file_data.read_text()])
-
-        logger.debug("Specific reader found for extension=%s", extension)
-        return reader_cls().load_data(file_data)
-
-    @staticmethod
-    def _exclude_metadata(documents: list[Document]) -> None:
-        for document in documents:
-            document.metadata["doc_id"] = document.doc_id
-            # We don't want the Embeddings search to receive this metadata
-            document.excluded_embed_metadata_keys = ["doc_id"]
-            # We don't want the LLM to receive these metadata in the context
-            document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
 
 
 @singleton
@@ -122,48 +41,24 @@ class IngestService:
             docstore=node_store_component.doc_store,
             index_store=node_store_component.index_store,
         )
+        node_parser = SentenceWindowNodeParser.from_defaults()
         self.ingest_service_context = ServiceContext.from_defaults(
             llm=self.llm_service.llm,
             embed_model=embedding_component.embedding_model,
-            node_parser=SentenceWindowNodeParser.from_defaults(),
+            node_parser=node_parser,
+            # Embeddings done early in the pipeline of node transformations, right
+            # after the node parsing
+            transformations=[node_parser, embedding_component.embedding_model],
         )
 
-        self._index = self._initialize_index()
-
-    def _initialize_index(self) -> BaseIndex[IndexDict]:
-        """Initialize the index from the storage context."""
-        try:
-            # Load the index with store_nodes_override=True to be able to delete them
-            index = load_index_from_storage(
-                storage_context=self.storage_context,
-                service_context=self.ingest_service_context,
-                store_nodes_override=True,  # Force store nodes in index and document stores
-                show_progress=True,
-            )
-        except ValueError:
-            # There are no index in the storage context, creating a new one
-            logger.info("Creating a new vector store index")
-            index = VectorStoreIndex.from_documents(
-                [],
-                storage_context=self.storage_context,
-                service_context=self.ingest_service_context,
-                store_nodes_override=True,  # Force store nodes in index and document stores
-                show_progress=True,
-            )
-            index.storage_context.persist(persist_dir=local_data_path)
-        return index
-
-    def _save_index(self) -> None:
-        self._index.storage_context.persist(persist_dir=local_data_path)
+        self.ingest_component = SimpleIngestComponent(
+            self.storage_context, self.ingest_service_context
+        )
 
     def ingest(self, file_name: str, file_data: Path) -> list[IngestedDoc]:
         logger.info("Ingesting file_name=%s", file_name)
-        documents = IngestionHelper.transform_file_into_documents(file_name, file_data)
-        logger.info(
-            "Transformed file=%s into count=%s documents", file_name, len(documents)
-        )
-        logger.debug("Saving the documents in the index and doc store")
-        return self._save_docs(documents)
+        documents = self.ingest_component.ingest(file_name, file_data)
+        return [IngestedDoc.from_document(document) for document in documents]
 
     def ingest_bin_data(
         self, file_name: str, raw_file_data: BinaryIO
@@ -188,41 +83,8 @@ class IngestService:
 
     def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[IngestedDoc]:
         logger.info("Ingesting file_names=%s", [f[0] for f in files])
-
-        with multiprocessing.Pool(processes=BULK_INGEST_WORKER_NUM) as pool:
-            documents = list(
-                itertools.chain.from_iterable(
-                    pool.starmap(IngestionHelper.transform_file_into_documents, files)
-                )
-            )
-        logger.info(
-            "Transformed count=%s files into count=%s documents",
-            len(files),
-            len(documents),
-        )
-        return self._save_docs(documents)
-
-    def _save_docs(self, documents: list[Document]) -> list[IngestedDoc]:
-        for document in documents:
-            document.metadata["doc_id"] = document.doc_id
-            # We don't want the Embeddings search to receive this metadata
-            document.excluded_embed_metadata_keys = ["doc_id"]
-            # We don't want the LLM to receive these metadata in the context
-            document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
-        logger.debug("Inserting the documents in the index")
-        for doc in documents:
-            self._index.insert(doc)
-        logger.debug("Storing the documents in the doc store")
-        # persist the index and nodes
-        self._save_index()
-        return [
-            IngestedDoc(
-                object="ingest.document",
-                doc_id=document.doc_id,
-                doc_metadata=IngestedDoc.curate_metadata(document.metadata),
-            )
-            for document in documents
-        ]
+        documents = self.ingest_component.bulk_ingest(files)
+        return [IngestedDoc.from_document(document) for document in documents]
 
     def list_ingested(self) -> list[IngestedDoc]:
         ingested_docs = []
@@ -260,9 +122,4 @@ class IngestService:
         logger.info(
             "Deleting the ingested document=%s in the doc and index store", doc_id
         )
-
-        # Delete the document from the index
-        self._index.delete_ref_doc(doc_id, delete_from_docstore=True)
-
-        # Save the index
-        self._save_index()
+        self.ingest_component.delete(doc_id)
