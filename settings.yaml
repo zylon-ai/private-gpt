@@ -22,6 +22,9 @@ ui:
 
 llm:
   mode: local
+embedding:
+  # Should be matching the value above in most cases
+  mode: local
 
 vectorstore:
   database: qdrant

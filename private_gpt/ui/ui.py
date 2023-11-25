@@ -157,10 +157,8 @@ class PrivateGptUi:
 
     def _upload_file(self, files: list[str]) -> None:
         logger.debug("Loading count=%s files", len(files))
-        for file in files:
-            logger.info("Loading file=%s", file)
-            path = Path(file)
-            self._ingest_service.ingest(file_name=path.name, file_data=path)
+        paths = [Path(file) for file in files]
+        self._ingest_service.bulk_ingest([(str(path.name), path) for path in paths])
 
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
