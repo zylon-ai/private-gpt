@@ -65,16 +65,6 @@ local:
   # default_system_prompt: Vous êtes un assistant IA qui répond à la question posée à la fin en utilisant le contexte suivant. Si vous ne connaissez pas la réponse, dites simplement que vous ne savez pas, n'essayez pas d'inventer une réponse. Veuillez répondre exclusivement en français.
 ```
 
-### GodziLLa2-70B LLM (English, rank 2 on HuggingFace OpenLLM Leaderboard), bge large Embedding Model (rank 1 on HuggingFace MTEB Leaderboard)
-`settings-optimised.yaml`:
-```yml
-local:
-  llm_hf_repo_id: TheBloke/GodziLLa2-70B-GGUF
-  llm_hf_model_file: godzilla2-70b.Q4_K_M.gguf
-  embedding_hf_model_name: BAAI/bge-large-en
-  prompt_style: "llama2"
-```
-
 You might want to change the prompt as the one above might not directly answer your question.
 You can read online about how to write a good prompt, but in a nutshell, make it (extremely) directive.
 
@@ -91,4 +81,15 @@ Context: None
 Situation: tu es au milieu d'un champ.
 Tache: va a la rivière, en bas du champ.
 Décrit comment aller a la rivière.
+```
+
+### Optimised Models
+GodziLLa2-70B LLM (English, rank 2 on HuggingFace OpenLLM Leaderboard), bge large Embedding Model (rank 1 on HuggingFace MTEB Leaderboard)
+`settings-optimised.yaml`:
+```yml
+local:
+  llm_hf_repo_id: TheBloke/GodziLLa2-70B-GGUF
+  llm_hf_model_file: godzilla2-70b.Q4_K_M.gguf
+  embedding_hf_model_name: BAAI/bge-large-en
+  prompt_style: "llama2"
 ```
