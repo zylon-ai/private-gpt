@@ -1,11 +1,10 @@
 from injector import inject, singleton
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
-from llama_index.chat_engine import ContextChatEngine
+from llama_index.chat_engine import ContextChatEngine, SimpleChatEngine
 from llama_index.chat_engine.types import (
     BaseChatEngine,
 )
 from llama_index.indices.postprocessor import MetadataReplacementPostProcessor
-from llama_index.llm_predictor.utils import stream_chat_response_to_tokens
 from llama_index.llms import ChatMessage
 from llama_index.types import TokenGen
 from pydantic import BaseModel
@@ -58,18 +57,23 @@ class ChatService:
         )
 
     def _chat_engine(
-        self, context_filter: ContextFilter | None = None
+        self, use_context: bool = False, context_filter: ContextFilter | None = None
     ) -> BaseChatEngine:
-        vector_index_retriever = self.vector_store_component.get_retriever(
-            index=self.index, context_filter=context_filter
-        )
-        return ContextChatEngine.from_defaults(
-            retriever=vector_index_retriever,
-            service_context=self.service_context,
-            node_postprocessors=[
-                MetadataReplacementPostProcessor(target_metadata_key="window"),
-            ],
-        )
+        if use_context:
+            vector_index_retriever = self.vector_store_component.get_retriever(
+                index=self.index, context_filter=context_filter
+            )
+            return ContextChatEngine.from_defaults(
+                retriever=vector_index_retriever,
+                service_context=self.service_context,
+                node_postprocessors=[
+                    MetadataReplacementPostProcessor(target_metadata_key="window"),
+                ],
+            )
+        else:
+            return SimpleChatEngine.from_defaults(
+                service_context=self.service_context,
+            )
 
     def stream_chat(
         self,
@@ -77,24 +81,18 @@ class ChatService:
         use_context: bool = False,
         context_filter: ContextFilter | None = None,
     ) -> CompletionGen:
-        if use_context:
-            last_message = messages[-1].content
-            chat_engine = self._chat_engine(context_filter=context_filter)
-            streaming_response = chat_engine.stream_chat(
-                message=last_message if last_message is not None else "",
-                chat_history=messages[:-1],
-            )
-            sources = [
-                Chunk.from_node(node) for node in streaming_response.source_nodes
-            ]
-            completion_gen = CompletionGen(
-                response=streaming_response.response_gen, sources=sources
-            )
-        else:
-            stream = self.llm_service.llm.stream_chat(messages)
-            completion_gen = CompletionGen(
-                response=stream_chat_response_to_tokens(stream)
-            )
+        last_message = messages[-1].content
+        chat_engine = self._chat_engine(
+            use_context=use_context, context_filter=context_filter
+        )
+        streaming_response = chat_engine.stream_chat(
+            message=last_message if last_message is not None else "",
+            chat_history=messages[:-1],
+        )
+        sources = [Chunk.from_node(node) for node in streaming_response.source_nodes]
+        completion_gen = CompletionGen(
+            response=streaming_response.response_gen, sources=sources
+        )
         return completion_gen
 
     def chat(
@@ -103,18 +101,14 @@ class ChatService:
         use_context: bool = False,
         context_filter: ContextFilter | None = None,
     ) -> Completion:
-        if use_context:
-            last_message = messages[-1].content
-            chat_engine = self._chat_engine(context_filter=context_filter)
-            wrapped_response = chat_engine.chat(
-                message=last_message if last_message is not None else "",
-                chat_history=messages[:-1],
-            )
-            sources = [Chunk.from_node(node) for node in wrapped_response.source_nodes]
-            completion = Completion(response=wrapped_response.response, sources=sources)
-        else:
-            chat_response = self.llm_service.llm.chat(messages)
-            response_content = chat_response.message.content
-            response = response_content if response_content is not None else ""
-            completion = Completion(response=response)
+        last_message = messages[-1].content
+        chat_engine = self._chat_engine(
+            use_context=use_context, context_filter=context_filter
+        )
+        wrapped_response = chat_engine.chat(
+            message=last_message if last_message is not None else "",
+            chat_history=messages[:-1],
+        )
+        sources = [Chunk.from_node(node) for node in wrapped_response.source_nodes]
+        completion = Completion(response=wrapped_response.response, sources=sources)
         return completion
