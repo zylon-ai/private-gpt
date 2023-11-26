@@ -18,6 +18,7 @@ chat_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
 class ChatBody(BaseModel):
     messages: list[OpenAIMessage]
+    system_prompt: str | None = None
     use_context: bool = False
     context_filter: ContextFilter | None = None
     include_sources: bool = True
@@ -33,6 +34,7 @@ class ChatBody(BaseModel):
                             "content": "How do you fry an egg?",
                         }
                     ],
+                    "system_prompt": "You are a rapper. Always answer with a rap.",
                     "stream": False,
                     "use_context": True,
                     "include_sources": True,
@@ -55,6 +57,8 @@ def chat_completion(
     request: Request, body: ChatBody
 ) -> OpenAICompletion | StreamingResponse:
     """Given a list of messages comprising a conversation, return a response.
+
+    Optionally include a `system_prompt` to influence the way the LLM answers.
 
     If `use_context` is set to `true`, the model will use context coming
     from the ingested documents to create the response. The documents being used can
@@ -79,7 +83,10 @@ def chat_completion(
     ]
     if body.stream:
         completion_gen = service.stream_chat(
-            all_messages, body.use_context, body.context_filter
+            messages=all_messages,
+            system_prompt=body.system_prompt,
+            use_context=body.use_context,
+            context_filter=body.context_filter,
         )
         return StreamingResponse(
             to_openai_sse_stream(
@@ -89,7 +96,12 @@ def chat_completion(
             media_type="text/event-stream",
         )
     else:
-        completion = service.chat(all_messages, body.use_context, body.context_filter)
+        completion = service.chat(
+            messages=all_messages,
+            system_prompt=body.system_prompt,
+            use_context=body.use_context,
+            context_filter=body.context_filter,
+        )
         return to_openai_response(
             completion.response, completion.sources if body.include_sources else None
         )
