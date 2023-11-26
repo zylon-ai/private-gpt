@@ -117,6 +117,9 @@ class PrivateGptUi:
         match mode:
             case "Query Docs":
                 query_stream = self._chat_service.stream_chat(
+                    system_prompt="You can only answer questions about the provided context. If you know the answer "
+                    "but it is not based in the provided context, don't provide the answer, just state "
+                    "the answer is not in the context provided.",
                     messages=all_messages,
                     use_context=True,
                 )
