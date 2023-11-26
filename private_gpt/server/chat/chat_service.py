@@ -1,3 +1,4 @@
+
 from injector import inject, singleton
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
 from llama_index.chat_engine import ContextChatEngine, SimpleChatEngine
@@ -57,13 +58,17 @@ class ChatService:
         )
 
     def _chat_engine(
-        self, use_context: bool = False, context_filter: ContextFilter | None = None
+        self,
+        system_prompt: str | None = None,
+        use_context: bool = False,
+        context_filter: ContextFilter | None = None,
     ) -> BaseChatEngine:
         if use_context:
             vector_index_retriever = self.vector_store_component.get_retriever(
                 index=self.index, context_filter=context_filter
             )
             return ContextChatEngine.from_defaults(
+                system_prompt=system_prompt,
                 retriever=vector_index_retriever,
                 service_context=self.service_context,
                 node_postprocessors=[
@@ -72,18 +77,22 @@ class ChatService:
             )
         else:
             return SimpleChatEngine.from_defaults(
+                system_prompt=system_prompt,
                 service_context=self.service_context,
             )
 
     def stream_chat(
         self,
         messages: list[ChatMessage],
+        system_prompt: str | None = None,
         use_context: bool = False,
         context_filter: ContextFilter | None = None,
     ) -> CompletionGen:
         last_message = messages[-1].content
         chat_engine = self._chat_engine(
-            use_context=use_context, context_filter=context_filter
+            system_prompt=system_prompt,
+            use_context=use_context,
+            context_filter=context_filter,
         )
         streaming_response = chat_engine.stream_chat(
             message=last_message if last_message is not None else "",
@@ -98,12 +107,15 @@ class ChatService:
     def chat(
         self,
         messages: list[ChatMessage],
+        system_prompt: str | None = None,
         use_context: bool = False,
         context_filter: ContextFilter | None = None,
     ) -> Completion:
         last_message = messages[-1].content
         chat_engine = self._chat_engine(
-            use_context=use_context, context_filter=context_filter
+            system_prompt=system_prompt,
+            use_context=use_context,
+            context_filter=context_filter,
         )
         wrapped_response = chat_engine.chat(
             message=last_message if last_message is not None else "",
