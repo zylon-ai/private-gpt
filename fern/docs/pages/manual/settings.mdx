@@ -78,3 +78,18 @@ Missing variables with no default will produce an error.
 server:
   port: ${PORT:8001}
 ```
+
+## LLM config options
+
+The `llm` section of the settings allows for the following configurations:
+
+- mode = how to run your llm
+- max_new_tokens = this lets you configure the number of new tokens the llm will generate and add to the context window (by default Llama.cpp uses 256)
+
+Example:
+
+```yaml
+llm:
+  mode: local
+  max_new_tokens: 256
+```

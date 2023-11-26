@@ -82,6 +82,7 @@ class DataSettings(BaseModel):
 
 class LLMSettings(BaseModel):
     mode: Literal["local", "openai", "sagemaker", "mock"]
+    max_new_tokens: int
 
 
 class VectorstoreSettings(BaseModel):
