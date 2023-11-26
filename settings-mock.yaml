@@ -1,0 +1,5 @@
+server:
+  env_name: ${APP_ENV:mock}
+
+llm:
+  mode: mock
