@@ -81,11 +81,9 @@ class DataSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: Literal["local", "openai", "sagemaker", "mock"]
-    max_new_tokens: int = Field(
-        256,
-        description="The maximum number of token that the LLM is authorized to generate in one completion.",
-    )
+    mode: Literal["local", "openai", "sagemaker", "mock", "hybrid"]
+    embedding_mode: Literal["local", "openai"] #added 
+    llm_mode: Literal["local", "openai"]
 
 
 class VectorstoreSettings(BaseModel):
@@ -95,32 +93,7 @@ class VectorstoreSettings(BaseModel):
 class LocalSettings(BaseModel):
     llm_hf_repo_id: str
     llm_hf_model_file: str
-    embedding_hf_model_name: str = Field(
-        description="Name of the HuggingFace model to use for embeddings"
-    )
-    prompt_style: Literal["default", "llama2", "tag"] = Field(
-        "llama2",
-        description=(
-            "The prompt style to use for the chat engine. "
-            "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
-            "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
-            "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
-            "`llama2` is the historic behaviour. `default` might work better with your custom models."
-        ),
-    )
-    default_system_prompt: str | None = Field(
-        None,
-        description=(
-            "The default system prompt to use for the chat engine. "
-            "If none is given - use the default system prompt (from the llama_index). "
-            "Please note that the default prompt might not be the same for all prompt styles. "
-            "Also note that this is only used if the first message is not a system message. "
-        ),
-    )
-
-
-class EmbeddingSettings(BaseModel):
-    mode: Literal["local", "openai", "sagemaker", "mock"]
+    embedding_hf_model_name: str
 
 
 class SagemakerSettings(BaseModel):
@@ -195,8 +168,7 @@ class Settings(BaseModel):
     server: ServerSettings
     data: DataSettings
     ui: UISettings
-    llm: LLMSettings
-    embedding: EmbeddingSettings
+    chatbot: LLMSettings
     local: LocalSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
