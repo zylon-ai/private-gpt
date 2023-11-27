@@ -22,6 +22,7 @@ ui:
 
 llm:
   mode: local
+  max_new_tokens: 4096
 embedding:
   # Should be matching the value above in most cases
   mode: local
