@@ -122,30 +122,26 @@ class Llama2PromptStyle(AbstractPromptStyleWithSystemPrompt):
 
         system_message_str = f"{B_SYS} {system_message_str.strip()} {E_SYS}"
 
-        for i in range(0, len(messages), 2):
+        for i in range(0, len(messages), 1):
             # first message should always be a user
-            user_message = messages[i]
-            #user_message.role = MessageRole.USER # GH 2023-11-27 Temporarily added instead of assert
-            assert user_message.role == MessageRole.USER
+            message = messages[i]
+            str_message = ""
+            if message.role == MessageRole.USER:
+                if i == 0:
+                    # make sure system prompt is included at the start
+                    str_message = f"{BOS} {B_INST} {system_message_str} "
+                else:
+                    # end previous user-assistant interaction
+                    string_messages[-1] += f" {EOS}"
+                    # no need to include system prompt
+                    str_message = f"{BOS} {B_INST} "
 
-            if i == 0:
-                # make sure system prompt is included at the start
-                str_message = f"{BOS} {B_INST} {system_message_str} "
-            else:
-                # end previous user-assistant interaction
-                string_messages[-1] += f" {EOS}"
-                # no need to include system prompt
-                str_message = f"{BOS} {B_INST} "
+                # include user message content
+                str_message += f"{message.content} {E_INST}"
 
-            # include user message content
-            str_message += f"{user_message.content} {E_INST}"
-
-            if len(messages) > (i + 1):
+            elif message.role == MessageRole.ASSISTANT:
                 # if assistant message exists, add to str_message
-                assistant_message = messages[i + 1]
-                #assistant_message.role = MessageRole.ASSISTANT # GH 2023-11-27 Temporarily added instead of assert
-                assert assistant_message.role == MessageRole.ASSISTANT
-                str_message += f" {assistant_message.content}"
+                str_message += f" {message.content}"
 
             string_messages.append(str_message)
 
