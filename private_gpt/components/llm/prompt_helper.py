@@ -162,8 +162,32 @@ class TagPromptStyle(AbstractPromptStyleWithSystemPrompt):
         return prompt
 
 
+class ZephyrPromptStyle(TagPromptStyle):
+    def _completion_to_prompt(self, completion: str) -> str:
+        return (
+            f"<|system|>\n{self.system_prompt.strip()}</s>\n"
+            f"<|user|>\n{completion.strip()}</s>\n"
+            "<|assistant|>\n"
+        )
+
+    @staticmethod
+    def _format_messages_to_prompt(messages: list[ChatMessage]) -> str:
+        """Format message to prompt with `<|ROLE|>: MSG` style."""
+        assert messages[0].role == MessageRole.SYSTEM
+        prompt = ""
+        for message in messages:
+            role = message.role
+            content = message.content or ""
+            message_from_user = f"<|{role.lower()}|>\n{content.strip()}</s>"
+            message_from_user += "\n"
+            prompt += message_from_user
+        # we are missing the last <|assistant|> tag that will trigger a completion
+        prompt += "<|assistant|>\n"
+        return prompt
+
+
 def get_prompt_style(
-    prompt_style: Literal["default", "llama2", "tag"] | None
+    prompt_style: Literal["default", "llama2", "tag", "zephyr"] | None
 ) -> type[AbstractPromptStyle]:
     """Get the prompt style to use from the given string.
 
@@ -176,4 +200,6 @@ def get_prompt_style(
         return Llama2PromptStyle
     elif prompt_style == "tag":
         return TagPromptStyle
+    elif prompt_style == "zephyr":
+        return ZephyrPromptStyle
     raise ValueError(f"Unknown prompt_style='{prompt_style}'")
