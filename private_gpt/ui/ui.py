@@ -157,8 +157,10 @@ class PrivateGptUi:
 
     def _upload_file(self, files: list[str]) -> None:
         logger.debug("Loading count=%s files", len(files))
-        paths = [Path(file) for file in files]
-        self._ingest_service.bulk_ingest([(str(path.name), path) for path in paths])
+        for file in files:
+            logger.info("Loading file=%s", file)
+            path = Path(file)
+            self._ingest_service.ingest(file_name=path.name, file_data=path)
 
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
@@ -213,7 +215,7 @@ class PrivateGptUi:
                     _ = gr.ChatInterface(
                         self._chat,
                         chatbot=gr.Chatbot(
-                            label=f"LLM: {settings().llm.mode}",
+                            label = f"Chatbot: {settings().chatbot.mode}",
                             show_copy_button=True,
                             render=False,
                             avatar_images=(
