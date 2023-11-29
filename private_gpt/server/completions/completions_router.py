@@ -26,6 +26,7 @@ class CompletionsBody(BaseModel):
             "examples": [
                 {
                     "prompt": "How do you fry an egg?",
+                    "system_prompt": "You are a rapper. Always answer with a rap.",
                     "stream": False,
                     "use_context": False,
                     "include_sources": False,
@@ -69,10 +70,13 @@ def prompt_completion(
     "finish_reason":null}]}
     ```
     """
-    message = OpenAIMessage(content=body.prompt, role="user")
+    messages = [OpenAIMessage(content=body.prompt, role="user")]
+    # If system prompt is passed, create a fake message with the system prompt.
+    if body.system_prompt:
+        messages.insert(0, OpenAIMessage(content=body.system_prompt, role="system"))
+
     chat_body = ChatBody(
-        messages=[message],
-        system_prompt=body.system_prompt,
+        messages=messages,
         use_context=body.use_context,
         stream=body.stream,
         include_sources=body.include_sources,
