@@ -15,6 +15,7 @@ completions_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated
 
 class CompletionsBody(BaseModel):
     prompt: str
+    system_prompt: str | None = None
     use_context: bool = False
     context_filter: ContextFilter | None = None
     include_sources: bool = True
@@ -25,6 +26,7 @@ class CompletionsBody(BaseModel):
             "examples": [
                 {
                     "prompt": "How do you fry an egg?",
+                    "system_prompt": "You are a rapper. Always answer with a rap.",
                     "stream": False,
                     "use_context": False,
                     "include_sources": False,
@@ -46,7 +48,11 @@ def prompt_completion(
 ) -> OpenAICompletion | StreamingResponse:
     """We recommend most users use our Chat completions API.
 
-    Given a prompt, the model will return one predicted completion. If `use_context`
+    Given a prompt, the model will return one predicted completion.
+
+    Optionally include a `system_prompt` to influence the way the LLM answers.
+
+    If `use_context`
     is set to `true`, the model will use context coming from the ingested documents
     to create the response. The documents being used can be filtered using the
     `context_filter` and passing the document IDs to be used. Ingested documents IDs
@@ -64,9 +70,13 @@ def prompt_completion(
     "finish_reason":null}]}
     ```
     """
-    message = OpenAIMessage(content=body.prompt, role="user")
+    messages = [OpenAIMessage(content=body.prompt, role="user")]
+    # If system prompt is passed, create a fake message with the system prompt.
+    if body.system_prompt:
+        messages.insert(0, OpenAIMessage(content=body.system_prompt, role="system"))
+
     chat_body = ChatBody(
-        messages=[message],
+        messages=messages,
         use_context=body.use_context,
         stream=body.stream,
         include_sources=body.include_sources,
