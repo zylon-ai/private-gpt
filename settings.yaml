@@ -25,6 +25,9 @@ llm:
 embedding:
   # Should be matching the value above in most cases
   mode: local
+  ingest_mode: simple
+#  ingest_mode: parallel
+#  count_workers: 2
 
 vectorstore:
   database: qdrant
