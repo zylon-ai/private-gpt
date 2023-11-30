@@ -11,13 +11,14 @@ from llama_index import (
 from llama_index.node_parser import SentenceWindowNodeParser
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
-from private_gpt.components.ingest.ingest_component import SimpleIngestComponent
+from private_gpt.components.ingest.ingest_component import get_ingestion_component
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
 from private_gpt.server.ingest.model import IngestedDoc
+from private_gpt.settings.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +49,8 @@ class IngestService:
             transformations=[node_parser, embedding_component.embedding_model],
         )
 
-        self.ingest_component = SimpleIngestComponent(
-            self.storage_context, self.ingest_service_context
+        self.ingest_component = get_ingestion_component(
+            self.storage_context, self.ingest_service_context, settings=settings()
         )
 
     def ingest(self, file_name: str, file_data: Path) -> list[IngestedDoc]:

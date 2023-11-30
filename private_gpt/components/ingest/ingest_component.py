@@ -21,6 +21,7 @@ from llama_index.ingestion import run_transformations
 
 from private_gpt.components.ingest.ingest_helper import IngestionHelper
 from private_gpt.paths import local_data_path
+from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ class BaseIngestComponentWithIndex(BaseIngestComponent, abc.ABC):
 
         self.show_progress = True
         self._index_thread_lock = (
-            threading.RLock()
+            threading.Lock()
         )  # Thread lock! Not Multiprocessing lock
         self._index = self._initialize_index()
 
@@ -141,18 +142,17 @@ class SimpleIngestComponent(BaseIngestComponentWithIndex):
         return documents
 
 
-class MultiWorkerIngestComponent(BaseIngestComponentWithIndex):
+class BatchIngestComponent(BaseIngestComponentWithIndex):
     """Parallelize the file reading and parsing on multiple CPU core.
 
     This also makes the embeddings to be computed in batches (on GPU or CPU).
     """
 
-    BULK_INGEST_WORKER_NUM = max((os.cpu_count() or 1) - 1, 1)
-
     def __init__(
         self,
         storage_context: StorageContext,
         service_context: ServiceContext,
+        count_workers: int,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -162,6 +162,12 @@ class MultiWorkerIngestComponent(BaseIngestComponentWithIndex):
         assert (
             len(self.service_context.transformations) >= 2
         ), "Embeddings must be in the transformations"
+        assert count_workers > 0, "count_workers must be > 0"
+        self.count_workers = count_workers
+
+        self._file_to_documents_work_pool = multiprocessing.Pool(
+            processes=self.count_workers
+        )
 
     def ingest(self, file_name: str, file_data: Path) -> list[Document]:
         logger.info("Ingesting file_name=%s", file_name)
@@ -173,12 +179,13 @@ class MultiWorkerIngestComponent(BaseIngestComponentWithIndex):
         return self._save_docs(documents)
 
     def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[Document]:
-        with multiprocessing.Pool(processes=self.BULK_INGEST_WORKER_NUM) as pool:
-            documents = list(
-                itertools.chain.from_iterable(
-                    pool.starmap(IngestionHelper.transform_file_into_documents, files)
+        documents = list(
+            itertools.chain.from_iterable(
+                self._file_to_documents_work_pool.starmap(
+                    IngestionHelper.transform_file_into_documents, files
                 )
             )
+        )
         logger.info(
             "Transformed count=%s files into count=%s documents",
             len(files),
@@ -195,7 +202,7 @@ class MultiWorkerIngestComponent(BaseIngestComponentWithIndex):
         )
         # Locking the index to avoid concurrent writes
         with self._index_thread_lock:
-            logger.debug("Inserting count=%s nodes in the index", len(nodes))
+            logger.info("Inserting count=%s nodes in the index", len(nodes))
             self._index.insert_nodes(nodes, show_progress=True)
             for document in documents:
                 self._index.docstore.set_document_hash(
@@ -213,51 +220,43 @@ class ParallelizedIngestComponent(BaseIngestComponentWithIndex):
 
     This use the CPU and GPU in parallel (both running at the same time), and
     reduce the memory pressure by not loading all the files in memory at the same time.
-
-    FIXME: this is not working as well as planned because of the usage of
-     the multiprocessing worker pool.
     """
-
-    BULK_INGEST_WORKER_NUM = max((os.cpu_count() or 1) - 1, 1)
 
     def __init__(
         self,
         storage_context: StorageContext,
         service_context: ServiceContext,
+        count_workers: int,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         super().__init__(storage_context, service_context, *args, **kwargs)
-        # Make an efficient use of the CPU and GPU, the embedding
-        # must be in the transformations
+        # To make an efficient use of the CPU and GPU, the embeddings
+        # must be in the transformations (to be computed in batches)
         assert (
             len(self.service_context.transformations) >= 2
         ), "Embeddings must be in the transformations"
+        assert count_workers > 0, "count_workers must be > 0"
+        self.count_workers = count_workers
         # We are doing our own multiprocessing
         # To do not collide with the multiprocessing of huggingface, we disable it
         os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+        self._ingest_work_pool = multiprocessing.pool.ThreadPool(
+            processes=self.count_workers
+        )
+
+        self._file_to_documents_work_pool = multiprocessing.Pool(
+            processes=self.count_workers
+        )
+
     def ingest(self, file_name: str, file_data: Path) -> list[Document]:
         logger.info("Ingesting file_name=%s", file_name)
-        # FIXME there are some cases where the process is not finished
-        #  causing deadlocks. More information using trace:
-        #  time PGPT_PROFILES=ingest-local python -m trace --trace \
-        #    ./scripts/ingest_folder.py ... &> ingestion.traces
-        with multiprocessing.Pool(processes=1) as pool:
-            # Running in a single (1) process to release the current
-            # thread, and take a dedicated CPU core for computation
-            a_documents = pool.apply_async(
-                IngestionHelper.transform_file_into_documents, (file_name, file_data)
-            )
-            while True:
-                # FIXME ugly hack to highlight the deadlock in traces
-                try:
-                    documents = list(a_documents.get(timeout=2))
-                except multiprocessing.TimeoutError:
-                    continue
-                break
-            pool.close()
-            pool.terminate()
+        # Running in a single (1) process to release the current
+        # thread, and take a dedicated CPU core for computation
+        documents = self._file_to_documents_work_pool.apply(
+            IngestionHelper.transform_file_into_documents, (file_name, file_data)
+        )
         logger.info(
             "Transformed file=%s into count=%s documents", file_name, len(documents)
         )
@@ -267,12 +266,12 @@ class ParallelizedIngestComponent(BaseIngestComponentWithIndex):
     def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[Document]:
         # Lightweight threads, used for parallelize the
         # underlying IO calls made in the ingestion
-        with multiprocessing.pool.ThreadPool(
-            processes=self.BULK_INGEST_WORKER_NUM
-        ) as pool:
-            documents = list(
-                itertools.chain.from_iterable(pool.starmap(self.ingest, files))
+
+        documents = list(
+            itertools.chain.from_iterable(
+                self._ingest_work_pool.starmap(self.ingest, files)
             )
+        )
         return documents
 
     def _save_docs(self, documents: list[Document]) -> list[Document]:
@@ -284,7 +283,7 @@ class ParallelizedIngestComponent(BaseIngestComponentWithIndex):
         )
         # Locking the index to avoid concurrent writes
         with self._index_thread_lock:
-            logger.debug("Inserting count=%s nodes in the index", len(nodes))
+            logger.info("Inserting count=%s nodes in the index", len(nodes))
             self._index.insert_nodes(nodes, show_progress=True)
             for document in documents:
                 self._index.docstore.set_document_hash(
@@ -295,3 +294,35 @@ class ParallelizedIngestComponent(BaseIngestComponentWithIndex):
             self._save_index()
             logger.debug("Persisted the index and nodes")
         return documents
+
+    def __del__(self) -> None:
+        # We need to do the appropriate cleanup of the multiprocessing pools
+        # when the object is deleted. Using root logger to avoid
+        # the logger to be deleted before the pool
+        logging.debug("Closing the ingest work pool")
+        self._ingest_work_pool.close()
+        self._ingest_work_pool.join()
+        self._ingest_work_pool.terminate()
+        logging.debug("Closing the file to documents work pool")
+        self._file_to_documents_work_pool.close()
+        self._file_to_documents_work_pool.join()
+        self._file_to_documents_work_pool.terminate()
+
+
+def get_ingestion_component(
+    storage_context: StorageContext,
+    service_context: ServiceContext,
+    settings: Settings,
+) -> BaseIngestComponent:
+    """Get the ingestion component for the given configuration."""
+    ingest_mode = settings.embedding.ingest_mode
+    if ingest_mode == "batch":
+        return BatchIngestComponent(
+            storage_context, service_context, settings.embedding.count_workers
+        )
+    elif ingest_mode == "parallel":
+        return ParallelizedIngestComponent(
+            storage_context, service_context, settings.embedding.count_workers
+        )
+    else:
+        return SimpleIngestComponent(storage_context, service_context)

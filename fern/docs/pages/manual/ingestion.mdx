@@ -35,7 +35,7 @@ or using the completions / chat API.
 
 ## Ingestion troubleshooting
 
-Are you running out of memory when ingesting files?
+### Running out of memory
 
 To do not run out of memory, you should ingest your documents without the LLM loaded in your (video) memory.
 To do so, you should change your configuration to set `llm.mode: mock`.
@@ -53,7 +53,42 @@ This configuration allows you to use hardware acceleration for creating embeddin
 
 Once your documents are ingested, you can set the `llm.mode` value back to `local` (or your previous custom value).
 
+### Ingestion speed
 
+The ingestion speed depends on the number of documents you are ingesting, and the size of each document.
+To speed up the ingestion, you can change the ingestion mode in configuration.
+
+The following ingestion mode exist:
+* `simple`: historic behavior, ingest one document at a time, sequentially
+* `batch`: read, parse, and embed multiple documents using batches (batch read, and then batch parse, and then batch embed)
+* `parallel`: read, parse, and embed multiple documents in parallel. This is the fastest ingestion mode for local setup.
+To change the ingestion mode, you can use the `embedding.ingest_mode` configuration value. The default value is `simple`.
+
+To configure the number of workers used for parallel or batched ingestion, you can use
+the `embedding.count_workers` configuration value. If you set this value too high, you might run out of
+memory, so be mindful when setting this value. The default value is `2`.
+For `batch` mode, you can easily set this value to your number of threads available on your CPU without
+running out of memory. For `parallel` mode, you should be more careful, and set this value to a lower value.
+
+The configuration below should be enough for users who want to stress more their hardware:
+```yaml
+embedding:
+  ingest_mode: parallel
+  count_workers: 4
+```
+
+If your hardware is powerful enough, and that you are loading heavy documents, you can increase the number of workers.
+It is recommended to do your own tests to find the optimal value for your hardware.
+
+If you have a `bash` shell, you can use this set of command to do your own benchmark:
+
+```bash
+# Wipe your local data, to put yourself in a clean state
+# This will delete all your ingested documents
+make wipe
+
+time PGPT_PROFILES=mock python ./scripts/ingest_folder.py ~/my-dir/to-ingest/
+```
 
 ## Supported file formats
 
