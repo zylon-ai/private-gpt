@@ -9,7 +9,7 @@ import gradio as gr  # type: ignore
 from fastapi import FastAPI
 from gradio.themes.utils.colors import slate  # type: ignore
 from injector import inject, singleton
-from llama_index.llms import ChatMessage, ChatResponse, MessageRole
+from llama_index.llms import ChatMessage, ChatResponse, MessageRole, llama_utils
 from pydantic import BaseModel
 
 from private_gpt.constants import PROJECT_ROOT_PATH
@@ -29,6 +29,8 @@ AVATAR_BOT = THIS_DIRECTORY_RELATIVE / "avatar-bot.ico"
 UI_TAB_TITLE = "My Private GPT"
 
 SOURCES_SEPARATOR = "\n\n Sources: \n"
+
+MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
 
 
 class Source(BaseModel):
@@ -70,6 +72,9 @@ class PrivateGptUi:
 
         # Cache the UI blocks
         self._ui_block = None
+
+        self.mode = MODES[0]
+        self._system_prompt = self._get_default_system_prompt(self.mode)
 
     def _chat(self, message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
         def yield_deltas(completion_gen: CompletionGen) -> Iterable[str]:
@@ -121,9 +126,7 @@ class PrivateGptUi:
                 all_messages.insert(
                     0,
                     ChatMessage(
-                        content="You can only answer questions about the provided context. If you know the answer "
-                        "but it is not based in the provided context, don't provide the answer, just state "
-                        "the answer is not in the context provided.",
+                        content=self._system_prompt,
                         role=MessageRole.SYSTEM,
                     ),
                 )
@@ -134,6 +137,15 @@ class PrivateGptUi:
                 yield from yield_deltas(query_stream)
 
             case "LLM Chat":
+                # Add a system message to force the behaviour of the LLM
+                # to answer only questions about the provided context.
+                all_messages.insert(
+                    0,
+                    ChatMessage(
+                        content=self._system_prompt,
+                        role=MessageRole.SYSTEM,
+                    ),
+                )
                 llm_stream = self._chat_service.stream_chat(
                     messages=all_messages,
                     use_context=False,
@@ -153,6 +165,31 @@ class PrivateGptUi:
                     f"{source.text}"
                     for index, source in enumerate(sources, start=1)
                 )
+
+    # On initialization and on mode change, this function set the system prompt
+    # to the default prompt based on the mode (and user settings).
+    # TODO - Should system prompt be reset when user switches mode? That is current behavior
+    def _get_default_system_prompt(self, mode):
+        p = ""
+        match mode:
+            case "Query Docs":
+                p = "You can only answer questions about the provided context. If you know the answer " \
+                    "but it is not based in the provided context, don't provide the answer, just state " \
+                    "the answer is not in the context provided."
+            case "LLM Chat":
+                p = settings().local.default_system_prompt or llama_utils.DEFAULT_SYSTEM_PROMPT
+            case "Search in Docs":
+                # TODO - Verify no prompt needed for doc search (and no default prompt options)
+                p = ""
+        return p
+
+    def _set_system_prompt(self, system_prompt_input):
+        logger.info("Setting system prompt to: {}".format(system_prompt_input))
+        self._system_prompt = system_prompt_input
+
+    def _set_current_mode(self, mode):
+        self.mode = mode
+        return self._get_default_system_prompt(mode)
 
     def _list_ingested_files(self) -> list[list[str]]:
         files = set()
@@ -193,7 +230,7 @@ class PrivateGptUi:
             with gr.Row():
                 with gr.Column(scale=3, variant="compact"):
                     mode = gr.Radio(
-                        ["Query Docs", "Search in Docs", "LLM Chat"],
+                        MODES,
                         label="Mode",
                         value="Query Docs",
                     )
@@ -220,6 +257,21 @@ class PrivateGptUi:
                         outputs=ingested_dataset,
                     )
                     ingested_dataset.render()
+                    system_prompt_input = gr.Textbox(
+                        placeholder=self._system_prompt,
+                        label="System Prompt",
+                        render=False,
+                        max_lines=2,
+                        interactive=True)
+                    # When mode changes, set default system prompt
+                    mode.change(
+                        self._set_current_mode,
+                        inputs=mode)
+                    # On submit, set system prompt to use in queries
+                    system_prompt_input.blur(
+                        self._set_system_prompt,
+                        inputs=system_prompt_input)
+
                 with gr.Column(scale=7):
                     _ = gr.ChatInterface(
                         self._chat,
@@ -232,7 +284,7 @@ class PrivateGptUi:
                                 AVATAR_BOT,
                             ),
                         ),
-                        additional_inputs=[mode, upload_button],
+                        additional_inputs=[mode, upload_button, system_prompt_input],
                     )
         return blocks
 
