@@ -119,33 +119,23 @@ class PrivateGptUi:
 
         new_message = ChatMessage(content=message, role=MessageRole.USER)
         all_messages = [*build_history(), new_message]
+        # Add a system message to force the behaviour of the LLM
+        # to answer only questions about the provided context.
+        all_messages.insert(
+            0,
+            ChatMessage(
+                content=self._system_prompt,
+                role=MessageRole.SYSTEM,
+            )
+        )
         match mode:
             case "Query Docs":
-                # Add a system message to force the behaviour of the LLM
-                # to answer only questions about the provided context.
-                all_messages.insert(
-                    0,
-                    ChatMessage(
-                        content=self._system_prompt,
-                        role=MessageRole.SYSTEM,
-                    ),
-                )
                 query_stream = self._chat_service.stream_chat(
                     messages=all_messages,
                     use_context=True,
                 )
                 yield from yield_deltas(query_stream)
-
             case "LLM Chat":
-                # Add a system message to force the behaviour of the LLM
-                # to answer only questions about the provided context.
-                all_messages.insert(
-                    0,
-                    ChatMessage(
-                        content=self._system_prompt,
-                        role=MessageRole.SYSTEM,
-                    ),
-                )
                 llm_stream = self._chat_service.stream_chat(
                     messages=all_messages,
                     use_context=False,
@@ -168,7 +158,6 @@ class PrivateGptUi:
 
     # On initialization and on mode change, this function set the system prompt
     # to the default prompt based on the mode (and user settings).
-    # TODO - Should system prompt be reset when user switches mode? That is current behavior
     def _get_default_system_prompt(self, mode):
         p = ""
         match mode:
@@ -189,7 +178,8 @@ class PrivateGptUi:
 
     def _set_current_mode(self, mode):
         self.mode = mode
-        return self._get_default_system_prompt(mode)
+        self._set_system_prompt(self._get_default_system_prompt(mode))
+        return gr.update(placeholder=self._system_prompt)
 
     def _list_ingested_files(self) -> list[list[str]]:
         files = set()
@@ -260,17 +250,21 @@ class PrivateGptUi:
                     system_prompt_input = gr.Textbox(
                         placeholder=self._system_prompt,
                         label="System Prompt",
-                        render=False,
                         max_lines=2,
-                        interactive=True)
+                        interactive=True,
+                        render=False
+                    )
                     # When mode changes, set default system prompt
                     mode.change(
                         self._set_current_mode,
-                        inputs=mode)
+                        inputs=mode,
+                        outputs=system_prompt_input
+                    )
                     # On submit, set system prompt to use in queries
                     system_prompt_input.blur(
                         self._set_system_prompt,
-                        inputs=system_prompt_input)
+                        inputs=system_prompt_input,
+                    )
 
                 with gr.Column(scale=7):
                     _ = gr.ChatInterface(
