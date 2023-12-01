@@ -73,6 +73,7 @@ class PrivateGptUi:
         # Cache the UI blocks
         self._ui_block = None
 
+        # Initialize system prompt based on default mode
         self.mode = MODES[0]
         self._system_prompt = self._get_default_system_prompt(self.mode)
 
@@ -158,7 +159,8 @@ class PrivateGptUi:
 
     # On initialization and on mode change, this function set the system prompt
     # to the default prompt based on the mode (and user settings).
-    def _get_default_system_prompt(self, mode):
+    @staticmethod
+    def _get_default_system_prompt(mode: str) -> str:
         p = ""
         match mode:
             case "Query Docs":
@@ -172,11 +174,11 @@ class PrivateGptUi:
                 p = ""
         return p
 
-    def _set_system_prompt(self, system_prompt_input):
+    def _set_system_prompt(self, system_prompt_input: str) -> None:
         logger.info("Setting system prompt to: {}".format(system_prompt_input))
         self._system_prompt = system_prompt_input
 
-    def _set_current_mode(self, mode):
+    def _set_current_mode(self, mode: str) -> dict:
         self.mode = mode
         self._set_system_prompt(self._get_default_system_prompt(mode))
         return gr.update(placeholder=self._system_prompt)
