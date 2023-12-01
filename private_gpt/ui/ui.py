@@ -250,7 +250,7 @@ class PrivateGptUi:
                     system_prompt_input = gr.Textbox(
                         placeholder=self._system_prompt,
                         label="System Prompt",
-                        max_lines=2,
+                        lines=2,
                         interactive=True,
                         render=False
                     )
