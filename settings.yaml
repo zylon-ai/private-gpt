@@ -1,3 +1,6 @@
+# The default configuration file.
+# More information about configuration can be found in the documentation: https://docs.privategpt.dev/
+# Syntax in `private_pgt/settings/settings.py`
 server:
   env_name: ${APP_ENV:prod}
   port: ${PORT:8001}
@@ -26,6 +29,7 @@ llm:
 embedding:
   # Should be matching the value above in most cases
   mode: local
+  ingest_mode: simple
 
 vectorstore:
   database: qdrant
