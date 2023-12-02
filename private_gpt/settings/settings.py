@@ -98,13 +98,33 @@ class LocalSettings(BaseModel):
     embedding_hf_model_name: str = Field(
         description="Name of the HuggingFace model to use for embeddings"
     )
-    prompt_style: Literal["default", "llama2", "tag"] = Field(
+    prompt_style: Literal[
+        "llama_cpp.llama-2",
+        "llama_cpp.alpaca",
+        "llama_cpp.vicuna",
+        "llama_cpp.oasst_llama",
+        "llama_cpp.baichuan-2",
+        "llama_cpp.baichuan",
+        "llama_cpp.openbuddy",
+        "llama_cpp.redpajama-incite",
+        "llama_cpp.snoozy",
+        "llama_cpp.phind",
+        "llama_cpp.intel",
+        "llama_cpp.open-orca",
+        "llama_cpp.mistrallite",
+        "llama_cpp.zephyr",
+        "llama_cpp.chatml",
+        "llama_cpp.openchat",
         "llama2",
+        "vigogne",
+        "template",
+    ] | None = Field(
+        None,
         description=(
             "The prompt style to use for the chat engine. "
-            "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
+            "If None is given - use the default prompt style from the llama_index. It should look like `role: message`.\n"
             "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
-            "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
+            "If `llama_cpp.<name>` - use the `<name>` prompt style, implemented by `llama-cpp-python`. \n"
             "`llama2` is the historic behaviour. `default` might work better with your custom models."
         ),
     )
@@ -115,6 +135,13 @@ class LocalSettings(BaseModel):
             "If none is given - use the default system prompt (from the llama_index). "
             "Please note that the default prompt might not be the same for all prompt styles. "
             "Also note that this is only used if the first message is not a system message. "
+        ),
+    )
+
+    template_name: str | None = Field(
+        None,
+        description=(
+            "The name of the template to use for the chat engine, if the `prompt_style` is `template`."
         ),
     )
 

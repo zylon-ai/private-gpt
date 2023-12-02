@@ -4,7 +4,6 @@ from injector import inject, singleton
 from llama_index.llms import MockLLM
 from llama_index.llms.base import LLM
 
-from private_gpt.components.llm.prompt_helper import get_prompt_style
 from private_gpt.paths import models_path
 from private_gpt.settings.settings import Settings
 
@@ -23,8 +22,11 @@ class LLMComponent:
             case "local":
                 from llama_index.llms import LlamaCPP
 
-                prompt_style_cls = get_prompt_style(settings.local.prompt_style)
-                prompt_style = prompt_style_cls(
+                from private_gpt.components.llm.prompt.prompt_helper import get_prompt_style
+
+                prompt_style = get_prompt_style(
+                    prompt_style=settings.local.prompt_style,
+                    template_name=settings.local.template_name,
                     default_system_prompt=settings.local.default_system_prompt
                 )
 
@@ -43,6 +45,7 @@ class LLMComponent:
                     completion_to_prompt=prompt_style.completion_to_prompt,
                     verbose=True,
                 )
+                # prompt_style.improve_prompt_format(llm=cast(LlamaCPP, self.llm))
 
             case "sagemaker":
                 from private_gpt.components.llm.custom.sagemaker import SagemakerLLM
