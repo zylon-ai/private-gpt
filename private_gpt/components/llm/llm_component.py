@@ -22,12 +22,14 @@ class LLMComponent:
             case "local":
                 from llama_index.llms import LlamaCPP
 
-                from private_gpt.components.llm.prompt.prompt_helper import get_prompt_style
+                from private_gpt.components.llm.prompt.prompt_helper import (
+                    get_prompt_style,
+                )
 
                 prompt_style = get_prompt_style(
                     prompt_style=settings.local.prompt_style,
                     template_name=settings.local.template_name,
-                    default_system_prompt=settings.local.default_system_prompt
+                    default_system_prompt=settings.local.default_system_prompt,
                 )
 
                 self.llm = LlamaCPP(
