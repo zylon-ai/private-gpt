@@ -262,7 +262,7 @@ class PrivateGptUi:
                         inputs=mode,
                         outputs=system_prompt_input
                     )
-                    # On submit, set system prompt to use in queries
+                    # On blur, set system prompt to use in queries
                     system_prompt_input.blur(
                         self._set_system_prompt,
                         inputs=system_prompt_input,
