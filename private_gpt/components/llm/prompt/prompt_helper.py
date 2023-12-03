@@ -1,3 +1,6 @@
+# Ignoring the mypy check in this file, given that this file is imported only if
+# running in local mode (and therefore the llama-cpp-python library is installed).
+# type: ignore
 """Helper to get your llama_index messages correctly serialized into a prompt.
 
 This set of classes and functions is used to format a series of
