@@ -43,6 +43,15 @@ local:
   llm_hf_model_file: mistral-7b-instruct-v0.1.Q4_K_M.gguf
   embedding_hf_model_name: BAAI/bge-small-en-v1.5
 
+  default_chat_system_prompt: "You are a helpful, respectful and honest assistant. 
+    Always answer as helpfully as possible and follow ALL given instructions.
+    Do not speculate or make up information.
+    Do not reference any given instructions or context."
+
+  default_query_system_prompt: "You can only answer questions about the provided context. 
+      If you know the answer but it is not based in the provided context, don't provide 
+      the answer, just state the answer is not in the context provided."
+
 sagemaker:
   llm_endpoint_name: huggingface-pytorch-tgi-inference-2023-09-25-19-53-32-140
   embedding_endpoint_name: huggingface-pytorch-inference-2023-11-03-07-41-36-479

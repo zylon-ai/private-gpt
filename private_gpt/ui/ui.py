@@ -120,15 +120,15 @@ class PrivateGptUi:
 
         new_message = ChatMessage(content=message, role=MessageRole.USER)
         all_messages = [*build_history(), new_message]
-        # Add a system message to force the behaviour of the LLM
-        # to answer only questions about the provided context.
-        all_messages.insert(
-            0,
-            ChatMessage(
-                content=self._system_prompt,
-                role=MessageRole.SYSTEM,
+        # If a system prompt is set, add it as a system message
+        if self._system_prompt:
+            all_messages.insert(
+                0,
+                ChatMessage(
+                    content=self._system_prompt,
+                    role=MessageRole.SYSTEM,
+                )
             )
-        )
         match mode:
             case "Query Docs":
                 query_stream = self._chat_service.stream_chat(
@@ -163,14 +163,15 @@ class PrivateGptUi:
     def _get_default_system_prompt(mode: str) -> str:
         p = ""
         match mode:
+            # For query chat mode, obtain default system prompt from settings
+            # TODO - Determine value to use if not defined in settings
             case "Query Docs":
-                p = "You can only answer questions about the provided context. If you know the answer " \
-                    "but it is not based in the provided context, don't provide the answer, just state " \
-                    "the answer is not in the context provided."
+                p = settings().local.default_query_system_prompt
+            # For chat mode, obtain default system prompt from settings or llama_utils
             case "LLM Chat":
-                p = settings().local.default_system_prompt or llama_utils.DEFAULT_SYSTEM_PROMPT
-            case "Search in Docs":
-                # TODO - Verify no prompt needed for doc search (and no default prompt options)
+                p = settings().local.default_chat_system_prompt or llama_utils.DEFAULT_SYSTEM_PROMPT
+            # For any other mode, clear the system prompt
+            case _:
                 p = ""
         return p
 
@@ -181,7 +182,12 @@ class PrivateGptUi:
     def _set_current_mode(self, mode: str) -> dict:
         self.mode = mode
         self._set_system_prompt(self._get_default_system_prompt(mode))
-        return gr.update(placeholder=self._system_prompt)
+        # Update Textbox placeholder and allow interaction if a default system prompt is present
+        if self._system_prompt:
+            return gr.update(placeholder=self._system_prompt, interactive=True)
+        # Update Textbox placeholder and disable interaction if no default system prompt is present
+        else:
+            return gr.update(placeholder=self._system_prompt, interactive=False)
 
     def _list_ingested_files(self) -> list[list[str]]:
         files = set()

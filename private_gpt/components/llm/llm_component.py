@@ -25,7 +25,7 @@ class LLMComponent:
 
                 prompt_style_cls = get_prompt_style(settings.local.prompt_style)
                 prompt_style = prompt_style_cls(
-                    default_system_prompt=settings.local.default_system_prompt
+                    default_system_prompt=settings.local.default_chat_system_prompt
                 )
 
                 self.llm = LlamaCPP(

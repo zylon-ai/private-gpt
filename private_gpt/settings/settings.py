@@ -15,7 +15,7 @@ class CorsSettings(BaseModel):
 
     enabled: bool = Field(
         description="Flag indicating if CORS headers are set or not."
-        "If set to True, the CORS headers will be set to allow all origins, methods and headers.",
+                    "If set to True, the CORS headers will be set to allow all origins, methods and headers.",
         default=False,
     )
     allow_credentials: bool = Field(
@@ -54,8 +54,8 @@ class AuthSettings(BaseModel):
     )
     secret: str = Field(
         description="The secret to be used for authentication. "
-        "It can be any non-blank string. For HTTP basic authentication, "
-        "this value should be the whole 'Authorization' header that is expected"
+                    "It can be any non-blank string. For HTTP basic authentication, "
+                    "this value should be the whole 'Authorization' header that is expected"
     )
 
 
@@ -76,7 +76,7 @@ class ServerSettings(BaseModel):
 class DataSettings(BaseModel):
     local_data_folder: str = Field(
         description="Path to local storage."
-        "It will be treated as an absolute path if it starts with /"
+                    "It will be treated as an absolute path if it starts with /"
     )
 
 
@@ -108,13 +108,20 @@ class LocalSettings(BaseModel):
             "`llama2` is the historic behaviour. `default` might work better with your custom models."
         ),
     )
-    default_system_prompt: str | None = Field(
+    default_chat_system_prompt: str | None = Field(
         None,
         description=(
-            "The default system prompt to use for the chat engine. "
+            "The default system prompt to use for the chat mode. "
             "If none is given - use the default system prompt (from the llama_index). "
             "Please note that the default prompt might not be the same for all prompt styles. "
             "Also note that this is only used if the first message is not a system message. "
+        ),
+    )
+    default_query_system_prompt: str | None = Field(
+        None,
+        description=(
+            "The default system prompt to use for the query mode. "
+            # TODO - document what can be used as default query system prompt
         ),
     )
 

@@ -39,9 +39,12 @@ Normal chat interface, self-explanatory ;)
 You can view and change the system prompt being passed to the LLM by clicking "Additional Inputs"
 in the chat interface. The system prompt is also logged on the server.
 
-By default, the `Query Docs` mode uses a predefined system prompt. The `LLM Chat` mode attempts to use
-the optional settings value `local.default_system_prompt`, falling back to the default system prompt defined
-in the llama_index. If no system prompt is entered, the UI will display the default system prompt being used
+By default, the `Query Docs` mode uses the setting value `local.default_query_system_prompt`.
+
+The `LLM Chat` mode attempts to use the optional settings value `local.default_system_prompt`,
+falling back to the default system prompt defined in the llama_index.
+
+If no system prompt is entered, the UI will display the default system prompt being used
 for the active mode.
 
 ##### System Prompt Examples:
@@ -52,7 +55,7 @@ you have given the model. Examples of system prompts can be be found
 
 Some interesting examples to try include:
 
-* You are <X>. You have all the knowledge and personality of <X>. Answer as if you were Shakespeare using
+* You are <X>. You have all the knowledge and personality of <X>. Answer as if you were <X> using
 their manner of speaking and vocabulary.
     * Example: You are Shakespeare. You have all the knowledge and personality of Shakespeare.
     Answer as if you were Shakespeare using their manner of speaking and vocabulary.
