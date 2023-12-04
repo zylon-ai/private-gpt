@@ -15,7 +15,7 @@ class CorsSettings(BaseModel):
 
     enabled: bool = Field(
         description="Flag indicating if CORS headers are set or not."
-                    "If set to True, the CORS headers will be set to allow all origins, methods and headers.",
+        "If set to True, the CORS headers will be set to allow all origins, methods and headers.",
         default=False,
     )
     allow_credentials: bool = Field(
@@ -54,8 +54,8 @@ class AuthSettings(BaseModel):
     )
     secret: str = Field(
         description="The secret to be used for authentication. "
-                    "It can be any non-blank string. For HTTP basic authentication, "
-                    "this value should be the whole 'Authorization' header that is expected"
+        "It can be any non-blank string. For HTTP basic authentication, "
+        "this value should be the whole 'Authorization' header that is expected"
     )
 
 
@@ -76,7 +76,7 @@ class ServerSettings(BaseModel):
 class DataSettings(BaseModel):
     local_data_folder: str = Field(
         description="Path to local storage."
-                    "It will be treated as an absolute path if it starts with /"
+        "It will be treated as an absolute path if it starts with /"
     )
 
 
