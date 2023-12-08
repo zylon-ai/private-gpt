@@ -93,3 +93,13 @@ local:
   embedding_hf_model_name: BAAI/bge-large-en
   prompt_style: "llama2"
 ```
+### German speaking model
+`settings-de.yaml`:
+```yml
+local:
+  llm_hf_repo_id: TheBloke/em_german_leo_mistral-GGUF
+  llm_hf_model_file:   em_german_leo_mistral.Q4_K_M.gguf
+  embedding_hf_model_name: T-Systems-onsite/german-roberta-sentence-transformer-v2
+  #llama, default or tag
+  prompt_style: "default"
+```
