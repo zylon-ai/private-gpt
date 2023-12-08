@@ -1,20 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "PrivateGPT",
-    "summary": "PrivateGPT is a production-ready AI project that allows you to ask questions to your documents using the power of Large Language Models (LLMs), even in scenarios without Internet connection. 100% private, no data leaves your execution environment at any point.",
-    "description": "",
-    "contact": {
-      "url": "https://github.com/imartinez/privateGPT"
-    },
-    "license": {
-      "name": "Apache 2.0",
-      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
-    },
-    "version": "0.1.0",
-    "x-logo": {
-      "url": "https://lh3.googleusercontent.com/drive-viewer/AK7aPaD_iNlMoTquOBsw4boh4tIYxyEuhz6EtEs8nzq3yNkNAK00xGjE1KUCmPJSk3TYOjcs6tReG6w_cLu1S7L_gPgT9z52iw=s2560"
-    }
+    "title": "FastAPI",
+    "version": "0.1.0"
   },
   "paths": {
     "/v1/completions": {
@@ -65,7 +53,7 @@
           "Contextual Completions"
         ],
         "summary": "Chat Completion",
-        "description": "Given a list of messages comprising a conversation, return a response.\n\nOptionally include a `system_prompt` to influence the way the LLM answers.\n\nIf `use_context` is set to `true`, the model will use context coming\nfrom the ingested documents to create the response. The documents being used can\nbe filtered using the `context_filter` and passing the document IDs to be used.\nIngested documents IDs can be found using `/ingest/list` endpoint. If you want\nall ingested documents to be used, remove `context_filter` altogether.\n\nWhen using `'include_sources': true`, the API will return the source Chunks used\nto create the response, which come from the context provided.\n\nWhen using `'stream': true`, the API will return data chunks following [OpenAI's\nstreaming model](https://platform.openai.com/docs/api-reference/chat/streaming):\n```\n{\"id\":\"12345\",\"object\":\"completion.chunk\",\"created\":1694268190,\n\"model\":\"private-gpt\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello\"},\n\"finish_reason\":null}]}\n```",
+        "description": "Given a list of messages comprising a conversation, return a response.\n\nOptionally include an initial `role: system` message to influence the way\nthe LLM answers.\n\nIf `use_context` is set to `true`, the model will use context coming\nfrom the ingested documents to create the response. The documents being used can\nbe filtered using the `context_filter` and passing the document IDs to be used.\nIngested documents IDs can be found using `/ingest/list` endpoint. If you want\nall ingested documents to be used, remove `context_filter` altogether.\n\nWhen using `'include_sources': true`, the API will return the source Chunks used\nto create the response, which come from the context provided.\n\nWhen using `'stream': true`, the API will return data chunks following [OpenAI's\nstreaming model](https://platform.openai.com/docs/api-reference/chat/streaming):\n```\n{\"id\":\"12345\",\"object\":\"completion.chunk\",\"created\":1694268190,\n\"model\":\"private-gpt\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello\"},\n\"finish_reason\":null}]}\n```",
         "operationId": "chat_completion_v1_chat_completions_post",
         "requestBody": {
           "content": {
@@ -338,17 +326,6 @@
             "type": "array",
             "title": "Messages"
           },
-          "system_prompt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "System Prompt"
-          },
           "use_context": {
             "type": "boolean",
             "title": "Use Context",
@@ -390,12 +367,15 @@
             "include_sources": true,
             "messages": [
               {
+                "content": "You are a rapper. Always answer with a rap.",
+                "role": "system"
+              },
+              {
                 "content": "How do you fry an egg?",
                 "role": "user"
               }
             ],
             "stream": false,
-            "system_prompt": "You are a rapper. Always answer with a rap.",
             "use_context": true
           }
         ]
@@ -591,6 +571,7 @@
             "include_sources": false,
             "prompt": "How do you fry an egg?",
             "stream": false,
+            "system_prompt": "You are a rapper. Always answer with a rap.",
             "use_context": false
           }
         ]
@@ -986,27 +967,5 @@
         "title": "ValidationError"
       }
     }
-  },
-  "tags": [
-    {
-      "name": "Ingestion",
-      "description": "High-level APIs covering document ingestion -internally managing document parsing, splitting,metadata extraction, embedding generation and storage- and ingested documents CRUD.Each ingested document is identified by an ID that can be used to filter the contextused in *Contextual Completions* and *Context Chunks* APIs."
-    },
-    {
-      "name": "Contextual Completions",
-      "description": "High-level APIs covering contextual Chat and Completions. They follow OpenAI's format, extending it to allow using the context coming from ingested documents to create the response. Internallymanage context retrieval, prompt engineering and the response generation."
-    },
-    {
-      "name": "Context Chunks",
-      "description": "Low-level API that given a query return relevant chunks of text coming from the ingesteddocuments."
-    },
-    {
-      "name": "Embeddings",
-      "description": "Low-level API to obtain the vector representation of a given text, using an Embeddings model.Follows OpenAI's embeddings API format."
-    },
-    {
-      "name": "Health",
-      "description": "Simple health API to make sure the server is up and running."
-    }
-  ]
+  }
 }
