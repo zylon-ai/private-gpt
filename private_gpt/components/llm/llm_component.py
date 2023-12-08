@@ -23,10 +23,7 @@ class LLMComponent:
             case "local":
                 from llama_index.llms import LlamaCPP
 
-                prompt_style_cls = get_prompt_style(settings.local.prompt_style)
-                prompt_style = prompt_style_cls(
-                    default_system_prompt=settings.local.default_system_prompt
-                )
+                prompt_style = get_prompt_style(settings.local.prompt_style)
 
                 self.llm = LlamaCPP(
                     model_path=str(models_path / settings.local.llm_hf_model_file),
