@@ -39,10 +39,9 @@ Normal chat interface, self-explanatory ;)
 You can view and change the system prompt being passed to the LLM by clicking "Additional Inputs"
 in the chat interface. The system prompt is also logged on the server.
 
-By default, the `Query Docs` mode uses the setting value `local.default_query_system_prompt`.
+By default, the `Query Docs` mode uses the setting value `ui.default_query_system_prompt`.
 
-The `LLM Chat` mode attempts to use the optional settings value `local.default_chat_system_prompt`,
-falling back to the default system prompt defined in the llama_index.
+The `LLM Chat` mode attempts to use the optional settings value `ui.default_chat_system_prompt`.
 
 If no system prompt is entered, the UI will display the default system prompt being used
 for the active mode.

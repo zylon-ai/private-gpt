@@ -117,12 +117,9 @@ class LocalSettings(BaseModel):
             "Also note that this is only used if the first message is not a system message. "
         ),
     )
-    default_query_system_prompt: str | None = Field(
+    default_query_system_prompt: str = Field(
         None,
-        description=(
-            "The default system prompt to use for the query mode. "
-            # TODO - document what can be used as default query system prompt
-        ),
+        description="The default system prompt to use for the query mode. ",
     )
 
 

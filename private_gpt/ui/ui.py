@@ -127,7 +127,7 @@ class PrivateGptUi:
                 ChatMessage(
                     content=self._system_prompt,
                     role=MessageRole.SYSTEM,
-                )
+                ),
             )
         match mode:
             case "Query Docs":
@@ -169,23 +169,26 @@ class PrivateGptUi:
                 p = settings().local.default_query_system_prompt
             # For chat mode, obtain default system prompt from settings or llama_utils
             case "LLM Chat":
-                p = settings().local.default_chat_system_prompt or llama_utils.DEFAULT_SYSTEM_PROMPT
+                p = (
+                    settings().local.default_chat_system_prompt
+                    or llama_utils.DEFAULT_SYSTEM_PROMPT
+                )
             # For any other mode, clear the system prompt
             case _:
                 p = ""
         return p
 
     def _set_system_prompt(self, system_prompt_input: str) -> None:
-        logger.info("Setting system prompt to: {}".format(system_prompt_input))
+        logger.info(f"Setting system prompt to: {system_prompt_input}")
         self._system_prompt = system_prompt_input
 
-    def _set_current_mode(self, mode: str) -> dict:
+    def _set_current_mode(self, mode: str) -> Any:
         self.mode = mode
         self._set_system_prompt(self._get_default_system_prompt(mode))
-        # Update Textbox placeholder and allow interaction if a default system prompt is present
+        # Update placeholder and allow interaction if default system prompt is set
         if self._system_prompt:
             return gr.update(placeholder=self._system_prompt, interactive=True)
-        # Update Textbox placeholder and disable interaction if no default system prompt is present
+        # Update placeholder and disable interaction if no default system prompt is set
         else:
             return gr.update(placeholder=self._system_prompt, interactive=False)
 
@@ -260,13 +263,11 @@ class PrivateGptUi:
                         label="System Prompt",
                         lines=2,
                         interactive=True,
-                        render=False
+                        render=False,
                     )
                     # When mode changes, set default system prompt
                     mode.change(
-                        self._set_current_mode,
-                        inputs=mode,
-                        outputs=system_prompt_input
+                        self._set_current_mode, inputs=mode, outputs=system_prompt_input
                     )
                     # On blur, set system prompt to use in queries
                     system_prompt_input.blur(
