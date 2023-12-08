@@ -154,6 +154,12 @@ class SagemakerSettings(BaseModel):
 
 class OpenAISettings(BaseModel):
     api_key: str
+    model: str | None = Field(
+        "gpt-3.5-turbo",
+        description=(
+            "OpenAI Model to use. Example: 'gpt-4'."
+        ),
+    )
 
 
 class UISettings(BaseModel):
