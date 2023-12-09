@@ -9,7 +9,7 @@ import gradio as gr  # type: ignore
 from fastapi import FastAPI
 from gradio.themes.utils.colors import slate  # type: ignore
 from injector import inject, singleton
-from llama_index.llms import ChatMessage, ChatResponse, MessageRole, llama_utils
+from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 from pydantic import BaseModel
 
 from private_gpt.constants import PROJECT_ROOT_PATH
@@ -164,15 +164,11 @@ class PrivateGptUi:
         p = ""
         match mode:
             # For query chat mode, obtain default system prompt from settings
-            # TODO - Determine value to use if not defined in settings
             case "Query Docs":
-                p = settings().local.default_query_system_prompt
-            # For chat mode, obtain default system prompt from settings or llama_utils
+                p = settings().ui.default_query_system_prompt
+            # For chat mode, obtain default system prompt from settings
             case "LLM Chat":
-                p = (
-                    settings().local.default_chat_system_prompt
-                    or llama_utils.DEFAULT_SYSTEM_PROMPT
-                )
+                p = settings().ui.default_chat_system_prompt
             # For any other mode, clear the system prompt
             case _:
                 p = ""
