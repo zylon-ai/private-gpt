@@ -19,6 +19,9 @@ from private_gpt.components.vector_store.vector_store_component import (
 )
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chunks.chunks_service import Chunk
+from private_gpt.settings.settings import settings
+
+DEFAULT_CONTEXT_TEMPLATE = settings().rag.default_context_template
 
 
 class Completion(BaseModel):
@@ -97,6 +100,7 @@ class ChatService:
         system_prompt: str | None = None,
         use_context: bool = False,
         context_filter: ContextFilter | None = None,
+        context_template: str | None = DEFAULT_CONTEXT_TEMPLATE,
     ) -> BaseChatEngine:
         if use_context:
             vector_index_retriever = self.vector_store_component.get_retriever(
@@ -109,6 +113,7 @@ class ChatService:
                 node_postprocessors=[
                     MetadataReplacementPostProcessor(target_metadata_key="window"),
                 ],
+                context_template=context_template,
             )
         else:
             return SimpleChatEngine.from_defaults(
@@ -121,6 +126,7 @@ class ChatService:
         messages: list[ChatMessage],
         use_context: bool = False,
         context_filter: ContextFilter | None = None,
+        context_template: str | None = None,
     ) -> CompletionGen:
         chat_engine_input = ChatEngineInput.from_messages(messages)
         last_message = (
@@ -141,6 +147,7 @@ class ChatService:
             system_prompt=system_prompt,
             use_context=use_context,
             context_filter=context_filter,
+            context_template=context_template,
         )
         streaming_response = chat_engine.stream_chat(
             message=last_message if last_message is not None else "",
@@ -157,6 +164,7 @@ class ChatService:
         messages: list[ChatMessage],
         use_context: bool = False,
         context_filter: ContextFilter | None = None,
+        context_template: str | None = None,
     ) -> Completion:
         chat_engine_input = ChatEngineInput.from_messages(messages)
         last_message = (
@@ -177,6 +185,7 @@ class ChatService:
             system_prompt=system_prompt,
             use_context=use_context,
             context_filter=context_filter,
+            context_template=context_template,
         )
         wrapped_response = chat_engine.chat(
             message=last_message if last_message is not None else "",

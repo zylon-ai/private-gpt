@@ -217,6 +217,16 @@ class QdrantSettings(BaseModel):
     )
 
 
+class RagSettings(BaseModel):
+    default_context_template: str | None = Field(
+        None,
+        description=(
+            "The default context template to use for the chat engine when using RAG. "
+            "If none is given - use the default system prompt (from the llama_index). "
+        ),
+    )
+
+
 class Settings(BaseModel):
     server: ServerSettings
     data: DataSettings
@@ -228,6 +238,7 @@ class Settings(BaseModel):
     openai: OpenAISettings
     vectorstore: VectorstoreSettings
     qdrant: QdrantSettings | None = None
+    rag: RagSettings
 
 
 """
