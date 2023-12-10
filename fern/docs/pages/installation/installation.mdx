@@ -67,11 +67,11 @@ These two models are known to work well:
 * https://huggingface.co/TheBloke/Llama-2-7B-chat-GGUF
 * https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF (recommended)
 
-To ease the installation process, use the `setup` script that will download both
+To ease the installation process, run the `setup` that will download both
 the embedding and the LLM model and place them in the correct location (under `models` folder):
 
 ```bash
-poetry run python scripts/setup
+make setup
 ```
 
 If you are ok with CPU execution, you can skip the rest of this section.
