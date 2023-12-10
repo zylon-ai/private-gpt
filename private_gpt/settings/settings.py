@@ -147,13 +147,20 @@ class OpenAISettings(BaseModel):
     api_key: str
     model: str = Field(
         "gpt-3.5-turbo",
-        description=("OpenAI Model to use. Example: 'gpt-4'."),
+        description="OpenAI Model to use. Example: 'gpt-4'.",
     )
 
 
 class UISettings(BaseModel):
     enabled: bool
     path: str
+    default_chat_system_prompt: str = Field(
+        None,
+        description="The default system prompt to use for the chat mode.",
+    )
+    default_query_system_prompt: str = Field(
+        None, description="The default system prompt to use for the query mode."
+    )
 
 
 class QdrantSettings(BaseModel):

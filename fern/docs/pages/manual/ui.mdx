@@ -35,5 +35,32 @@ database* section in the documentation.
 
 Normal chat interface, self-explanatory ;)
 
-You can check the actual prompt being passed to the LLM by looking at the logs of
-the server. We'll add better observability in future releases.
+#### System Prompt
+You can view and change the system prompt being passed to the LLM by clicking "Additional Inputs"
+in the chat interface. The system prompt is also logged on the server.
+
+By default, the `Query Docs` mode uses the setting value `ui.default_query_system_prompt`.
+
+The `LLM Chat` mode attempts to use the optional settings value `ui.default_chat_system_prompt`.
+
+If no system prompt is entered, the UI will display the default system prompt being used
+for the active mode.
+
+##### System Prompt Examples:
+
+The system prompt can effectively provide your chat bot specialized roles, and results tailored to the prompt
+you have given the model. Examples of system prompts can be be found
+[here](https://www.w3schools.com/gen_ai/chatgpt-3-5/chatgpt-3-5_roles.php).
+
+Some interesting examples to try include:
+
+* You are -X-. You have all the knowledge and personality of -X-. Answer as if you were -X- using
+their manner of speaking and vocabulary.
+    * Example: You are Shakespeare. You have all the knowledge and personality of Shakespeare.
+    Answer as if you were Shakespeare using their manner of speaking and vocabulary.
+* You are an expert (at) -role-. Answer all questions using your expertise on -specific domain topic-.
+    * Example: You are an expert software engineer. Answer all questions using your expertise on Python.
+* You are a -role- bot, respond with -response criteria needed-. If no -response criteria- is needed,
+respond with -alternate response-.
+    * Example: You are a grammar checking bot, respond with any grammatical corrections needed. If no corrections
+    are needed, respond with "verified".
