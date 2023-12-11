@@ -44,3 +44,26 @@ class EmbeddingComponent:
                 # Not a random number, is the dimensionality used by
                 # the default embedding model
                 self.embedding_model = MockEmbedding(384)
+
+            case "bedrock":
+
+                from llama_index.embeddings import BedrockEmbedding
+
+                self.embedding_model = BedrockEmbedding(
+                    model_name=settings.bedrock.embedding_modelid,
+                )
+
+                from boto3 import Session
+
+                # Access credentials using boto3
+                session = Session()
+                credentials = session.get_credentials()
+
+                # Access key ID and secret access key
+                access_key = credentials.access_key
+                secret_key = credentials.secret_key
+
+                self.embedding_model.set_credentials(aws_region=settings.bedrock.region,
+                                                     aws_access_key_id=access_key,
+                                                     aws_secret_access_key=secret_key
+                                                     )

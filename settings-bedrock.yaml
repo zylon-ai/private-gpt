@@ -1,0 +1,19 @@
+server:
+  env_name: ${APP_ENV:prod}
+  port: ${PORT:8001}
+
+ui:
+  enabled: true
+  path: /
+
+llm:
+  mode: bedrock
+
+embedding:
+  mode: bedrock
+
+bedrock:
+  llm_modelid: anthropic.claude-v2
+  llm_temperature: 0.5
+  embedding_modelid: amazon.titan-embed-text-v1
+  region: us-east-1

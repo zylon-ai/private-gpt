@@ -57,3 +57,9 @@ sagemaker:
 openai:
   api_key: ${OPENAI_API_KEY:}
   model: gpt-3.5-turbo
+
+bedrock:
+  llm_modelid: anthropic.claude-v2
+  llm_temperature: 0.5
+  embedding_modelid: amazon.titan-embed-text-v1
+  region: us-east-1

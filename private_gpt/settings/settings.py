@@ -81,7 +81,7 @@ class DataSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: Literal["local", "openai", "sagemaker", "mock"]
+    mode: Literal["local", "openai", "sagemaker", "mock", "bedrock"]
     max_new_tokens: int = Field(
         256,
         description="The maximum number of token that the LLM is authorized to generate in one completion.",
@@ -111,7 +111,7 @@ class LocalSettings(BaseModel):
 
 
 class EmbeddingSettings(BaseModel):
-    mode: Literal["local", "openai", "sagemaker", "mock"]
+    mode: Literal["local", "openai", "sagemaker", "mock", "bedrock"]
     ingest_mode: Literal["simple", "batch", "parallel"] = Field(
         "simple",
         description=(
@@ -149,6 +149,13 @@ class OpenAISettings(BaseModel):
         "gpt-3.5-turbo",
         description="OpenAI Model to use. Example: 'gpt-4'.",
     )
+
+
+class BedrockSettings(BaseModel):
+    llm_modelid: str
+    llm_temperature: float
+    embedding_modelid: str
+    region: str
 
 
 class UISettings(BaseModel):
@@ -226,6 +233,7 @@ class Settings(BaseModel):
     local: LocalSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
+    bedrock: BedrockSettings
     vectorstore: VectorstoreSettings
     qdrant: QdrantSettings | None = None
 

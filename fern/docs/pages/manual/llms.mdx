@@ -83,3 +83,87 @@ or
 
 When the server is started it will print a log *Application startup complete*.
 Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
+
+
+
+### Use AWS Bedrock Models
+
+Another alternative if you don't have the necessary GPU to run local models, is using AWS Bedrock models. The default chosen models in Bedrock are Anthropic Claude v2 (LLM) and Titan Embeddings G1 - Text (embedding). You can navigate to `settings-bedrock.yaml` and change the `llm_modelid` and `embedding_modelid` parameters. You can find the available models and their IDs in the link https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids-arns.html
+
+In order to use the Bedrock models, you need to do the following configurations.
+
+#### Install AWS CLI
+
+* Go to `https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html` and follow the instructions
+
+#### Configure AWS CLI
+
+* Open a powershell and run the following command: `aws configure`
+
+* You'll be prompted to enter the following information:
+
+
+  * AWS Access Key ID\
+  AWS Secret Access Key\
+  Default region name\
+  Default output format (optional)\
+  These credentials should have the necessary permissions to interact with AWS services.
+
+#### Set the Environment Variable
+
+To add Bedrock as an active profile of PrivateGPT, you should add `'bedrock'` as value to an environment variable named **PGPT_PROFILES**:
+
+First, check if the variable exists with one of the commands below based on your OS. If the variable exists, it will print the value. If not, it will do nothing:
+
+```bash
+# macOS (terminal)
+echo $PGPT_PROFILES
+
+# Windows (cmd)
+echo %PGPT_PROFILES%
+
+# Windows (Powershell)
+$env:PGPT_PROFILES
+
+# Linux (Bash)
+echo $PGPT_PROFILES
+```
+
+If variable does not exist, set the value to `'bedrock'` with one the following commands:
+
+```bash
+# macOS (terminal)
+export PGPT_PROFILES="bedrock"
+
+# Windows (cmd)
+set PGPT_PROFILES=bedrock
+
+# Windows (Powershell)
+$env:PGPT_PROFILES="bedrock"
+
+# Linux (Bash)
+export PGPT_PROFILES="bedrock"
+```
+
+If variable does exist, add the value `'bedrock'` to env var with one the following commands:
+
+```bash
+# macOS (terminal)
+export PGPT_PROFILES="${PGPT_PROFILES}:bedrock"
+
+# Windows (cmd) : Windows Command Prompt doesn't have a straightforward way to directly append to an environment variable without extra tooling or scripting.
+
+# Windows (Powershell)
+$env:PGPT_PROFILES += ";bedrock"
+
+# Linux (Bash)
+export PGPT_PROFILES="${PGPT_PROFILES}:bedrock"
+```
+
+#### Run the program
+
+Then, you can run the program with the command:
+
+```bash
+poetry run python -m private_gpt
+```
