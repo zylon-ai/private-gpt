@@ -117,7 +117,7 @@ Don't know what to contribute? Here is the public
 [Project Board](https://github.com/users/imartinez/projects/3) with several ideas. 
 
 Head over to Discord 
-#contributors channel and ask for write permissions on that Github project.
+#contributors channel and ask for write permissions on that GitHub project.
 
 ## 💬 Community
 Join the conversation around PrivateGPT on our:

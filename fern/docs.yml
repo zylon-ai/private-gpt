@@ -89,7 +89,7 @@ navigation:
 # `type:primary` is always displayed at the most right side of the navbar
 navbar-links:
   - type: secondary
-    text: Github
+    text: GitHub
     url: "https://github.com/imartinez/privateGPT"
   - type: secondary
     text: Contact us
