@@ -49,7 +49,7 @@ class NLSQLComponent:
     ) -> SQLTableRetrieverQueryEngine:
         table_node_mapping = SQLTableNodeMapping(self.sql_database)
         table_schema_objs = []
-        for table_name in self.metadata_obj.tables.keys():
+        for table_name in self.metadata_obj.tables:
             table_schema_objs.append(SQLTableSchema(table_name=table_name))
         obj_index = ObjectIndex.from_objects(
             table_schema_objs,
