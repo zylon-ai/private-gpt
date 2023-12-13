@@ -32,9 +32,11 @@ class CompletionGen(BaseModel):
     response: TokenGen
     sources: list[Chunk] | None = None
 
+
 class SqlQueryResponse(BaseModel):
     response: str
     sources: None = None
+
 
 @dataclass
 class ChatEngineInput:
