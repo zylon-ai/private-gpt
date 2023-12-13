@@ -18,6 +18,7 @@ qdrant-client = "^1.6.9"
 chromadb = {version = "^0.4.13", optional = true}
 gradio = "4.4.1"
 pymysql = "^1.1.0"
+cryptography = "^41.0.7"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"

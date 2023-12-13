@@ -44,12 +44,13 @@ vectorstore:
 qdrant:
   path: local_data/private_gpt/qdrant
 
-sqldatabase:
+sqlmode:
+  enabled: false
   dialect: mysql
   driver: pymysql
-  host: ${HOSTNAME:localhost}
-  user: ${USERNAME:root}
-  password: ${PASSWORD:}
+  db_host: ${HOSTNAME:localhost}
+  db_user: ${USERNAME:root}
+  db_password: ${PASSWORD:}
   database: ${DATABASE:}
   tables: ["${TABLES:}"]
 

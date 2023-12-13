@@ -218,17 +218,21 @@ class QdrantSettings(BaseModel):
 
 
 class SQLDatabaseSettings(BaseModel):
+    enabled: bool = Field(
+        False,
+        description="Flag to enable SQL Query mode. Disabled by default",
+    )
     dialect: Literal["mysql"]
     driver: Literal["pymysql"]
-    host: str | None = Field(
+    db_host: str | None = Field(
         "localhost",
-        description="Host name of Qdrant service. If host is None, set to 'localhost'.",
+        description="Host name of Database server. If host is None, set to 'localhost'.",
     )
-    user: str | None = Field(
+    db_user: str | None = Field(
         "root",
         description="Username to be used for accessing the SQL Database Server. If user is None, set to 'root'.",
     )
-    password: str = Field(
+    db_password: str = Field(
         "",
         description="Password to be used for accessing the SQL Database Server. If password is None, set to empty string.",
     )
@@ -249,7 +253,7 @@ class Settings(BaseModel):
     openai: OpenAISettings
     vectorstore: VectorstoreSettings
     qdrant: QdrantSettings | None = None
-    sqldatabase: SQLDatabaseSettings
+    sqlmode: SQLDatabaseSettings
 
 
 """

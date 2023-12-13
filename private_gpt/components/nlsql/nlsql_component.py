@@ -24,24 +24,30 @@ class NLSQLComponent:
 
     @inject
     def __init__(self, settings: Settings) -> None:
-        dialect = settings.sqldatabase.dialect
-        driver = settings.sqldatabase.driver
-        host = settings.sqldatabase.host
-        user = settings.sqldatabase.user
-        password = settings.sqldatabase.password
-        database = settings.sqldatabase.database
-        tables = settings.sqldatabase.tables
+        if settings.sqlmode.enabled:
+            dialect = settings.sqlmode.dialect
+            driver = settings.sqlmode.driver
+            host = settings.sqlmode.db_host
+            user = settings.sqlmode.db_user
+            password = settings.sqlmode.db_password
+            database = settings.sqlmode.database
+            tables = settings.sqlmode.tables
+            try:
+                engine = create_engine(
+                    f"{dialect}+{driver}://{user}:%s@{host}/{database}"
+                    % quote_plus(password)
+                )
+            except BaseException as error:
+                raise ValueError(
+                    f"Unable to connect to SQL Database\n{error}"
+                ) from error
 
-        engine = create_engine(
-            f"{dialect}+{driver}://{user}:%s@{host}/{database}" % quote_plus(password)
-        )
-        metadata_obj = MetaData()
-        metadata_obj.reflect(engine)
-        sql_database = SQLDatabase(engine, include_tables=tables)
-
-        self.sqlalchemy_engine = engine
-        self.sql_database = sql_database
-        self.metadata_obj = metadata_obj
+            metadata_obj = MetaData()
+            metadata_obj.reflect(engine)
+            sql_database = SQLDatabase(engine, include_tables=tables)
+            self.sqlalchemy_engine = engine
+            self.sql_database = sql_database
+            self.metadata_obj = metadata_obj
 
     def get_nlsql_query_engine(
         self,
