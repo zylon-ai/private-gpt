@@ -7,11 +7,11 @@ To use the text to SQL feature, set the following environment variables to allow
 sqldatabase:
   dialect: mysql
   driver: pymysql
-  host: <db_hostname>
-  user: <db_username>
-  password: <db_password>
-  database: <database_name>
-  tables: <list_of_table_names>
+  host: <db_hostname_here>
+  user: <db_username_here>
+  password: <db_password_here>
+  database: <database_name_here>
+  tables: <list_of_table_names_here>
 ```
 
 You will also need to install `pymysql`.
@@ -23,6 +23,8 @@ To get started with exploring the use of other databases, set the `sqldatabase.d
 
 ```yaml
 sqldatabase:
-  dialect: <mysql>
-  driver: pymysql
+  dialect: <dialect_here>
+  driver: <driver_here>
 ```
+
+Refer to [SQLAlchemy Engine Configuration](https://docs.sqlalchemy.org/en/20/core/engines.html) for constructing the DB connection string.
