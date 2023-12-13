@@ -51,7 +51,7 @@ sqldatabase:
   user: ${USERNAME:root}
   password: ${PASSWORD:}
   database: ${DATABASE:}
-  tables: ${TABLES:}
+  tables: ["${TABLES:}"]
 
 local:
   prompt_style: "llama2"
