@@ -3,22 +3,22 @@ from dataclasses import dataclass
 from injector import inject, singleton
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
 from llama_index.chat_engine import ContextChatEngine, SimpleChatEngine
-from llama_index.indices.struct_store import SQLTableRetrieverQueryEngine
 from llama_index.chat_engine.types import (
     BaseChatEngine,
 )
 from llama_index.indices.postprocessor import MetadataReplacementPostProcessor
+from llama_index.indices.struct_store import SQLTableRetrieverQueryEngine
 from llama_index.llms import ChatMessage, MessageRole
 from llama_index.types import TokenGen
 from pydantic import BaseModel
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.nlsql.nlsql_component import NLSQLComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
-from private_gpt.components.nlsql.nlsql_component import NLSQLComponent
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chunks.chunks_service import Chunk
 

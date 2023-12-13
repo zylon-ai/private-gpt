@@ -78,7 +78,9 @@ class PrivateGptUi:
         self._system_prompt = self._get_default_system_prompt(self.mode)
 
     def _chat(self, message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
-        def yield_deltas(completion_gen: CompletionGen, sources: bool=True) -> Iterable[str]:
+        def yield_deltas(
+            completion_gen: CompletionGen, sources: bool = True
+        ) -> Iterable[str]:
             full_response: str = ""
             stream = completion_gen.response
             for delta in stream:
