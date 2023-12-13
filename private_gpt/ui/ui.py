@@ -30,7 +30,7 @@ UI_TAB_TITLE = "My Private GPT"
 
 SOURCES_SEPARATOR = "\n\n Sources: \n"
 
-MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
+MODES = ["Query Docs", "Query Db", "Search in Docs", "LLM Chat"]
 
 
 class Source(BaseModel):
@@ -78,7 +78,7 @@ class PrivateGptUi:
         self._system_prompt = self._get_default_system_prompt(self.mode)
 
     def _chat(self, message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
-        def yield_deltas(completion_gen: CompletionGen) -> Iterable[str]:
+        def yield_deltas(completion_gen: CompletionGen, sources: bool=True) -> Iterable[str]:
             full_response: str = ""
             stream = completion_gen.response
             for delta in stream:
@@ -88,7 +88,7 @@ class PrivateGptUi:
                     full_response += delta.delta or ""
                 yield full_response
 
-            if completion_gen.sources:
+            if sources and completion_gen.sources:
                 full_response += SOURCES_SEPARATOR
                 cur_sources = Source.curate_sources(completion_gen.sources)
                 sources_text = "\n\n\n".join(
@@ -136,6 +136,13 @@ class PrivateGptUi:
                     use_context=True,
                 )
                 yield from yield_deltas(query_stream)
+
+            case "Query Db":
+                query_stream = self._chat_service.stream_chat_nlsql(
+                    messages=all_messages,
+                )
+                yield from yield_deltas(query_stream, False)
+
             case "LLM Chat":
                 llm_stream = self._chat_service.stream_chat(
                     messages=all_messages,

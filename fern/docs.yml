@@ -58,6 +58,8 @@ navigation:
         contents:
           - page: Vector Stores
             path: ./docs/pages/manual/vectordb.mdx
+          - page: SQL Databases
+            path: ./docs/pages/manual/nlsql.mdx
       - section: Advanced Setup
         contents:
           - page: LLM Backends

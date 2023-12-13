@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from injector import inject, singleton
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
 from llama_index.chat_engine import ContextChatEngine, SimpleChatEngine
+from llama_index.indices.struct_store import SQLTableRetrieverQueryEngine
 from llama_index.chat_engine.types import (
     BaseChatEngine,
 )
@@ -17,6 +18,7 @@ from private_gpt.components.node_store.node_store_component import NodeStoreComp
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
+from private_gpt.components.nlsql.nlsql_component import NLSQLComponent
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chunks.chunks_service import Chunk
 
@@ -74,9 +76,11 @@ class ChatService:
         vector_store_component: VectorStoreComponent,
         embedding_component: EmbeddingComponent,
         node_store_component: NodeStoreComponent,
+        nlsql_component: NLSQLComponent,
     ) -> None:
         self.llm_service = llm_component
         self.vector_store_component = vector_store_component
+        self.nlsql_component = nlsql_component
         self.storage_context = StorageContext.from_defaults(
             vector_store=vector_store_component.vector_store,
             docstore=node_store_component.doc_store,
@@ -115,6 +119,13 @@ class ChatService:
                 system_prompt=system_prompt,
                 service_context=self.service_context,
             )
+
+    def _nlsql_engine(
+        self,
+    ) -> SQLTableRetrieverQueryEngine:
+        return self.nlsql_component.get_nlsql_query_engine(
+            service_context=self.service_context
+        )
 
     def stream_chat(
         self,
@@ -185,3 +196,12 @@ class ChatService:
         sources = [Chunk.from_node(node) for node in wrapped_response.source_nodes]
         completion = Completion(response=wrapped_response.response, sources=sources)
         return completion
+
+    def stream_chat_nlsql(
+        self,
+        messages: list[ChatMessage],
+    ) -> str:
+        last_message = messages[-1].content
+        nlsql_engine = self._nlsql_engine()
+        response = nlsql_engine.query(last_message)
+        return response

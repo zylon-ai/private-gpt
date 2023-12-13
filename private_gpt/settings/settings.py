@@ -216,6 +216,35 @@ class QdrantSettings(BaseModel):
         ),
     )
 
+class SQLDatabaseSettings(BaseModel):
+    dialect: Literal["mysql"]
+    driver: Literal["pymysql"]
+    host: str | None = Field(
+        None,
+        description="Host name of Qdrant service. If host is None, set to 'localhost'.",
+    )
+    user: str | None = Field(
+        "root",
+        description=(
+            "Username to be used for accessing the SQL Database Server. If user is None, set to 'root'.",
+        )
+    )
+    password: str | None = Field(
+        "",
+        description=(
+            "Password to be used for accessing the SQL Database Server. If password is None, set to empty string.",
+        )
+    )
+    database: str | None = Field(
+        description=(
+            "The database name in which tables are to be queried",
+        )
+    )
+    tables: list | None = Field(
+        description=(
+            "List of tables to query into",
+        )
+    )
 
 class Settings(BaseModel):
     server: ServerSettings
@@ -228,6 +257,7 @@ class Settings(BaseModel):
     openai: OpenAISettings
     vectorstore: VectorstoreSettings
     qdrant: QdrantSettings | None = None
+    sqldatabase: SQLDatabaseSettings
 
 
 """

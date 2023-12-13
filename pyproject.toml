@@ -16,6 +16,8 @@ llama-index = { extras = ["local_models"], version = "0.9.3" }
 watchdog = "^3.0.0"
 qdrant-client = "^1.6.9"
 chromadb = {version = "^0.4.13", optional = true}
+gradio = "4.4.1"
+pymysql = "^1.1.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"

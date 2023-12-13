@@ -1,0 +1,28 @@
+## MySQL Configuration
+Text-to-SQL querying has been tested for [MySQL](https://www.mysql.com/) in PrivateGPT.
+
+To use the text to SQL feature, set the following environment variables to allow connecting to your MySQL Server:
+
+```yaml
+sqldatabase:
+  dialect: mysql
+  driver: pymysql
+  host: <db_hostname>
+  user: <db_username>
+  password: <db_password>
+  database: <database_name>
+  tables: <list_of_table_names>
+```
+
+You will also need to install `pymysql`.
+
+`poetry add pymysql`
+
+## Other Databases
+To get started with exploring the use of other databases, set the `sqldatabase.dialect` and `sqldatabase.driver` properties in the `settings.yaml` file.
+
+```yaml
+sqldatabase:
+  dialect: <mysql>
+  driver: pymysql
+```
