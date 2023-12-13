@@ -228,7 +228,7 @@ class SQLDatabaseSettings(BaseModel):
         "root",
         description="Username to be used for accessing the SQL Database Server. If user is None, set to 'root'.",
     )
-    password: str | None = Field(
+    password: str = Field(
         "",
         description="Password to be used for accessing the SQL Database Server. If password is None, set to empty string.",
     )

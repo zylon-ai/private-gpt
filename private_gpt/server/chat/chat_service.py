@@ -32,6 +32,9 @@ class CompletionGen(BaseModel):
     response: TokenGen
     sources: list[Chunk] | None = None
 
+class SqlQueryResponse(BaseModel):
+    response: str
+    sources: None = None
 
 @dataclass
 class ChatEngineInput:
@@ -200,8 +203,9 @@ class ChatService:
     def stream_chat_nlsql(
         self,
         messages: list[ChatMessage],
-    ) -> str:
-        last_message = messages[-1].content
+    ) -> SqlQueryResponse:
+        last_message = str(messages[-1].content)
         nlsql_engine = self._nlsql_engine()
         response = nlsql_engine.query(last_message)
-        return response
+        query = SqlQueryResponse(response=str(response))
+        return query
