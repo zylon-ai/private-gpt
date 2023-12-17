@@ -11,7 +11,7 @@ context_database:
   db_user: <db_username_here>
   db_password: <db_password_here>
   database: <database_name_here>
-  tables: <list_of_table_names_here>  # eg: ["EMPLOYEES", "DEPARTMENTS"]
+  tables: <comma_separated_table_names_here>  # eg: TABLE1,TABLE2,TABLE3
 ```
 
 You will also need to install `pymysql`: `poetry add pymysql`
@@ -43,4 +43,4 @@ Connection URL using psycopg2: `postgresql+psycopg2://scott:tiger@localhost/myda
 Documentation Reference: https://docs.sqlalchemy.org/en/20/dialects/postgresql.html
 
 
-# Refer to [SQLAlchemy Engine Configuration](https://docs.sqlalchemy.org/en/20/core/engines.html) for constructing the DB connection string.
+Refer to [SQLAlchemy Engine Configuration](https://docs.sqlalchemy.org/en/20/core/engines.html) for constructing the DB connection string.
