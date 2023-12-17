@@ -35,7 +35,7 @@ UI_TAB_TITLE = "My Private GPT"
 SOURCES_SEPARATOR = "\n\n Sources: \n"
 
 MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
-if settings().sqlmode.enabled:
+if settings().context_database.enabled:
     MODES.append("Query Db")
 
 

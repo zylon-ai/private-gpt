@@ -84,7 +84,6 @@ if args.log_file:
     logger.addHandler(file_handler)
 
 if __name__ == "__main__":
-
     root_path = Path(args.folder)
     if not root_path.exists():
         raise ValueError(f"Path {args.folder} does not exist")

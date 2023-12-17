@@ -24,14 +24,14 @@ class NLSQLComponent:
 
     @inject
     def __init__(self, settings: Settings) -> None:
-        if settings.sqlmode.enabled:
-            dialect = settings.sqlmode.dialect
-            driver = settings.sqlmode.driver
-            host = settings.sqlmode.db_host
-            user = settings.sqlmode.db_user
-            password = settings.sqlmode.db_password
-            database = settings.sqlmode.database
-            tables = settings.sqlmode.tables
+        if settings.context_database.enabled:
+            dialect = settings.context_database.db_dialect
+            driver = settings.context_database.db_driver
+            host = settings.context_database.db_host
+            user = settings.context_database.db_user
+            password = settings.context_database.db_password
+            database = settings.context_database.database
+            tables = settings.context_database.tables
             try:
                 engine = create_engine(
                     f"{dialect}+{driver}://{user}:%s@{host}/{database}"

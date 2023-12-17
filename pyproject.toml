@@ -16,9 +16,6 @@ llama-index = { extras = ["local_models"], version = "0.9.3" }
 watchdog = "^3.0.0"
 qdrant-client = "^1.6.9"
 chromadb = {version = "^0.4.13", optional = true}
-gradio = "4.4.1"
-pymysql = "^1.1.0"
-cryptography = "^41.0.7"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
@@ -45,6 +42,12 @@ sentence-transformers = "^2.2.2"
 # https://stackoverflow.com/questions/76327419/valueerror-libcublas-so-0-9-not-found-in-the-system-path
 torch = ">=2.0.0, !=2.0.1, !=2.1.0"
 transformers = "^4.34.0"
+
+# Dependencies for using Database as context
+[tool.poetry.group.context_database]
+optional = true
+[tool.poetry.group.context_database.dependencies]
+cryptography = "^41.0.7"
 
 [tool.poetry.extras]
 chroma = ["chromadb"]

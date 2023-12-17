@@ -58,12 +58,12 @@ navigation:
         contents:
           - page: Vector Stores
             path: ./docs/pages/manual/vectordb.mdx
-          - page: SQL Databases
-            path: ./docs/pages/manual/nlsql.mdx
       - section: Advanced Setup
         contents:
           - page: LLM Backends
             path: ./docs/pages/manual/llms.mdx
+          - page: Context Configuration
+            path: ./docs/pages/manual/contexts.mdx
       - section: User Interface
         contents:
           - page: User interface (Gradio) Manual

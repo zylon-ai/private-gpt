@@ -222,24 +222,32 @@ class SQLDatabaseSettings(BaseModel):
         False,
         description="Flag to enable SQL Query mode. Disabled by default",
     )
-    dialect: Literal["mysql"]
-    driver: Literal["pymysql"]
-    db_host: str | None = Field(
-        "localhost",
-        description="Host name of Database server. If host is None, set to 'localhost'.",
+    db_dialect: str = Field(
+        None,
+        description="Supported dialect in SQLAlchemy to be used for connecting with the DBAPI",
     )
-    db_user: str | None = Field(
-        "root",
-        description="Username to be used for accessing the SQL Database Server. If user is None, set to 'root'.",
+    db_driver: str = Field(
+        None, description="Drivername of the DBAPI for connecting with Database"
+    )
+    db_host: str = Field(
+        "localhost",
+        description="Host name of Database server. Defaults to 'localhost'.",
+    )
+    db_user: str = Field(
+        None,
+        description="Username to be used for accessing the SQL Database Server. Defaults to None.",
     )
     db_password: str = Field(
-        "",
-        description="Password to be used for accessing the SQL Database Server. If password is None, set to empty string.",
+        None,
+        description="Password to be used for accessing the SQL Database Server. Defaults to None.",
     )
-    database: str | None = Field(
-        description="The database name in which tables are to be queried",
+    database: str = Field(
+        None,
+        description="The database name in which tables are to be queried. Defaults to None.",
     )
-    tables: list[str] | None = Field(description="List of tables to query into")
+    tables: list[str] | None = Field(
+        None, description="List of tables to use as context. Defaults to [None]"
+    )
 
 
 class Settings(BaseModel):
@@ -253,7 +261,7 @@ class Settings(BaseModel):
     openai: OpenAISettings
     vectorstore: VectorstoreSettings
     qdrant: QdrantSettings | None = None
-    sqlmode: SQLDatabaseSettings
+    context_database: SQLDatabaseSettings
 
 
 """

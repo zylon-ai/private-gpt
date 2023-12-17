@@ -44,15 +44,16 @@ vectorstore:
 qdrant:
   path: local_data/private_gpt/qdrant
 
-sqlmode:
+context_database:
+  # Refer https://docs.privategpt.dev/manual/advanced-setup/context-configuration
   enabled: false
-  dialect: mysql
-  driver: pymysql
-  db_host: ${HOSTNAME:localhost}
-  db_user: ${USERNAME:root}
+  db_dialect: ${DIALECT:}
+  db_driver: ${DRIVER:}
+  db_host: ${HOSTNAME:}
+  db_user: ${USERNAME:}
   db_password: ${PASSWORD:}
   database: ${DATABASE:}
-  tables: ["${TABLES:}"]
+  tables: ${TABLES_LIST:} # Should be comma separated, for example: TABLE1,TABLE2,TABLE3
 
 local:
   prompt_style: "llama2"

@@ -27,7 +27,6 @@ class EmbeddingComponent:
                     cache_folder=str(models_cache_path),
                 )
             case "sagemaker":
-
                 from private_gpt.components.embedding.custom.sagemaker import (
                     SagemakerEmbedding,
                 )
