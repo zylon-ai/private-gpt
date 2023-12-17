@@ -3626,10 +3626,6 @@ files = [
 plugins = ["importlib-metadata"]
 windows-terminal = ["colorama (>=0.4.6)"]
 
-[package.extras]
-ed25519 = ["PyNaCl (>=1.4.0)"]
-rsa = ["cryptography"]
-
 [[package]]
 name = "pyparsing"
 version = "3.1.1"
