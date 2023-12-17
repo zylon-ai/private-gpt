@@ -1,12 +1,30 @@
 ## SQL Databases
 Text-to-SQL querying has been tested for [MySQL](https://www.mysql.com/) in PrivateGPT.
 
-To use the text to SQL feature, set the following environment variables to allow connecting to your MySQL Server:
+The DB connection is established using [SQLAlchemy](https://www.sqlalchemy.org/), and allows connecting to a number of databases.
+To use this feature, connection details for the DB are required.
+A database name and list of tables allow PrivateGPT to select those as the query context.
+
+##### Install Dependencies
+* Run the following command to install the dependencies for text-to-SQL:
+
+```bash
+  poetry install --with context_database
+```
+
+* Install an appropriate database driver. For MySQL as an example, run:
+
+```bash
+  poetry add pymysql
+```
+
+* Set the following environment variables in `settings.yaml`:
 
 ```yaml
 context_database:
-  db_dialect: mysql
-  db_driver: pymysql
+  enabled: true
+  db_dialect: <db_dialect_here>
+  db_driver: <db_driver_here>
   db_host: <db_hostname_here>
   db_user: <db_username_here>
   db_password: <db_password_here>
@@ -14,18 +32,11 @@ context_database:
   tables: <comma_separated_table_names_here>  # eg: TABLE1,TABLE2,TABLE3
 ```
 
-You will also need to install `pymysql`: `poetry add pymysql`
-
-## Other Databases
+##### Other Databases
 To start using other SQL databases as context, set the `context_database.db_dialect` and `context_database.db_driver` properties in the `settings.yaml` file.
 
-```yaml
-sqldatabase:
-  dialect: <dialect_here>
-  driver: <driver_here>
-```
 
-## List of Included Dialects in SQLAlchemy
+##### List of Included Dialects in SQLAlchemy
 
 | Database              | Dialect  | Driver Options                                            |
 |-----------------------|----------|---------------------------------------------------------- |
@@ -38,11 +49,11 @@ sqldatabase:
 
 https://docs.sqlalchemy.org/en/20/dialects/
 
-## For PostgreSQL:
+##### Example For PostgreSQL:
 Sample connection URL (using psycopg2): `postgresql+psycopg2://scott:tiger@localhost/mydatabase`
 
 
-Documentation Reference: https://docs.sqlalchemy.org/en/20/dialects/postgresql.html
+PostgreSQL Documentation Reference: https://docs.sqlalchemy.org/en/20/dialects/postgresql.html
 
 
-Refer to [SQLAlchemy Engine Configuration](https://docs.sqlalchemy.org/en/20/core/engines.html) for constructing the DB connection string.
+Refer to [SQLAlchemy Engine Configuration](https://docs.sqlalchemy.org/en/20/core/engines.html) for documentation about configuring SQLAlchemy and the DB connection string.
