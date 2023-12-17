@@ -1,15 +1,11 @@
 import logging
+from typing import Any
 from urllib.parse import quote_plus
 
 from injector import inject, singleton
 from llama_index import ServiceContext, SQLDatabase, VectorStoreIndex
 from llama_index.indices.struct_store import SQLTableRetrieverQueryEngine
 from llama_index.objects import ObjectIndex, SQLTableNodeMapping, SQLTableSchema
-from sqlalchemy import (
-    MetaData,
-)
-from sqlalchemy.engine import create_engine
-from sqlalchemy.engine.base import Engine
 
 from private_gpt.settings.settings import Settings
 
@@ -18,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 @singleton
 class NLSQLComponent:
-    sqlalchemy_engine: Engine
-    sql_database: SQLDatabase
-    metadata_obj: MetaData
+    sqlalchemy_engine: Any
+    sql_database: Any
+    metadata_obj: Any
 
     @inject
     def __init__(self, settings: Settings) -> None:
@@ -33,13 +29,18 @@ class NLSQLComponent:
             database = settings.context_database.database
             tables = settings.context_database.tables
             try:
+                from sqlalchemy import (
+                    MetaData,
+                )
+                from sqlalchemy.engine import create_engine
+
                 engine = create_engine(
                     f"{dialect}+{driver}://{user}:%s@{host}/{database}"
                     % quote_plus(password)
                 )
             except BaseException as error:
                 raise ValueError(
-                    f"Unable to connect to SQL Database\n{error}"
+                    f"Unable to initialise connection to SQL Database\n{error}"
                 ) from error
 
             metadata_obj = MetaData()
