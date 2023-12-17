@@ -49,7 +49,7 @@ context_database:
   enabled: false
   db_dialect: ${DIALECT:}
   db_driver: ${DRIVER:}
-  db_host: ${HOSTNAME:}
+  db_host: ${HOSTNAME:localhost}
   db_user: ${USERNAME:}
   db_password: ${PASSWORD:}
   database: ${DATABASE:}
