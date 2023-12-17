@@ -5,7 +5,7 @@ The DB connection is established using [SQLAlchemy](https://www.sqlalchemy.org/)
 To use this feature, connection details for the DB are required.
 A database name and list of tables allow PrivateGPT to select those as the query context.
 
-##### Install Dependencies
+### Install Dependencies
 * Run the following command to install the dependencies for text-to-SQL:
 
 ```bash
@@ -32,9 +32,16 @@ context_database:
   tables: <comma_separated_table_names_here>  # eg: TABLE1,TABLE2,TABLE3
 ```
 
-##### Other Databases
+### Other Databases
+* Dialect is the system SQLAlchemy uses to communicate with different databases.
+* Drivers are the connectors for databases.
+
 To start using other SQL databases as context, set the `context_database.db_dialect` and `context_database.db_driver` properties in the `settings.yaml` file.
 
+This configures a connection string as per the following format:
+```bash
+  db_dialect+db_driver://db_user:db_password@db_host/database
+```
 
 ##### List of Included Dialects in SQLAlchemy
 
@@ -47,13 +54,20 @@ To start using other SQL databases as context, set the `context_database.db_dial
 | Oracle                | oracle   | cx_oracle/python-oracledb                                 |
 | Microsoft SQL Server  | mssql    | pyodbc/pymssql/aioodbc                                    |
 
-https://docs.sqlalchemy.org/en/20/dialects/
 
-##### Example For PostgreSQL:
-Sample connection URL (using psycopg2): `postgresql+psycopg2://scott:tiger@localhost/mydatabase`
+##### Examples Connection Strings
 
+| Database              | Example |
+|-----------------------|----------|
+| MySQL                 | `mysql+pymysql://<username>:<password>@<host>/<dbname>`                 |
+| MariaDB               | `mariadb+mariadbconnector://<user>:<password>@<host>[:<port>]/<dbname>` |
+| PostgreSQL            | `postgresql+psycopg2://user:password@host:port/dbname`                  |
+| SQLite                | `sqlite+pysqlite:///file_path`                                          |
+
+
+##### Additional Documentation
+Refer to [SQLAlchemy Engine Configuration](https://docs.sqlalchemy.org/en/20/core/engines.html) for documentation about configuring SQLAlchemy and the DB connection string.
+
+List of Dialects: https://docs.sqlalchemy.org/en/20/dialects/
 
 PostgreSQL Documentation Reference: https://docs.sqlalchemy.org/en/20/dialects/postgresql.html
-
-
-Refer to [SQLAlchemy Engine Configuration](https://docs.sqlalchemy.org/en/20/core/engines.html) for documentation about configuring SQLAlchemy and the DB connection string.
