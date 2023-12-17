@@ -34,11 +34,7 @@ def ingest(request: Request, file: UploadFile) -> IngestResponse:
 
     Deprecated. Use ingest/file instead.
     """
-    service = request.state.injector.get(IngestService)
-    if file.filename is None:
-        raise HTTPException(400, "No file name provided")
-    ingested_documents = service.ingest_bin_data(file.filename, file.file)
-    return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
+    return ingest_file(request, file)
 
 
 @ingest_router.post("/ingest/file", tags=["Ingestion"])
