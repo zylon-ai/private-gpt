@@ -217,6 +217,39 @@ class QdrantSettings(BaseModel):
     )
 
 
+class SQLDatabaseSettings(BaseModel):
+    enabled: bool = Field(
+        False,
+        description="Flag to enable SQL Query mode. Disabled by default",
+    )
+    db_dialect: str = Field(
+        None,
+        description="Supported dialect in SQLAlchemy to be used for connecting with the DBAPI",
+    )
+    db_driver: str = Field(
+        None, description="Drivername of the DBAPI for connecting with Database"
+    )
+    db_host: str = Field(
+        "localhost",
+        description="Host name of Database server. Defaults to 'localhost'.",
+    )
+    db_user: str = Field(
+        None,
+        description="Username to be used for accessing the SQL Database Server. Defaults to None.",
+    )
+    db_password: str = Field(
+        None,
+        description="Password to be used for accessing the SQL Database Server. Defaults to None.",
+    )
+    database: str = Field(
+        None,
+        description="The database name in which tables are to be queried. Defaults to None.",
+    )
+    tables: list[str] | None = Field(
+        None, description="List of tables to use as context. Defaults to [None]"
+    )
+
+
 class Settings(BaseModel):
     server: ServerSettings
     data: DataSettings
@@ -228,6 +261,7 @@ class Settings(BaseModel):
     openai: OpenAISettings
     vectorstore: VectorstoreSettings
     qdrant: QdrantSettings | None = None
+    context_database: SQLDatabaseSettings
 
 
 """

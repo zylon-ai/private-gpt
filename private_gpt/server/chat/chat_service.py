@@ -7,12 +7,14 @@ from llama_index.chat_engine.types import (
     BaseChatEngine,
 )
 from llama_index.indices.postprocessor import MetadataReplacementPostProcessor
+from llama_index.indices.struct_store import SQLTableRetrieverQueryEngine
 from llama_index.llms import ChatMessage, MessageRole
 from llama_index.types import TokenGen
 from pydantic import BaseModel
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.nlsql.nlsql_component import NLSQLComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
@@ -29,6 +31,11 @@ class Completion(BaseModel):
 class CompletionGen(BaseModel):
     response: TokenGen
     sources: list[Chunk] | None = None
+
+
+class SqlQueryResponse(BaseModel):
+    response: str
+    sources: None = None
 
 
 @dataclass
@@ -74,9 +81,11 @@ class ChatService:
         vector_store_component: VectorStoreComponent,
         embedding_component: EmbeddingComponent,
         node_store_component: NodeStoreComponent,
+        nlsql_component: NLSQLComponent,
     ) -> None:
         self.llm_service = llm_component
         self.vector_store_component = vector_store_component
+        self.nlsql_component = nlsql_component
         self.storage_context = StorageContext.from_defaults(
             vector_store=vector_store_component.vector_store,
             docstore=node_store_component.doc_store,
@@ -115,6 +124,13 @@ class ChatService:
                 system_prompt=system_prompt,
                 service_context=self.service_context,
             )
+
+    def _nlsql_engine(
+        self,
+    ) -> SQLTableRetrieverQueryEngine:
+        return self.nlsql_component.get_nlsql_query_engine(
+            service_context=self.service_context
+        )
 
     def stream_chat(
         self,
@@ -185,3 +201,13 @@ class ChatService:
         sources = [Chunk.from_node(node) for node in wrapped_response.source_nodes]
         completion = Completion(response=wrapped_response.response, sources=sources)
         return completion
+
+    def stream_chat_nlsql(
+        self,
+        messages: list[ChatMessage],
+    ) -> SqlQueryResponse:
+        last_message = str(messages[-1].content)
+        nlsql_engine = self._nlsql_engine()
+        response = nlsql_engine.query(last_message)
+        query = SqlQueryResponse(response=str(response))
+        return query

@@ -43,6 +43,12 @@ sentence-transformers = "^2.2.2"
 torch = ">=2.0.0, !=2.0.1, !=2.1.0"
 transformers = "^4.34.0"
 
+# Dependencies for using Database as context
+[tool.poetry.group.context_database]
+optional = true
+[tool.poetry.group.context_database.dependencies]
+cryptography = "^41.0.7"
+
 [tool.poetry.extras]
 chroma = ["chromadb"]
 

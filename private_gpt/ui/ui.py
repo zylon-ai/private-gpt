@@ -14,7 +14,11 @@ from pydantic import BaseModel
 
 from private_gpt.constants import PROJECT_ROOT_PATH
 from private_gpt.di import global_injector
-from private_gpt.server.chat.chat_service import ChatService, CompletionGen
+from private_gpt.server.chat.chat_service import (
+    ChatService,
+    CompletionGen,
+    SqlQueryResponse,
+)
 from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.settings.settings import settings
@@ -31,6 +35,8 @@ UI_TAB_TITLE = "My Private GPT"
 SOURCES_SEPARATOR = "\n\n Sources: \n"
 
 MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
+if settings().context_database.enabled:
+    MODES.append("Query Db")
 
 
 class Source(BaseModel):
@@ -78,7 +84,9 @@ class PrivateGptUi:
         self._system_prompt = self._get_default_system_prompt(self.mode)
 
     def _chat(self, message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
-        def yield_deltas(completion_gen: CompletionGen) -> Iterable[str]:
+        def yield_deltas(
+            completion_gen: CompletionGen | SqlQueryResponse, sources: bool = True
+        ) -> Iterable[str]:
             full_response: str = ""
             stream = completion_gen.response
             for delta in stream:
@@ -88,7 +96,7 @@ class PrivateGptUi:
                     full_response += delta.delta or ""
                 yield full_response
 
-            if completion_gen.sources:
+            if sources and completion_gen.sources:
                 full_response += SOURCES_SEPARATOR
                 cur_sources = Source.curate_sources(completion_gen.sources)
                 sources_text = "\n\n\n".join(
@@ -136,6 +144,13 @@ class PrivateGptUi:
                     use_context=True,
                 )
                 yield from yield_deltas(query_stream)
+
+            case "Query Db":
+                sql_stream = self._chat_service.stream_chat_nlsql(
+                    messages=all_messages,
+                )
+                yield from yield_deltas(sql_stream, False)
+
             case "LLM Chat":
                 llm_stream = self._chat_service.stream_chat(
                     messages=all_messages,

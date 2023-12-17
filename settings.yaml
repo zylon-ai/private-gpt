@@ -46,6 +46,17 @@ vectorstore:
 qdrant:
   path: local_data/private_gpt/qdrant
 
+context_database:
+  # Refer https://docs.privategpt.dev/manual/advanced-setup/context-configuration
+  enabled: false
+  db_dialect: ${DIALECT:}
+  db_driver: ${DRIVER:}
+  db_host: ${HOSTNAME:localhost}
+  db_user: ${USERNAME:}
+  db_password: ${PASSWORD:}
+  database: ${DATABASE:}
+  tables: ${TABLES_LIST:} # Should be comma separated, for example: TABLE1,TABLE2,TABLE3
+
 local:
   prompt_style: "llama2"
   llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.1-GGUF

@@ -26,6 +26,11 @@ def load_yaml_with_envvars(
         env_var = split[0]
         value = environ.get(env_var)
         default = None if len(split) == 1 else split[1]
+        if env_var in ["TABLES_LIST"]:
+            if value is not None:
+                value = value.split(",")
+            else:
+                default = []
         if value is None and default is None:
             raise ValueError(
                 f"Environment variable {env_var} is not set and not default was provided"
