@@ -62,7 +62,7 @@ navigation:
         contents:
           - page: LLM Backends
             path: ./docs/pages/manual/llms.mdx
-          - page: Context Configuration
+          - page: Context Configurations
             path: ./docs/pages/manual/contexts.mdx
       - section: User Interface
         contents:

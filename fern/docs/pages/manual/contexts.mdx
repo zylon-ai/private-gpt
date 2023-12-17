@@ -12,10 +12,10 @@ A database name and list of tables allow PrivateGPT to select those as the query
   poetry install --with context_database
 ```
 
-* Install an appropriate database driver. For MySQL as an example, run:
+* Install an appropriate database driver:
 
 ```bash
-  poetry add pymysql
+  poetry add <db_driver>
 ```
 
 * Set the following environment variables in `settings.yaml`:
@@ -32,7 +32,7 @@ context_database:
   tables: <comma_separated_table_names_here>  # eg: TABLE1,TABLE2,TABLE3
 ```
 
-### Other Databases
+### Configuring Database
 * Dialect is the system SQLAlchemy uses to communicate with different databases.
 * Drivers are the connectors for databases.
 
@@ -43,19 +43,19 @@ This configures a connection string as per the following format:
   db_dialect+db_driver://db_user:db_password@db_host/database
 ```
 
-##### List of Included Dialects in SQLAlchemy
+##### List of included Dialects in SQLAlchemy
 
-| Database              | Dialect  | Driver Options                                            |
-|-----------------------|----------|---------------------------------------------------------- |
-| PostgreSQL            | psycopg2 | psycopg2/mysqlconnector/pg8000/asyncpg/                   |
-| MySQL                 | mysql    | pymysql/mysqldb/mysqlconnector/asyncmy/aiomysql/cymysql   |
-| MariaDB               | mariadb  | pymysql/mysqldb/mariadbconnector/asyncmy/aiomysql/cymysql |
-| SQLite                | sqlite   | pysqlite/aiosqlite/pysqlcipher                            |
-| Oracle                | oracle   | cx_oracle/python-oracledb                                 |
-| Microsoft SQL Server  | mssql    | pyodbc/pymssql/aioodbc                                    |
+| Database              | Dialect    | Driver Options                                            |
+|-----------------------|------------|---------------------------------------------------------- |
+| PostgreSQL            | postgresql | psycopg2/mysqlconnector/pg8000/asyncpg/                   |
+| MySQL                 | mysql      | pymysql/mysqldb/mysqlconnector/asyncmy/aiomysql/cymysql   |
+| MariaDB               | mariadb    | pymysql/mysqldb/mariadbconnector/asyncmy/aiomysql/cymysql |
+| SQLite                | sqlite     | pysqlite/aiosqlite/pysqlcipher                            |
+| Oracle                | oracle     | cx_oracle/python-oracledb                                 |
+| Microsoft SQL Server  | mssql      | pyodbc/pymssql/aioodbc                                    |
 
 
-##### Examples Connection Strings
+##### Example connection strings
 
 | Database              | Example |
 |-----------------------|----------|
@@ -65,9 +65,9 @@ This configures a connection string as per the following format:
 | SQLite                | `sqlite+pysqlite:///file_path`                                          |
 
 
-##### Additional Documentation
+##### Additional documentation
 Refer to [SQLAlchemy Engine Configuration](https://docs.sqlalchemy.org/en/20/core/engines.html) for documentation about configuring SQLAlchemy and the DB connection string.
 
-List of Dialects: https://docs.sqlalchemy.org/en/20/dialects/
+List of internal & external Dialects: https://docs.sqlalchemy.org/en/20/dialects/
 
 PostgreSQL Documentation Reference: https://docs.sqlalchemy.org/en/20/dialects/postgresql.html
