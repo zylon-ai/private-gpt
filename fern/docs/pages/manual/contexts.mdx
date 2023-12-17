@@ -25,7 +25,7 @@ sqldatabase:
   driver: <driver_here>
 ```
 
-# List of Included Dialects (https://docs.sqlalchemy.org/en/20/dialects/#:~:text=driver%20is%20installed.-,Included%20Dialects%C2%B6,-PostgreSQL)
+# List of Included Dialects 
 
 | Database              | Dialect  | Driver Options                                            |
 |-----------------------|----------|---------------------------------------------------------- |
@@ -36,9 +36,11 @@ sqldatabase:
 | Oracle                | oracle   | cx_oracle/python-oracledb                                 |
 | Microsoft SQL Server  | mssql    | pyodbc/pymssql/aioodbc                                    |
 
+https://docs.sqlalchemy.org/en/20/dialects/
+
 # Here is an example for PostgreSQL:
 Connection URL using psycopg2: `postgresql+psycopg2://scott:tiger@localhost/mydatabase`
-Documentation Reference: https://docs.sqlalchemy.org/en/20/dialects/postgresql.html#module-sqlalchemy.dialects.postgresql.psycopg2:~:text=ON%20CONFLICT%20(Upsert)-,psycopg2,-%C2%B6
+Documentation Reference: https://docs.sqlalchemy.org/en/20/dialects/postgresql.html
 
 
 # Refer to [SQLAlchemy Engine Configuration](https://docs.sqlalchemy.org/en/20/core/engines.html) for constructing the DB connection string.
