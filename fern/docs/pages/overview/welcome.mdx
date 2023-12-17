@@ -32,21 +32,6 @@ The installation guide will help you in the [Installation section](/installation
   />
 </Cards>
 
-## API Organization 
-
-The API is divided in two logical blocks:
-
-1. High-level API, abstracting all the complexity of a RAG (Retrieval Augmented Generation) pipeline implementation:
-    - Ingestion of documents: internally managing document parsing, splitting, metadata extraction,
-      embedding generation and storage.
-    - Chat & Completions using context from ingested documents: abstracting the retrieval of context, the prompt
-      engineering and the response generation.
-
-2. Low-level API, allowing advanced users to implement their own complex pipelines:
-    - Embeddings generation: based on a piece of text.
-    - Contextual chunks retrieval: given a query, returns the most relevant chunks of text from the ingested
-      documents.
-
 <Callout intent = "info">
 A working **Gradio UI client** is provided to test the API, together with a set of useful tools such as bulk
 model download script, ingestion script, documents folder watch, etc.
