@@ -48,7 +48,7 @@ class LocalIngestWorker:
         try:
             if changed_path.exists():
                 logger.info(f"Started ingesting file={changed_path}")
-                self.ingest_service.ingest(changed_path.name, changed_path)
+                self.ingest_service.ingest_file(changed_path.name, changed_path)
                 logger.info(f"Completed ingesting file={changed_path}")
         except Exception:
             logger.exception(
