@@ -2,6 +2,7 @@ import abc
 import logging
 from collections.abc import Sequence
 from typing import Any, Literal
+from private_gpt.settings.settings import settings
 
 from llama_index.llms import ChatMessage, MessageRole
 from llama_index.llms.llama_utils import (
@@ -122,9 +123,24 @@ class TagPromptStyle(AbstractPromptStyle):
             [ChatMessage(content=completion, role=MessageRole.USER)]
         )
 
+class MistralPromptStyle(AbstractPromptStyle):
+    def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
+        p = settings().ui.default_chat_system_prompt
+        prompt = f"<s>{p.strip()}"
+        for message in messages:
+            role = message.role
+            content = message.content or ""
+            if role.lower() == "system":
+                message_from_user = f"[INST] {content.strip()} [/INST]"
+                prompt += message_from_user
+            elif role.lower() == "user":
+                prompt += "</s>"
+                message_from_user = f"[INST] {content.strip()} [/INST]"
+                prompt += message_from_user
+        return prompt
 
 def get_prompt_style(
-    prompt_style: Literal["default", "llama2", "tag"] | None
+    prompt_style: Literal["default", "llama2", "tag", "mistral"] | None
 ) -> AbstractPromptStyle:
     """Get the prompt style to use from the given string.
 
@@ -137,4 +153,6 @@ def get_prompt_style(
         return Llama2PromptStyle()
     elif prompt_style == "tag":
         return TagPromptStyle()
+    elif prompt_style == "mistral":
+        return MistralPromptStyle()
     raise ValueError(f"Unknown prompt_style='{prompt_style}'")
