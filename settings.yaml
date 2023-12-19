@@ -61,4 +61,8 @@ openai:
   model: gpt-3.5-turbo
 
 rag:
-  default_context_template: "Context information is below.\n--------------------\n{context_str}\n--------------------\n"
+  default_context_template: |
+    Context information is below.
+    --------------------
+    {context_str}
+    --------------------
