@@ -5,9 +5,9 @@ RUN pip install pipx
 RUN python3 -m pipx ensurepath
 RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
-# Set the environment variable for the file URL (can be overridden)
+# Set the environment variable for the file URL (can be overwritten)
 ENV FILE_URL="https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf"
-# Set the predefined path where the file should be downloaded
+# Set the predefined model name (can be ovewritten)
 ENV NAME="mistral-7b-instruct-v0.1.Q4_K_M.gguf"
 
 # Dependencies to build llama-cpp
