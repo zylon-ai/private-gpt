@@ -137,13 +137,98 @@
           "Ingestion"
         ],
         "summary": "Ingest",
-        "description": "Ingests and processes a file, storing its chunks to be used as context.\n\nThe context obtained from files is later used in\n`/chat/completions`, `/completions`, and `/chunks` APIs.\n\nMost common document\nformats are supported, but you may be prompted to install an extra dependency to\nmanage a specific file type.\n\nA file can generate different Documents (for example a PDF generates one Document\nper page). All Documents IDs are returned in the response, together with the\nextracted Metadata (which is later used to improve context retrieval). Those IDs\ncan be used to filter the context used to create responses in\n`/chat/completions`, `/completions`, and `/chunks` APIs.",
+        "description": "Ingests and processes a file.\n\nDeprecated. Use ingest/file instead.",
         "operationId": "ingest_v1_ingest_post",
         "requestBody": {
           "content": {
             "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/Body_ingest_v1_ingest_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/v1/ingest/file": {
+      "post": {
+        "tags": [
+          "Ingestion"
+        ],
+        "summary": "Ingest File",
+        "description": "Ingests and processes a file, storing its chunks to be used as context.\n\nThe context obtained from files is later used in\n`/chat/completions`, `/completions`, and `/chunks` APIs.\n\nMost common document\nformats are supported, but you may be prompted to install an extra dependency to\nmanage a specific file type.\n\nA file can generate different Documents (for example a PDF generates one Document\nper page). All Documents IDs are returned in the response, together with the\nextracted Metadata (which is later used to improve context retrieval). Those IDs\ncan be used to filter the context used to create responses in\n`/chat/completions`, `/completions`, and `/chunks` APIs.",
+        "operationId": "ingest_file_v1_ingest_file_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_ingest_file_v1_ingest_file_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ingest/text": {
+      "post": {
+        "tags": [
+          "Ingestion"
+        ],
+        "summary": "Ingest Text",
+        "description": "Ingests and processes a text, storing its chunks to be used as context.\n\nThe context obtained from files is later used in\n`/chat/completions`, `/completions`, and `/chunks` APIs.\n\nA Document will be generated with the given text. The Document\nID is returned in the response, together with the\nextracted Metadata (which is later used to improve context retrieval). That ID\ncan be used to filter the context used to create responses in\n`/chat/completions`, `/completions`, and `/chunks` APIs.",
+        "operationId": "ingest_text_v1_ingest_text_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestTextBody"
               }
             }
           },
@@ -303,6 +388,20 @@
   },
   "components": {
     "schemas": {
+      "Body_ingest_file_v1_ingest_file_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_ingest_file_v1_ingest_file_post"
+      },
       "Body_ingest_v1_ingest_post": {
         "properties": {
           "file": {
@@ -734,6 +833,30 @@
           "data"
         ],
         "title": "IngestResponse"
+      },
+      "IngestTextBody": {
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "title": "File Name",
+            "examples": [
+              "Avatar: The Last Airbender"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "examples": [
+              "Avatar is set in an Asian and Arctic-inspired world in which some people can telekinetically manipulate one of the four elements\u2014water, earth, fire or air\u2014through practices known as 'bending', inspired by Chinese martial arts."
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_name",
+          "text"
+        ],
+        "title": "IngestTextBody"
       },
       "IngestedDoc": {
         "properties": {

@@ -13,7 +13,7 @@ class IngestHelper:
     def ingest_file(self, path: Path) -> IngestResponse:
         files = {"file": (path.name, path.open("rb"))}
 
-        response = self.test_client.post("/v1/ingest", files=files)
+        response = self.test_client.post("/v1/ingest/file", files=files)
         assert response.status_code == 200
         ingest_result = IngestResponse.model_validate(response.json())
         return ingest_result

@@ -36,7 +36,7 @@ gradio = "^4.4.1"
 [tool.poetry.group.local]
 optional = true
 [tool.poetry.group.local.dependencies]
-llama-cpp-python = "^0.2.11"
+llama-cpp-python = "^0.2.23"
 numpy = "1.26.0"
 sentence-transformers = "^2.2.2"
 # https://stackoverflow.com/questions/76327419/valueerror-libcublas-so-0-9-not-found-in-the-system-path
