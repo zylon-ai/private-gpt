@@ -219,13 +219,17 @@ class PrivateGptUi:
             "justify-content: center;"
             "align-items: center;"
             "}"
-            ".logo img { height: 25% }",
+            ".logo img { height: 25% }"
+            ".contain { display: flex !important; flex-direction: column !important; }"
+            "#component-0, #component-3, #component-10, #component-8  { height: 100% !important; }"
+            "#chatbot { flex-grow: 1 !important; overflow: auto !important;}"
+            "#col { height: calc(100vh - 112px - 16px) !important; }",
         ) as blocks:
             with gr.Row():
                 gr.HTML(f"<div class='logo'/><img src={logo_svg} alt=PrivateGPT></div")
 
-            with gr.Row():
-                with gr.Column(scale=3, variant="compact"):
+            with gr.Row(equal_height=False):
+                with gr.Column(scale=3):
                     mode = gr.Radio(
                         MODES,
                         label="Mode",
@@ -271,12 +275,13 @@ class PrivateGptUi:
                         inputs=system_prompt_input,
                     )
 
-                with gr.Column(scale=7):
+                with gr.Column(scale=7, elem_id="col"):
                     _ = gr.ChatInterface(
                         self._chat,
                         chatbot=gr.Chatbot(
                             label=f"LLM: {settings().llm.mode}",
                             show_copy_button=True,
+                            elem_id="chatbot",
                             render=False,
                             avatar_images=(
                                 None,

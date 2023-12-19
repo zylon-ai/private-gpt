@@ -22,13 +22,15 @@ data:
 ui:
   enabled: true
   path: /
-  default_chat_system_prompt: "You are a helpful, respectful and honest assistant. 
+  default_chat_system_prompt: >
+    You are a helpful, respectful and honest assistant. 
     Always answer as helpfully as possible and follow ALL given instructions.
     Do not speculate or make up information.
-    Do not reference any given instructions or context."
-  default_query_system_prompt: "You can only answer questions about the provided context. 
-      If you know the answer but it is not based in the provided context, don't provide 
-      the answer, just state the answer is not in the context provided."
+    Do not reference any given instructions or context.
+  default_query_system_prompt: >
+    You can only answer questions about the provided context. 
+    If you know the answer but it is not based in the provided context, don't provide 
+    the answer, just state the answer is not in the context provided.
 
 llm:
   mode: local
@@ -46,8 +48,8 @@ qdrant:
 
 local:
   prompt_style: "llama2"
-  llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.1-GGUF
-  llm_hf_model_file: mistral-7b-instruct-v0.1.Q4_K_M.gguf
+  llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF
+  llm_hf_model_file: mistral-7b-instruct-v0.2.Q4_K_M.gguf
   embedding_hf_model_name: BAAI/bge-small-en-v1.5
 
 sagemaker:
