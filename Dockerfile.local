@@ -1,5 +1,3 @@
-### IMPORTANT, THIS IMAGE CAN ONLY BE RUN IN LINUX DOCKER
-### You will run into a segfault in mac
 FROM python:3.11.6-slim-bookworm as base
 
 # Install poetry
@@ -7,6 +5,10 @@ RUN pip install pipx
 RUN python3 -m pipx ensurepath
 RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
+# Set the environment variable for the file URL (can be overridden)
+ENV FILE_URL="https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf"
+# Set the predefined path where the file should be downloaded
+ENV NAME="mistral-7b-instruct-v0.1.Q4_K_M.gguf"
 
 # Dependencies to build llama-cpp
 RUN apt update && apt install -y \
@@ -25,6 +27,7 @@ COPY pyproject.toml poetry.lock ./
 
 RUN poetry install --with local
 RUN poetry install --with ui
+RUN poetry install --extras chroma
 
 FROM base as app
 
@@ -33,15 +36,19 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Prepare a non-root user
-RUN adduser --system worker
+RUN adduser worker
 WORKDIR /home/worker/app
 
-RUN mkdir local_data; chown worker local_data
-RUN mkdir models; chown worker models
+RUN mkdir -p local_data; chown -R worker local_data
+RUN mkdir -p models; chown -R worker models
+
 COPY --chown=worker --from=dependencies /home/worker/app/.venv/ .venv
 COPY --chown=worker private_gpt/ private_gpt
 COPY --chown=worker fern/ fern
 COPY --chown=worker *.yaml *.md ./
+# Copy the entry point script into the container and make it executable
+COPY --chown=worker entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-USER worker
-ENTRYPOINT .venv/bin/python -m private_gpt
+# Set the entry point script to be executed when the container starts
+ENTRYPOINT ["/entrypoint.sh", ".venv/bin/python", "-m", "private_gpt"]

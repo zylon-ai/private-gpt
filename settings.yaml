@@ -41,7 +41,7 @@ embedding:
   ingest_mode: simple
 
 vectorstore:
-  database: qdrant
+  database: chroma
 
 qdrant:
   path: local_data/private_gpt/qdrant
@@ -59,3 +59,4 @@ sagemaker:
 openai:
   api_key: ${OPENAI_API_KEY:}
   model: gpt-3.5-turbo
+  
