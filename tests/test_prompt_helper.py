@@ -65,6 +65,7 @@ def test_tag_prompt_style_format_with_system_prompt():
     assert prompt_style.messages_to_prompt(messages) == expected_prompt
 
 def test_mistral_prompt_style_format():
+    p = settings().ui.default_chat_system_prompt
     prompt_style = MistralPromptStyle()
     messages = [
         ChatMessage(content="You are an AI assistant.", role=MessageRole.SYSTEM),
