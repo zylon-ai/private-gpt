@@ -105,7 +105,7 @@ class LocalSettings(BaseModel):
             "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
             "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
             "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
-            "If `mistral` - use the `mistral prompt style. It shoudl look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]
+            "If `mistral` - use the `mistral prompt style. It shoudl look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]"
             "`llama2` is the historic behaviour. `default` might work better with your custom models."
         ),
     )
