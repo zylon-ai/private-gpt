@@ -139,6 +139,11 @@ class MistralPromptStyle(AbstractPromptStyle):
                 prompt += message_from_user
         return prompt
 
+    def _completion_to_prompt(self, completion: str) -> str:
+        return self._messages_to_prompt(
+            [ChatMessage(content=completion, role=MessageRole.USER)]
+        )
+
 def get_prompt_style(
     prompt_style: Literal["default", "llama2", "tag", "mistral"] | None
 ) -> AbstractPromptStyle:
