@@ -1,15 +1,13 @@
 import pytest
 from llama_index.llms import ChatMessage, MessageRole
-from private_gpt.settings.settings import settings
-
 from private_gpt.components.llm.prompt_helper import (
     DefaultPromptStyle,
     Llama2PromptStyle,
-    TagPromptStyle,
     MistralPromptStyle,
+    TagPromptStyle,
     get_prompt_style,
 )
-
+from private_gpt.settings.settings import settings
 
 @pytest.mark.parametrize(
     ("prompt_style", "expected_prompt_style"),
