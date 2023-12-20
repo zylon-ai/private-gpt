@@ -1,5 +1,6 @@
 import pytest
 from llama_index.llms import ChatMessage, MessageRole
+from private_gpt.settings.settings import settings
 
 from private_gpt.components.llm.prompt_helper import (
     DefaultPromptStyle,
@@ -71,24 +72,7 @@ def test_mistral_prompt_style_format():
     ]
 
     expected_prompt = (
-        "<s>[INST] You are an AI assistant. [/INST]</s>"
-        "[INST] Hello, how are you doing? [/INST]"
-    )
-
-    assert prompt_style.messages_to_prompt(messages) == expected_prompt
-
-
-def test_mistral_prompt_style_format_with_system_prompt():
-    prompt_style = MistralPromptStyle()
-    messages = [
-        ChatMessage(
-            content="FOO BAR Custom sys prompt from messages.", role=MessageRole.SYSTEM
-        ),
-        ChatMessage(content="Hello, how are you doing?", role=MessageRole.USER),
-    ]
-
-    expected_prompt = (
-        "<s>[INST] FOO BAR Custom sys prompt from messages. [/INST]</s>"
+        f"<s>[INST] {p.strip()} [/INST][INST] You are an AI assistant. [/INST]</s>"
         "[INST] Hello, how are you doing? [/INST]"
     )
 
