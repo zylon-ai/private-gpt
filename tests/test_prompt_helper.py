@@ -5,6 +5,7 @@ from private_gpt.components.llm.prompt_helper import (
     DefaultPromptStyle,
     Llama2PromptStyle,
     TagPromptStyle,
+    MistralPromptStyle,
     get_prompt_style,
 )
 
@@ -15,6 +16,7 @@ from private_gpt.components.llm.prompt_helper import (
         ("default", DefaultPromptStyle),
         ("llama2", Llama2PromptStyle),
         ("tag", TagPromptStyle),
+        ("mistral", MistralPromptStyle)
     ],
 )
 def test_get_prompt_style_success(prompt_style, expected_prompt_style):
@@ -57,6 +59,37 @@ def test_tag_prompt_style_format_with_system_prompt():
         "<|system|>: FOO BAR Custom sys prompt from messages.\n"
         "<|user|>: Hello, how are you doing?\n"
         "<|assistant|>: "
+    )
+
+    assert prompt_style.messages_to_prompt(messages) == expected_prompt
+
+def test_mistral_prompt_style_format():
+    prompt_style = MistralPromptStyle()
+    messages = [
+        ChatMessage(content="You are an AI assistant.", role=MessageRole.SYSTEM),
+        ChatMessage(content="Hello, how are you doing?", role=MessageRole.USER),
+    ]
+
+    expected_prompt = (
+        "<s>[INST] You are an AI assistant. [/INST]</s>"
+        "[INST] Hello, how are you doing? [/INST]"
+    )
+
+    assert prompt_style.messages_to_prompt(messages) == expected_prompt
+
+
+def test_mistral_prompt_style_format_with_system_prompt():
+    prompt_style = MistralPromptStyle()
+    messages = [
+        ChatMessage(
+            content="FOO BAR Custom sys prompt from messages.", role=MessageRole.SYSTEM
+        ),
+        ChatMessage(content="Hello, how are you doing?", role=MessageRole.USER),
+    ]
+
+    expected_prompt = (
+        "<s>[INST] FOO BAR Custom sys prompt from messages. [/INST]</s>"
+        "[INST] Hello, how are you doing? [/INST]"
     )
 
     assert prompt_style.messages_to_prompt(messages) == expected_prompt
