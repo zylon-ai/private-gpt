@@ -73,6 +73,7 @@ class IngestService:
     def ingest_file(self, file_name: str, file_data: Path) -> list[IngestedDoc]:
         logger.info("Ingesting file_name=%s", file_name)
         documents = self.ingest_component.ingest(file_name, file_data)
+        logger.info("Finished ingestion file_name=%s", file_name)
         return [IngestedDoc.from_document(document) for document in documents]
 
     def ingest_text(self, file_name: str, text: str) -> list[IngestedDoc]:
@@ -89,6 +90,7 @@ class IngestService:
     def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[IngestedDoc]:
         logger.info("Ingesting file_names=%s", [f[0] for f in files])
         documents = self.ingest_component.bulk_ingest(files)
+        logger.info("Finished ingestion file_name=%s", [f[0] for f in files])
         return [IngestedDoc.from_document(document) for document in documents]
 
     def list_ingested(self) -> list[IngestedDoc]:
