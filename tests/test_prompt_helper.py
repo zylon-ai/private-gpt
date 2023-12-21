@@ -72,7 +72,7 @@ def test_mistral_prompt_style_format():
     ]
 
     expected_prompt = (
-        f"<s>[INST] You are an AI assistant. [/INST]</s>"
+        "<s>[INST] You are an AI assistant. [/INST]</s>"
         "[INST] Hello, how are you doing? [/INST]"
     )
 

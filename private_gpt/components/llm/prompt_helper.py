@@ -125,8 +125,7 @@ class TagPromptStyle(AbstractPromptStyle):
 
 class MistralPromptStyle(AbstractPromptStyle):
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
-        p = settings().ui.default_chat_system_prompt
-        prompt = f"<s>"
+        prompt = "<s>"
         for message in messages:
             role = message.role
             content = message.content or ""
