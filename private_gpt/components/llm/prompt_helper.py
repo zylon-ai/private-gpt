@@ -2,13 +2,14 @@ import abc
 import logging
 from collections.abc import Sequence
 from typing import Any, Literal
-from private_gpt.settings.settings import settings
 
 from llama_index.llms import ChatMessage, MessageRole
 from llama_index.llms.llama_utils import (
     completion_to_prompt,
     messages_to_prompt,
 )
+
+from private_gpt.settings.settings import settings
 
 logger = logging.getLogger(__name__)
 

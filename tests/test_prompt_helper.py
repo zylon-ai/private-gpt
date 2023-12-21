@@ -10,6 +10,7 @@ from private_gpt.components.llm.prompt_helper import (
 )
 from private_gpt.settings.settings import settings
 
+
 @pytest.mark.parametrize(
     ("prompt_style", "expected_prompt_style"),
     [
