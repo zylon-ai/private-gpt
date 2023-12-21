@@ -8,7 +8,6 @@ from private_gpt.components.llm.prompt_helper import (
     TagPromptStyle,
     get_prompt_style,
 )
-from private_gpt.settings.settings import settings
 
 
 @pytest.mark.parametrize(
@@ -66,7 +65,6 @@ def test_tag_prompt_style_format_with_system_prompt():
 
 
 def test_mistral_prompt_style_format():
-    p = settings().ui.default_chat_system_prompt
     prompt_style = MistralPromptStyle()
     messages = [
         ChatMessage(content="You are an AI assistant.", role=MessageRole.SYSTEM),
@@ -74,7 +72,7 @@ def test_mistral_prompt_style_format():
     ]
 
     expected_prompt = (
-        f"<s>[INST] {p.strip()} [/INST][INST] You are an AI assistant. [/INST]</s>"
+        f"<s>[INST] You are an AI assistant. [/INST]</s>"
         "[INST] Hello, how are you doing? [/INST]"
     )
 
