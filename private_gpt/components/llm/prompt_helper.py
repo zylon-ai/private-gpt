@@ -124,6 +124,7 @@ class TagPromptStyle(AbstractPromptStyle):
             [ChatMessage(content=completion, role=MessageRole.USER)]
         )
 
+
 class MistralPromptStyle(AbstractPromptStyle):
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
         p = settings().ui.default_chat_system_prompt
@@ -144,6 +145,7 @@ class MistralPromptStyle(AbstractPromptStyle):
         return self._messages_to_prompt(
             [ChatMessage(content=completion, role=MessageRole.USER)]
         )
+
 
 def get_prompt_style(
     prompt_style: Literal["default", "llama2", "tag", "mistral"] | None

@@ -17,7 +17,7 @@ from private_gpt.settings.settings import settings
         ("default", DefaultPromptStyle),
         ("llama2", Llama2PromptStyle),
         ("tag", TagPromptStyle),
-        ("mistral", MistralPromptStyle)
+        ("mistral", MistralPromptStyle),
     ],
 )
 def test_get_prompt_style_success(prompt_style, expected_prompt_style):
@@ -63,6 +63,7 @@ def test_tag_prompt_style_format_with_system_prompt():
     )
 
     assert prompt_style.messages_to_prompt(messages) == expected_prompt
+
 
 def test_mistral_prompt_style_format():
     p = settings().ui.default_chat_system_prompt
