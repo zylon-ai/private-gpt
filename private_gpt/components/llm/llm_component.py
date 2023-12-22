@@ -75,6 +75,8 @@ class LLMComponent:
                     api_key=openai_settings.api_key,
                     model=openai_settings.model,
                     is_chat_model=True,
+                    max_tokens=None,
+                    api_version="",
                 )
             case "mock":
                 self.llm = MockLLM()
