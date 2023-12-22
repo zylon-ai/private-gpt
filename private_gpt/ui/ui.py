@@ -205,7 +205,7 @@ class PrivateGptUi:
         paths = [Path(file) for file in files]
         self._ingest_service.bulk_ingest([(str(path.name), path) for path in paths])
 
-    def _delete_all(self) -> None:
+    def _delete_all(self, files: list[str]) -> None:
         logger.debug("Deleting all ingested files")
         self._ingest_service.delete_all()
 
@@ -247,9 +247,7 @@ class PrivateGptUi:
                     )
                     delete_button = gr.Button(
                         "Delete All",
-                        type="danger",
-                        size="sm",
-                        disabled=True,
+                        size="sm"
                     )
                     ingested_dataset = gr.List(
                         self._list_ingested_files,
