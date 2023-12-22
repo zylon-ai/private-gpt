@@ -121,7 +121,7 @@ class IngestService:
         logger.debug("Found count=%s ingested documents", len(ingested_docs))
         return ingested_docs
     
-    def delete_all(self):
+    def delete_all(self) -> None:
         """Delete all ingested documents."""
         logger.info("Deleting all ingested documents")
         docstore = self.storage_context.docstore
