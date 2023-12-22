@@ -120,6 +120,17 @@ class IngestService:
             pass
         logger.debug("Found count=%s ingested documents", len(ingested_docs))
         return ingested_docs
+    
+    def delete_all(self):
+        """Delete all ingested documents."""
+        logger.info("Deleting all ingested documents")
+        docstore = self.storage_context.docstore
+        ingested_docs_ids: set[str] = set()
+        for node in docstore.docs.values():
+            if node.ref_doc_id is not None:
+                ingested_docs_ids.add(node.ref_doc_id)
+        for id in ingested_docs_ids:
+            self.delete(id)
 
     def delete(self, doc_id: str) -> None:
         """Delete an ingested document.
