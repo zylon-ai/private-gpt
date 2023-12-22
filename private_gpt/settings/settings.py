@@ -86,6 +86,18 @@ class LLMSettings(BaseModel):
         256,
         description="The maximum number of token that the LLM is authorized to generate in one completion.",
     )
+    context_window: int = Field(
+        3900,
+        description="The maximum number of context tokens for the model.",
+    )
+    tokenizer: str = Field(
+        None,
+        description="The model id of a predefined tokenizer hosted inside a model repo on "
+        "huggingface.co. Valid model ids can be located at the root-level, like "
+        "`bert-base-uncased`, or namespaced under a user or organization name, "
+        "like `HuggingFaceH4/zephyr-7b-beta`. If not set, will load a tokenizer matching "
+        "gpt-3.5-turbo LLM.",
+    )
 
 
 class VectorstoreSettings(BaseModel):

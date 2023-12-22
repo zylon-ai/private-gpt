@@ -4,11 +4,12 @@ FROM python:3.11.6-slim-bookworm as base
 RUN pip install pipx
 RUN python3 -m pipx ensurepath
 RUN pipx install poetry
-ENV PATH="/root/.local/bin:$PATH"
 # Set the environment variable for the file URL (can be overwritten)
 ENV FILE_URL="https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf"
 # Set the predefined model name (can be ovewritten)
 ENV NAME="mistral-7b-instruct-v0.1.Q4_K_M.gguf"
+ENV PATH=".venv/bin/:$PATH"
+ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
 
 # Dependencies to build llama-cpp
 RUN apt update && apt install -y \
@@ -46,6 +47,8 @@ COPY --chown=worker --from=dependencies /home/worker/app/.venv/ .venv
 COPY --chown=worker private_gpt/ private_gpt
 COPY --chown=worker fern/ fern
 COPY --chown=worker *.yaml *.md ./
+COPY --chown=worker scripts/ scripts
+
 # Copy the entry point script into the container and make it executable
 COPY --chown=worker entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
