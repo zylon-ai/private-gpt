@@ -66,7 +66,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--ignored",
-    nargs='*',
+    nargs="*",
     help="List of files/directories to ignore",
     default=[],
 )
@@ -101,10 +101,14 @@ if __name__ == "__main__":
     worker.ingest_folder(root_path, args.ignored)
 
     if args.ignored:
-        logger.info(f'Skipping following files and directories: {args.ignored}')
+        logger.info(f"Skipping following files and directories: {args.ignored}")
 
     if args.watch:
         logger.info(f"Watching {args.folder} for changes, press Ctrl+C to stop...")
-        directories_to_watch = [dir for dir in root_path.iterdir() if dir.is_dir() and dir.name not in args.ignored]
+        directories_to_watch = [
+            dir
+            for dir in root_path.iterdir()
+            if dir.is_dir() and dir.name not in args.ignored
+        ]
         watcher = IngestWatcher(args.folder, worker.ingest_on_watch)
         watcher.start()
