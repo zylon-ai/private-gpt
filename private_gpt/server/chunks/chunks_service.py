@@ -12,7 +12,7 @@ from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
-from private_gpt.server.ingest.ingest_service import IngestedDoc
+from private_gpt.server.ingest.model import IngestedDoc
 
 if TYPE_CHECKING:
     from llama_index.schema import RelatedNodeInfo

@@ -1,9 +1,13 @@
+import logging
+
 from injector import inject, singleton
 from llama_index import MockEmbedding
 from llama_index.embeddings.base import BaseEmbedding
 
 from private_gpt.paths import models_cache_path
 from private_gpt.settings.settings import Settings
+
+logger = logging.getLogger(__name__)
 
 
 @singleton
@@ -12,7 +16,9 @@ class EmbeddingComponent:
 
     @inject
     def __init__(self, settings: Settings) -> None:
-        match settings.llm.mode:
+        embedding_mode = settings.embedding.mode
+        logger.info("Initializing the embedding model in mode=%s", embedding_mode)
+        match embedding_mode:
             case "local":
                 from llama_index.embeddings import HuggingFaceEmbedding
 
