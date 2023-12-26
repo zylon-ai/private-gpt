@@ -37,6 +37,7 @@ llm:
   mode: openai
 
 openai:
+  api_base: <openai-api-base-url> # Defaults to https://api.openai.com/v1
   api_key: <your_openai_api_key>  # You could skip this configuration and use the OPENAI_API_KEY env var instead
   model: <openai_model_to_use> # Optional model to use. Default is "gpt-3.5-turbo"
                                # Note: Open AI Models are listed here: https://platform.openai.com/docs/models
@@ -54,6 +55,24 @@ When the server is started it will print a log *Application startup complete*.
 Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
 You'll notice the speed and quality of response is higher, given you are using OpenAI's servers for the heavy
 computations.
+
+### Using OpenAI compatible API
+
+Many tools, including [LocalAI](https://localai.io/) and [vLLM](https://docs.vllm.ai/en/latest/),
+support serving local models with an OpenAI compatible API. Even when overriding the `api_base`,
+using the `openai` mode doesn't allow you to use custom models. Instead, you should use the `openailike` mode:
+
+```yaml
+llm:
+  mode: openailike
+```
+
+This mode uses the same settings as the `openai` mode.
+
+As an example, you can follow the [vLLM quickstart guide](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server)
+to run an OpenAI compatible server. Then, you can run PrivateGPT using the `settings-vllm.yaml` profile:
+
+`PGPT_PROFILES=vllm make run`
 
 ### Using AWS Sagemaker
 
