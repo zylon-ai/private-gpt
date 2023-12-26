@@ -62,7 +62,21 @@ class LLMComponent:
 
                 openai_settings = settings.openai
                 self.llm = OpenAI(
-                    api_key=openai_settings.api_key, model=openai_settings.model
+                    api_base=openai_settings.api_base,
+                    api_key=openai_settings.api_key,
+                    model=openai_settings.model,
+                )
+            case "openailike":
+                from llama_index.llms import OpenAILike
+
+                openai_settings = settings.openai
+                self.llm = OpenAILike(
+                    api_base=openai_settings.api_base,
+                    api_key=openai_settings.api_key,
+                    model=openai_settings.model,
+                    is_chat_model=True,
+                    max_tokens=None,
+                    api_version="",
                 )
             case "mock":
                 self.llm = MockLLM()
