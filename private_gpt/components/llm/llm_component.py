@@ -3,8 +3,8 @@ import logging
 from injector import inject, singleton
 from llama_index import set_global_tokenizer
 from llama_index.llms import MockLLM
-from llama_index.llms.base import LLM
 from transformers import AutoTokenizer  # type: ignore
+from llama_index.llms.base import BaseLLM as LLM
 
 from private_gpt.components.llm.prompt_helper import get_prompt_style
 from private_gpt.paths import models_cache_path, models_path
