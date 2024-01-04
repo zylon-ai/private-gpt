@@ -53,3 +53,6 @@ ingest:
 
 wipe:
 	poetry run python scripts/utils.py wipe
+
+setup:
+	poetry run python scripts/setup

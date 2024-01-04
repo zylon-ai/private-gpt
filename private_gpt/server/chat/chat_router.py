@@ -29,9 +29,13 @@ class ChatBody(BaseModel):
                 {
                     "messages": [
                         {
+                            "role": "system",
+                            "content": "You are a rapper. Always answer with a rap.",
+                        },
+                        {
                             "role": "user",
                             "content": "How do you fry an egg?",
-                        }
+                        },
                     ],
                     "stream": False,
                     "use_context": True,
@@ -56,6 +60,9 @@ def chat_completion(
 ) -> OpenAICompletion | StreamingResponse:
     """Given a list of messages comprising a conversation, return a response.
 
+    Optionally include an initial `role: system` message to influence the way
+    the LLM answers.
+
     If `use_context` is set to `true`, the model will use context coming
     from the ingested documents to create the response. The documents being used can
     be filtered using the `context_filter` and passing the document IDs to be used.
@@ -79,7 +86,9 @@ def chat_completion(
     ]
     if body.stream:
         completion_gen = service.stream_chat(
-            all_messages, body.use_context, body.context_filter
+            messages=all_messages,
+            use_context=body.use_context,
+            context_filter=body.context_filter,
         )
         return StreamingResponse(
             to_openai_sse_stream(
@@ -89,7 +98,11 @@ def chat_completion(
             media_type="text/event-stream",
         )
     else:
-        completion = service.chat(all_messages, body.use_context, body.context_filter)
+        completion = service.chat(
+            messages=all_messages,
+            use_context=body.use_context,
+            context_filter=body.context_filter,
+        )
         return to_openai_response(
             completion.response, completion.sources if body.include_sources else None
         )

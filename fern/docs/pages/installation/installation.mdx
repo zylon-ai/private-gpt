@@ -10,7 +10,7 @@
 ```
 
 * Install Python `3.11` (*if you do not have it already*). Ideally through a python version manager like `pyenv`.
-  Python 3.12 should work too. Earlier python versions are not supported.
+  Earlier python versions are not supported.
     * osx/linux: [pyenv](https://github.com/pyenv/pyenv)
     * windows: [pyenv-win](https://github.com/pyenv-win/pyenv-win)
 
@@ -88,6 +88,21 @@ is used.
 Currently, not all the parameters of `llama.cpp` and `llama-cpp-python` are available at PrivateGPT's `settings.yaml` file.
 In case you need to customize parameters such as the number of layers loaded into the GPU, you might change
 these at the `llm_component.py` file under the `private_gpt/components/llm/llm_component.py`.
+
+##### Available LLM config options
+
+The `llm` section of the settings allows for the following configurations:
+
+- `mode`: how to run your llm
+- `max_new_tokens`: this lets you configure the number of new tokens the LLM will generate and add to the context window (by default Llama.cpp uses `256`)
+
+Example:
+
+```yaml
+llm:
+  mode: local
+  max_new_tokens: 256
+```
 
 If you are getting an out of memory error, you might also try a smaller model or stick to the proposed
 recommended models, instead of custom tuning the parameters.

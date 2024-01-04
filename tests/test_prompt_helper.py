@@ -18,7 +18,7 @@ from private_gpt.components.llm.prompt_helper import (
     ],
 )
 def test_get_prompt_style_success(prompt_style, expected_prompt_style):
-    assert get_prompt_style(prompt_style) == expected_prompt_style
+    assert isinstance(get_prompt_style(prompt_style), expected_prompt_style)
 
 
 def test_get_prompt_style_failure():
@@ -45,20 +45,7 @@ def test_tag_prompt_style_format():
 
 
 def test_tag_prompt_style_format_with_system_prompt():
-    system_prompt = "This is a system prompt from configuration."
-    prompt_style = TagPromptStyle(default_system_prompt=system_prompt)
-    messages = [
-        ChatMessage(content="Hello, how are you doing?", role=MessageRole.USER),
-    ]
-
-    expected_prompt = (
-        f"<|system|>: {system_prompt}\n"
-        "<|user|>: Hello, how are you doing?\n"
-        "<|assistant|>: "
-    )
-
-    assert prompt_style.messages_to_prompt(messages) == expected_prompt
-
+    prompt_style = TagPromptStyle()
     messages = [
         ChatMessage(
             content="FOO BAR Custom sys prompt from messages.", role=MessageRole.SYSTEM
@@ -94,22 +81,7 @@ def test_llama2_prompt_style_format():
 
 
 def test_llama2_prompt_style_with_system_prompt():
-    system_prompt = "This is a system prompt from configuration."
-    prompt_style = Llama2PromptStyle(default_system_prompt=system_prompt)
-    messages = [
-        ChatMessage(content="Hello, how are you doing?", role=MessageRole.USER),
-    ]
-
-    expected_prompt = (
-        "<s> [INST] <<SYS>>\n"
-        f" {system_prompt} \n"
-        "<</SYS>>\n"
-        "\n"
-        " Hello, how are you doing? [/INST]"
-    )
-
-    assert prompt_style.messages_to_prompt(messages) == expected_prompt
-
+    prompt_style = Llama2PromptStyle()
     messages = [
         ChatMessage(
             content="FOO BAR Custom sys prompt from messages.", role=MessageRole.SYSTEM

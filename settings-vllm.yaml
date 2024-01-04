@@ -1,0 +1,14 @@
+llm:
+  mode: openailike
+
+embedding:
+  mode: local
+  ingest_mode: simple
+
+local:
+  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+
+openai:
+  api_base: http://localhost:8000/v1
+  api_key: EMPTY
+  model: facebook/opt-125m
