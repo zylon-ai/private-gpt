@@ -31,6 +31,18 @@ class LLMComponent:
         logger.info("Initializing the LLM in mode=%s", llm_mode)
         match settings.llm.mode:
             case "local":
+                use_ollama: bool = settings.llm.use_ollama
+                if use_ollama:
+                    from llama_index.llms import Ollama
+
+                    prompt_style = get_prompt_style(settings.local.prompt_style)
+                    self.llm = Ollama(
+                        model=settings.ollama.model,
+                        messages_to_prompt=prompt_style.messages_to_prompt,
+                        completion_to_prompt=prompt_style.completion_to_prompt,
+                    )
+                    return
+
                 from llama_index.llms import LlamaCPP
 
                 prompt_style = get_prompt_style(settings.local.prompt_style)
@@ -48,7 +60,6 @@ class LLMComponent:
                     completion_to_prompt=prompt_style.completion_to_prompt,
                     verbose=True,
                 )
-
             case "sagemaker":
                 from private_gpt.components.llm.custom.sagemaker import SagemakerLLM
 

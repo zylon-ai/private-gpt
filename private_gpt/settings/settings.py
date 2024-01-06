@@ -123,6 +123,13 @@ class LocalSettings(BaseModel):
     )
 
 
+class OllamaSettings(BaseModel):
+    model: str = Field(
+        "mistral:latest",
+        description="The model to use for Ollama (default: mistral:latest)",
+    )
+
+
 class EmbeddingSettings(BaseModel):
     mode: Literal["local", "openai", "sagemaker", "mock"]
     ingest_mode: Literal["simple", "batch", "parallel"] = Field(
@@ -245,6 +252,7 @@ class Settings(BaseModel):
     openai: OpenAISettings
     vectorstore: VectorstoreSettings
     qdrant: QdrantSettings | None = None
+    ollama: OllamaSettings
 
 
 """
