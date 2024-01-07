@@ -34,7 +34,7 @@ ui:
 
 llm:
   mode: local
-  use_ollama: true
+  use_ollama: false
   # Should be matching the selected model
   max_new_tokens: 512
   context_window: 3900

@@ -18,6 +18,19 @@
 pyenv install 3.11
 pyenv local 3.11
 ```
+### Using Linux (Ubuntu/WSL2)
+
+* Ensure the python 3.11 installation
+
+```bash
+sudo apt install python3.11
+```
+
+* Use python 3.11 in poetry
+
+```bash
+poetry env use 3.11
+```
 
 * Install [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) for dependency management:
 
@@ -35,8 +48,17 @@ Install the dependencies:
 poetry install --with ui
 ```
 
-Verify everything is working by running `make run` (or `poetry run python -m private_gpt`) and navigate to
-http://localhost:8001. You should see a [Gradio UI](https://gradio.app/) **configured with a mock LLM** that will
+### Run
+
+Verify everything is working by running.
+
+```bash
+make run
+# or
+poetry run python -m private_gpt
+```
+
+Navigate to http://localhost:8001. You should see a [Gradio UI](https://gradio.app/) **configured with a mock LLM** that will
 echo back the input. Below we'll see how to configure a real LLM.
 
 ### Settings
@@ -180,6 +202,12 @@ After that running the following command in the repository will install llama.cp
 
 ```bash
 CMAKE_ARGS='-DLLAMA_CUBLAS=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python
+```
+
+or
+
+```bash
+CMAKE_ARGS="-DLLAMA_OPENBLAS=on" FORCE_CMAKE=1 poetry run pip install llama-cpp-python --force-reinstall --no-cache-dir
 ```
 
 If your installation was correct, you should see a message similar to the following next

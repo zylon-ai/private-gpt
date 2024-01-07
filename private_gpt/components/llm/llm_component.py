@@ -32,7 +32,6 @@ class LLMComponent:
         match settings.llm.mode:
             case "local":
                 use_ollama: bool = settings.llm.use_ollama
-                print(use_ollama, type(use_ollama))
                 if use_ollama:
                     from llama_index.llms import Ollama
 
