@@ -72,9 +72,13 @@ class IngestService:
 
     def ingest_file(self, file_name: str, file_data: Path) -> list[IngestedDoc]:
         logger.info("Ingesting file_name=%s", file_name)
-        documents = self.ingest_component.ingest(file_name, file_data)
-        logger.info("Finished ingestion file_name=%s", file_name)
-        return [IngestedDoc.from_document(document) for document in documents]
+        if not self.is_ingested(file_name):
+            documents = self.ingest_component.ingest(file_name, file_data)
+            logger.info("Finished ingestion file_name=%s", file_name)
+            return [IngestedDoc.from_document(document) for document in documents]
+        else:
+            logger.info("File already ingested. Skipping: file_name=%s", file_name)
+            return self.get_ingested(file_name)
 
     def ingest_text(self, file_name: str, text: str) -> list[IngestedDoc]:
         logger.debug("Ingesting text data with file_name=%s", file_name)
@@ -89,9 +93,36 @@ class IngestService:
 
     def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[IngestedDoc]:
         logger.info("Ingesting file_names=%s", [f[0] for f in files])
+        files = self.filter_new_only(files)
         documents = self.ingest_component.bulk_ingest(files)
         logger.info("Finished ingestion file_name=%s", [f[0] for f in files])
         return [IngestedDoc.from_document(document) for document in documents]
+
+    def filter_new_only(self, files: list[tuple[str, Path]]) -> list[tuple[str, Path]]:
+        ingested_docs = self.list_ingested() 
+        new_files = files.copy()
+        for f in files:
+            for d in ingested_docs:
+                if f[0] == d.doc_metadata["file_name"]:
+                    logger.info("Skipping already ingested file_name=%s", f[0])
+                    new_files.remove(f)
+                    break
+        return new_files
+
+    def is_ingested(self, file_name: str) -> bool:
+        ingested_docs = self.list_ingested() 
+        for d in ingested_docs:
+            if file_name == d.doc_metadata["file_name"]:
+                return True
+        return False
+
+    def get_ingested(self, file_name: str) -> list[IngestedDoc]:
+        ingested_docs = self.list_ingested()
+        return_docs = []
+        for d in ingested_docs:
+            if file_name == d.doc_metadata["file_name"]:
+                return_docs.append(d)
+        return return_docs
 
     def list_ingested(self) -> list[IngestedDoc]:
         ingested_docs = []
