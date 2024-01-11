@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from gradio.themes.utils.colors import slate  # type: ignore
 from injector import inject, singleton
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
+from pydantic import BaseModel
 
 from private_gpt.constants import PROJECT_ROOT_PATH
 from private_gpt.di import global_injector
@@ -32,10 +33,8 @@ SOURCES_SEPARATOR = "\n\n Sources: \n"
 
 MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
 
-
-
 @singleton
-class PrivateGptUi:
+class PrivateAdminGptUi:
     @inject
     def __init__(
         self,
@@ -182,7 +181,7 @@ class PrivateGptUi:
         paths = [Path(file) for file in files]
         self._ingest_service.bulk_ingest([(str(path.name), path) for path in paths])
 
-    def _build_ui_blocks(self) -> gr.Blocks:
+    def _build_admin_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
         with gr.Blocks(
             title=UI_TAB_TITLE,
@@ -201,7 +200,7 @@ class PrivateGptUi:
             "#component-0, #component-3, #component-10, #component-8  { height: 100% !important; }"
             "#chatbot { flex-grow: 1 !important; overflow: auto !important;}"
             "#col { height: calc(100vh - 112px - 16px) !important; }",
-        ) as users:
+        ) as blocks:
             with gr.Row():
                 gr.HTML(f"<div class='logo'/><img src={logo_svg} alt=PrivateGPT></div")
 
@@ -212,12 +211,23 @@ class PrivateGptUi:
                         label="Mode",
                         value="Query Docs",
                     )
+                    upload_button = gr.components.UploadButton(
+                        "Upload File(s)",
+                        type="filepath",
+                        file_count="multiple",
+                        size="sm",
+                    )
                     ingested_dataset = gr.List(
                         self._list_ingested_files,
                         headers=["File name"],
                         label="Ingested Files",
                         interactive=False,
                         render=False,  # Rendered under the button
+                    )
+                    upload_button.upload(
+                        self._upload_file,
+                        inputs=upload_button,
+                        outputs=ingested_dataset,
                     )
                     ingested_dataset.change(
                         self._list_ingested_files,
@@ -254,25 +264,24 @@ class PrivateGptUi:
                                 AVATAR_BOT,
                             ),
                         ),
-                        additional_inputs=[mode, system_prompt_input],
+                        additional_inputs=[mode, upload_button, system_prompt_input],
                     )
-        return users
-
-    def get_ui_blocks(self) -> gr.Blocks:
+        return blocks
+    
+    def get_admin_ui_blocks(self) -> gr.Blocks:
         if self._ui_block is None:
-            self._ui_block = self._build_ui_blocks()
+            self._ui_block = self._build_admin_ui_blocks()
         return self._ui_block
 
-    def mount_in_app(self, app: FastAPI, path: str) -> None:
+    def mount_in_admin_app(self, app: FastAPI, path: str) -> None:
         logger.info("PATH---------------------------->:%s", path)
-        blocks = self.get_ui_blocks()
+        blocks = self.get_admin_ui_blocks()
         blocks.queue()
-        logger.info("Mounting the regular gradio UI at path=%s", path)
+        logger.info("Mounting the admin gradio UI at path=%s", path)
         gr.mount_gradio_app(app, blocks, path=path)
 
-    
 if __name__ == "__main__":
-    ui = global_injector.get(PrivateGptUi)
+    ui = global_injector.get(PrivateAdminGptUi)
     _blocks = ui.get_admin_ui_blocks()
     _blocks.queue()
     _blocks.launch(debug=False, show_api=False)
