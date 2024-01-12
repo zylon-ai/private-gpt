@@ -35,6 +35,9 @@ check:
 run:
 	poetry run python -m private_gpt
 
+run-https:
+	poetry run python -m private_gpt --https
+
 dev-windows:
 	(set PGPT_PROFILES=local & poetry run python -m uvicorn private_gpt.main:app --reload --port 8001)
 
