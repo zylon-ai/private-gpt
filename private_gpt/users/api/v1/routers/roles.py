@@ -5,7 +5,9 @@ from private_gpt.users.api import deps
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+
 router = APIRouter(prefix='/roles', tags=['roles'])
+
 
 @router.get("/", response_model=List[schemas.Role])
 def get_roles(

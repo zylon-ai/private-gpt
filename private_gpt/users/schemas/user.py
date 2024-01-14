@@ -31,15 +31,14 @@ class UserLoginSchema(BaseModel):
 
 class UserSchema(UserBaseSchema):
 	id: int
-	user_role: Optional[UserRole]
-	last_login: Optional[datetime]
+	user_role: Optional[UserRole] = None
+	last_login: Optional[datetime] = None
 	created_at: datetime
 	updated_at: datetime
 	is_active: bool = Field(default=False)
 
 	class Config:
 		orm_mode = True
-		json_exclude = {'user_role'}
 
 # Additional properties to return via API
 class User(UserSchema):

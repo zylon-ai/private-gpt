@@ -14,7 +14,7 @@ def assign_user_role(
     *,
     db: Session = Depends(deps.get_db),
     user_role_in: schemas.UserRoleCreate,
-    current_user: models.User = Depends(deps.get_current_active_user),
+    current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
     Assign a role to a user after creation of a user
@@ -35,14 +35,13 @@ def update_user_role(
     db: Session = Depends(deps.get_db),
     user_id: int,
     user_role_in: schemas.UserRoleUpdate,
-    # current_user: models.User = Security(
-    #     deps.get_current_active_user,
-    #     scopes=[
-    #         Role.ADMIN["name"],
-    #         Role.SUPER_ADMIN["name"],
-    #         Role.ACCOUNT_ADMIN["name"],
-    #     ],
-    # ),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[
+            Role.ADMIN["name"],
+            Role.SUPER_ADMIN["name"],
+        ],
+    ),
 ) -> Any:
     """
     Update a users role.

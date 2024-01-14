@@ -15,7 +15,7 @@ SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://{username}:{password}@{host}:{p
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AUTHENTICATION AND AUTHORIZATION"
-    API_V1_STR: str = "/api/v1"
+    API_V1_STR: str = "/v1"
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     REFRESH_TOKEN_EXPIRE_MINUTES: int

@@ -64,7 +64,8 @@ def login_access_token(
         ),
         "refresh_token": security.create_refresh_token(
             token_payload, expires_delta=refresh_token_expires
-        )
+        ),
+        "token_type": "bearer",
     }
 
 
@@ -95,7 +96,7 @@ def register(
     user = crud.user.create(db, obj_in=user_in)
 
     # get role
-    role = crud.role.get_by_name(db, name=Role.GUEST["name"])
+    role = crud.role.get_by_name(db, name=Role.SUPER_ADMIN["name"])
     print("ROLE:", role)
     # assign user_role
     user_role_in = schemas.UserRoleCreate(
@@ -127,5 +128,6 @@ def register(
         ),
         "refresh_token": security.create_refresh_token(
             token_payload, expires_delta=refresh_token_expires
-        )
+        ),
+        "token_type": "bearer",
     }
