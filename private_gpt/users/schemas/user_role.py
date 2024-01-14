@@ -1,6 +1,6 @@
 from typing import Optional
 
-from private_gpt.users.models.role import Role
+from private_gpt.users.schemas.role import Role
 from pydantic import BaseModel
 
 # Shared properties

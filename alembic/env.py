@@ -8,10 +8,10 @@ from alembic import context
 from private_gpt.users.db.base_class import Base
 from private_gpt.users.core.config import SQLALCHEMY_DATABASE_URI
 
+
 from private_gpt.users.models.user import User
 from private_gpt.users.models.role import Role
 from private_gpt.users.models.user_role import UserRole
-
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

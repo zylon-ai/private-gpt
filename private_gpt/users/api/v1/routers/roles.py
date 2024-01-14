@@ -7,12 +7,12 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(prefix='/roles', tags=['roles'])
 
-@router.get("/", response_model= List[schemas.Role])
+@router.get("/", response_model=List[schemas.Role])
 def get_roles(
     db: Session = Depends(deps.get_db), skip: int = 0, limit: int = 100,
 ) -> Any:
     """
-    Retrieve all avaiable user roles.
+    Retrieve all available user roles.
     """
-    roles = crud.roles_crud.get_multi(db, skip=skip, limit=limit)
+    roles = crud.role.get_multi(db, skip=skip, limit=limit)
     return roles

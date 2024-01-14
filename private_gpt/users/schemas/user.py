@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field, EmailStr
-from private_gpt.users.models.user_role import UserRole
+from private_gpt.users.schemas.user_role import UserRole
 
 
 class UserBaseSchema(BaseModel):

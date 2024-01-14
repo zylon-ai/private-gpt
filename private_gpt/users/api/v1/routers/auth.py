@@ -25,12 +25,13 @@ def login_access_token(
     user = crud.user.authenticate(
         db, email=form_data.username, password=form_data.password
     )
+    print("USER object", user)
     if not user:
         raise HTTPException(
             status_code=400, detail="Incorrect email or password"
         )
-    elif not crud.user.is_active(user):
-        raise HTTPException(status_code=400, detail="Inactive user")
+    # elif not crud.user.is_active(user):
+    #     raise HTTPException(status_code=400, detail="Inactive user")
    
     access_token_expires = timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -38,12 +39,15 @@ def login_access_token(
     refresh_token_expires = timedelta(
         minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES
     )
-    
+    print(f"Access Token expires: {access_token_expires}\n Refresh token expires: {refresh_token_expires}")
     user_in = schemas.UserUpdate(
+        email = user.email,
+        fullname = user.fullname,
         last_login=datetime.now()
     )
+    print("Update last login schema: ", user_in)
     user = crud.user.update(db, db_obj=user, obj_in=user_in)
-    
+    print("update in database:", user)
     if not user.user_role:
         role = "GUEST"
     else:
@@ -81,23 +85,18 @@ def register(
             status_code=409,
             detail="The user with this username already exists in the system",
         )
-    print("here 1...")
     user_in = schemas.UserCreate(
         email=email,
         password=password,
         fullname=fullname,
     )
-    print("here 2...")
 
     # create user
     user = crud.user.create(db, obj_in=user_in)
 
-    print("here 4...")
-
     # get role
-    role = crud.role.get_by_name(db, name=Role.ACCOUNT_ADMIN["name"])
-
-    print("here 4...")
+    role = crud.role.get_by_name(db, name=Role.GUEST["name"])
+    print("ROLE:", role)
     # assign user_role
     user_role_in = schemas.UserRoleCreate(
         user_id=user.id,
@@ -105,8 +104,7 @@ def register(
     )
     user_role = crud.user_role.create(db, obj_in=user_role_in)
 
-    print("here 5...")
-
+    print(user)
     
     access_token_expires = timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -118,6 +116,7 @@ def register(
         role = "GUEST"
     else:
         role = user.user_role.role.name
+
     token_payload = {
         "id": str(user.id),
         "role": role,
