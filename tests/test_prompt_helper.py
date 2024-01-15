@@ -2,6 +2,7 @@ import pytest
 from llama_index.llms import ChatMessage, MessageRole
 
 from private_gpt.components.llm.prompt_helper import (
+    ChatMLPromptStyle,
     DefaultPromptStyle,
     Llama2PromptStyle,
     TagPromptStyle,
@@ -15,6 +16,7 @@ from private_gpt.components.llm.prompt_helper import (
         ("default", DefaultPromptStyle),
         ("llama2", Llama2PromptStyle),
         ("tag", TagPromptStyle),
+        ("chatml", TagPromptStyle),
     ],
 )
 def test_get_prompt_style_success(prompt_style, expected_prompt_style):
@@ -95,6 +97,22 @@ def test_llama2_prompt_style_with_system_prompt():
         "<</SYS>>\n"
         "\n"
         " Hello, how are you doing? [/INST]"
+    )
+
+    assert prompt_style.messages_to_prompt(messages) == expected_prompt
+
+
+def test_chatml_prompt_style_format():
+    prompt_style = ChatMLPromptStyle()
+    messages = [
+        ChatMessage(content="You are an AI assistant.", role=MessageRole.SYSTEM),
+        ChatMessage(content="Hello, how are you doing?", role=MessageRole.USER),
+    ]
+
+    expected_prompt = (
+        "<|im_start|>system\nYou are an AI assistant.<|im_end|>\n"
+        "<|im_start|>user\nHello, how are you doing?<|im_end|>\n"
+        "<|im_start|>assistant\n"
     )
 
     assert prompt_style.messages_to_prompt(messages) == expected_prompt

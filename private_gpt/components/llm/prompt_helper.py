@@ -104,17 +104,23 @@ class TagPromptStyle(AbstractPromptStyle):
     FIXME: should we add surrounding `<s>` and `</s>` tags, like in llama2?
     """
 
+    def format_message_from_user(self, role: str, content: str) -> str:
+        return f"<|{role.lower()}|>: {content.strip()}"
+
+    def assistant_prompt(self) -> str:
+        return "<|assistant|>: "
+
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
         """Format message to prompt with `<|ROLE|>: MSG` style."""
         prompt = ""
         for message in messages:
             role = message.role
             content = message.content or ""
-            message_from_user = f"<|{role.lower()}|>: {content.strip()}"
+            message_from_user = self.format_message_from_user(role, content)
             message_from_user += "\n"
             prompt += message_from_user
         # we are missing the last <|assistant|> tag that will trigger a completion
-        prompt += "<|assistant|>: "
+        prompt += self.assistant_prompt()
         return prompt
 
     def _completion_to_prompt(self, completion: str) -> str:
@@ -123,8 +129,30 @@ class TagPromptStyle(AbstractPromptStyle):
         )
 
 
+class ChatMLPromptStyle(TagPromptStyle):
+    r"""ChatML prompt style that uses the prompt style `<|im_start|>user\nMSG`.
+
+    It transforms the sequence of messages into a prompt that should look like:
+    ```text
+    <|im_start|>system
+    your system prompt here.<|im_end|>
+    <|im_start|>user>
+    user message here.
+    (possibly with context and question)<|im_end|>
+    <|im_start|>assistant
+    assistant (model) response here.<|im_end|>
+    ```
+    """
+
+    def format_message_from_user(self, role: str, content: str) -> str:
+        return f"<|im_start|>{role.lower()}\n{content.strip()}<|im_end|>"
+
+    def assistant_prompt(self) -> str:
+        return "<|im_start|>assistant\n"
+
+
 def get_prompt_style(
-    prompt_style: Literal["default", "llama2", "tag"] | None
+    prompt_style: Literal["default", "llama2", "tag", "chatml"] | None
 ) -> AbstractPromptStyle:
     """Get the prompt style to use from the given string.
 
@@ -137,4 +165,6 @@ def get_prompt_style(
         return Llama2PromptStyle()
     elif prompt_style == "tag":
         return TagPromptStyle()
+    elif prompt_style == "chatml":
+        return ChatMLPromptStyle()
     raise ValueError(f"Unknown prompt_style='{prompt_style}'")
