@@ -6,6 +6,7 @@ from private_gpt.components.llm.prompt_helper import (
     Llama2PromptStyle,
     MistralPromptStyle,
     TagPromptStyle,
+    ChatMLPromptStyle,
     get_prompt_style,
 )
 
@@ -80,17 +81,17 @@ def test_mistral_prompt_style_format():
 
 
 def test_chatml_prompt_style_format():
-    prompt_style = MistralPromptStyle()
+    prompt_style = ChatMLPromptStyle()
     messages = [
         ChatMessage(content="You are an AI assistant.", role=MessageRole.SYSTEM),
         ChatMessage(content="Hello, how are you doing?", role=MessageRole.USER),
     ]
 
     expected_prompt = (
-        "<|im_start|>system"
-        "You are an AI assistant.<|im_end|>"
-        "<|im_start|>user"
-        "Hello, how are you doing?<|im_end|>"
+        "<|im_start|>system\n"
+        "You are an AI assistant.<|im_end|>\n"
+        "<|im_start|>user\n"
+        "Hello, how are you doing?<|im_end|>\n"
         "<|im_start|>assistant\n"
     )
 
