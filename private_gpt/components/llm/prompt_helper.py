@@ -143,6 +143,7 @@ class MistralPromptStyle(AbstractPromptStyle):
             [ChatMessage(content=completion, role=MessageRole.USER)]
         )
 
+
 class ChatMLPromptStyle(AbstractPromptStyle):
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
         prompt = "<|im_start|>system\n"
@@ -155,7 +156,7 @@ class ChatMLPromptStyle(AbstractPromptStyle):
             elif role.lower() == "user":
                 prompt += "<|im_end|>\n<|im_start|>user\n"
                 message_from_user = f"{content.strip()}<|im_end|>\n"
-                prompt += message_from_user        
+                prompt += message_from_user
         prompt += "<|im_start|>assistant\n"
         return prompt
 
@@ -163,6 +164,7 @@ class ChatMLPromptStyle(AbstractPromptStyle):
         return self._messages_to_prompt(
             [ChatMessage(content=completion, role=MessageRole.USER)]
         )
+
 
 def get_prompt_style(
     prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] | None
