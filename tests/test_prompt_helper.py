@@ -79,6 +79,24 @@ def test_mistral_prompt_style_format():
     assert prompt_style.messages_to_prompt(messages) == expected_prompt
 
 
+def test_chatml_prompt_style_format():
+    prompt_style = MistralPromptStyle()
+    messages = [
+        ChatMessage(content="You are an AI assistant.", role=MessageRole.SYSTEM),
+        ChatMessage(content="Hello, how are you doing?", role=MessageRole.USER),
+    ]
+
+    expected_prompt = (
+        "<|im_start|>system"
+        "You are an AI assistant.<|im_end|>"
+        "<|im_start|>user"
+        "Hello, how are you doing?<|im_end|>"
+        "<|im_start|>assistant\n"
+    )
+
+    assert prompt_style.messages_to_prompt(messages) == expected_prompt
+
+
 def test_llama2_prompt_style_format():
     prompt_style = Llama2PromptStyle()
     messages = [
