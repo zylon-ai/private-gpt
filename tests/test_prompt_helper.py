@@ -2,11 +2,11 @@ import pytest
 from llama_index.llms import ChatMessage, MessageRole
 
 from private_gpt.components.llm.prompt_helper import (
+    ChatMLPromptStyle,
     DefaultPromptStyle,
     Llama2PromptStyle,
     MistralPromptStyle,
     TagPromptStyle,
-    ChatMLPromptStyle,
     get_prompt_style,
 )
 
@@ -18,6 +18,7 @@ from private_gpt.components.llm.prompt_helper import (
         ("llama2", Llama2PromptStyle),
         ("tag", TagPromptStyle),
         ("mistral", MistralPromptStyle),
+        ("chatml", ChatMLPromptStyle)
     ],
 )
 def test_get_prompt_style_success(prompt_style, expected_prompt_style):
