@@ -98,7 +98,7 @@ class LocalSettings(BaseModel):
     embedding_hf_model_name: str = Field(
         description="Name of the HuggingFace model to use for embeddings"
     )
-    prompt_style: Literal["default", "llama2", "tag", "mistral"] = Field(
+    prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] = Field(
         "llama2",
         description=(
             "The prompt style to use for the chat engine. "
