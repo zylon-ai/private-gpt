@@ -2,7 +2,6 @@ from private_gpt.users.db.base_class import Base
 from sqlalchemy import Column, ForeignKey, UniqueConstraint, Integer
 from sqlalchemy.orm import relationship
 
-
 class UserRole(Base):
     __tablename__ = "user_roles"
     user_id = Column(

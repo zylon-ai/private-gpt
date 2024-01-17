@@ -250,7 +250,6 @@ class PrivateAdminGptUi:
                         self._set_system_prompt,
                         inputs=system_prompt_input,
                     )
-
                 with gr.Column(scale=7, elem_id="col"):
                     _ = gr.ChatInterface(
                         self._chat,

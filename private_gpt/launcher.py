@@ -26,12 +26,12 @@ def create_app(root_injector: Injector) -> FastAPI:
 
     app = FastAPI(dependencies=[Depends(bind_injector_to_request)])
 
-    app.include_router(completions_router)
-    app.include_router(chat_router)
-    app.include_router(chunks_router)
-    app.include_router(ingest_router)
-    app.include_router(embeddings_router)
-    app.include_router(health_router)
+    # app.include_router(completions_router)
+    # app.include_router(chat_router)
+    # app.include_router(chunks_router)
+    # app.include_router(ingest_router)
+    # app.include_router(embeddings_router)
+    # app.include_router(health_router)
     
     app.include_router(api_router)
 
@@ -48,14 +48,14 @@ def create_app(root_injector: Injector) -> FastAPI:
             allow_headers=settings.server.cors.allow_headers,
         )
 
-    if settings.ui.enabled:
-        logger.debug("Importing the UI module")
-        from private_gpt.ui.admin_ui import PrivateAdminGptUi
-        admin_ui = root_injector.get(PrivateAdminGptUi)
-        admin_ui.mount_in_admin_app(app, '/admin')
+    # if settings.ui.enabled:
+    #     logger.debug("Importing the UI module")
+    #     from private_gpt.ui.admin_ui import PrivateAdminGptUi
+    #     admin_ui = root_injector.get(PrivateAdminGptUi)
+    #     admin_ui.mount_in_admin_app(app, '/admin')
 
-        from private_gpt.ui.ui import PrivateGptUi
-        ui = root_injector.get(PrivateGptUi)
-        ui.mount_in_app(app, settings.ui.path)
+        # from private_gpt.ui.ui import PrivateGptUi
+        # ui = root_injector.get(PrivateGptUi)
+        # ui.mount_in_app(app, settings.ui.path)
 
     return app
