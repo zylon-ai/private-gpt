@@ -1,16 +1,18 @@
 from typing import Any, List
-from private_gpt.users import crud, models, schemas
+
+from sqlalchemy.orm import Session
+from pydantic.networks import EmailStr
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi import APIRouter, Body, Depends, HTTPException, Security, status
+
 from private_gpt.users.api import deps
 from private_gpt.users.constants.role import Role
 from private_gpt.users.core.config import settings
+from private_gpt.users import crud, models, schemas
 from private_gpt.users.core.security import verify_password, get_password_hash
-from fastapi import APIRouter, Body, Depends, HTTPException, Security
-from fastapi.encoders import jsonable_encoder
-from pydantic.networks import EmailStr
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/users", tags=["users"])
-
 
 @router.get("", response_model=List[schemas.User])
 def read_users(
@@ -25,7 +27,7 @@ def read_users(
     """
     Retrieve all users.
     """
-    users = crud.user.get_multi(db, skip=skip, limit=limit,)
+    users = crud.user.get_multi(db, skip=skip, limit=limit)
     return users
 
 
@@ -45,11 +47,14 @@ def create_user(
     user = crud.user.get_by_email(db, email=user_in.email)
     if user:
         raise HTTPException(
-            status_code=409,
-            detail="The user with this username already exists in the system.",
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The user with this email already exists in the system.",
         )
     user = crud.user.create(db, obj_in=user_in)
-    return user
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED,
+        content={"message": "User created successfully", "user": jsonable_encoder(user)},
+    )
 
 
 @router.put("/me", response_model=schemas.User)
@@ -64,15 +69,20 @@ def update_user_me(
     Update own user.
     """
     current_user_data = jsonable_encoder(current_user)
-    print("Current user data: ", current_user_data)
     user_in = schemas.UserUpdate(**current_user_data)
     if fullname is not None:
         user_in.fullname = fullname
     if email is not None:
         user_in.email = email
-    print(f"DB obj: {current_user}\n obj IN : {user_in}")
     user = crud.user.update(db, db_obj=current_user, obj_in=user_in)
-    return user
+    user_data = schemas.UserBaseSchema(
+        email=user.email,
+        fullname=user.fullname,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"message": "User updated successfully", "user": jsonable_encoder(user_data)},
+    )
 
 
 @router.get("/me", response_model=schemas.User)
@@ -83,21 +93,15 @@ def read_user_me(
     """
     Get current user.
     """
-    if not current_user.user_role:
-        role = None
-    else:
-        role = current_user.user_role.role.name
-    user_data = schemas.User(
-        id=current_user.id,
+    role = current_user.user_role.role.name if current_user.user_role else None
+    user_data = schemas.UserBaseSchema(
         email=current_user.email,
-        is_active=current_user.is_active,
         fullname=current_user.fullname,
-        created_at=current_user.created_at,
-        updated_at=current_user.updated_at,
-        last_login = current_user.last_login,
-        role=role
     )
-    return user_data
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"message": "Current user retrieved successfully", "user": jsonable_encoder(user_data)},
+    )
 
 
 @router.patch("/me/change-password", response_model=schemas.User)
@@ -111,27 +115,24 @@ def change_password(
     """
     Change current user's password.
     """
-    # Verify the old password
     if not verify_password(old_password, current_user.hashed_password):
-        raise HTTPException(status_code=400, detail="Old password is incorrect")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Old password is incorrect")
 
-    # Change the password
     new_password_hashed = get_password_hash(new_password)
     current_user.hashed_password = new_password_hashed
     db.commit()
 
     role = current_user.user_role.role.name if current_user.user_role else None
-    user_data = schemas.User(
+    user_data = schemas.UserBaseSchema(
         id=current_user.id,
         email=current_user.email,
-        is_active=current_user.is_active,
         fullname=current_user.fullname,
-        created_at=current_user.created_at,
-        updated_at=current_user.updated_at,
-        last_login=current_user.last_login,
-        role=role,
     )
-    return user_data
+    
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"message": "Password changed successfully", "user": jsonable_encoder(user_data)},
+    )
 
 
 @router.get("/{user_id}", response_model=schemas.User)
@@ -147,9 +148,12 @@ def read_user_by_id(
     Get a specific user by id.
     """
     if user_id is None:
-        return "User id is not given."
+        return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"message": "User id is not given."})
     user = crud.user.get(db, id=user_id)
-    return user
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"message": "User retrieved successfully", "user": jsonable_encoder(user)},
+    )
 
 
 @router.put("/{user_id}", response_model=schemas.User)
@@ -169,8 +173,16 @@ def update_user(
     user = crud.user.get(db, id=user_id)
     if not user:
         raise HTTPException(
-            status_code=404,
-            detail="The user with this username does not exist in the system",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The user with this id does not exist in the system",
         )
     user = crud.user.update(db, db_obj=user, obj_in=user_in)
-    return user
+    user_data = schemas.UserBaseSchema(
+        id=user.id,
+        email=user.email,
+        fullname=user.fullname,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"message": "User updated successfully", "user": jsonable_encoder(user_data)},
+    )

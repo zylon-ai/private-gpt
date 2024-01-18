@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     DB_NAME: str
     PORT: str
 
+    SMTP_SERVER: str
+    SMTP_PORT: str
+    SMTP_SENDER_EMAIL: str
+    SMTP_USERNAME: str
+    SMTP_PASSWORD: str
+
 
     # SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
 

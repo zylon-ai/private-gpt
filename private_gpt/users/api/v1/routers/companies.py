@@ -1,20 +1,27 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
+
 from sqlalchemy.orm import Session
-from private_gpt.users import crud, models, schemas
-from private_gpt.users.constants.role import Role
-from private_gpt.users.api import deps
+from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+from fastapi import APIRouter, Depends, HTTPException, status, Security
+
+from private_gpt.users.api import deps
+from private_gpt.users.constants.role import Role
+from private_gpt.users import crud, models, schemas
 
 
 router = APIRouter(prefix="/companies", tags=["Companies"])
+
 
 @router.get("", response_model=List[schemas.Company])
 def list_companies(
     db: Session = Depends(deps.get_db),
     skip: int = 0,
     limit: int = 100,
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"]],
+    ),
 ) -> List[schemas.Company]:
     """
     List companies
@@ -27,18 +34,34 @@ def list_companies(
 def create_company(
     company_in: schemas.CompanyCreate,
     db: Session = Depends(deps.get_db),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"]],
+    ),
 ) -> schemas.Company:
     """
     Create a new company
     """
     company = crud.company.create(db=db, obj_in=company_in)
-    return company
+    company = jsonable_encoder(company)
+
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED,
+        content={
+            "message": "Company created successfully", 
+            "subscription": company
+        },
+    )
 
 
 @router.get("/{company_id}", response_model=schemas.Company)
 def read_company(
     company_id: int,
     db: Session = Depends(deps.get_db),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"]],
+    ),
 ) -> schemas.Company:
     """
     Read a company by ID
@@ -54,6 +77,10 @@ def update_company(
     company_id: int,
     company_in: schemas.CompanyUpdate,
     db: Session = Depends(deps.get_db),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"]],
+    ),
 ) -> schemas.Company:
     """
     Update a company by ID
@@ -72,10 +99,15 @@ def update_company(
         },
     )
 
+
 @router.delete("/{company_id}", response_model=schemas.Company)
 def delete_company(
     company_id: int,
     db: Session = Depends(deps.get_db),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"]],
+    ),
 ) -> schemas.Company:
     """
     Delete a company by ID

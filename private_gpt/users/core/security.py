@@ -1,8 +1,10 @@
-from passlib.context import CryptContext
 import os
+import random
+import string
 from datetime import datetime, timedelta
 from typing import Union, Any
 from jose import jwt
+from passlib.context import CryptContext
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
 REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
@@ -42,3 +44,10 @@ def create_refresh_token(subject: Union[str, Any], expires_delta: int = None) ->
     to_encode = {"exp": expires_delta, **subject}
     encoded_jwt = jwt.encode(to_encode, JWT_REFRESH_SECRET_KEY, ALGORITHM)
     return encoded_jwt
+
+def generate_random_password(length: int = 12) -> str:
+    """
+    Generate a random password.
+    """
+    characters = string.ascii_letters + string.digits + string.punctuation
+    return ''.join(random.choice(characters) for i in range(length))

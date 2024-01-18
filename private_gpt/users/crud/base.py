@@ -1,9 +1,12 @@
 from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 
 from private_gpt.users.db.base import Base
+from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from pydantic.error_wrappers import ValidationError
 
 # Define custom types for SQLAlchemy model, and Pydantic schemas
 ModelType = TypeVar("ModelType", bound=Base)
@@ -30,12 +33,19 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db.query(self.model).filter(self.model.id == id).first()
 
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
-        obj_in_data = jsonable_encoder(obj_in)
-        db_obj = self.model(**obj_in_data)  # type: ignore
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+        try:
+            obj_in_data = jsonable_encoder(obj_in)
+            db_obj = self.model(**obj_in_data)
+            db.add(db_obj)
+            db.commit()
+            db.refresh(db_obj)
+            return db_obj
+        except IntegrityError as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Integrity Error: {str(e)}",
+            )
 
     def update(
         self,
@@ -44,21 +54,34 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj: ModelType,
         obj_in: Union[UpdateSchemaType, Dict[str, Any]]
     ) -> ModelType:
-        obj_data = jsonable_encoder(db_obj)
-        if isinstance(obj_in, dict):
-            update_data = obj_in
-        else:
-            update_data = obj_in.dict(exclude_unset=True)
-        for field in obj_data:
-            if field in update_data:
-                setattr(db_obj, field, update_data[field])
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+        try:
+            obj_data = jsonable_encoder(db_obj)
+            if isinstance(obj_in, dict):
+                update_data = obj_in
+            else:
+                update_data = obj_in.dict(exclude_unset=True)
+            for field in obj_data:
+                if field in update_data:
+                    setattr(db_obj, field, update_data[field])
+            db.add(db_obj)
+            db.commit()
+            db.refresh(db_obj)
+            return db_obj
+        except IntegrityError as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Integrity Error: {str(e)}",
+            )
 
     def remove(self, db: Session, *, id: int) -> ModelType:
         obj = db.query(self.model).get(id)
-        db.delete(obj)
-        db.commit()
-        return obj
+        if obj:
+            db.delete(obj)
+            db.commit()
+            return obj
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"{self.model.__name__} not found with id: {id}",
+            )
