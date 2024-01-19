@@ -82,7 +82,10 @@ class DataSettings(BaseModel):
 
 class LLMSettings(BaseModel):
     mode: Literal["local", "openai", "openailike", "sagemaker", "mock"]
-    use_ollama: bool = Field(default=False, description="Use Ollama instead of LlamaCPP")
+    use: Literal["cpp", "ollama"] = Field(
+        default="cpp",
+        description="Use a type of local LLM",
+    )
     max_new_tokens: int = Field(
         256,
         description="The maximum number of token that the LLM is authorized to generate in one completion.",
