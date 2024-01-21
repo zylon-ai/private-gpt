@@ -26,12 +26,12 @@ def create_app(root_injector: Injector) -> FastAPI:
 
     app = FastAPI(dependencies=[Depends(bind_injector_to_request)])
 
-    app.include_router(completions_router)
-    app.include_router(chat_router)
-    app.include_router(chunks_router)
-    app.include_router(ingest_router)
-    app.include_router(embeddings_router)
-    app.include_router(health_router)
+    # app.include_router(completions_router)
+    # app.include_router(chat_router)
+    # app.include_router(chunks_router)
+    # app.include_router(ingest_router)
+    # app.include_router(embeddings_router)
+    # app.include_router(health_router)
     
     app.include_router(api_router)
 

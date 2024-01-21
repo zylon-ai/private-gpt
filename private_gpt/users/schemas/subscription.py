@@ -7,7 +7,6 @@ from private_gpt.users.schemas.company import Company
 class SubscriptionBase(BaseModel):
     start_date: datetime
     end_date: datetime
-    is_active: bool
 
 class SubscriptionCreate(SubscriptionBase):
     company_id: int

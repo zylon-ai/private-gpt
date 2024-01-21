@@ -13,7 +13,6 @@ class Subscription(Base):
     company_id = Column(Integer, ForeignKey("companies.id"))
     start_date = Column(DateTime, default=datetime.utcnow())
     end_date = Column(DateTime, default=datetime.utcnow() + timedelta(days=30))  # Example: 30 days subscription period
-    is_active = Column(Boolean, default=False)
 
     company = relationship("Company", back_populates="subscriptions")
 

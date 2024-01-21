@@ -204,3 +204,14 @@ def update_user(
         content={"message": "User updated successfully", "user": jsonable_encoder(user_data)},
     )
 
+
+@router.get("/")
+def home_page(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Security(
+        deps.get_active_subscription,
+    ),
+):
+    
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Welcome to QuickGPT"})

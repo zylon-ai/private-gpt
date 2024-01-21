@@ -124,3 +124,21 @@ async def get_company_name(company_id: int, db: Session = Depends(get_db)) -> st
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     return company.name
+
+
+def get_active_subscription(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    company_id = current_user.user_role.company_id
+    if company_id:
+        company = crud.company.get(db, company_id)
+        if company and company.subscriptions:
+            active_subscription = next((sub for sub in company.subscriptions if sub.is_active), None)
+            if active_subscription:
+                return company
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Access Forbidden - No Active Subscription",
+    )

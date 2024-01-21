@@ -205,3 +205,4 @@ def register_without_company_assignment(
         "refresh_token": security.create_refresh_token(token_payload, expires_delta=timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)),
         "token_type": "bearer",
     }
+

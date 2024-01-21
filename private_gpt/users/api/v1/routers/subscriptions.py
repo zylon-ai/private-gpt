@@ -89,7 +89,7 @@ def read_subscriptions_by_company(
         status_code=status.HTTP_200_OK,
         content={
             "message": "Subscriptions retrieved successfully", 
-            "subscriptions": subscriptions_list
+            "subscriptions": jsonable_encoder(subscriptions)
         },
     )
 
