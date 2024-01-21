@@ -7,6 +7,7 @@ from pydantic import BaseModel
 class UserRoleBase(BaseModel):
     user_id: Optional[int]
     role_id: Optional[int]
+    company_id: Optional[int]
 
     class Config:
         arbitrary_types_allowed = True
@@ -29,7 +30,6 @@ class UserRoleInDBBase(UserRoleBase):
     class Config:
         orm_mode = True
         arbitrary_types_allowed = True
-
 
 
 # Additional properties to return via API

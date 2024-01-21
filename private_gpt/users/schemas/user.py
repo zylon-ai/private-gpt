@@ -4,11 +4,12 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, EmailStr
 from private_gpt.users.schemas.user_role import UserRole
-
+from private_gpt.users.schemas.company import Company
 
 class UserBaseSchema(BaseModel):
 	email: EmailStr
 	fullname: str
+	company_id: Optional[int]
 
 	class Config:
 		arbitrary_types_allowed = True

@@ -1,10 +1,10 @@
-from typing import Any, List
+from typing import Any, List, Optional
 
 from sqlalchemy.orm import Session
 from pydantic.networks import EmailStr
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from fastapi import APIRouter, Body, Depends, HTTPException, Security, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Security, status, Path
 
 from private_gpt.users.api import deps
 from private_gpt.users.constants.role import Role
@@ -24,10 +24,27 @@ def read_users(
         scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
     ),
 ) -> Any:
-    """
+    """                                 
     Retrieve all users.
     """
     users = crud.user.get_multi(db, skip=skip, limit=limit)
+    return users
+
+
+@router.get("/{company_name}")
+def read_users_by_company(
+    company_name: Optional[str] = Path(..., title="Company Name", description="Only for company admin"),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+    ),
+):
+    """                                 
+    Retrieve all users of that company only
+    """
+    company = crud.company.get_by_company_name(db, company_name=company_name)
+    users = crud.user.get_multi_by_company_id(db, company_id=company.id)
     return users
 
 
@@ -186,3 +203,4 @@ def update_user(
         status_code=status.HTTP_200_OK,
         content={"message": "User updated successfully", "user": jsonable_encoder(user_data)},
     )
+

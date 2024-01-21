@@ -11,7 +11,6 @@ from private_gpt.users import crud, models, schemas
 
 router = APIRouter(prefix="/user-roles", tags=["user-roles"])
 
-
 @router.post("", response_model=schemas.UserRole)
 def assign_user_role(
     *,
@@ -69,3 +68,10 @@ def update_user_role(
         status_code=status.HTTP_200_OK,
         content={"message": "User role updated successfully", "user_role": jsonable_encoder(user_role)},
     )
+
+
+
+
+company_router = APIRouter(prefix="/user-roles", tags=["user-roles"])
+
+

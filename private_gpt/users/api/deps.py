@@ -14,6 +14,7 @@ from private_gpt.users.core.security import (
 from fastapi import Depends, HTTPException, Security, status
 from jose import jwt
 from pydantic import ValidationError
+from private_gpt.users.constants.role import Role
 from private_gpt.users.schemas.token import TokenPayload
 from sqlalchemy.orm import Session
 
@@ -95,3 +96,31 @@ async def get_current_active_user(
     if not crud.user.is_active(current_user):
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+
+async def is_company_admin(current_user: models.User = Depends(get_current_user)):
+    if current_user.role == Role.ADMIN["name"]:
+        return current_user
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have the necessary permissions to perform this action",
+        )
+
+
+async def is_super_admin(current_user: models.User = Depends(get_current_user)):
+    if current_user.role == Role.SUPER_ADMIN["name"]:
+        return current_user
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have the necessary permissions to perform this action",
+        )
+    
+
+async def get_company_name(company_id: int, db: Session = Depends(get_db)) -> str:
+    company = crud.company.get(db=db, id=company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return company.name

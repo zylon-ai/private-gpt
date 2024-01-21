@@ -14,6 +14,6 @@ class CompanyUpdate(CompanyBase):
 
 class Company(CompanyBase):
     id: int
-
+    
     class Config:
         orm_mode = True

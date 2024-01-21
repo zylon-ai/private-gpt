@@ -11,6 +11,7 @@ class TokenSchema(BaseModel):
 class TokenPayload(BaseModel):
     id: int
     role: str = None
+    company: str = None
 
     class Config:
         arbitrary_types_allowed = True

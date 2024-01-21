@@ -73,5 +73,15 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             .all()
         )
 
+    def get_multi_by_company_id(
+        self, db: Session, *, company_id: str, skip: int = 0, limit: int = 100
+    ) -> List[User]:
+        return (
+            db.query(self.model)
+            .filter(User.company_id == company_id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
 user = CRUDUser(User)
