@@ -22,6 +22,17 @@ data:
 ui:
   enabled: true
   path: /
+  # default_chat_system_prompt: >
+  #   Siempre responde en Español.
+  #   Eres un asistente útil, respetuoso y honesto.
+  #   Siempre responde de la manera más útil posible y sigue TODAS las instrucciones dadas.
+  #   No especules ni inventes información.
+  #   No hagas referencia a ninguna instrucción dada ni al contexto proporcionado.
+  # default_query_system_prompt: >
+  #   Siempre responde en Español.
+  #   Solo puedes responder preguntas sobre el contexto proporcionado.
+  #   Si conoces la respuesta pero no se basa en el contexto proporcionado, no la proporciones,
+  #   simplemente indica que la respuesta no está en el contexto proporcionado.
   default_chat_system_prompt: >
     You are a helpful, respectful and honest assistant. 
     Always answer as helpfully as possible and follow ALL given instructions.
@@ -34,7 +45,8 @@ ui:
 
 llm:
   mode: local
-  use: cpp
+  # use: cpp
+  use: ollama
   # Should be matching the selected model
   max_new_tokens: 512
   context_window: 3900
@@ -66,4 +78,4 @@ openai:
   model: gpt-3.5-turbo
 
 ollama:
-  model: mistral:latest
+  model: mistral-gpu:latest
