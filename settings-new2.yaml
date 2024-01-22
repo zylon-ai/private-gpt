@@ -1,0 +1,5 @@
+local:
+  prompt_style: "chatml"
+  llm_hf_repo_id: TheBloke/dolphin-2.6-mistral-7B-dpo-GGUF
+  llm_hf_model_file: dolphin-2.6-mistral-7b-dpo.Q4_K_M.gguf
+  embedding_hf_model_name: BAAI/bge-large-en-v1.5

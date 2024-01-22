@@ -363,6 +363,48 @@
         }
       }
     },
+    "/v1/split": {
+      "post": {
+        "tags": [
+          "Split"
+        ],
+        "summary": "Split Generation",
+        "description": "Get semantically split chunks of a given text input.\n\nThe split chunks can be easily used for prompt augmentation.",
+        "operationId": "split_generation_v1_split_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SplitTextBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SplitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -1055,6 +1097,83 @@
         ],
         "title": "OpenAIMessage",
         "description": "Inference result, with the source of the message.\n\nRole could be the assistant or system\n(providing a default response, not AI generated)."
+      },
+      "Split": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "object": {
+            "const": "split",
+            "title": "Object"
+          },
+          "split": {
+            "type": "string",
+            "title": "Split",
+            "examples": [
+              "Avatar is set in an Asian and Arctic-inspired world in which some people can telekinetically manipulate one of"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "object",
+          "split"
+        ],
+        "title": "Split"
+      },
+      "SplitResponse": {
+        "properties": {
+          "object": {
+            "const": "list",
+            "title": "Object"
+          },
+          "model": {
+            "const": "private-gpt",
+            "title": "Model"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Split"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "object",
+          "model",
+          "data"
+        ],
+        "title": "SplitResponse"
+      },
+      "SplitTextBody": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "examples": [
+              "Avatar is set in an Asian and Arctic-inspired world in which some people can telekinetically manipulate one of the four elements\u2014water, earth, fire or air\u2014through practices known as 'bending', inspired by Chinese martial arts."
+            ]
+          },
+          "chunk_size": {
+            "type": "integer",
+            "title": "Chunk Size",
+            "description": "The maximum number of characters in each split chunk.",
+            "default": 400,
+            "examples": [
+              400
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SplitTextBody"
       },
       "ValidationError": {
         "properties": {

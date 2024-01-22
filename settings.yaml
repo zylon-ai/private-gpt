@@ -45,7 +45,7 @@ embedding:
   ingest_mode: simple
 
 vectorstore:
-  database: qdrant
+  database: chroma
 
 qdrant:
   path: local_data/private_gpt/qdrant
