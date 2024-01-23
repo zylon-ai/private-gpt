@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
+from private_gpt.components.reranker.reranker import RerankerComponent
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
@@ -99,6 +100,8 @@ class ChatService:
             embed_model=embedding_component.embedding_model,
             show_progress=True,
         )
+        if settings.reranker.enabled:
+            self.reranker_component = RerankerComponent(settings=settings)
 
     def _chat_engine(
         self,
@@ -113,16 +116,22 @@ class ChatService:
                 context_filter=context_filter,
                 similarity_top_k=self.settings.rag.similarity_top_k,
             )
+
+            node_postprocessors = [
+                MetadataReplacementPostProcessor(target_metadata_key="window"),
+                SimilarityPostprocessor(
+                    similarity_cutoff=settings.rag.similarity_value
+                ),
+            ]
+
+            if self.reranker_component:
+                node_postprocessors.append(self.reranker_component)
+
             return ContextChatEngine.from_defaults(
                 system_prompt=system_prompt,
                 retriever=vector_index_retriever,
                 llm=self.llm_component.llm,  # Takes no effect at the moment
-                node_postprocessors=[
-                    MetadataReplacementPostProcessor(target_metadata_key="window"),
-                    SimilarityPostprocessor(
-                        similarity_cutoff=settings.rag.similarity_value
-                    ),
-                ],
+                node_postprocessors=node_postprocessors,
             )
         else:
             return SimpleChatEngine.from_defaults(

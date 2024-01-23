@@ -27,6 +27,17 @@ snapshot_download(
 )
 print("Embedding model downloaded!")
 
+if settings().reranker.enabled:
+    # Download Reranker model
+    reranker_path = models_path / "reranker"
+    print(f"Downloading reranker {settings().reranker.hf_model_name}")
+    snapshot_download(
+        repo_id=settings().reranker.hf_model_name,
+        cache_dir=models_cache_path,
+        local_dir=reranker_path,
+    )
+    print("Reranker model downloaded!")
+
 # Download LLM and create a symlink to the model file
 print(f"Downloading LLM {settings().llamacpp.llm_hf_model_file}")
 hf_hub_download(
