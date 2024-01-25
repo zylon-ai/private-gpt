@@ -33,6 +33,8 @@ SOURCES_SEPARATOR = "\n\n Sources: \n"
 
 MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
 
+
+# generate 
 @singleton
 class PrivateAdminGptUi:
     @inject
@@ -67,11 +69,16 @@ class PrivateAdminGptUi:
             if completion_gen.sources:
                 full_response += SOURCES_SEPARATOR
                 cur_sources = Source.curate_sources(completion_gen.sources)
+                # sources_text = "\n\n\n".join(
+                #     f"{index}. {source.file} (page {source.page}) (page_link {source.page_link})"
+                #     for index, source in enumerate(cur_sources, start=1)
+                # )
                 sources_text = "\n\n\n".join(
-                    f"{index}. {source.file} (page {source.page})"
+                    f'<a href="#" target="_blank" rel="noopener noreferrer">{index}. {source.file} (page {source.page})</a>'
                     for index, source in enumerate(cur_sources, start=1)
                 )
                 full_response += sources_text
+                print(full_response)
             yield full_response
 
         def build_history() -> list[ChatMessage]:
@@ -125,11 +132,10 @@ class PrivateAdminGptUi:
                 )
 
                 sources = Source.curate_sources(response)
-
+                
                 yield "\n\n\n".join(
-                    f"{index}. **{source.file} "
-                    f"(page {source.page})**\n "
-                    f"{source.text}"
+                    f"{index}. **{source.file} (page {source.page})**\n"
+                    f" (link: [{source.page_link}]({source.page_link}))\n{source.text}"
                     for index, source in enumerate(sources, start=1)
                 )
 

@@ -1,14 +1,16 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.server.ingest.model import IngestedDoc
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.constants import UPLOAD_DIR
+from pathlib import Path
 
 ingest_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
-
 
 class IngestTextBody(BaseModel):
     file_name: str = Field(examples=["Avatar: The Last Airbender"])
@@ -38,7 +40,7 @@ def ingest(request: Request, file: UploadFile) -> IngestResponse:
 
 
 @ingest_router.post("/ingest/file", tags=["Ingestion"])
-def ingest_file(request: Request, file: UploadFile) -> IngestResponse:
+def ingest_file(request: Request, file: UploadFile = File(...)) -> IngestResponse:
     """Ingests and processes a file, storing its chunks to be used as context.
 
     The context obtained from files is later used in
@@ -54,12 +56,22 @@ def ingest_file(request: Request, file: UploadFile) -> IngestResponse:
     can be used to filter the context used to create responses in
     `/chat/completions`, `/completions`, and `/chunks` APIs.
     """
+    # try:
     service = request.state.injector.get(IngestService)
     if file.filename is None:
         raise HTTPException(400, "No file name provided")
-    ingested_documents = service.ingest_bin_data(file.filename, file.file)
+    upload_path = Path(f"{UPLOAD_DIR}/{file.filename}")
+    try:
+        with open(upload_path, "wb") as f:
+            f.write(file.file.read())
+        with open(upload_path, "rb") as f:
+            ingested_documents = service.ingest_bin_data(file.filename, f)
+    except Exception as e:
+        return {"message": f"There was an error uploading the file(s)\n {e}"}
+    finally:
+        file.file.close()
     return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
-
+    
 
 @ingest_router.post("/ingest/text", tags=["Ingestion"])
 def ingest_text(request: Request, body: IngestTextBody) -> IngestResponse:
@@ -94,6 +106,17 @@ def list_ingested(request: Request) -> IngestResponse:
 
 
 @ingest_router.delete("/ingest/{doc_id}", tags=["Ingestion"])
+def delete_ingested(request: Request, doc_id: str) -> None:
+    """Delete the specified ingested Document.
+
+    The `doc_id` can be obtained from the `GET /ingest/list` endpoint.
+    The document will be effectively deleted from your storage context.
+    """
+    service = request.state.injector.get(IngestService)
+    service.delete(doc_id)
+
+
+@ingest_router.delete("/ingest", tags=["Ingestion"])
 def delete_ingested(request: Request, doc_id: str) -> None:
     """Delete the specified ingested Document.
 

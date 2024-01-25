@@ -54,9 +54,11 @@ def create_token_payload(user: models.User, user_role: models.UserRole) -> dict:
     """
     return {
         "id": str(user.id),
+        "email": str(user.email),
         "role": user_role.role.name,
         "company_id": user_role.company.id if user_role.company else None,
     }
+
 
 @router.post("/login", response_model=schemas.TokenSchema)
 def login_access_token(
@@ -97,6 +99,7 @@ def login_access_token(
 
     token_payload = {
         "id": str(user.id),
+        "email": str(user.email),
         "role": role,
         "company_id": company_id,
     }

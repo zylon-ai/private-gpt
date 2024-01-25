@@ -1,15 +1,18 @@
 """This file should be imported only and only if you want to run the UI locally."""
+from fastapi import Request
+from fastapi.responses import StreamingResponse
 import itertools
 import logging
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 
-import gradio as gr  # type: ignore
-from fastapi import FastAPI
+from fastapi import APIRouter, Depends, Request, FastAPI, Body
+from fastapi.responses import JSONResponse
 from gradio.themes.utils.colors import slate  # type: ignore
 from injector import inject, singleton
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
+from pydantic import BaseModel
 
 from private_gpt.constants import PROJECT_ROOT_PATH
 from private_gpt.di import global_injector
@@ -31,11 +34,12 @@ UI_TAB_TITLE = "My Private GPT"
 SOURCES_SEPARATOR = "\n\n Sources: \n"
 
 MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
+home_router = APIRouter(prefix="/v1")
 
 
 
 @singleton
-class PrivateGptUi:
+class Home:
     @inject
     def __init__(
         self,
@@ -46,9 +50,6 @@ class PrivateGptUi:
         self._ingest_service = ingest_service
         self._chat_service = chat_service
         self._chunks_service = chunks_service
-
-        # Cache the UI blocks
-        self._ui_block = None
 
         # Initialize system prompt based on default mode
         self.mode = MODES[0]
@@ -69,10 +70,11 @@ class PrivateGptUi:
                 full_response += SOURCES_SEPARATOR
                 cur_sources = Source.curate_sources(completion_gen.sources)
                 sources_text = "\n\n\n".join(
-                    f"{index}. {source.file} (page {source.page}) (page_link {source.page_link})"
+                    f'<a href="{source.page_link}" target="_blank" rel="noopener noreferrer">{index}. {source.file} (page {source.page})</a>'
                     for index, source in enumerate(cur_sources, start=1)
                 )
                 full_response += sources_text
+                print(full_response)
             yield full_response
 
         def build_history() -> list[ChatMessage]:
@@ -80,10 +82,12 @@ class PrivateGptUi:
                 itertools.chain(
                     *[
                         [
-                            ChatMessage(content=interaction[0], role=MessageRole.USER),
+                            ChatMessage(
+                                content=interaction[0], role=MessageRole.USER),
                             ChatMessage(
                                 # Remove from history content the Sources information
-                                content=interaction[1].split(SOURCES_SEPARATOR)[0],
+                                content=interaction[1].split(
+                                    SOURCES_SEPARATOR)[0],
                                 role=MessageRole.ASSISTANT,
                             ),
                         ]
@@ -128,10 +132,8 @@ class PrivateGptUi:
                 sources = Source.curate_sources(response)
 
                 yield "\n\n\n".join(
-                    f"{index}. **{source.file} "
-                    f"(page {source.page})**\n "
-                    f"(link {source.page_link})**\n "
-                    f"{source.text}"
+                    f"{index}. **{source.file} (page {source.page})**\n"
+                    f" (link: [{source.page_link}]({source.page_link}))\n{source.text}"
                     for index, source in enumerate(sources, start=1)
                 )
 
@@ -159,13 +161,7 @@ class PrivateGptUi:
     def _set_current_mode(self, mode: str) -> Any:
         self.mode = mode
         self._set_system_prompt(self._get_default_system_prompt(mode))
-        # Update placeholder and allow interaction if default system prompt is set
-        if self._system_prompt:
-            return gr.update(placeholder=self._system_prompt, interactive=True)
-        # Update placeholder and disable interaction if no default system prompt is set
-        else:
-            return gr.update(placeholder=self._system_prompt, interactive=False)
-
+    
     def _list_ingested_files(self) -> list[list[str]]:
         files = set()
         for ingested_document in self._ingest_service.list_ingested():
@@ -181,101 +177,42 @@ class PrivateGptUi:
     def _upload_file(self, files: list[str]) -> None:
         logger.debug("Loading count=%s files", len(files))
         paths = [Path(file) for file in files]
-        self._ingest_service.bulk_ingest([(str(path.name), path) for path in paths])
+        self._ingest_service.bulk_ingest(
+            [(str(path.name), path) for path in paths])
 
-    def _build_ui_blocks(self) -> gr.Blocks:
-        logger.debug("Creating the UI blocks")
-        with gr.Blocks(
-            title=UI_TAB_TITLE,
-            theme=gr.themes.Soft(primary_hue=slate),
-            css=".logo { "
-            "display:flex;"
-            "background-color: #C7BAFF;"
-            "height: 80px;"
-            "border-radius: 8px;"
-            "align-content: center;"
-            "justify-content: center;"
-            "align-items: center;"
-            "}"
-            ".logo img { height: 25% }"
-            ".contain { display: flex !important; flex-direction: column !important; }"
-            "#component-0, #component-3, #component-10, #component-8  { height: 100% !important; }"
-            "#chatbot { flex-grow: 1 !important; overflow: auto !important;}"
-            "#col { height: calc(100vh - 112px - 16px) !important; }",
-        ) as users:
-            with gr.Row():
-                gr.HTML(f"<div class='logo'/><img src={logo_svg} alt=PrivateGPT></div")
 
-            with gr.Row(equal_height=False):
-                with gr.Column(scale=3):
-                    mode = gr.Radio(
-                        MODES,
-                        label="Mode",
-                        value="Query Docs",
-                    )
-                    ingested_dataset = gr.List(
-                        self._list_ingested_files,
-                        headers=["File name"],
-                        label="Ingested Files",
-                        interactive=False,
-                        render=False,  # Rendered under the button
-                    )
-                    ingested_dataset.change(
-                        self._list_ingested_files,
-                        outputs=ingested_dataset,
-                    )
-                    ingested_dataset.render()
-                    system_prompt_input = gr.Textbox(
-                        placeholder=self._system_prompt,
-                        label="System Prompt",
-                        lines=2,
-                        interactive=True,
-                        render=False,
-                    )
-                    # When mode changes, set default system prompt
-                    mode.change(
-                        self._set_current_mode, inputs=mode, outputs=system_prompt_input
-                    )
-                    # On blur, set system prompt to use in queries
-                    system_prompt_input.blur(
-                        self._set_system_prompt,
-                        inputs=system_prompt_input,
-                    )
 
-                with gr.Column(scale=7, elem_id="col"):
-                    _ = gr.ChatInterface(
-                        self._chat,
-                        chatbot=gr.Chatbot(
-                            label=f"LLM: {settings().llm.mode}",
-                            show_copy_button=True,
-                            elem_id="chatbot",
-                            render=False,
-                            avatar_images=(
-                                None,
-                                AVATAR_BOT,
-                            ),
-                        ),
-                        additional_inputs=[mode, system_prompt_input],
-                    )
-        return users
+import json
 
-    def get_ui_blocks(self) -> gr.Blocks:
-        if self._ui_block is None:
-            self._ui_block = self._build_ui_blocks()
-        return self._ui_block
+DEFAULT_MODE = MODES[0]
+@home_router.post("/chat")
+async def chat_endpoint(request: Request, message: str = Body(...), mode: str = Body(DEFAULT_MODE)):
+    home_instance = request.state.injector.get(Home)
+    history = []
+    print("The message is: ", message)
+    print("The mode is: ", mode)
+    responses = home_instance._chat(message, history, mode)
+    return StreamingResponse(content=responses, media_type='text/event-stream')
 
-    def mount_in_app(self, app: FastAPI, path: str) -> None:
-        logger.info("PATH---------------------------->:%s", path)
-        blocks = self.get_ui_blocks()
-        blocks.queue()
-        logger.info("Mounting the regular gradio UI at path=%s", path)
-        gr.mount_gradio_app(app, blocks, path=path)
 
-    
-if __name__ == "__main__":
-    ui = global_injector.get(PrivateGptUi)
-    _blocks = ui.get_admin_ui_blocks()
-    _blocks.queue()
-    _blocks.launch(debug=False, show_api=False)
-        
+
+
+
+    # text = (
+    #     "To run the Celery worker based on the provided context, you can follow these steps: "
+    #     "1. First, make sure you have Celery installed in your project."
+    #     "2. Create a Celery instance and configure it with your settings."
+    #     "3. Define Celery tasks that will be executed by the worker."
+    #     "4. Start the Celery worker using the configured Celery instance."
+    #     "5. Your Celery worker is now running and ready to process tasks."
+    # )
+    # import time
+    # async def generate_stream():
+    #     for i in range(len(text)):
+    #         yield text[:i+1]  # Sending part of the text in each iteration
+    #         time.sleep(0.1)  # Simulating some processing time
+
+    # Return the responses as a StreamingResponse
+    # return StreamingResponse(content=responses, media_type="application/json")
+
 

@@ -130,3 +130,4 @@ class IngestService:
             "Deleting the ingested document=%s in the doc and index store", doc_id
         )
         self.ingest_component.delete(doc_id)
+

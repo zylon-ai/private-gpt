@@ -24,7 +24,7 @@ def list_companies(
     ),
 ) -> List[schemas.Company]:
     """
-    List companies
+    Retrieve a list of companies with pagination support.
     """
     companies = crud.company.get_multi(db, skip=skip, limit=limit)
     return companies

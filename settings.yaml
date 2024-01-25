@@ -5,8 +5,9 @@ server:
   env_name: ${APP_ENV:prod}
   port: ${PORT:8001}
   cors:
-    enabled: false
-    allow_origins: ["*"]
+    enabled: true
+    allow_credentials: true
+    allow_origins: ["http://localhost:5173/"]
     allow_methods: ["*"]
     allow_headers: ["*"]
   auth:

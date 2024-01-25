@@ -106,3 +106,4 @@ def chat_completion(
         return to_openai_response(
             completion.response, completion.sources if body.include_sources else None
         )
+    

@@ -1,8 +1,9 @@
 from typing import Any, Literal
-
+import os
 from llama_index import Document
 from pydantic import BaseModel, Field
-
+from private_gpt.constants import UPLOAD_DIR
+from pathlib import Path
 
 class IngestedDoc(BaseModel):
     object: Literal["ingest.document"]
@@ -30,3 +31,4 @@ class IngestedDoc(BaseModel):
             doc_id=document.doc_id,
             doc_metadata=IngestedDoc.curate_metadata(document.metadata),
         )
+
