@@ -1,5 +1,6 @@
 """This file should be imported only and only if you want to run the UI locally."""
-from fastapi import Request
+import time
+from fastapi import File, Request, UploadFile
 from fastapi.responses import StreamingResponse
 import itertools
 import logging
@@ -23,6 +24,7 @@ from private_gpt.settings.settings import settings
 from private_gpt.ui.images import logo_svg
 from private_gpt.ui.common import Source
 
+
 logger = logging.getLogger(__name__)
 
 THIS_DIRECTORY_RELATIVE = Path(__file__).parent.relative_to(PROJECT_ROOT_PATH)
@@ -35,7 +37,6 @@ SOURCES_SEPARATOR = "\n\n Sources: \n"
 
 MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
 home_router = APIRouter(prefix="/v1")
-
 
 
 @singleton
@@ -51,14 +52,14 @@ class Home:
         self._chat_service = chat_service
         self._chunks_service = chunks_service
 
-        # Initialize system prompt based on default mode
         self.mode = MODES[0]
-        self._system_prompt = self._get_default_system_prompt(self.mode)
+        self._history = []
 
-    def _chat(self, message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
+    def _chat(self, message: str, mode: str, *_: Any) -> Any:
         def yield_deltas(completion_gen: CompletionGen) -> Iterable[str]:
             full_response: str = ""
             stream = completion_gen.response
+            print("THE STREAM: ",)
             for delta in stream:
                 if isinstance(delta, str):
                     full_response += str(delta)
@@ -74,7 +75,6 @@ class Home:
                     for index, source in enumerate(cur_sources, start=1)
                 )
                 full_response += sources_text
-                print(full_response)
             yield full_response
 
         def build_history() -> list[ChatMessage]:
@@ -85,13 +85,12 @@ class Home:
                             ChatMessage(
                                 content=interaction[0], role=MessageRole.USER),
                             ChatMessage(
-                                # Remove from history content the Sources information
                                 content=interaction[1].split(
                                     SOURCES_SEPARATOR)[0],
                                 role=MessageRole.ASSISTANT,
                             ),
                         ]
-                        for interaction in history
+                        for interaction in self._history
                     ]
                 )
             )
@@ -100,16 +99,9 @@ class Home:
             return history_messages[:20]
 
         new_message = ChatMessage(content=message, role=MessageRole.USER)
+        # Appending user message to history
+        self._history.append([message, ""])
         all_messages = [*build_history(), new_message]
-        # If a system prompt is set, add it as a system message
-        if self._system_prompt:
-            all_messages.insert(
-                0,
-                ChatMessage(
-                    content=self._system_prompt,
-                    role=MessageRole.SYSTEM,
-                ),
-            )
         match mode:
             case "Query Docs":
                 query_stream = self._chat_service.stream_chat(
@@ -137,31 +129,6 @@ class Home:
                     for index, source in enumerate(sources, start=1)
                 )
 
-    # On initialization and on mode change, this function set the system prompt
-    # to the default prompt based on the mode (and user settings).
-    @staticmethod
-    def _get_default_system_prompt(mode: str) -> str:
-        p = ""
-        match mode:
-            # For query chat mode, obtain default system prompt from settings
-            case "Query Docs":
-                p = settings().ui.default_query_system_prompt
-            # For chat mode, obtain default system prompt from settings
-            case "LLM Chat":
-                p = settings().ui.default_chat_system_prompt
-            # For any other mode, clear the system prompt
-            case _:
-                p = ""
-        return p
-
-    def _set_system_prompt(self, system_prompt_input: str) -> None:
-        logger.info(f"Setting system prompt to: {system_prompt_input}")
-        self._system_prompt = system_prompt_input
-
-    def _set_current_mode(self, mode: str) -> Any:
-        self.mode = mode
-        self._set_system_prompt(self._get_default_system_prompt(mode))
-    
     def _list_ingested_files(self) -> list[list[str]]:
         files = set()
         for ingested_document in self._ingest_service.list_ingested():
@@ -181,38 +148,45 @@ class Home:
             [(str(path.name), path) for path in paths])
 
 
+home_instance = global_injector.get(Home)
 
-import json
+
+async def chat_simulation(message, mode):
+    response = home_instance._chat(message=message, mode=mode)
+    return StreamingResponse(
+        response,
+        media_type='text/event-stream'
+    )
+
 
 DEFAULT_MODE = MODES[0]
+
+
+def get_home_instance(request: Request) -> Home:
+    home_instance = request.state.injector.get(Home)
+    return home_instance
+
 @home_router.post("/chat")
 async def chat_endpoint(request: Request, message: str = Body(...), mode: str = Body(DEFAULT_MODE)):
-    home_instance = request.state.injector.get(Home)
-    history = []
-    print("The message is: ", message)
-    print("The mode is: ", mode)
-    responses = home_instance._chat(message, history, mode)
-    return StreamingResponse(content=responses, media_type='text/event-stream')
+    # Create the Home instance
+    # home_instance = request.state.injector.get(Home)
+    response = home_instance._chat(message=message, mode=mode)
+    return StreamingResponse(
+        response,
+        media_type='text/event-stream'
+    )
 
 
 
+class ListFilesResponse(BaseModel):
+    uploaded_files: List[str]
 
 
-    # text = (
-    #     "To run the Celery worker based on the provided context, you can follow these steps: "
-    #     "1. First, make sure you have Celery installed in your project."
-    #     "2. Create a Celery instance and configure it with your settings."
-    #     "3. Define Celery tasks that will be executed by the worker."
-    #     "4. Start the Celery worker using the configured Celery instance."
-    #     "5. Your Celery worker is now running and ready to process tasks."
-    # )
-    # import time
-    # async def generate_stream():
-    #     for i in range(len(text)):
-    #         yield text[:i+1]  # Sending part of the text in each iteration
-    #         time.sleep(0.1)  # Simulating some processing time
 
-    # Return the responses as a StreamingResponse
-    # return StreamingResponse(content=responses, media_type="application/json")
-
-
+@home_router.get("/list_files")
+async def list_files(home_instance: Home = Depends(get_home_instance)) -> dict:
+    """
+    List all uploaded files.
+    """
+    uploaded_files = home_instance._list_ingested_files()
+    return {"uploaded_files": uploaded_files}

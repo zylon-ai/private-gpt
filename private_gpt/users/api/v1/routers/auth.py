@@ -56,6 +56,7 @@ def create_token_payload(user: models.User, user_role: models.UserRole) -> dict:
         "id": str(user.id),
         "email": str(user.email),
         "role": user_role.role.name,
+        "username": str(user.fullname),
         "company_id": user_role.company.id if user_role.company else None,
     }
 
@@ -100,6 +101,8 @@ def login_access_token(
     token_payload = {
         "id": str(user.id),
         "email": str(user.email),
+        "username": str(user.fullname),
+
         "role": role,
         "company_id": company_id,
     }
@@ -114,7 +117,32 @@ def login_access_token(
         "token_type": "bearer",
     }
 
+@router.post("/login/refresh-token", response_model=schemas.TokenSchema)
+def refresh_access_token(
+    db: Session = Depends(deps.get_db),
+    form_data: OAuth2PasswordRequestForm = Depends(),
+) -> Any:
+    """
+    Refresh access token using a valid refresh token
+    """
+    refresh_token = form_data.refresh_token
+    token_payload = security.verify_refresh_token(refresh_token)
 
+    if not token_payload:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+
+    return {
+        "access_token": security.create_access_token(
+            token_payload, expires_delta=access_token_expires
+        ),
+        "refresh_token": security.create_refresh_token(
+            token_payload, expires_delta=refresh_token_expires
+        ),
+        "token_type": "bearer",
+    }
 
 @router.post("/{company_name}/register", response_model=schemas.User)
 def register_for_company(

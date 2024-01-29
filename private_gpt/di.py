@@ -17,3 +17,4 @@ Avoid using this reference, it will make your code harder to test.
 Instead, use the `request.state.injector` reference, which is bound to every request
 """
 global_injector: Injector = create_application_injector()
+

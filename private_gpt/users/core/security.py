@@ -2,11 +2,12 @@ import os
 import random
 import string
 from datetime import datetime, timedelta
-from typing import Union, Any
-from jose import jwt
+from typing import Dict, Any, Optional, Union
+
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = 120  # 30 minutes
 REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
 ALGORITHM = "HS256"
 # JWT_SECRET_KEY = os.environ['JWT_SECRET_KEY']     # should be kept secret
@@ -51,3 +52,12 @@ def generate_random_password(length: int = 12) -> str:
     """
     characters = string.ascii_letters + string.digits + string.punctuation
     return ''.join(random.choice(characters) for i in range(length))
+
+
+def verify_refresh_token(token: str) -> Optional[Dict[str, Any]]:
+    try:
+        payload = jwt.decode(token, JWT_REFRESH_SECRET_KEY,
+                             algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        return None

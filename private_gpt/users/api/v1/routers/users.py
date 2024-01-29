@@ -75,31 +75,28 @@ def create_user(
 
 
 @router.put("/me", response_model=schemas.User)
-def update_user_me(
+def update_username(
     *,
     db: Session = Depends(deps.get_db),
-    fullname: str = Body(None),
-    email: EmailStr = Body(None),
+    fullname: str = Body(...),
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Update own user.
+    Update own username.
     """
-    current_user_data = jsonable_encoder(current_user)
-    user_in = schemas.UserUpdate(**current_user_data)
-    if fullname is not None:
-        user_in.fullname = fullname
-    if email is not None:
-        user_in.email = email
+    user_in = schemas.UserUpdate(fullname=fullname, email=current_user.email, company_id=current_user.company_id)
     user = crud.user.update(db, db_obj=current_user, obj_in=user_in)
     user_data = schemas.UserBaseSchema(
         email=user.email,
         fullname=user.fullname,
+        company_id=user.company_id
     )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={"message": "User updated successfully", "user": jsonable_encoder(user_data)},
+        content={"message": "Username updated successfully",
+                 "user": jsonable_encoder(user_data)},
     )
+
 
 
 @router.get("/me", response_model=schemas.User)
@@ -111,6 +108,7 @@ def read_user_me(
     Get current user.
     """
     role = current_user.user_role.role.name if current_user.user_role else None
+    print("THe role is: ", role)
     user_data = schemas.UserBaseSchema(
         email=current_user.email,
         fullname=current_user.fullname,
@@ -144,6 +142,7 @@ def change_password(
         id=current_user.id,
         email=current_user.email,
         fullname=current_user.fullname,
+        company_id= current_user.company_id,
     )
     
     return JSONResponse(

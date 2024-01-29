@@ -19,7 +19,7 @@ class User(Base):
     
     email = Column(String(225), nullable=False, unique=True)
     hashed_password = Column(String, nullable=False)
-    fullname = Column(String(225), nullable=False)
+    fullname = Column(String(225), nullable=False, unique=True)
 
     UniqueConstraint("email", name="uq_user_email")
     PrimaryKeyConstraint("id", name="pk_user_id")
@@ -43,4 +43,6 @@ class User(Base):
         """Returns string representation of model instance"""
         return "<User {fullname!r}>".format(fullname=self.fullname)
     
-    
+    __table_args__ = (
+        UniqueConstraint('fullname', name='unique_username_no_spacing'),
+    )
