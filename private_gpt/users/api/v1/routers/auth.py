@@ -144,13 +144,15 @@ def refresh_access_token(
         "token_type": "bearer",
     }
 
-@router.post("/{company_name}/register", response_model=schemas.User)
+
+@router.post("/{company_id}/register", response_model=schemas.User)
 def register_for_company(
     *,
     db: Session = Depends(deps.get_db),
     email: str = Body(...),
     fullname: str = Body(...),
-    company_name: Optional[str] = Path(..., title="Company Name", description="Only for company admin"),
+    company_id: int = Path(..., title="Company ID",
+                           description="Only for company admin"),
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.SUPER_ADMIN["name"], Role.ADMIN['name']],
@@ -172,14 +174,14 @@ def register_for_company(
             detail="You do not have permission to register users for a company.",
         )
 
-    company = crud.company.get_by_company_name(db, company_name=company_name)
+    company = crud.company.get_by_id(db, id=company_id)
     print(f"Company is : {company.id}")
     if not (current_user.user_role.role.name == Role.ADMIN["name"] and current_user.user_role.company_id == company.id):
         raise HTTPException(
             status_code=403,
             detail="You are not the admin of the specified company.",
         )
-    
+
     random_password = security.generate_random_password()
     user = register_user(db, email, fullname, random_password, company)
     user_role = create_user_role(db, user, Role.GUEST["name"], company)
@@ -187,7 +189,8 @@ def register_for_company(
     token_payload = create_token_payload(user, user_role)
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
-        content={"message": "User registered successfully.\n\n Check respective user email for login credentials", "user": jsonable_encoder(user)},
+        content={"message": "User registered successfully.\n\n Check respective user email for login credentials",
+                 "user": jsonable_encoder(user)},
     )
 
 

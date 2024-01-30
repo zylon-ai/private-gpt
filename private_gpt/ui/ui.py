@@ -68,7 +68,7 @@ class PrivateGptUi:
             if completion_gen.sources:
                 full_response += SOURCES_SEPARATOR
                 cur_sources = Source.curate_sources(completion_gen.sources)
-                sources_text = "\n\n\n".join(
+                sources_text = "\n".join(
                     f"{index}. {source.file} (page {source.page}) (page_link {source.page_link})"
                     for index, source in enumerate(cur_sources, start=1)
                 )
@@ -127,7 +127,7 @@ class PrivateGptUi:
 
                 sources = Source.curate_sources(response)
 
-                yield "\n\n\n".join(
+                yield "\n".join(
                     f"{index}. **{source.file} "
                     f"(page {source.page})**\n "
                     f"(link {source.page_link})**\n "

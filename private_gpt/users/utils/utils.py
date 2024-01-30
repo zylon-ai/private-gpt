@@ -9,8 +9,9 @@ def send_registration_email(fullname: str, email: str, random_password: str) -> 
     Send a registration email with a random password.
     """
     subject = "Welcome to QuickGPT - Registration Successful"
-    body = f"Hello {fullname},\n\nThank you for registering with Your App!\n\n"\
-       f"Your temporary password is: {random_password}\n\n"\
+    body = f"Hello {fullname},\n\nThank you for registering with QuickGPT!\n\n"\
+       f"Your temporary password is: {random_password}\n"\
+       f"Please login to the QuickGPT: http://quickgpt.gibl.com.np\n"\
        f"Please use this password to log in and consider changing it"\
        " to a more secure one after logging in.\n\n"\
        "Best regards,\nQuickGPT Team"
