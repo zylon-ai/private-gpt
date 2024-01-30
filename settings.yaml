@@ -3,12 +3,12 @@
 # Syntax in `private_pgt/settings/settings.py`
 server:
   env_name: ${APP_ENV:prod}
-  port: ${PORT:8001}
+  port: ${PORT:88}
   cors:
     enabled: true
     allow_credentials: true
-    allow_origins: ["http://localhost:5173/"]
-    allow_methods: ["*"]
+    allow_origins: ["http://localhost:80", "http://10.1.101.125", "http://quickgpt.gibl.com.np"]
+    allow_methods: ["DELETE", "GET", "POST", "PUT", "OPTIONS", "PATCH"]
     allow_headers: ["*"]
   auth:
     enabled: false

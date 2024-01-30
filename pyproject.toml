@@ -16,6 +16,13 @@ llama-index = { extras = ["local_models"], version = "0.9.3" }
 watchdog = "^3.0.0"
 qdrant-client = "^1.6.9"
 chromadb = {version = "^0.4.13", optional = true}
+inflect = "^7.0.0"
+alembic = "^1.13.1"
+sqlalchemy = "^2.0.25"
+bcrypt = "^4.1.2"
+python-jose = "^3.3.0"
+psycopg2-binary = "^2.9.9"
+passlib = "^1.7.4"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"

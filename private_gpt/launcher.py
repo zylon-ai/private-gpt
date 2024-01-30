@@ -35,15 +35,15 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(api_router)
     app.include_router(home_router)
     settings = root_injector.get(Settings)
-    # if settings.server.cors.enabled/:
-    logger.debug("Setting up CORS middleware")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_credentials=True,
-        allow_origins=["http://localhost:5173", "http://localhost:8001"],
-        allow_methods=["DELETE", "GET", "POST", "PUT", "OPTIONS", "PATCH"],
-        allow_headers=["*"],
-    )
+    if settings.server.cors.enabled:
+        logger.debug("Setting up CORS middleware")
+        app.add_middleware(
+            CORSMiddleware,
+            allow_credentials=True,
+            allow_origins=["http://localhost:80", "http://10.1.101.125", "http://quickgpt.gibl.com.np"],
+            allow_methods=["DELETE", "GET", "POST", "PUT", "OPTIONS", "PATCH"],
+            allow_headers=["*"],
+        )
 
     # if settings.ui.enabled:
     #     logger.debug("Importing the UI module")

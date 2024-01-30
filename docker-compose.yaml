@@ -12,3 +12,5 @@ services:
       PGPT_PROFILES: docker
       PGPT_MODE: local
 
+    env_file:
+      - .env
