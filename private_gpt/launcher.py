@@ -36,11 +36,7 @@ def create_app(root_injector: Injector) -> FastAPI:
         logger.debug("Setting up CORS middleware")
         app.add_middleware(
             CORSMiddleware,
-            allow_credentials=settings.server.cors.allow_credentials,
-            allow_origins=settings.server.cors.allow_origins,
-            allow_origin_regex=settings.server.cors.allow_origin_regex,
-            allow_methods=settings.server.cors.allow_methods,
-            allow_headers=settings.server.cors.allow_headers,
+            **settings.server.cors.model_dump()
         )
 
     if settings.ui.enabled:
