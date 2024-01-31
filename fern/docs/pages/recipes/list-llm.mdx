@@ -24,7 +24,7 @@ user: {{ user_message }}
 assistant: {{ assistant_message }}
 ```
 
-And the "`tag`" style looks like this:
+The "`tag`" style looks like this:
 
 ```text
 <|system|>: {{ system_prompt }}
@@ -32,7 +32,23 @@ And the "`tag`" style looks like this:
 <|assistant|>: {{ assistant_message }}
 ```
 
-Some LLMs will not understand this prompt style, and will not work (returning nothing).
+The "`mistral`" style looks like this: 
+
+```text 
+<s>[INST] You are an AI assistant. [/INST]</s>[INST] Hello, how are you doing? [/INST]
+```
+
+The "`chatml`" style looks like this: 
+```text
+<|im_start|>system
+{{ system_prompt }}<|im_end|>
+<|im_start|>user"
+{{ user_message }}<|im_end|>
+<|im_start|>assistant
+{{ assistant_message }}
+```
+
+Some LLMs will not understand these prompt styles, and will not work (returning nothing).
 You can try to change the prompt style to `default` (or `tag`) in the settings, and it will
 change the way the messages are formatted to be passed to the LLM.
 
