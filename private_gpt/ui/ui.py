@@ -205,6 +205,12 @@ class PrivateGptUi:
         paths = [Path(file) for file in files]
         self._ingest_service.bulk_ingest([(str(path.name), path) for path in paths])
 
+    def _delete_all_files(self) -> None:
+        ingested_files = self._ingest_service.list_ingested()
+        logger.debug("Deleting count=%s files", len(ingested_files))
+        for ingested_document in ingested_files:
+            self._ingest_service.delete(ingested_document.doc_id)
+
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
         with gr.Blocks(
@@ -258,6 +264,12 @@ class PrivateGptUi:
                         outputs=ingested_dataset,
                     )
                     ingested_dataset.render()
+                    if settings().ui.delete_files_button is True:
+                        delete_files_button = gr.components.Button(
+                            "Delete all files",
+                            size="sm",
+                        )
+                        delete_files_button.click(self._delete_all_files)
                     system_prompt_input = gr.Textbox(
                         placeholder=self._system_prompt,
                         label="System Prompt",
