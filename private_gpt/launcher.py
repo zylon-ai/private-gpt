@@ -24,7 +24,8 @@ def create_app(root_injector: Injector) -> FastAPI:
     async def bind_injector_to_request(request: Request) -> None:
         request.state.injector = root_injector
 
-    app = FastAPI(dependencies=[Depends(bind_injector_to_request)])
+    # app = FastAPI(dependencies=[Depends(bind_injector_to_request)])
+    app = FastAPI()
     app.include_router(completions_router)
     app.include_router(chat_router)
     app.include_router(chunks_router)
