@@ -33,7 +33,7 @@ AVATAR_BOT = THIS_DIRECTORY_RELATIVE / "avatar-bot.ico"
 
 UI_TAB_TITLE = "My Private GPT"
 
-SOURCES_SEPARATOR = "\n\n Sources: \n"
+SOURCES_SEPARATOR = "\n Sources: \n"
 
 MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
 home_router = APIRouter(prefix="/v1")
@@ -70,7 +70,7 @@ class Home:
             if completion_gen.sources:
                 full_response += SOURCES_SEPARATOR
                 cur_sources = Source.curate_sources(completion_gen.sources)
-                sources_text = "\n\n\n".join(
+                sources_text = "\n".join(
                     f'<a href="{source.page_link}" target="_blank" rel="noopener noreferrer">{index}. {source.file} (page {source.page})</a>'
                     for index, source in enumerate(cur_sources, start=1)
                 )
@@ -123,7 +123,7 @@ class Home:
 
                 sources = Source.curate_sources(response)
 
-                yield "\n\n\n".join(
+                yield "\n".join(
                     f"{index}. **{source.file} (page {source.page})**\n"
                     f" (link: [{source.page_link}]({source.page_link}))\n{source.text}"
                     for index, source in enumerate(sources, start=1)
