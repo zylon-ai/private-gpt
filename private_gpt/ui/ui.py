@@ -285,8 +285,7 @@ class PrivateGptUi:
                         size="sm",
                         interactive=settings().ui.delete_file_button_enabled,
                     )
-                    delete_file_button.click(
-                        self._delete_selected_file)
+                    delete_file_button.click(self._delete_selected_file)
                     delete_files_button = gr.components.Button(
                         "Delete all files",
                         size="sm",
