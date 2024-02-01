@@ -264,12 +264,12 @@ class PrivateGptUi:
                         outputs=ingested_dataset,
                     )
                     ingested_dataset.render()
-                    if settings().ui.delete_files_button is True:
-                        delete_files_button = gr.components.Button(
-                            "Delete all files",
-                            size="sm",
-                        )
-                        delete_files_button.click(self._delete_all_files)
+                    delete_files_button = gr.components.Button(
+                        "Delete all files",
+                        size="sm",
+                        interactive=settings().ui.delete_files_button_enabled,
+                    )
+                    delete_files_button.click(self._delete_all_files)
                     system_prompt_input = gr.Textbox(
                         placeholder=self._system_prompt,
                         label="System Prompt",
