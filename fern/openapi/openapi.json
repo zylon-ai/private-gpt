@@ -44,6 +44,15 @@
               }
             }
           }
+        },
+        "x-fern-streaming": {
+          "stream-condition": "stream",
+          "response": {
+            "$ref": "#/components/schemas/OpenAICompletion"
+          },
+          "response-stream": {
+            "$ref": "#/components/schemas/OpenAICompletion"
+          }
         }
       }
     },
@@ -85,6 +94,15 @@
                 }
               }
             }
+          }
+        },
+        "x-fern-streaming": {
+          "stream-condition": "stream",
+          "response": {
+            "$ref": "#/components/schemas/OpenAICompletion"
+          },
+          "response-stream": {
+            "$ref": "#/components/schemas/OpenAICompletion"
           }
         }
       }
