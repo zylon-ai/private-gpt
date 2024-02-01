@@ -41,7 +41,7 @@ def create_app(root_injector: Injector) -> FastAPI:
         app.add_middleware(
             CORSMiddleware,
             allow_credentials=True,
-            allow_origins=["http://localhost:80", "http://10.1.101.125", "http://quickgpt.gibl.com.np"],
+            allow_origins=["http://localhost:80", "http://10.1.101.125:80", "http://quickgpt.gibl.com.np:80", "http://10.1.101.125", "http://quickgpt.gibl.com.np"],
             allow_methods=["DELETE", "GET", "POST", "PUT", "OPTIONS", "PATCH"],
             allow_headers=["*"],
         )

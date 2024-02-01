@@ -5,6 +5,9 @@ server:
 llm:
   mode: ${PGPT_MODE:mock}
 
+embedding:
+  mode: ${PGPT_MODE:sagemaker}
+
 local:
   llm_hf_repo_id: ${PGPT_HF_REPO_ID:TheBloke/Mistral-7B-Instruct-v0.1-GGUF}
   llm_hf_model_file: ${PGPT_HF_MODEL_FILE:mistral-7b-instruct-v0.1.Q4_K_M.gguf}

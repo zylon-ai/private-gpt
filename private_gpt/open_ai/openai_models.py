@@ -118,5 +118,5 @@ def to_openai_sse_stream(
             yield f"data: {OpenAICompletion.json_from_delta(text=response.delta)}\n\n"
         else:
             yield f"data: {OpenAICompletion.json_from_delta(text=response, sources=sources)}\n\n"
-    yield f"data: {OpenAICompletion.json_from_delta(text=None, finish_reason='stop')}\n\n"
+    yield f"data: {OpenAICompletion.json_from_delta(text='', finish_reason='stop')}\n\n"
     yield "data: [DONE]\n\n"
