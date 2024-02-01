@@ -221,11 +221,10 @@ class PrivateGptUi:
                 self._ingest_service.delete(ingested_document.doc_id)
 
     def _selected_a_file(self, select_data: gr.SelectData) -> None:
-        if select_data.selected is False:
-            self._selected_filename = None
-        elif select_data.selected is True:
+        if select_data.selected is True:
             self._selected_filename = select_data.value
-
+        else:
+            self._selected_filename = None
 
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
