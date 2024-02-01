@@ -73,6 +73,8 @@ class PrivateGptUi:
         # Cache the UI blocks
         self._ui_block = None
 
+        self._selected_filename = None
+
         # Initialize system prompt based on default mode
         self.mode = MODES[0]
         self._system_prompt = self._get_default_system_prompt(self.mode)
@@ -211,6 +213,20 @@ class PrivateGptUi:
         for ingested_document in ingested_files:
             self._ingest_service.delete(ingested_document.doc_id)
 
+    def _delete_selected_file(self) -> None:
+        logger.debug("Deleting selected %s", self._selected_filename)
+        # Note: keep looping for pdf's (each page became a Document)
+        for ingested_document in self._ingest_service.list_ingested():
+            if ingested_document.doc_metadata["file_name"] == self._selected_filename:
+                self._ingest_service.delete(ingested_document.doc_id)
+
+    def _selected_a_file(self, select_data: gr.SelectData) -> None:
+        if select_data.selected is False:
+            self._selected_filename = None
+        elif select_data.selected is True:
+            self._selected_filename = select_data.value
+
+
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
         with gr.Blocks(
@@ -264,10 +280,18 @@ class PrivateGptUi:
                         outputs=ingested_dataset,
                     )
                     ingested_dataset.render()
+                    ingested_dataset.select(self._selected_a_file)
+                    delete_file_button = gr.components.Button(
+                        "Delete selected file",
+                        size="sm",
+                        interactive=settings().ui.delete_file_button_enabled,
+                    )
+                    delete_file_button.click(
+                        self._delete_selected_file)
                     delete_files_button = gr.components.Button(
                         "Delete all files",
                         size="sm",
-                        interactive=settings().ui.delete_files_button_enabled,
+                        interactive=settings().ui.delete_all_files_button_enabled,
                     )
                     delete_files_button.click(self._delete_all_files)
                     system_prompt_input = gr.Textbox(

@@ -178,8 +178,11 @@ class UISettings(BaseModel):
     default_query_system_prompt: str = Field(
         None, description="The default system prompt to use for the query mode."
     )
-    delete_files_button_enabled: bool = Field(
-        True, description="If the button to delete all files is enabled or not."
+    delete_file_button_enabled: bool = Field(
+        True, description="If the button to delete a files is enabled or not."
+    )
+    delete_all_files_button_enabled: bool = Field(
+        False, description="If the button to delete all files is enabled or not."
     )
 
 
