@@ -1,17 +1,23 @@
+import logging
+from pathlib import Path
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status, Security
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+
+from private_gpt.home import Home
+from private_gpt.users import crud, models, schemas
+from private_gpt.users.api import deps
 
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.server.ingest.model import IngestedDoc
 from private_gpt.server.utils.auth import authenticated
 from private_gpt.constants import UPLOAD_DIR
-from pathlib import Path
 
 ingest_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
+logger = logging.getLogger(__name__)
 class IngestTextBody(BaseModel):
     file_name: str = Field(examples=["Avatar: The Last Airbender"])
     text: str = Field(
@@ -39,7 +45,7 @@ def ingest(request: Request, file: UploadFile) -> IngestResponse:
     return ingest_file(request, file)
 
 
-@ingest_router.post("/ingest/file", tags=["Ingestion"])
+@ingest_router.post("/ingest/file1", tags=["Ingestion"])
 def ingest_file(request: Request, file: UploadFile = File(...)) -> IngestResponse:
     """Ingests and processes a file, storing its chunks to be used as context.
 
@@ -56,7 +62,6 @@ def ingest_file(request: Request, file: UploadFile = File(...)) -> IngestRespons
     can be used to filter the context used to create responses in
     `/chat/completions`, `/completions`, and `/chunks` APIs.
     """
-    # try:
     service = request.state.injector.get(IngestService)
     if file.filename is None:
         raise HTTPException(400, "No file name provided")
@@ -116,12 +121,66 @@ def delete_ingested(request: Request, doc_id: str) -> None:
     service.delete(doc_id)
 
 
-@ingest_router.delete("/ingest", tags=["Ingestion"])
-def delete_ingested(request: Request, doc_id: str) -> None:
-    """Delete the specified ingested Document.
+@ingest_router.delete("/ingest/file/{filename}", tags=["Ingestion"])
+def delete_file(
+        request: Request,
+        filename: str,
+        current_user: models.User = Security(
+            deps.get_current_user,
+        )) -> dict:
+    """Delete the specified filename.
 
-    The `doc_id` can be obtained from the `GET /ingest/list` endpoint.
+    The `filename` can be obtained from the `GET /ingest/list` endpoint.
     The document will be effectively deleted from your storage context.
     """
     service = request.state.injector.get(IngestService)
-    service.delete(doc_id)
+    try:
+        doc_ids = service.get_doc_ids_by_filename(filename)
+        if not doc_ids:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"No documents found with filename '{filename}'")
+
+        for doc_id in doc_ids:
+            service.delete(doc_id)
+
+        return {"status": "SUCCESS", "message": f"{filename}' successfully deleted."}
+    except Exception as e:
+        logger.error(
+            f"Unexpected error deleting documents with filename '{filename}': {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+
+
+@ingest_router.post("/ingest/file", response_model=IngestResponse, tags=["Ingestion"])
+def ingest_file(
+        request: Request,
+        file: UploadFile = File(...),
+        current_user: models.User = Security(
+            deps.get_current_user,
+        )) -> IngestResponse:
+    """Ingests and processes a file, storing its chunks to be used as context."""
+    service = request.state.injector.get(IngestService)
+
+    try:
+        if file.filename is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="No file name provided")
+
+        upload_path = Path(f"{UPLOAD_DIR}/{file.filename}")
+
+        with open(upload_path, "wb") as f:
+            f.write(file.file.read())
+
+        with open(upload_path, "rb") as f:
+            ingested_documents = service.ingest_bin_data(file.filename, f)
+
+        return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
+
+    except Exception as e:
+        logger.error(f"There was an error uploading the file(s): {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error: Unable to ingest file.",
+        )
+    finally:
+        file.file.close()

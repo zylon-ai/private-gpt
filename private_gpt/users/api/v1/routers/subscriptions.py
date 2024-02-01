@@ -1,7 +1,6 @@
 from typing import Any, List
 
 from sqlalchemy.orm import Session
-from pydantic.networks import EmailStr
 from fastapi import APIRouter, Body, Depends, HTTPException, Security, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse

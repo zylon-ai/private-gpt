@@ -1,4 +1,7 @@
 """This file should be imported only and only if you want to run the UI locally."""
+from private_gpt.users.core import security
+from private_gpt.users.api import deps
+from private_gpt.users import crud, models, schemas
 import time
 from fastapi import File, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -6,15 +9,16 @@ import itertools
 import logging
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, Literal
 
-from fastapi import APIRouter, Depends, Request, FastAPI, Body
+from fastapi import APIRouter, Depends, Request, FastAPI, Body, status, HTTPException, Security
 from fastapi.responses import JSONResponse
 from gradio.themes.utils.colors import slate  # type: ignore
 from injector import inject, singleton
 from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 from pydantic import BaseModel
 
+from private_gpt.server.ingest.model import IngestedDoc
 from private_gpt.constants import PROJECT_ROOT_PATH
 from private_gpt.di import global_injector
 from private_gpt.server.chat.chat_service import ChatService, CompletionGen
@@ -23,20 +27,27 @@ from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.settings.settings import settings
 from private_gpt.ui.images import logo_svg
 from private_gpt.ui.common import Source
+from private_gpt.constants import UPLOAD_DIR
+
 
 
 logger = logging.getLogger(__name__)
 
 THIS_DIRECTORY_RELATIVE = Path(__file__).parent.relative_to(PROJECT_ROOT_PATH)
-# Should be "private_gpt/ui/avatar-bot.ico"
-AVATAR_BOT = THIS_DIRECTORY_RELATIVE / "avatar-bot.ico"
-
-UI_TAB_TITLE = "My Private GPT"
-
 SOURCES_SEPARATOR = "\n Sources: \n"
 
 MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
-home_router = APIRouter(prefix="/v1")
+DEFAULT_MODE = MODES[0]
+
+chat_router = APIRouter(prefix="/v1", tags=["Chat"])
+
+class ListFilesResponse(BaseModel):
+    uploaded_files: List[str]
+
+class IngestResponse(BaseModel):
+    object: Literal["list"]
+    model: Literal["private-gpt"]
+    data: list[IngestedDoc]
 
 
 @singleton
@@ -99,7 +110,6 @@ class Home:
             return history_messages[:20]
 
         new_message = ChatMessage(content=message, role=MessageRole.USER)
-        # Appending user message to history
         self._history.append([message, ""])
         all_messages = [*build_history(), new_message]
         match mode:
@@ -149,27 +159,19 @@ class Home:
 
 
 home_instance = global_injector.get(Home)
-
-
-async def chat_simulation(message, mode):
-    response = home_instance._chat(message=message, mode=mode)
-    return StreamingResponse(
-        response,
-        media_type='text/event-stream'
-    )
-
-
-DEFAULT_MODE = MODES[0]
-
-
 def get_home_instance(request: Request) -> Home:
     home_instance = request.state.injector.get(Home)
     return home_instance
 
-@home_router.post("/chat")
-async def chat_endpoint(request: Request, message: str = Body(...), mode: str = Body(DEFAULT_MODE)):
-    # Create the Home instance
-    # home_instance = request.state.injector.get(Home)
+
+@chat_router.post("/chat")
+async def chat_endpoint(
+    home_instance: Home = Depends(get_home_instance), 
+    message: str = Body(...), mode: str = Body(DEFAULT_MODE),
+    current_user: models.User = Security(
+        deps.get_current_user,
+    )
+):
     response = home_instance._chat(message=message, mode=mode)
     return StreamingResponse(
         response,
@@ -177,16 +179,15 @@ async def chat_endpoint(request: Request, message: str = Body(...), mode: str = 
     )
 
 
-
-class ListFilesResponse(BaseModel):
-    uploaded_files: List[str]
-
-
-
-@home_router.get("/list_files")
-async def list_files(home_instance: Home = Depends(get_home_instance)) -> dict:
+@chat_router.get("/list_files")
+async def list_files(
+    home_instance: Home = Depends(get_home_instance),  
+    current_user: models.User = Security(
+        deps.get_current_user,
+)) -> dict:
     """
     List all uploaded files.
     """
     uploaded_files = home_instance._list_ingested_files()
     return {"uploaded_files": uploaded_files}
+

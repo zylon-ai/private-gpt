@@ -70,8 +70,3 @@ def update_user_role(
     )
 
 
-
-
-company_router = APIRouter(prefix="/user-roles", tags=["user-roles"])
-
-

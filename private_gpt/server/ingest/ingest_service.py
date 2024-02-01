@@ -131,3 +131,19 @@ class IngestService:
         )
         self.ingest_component.delete(doc_id)
 
+    def get_doc_ids_by_filename(self, filename: str) -> list[str]:
+        doc_ids: set[str] = set()
+        try:
+            docstore = self.storage_context.docstore
+            for node in docstore.docs.values():
+                if node.metadata is not None and node.metadata.get("file_name") == filename:
+                    doc_ids.add(node.ref_doc_id)
+
+        except ValueError:
+            logger.warning(
+                "Got an exception when getting doc_ids by filename", exc_info=True)
+            pass
+
+        logger.debug("Found count=%s doc_ids for filename '%s'",
+                     len(doc_ids), filename)
+        return doc_ids

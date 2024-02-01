@@ -46,7 +46,6 @@ async def get_current_user(
         token: str = Depends(reusable_oauth2)
     ) -> models.User:
 
-    print("HELLO--------------------------------------------")
     if security_scopes.scopes:
         authenticate_value = f'Bearer scope="{security_scopes.scope_str}"'
     else:
@@ -89,7 +88,6 @@ async def get_current_user(
             detail="Not enough permissions",
             headers={"WWW-Authenticate": authenticate_value},
         )
-    print("THE USER IS::::::::::::::::::::::", user)
     return user
 
 

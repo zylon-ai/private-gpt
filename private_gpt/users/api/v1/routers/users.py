@@ -212,5 +212,42 @@ def home_page(
         deps.get_active_subscription,
     ),
 ):
-    
     return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Welcome to QuickGPT"})
+
+
+@router.patch("/{user_id}/change-password", response_model=schemas.User)
+def admin_change_password(
+    *,
+    db: Session = Depends(deps.get_db),
+    user_id: int,
+    new_password: str = Body(..., embed=True),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+    ),
+) -> Any:
+    """
+    Admin/Super Admin change user's password without confirming the previous password.
+    """
+    user = crud.user.get(db, id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The user with this id does not exist in the system",
+        )
+
+    new_password_hashed = get_password_hash(new_password)
+    user.hashed_password = new_password_hashed
+    db.commit()
+
+    user_data = schemas.UserBaseSchema(
+        id=user.id,
+        email=user.email,
+        fullname=user.fullname,
+        company_id=user.company_id,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"message": "User password changed successfully",
+                 "user": jsonable_encoder(user_data)},
+    )

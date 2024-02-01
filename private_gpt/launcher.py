@@ -14,7 +14,7 @@ from private_gpt.server.ingest.ingest_router import ingest_router
 from private_gpt.users.api.v1.api import api_router
 
 from private_gpt.settings.settings import Settings
-from private_gpt.home import home_router
+from private_gpt.home import chat_router
 logger = logging.getLogger(__name__)
 
 
@@ -24,8 +24,7 @@ def create_app(root_injector: Injector) -> FastAPI:
     async def bind_injector_to_request(request: Request) -> None:
         request.state.injector = root_injector
 
-    # app = FastAPI(dependencies=[Depends(bind_injector_to_request)])
-    app = FastAPI()
+    app = FastAPI(dependencies=[Depends(bind_injector_to_request)])
     app.include_router(completions_router)
     app.include_router(chat_router)
     app.include_router(chunks_router)
@@ -34,7 +33,7 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(health_router)
     
     app.include_router(api_router)
-    app.include_router(home_router)
+    app.include_router(chat_router)
     settings = root_injector.get(Settings)
     if settings.server.cors.enabled:
         logger.debug("Setting up CORS middleware")
@@ -52,8 +51,5 @@ def create_app(root_injector: Injector) -> FastAPI:
     #     admin_ui = root_injector.get(PrivateAdminGptUi)
     #     admin_ui.mount_in_admin_app(app, '/admin')
 
-        # from private_gpt.ui.ui import PrivateGptUi
-        # ui = root_injector.get(PrivateGptUi)
-        # ui.mount_in_app(app, settings.ui.path)
 
     return app

@@ -2,11 +2,9 @@ from typing import Any, Optional
 from datetime import timedelta, datetime
 
 from sqlalchemy.orm import Session
-from pydantic.networks import EmailStr
 from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi import APIRouter, Body, Depends, HTTPException, Security, Path, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Security, status
 
 from private_gpt.users.api import deps
 from private_gpt.users.core import security
@@ -76,7 +74,6 @@ def login_access_token(
         raise HTTPException(
             status_code=400, detail="Incorrect email or password"
         )
-
     access_token_expires = timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
@@ -89,9 +86,7 @@ def login_access_token(
         company_id=user.company_id,
         last_login=datetime.now()
     )
-
     user = crud.user.update(db, db_obj=user, obj_in=user_in)
-
     if user.user_role:
         role = user.user_role.role.name
         if user.user_role.company_id:
@@ -102,12 +97,11 @@ def login_access_token(
         "id": str(user.id),
         "email": str(user.email),
         "username": str(user.fullname),
-
         "role": role,
         "company_id": company_id,
     }
 
-    return {
+    response_dict = {
         "access_token": security.create_access_token(
             token_payload, expires_delta=access_token_expires
         ),
@@ -116,127 +110,105 @@ def login_access_token(
         ),
         "token_type": "bearer",
     }
+    return JSONResponse(content=response_dict)
+
 
 @router.post("/login/refresh-token", response_model=schemas.TokenSchema)
-def refresh_access_token(
-    db: Session = Depends(deps.get_db),
-    form_data: OAuth2PasswordRequestForm = Depends(),
-) -> Any:
-    """
-    Refresh access token using a valid refresh token
-    """
+def refresh_access_token(db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()) -> Any:
     refresh_token = form_data.refresh_token
     token_payload = security.verify_refresh_token(refresh_token)
 
     if not token_payload:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    refresh_token_expires = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires = timedelta(
+        minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
 
-    return {
-        "access_token": security.create_access_token(
-            token_payload, expires_delta=access_token_expires
-        ),
-        "refresh_token": security.create_refresh_token(
-            token_payload, expires_delta=refresh_token_expires
-        ),
+    response_dict = {
+        "access_token": security.create_access_token(token_payload, expires_delta=access_token_expires),
+        "refresh_token": security.create_refresh_token(token_payload, expires_delta=refresh_token_expires),
         "token_type": "bearer",
     }
 
-
-@router.post("/{company_id}/register", response_model=schemas.User)
-def register_for_company(
-    *,
-    db: Session = Depends(deps.get_db),
-    email: str = Body(...),
-    fullname: str = Body(...),
-    company_id: int = Path(..., title="Company ID",
-                           description="Only for company admin"),
-    current_user: models.User = Security(
-        deps.get_current_user,
-        scopes=[Role.SUPER_ADMIN["name"], Role.ADMIN['name']],
-    ),
-) -> Any:
-    """
-    Register new user for a specific company.
-    """
-    user = crud.user.get_by_email(db, email=email)
-    if user:
-        raise HTTPException(
-            status_code=409,
-            detail="The user with this username already exists in the system",
-        )
-
-    if current_user.user_role.role.name not in {Role.ADMIN["name"], Role.SUPER_ADMIN["name"]}:
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to register users for a company.",
-        )
-
-    company = crud.company.get_by_id(db, id=company_id)
-    print(f"Company is : {company.id}")
-    if not (current_user.user_role.role.name == Role.ADMIN["name"] and current_user.user_role.company_id == company.id):
-        raise HTTPException(
-            status_code=403,
-            detail="You are not the admin of the specified company.",
-        )
-
-    random_password = security.generate_random_password()
-    user = register_user(db, email, fullname, random_password, company)
-    user_role = create_user_role(db, user, Role.GUEST["name"], company)
-
-    token_payload = create_token_payload(user, user_role)
-    return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
-        content={"message": "User registered successfully.\n\n Check respective user email for login credentials",
-                 "user": jsonable_encoder(user)},
-    )
+    return JSONResponse(content=response_dict)
 
 
 @router.post("/register", response_model=schemas.TokenSchema)
-def register_without_company_assignment(
+def register_user(
     *,
     db: Session = Depends(deps.get_db),
     email: str = Body(...),
     fullname: str = Body(...),
-    company_id: int = Body(None, title="Company ID", description="Company ID for the user (if applicable)"),
+    company_id: int = Body(None, title="Company ID",
+                           description="Company ID for the user (if applicable)"),
+    role_name: str = Body(None, title="Role Name",
+                          description="User role name (if applicable)"),
     current_user: models.User = Security(
         deps.get_current_user,
-        scopes=[Role.SUPER_ADMIN["name"], Role.ADMIN['name']],
+        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
     ),
 ) -> Any:
     """
-    Register new user with company assignment.
+    Register new user with optional company assignment and role selection.
     """
     user = crud.user.get_by_email(db, email=email)
     if user:
         raise HTTPException(
             status_code=409,
-            detail="The user with this username already exists in the system",
+            detail="The user with this email already exists in the system",
         )
 
-    if current_user.user_role.role.name != Role.SUPER_ADMIN["name"]:
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to register users without a company.",
-        )
+    if company_id is not None:
+        # Registering user with a specific company
+        company = crud.company.get(db, company_id)
+        if not company:
+            raise HTTPException(
+                status_code=404,
+                detail="Company not found.",
+            )
 
-    if company_id is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Company ID is required for registering a user without a specific company.",
-        )
-    
+        if current_user.user_role.role.name not in {Role.SUPER_ADMIN["name"], Role.ADMIN["name"]}:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to register users for a specific company.",
+            )
+
+        user_role_name = role_name or Role.GUEST["name"]
+        if user_role_name == Role.SUPER_USER["name"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot create a user with SUPER_USER role.",
+            )
+
+        user_role = create_user_role(db, user, user_role_name, company)
+
+    else:
+        # Registering user without a specific company
+        if current_user.user_role.role.name != Role.SUPER_ADMIN["name"]:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to register users without a company.",
+            )
+
+        user_role_name = role_name or Role.ADMIN["name"]
+        if user_role_name == Role.SUPER_USER["name"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot create a user with SUPER_USER role.",
+            )
+
+        user_role = create_user_role(db, user, user_role_name, None)
+
     random_password = security.generate_random_password()
-    company = crud.company.get(db, company_id)
     user = register_user(db, email, fullname, random_password, company)
-    user_role = create_user_role(db, user, Role.ADMIN["name"], company)
 
     token_payload = create_token_payload(user, user_role)
-    return {
+    response_dict = {
         "access_token": security.create_access_token(token_payload, expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)),
         "refresh_token": security.create_refresh_token(token_payload, expires_delta=timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)),
         "token_type": "bearer",
     }
 
+    return JSONResponse(content=response_dict, status_code=status.HTTP_201_CREATED)
