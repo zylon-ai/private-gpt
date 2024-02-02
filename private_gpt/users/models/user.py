@@ -37,7 +37,8 @@ class User(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  
     company = relationship("Company", back_populates="users") 
 
-    user_role = relationship("UserRole", back_populates="user", uselist=False)
+    user_role = relationship(
+        "UserRole", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):
         """Returns string representation of model instance"""

@@ -114,8 +114,10 @@ def login_access_token(
 
 
 @router.post("/login/refresh-token", response_model=schemas.TokenSchema)
-def refresh_access_token(db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()) -> Any:
-    refresh_token = form_data.refresh_token
+def refresh_access_token(
+    db: Session = Depends(deps.get_db),
+    refresh_token: str = Body(..., embed=True),
+) -> Any:
     token_payload = security.verify_refresh_token(refresh_token)
 
     if not token_payload:
@@ -131,12 +133,11 @@ def refresh_access_token(db: Session = Depends(deps.get_db), form_data: OAuth2Pa
         "refresh_token": security.create_refresh_token(token_payload, expires_delta=refresh_token_expires),
         "token_type": "bearer",
     }
-
     return JSONResponse(content=response_dict)
 
 
 @router.post("/register", response_model=schemas.TokenSchema)
-def register_user(
+def register(
     *,
     db: Session = Depends(deps.get_db),
     email: str = Body(...),
@@ -153,14 +154,15 @@ def register_user(
     """
     Register new user with optional company assignment and role selection.
     """
-    user = crud.user.get_by_email(db, email=email)
-    if user:
+    existing_user = crud.user.get_by_email(db, email=email)
+    if existing_user:
         raise HTTPException(
             status_code=409,
             detail="The user with this email already exists in the system",
         )
+    random_password = security.generate_random_password()
 
-    if company_id is not None:
+    if company_id:
         # Registering user with a specific company
         company = crud.company.get(db, company_id)
         if not company:
@@ -168,41 +170,28 @@ def register_user(
                 status_code=404,
                 detail="Company not found.",
             )
-
         if current_user.user_role.role.name not in {Role.SUPER_ADMIN["name"], Role.ADMIN["name"]}:
             raise HTTPException(
                 status_code=403,
                 detail="You do not have permission to register users for a specific company.",
             )
-
+        user = register_user(db, email, fullname, random_password, company)
         user_role_name = role_name or Role.GUEST["name"]
-        if user_role_name == Role.SUPER_USER["name"]:
-            raise HTTPException(
-                status_code=403,
-                detail="Cannot create a user with SUPER_USER role.",
-            )
-
         user_role = create_user_role(db, user, user_role_name, company)
 
     else:
-        # Registering user without a specific company
         if current_user.user_role.role.name != Role.SUPER_ADMIN["name"]:
             raise HTTPException(
                 status_code=403,
                 detail="You do not have permission to register users without a company.",
             )
-
+        user = register_user(db, email, fullname, random_password, None)
         user_role_name = role_name or Role.ADMIN["name"]
-        if user_role_name == Role.SUPER_USER["name"]:
-            raise HTTPException(
-                status_code=403,
-                detail="Cannot create a user with SUPER_USER role.",
-            )
-
         user_role = create_user_role(db, user, user_role_name, None)
 
-    random_password = security.generate_random_password()
-    user = register_user(db, email, fullname, random_password, company)
+    print("USER REGISTERED: ", user.email, user.fullname, user.company_id)
+    print("USER ROLE REGISTERED: ", user_role.user.email,
+          user_role.role.name, user_role.company_id)
 
     token_payload = create_token_payload(user, user_role)
     response_dict = {

@@ -40,7 +40,7 @@ def get_db() -> Generator:
     finally:
         db.close()
 
-async def get_current_user(
+def get_current_user(
         security_scopes: SecurityScopes,
         db: Session = Depends(get_db), 
         token: str = Depends(reusable_oauth2)
@@ -62,7 +62,6 @@ async def get_current_user(
         )
         if payload.get("id") is None:
             raise credentials_exception
-        print(payload)
         token_data = schemas.TokenPayload(**payload)
     except (jwt.JWTError, ValidationError):
         logger.error("Error Decoding Token", exc_info=True)

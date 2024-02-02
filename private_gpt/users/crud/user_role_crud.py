@@ -11,6 +11,10 @@ class CRUDUserRole(CRUDBase[UserRole, UserRoleCreate, UserRoleUpdate]):
         self, db: Session, *, user_id: int
     ) -> Optional[UserRole]:
         return db.query(UserRole).filter(UserRole.user_id == user_id).first()
-
+    
+    def remove_user(
+            self, db: Session, *, user_id: int
+    )-> Optional[UserRole]:
+        return db.query(UserRole).filter(UserRole.user_id == user_id).delete()
 
 user_role = CRUDUserRole(UserRole)
