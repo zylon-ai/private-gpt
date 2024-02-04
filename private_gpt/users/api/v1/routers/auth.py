@@ -189,10 +189,6 @@ def register(
         user_role_name = role_name or Role.ADMIN["name"]
         user_role = create_user_role(db, user, user_role_name, None)
 
-    print("USER REGISTERED: ", user.email, user.fullname, user.company_id)
-    print("USER ROLE REGISTERED: ", user_role.user.email,
-          user_role.role.name, user_role.company_id)
-
     token_payload = create_token_payload(user, user_role)
     response_dict = {
         "access_token": security.create_access_token(token_payload, expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)),

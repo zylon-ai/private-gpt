@@ -1,17 +1,8 @@
 from functools import lru_cache
 from typing import Any, Dict, Optional
 
-from pydantic import PostgresDsn, validator
 from pydantic_settings import BaseSettings
 
-
-SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://{username}:{password}@{host}:{port}/{db_name}".format(
-        host='localhost',
-        port='5432',
-        db_name='QuickGpt',
-        username='postgres',
-        password="quick",
-    )
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AUTHENTICATION AND AUTHORIZATION"
@@ -39,24 +30,9 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str
     SMTP_PASSWORD: str
 
-
-    # SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
-
-    # @validator("SQLALCHEMY_DATABASE_URI", pre=True)
-    # def assemble_db_connection(
-    #     cls, v: Optional[str], values: Dict[str, Any]
-    # ) -> Any:
-    #     if isinstance(v, str):
-    #         return v
-    #     return PostgresDsn.build(
-    #         scheme="postgresql",
-    #         user=values.get("DB_USER"),
-    #         password=values.get("DB_PASS"),
-    #         host=values.get("DB_HOST"),
-    #         path=f"/{values.get('DB_NAME') or  ''}",
-    #     )
-    # Database url configuration
-    
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        return f"postgresql+psycopg2://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     class Config:
         case_sensitive = True
@@ -64,7 +40,7 @@ class Settings(BaseSettings):
 
 
 @lru_cache()
-def get_settings():
+def get_settings() -> Settings:
     return Settings()
 
 

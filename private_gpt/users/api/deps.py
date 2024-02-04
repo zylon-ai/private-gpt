@@ -90,36 +90,24 @@ def get_current_user(
     return user
 
 
-async def get_current_active_user(
-    current_user: models.User = Security(get_current_user, scopes=[],),
-) -> models.User:
-    if not crud.user.is_active(current_user):
-        raise HTTPException(status_code=400, detail="Inactive user")
+def check_user_role(current_user: models.User = Depends(get_current_user), role: str = ""):
+    if current_user.role != role:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have the necessary permissions to perform this action",
+        )
     return current_user
 
 
-
-async def is_company_admin(current_user: models.User = Depends(get_current_user)):
-    if current_user.role == Role.ADMIN["name"]:
-        return current_user
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have the necessary permissions to perform this action",
-        )
+def is_company_admin(current_user: models.User = Depends(get_current_user)):
+    return check_user_role(current_user, role=Role.ADMIN["name"])
 
 
-async def is_super_admin(current_user: models.User = Depends(get_current_user)):
-    if current_user.role == Role.SUPER_ADMIN["name"]:
-        return current_user
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have the necessary permissions to perform this action",
-        )
+def is_super_admin(current_user: models.User = Depends(get_current_user)):
+    return check_user_role(current_user, role=Role.SUPER_ADMIN["name"])
     
 
-async def get_company_name(company_id: int, db: Session = Depends(get_db)) -> str:
+def get_company_name(company_id: int, db: Session = Depends(get_db)) -> str:
     company = crud.company.get(db=db, id=company_id)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")

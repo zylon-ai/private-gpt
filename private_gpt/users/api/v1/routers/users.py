@@ -31,19 +31,25 @@ def read_users(
     return users
 
 
-@router.get("/{company_name}")
+@router.get("/{company_name}", response_model=List[schemas.User])
 def read_users_by_company(
-    company_name: Optional[str] = Path(..., title="Company Name", description="Only for company admin"),
+    company_name: Optional[str] = Path(..., title="Company Name",
+                                       description="Only for company admin"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
     ),
 ):
-    """                                 
-    Retrieve all users of that company only
-    """
+    """Retrieve all users of that company only"""
     company = crud.company.get_by_company_name(db, company_name=company_name)
+
+    if company is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Company with name '{company_name}' not found",
+        )
+
     users = crud.user.get_multi_by_company_id(db, company_id=company.id)
     return users
 

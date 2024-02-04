@@ -175,12 +175,9 @@ def ingest_file(
             ingested_documents = service.ingest_bin_data(file.filename, f)
 
         return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
-
     except Exception as e:
         logger.error(f"There was an error uploading the file(s): {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error: Unable to ingest file.",
         )
-    finally:
-        file.file.close()
