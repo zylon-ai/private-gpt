@@ -48,3 +48,7 @@ class User(UserSchema):
 # Additional properties stored in DB
 class UserInDB(UserSchema):
     hashed_password: str
+
+
+class Profile(UserBaseSchema):
+	role: str

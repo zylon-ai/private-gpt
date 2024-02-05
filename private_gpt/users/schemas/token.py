@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class TokenSchema(BaseModel):
     access_token: str
     refresh_token: str
+    user: object
 
     class Config:
         arbitrary_types_allowed = True

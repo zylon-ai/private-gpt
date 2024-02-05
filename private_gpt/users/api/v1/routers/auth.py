@@ -108,13 +108,22 @@ def login_access_token(
         "refresh_token": security.create_refresh_token(
             token_payload, expires_delta=refresh_token_expires
         ),
+        "user": token_payload,
         "token_type": "bearer",
     }
     return JSONResponse(content=response_dict)
 
 
 @router.post("/login/refresh-token", response_model=schemas.TokenSchema)
-def refresh_access_token(
+def refresh_
+
+
+
+
+
+
+
+access_token(
     db: Session = Depends(deps.get_db),
     refresh_token: str = Body(..., embed=True),
 ) -> Any:
@@ -141,6 +150,57 @@ def register(
     *,
     db: Session = Depends(deps.get_db),
     email: str = Body(...),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     fullname: str = Body(...),
     company_id: int = Body(None, title="Company ID",
                            description="Company ID for the user (if applicable)"),

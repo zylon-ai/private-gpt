@@ -31,7 +31,7 @@ def read_users(
     return users
 
 
-@router.get("/{company_name}", response_model=List[schemas.User])
+@router.get("/company/{company_name}", response_model=List[schemas.User])
 def read_users_by_company(
     company_name: Optional[str] = Path(..., title="Company Name",
                                        description="Only for company admin"),
@@ -115,9 +115,11 @@ def read_user_me(
     """
     role = current_user.user_role.role.name if current_user.user_role else None
     print("THe role is: ", role)
-    user_data = schemas.UserBaseSchema(
+    user_data = schemas.Profile(
         email=current_user.email,
         fullname=current_user.fullname,
+        company_id = current_user.company_id,
+        role =role
     )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
