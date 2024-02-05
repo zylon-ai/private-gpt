@@ -115,15 +115,7 @@ def login_access_token(
 
 
 @router.post("/login/refresh-token", response_model=schemas.TokenSchema)
-def refresh_
-
-
-
-
-
-
-
-access_token(
+def refresh_access_token(
     db: Session = Depends(deps.get_db),
     refresh_token: str = Body(..., embed=True),
 ) -> Any:
@@ -150,57 +142,6 @@ def register(
     *,
     db: Session = Depends(deps.get_db),
     email: str = Body(...),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     fullname: str = Body(...),
     company_id: int = Body(None, title="Company ID",
                            description="Company ID for the user (if applicable)"),

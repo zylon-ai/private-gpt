@@ -81,6 +81,7 @@ class Home:
             if completion_gen.sources:
                 full_response += SOURCES_SEPARATOR
                 cur_sources = Source.curate_sources(completion_gen.sources)
+               
                 sources_text = "\n".join(
                     f'<a href="{source.page_link}" target="_blank" rel="noopener noreferrer">{index}. {source.file} (page {source.page})</a>'
                     for index, source in enumerate(cur_sources, start=1)

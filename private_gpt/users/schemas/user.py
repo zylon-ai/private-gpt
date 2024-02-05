@@ -17,6 +17,8 @@ class UserBaseSchema(BaseModel):
 class UserCreate(UserBaseSchema):
 	password: str = Field(alias="password")
 
+class UsernameUpdate(BaseModel):
+	fullname: str
 
 class UserUpdate(UserBaseSchema):
 	last_login: Optional[datetime] = None

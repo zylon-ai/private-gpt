@@ -84,13 +84,13 @@ def create_user(
 def update_username(
     *,
     db: Session = Depends(deps.get_db),
-    fullname: str = Body(...),
     current_user: models.User = Depends(deps.get_current_user),
+    update_in: schemas.UsernameUpdate,
 ) -> Any:
     """
     Update own username.
     """
-    user_in = schemas.UserUpdate(fullname=fullname, email=current_user.email, company_id=current_user.company_id)
+    user_in = schemas.UserUpdate(fullname=update_in.fullname, email=current_user.email, company_id=current_user.company_id)
     user = crud.user.update(db, db_obj=current_user, obj_in=user_in)
     user_data = schemas.UserBaseSchema(
         email=user.email,
