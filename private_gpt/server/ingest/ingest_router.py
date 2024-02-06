@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status, Security
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status, Security, Body
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -35,6 +35,8 @@ class IngestResponse(BaseModel):
     model: Literal["private-gpt"]
     data: list[IngestedDoc]
 
+class DeleteFilename(BaseModel):
+    filename: str
 
 @ingest_router.post("/ingest", tags=["Ingestion"], deprecated=True)
 def ingest(request: Request, file: UploadFile) -> IngestResponse:
@@ -121,10 +123,10 @@ def delete_ingested(request: Request, doc_id: str) -> None:
     service.delete(doc_id)
 
 
-@ingest_router.delete("/ingest/file/{filename}", tags=["Ingestion"])
+@ingest_router.post("/ingest/file/delete", tags=["Ingestion"])
 def delete_file(
         request: Request,
-        filename: str,
+        delete_input: DeleteFilename,
         current_user: models.User = Security(
             deps.get_current_user,
         )) -> dict:
@@ -133,6 +135,9 @@ def delete_file(
     The `filename` can be obtained from the `GET /ingest/list` endpoint.
     The document will be effectively deleted from your storage context.
     """
+    filename = delete_input.filename
+    print(filename)
+    
     service = request.state.injector.get(IngestService)
     try:
         doc_ids = service.get_doc_ids_by_filename(filename)

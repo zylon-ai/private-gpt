@@ -20,7 +20,7 @@ class Source(BaseModel):
 
             file_name = doc_metadata.get("file_name", "-") if doc_metadata else "-"
             page_label = doc_metadata.get("page_label", "-") if doc_metadata else "-"
-            page_link = str(Path(f"{UPLOAD_DIR}/{file_name}#page={page_label}"))
+            page_link = str(f"http://10.1.101.125:88/static/{file_name}#page={page_label}")
 
             source = Source(file=file_name, page=page_label, text=chunk.text, page_link=page_link)
             curated_sources.add(source)

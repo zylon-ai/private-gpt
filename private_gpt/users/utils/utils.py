@@ -22,8 +22,11 @@ def send_registration_email(fullname: str, email: str, random_password: str) -> 
     msg["From"] = settings.SMTP_SENDER_EMAIL
     msg["To"] = email
 
+    print(settings.SMTP_SERVER)
+    print(settings.SMTP_PORT)
+
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
-        server.starttls()
-        server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+        # server.starttls()
+        # server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
         server.sendmail(settings.SMTP_SENDER_EMAIL, email, msg.as_string())
 
