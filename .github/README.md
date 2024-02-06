@@ -29,7 +29,7 @@ There are two ways to run PrivateGPT. We strongly recommend the first option:
    - GOTCHA: if you have an M1/M2 machine and run into `llama.cpp`-related errors after running `poetry run python scripts/setup`, go to the "OSX GPU support" section on the same page and follow the instructions listed there, THEN,
      - re-run: `poetry install --with local` and lastly: `poetry run python -m private_gpt`
 
-## Branching Strategy, Commiting Changes, Merging and Maintenance
+## Branching Strategy, Committing Changes, Merging and Maintenance
 
 It's important to reiterate that we are using a forked version of PrivateGPT which we added as a `submodule` to our ImmigrationCommons repo. While this configuration allows us to have a cleaner separation of the ImmigrationCommons and `ec-private-gpt` repositories and easily retrieve submodule-level updates, it does come with some drawbacks.
 
@@ -53,15 +53,16 @@ Let's assume you want to build a new feature and make it available in Immigratio
 - `git add .`
 - `git commit -m "Implement cool feature in ec-private-gpt submodule."`
 - `git push origin IV-001-my-cool-feature`
-- create and submit Pull Request to merge the feature branch into the `ec-staging` branch of our forked `ec-private-gpt` repo.
+- create and submit Pull Request to merge the feature branch into the `ec-dev` branch of our forked `ec-private-gpt` repo.
+  - GOTCHA: please make sure to select our forked repo's `ec-dev` branch as the base branch (unfortunately, Github will automatically select the original PrivateGPT's `main` brach as the base).
 - once the PR has been approved, `cd` one level up to the root of ImmigrationCommons.
 - create a new branch to ensure we can utilize the latest feature code in our `ec-private-gpt` submodule: `git checkout -b feature-update-submodule`, then:
 - `git submodule update --recursive --remote` - updates submodule to the latest commits
-- `git merge --no-ff ec-staging` - merge the submodule changes in `ec-staging`
+- `git merge --no-ff ec-dev` - merge the submodule changes in `ec-dev`
 - `git push origin feature-update-submodule`
 - then, submit a PR on ImmigrationCommons as usual
 
-Please note, that once changes have been approved on `staging`, the same exact steps will be required to merge the latest updates in `staging` into `production`.
+Please note, that once changes have been approved on `staging`, the same exact steps will be required to merge the latest updates into `production`.
 
 ### Maintenance
 
@@ -72,7 +73,7 @@ Please follow these (suggested) steps when pulling the latest changes from the o
 - Go to our [forked repo's page](https://github.com/emersoncollective/ec-private-gpt)
 - Click on the `Sync fork` button (this should bring the forked repo's `main` branch up-to-date)
 - On VS Code and on the terminal, run: `git submodule update --recursive --remote`
-- Branch out from `ec-staging` - ex: `git checkout -b feature-sync-ec-fork`
+- Branch out from `ec-dev` - ex: `git checkout -b feature-sync-ec-fork`
 - Resolve merge conflicts and fix code-breaking changes.
 - Push branch `git push origin feature-sync-ec-fork`
 - Submit a Pull Request as usual. Refer to the [Building, Committing, and Merging New Features](Building) section for more detailed instructions on `submodule` PRs.
