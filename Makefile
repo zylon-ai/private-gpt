@@ -56,3 +56,20 @@ wipe:
 
 setup:
 	poetry run python scripts/setup
+
+list:
+	@echo "Available commands:"
+	@echo "  test            : Run tests using pytest"
+	@echo "  test-coverage   : Run tests with coverage report"
+	@echo "  black           : Check code format with black"
+	@echo "  ruff            : Check code with ruff"
+	@echo "  format          : Format code with black and ruff"
+	@echo "  mypy            : Run mypy for type checking"
+	@echo "  check           : Run format and mypy commands"
+	@echo "  run             : Run the application"
+	@echo "  dev-windows     : Run the application in development mode on Windows"
+	@echo "  dev             : Run the application in development mode"
+	@echo "  api-docs        : Generate API documentation"
+	@echo "  ingest          : Ingest data using specified script"
+	@echo "  wipe            : Wipe data using specified script"
+	@echo "  setup           : Setup the application"
