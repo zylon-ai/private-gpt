@@ -54,3 +54,10 @@ class UserInDB(UserSchema):
 
 class Profile(UserBaseSchema):
 	role: str
+
+class DeleteUser(BaseModel):
+	id: int
+
+class AdminUpdate(BaseModel):
+	fullname: str
+	role: int

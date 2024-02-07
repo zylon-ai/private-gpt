@@ -31,10 +31,10 @@ def read_users(
     return users
 
 
-@router.get("/company/{company_name}", response_model=List[schemas.User])
+@router.get("/company/{company_id}", response_model=List[schemas.User])
 def read_users_by_company(
-    company_name: Optional[str] = Path(..., title="Company Name",
-                                       description="Only for company admin"),
+    company_id: int = Path(..., title="Company ID",
+                           description="Only for company admin"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
@@ -42,12 +42,12 @@ def read_users_by_company(
     ),
 ):
     """Retrieve all users of that company only"""
-    company = crud.company.get_by_company_name(db, company_name=company_name)
+    company = crud.company.get(db, company_id)
 
     if company is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Company with name '{company_name}' not found",
+            detail=f"Company with ID '{company_id}' not found",
         )
 
     users = crud.user.get_multi_by_company_id(db, company_id=company.id)
@@ -262,11 +262,11 @@ def admin_change_password(
     )
 
 
-@router.delete("/{user_id}")
+@router.post("/delete")
 def delete_user(
     *,
     db: Session = Depends(deps.get_db),
-    user_id: int,
+    delete_user: schemas.DeleteUser,
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
@@ -275,6 +275,7 @@ def delete_user(
     """
     Delete a user by ID.
     """
+    user_id = delete_user.id
     user = crud.user.get(db, id=user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -283,3 +284,4 @@ def delete_user(
         status_code=status.HTTP_200_OK,
         content={"message": "User deleted successfully"},
     )
+

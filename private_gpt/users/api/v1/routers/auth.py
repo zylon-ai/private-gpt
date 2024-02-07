@@ -28,7 +28,12 @@ def register_user(
     """
     print(f"{email} {fullname} {password} {company.id}")
     user_in = schemas.UserCreate(email=email, password=password, fullname=fullname, company_id=company.id)
-    send_registration_email(fullname, email, password)
+    try:
+        send_registration_email(fullname, email, password)
+    except Exception as e:
+        print(f"Failed to send registration email: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to send registration email.")
     return crud.user.create(db, obj_in=user_in)
 
 
@@ -159,7 +164,7 @@ def register(
     if existing_user:
         raise HTTPException(
             status_code=409,
-            detail="The user with this email already exists in the system",
+            detail="The user with this email already exists!",
         )
     random_password = security.generate_random_password()
 
@@ -174,7 +179,7 @@ def register(
         if current_user.user_role.role.name not in {Role.SUPER_ADMIN["name"], Role.ADMIN["name"]}:
             raise HTTPException(
                 status_code=403,
-                detail="You do not have permission to register users for a specific company.",
+                detail="You do not have permission to register users!",
             )
         user = register_user(db, email, fullname, random_password, company)
         user_role_name = role_name or Role.GUEST["name"]

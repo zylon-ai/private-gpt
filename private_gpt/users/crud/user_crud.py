@@ -3,9 +3,11 @@ from typing import Any, Dict, List, Optional, Union
 from private_gpt.users.core.security import get_password_hash, verify_password
 from private_gpt.users.crud.base import CRUDBase
 from private_gpt.users.models.user import User
-from private_gpt.users.schemas.user import UserCreate, UserUpdate
+from private_gpt.users.schemas.user import UserCreate, UserUpdate, AdminUpdate
+from private_gpt.users.models.user_role import UserRole
+from private_gpt.users.models.role import Role
 from sqlalchemy.orm import Session
-
+from sqlalchemy.orm import joinedload
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     def get_by_email(self, db: Session, *, email: str) -> Optional[User]:
@@ -27,7 +29,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         db: Session,
         *,
         db_obj: User,
-        obj_in: Union[UserUpdate, Dict[str, Any]],
+        obj_in: Union[AdminUpdate, Dict[str, Any]],
     ) -> User:
         if isinstance(obj_in, dict):
             update_data = obj_in
@@ -38,7 +40,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             del update_data["password"]
             update_data["hashed_password"] = hashed_password
         return super().update(db, db_obj=db_obj, obj_in=update_data)
-
+    
     def get_multi(
         self, db: Session, *, skip: int = 0, limit: int = 100,
     ) -> List[User]:
@@ -73,15 +75,19 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             .all()
         )
 
+
     def get_multi_by_company_id(
         self, db: Session, *, company_id: str, skip: int = 0, limit: int = 100
     ) -> List[User]:
         return (
             db.query(self.model)
-            .filter(User.company_id == company_id)
+            .join(User.user_role)
+            .filter(UserRole.company_id == company_id)
+            .options(joinedload(User.user_role).joinedload(UserRole.role))
             .offset(skip)
             .limit(limit)
             .all()
         )
+    
 
 user = CRUDUser(User)

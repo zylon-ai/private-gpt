@@ -9,12 +9,24 @@ def send_registration_email(fullname: str, email: str, random_password: str) -> 
     Send a registration email with a random password.
     """
     subject = "Welcome to QuickGPT - Registration Successful"
-    body = f"Hello {fullname},\n\nThank you for registering with QuickGPT!\n\n"\
-       f"Your temporary password is: {random_password}\n"\
-       f"Please login to the QuickGPT: http://quickgpt.gibl.com.np\n"\
-       f"Please use this password to log in and consider changing it"\
-       " to a more secure one after logging in.\n\n"\
-       "Best regards,\nQuickGPT Team"
+    body = f"""
+        <html>
+        <body>
+            <p>Hello {fullname},</p>
+            
+            <p>Thank you for registering with QuickGPT!</p>
+            
+            <p>Your temporary password is: <strong>{random_password}</strong></p>
+            
+            <p>Please log in to QuickGPT <a href="http://quickgpt.gibl.com.np">here</a>.</p>
+            
+            <p>Please use this password to log in and consider changing it to a more secure one after logging in.</p>
+            
+            <p>Best regards,<br>
+            QuickGPT Team</p>
+        </body>
+        </html>
+    """
 
     msg = MIMEMultipart()
     msg.attach(MIMEText(body, "plain"))
@@ -26,7 +38,7 @@ def send_registration_email(fullname: str, email: str, random_password: str) -> 
     print(settings.SMTP_PORT)
 
     with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
-        # server.starttls()
-        # server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+        server.starttls()
+        server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
         server.sendmail(settings.SMTP_SENDER_EMAIL, email, msg.as_string())
 
