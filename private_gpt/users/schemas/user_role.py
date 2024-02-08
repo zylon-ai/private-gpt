@@ -19,6 +19,7 @@ class UserRoleCreate(UserRoleBase):
 
 # Properties to receive via API on update
 class UserRoleUpdate(BaseModel):
+    user_id: int
     role_id: int
 
     class Config:

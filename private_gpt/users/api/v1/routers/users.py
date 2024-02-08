@@ -285,3 +285,61 @@ def delete_user(
         content={"message": "User deleted successfully"},
     )
 
+
+
+@router.post("/update_user")
+def admin_update_user(
+    *,
+    db: Session = Depends(deps.get_db),
+    user_update: schemas.UserAdminUpdate,
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+    ),
+) -> Any:
+    """
+    Update the user by the Admin/Super_ADMIN 
+    """
+    existing_user = crud.user.get(db, id=user_update.id)
+
+    if existing_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User not found with id: {user_update.id}",
+        )
+    if existing_user.fullname == user_update.fullname:
+        pass
+    else:
+        fullname = crud.user.get_by_name(db, name=user_update.fullname)
+        if fullname:
+            raise HTTPException(
+                status_code=409,
+                detail="The user with this username already exists!",
+            )
+    
+    role = crud.role.get_by_name(db,name=user_update.role)
+    if role.id == 1:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cannot create SUPER ADMIN!",
+        )
+
+    user_role = crud.user_role.get_by_user_id(db, user_id=existing_user.id)
+    role_in = schemas.UserRoleUpdate(
+        user_id = existing_user.id,
+        role_id = role.id,
+    )
+    role = crud.user_role.update(db, db_obj=user_role, obj_in=role_in)
+    
+    user_in = schemas.UserUpdate(fullname=user_update.fullname,
+                                 email=existing_user.email, company_id=existing_user.user_role.company_id)
+    print("User in: ", user_in)
+    user = crud.user.update(db, db_obj=existing_user, obj_in=user_in)
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"message": "User updated successfully",
+                }
+    )
+
+
