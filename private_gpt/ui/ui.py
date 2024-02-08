@@ -1,6 +1,7 @@
 """This file should be imported only and only if you want to run the UI locally."""
 import itertools
 import logging
+import time
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -87,6 +88,7 @@ class PrivateGptUi:
                 elif isinstance(delta, ChatResponse):
                     full_response += delta.delta or ""
                 yield full_response
+                time.sleep(0.02)
 
             if completion_gen.sources:
                 full_response += SOURCES_SEPARATOR
