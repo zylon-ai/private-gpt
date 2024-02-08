@@ -58,8 +58,6 @@ class Profile(UserBaseSchema):
 class DeleteUser(BaseModel):
 	id: int
 
-
-class UserAdminUpdate(BaseModel):
-	id: int
+class AdminUpdate(BaseModel):
 	fullname: str
-	role: str
+	role: int

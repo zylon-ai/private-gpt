@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Union
 from private_gpt.users.core.security import get_password_hash, verify_password
 from private_gpt.users.crud.base import CRUDBase
 from private_gpt.users.models.user import User
-from private_gpt.users.schemas.user import UserCreate, UserUpdate
+from private_gpt.users.schemas.user import UserCreate, UserUpdate, AdminUpdate
 from private_gpt.users.models.user_role import UserRole
 from private_gpt.users.models.role import Role
 from sqlalchemy.orm import Session
@@ -89,8 +89,5 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             .all()
         )
     
-    def get_by_name(self, db: Session, *, name: str) -> Optional[User]:
-        return db.query(self.model).filter(User.fullname == name).first()
-    
-    
+
 user = CRUDUser(User)
