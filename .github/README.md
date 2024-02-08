@@ -1,16 +1,16 @@
-# EC's Forked (Submodule) Version of 🔒 PrivateGPT 📑
+# EC's Fork of 🔒 PrivateGPT 📑
 
-This [forked version](https://github.com/emersoncollective/ec-private-gpt) of [PrivateGPT](https://github.com/imartinez/privateGPT) has been added as a Git submodule of Immigration Commons.
+This repo is a fork of [PrivateGPT](https://github.com/imartinez/privateGPT) whose APIs are utilized by the Immigration Commons Chatbot to provide real-time querying of documents.
 
 This README holds important notes, instructions, and general information about our custom implementation of PrivateGPT. [Click here to read the original PrivateGPT README](../README.md). As per PrivateGPT's maintainers, the most up-to-date documentation is found on the official [PrivateGPT website](https://docs.privategpt.dev/)
 
 ## Why PrivateGPT and what parts of the open source project do we use?
 
-PrivateGPT is an open source AI-chatbot project that allows users to upload and ask questions about their documents. It is a production-ready and modular project that lends itself to custom implementations of the high- and low-level APIs, services, and components layers. It also has a frontend component but we make _no_ use of it since it's built on Gradio UI and, unfortunately, does not meet ImmigrationCommons' UI needs and requirements.
+PrivateGPT is an open source AI-chatbot project that allows users to upload and ask questions about their documents. It is a production-ready and modular project that lends itself to custom implementations of the high- and low-level APIs, services, and component layers. It also has a frontend component but we make _no_ use of it since it's built on Gradio UI and, unfortunately, does not meet ImmigrationCommons' UI needs and requirements.
 
 As of February 1, 2024 we decided to use PrivateGPT's:
 
-- High-level APIs - they abstract all the complexity of a RAG (Retrieval Augmented Generation) pipeline implementation to _and thus_ will help us speed up the development of the `Chatbot` UI in ImmigrationCommons.
+- High-level APIs - they abstract all the complexity of a RAG (Retrieval Augmented Generation) pipeline implementation _and thus_ should help us more quickly build the first iteration of the `Chatbot` UI in ImmigrationCommons.
 - `local` settings - these are the default settings which make it easy to experiment and test locally. It provides Qdrant as the default vector store and Mistral-7B as the LLM.
 
 ## Installation and Setup Instructions
@@ -31,38 +31,12 @@ There are two ways to run PrivateGPT. We strongly recommend the first option:
 
 ## Branching Strategy, Committing Changes, Merging and Maintenance
 
-It's important to reiterate that we are using a forked version of PrivateGPT which we added as a `submodule` to our ImmigrationCommons repo. While this configuration allows us to have a cleaner separation of the ImmigrationCommons and `ec-private-gpt` repositories and easily retrieve submodule-level updates, it does come with some drawbacks.
+It's important to reiterate that we are using a fork of PrivateGPT and as a result we have separate branches for the `staging` and `production` environments. Below are a list of the most important branches and how they should be utilized:
 
-### Branching Strategy:
-
-To make sure we are able to utilize and have an easier time merging the latest updates from the original PrivateGPT repository, the following branch rules should be followed:
-
-- `main` - **_NEVER_** merge any custom code into our forked PrivateGPT `main` branch - we will use it to pull the latest changes from the original [PrivateGPT project](https://github.com/imartinez/privateGPT).
-- `ec-main` - Think of this as our `main` branch
-- `ec-dev` - Our dev branch. We should treat it the same way we treat the `dev` branch on ImmigrationCommons - that is, as the `staging` environment's base branch.
-- `IV-##-my-feature` - Suggested name structure of feature branches. Remember, when you create a feature branch inside the `ec-private-gpt` submodule, the branch is a branch of our forked `ec-private-gpt` repo **and not** the Immigration Commons repo.
-
-### Building, Committing, and Merging New Features
-
-Let's assume you want to build a new feature and make it available in ImmigrationCommons; you'd want to follow these instructions:
-
-- `git submodule update --recursive --remote` - just like running `git pull`
-- `cd ec-private-gpt`
-- `git checkout -b IV-001-my-cool-feature`
-- Make your changes
-- `git add .`
-- `git commit -m "Implement cool feature in ec-private-gpt submodule."`
-- `git push origin IV-001-my-cool-feature`
-- create and submit Pull Request to merge the feature branch into the `ec-dev` branch of our forked `ec-private-gpt` repo.
-  - GOTCHA: please make sure to select our forked repo's `ec-dev` branch as the base branch (unfortunately, Github will automatically select the original PrivateGPT's `main` brach as the base).
-- once the PR has been approved, `cd` one level up to the root of ImmigrationCommons.
-- create a new branch to ensure we can utilize the latest feature code in our `ec-private-gpt` submodule: `git checkout -b feature-update-submodule`, then:
-- `git submodule update --recursive --remote` - updates submodule to the latest commits
-- `git merge --no-ff ec-dev` - merge the submodule changes in `ec-dev`
-- `git push origin feature-update-submodule`
-- then, submit a PR on ImmigrationCommons as usual
-
-Please note, that once changes have been approved on `staging`, the same exact steps will be required to merge the latest updates into `production`.
+- `main` - **_NEVER_** merge any custom code into our fork's `main` branch - we will use it to pull the latest changes from the original [PrivateGPT project](https://github.com/imartinez/privateGPT) and eventually merge them into `ec-main`.
+- `ec-main` - This is our `production` (aka `main`) branch.
+- `ec-dev` - This is our `staging` environment's branch. We chose this name in order to maintain some naming parity with Immigration Commons's `dev` branch which is used by the `staging` environment.
+- `IV-##-my-feature` - Recommended naming structure of feature branches - the prefix `IV-##` corresponds to the JIRA ticket's label and it's necessary for tracking its progress in JIRA.
 
 ### Maintenance
 
@@ -71,9 +45,9 @@ We should aim to pull and make use of the latest changes from the original [Priv
 Please follow these (suggested) steps when pulling the latest changes from the original PrivateGPT:
 
 - Go to our [forked repo's page](https://github.com/emersoncollective/ec-private-gpt)
-- Click on the `Sync fork` button (this should bring the forked repo's `main` branch up-to-date)
-- On VS Code and on the terminal, run: `git submodule update --recursive --remote`
+- Click on the `Sync fork` button (this should bring our fork's `main` branch up-to-date)
 - Branch out from `ec-dev` - ex: `git checkout -b feature-sync-ec-fork`
+- Merge `main` into the `feature-sync-ec-fork` branch
 - Resolve merge conflicts and fix code-breaking changes.
 - Push branch `git push origin feature-sync-ec-fork`
-- Submit a Pull Request as usual. Refer to the [Building, Committing, and Merging New Features](Building) section for more detailed instructions on `submodule` PRs.
+- Submit a Pull Request as usual to bring the `ec-main` and `ec-dev` branches up-to-date.
