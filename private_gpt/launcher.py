@@ -14,7 +14,7 @@ from private_gpt.server.ingest.ingest_router import ingest_router
 from private_gpt.users.api.v1.api import api_router
 
 from private_gpt.settings.settings import Settings
-from private_gpt.home import chat_router
+from private_gpt.home import home_router
 logger = logging.getLogger(__name__)
 
 
@@ -33,7 +33,7 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(health_router)
     
     app.include_router(api_router)
-    app.include_router(chat_router)
+    app.include_router(home_router)
     settings = root_injector.get(Settings)
     if settings.server.cors.enabled:
         logger.debug("Setting up CORS middleware")

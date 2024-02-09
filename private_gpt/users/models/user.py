@@ -36,7 +36,7 @@ class User(Base):
 
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  
     company = relationship("Company", back_populates="users") 
-
+    uploaded_documents = relationship("Documents", back_populates="uploaded_by_user")
     user_role = relationship(
         "UserRole", back_populates="user", uselist=False, cascade="all, delete-orphan")
 

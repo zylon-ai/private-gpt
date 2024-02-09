@@ -88,7 +88,7 @@ def login_access_token(
     user_in = schemas.UserUpdate(
         email=user.email,
         fullname=user.fullname,
-        company_id=user.company_id,
+        company_id=user.user_role.company_id,
         last_login=datetime.now()
     )
     user = crud.user.update(db, db_obj=user, obj_in=user_in)
@@ -176,21 +176,11 @@ def register(
                 status_code=404,
                 detail="Company not found.",
             )
-        if current_user.user_role.role.name not in {Role.SUPER_ADMIN["name"], Role.ADMIN["name"]}:
-            raise HTTPException(
-                status_code=403,
-                detail="You do not have permission to register users!",
-            )
         user = register_user(db, email, fullname, random_password, company)
         user_role_name = role_name or Role.GUEST["name"]
         user_role = create_user_role(db, user, user_role_name, company)
 
     else:
-        if current_user.user_role.role.name != Role.SUPER_ADMIN["name"]:
-            raise HTTPException(
-                status_code=403,
-                detail="You do not have permission to register users without a company.",
-            )
         user = register_user(db, email, fullname, random_password, None)
         user_role_name = role_name or Role.ADMIN["name"]
         user_role = create_user_role(db, user, user_role_name, None)

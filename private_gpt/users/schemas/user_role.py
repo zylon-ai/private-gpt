@@ -4,6 +4,8 @@ from private_gpt.users.schemas.role import Role
 from pydantic import BaseModel
 
 # Shared properties
+
+
 class UserRoleBase(BaseModel):
     user_id: Optional[int]
     role_id: Optional[int]
@@ -18,12 +20,16 @@ class UserRoleCreate(UserRoleBase):
     pass
 
 # Properties to receive via API on update
+
+
 class UserRoleUpdate(BaseModel):
+    user_id: int
     role_id: int
 
     class Config:
         arbitrary_types_allowed = True
-          
+
+
 class UserRoleInDBBase(UserRoleBase):
     role: Role
 

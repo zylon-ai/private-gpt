@@ -39,7 +39,7 @@ SOURCES_SEPARATOR = "\n Sources: \n"
 MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
 DEFAULT_MODE = MODES[0]
 
-chat_router = APIRouter(prefix="/v1", tags=["Chat"])
+home_router = APIRouter(prefix="/v1", tags=["Chat"])
 
 class ListFilesResponse(BaseModel):
     uploaded_files: List[str]
@@ -165,7 +165,7 @@ def get_home_instance(request: Request) -> Home:
     return home_instance
 
 
-@chat_router.post("/chat")
+@home_router.post("/chat")
 async def chat_endpoint(
     home_instance: Home = Depends(get_home_instance), 
     message: str = Body(...), mode: str = Body(DEFAULT_MODE),
@@ -180,7 +180,7 @@ async def chat_endpoint(
     )
 
 
-@chat_router.get("/list_files")
+@home_router.get("/list_files")
 async def list_files(
     home_instance: Home = Depends(get_home_instance),  
     current_user: models.User = Security(

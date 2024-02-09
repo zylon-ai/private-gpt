@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, EmailStr
 from private_gpt.users.schemas.user_role import UserRole
 from private_gpt.users.schemas.company import Company
 
+
 class UserBaseSchema(BaseModel):
 	email: EmailStr
 	fullname: str
@@ -14,11 +15,14 @@ class UserBaseSchema(BaseModel):
 	class Config:
 		arbitrary_types_allowed = True
 
+
 class UserCreate(UserBaseSchema):
 	password: str = Field(alias="password")
 
+
 class UsernameUpdate(BaseModel):
 	fullname: str
+
 
 class UserUpdate(UserBaseSchema):
 	last_login: Optional[datetime] = None
@@ -26,8 +30,8 @@ class UserUpdate(UserBaseSchema):
 
 class UserLoginSchema(BaseModel):
 	email: EmailStr = Field(alias="email")
-	password: str 
-	
+	password: str
+
 	class Config:
 		arbitrary_types_allowed = True
 
@@ -44,10 +48,14 @@ class UserSchema(UserBaseSchema):
 		orm_mode = True
 
 # Additional properties to return via API
+
+
 class User(UserSchema):
     pass
 
 # Additional properties stored in DB
+
+
 class UserInDB(UserSchema):
     hashed_password: str
 
@@ -55,9 +63,12 @@ class UserInDB(UserSchema):
 class Profile(UserBaseSchema):
 	role: str
 
+
 class DeleteUser(BaseModel):
 	id: int
 
-class AdminUpdate(BaseModel):
+
+class UserAdminUpdate(BaseModel):
+	id: int
 	fullname: str
-	role: int
+	role: str

@@ -1,7 +1,8 @@
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 
+from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status, Security, Body
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -135,9 +136,7 @@ def delete_file(
     The `filename` can be obtained from the `GET /ingest/list` endpoint.
     The document will be effectively deleted from your storage context.
     """
-    filename = delete_input.filename
-    print(filename)
-    
+    filename = delete_input.filename    
     service = request.state.injector.get(IngestService)
     try:
         doc_ids = service.get_doc_ids_by_filename(filename)
@@ -159,6 +158,7 @@ def delete_file(
 @ingest_router.post("/ingest/file", response_model=IngestResponse, tags=["Ingestion"])
 def ingest_file(
         request: Request,
+        db: Session = Depends(deps.get_db),
         file: UploadFile = File(...),
         current_user: models.User = Security(
             deps.get_current_user,
@@ -167,10 +167,27 @@ def ingest_file(
     service = request.state.injector.get(IngestService)
 
     try:
+        file_ingested = crud.documents.get_by_filename(db, file_name=file.filename)
+        if file_ingested:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="File already exists. Choose a different file.",
+            )
+        
         if file.filename is None:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="No file name provided")
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No file name provided",
+            )
 
+        try:
+            docs_in = schemas.DocumentCreate(filename=file.filename, uploaded_by=current_user.id)
+            crud.documents.create(db=db, obj_in=docs_in)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Unable to upload file.",
+            )
         upload_path = Path(f"{UPLOAD_DIR}/{file.filename}")
 
         with open(upload_path, "wb") as f:
@@ -178,6 +195,7 @@ def ingest_file(
 
         with open(upload_path, "rb") as f:
             ingested_documents = service.ingest_bin_data(file.filename, f)
+        logger.info(f"{file.filename} is uploaded by the {current_user.fullname}.")
 
         return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
     except Exception as e:
