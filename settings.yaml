@@ -5,7 +5,7 @@ server:
   env_name: ${APP_ENV:prod}
   port: ${PORT:8001}
   cors:
-    enabled: false
+    enabled: true
     allow_origins: ["*"]
     allow_methods: ["*"]
     allow_headers: ["*"]
