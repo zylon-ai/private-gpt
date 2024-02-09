@@ -81,7 +81,7 @@ class DataSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: Literal["local", "openai", "openailike", "sagemaker", "mock"]
+    mode: Literal["local", "openai", "openailike", "sagemaker", "mock", "ollama"]
     max_new_tokens: int = Field(
         256,
         description="The maximum number of token that the LLM is authorized to generate in one completion.",
@@ -168,6 +168,17 @@ class OpenAISettings(BaseModel):
     )
 
 
+class OllamaSettings(BaseModel):
+    api_base: str = Field(
+        "http://localhost:11434",
+        description="Base URL of Ollama API. Example: 'https://localhost:11434'.",
+    )
+    model: str = Field(
+        None,
+        description="Model to use. Example: 'llama2-uncensored'.",
+    )
+
+
 class UISettings(BaseModel):
     enabled: bool
     path: str
@@ -243,6 +254,7 @@ class Settings(BaseModel):
     local: LocalSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
+    ollama: OllamaSettings
     vectorstore: VectorstoreSettings
     qdrant: QdrantSettings | None = None
 
