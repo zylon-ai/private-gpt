@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from private_gpt.home import Home
 from private_gpt.users import crud, models, schemas
 from private_gpt.users.api import deps
+from private_gpt.users.constants.role import Role
 
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.server.ingest.model import IngestedDoc
@@ -128,8 +129,11 @@ def delete_ingested(request: Request, doc_id: str) -> None:
 def delete_file(
         request: Request,
         delete_input: DeleteFilename,
+        db: Session = Depends(deps.get_db),
         current_user: models.User = Security(
             deps.get_current_user,
+            scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+
         )) -> dict:
     """Delete the specified filename.
 
@@ -146,7 +150,8 @@ def delete_file(
 
         for doc_id in doc_ids:
             service.delete(doc_id)
-
+        document = crud.documents.get_by_filename(db,file_name=filename)
+        crud.documents.remove(db=db, id=document.id)
         return {"status": "SUCCESS", "message": f"{filename}' successfully deleted."}
     except Exception as e:
         logger.error(
@@ -162,6 +167,7 @@ def ingest_file(
         file: UploadFile = File(...),
         current_user: models.User = Security(
             deps.get_current_user,
+            scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
         )) -> IngestResponse:
     """Ingests and processes a file, storing its chunks to be used as context."""
     service = request.state.injector.get(IngestService)
@@ -198,8 +204,12 @@ def ingest_file(
         logger.info(f"{file.filename} is uploaded by the {current_user.fullname}.")
 
         return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
+    except HTTPException:
+        raise
+
     except Exception as e:
         logger.error(f"There was an error uploading the file(s): {str(e)}")
+        print("ERROR: ", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error: Unable to ingest file.",
