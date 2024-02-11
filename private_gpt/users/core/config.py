@@ -8,7 +8,7 @@ SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://{username}:{password}@{host}:{p
     port='5432',
     db_name='QuickGpt',
     username='postgres',
-    password="quick",
+    password="admin",
 )
 
 class Settings(BaseSettings):
@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str
     SMTP_PASSWORD: str
 
+    LDAP_SERVER: str
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         return f"postgresql+psycopg2://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"

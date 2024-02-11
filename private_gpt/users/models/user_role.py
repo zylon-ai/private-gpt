@@ -20,7 +20,7 @@ class UserRole(Base):
         Integer,
         ForeignKey("companies.id"),
         primary_key=True,
-        nullable=True,
+        nullable=False,
     )
     role = relationship("Role")
     user = relationship("User", back_populates="user_role", uselist=False)

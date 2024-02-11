@@ -11,8 +11,9 @@ from private_gpt.users.core import security
 from private_gpt.users.constants.role import Role
 from private_gpt.users.core.config import settings
 from private_gpt.users import crud, models, schemas
-from private_gpt.users.utils import send_registration_email
+from private_gpt.users.utils import send_registration_email, Ldap
 
+LDAP_SERVER = settings.LDAP_SERVER
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -79,6 +80,13 @@ def login_access_token(
         raise HTTPException(
             status_code=400, detail="Incorrect email or password"
         )
+    
+    ldap = Ldap(LDAP_SERVER, form_data.username, form_data.password)
+    print("LDAP LOGIN:: ", ldap.who_am_i())
+    if not ldap:
+        raise HTTPException(
+            status_code=400, detail="Incorrect email or password"
+        )
     access_token_expires = timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
@@ -97,7 +105,7 @@ def login_access_token(
         if user.user_role.company_id:
             company_id = user.user_role.company_id
         else: company_id = None
-
+    
     token_payload = {
         "id": str(user.id),
         "email": str(user.email),
