@@ -151,7 +151,8 @@ def delete_file(
         for doc_id in doc_ids:
             service.delete(doc_id)
         document = crud.documents.get_by_filename(db,file_name=filename)
-        crud.documents.remove(db=db, id=document.id)
+        if document:
+            crud.documents.remove(db=db, id=document.id)
         return {"status": "SUCCESS", "message": f"{filename}' successfully deleted."}
     except Exception as e:
         logger.error(
