@@ -2,7 +2,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from private_gpt.users.core.config import settings
-
+from fastapi import HTTPException
 
 def send_registration_email(fullname: str, email: str, random_password: str) -> None:
     """
@@ -29,16 +29,21 @@ def send_registration_email(fullname: str, email: str, random_password: str) -> 
     """
 
     msg = MIMEMultipart()
-    msg.attach(MIMEText(body, "plain"))
+    msg.attach(MIMEText(body, "html"))
     msg["Subject"] = subject
     msg["From"] = settings.SMTP_SENDER_EMAIL
     msg["To"] = email
 
     print(settings.SMTP_SERVER)
     print(settings.SMTP_PORT)
-
-    with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
-        server.starttls()
-        server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-        server.sendmail(settings.SMTP_SENDER_EMAIL, email, msg.as_string())
-
+    
+    try:
+        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+            server.starttls()
+            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+            server.sendmail(settings.SMTP_SENDER_EMAIL, email, msg.as_string())
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unable to send email."
+        )

@@ -19,7 +19,7 @@ chromadb = {version = "^0.4.13", optional = true}
 inflect = "^7.0.0"
 alembic = "^1.13.1"
 sqlalchemy = "^2.0.25"
-bcrypt = "^4.1.2"
+bcrypt = "4.0.1"
 python-jose = "^3.3.0"
 psycopg2-binary = "^2.9.9"
 passlib = "^1.7.4"

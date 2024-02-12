@@ -1,3 +1,4 @@
+import os
 import logging
 from pathlib import Path
 from typing import Literal, Optional
@@ -150,6 +151,11 @@ def delete_file(
 
         for doc_id in doc_ids:
             service.delete(doc_id)
+        try:
+            upload_path = Path(f"{UPLOAD_DIR}/{filename}")
+            os.remove(upload_path)
+        except:
+            print("Unable to delete file from the static directory")
         document = crud.documents.get_by_filename(db,file_name=filename)
         if document:
             crud.documents.remove(db=db, id=document.id)
