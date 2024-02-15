@@ -24,7 +24,10 @@ python-jose = "^3.3.0"
 psycopg2-binary = "^2.9.9"
 passlib = "^1.7.4"
 docx2txt = "^0.8"
-torch = "2.1.2"
+gradio = "^4.18.0"
+ldap3 = "^2.9.1"
+uvicorn = "^0.27.1"
+python-doctr = {extras = ["torch"], version = "^0.7.0"}
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"

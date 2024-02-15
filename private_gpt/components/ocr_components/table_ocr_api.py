@@ -1,19 +1,19 @@
-from fastapi import FastAPI, File, UploadFile, Response, APIRouter
+from fastapi import FastAPI, File, UploadFile, Response, APIRouter, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from docx import Document
 import os
 import fitz
-
+import requests
 from private_gpt.components.ocr_components.TextExtraction import ImageToTable
 from private_gpt.components.ocr_components.table_ocr import GetOCRText
-
-upload_dir = rf"F:\LLM\privateGPT\private_gpt\uploads"
+from private_gpt.server.ingest.ingest_router import ingest_file
+upload_dir = rf"C:\Users\ASUS\Desktop\QuickGPT\backend\privateGPT\private_gpt\uploads"
 
 pdf_router = APIRouter(prefix="/pdf", tags=["auth"])
 
 @pdf_router.post("/pdf_ocr")
-async def get_pdf_ocr(file: UploadFile = File(...)):
+async def get_pdf_ocr(request: Request, file: UploadFile = File(...)):
     UPLOAD_DIR = upload_dir
     try:
         contents = await file.read()
@@ -49,7 +49,16 @@ async def get_pdf_ocr(file: UploadFile = File(...)):
             doc.add_paragraph(table_data)
             # remove image file
 
-    doc.save(os.path.join(UPLOAD_DIR, "ocr_result.docx"))
-    
+    save_path = os.path.join(UPLOAD_DIR, "ocr_result.docx")
+    doc.save(save_path)
+
+    with open(save_path,'rb') as f:
+        file_content = f.read()
+        starfleet_data = {
+            "filename": f.name,
+            "file_content": file_content,
+            "file_type": "multipart/form-data"
+        }
+    requests.post('http://127.0.0.1:88/pdf/pdf_ocr', json=starfleet_data,headers={"Content-Type":"multipart/form-data"})
     return FileResponse(path=os.path.join(UPLOAD_DIR, "ocr_result.docx"), filename="ocr_result.docx", media_type="application/pdf")
 

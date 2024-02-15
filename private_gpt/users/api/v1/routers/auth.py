@@ -14,7 +14,7 @@ from private_gpt.users import crud, models, schemas
 from private_gpt.users.utils import send_registration_email, Ldap
 
 LDAP_SERVER = settings.LDAP_SERVER
-LDAP_ENABLE = True
+LDAP_ENABLE = False
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -104,17 +104,17 @@ def login_access_token(
     """
     OAuth2 compatible token login, get an access token for future requests
     """
-    if LDAP_ENABLE:
-        existing_user = crud.user.get_by_email(db, email=form_data.username)
+    # if LDAP_ENABLE:
+    #     existing_user = crud.user.get_by_email(db, email=form_data.username)
         
-        if existing_user:
-            if existing_user.user_role.role.name == "SUPER_ADMIN":
-                pass
-            else:
-                ldap = ldap_login(db=db, username=form_data.username, password=form_data.password)
-        else:
-            ldap = ldap_login(db=db, username=form_data.username, password=form_data.password)
-            ad_user_register(db=db, email=form_data.username,fullname=ldap, password=form_data.password)
+    #     if existing_user:
+    #         if existing_user.user_role.role.name == "SUPER_ADMIN":
+    #             pass
+    #         else:
+    #             ldap = ldap_login(db=db, username=form_data.username, password=form_data.password)
+    #     else:
+    #         ldap = ldap_login(db=db, username=form_data.username, password=form_data.password)
+    #         ad_user_register(db=db, email=form_data.username,fullname=ldap, password=form_data.password)
 
     user = crud.user.authenticate(
         db, email=form_data.username, password=form_data.password
@@ -212,7 +212,7 @@ def register(
             detail="The user with this email already exists!",
         )
     random_password = security.generate_random_password()
-
+    # random_password = password
     try:
         if company_id:
             # Registering user with a specific company
