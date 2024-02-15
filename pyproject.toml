@@ -24,6 +24,7 @@ python-jose = "^3.3.0"
 psycopg2-binary = "^2.9.9"
 passlib = "^1.7.4"
 docx2txt = "^0.8"
+torch = "2.1.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"

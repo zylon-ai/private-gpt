@@ -12,6 +12,7 @@ from private_gpt.server.embeddings.embeddings_router import embeddings_router
 from private_gpt.server.health.health_router import health_router
 from private_gpt.server.ingest.ingest_router import ingest_router
 from private_gpt.users.api.v1.api import api_router
+from private_gpt.components.ocr_components.table_ocr_api import pdf_router
 
 from private_gpt.settings.settings import Settings
 from private_gpt.home import home_router
@@ -34,6 +35,7 @@ def create_app(root_injector: Injector) -> FastAPI:
     
     app.include_router(api_router)
     app.include_router(home_router)
+    app.include_router(pdf_router)
     settings = root_injector.get(Settings)
     if settings.server.cors.enabled:
         logger.debug("Setting up CORS middleware")

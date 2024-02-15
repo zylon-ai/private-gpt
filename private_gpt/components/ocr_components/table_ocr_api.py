@@ -1,20 +1,20 @@
-from fastapi import FastAPI, File, UploadFile, Response
+from fastapi import FastAPI, File, UploadFile, Response, APIRouter
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from docx import Document
 import os
 import fitz
 
-from table_ocr import ImageToTable
-from TextExtraction import GetOCRText
+from private_gpt.components.ocr_components.TextExtraction import ImageToTable
+from private_gpt.components.ocr_components.table_ocr import GetOCRText
 
-app = FastAPI()
+upload_dir = rf"F:\LLM\privateGPT\private_gpt\uploads"
 
+pdf_router = APIRouter(prefix="/pdf", tags=["auth"])
 
-
-@app.post("/pdf_ocr")
+@pdf_router.post("/pdf_ocr")
 async def get_pdf_ocr(file: UploadFile = File(...)):
-    UPLOAD_DIR = os.getcwd()
+    UPLOAD_DIR = upload_dir
     try:
         contents = await file.read()
     except Exception:

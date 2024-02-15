@@ -12,7 +12,7 @@ from transformers import TableTransformerForObjectDetection
 
 from typing import Literal
 
-from TextExtraction import GetOCRText
+from private_gpt.components.ocr_components.table_ocr import GetOCRText
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 

@@ -32,3 +32,5 @@ __pycache__/
 *.pdf
 *.doc
 *.docx
+
+*.png
