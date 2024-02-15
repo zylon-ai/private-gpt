@@ -33,6 +33,14 @@ ui:
     If you know the answer but it is not based in the provided context, don't provide
     the answer, just state the answer is not in the context provided.
 
+# Even though we aren't using local settings for production, we still need to define them
+# as they are required by the application when loading the settings.
+# See more in: private_gpt/settings/settings.py
+local:
+  llm_hf_repo_id: ${PGPT_HF_REPO_ID:TheBloke/Mistral-7B-Instruct-v0.1-GGUF}
+  llm_hf_model_file: ${PGPT_HF_MODEL_FILE:mistral-7b-instruct-v0.1.Q4_K_M.gguf}
+  embedding_hf_model_name: ${PGPT_EMBEDDING_HF_MODEL_NAME:BAAI/bge-small-en-v1.5}
+
 embedding:
   # Should be matching the value above in most cases
   mode: local
