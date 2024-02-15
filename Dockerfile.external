@@ -7,6 +7,10 @@ RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
 ENV PATH=".venv/bin/:$PATH"
 
+# Dependencies to build llama-cpp
+RUN apt update && apt install -y \
+    build-essential
+
 # https://python-poetry.org/docs/configuration/#virtualenvsin-project
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 
@@ -35,6 +39,10 @@ COPY --chown=worker *.yaml *.md ./
 COPY --chown=worker scripts/ scripts
 
 ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
+
+# Set the default profile to staging (`settings-staging.yaml`)
+ARG PGPT_PROFILES="staging"
+ENV PGPT_PROFILES=$PGPT_PROFILES
 
 USER worker
 ENTRYPOINT python -m private_gpt
