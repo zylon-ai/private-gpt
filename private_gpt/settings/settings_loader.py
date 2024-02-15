@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 _settings_folder = os.environ.get("PGPT_SETTINGS_FOLDER", PROJECT_ROOT_PATH)
 
 # if running in unittest, use the test profile
-_test_profile = ["test"] if "unittest" in sys.modules else []
+_test_profile = ["test"] if "tests.fixtures" in sys.modules else []
 
 active_profiles: list[str] = unique_list(
     ["default"]

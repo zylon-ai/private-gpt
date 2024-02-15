@@ -54,6 +54,13 @@ class ChatBody(BaseModel):
     response_model=None,
     responses={200: {"model": OpenAICompletion}},
     tags=["Contextual Completions"],
+    openapi_extra={
+        "x-fern-streaming": {
+            "stream-condition": "stream",
+            "response": {"$ref": "#/components/schemas/OpenAICompletion"},
+            "response-stream": {"$ref": "#/components/schemas/OpenAICompletion"},
+        }
+    },
 )
 def chat_completion(
     request: Request, body: ChatBody

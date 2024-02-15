@@ -1,4 +1,6 @@
 .venv
+.env
+venv
 
 settings-me.yaml
 

@@ -81,7 +81,7 @@ class DataSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: Literal["local", "openai", "openailike", "sagemaker", "mock"]
+    mode: Literal["local", "openai", "openailike", "sagemaker", "mock", "ollama"]
     max_new_tokens: int = Field(
         256,
         description="The maximum number of token that the LLM is authorized to generate in one completion.",
@@ -110,13 +110,14 @@ class LocalSettings(BaseModel):
     embedding_hf_model_name: str = Field(
         description="Name of the HuggingFace model to use for embeddings"
     )
-    prompt_style: Literal["default", "llama2", "tag"] = Field(
+    prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] = Field(
         "llama2",
         description=(
             "The prompt style to use for the chat engine. "
             "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
             "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
             "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
+            "If `mistral` - use the `mistral prompt style. It shoudl look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]"
             "`llama2` is the historic behaviour. `default` might work better with your custom models."
         ),
     )
@@ -164,6 +165,17 @@ class OpenAISettings(BaseModel):
     model: str = Field(
         "gpt-3.5-turbo",
         description="OpenAI Model to use. Example: 'gpt-4'.",
+    )
+
+
+class OllamaSettings(BaseModel):
+    api_base: str = Field(
+        "http://localhost:11434",
+        description="Base URL of Ollama API. Example: 'https://localhost:11434'.",
+    )
+    model: str = Field(
+        None,
+        description="Model to use. Example: 'llama2-uncensored'.",
     )
 
 
@@ -242,6 +254,7 @@ class Settings(BaseModel):
     local: LocalSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
+    ollama: OllamaSettings
     vectorstore: VectorstoreSettings
     qdrant: QdrantSettings | None = None
 
