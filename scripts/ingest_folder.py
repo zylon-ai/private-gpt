@@ -18,10 +18,11 @@ class LocalIngestWorker:
         self.total_documents = 0
         self.current_document_count = 0
 
-        self._files_under_root_folder: list[Path] = list()
+        self._files_under_root_folder: list[Path] = []
 
     def _find_all_files_in_folder(self, root_path: Path, ignored: list[str]) -> None:
         """Search all files under the root folder recursively.
+
         Count them at the same time
         """
         for file_path in root_path.iterdir():

@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from private_gpt.constants import PROJECT_ROOT_PATH
 from private_gpt.di import global_injector
+from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chat.chat_service import ChatService, CompletionGen
 from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
 from private_gpt.server.ingest.ingest_service import IngestService
@@ -31,7 +32,7 @@ UI_TAB_TITLE = "My Private GPT"
 
 SOURCES_SEPARATOR = "\n\n Sources: \n"
 
-MODES = ["Query Docs", "Search in Docs", "LLM Chat"]
+MODES = ["Query Files", "Search Files", "LLM Chat (no context from files)"]
 
 
 class Source(BaseModel):
@@ -73,6 +74,8 @@ class PrivateGptUi:
 
         # Cache the UI blocks
         self._ui_block = None
+
+        self._selected_filename = None
 
         # Initialize system prompt based on default mode
         self.mode = MODES[0]
@@ -132,20 +135,34 @@ class PrivateGptUi:
                 ),
             )
         match mode:
-            case "Query Docs":
+            case "Query Files":
+
+                # Use only the selected file for the query
+                context_filter = None
+                if self._selected_filename is not None:
+                    docs_ids = []
+                    for ingested_document in self._ingest_service.list_ingested():
+                        if (
+                            ingested_document.doc_metadata["file_name"]
+                            == self._selected_filename
+                        ):
+                            docs_ids.append(ingested_document.doc_id)
+                    context_filter = ContextFilter(docs_ids=docs_ids)
+
                 query_stream = self._chat_service.stream_chat(
                     messages=all_messages,
                     use_context=True,
+                    context_filter=context_filter,
                 )
                 yield from yield_deltas(query_stream)
-            case "LLM Chat":
+            case "LLM Chat (no context from files)":
                 llm_stream = self._chat_service.stream_chat(
                     messages=all_messages,
                     use_context=False,
                 )
                 yield from yield_deltas(llm_stream)
 
-            case "Search in Docs":
+            case "Search Files":
                 response = self._chunks_service.retrieve_relevant(
                     text=message, limit=4, prev_next_chunks=0
                 )
@@ -166,10 +183,10 @@ class PrivateGptUi:
         p = ""
         match mode:
             # For query chat mode, obtain default system prompt from settings
-            case "Query Docs":
+            case "Query Files":
                 p = settings().ui.default_query_system_prompt
             # For chat mode, obtain default system prompt from settings
-            case "LLM Chat":
+            case "LLM Chat (no context from files)":
                 p = settings().ui.default_chat_system_prompt
             # For any other mode, clear the system prompt
             case _:
@@ -205,7 +222,70 @@ class PrivateGptUi:
     def _upload_file(self, files: list[str]) -> None:
         logger.debug("Loading count=%s files", len(files))
         paths = [Path(file) for file in files]
+
+        # remove all existing Documents with name identical to a new file upload:
+        file_names = [path.name for path in paths]
+        doc_ids_to_delete = []
+        for ingested_document in self._ingest_service.list_ingested():
+            if (
+                ingested_document.doc_metadata
+                and ingested_document.doc_metadata["file_name"] in file_names
+            ):
+                doc_ids_to_delete.append(ingested_document.doc_id)
+        if len(doc_ids_to_delete) > 0:
+            logger.info(
+                "Uploading file(s) which were already ingested: %s document(s) will be replaced.",
+                len(doc_ids_to_delete),
+            )
+            for doc_id in doc_ids_to_delete:
+                self._ingest_service.delete(doc_id)
+
         self._ingest_service.bulk_ingest([(str(path.name), path) for path in paths])
+
+    def _delete_all_files(self) -> Any:
+        ingested_files = self._ingest_service.list_ingested()
+        logger.debug("Deleting count=%s files", len(ingested_files))
+        for ingested_document in ingested_files:
+            self._ingest_service.delete(ingested_document.doc_id)
+        return [
+            gr.List(self._list_ingested_files()),
+            gr.components.Button(interactive=False),
+            gr.components.Button(interactive=False),
+            gr.components.Textbox("All files"),
+        ]
+
+    def _delete_selected_file(self) -> Any:
+        logger.debug("Deleting selected %s", self._selected_filename)
+        # Note: keep looping for pdf's (each page became a Document)
+        for ingested_document in self._ingest_service.list_ingested():
+            if (
+                ingested_document.doc_metadata
+                and ingested_document.doc_metadata["file_name"]
+                == self._selected_filename
+            ):
+                self._ingest_service.delete(ingested_document.doc_id)
+        return [
+            gr.List(self._list_ingested_files()),
+            gr.components.Button(interactive=False),
+            gr.components.Button(interactive=False),
+            gr.components.Textbox("All files"),
+        ]
+
+    def _deselect_selected_file(self) -> Any:
+        self._selected_filename = None
+        return [
+            gr.components.Button(interactive=False),
+            gr.components.Button(interactive=False),
+            gr.components.Textbox("All files"),
+        ]
+
+    def _selected_a_file(self, select_data: gr.SelectData) -> Any:
+        self._selected_filename = select_data.value
+        return [
+            gr.components.Button(interactive=True),
+            gr.components.Button(interactive=True),
+            gr.components.Textbox(self._selected_filename),
+        ]
 
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
@@ -235,7 +315,7 @@ class PrivateGptUi:
                     mode = gr.Radio(
                         MODES,
                         label="Mode",
-                        value="Query Docs",
+                        value="Query Files",
                     )
                     upload_button = gr.components.UploadButton(
                         "Upload File(s)",
@@ -247,6 +327,7 @@ class PrivateGptUi:
                         self._list_ingested_files,
                         headers=["File name"],
                         label="Ingested Files",
+                        height=235,
                         interactive=False,
                         render=False,  # Rendered under the button
                     )
@@ -260,6 +341,57 @@ class PrivateGptUi:
                         outputs=ingested_dataset,
                     )
                     ingested_dataset.render()
+                    deselect_file_button = gr.components.Button(
+                        "De-select selected file", size="sm", interactive=False
+                    )
+                    selected_text = gr.components.Textbox(
+                        "All files", label="Selected for Query or Deletion", max_lines=1
+                    )
+                    delete_file_button = gr.components.Button(
+                        "🗑️ Delete selected file",
+                        size="sm",
+                        visible=settings().ui.delete_file_button_enabled,
+                        interactive=False,
+                    )
+                    delete_files_button = gr.components.Button(
+                        "⚠️ Delete ALL files",
+                        size="sm",
+                        visible=settings().ui.delete_all_files_button_enabled,
+                    )
+                    deselect_file_button.click(
+                        self._deselect_selected_file,
+                        outputs=[
+                            delete_file_button,
+                            deselect_file_button,
+                            selected_text,
+                        ],
+                    )
+                    ingested_dataset.select(
+                        fn=self._selected_a_file,
+                        outputs=[
+                            delete_file_button,
+                            deselect_file_button,
+                            selected_text,
+                        ],
+                    )
+                    delete_file_button.click(
+                        self._delete_selected_file,
+                        outputs=[
+                            ingested_dataset,
+                            delete_file_button,
+                            deselect_file_button,
+                            selected_text,
+                        ],
+                    )
+                    delete_files_button.click(
+                        self._delete_all_files,
+                        outputs=[
+                            ingested_dataset,
+                            delete_file_button,
+                            deselect_file_button,
+                            selected_text,
+                        ],
+                    )
                     system_prompt_input = gr.Textbox(
                         placeholder=self._system_prompt,
                         label="System Prompt",
