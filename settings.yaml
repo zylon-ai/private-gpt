@@ -32,7 +32,7 @@ ui:
     If you know the answer but it is not based in the provided context, don't provide 
     the answer, just state the answer is not in the context provided.
   delete_file_button_enabled: true
-  delete_all_files_button_enabled: false
+  delete_all_files_button_enabled: true
 
 
 llm:
