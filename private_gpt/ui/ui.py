@@ -225,7 +225,10 @@ class PrivateGptUi:
         file_names = [path.name for path in paths]
         doc_ids_to_delete = []
         for ingested_document in self._ingest_service.list_ingested():
-            if ingested_document.doc_metadata["file_name"] in file_names:
+            if (
+                ingested_document.doc_metadata
+                and ingested_document.doc_metadata["file_name"] in file_names
+            ):
                 doc_ids_to_delete.append(ingested_document.doc_id)
         if len(doc_ids_to_delete) > 0:
             logger.info(
