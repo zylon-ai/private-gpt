@@ -223,48 +223,48 @@ def ingest_file(
         )
 
 
-
-
-def ingest_pdf_file(
-        request: Request,
-        db: Session = Depends(deps.get_db),
-        file: UploadFile = File(...),
-) -> IngestResponse:
-    """Ingests and processes a file, storing its chunks to be used as context."""
+async def common_ingest_logic(
+    request: Request,
+    db: Session,
+    ocr_file,
+    current_user,
+):
     service = request.state.injector.get(IngestService)
-
     try:
-        file_ingested = crud.documents.get_by_filename(db, file_name=file.filename)
-        if file_ingested:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="File already exists. Choose a different file.",
-            )
-        
-        if file.filename is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No file name provided",
-            )
+        with open(ocr_file, 'rb') as file:
+            file_name = Path(ocr_file).name
+            upload_path = Path(f"{UPLOAD_DIR}/{file_name}")
 
-        try:
-            docs_in = schemas.DocumentCreate(filename=file.filename, uploaded_by=current_user.id)
+            file_ingested = crud.documents.get_by_filename(
+                db, file_name=file_name)
+            if file_ingested:
+                raise HTTPException(
+                    status_code=409,
+                    detail="File already exists. Choose a different file.",
+                )
+
+            if file_name is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No file name provided",
+                )
+
+            docs_in = schemas.DocumentCreate(
+                filename=file_name, uploaded_by=current_user.id)
             crud.documents.create(db=db, obj_in=docs_in)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Unable to upload file.",
-            )
-        upload_path = Path(f"{UPLOAD_DIR}/{file.filename}")
 
-        with open(upload_path, "wb") as f:
-            f.write(file.file.read())
+            with open(upload_path, "wb") as f:
+                f.write(file.read())
 
-        with open(upload_path, "rb") as f:
-            ingested_documents = service.ingest_bin_data(file.filename, f)
-        logger.info(f"{file.filename} is uploaded by the {current_user.fullname}.")
+            # Ingest binary data
+            file.seek(0)  # Move the file pointer back to the beginning
+            ingested_documents = service.ingest_bin_data(file_name, file)
 
-        return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
+        logger.info(
+            f"{file_name} is uploaded by the {current_user.fullname}.")
+
+        return ingested_documents
+
     except HTTPException:
         raise
 
@@ -272,6 +272,6 @@ def ingest_pdf_file(
         logger.error(f"There was an error uploading the file(s): {str(e)}")
         print("ERROR: ", e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail="Internal Server Error: Unable to ingest file.",
         )

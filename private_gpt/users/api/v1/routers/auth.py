@@ -14,7 +14,7 @@ from private_gpt.users import crud, models, schemas
 from private_gpt.users.utils import send_registration_email, Ldap
 
 LDAP_SERVER = settings.LDAP_SERVER
-LDAP_ENABLE = False
+LDAP_ENABLE = settings.LDAP_ENABLE
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
