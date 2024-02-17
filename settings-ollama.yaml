@@ -1,0 +1,9 @@
+# 2024-02-14 rhm
+llm:
+  mode: ollama
+
+ollama:
+  model: mistral               # Required Model to use.
+                               # Note: Ollama Models are listed here: https://ollama.ai/library
+                               #       Be sure to pull the model to your Ollama server
+  api_base: http://localhost:11434   # Defaults to http://localhost:11434
