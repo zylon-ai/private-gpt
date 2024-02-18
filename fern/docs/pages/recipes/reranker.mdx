@@ -1,0 +1,45 @@
+# Reranker
+
+PrivateGPT supports the integration with the `Reranker` which has the potential to enhance the performance of the Retrieval-Augmented Generation (RAG) system.
+
+## Configurations
+
+The Reranker can be configured using the following parameters:
+
+- **top_n**: Represents the number of top documents to retrieve.
+- **cut_off**: A threshold score for similarity below which documents are dismissed.
+- **enabled**: A boolean flag to activate or deactivate the reranker.
+- **hf_model_name**: The Hugging Face model identifier for the FlagReranker.
+
+## Behavior of Reranker
+
+The functionality of the `Reranker` is as follows:
+
+1. It evaluates the similarity between a query and documents retrieved by the retriever.
+2. If the similarity score is less than `cut_off`, the document is excluded from the results.
+3. In scenarios where the filtered documents are fewer than `top_n`, the system defaults to providing the top `top_n` documents ignoring the `cut_off` score.
+4. The `hf_model_name` parameter allows users to specify the particular FlagReranker model from [Hugging Face](https://huggingface.co/) for the reranking process.
+
+Use the `enabled` flag to toggle the `Reranker` as per requirement for optimized results.
+
+## Example Usage
+
+To utilize the `Reranker` with your desired settings:
+
+```yml
+reranker:
+  enabled: true
+  hf_model_name: BAAI/bge-reranker-large
+  top_n: 5
+  cut_off: 0.75
+```
+
+## Conclusion
+
+`Reranker` serves as a [Node Postprocessor](https://docs.llamaindex.ai/en/stable/module_guides/querying/node_postprocessors/root.html). With these settings, it offers a robust and flexible way to improve the performance of the RAG system by filtering and ranking the retrieved documents based on relevancy.
+
+## Moreover
+
+The llamaindex is already integrated with an LLM-based reranker. However, this integration faces stability issues due to the LLM’s output being somewhat unpredictable. Such erratic behavior occasionally leads to complications where the output cannot be effectively parsed by privateGPT. The expected format is a structured list of documents with associated relevance scores. The LLM reranker sometimes generates outputs with inconsistent formatting or adds extraneous summaries not conducive to parsing.
+
+Due to these inconsistencies, there is a consideration to transition towards a specialized model strictly dedicated to reranking, which would reliably output only similarity scores. Such a model promises a more stable and predictable behavior. 
