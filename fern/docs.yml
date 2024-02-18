@@ -64,6 +64,8 @@ navigation:
         contents:
           - page: LLM Backends
             path: ./docs/pages/manual/llms.mdx
+          - page: Reranker
+            path: ./docs/pages/manual/reranker.mdx
       - section: User Interface
         contents:
           - page: User interface (Gradio) Manual
@@ -76,10 +78,6 @@ navigation:
           # TODO: add recipes
           - page: List of LLMs
             path: ./docs/pages/recipes/list-llm.mdx
-      - section: Choice of Reranker
-        contents:
-          - page: Reranker
-            path: ./docs/pages/recipes/reranker.mdx
   # More advanced usage of privateGPT, by API
   - tab: api-reference
     layout:
