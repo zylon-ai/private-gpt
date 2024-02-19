@@ -15,7 +15,7 @@ from private_gpt.server.ingest.ingest_router import common_ingest_logic, IngestR
 from private_gpt.constants import OCR_UPLOAD
 
 
-pdf_router = APIRouter(prefix="/pdf", tags=["ocr"])
+pdf_router = APIRouter(prefix="/v1", tags=["ocr"])
 
 
 @pdf_router.post("/pdf_ocr")
