@@ -101,7 +101,7 @@ class LLMSettings(BaseModel):
 
 
 class VectorstoreSettings(BaseModel):
-    database: Literal["chroma", "qdrant"]
+    database: Literal["chroma", "qdrant", "pgvector"]
 
 
 class LocalSettings(BaseModel):
@@ -196,6 +196,39 @@ class UISettings(BaseModel):
         False, description="If the button to delete all files is enabled or not."
     )
 
+class PGVectorSettings(BaseModel):
+    host: str = Field(
+        "localhost",
+        description="The server hosting the Postgres database",
+    )
+    port: int = Field(
+        5432,
+        description="The port on which the Postgres database is accessible",
+    )
+    user: str = Field(
+        "postgres",
+        description="The user to use to connect to the Postgres database",
+    )
+    password: str = Field(
+        "postgres",
+        description="The password to use to connect to the Postgres database",
+    )
+    database: str = Field(
+        "postgres",
+        description="The database to use to connect to the Postgres database",
+    )
+    embed_dim: int = Field(
+        384,
+        description="The dimension of the embeddings stored in the Postgres database",
+    )
+    schema_name: str = Field(
+        "public",
+        description="The name of the schema in the Postgres database where the embeddings are stored",
+    )
+    table_name: str = Field(
+        "embeddings",
+        description="The name of the table in the Postgres database where the embeddings are stored",
+    )
 
 class QdrantSettings(BaseModel):
     location: str | None = Field(
@@ -263,6 +296,7 @@ class Settings(BaseModel):
     ollama: OllamaSettings
     vectorstore: VectorstoreSettings
     qdrant: QdrantSettings | None = None
+    pgvector: PGVectorSettings | None = None
 
 
 """
