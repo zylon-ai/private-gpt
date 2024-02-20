@@ -60,7 +60,7 @@ else:
 
     # Method to be used as a dependency to check if the request is authenticated.
     def authenticated(
-        _simple_authentication: Annotated[bool, Depends(_simple_authentication)]
+        _simple_authentication: Annotated[bool, Depends(_simple_authentication)],
     ) -> bool:
         """Check if the request is authenticated."""
         assert settings().server.auth.enabled

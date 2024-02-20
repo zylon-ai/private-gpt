@@ -145,7 +145,6 @@ class PrivateGptUi:
             )
         match mode:
             case "Query Files":
-
                 # Use only the selected file for the query
                 context_filter = None
                 if self._selected_filename is not None:

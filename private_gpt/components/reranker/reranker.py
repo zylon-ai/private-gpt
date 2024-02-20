@@ -1,17 +1,17 @@
-from typing import List, Tuple
-from injector import singleton, inject
-from llama_index.schema import NodeWithScore, QueryBundle
-from private_gpt.paths import models_path
-from llama_index.bridge.pydantic import Field
 from FlagEmbedding import FlagReranker
+from injector import inject, singleton
+from llama_index.bridge.pydantic import Field
 from llama_index.postprocessor.types import BaseNodePostprocessor
+from llama_index.schema import NodeWithScore, QueryBundle
+
+from private_gpt.paths import models_path
 from private_gpt.settings.settings import Settings
 
 
 @singleton
 class RerankerComponent(BaseNodePostprocessor):
-    """
-    Reranker component:
+    """Reranker component.
+
     - top_n: Top N nodes to return.
     - cut_off: Cut off score for nodes.
 
@@ -47,14 +47,14 @@ class RerankerComponent(BaseNodePostprocessor):
 
     def _postprocess_nodes(
         self,
-        nodes: List[NodeWithScore],
+        nodes: list[NodeWithScore],
         query_bundle: QueryBundle | None = None,
-    ) -> List[NodeWithScore]:
+    ) -> list[NodeWithScore]:
         if query_bundle is None:
             return ValueError("Query bundle must be provided.")
 
         query_str = query_bundle.query_str
-        sentence_pairs: List[Tuple[str, str]] = []
+        sentence_pairs: list[tuple[str, str]] = []
         for node in nodes:
             content = node.get_content()
             sentence_pairs.append([query_str, content])

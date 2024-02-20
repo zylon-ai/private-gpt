@@ -14,8 +14,13 @@ qdrant:
 llm:
   mode: mock
 
+<<<<<<< HEAD
 embedding:
   mode: mock
+=======
+reranker:
+  enabled: false
+>>>>>>> c096818 (fix: tests)
 
 ui:
   enabled: false

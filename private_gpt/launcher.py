@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 def create_app(root_injector: Injector) -> FastAPI:
-
     # Start the API
     async def bind_injector_to_request(request: Request) -> None:
         request.state.injector = root_injector
