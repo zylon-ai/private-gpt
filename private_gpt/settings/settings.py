@@ -196,6 +196,7 @@ class UISettings(BaseModel):
         False, description="If the button to delete all files is enabled or not."
     )
 
+
 class PGVectorSettings(BaseModel):
     host: str = Field(
         "localhost",
@@ -229,6 +230,7 @@ class PGVectorSettings(BaseModel):
         "embeddings",
         description="The name of the table in the Postgres database where the embeddings are stored",
     )
+
 
 class QdrantSettings(BaseModel):
     location: str | None = Field(

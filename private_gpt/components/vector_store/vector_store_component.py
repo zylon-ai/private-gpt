@@ -48,9 +48,12 @@ class VectorStoreComponent:
                         "PGVectorStore settings not found. Please provide settings."
                     )
 
-                self.vector_store = typing.cast(VectorStore, PGVectorStore.from_params(
-                    **settings.pgvector.model_dump(exclude_none=True)
-                ))
+                self.vector_store = typing.cast(
+                    VectorStore,
+                    PGVectorStore.from_params(
+                        **settings.pgvector.model_dump(exclude_none=True)
+                    ),
+                )
 
             case "chroma":
                 try:
