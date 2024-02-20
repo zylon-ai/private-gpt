@@ -7,6 +7,7 @@ from FlagEmbedding import FlagReranker
 from llama_index.postprocessor.types import BaseNodePostprocessor
 from private_gpt.settings.settings import Settings
 
+
 @singleton
 class RerankerComponent(BaseNodePostprocessor):
     """
@@ -17,6 +18,7 @@ class RerankerComponent(BaseNodePostprocessor):
     If the number of nodes with score > cut_off is <= top_n, then return top_n nodes.
     Otherwise, return all nodes with score > cut_off.
     """
+
     reranker: FlagReranker = Field(description="Reranker class.")
     top_n: int = Field(description="Top N nodes to return.")
     cut_off: float = Field(description="Cut off score for nodes.")
@@ -66,6 +68,4 @@ class RerankerComponent(BaseNodePostprocessor):
         if len(res) > self.top_n:
             return res
 
-        return sorted(nodes, key=lambda x: x.score or 0.0, reverse=True)[
-            : self.top_n
-        ]
+        return sorted(nodes, key=lambda x: x.score or 0.0, reverse=True)[: self.top_n]

@@ -121,7 +121,7 @@ class RerankerSettings(BaseModel):
     )
     hf_model_name: str = Field(
         "BAAI/bge-reranker-large",
-        description="Name of the HuggingFace model to use for reranking"
+        description="Name of the HuggingFace model to use for reranking",
     )
     top_n: int = Field(
         5,
