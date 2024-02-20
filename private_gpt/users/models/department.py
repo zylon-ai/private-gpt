@@ -15,3 +15,6 @@ class Department(Base):
 
     company_id = Column(Integer, ForeignKey('companies.id'))
     company = relationship("Company", back_populates="departments")
+
+    users = relationship("User", back_populates="department")
+    documents = relationship("Document", back_populates="department")

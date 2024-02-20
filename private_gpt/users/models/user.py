@@ -36,12 +36,14 @@ class User(Base):
 
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  
     company = relationship("Company", back_populates="users") 
-    uploaded_documents = relationship("Documents", back_populates="uploaded_by_user")
+    
+    uploaded_documents = relationship("Document", back_populates="uploaded_by_user")
+
     user_role = relationship(
         "UserRole", back_populates="user", uselist=False, cascade="all, delete-orphan")
     
     department_id = Column(Integer, ForeignKey(
-        "departments.id"), nullable=True)
+        "departments.id"), nullable=False)
     department = relationship("Department", back_populates="users")
 
     def __repr__(self):

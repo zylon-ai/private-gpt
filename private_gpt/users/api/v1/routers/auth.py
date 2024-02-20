@@ -1,3 +1,4 @@
+import traceback
 from typing import Any, Optional
 from datetime import timedelta, datetime
 
@@ -12,9 +13,13 @@ from private_gpt.users.constants.role import Role
 from private_gpt.users.core.config import settings
 from private_gpt.users import crud, models, schemas
 from private_gpt.users.utils import send_registration_email, Ldap
+import logging
+
+logger = logging.getLogger(__name__)
 
 LDAP_SERVER = settings.LDAP_SERVER
-LDAP_ENABLE = settings.LDAP_ENABLE
+# LDAP_ENABLE = settings.LDAP_ENABLE
+LDAP_ENABLE = False
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -24,16 +29,23 @@ def register_user(
     fullname: str,
     password: str,
     company: Optional[models.Company] = None,
+    department: Optional[models.Department] = None,
 ) -> models.User:
     """
     Register a new user in the database.
     """
-    print(f"{email} {fullname} {password} {company.id}")
-    user_in = schemas.UserCreate(email=email, password=password, fullname=fullname, company_id=company.id)
+    logging.info(f"User : {email} Password: {password} company_id: {company.id} deparment_id: {department.id}")
+    user_in = schemas.UserCreate(
+            email=email,
+            password=password,
+            fullname=fullname,
+            company_id=company.id,
+            department_id=department.id,
+        )    
     try:
         send_registration_email(fullname, email, password)
     except Exception as e:
-        print(f"Failed to send registration email: {str(e)}")
+        logging.info(f"Failed to send registration email: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Failed to send registration email.")
     return crud.user.create(db, obj_in=user_in)
@@ -72,6 +84,7 @@ def create_token_payload(user: models.User, user_role: models.UserRole) -> dict:
         "role": user_role.role.name,
         "username": str(user.fullname),
         "company_id": user_role.company.id if user_role.company else None,
+        "department_id": user.department_id
     }
 
 def ad_user_register(
@@ -82,17 +95,15 @@ def ad_user_register(
 
 ) -> models.User:
     """
-    Register a new user in the database.
+    Register a new user in the database. Company id is directly given here.
     """
     user_in = schemas.UserCreate(email=email, password=password, fullname=fullname, company_id=1)
     print("user is: ", user_in)
     user = crud.user.create(db, obj_in=user_in)
-    print("AD user created......................................................................")
     user_role_name = Role.GUEST["name"]
     company = crud.company.get(db, 1)
 
     user_role = create_user_role(db, user, user_role_name, company)
-    print("AD user role created----------------------------------------------------------------")
     return user
 
 
@@ -104,17 +115,17 @@ def login_access_token(
     """
     OAuth2 compatible token login, get an access token for future requests
     """
-    # if LDAP_ENABLE:
-    #     existing_user = crud.user.get_by_email(db, email=form_data.username)
+    if LDAP_ENABLE:
+        existing_user = crud.user.get_by_email(db, email=form_data.username)
         
-    #     if existing_user:
-    #         if existing_user.user_role.role.name == "SUPER_ADMIN":
-    #             pass
-    #         else:
-    #             ldap = ldap_login(db=db, username=form_data.username, password=form_data.password)
-    #     else:
-    #         ldap = ldap_login(db=db, username=form_data.username, password=form_data.password)
-    #         ad_user_register(db=db, email=form_data.username,fullname=ldap, password=form_data.password)
+        if existing_user:
+            if existing_user.user_role.role.name == "SUPER_ADMIN":
+                pass
+            else:
+                ldap = ldap_login(db=db, username=form_data.username, password=form_data.password)
+        else:
+            ldap = ldap_login(db=db, username=form_data.username, password=form_data.password)
+            ad_user_register(db=db, email=form_data.username,fullname=ldap, password=form_data.password)
 
     user = crud.user.authenticate(
         db, email=form_data.username, password=form_data.password
@@ -130,9 +141,6 @@ def login_access_token(
         minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES
     )
     user_in = schemas.UserUpdate(
-        email=user.email,
-        fullname=user.fullname,
-        company_id=user.user_role.company_id,
         last_login=datetime.now()
     )
     user = crud.user.update(db, db_obj=user, obj_in=user_in)
@@ -148,6 +156,7 @@ def login_access_token(
         "username": str(user.fullname),
         "role": role,
         "company_id": company_id,
+        "department_id": str(user.department_id),
     }
 
     response_dict = {
@@ -192,8 +201,11 @@ def register(
     db: Session = Depends(deps.get_db),
     email: str = Body(...),
     fullname: str = Body(...),
+    # password: str = Body(...),
     company_id: int = Body(None, title="Company ID",
                            description="Company ID for the user (if applicable)"),
+    department_name: str = Body(None, title="Department Name",
+                                description="Department name for the user (if applicable)"),
     role_name: str = Body(None, title="Role Name",
                           description="User role name (if applicable)"),
     current_user: models.User = Security(
@@ -212,29 +224,34 @@ def register(
             detail="The user with this email already exists!",
         )
     random_password = security.generate_random_password()
-    # random_password = password
     try:
         if company_id:
-            # Registering user with a specific company
             company = crud.company.get(db, company_id)
             if not company:
                 raise HTTPException(
                     status_code=404,
                     detail="Company not found.",
                 )
-            user = register_user(db, email, fullname, random_password, company)
+            if department_name:
+                department = crud.department.get_by_department_name(
+                    db=db, name=department_name)
+                if not department:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Department not found.",
+                    )
+                logging.info(f"Department is {department}")
+            user = register_user(
+                db, email, fullname, random_password, company, department
+            )
             user_role_name = role_name or Role.GUEST["name"]
             user_role = create_user_role(db, user, user_role_name, company)
-
-        else:
-            user = register_user(db, email, fullname, random_password, None)
-            user_role_name = role_name or Role.ADMIN["name"]
-            user_role = create_user_role(db, user, user_role_name, None)
     except Exception as e:
+        print(traceback.format_exc())
         raise HTTPException(
-                    status_code=500,
-                    detail="Unable to create account.",
-                )
+            status_code=500,
+            detail="Unable to create account.",
+        )
     token_payload = create_token_payload(user, user_role)
     response_dict = {
         "access_token": security.create_access_token(token_payload, expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)),
@@ -242,6 +259,4 @@ def register(
         "token_type": "bearer",
         "password": random_password,
     }
-    print("RESPONSE DICT: ", response_dict)
     return JSONResponse(content=response_dict, status_code=status.HTTP_201_CREATED)
-

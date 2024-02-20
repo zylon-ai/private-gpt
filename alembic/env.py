@@ -14,7 +14,8 @@ from private_gpt.users.models.role import Role
 from private_gpt.users.models.user_role import UserRole
 from private_gpt.users.models.subscription import Subscription
 from private_gpt.users.models.company import Company
-from private_gpt.users.models.documents import Documents
+from private_gpt.users.models.document import Document
+from private_gpt.users.models.department import Department
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

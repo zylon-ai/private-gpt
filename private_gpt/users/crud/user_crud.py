@@ -19,6 +19,8 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             email=obj_in.email,
             hashed_password=get_password_hash(obj_in.password),
             fullname=obj_in.fullname,
+            company_id=obj_in.company_id,
+            department_id=obj_in.department_id,
         )
         db.add(db_obj)
         db.commit()
@@ -92,4 +94,14 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     def get_by_name(self, db: Session, *, name: str) -> Optional[User]:
         return db.query(self.model).filter(User.fullname == name).first()
 
+    def get_by_department_id(
+        self, db: Session, *, department_id: int, skip: int = 0, limit: int = 100
+    ) -> List[User]:
+        return (
+            db.query(self.model)
+            .filter(User.department_id == department_id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 user = CRUDUser(User)

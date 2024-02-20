@@ -34,7 +34,7 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(health_router)
     
     app.include_router(api_router)
-    app.include_router(home_router)
+    # app.include_router(home_router)
     app.include_router(pdf_router)
     settings = root_injector.get(Settings)
     if settings.server.cors.enabled:

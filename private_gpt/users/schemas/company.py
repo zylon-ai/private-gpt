@@ -1,9 +1,6 @@
 from typing import List
 from pydantic import BaseModel
 
-from private_gpt.users.schemas import Department, User
-
-
 class CompanyBase(BaseModel):
     name: str
 
@@ -24,7 +21,4 @@ class CompanyInDB(CompanyBase):
 
 
 class Company(CompanyInDB):
-    subscriptions: List[str] = []
-    users: List[User] = []
-    user_roles: List[str] = []
-    departments: List[Department] = []
+    pass

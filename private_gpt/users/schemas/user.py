@@ -10,7 +10,8 @@ from private_gpt.users.schemas.company import Company
 class UserBaseSchema(BaseModel):
 	email: EmailStr
 	fullname: str
-	company_id: Optional[int]
+	company_id: int
+	department_id: int
 
 	class Config:
 		arbitrary_types_allowed = True
@@ -24,7 +25,7 @@ class UsernameUpdate(BaseModel):
 	fullname: str
 
 
-class UserUpdate(UserBaseSchema):
+class UserUpdate(BaseModel):
 	last_login: Optional[datetime] = None
 
 
@@ -69,4 +70,4 @@ class UserAdminUpdate(BaseModel):
 	id: int
 	fullname: str
 	role: str
-	department_id: Optional[int] = None
+	department_id: int

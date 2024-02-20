@@ -24,104 +24,104 @@ def list_deparments(
     ),
 ) -> List[schemas.Department]:
     """
-    Retrieve a list of companies with pagination support.
+    Retrieve a list of department with pagination support.
     """
-    deparments = crud.deparment.get_multi(db, skip=skip, limit=limit)
+    deparments = crud.department.get_multi(db, skip=skip, limit=limit)
     return deparments
 
 
 @router.post("/create", response_model=schemas.Department)
 def create_deparment(
-    company_in: schemas.DepartmentCreate,
+    department_in: schemas.DepartmentCreate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.SUPER_ADMIN["name"]],
     ),
-) -> schemas.Company:
+) -> schemas.Department:
     """
-    Create a new company
+    Create a new department
     """
-    deparment = crud.deparment.create(db=db, obj_in=company_in)
-    deparment = jsonable_encoder(deparment)
+    deparment = crud.department.create(db=db, obj_in=department_in)
+    department = jsonable_encoder(department)
 
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content={
             "message": "Department created successfully",
-            "department": deparment
+            "department": department
         },
     )
 
 
-@router.get("/{deparment_id}", response_model=schemas.Department)
-def read_company(
-    deparment_id: int,
+@router.get("/{department_id}", response_model=schemas.Department)
+def read_department(
+    department_id: int,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.SUPER_ADMIN["name"]],
     ),
-) -> schemas.Company:
+) -> schemas.Department:
     """
-    Read a company by ID
+    Read a Department by ID
     """
-    deparment = crud.deparment.get_by_id(db, id=deparment_id)
-    if deparment is None:
-        raise HTTPException(status_code=404, detail="Deparment not found")
-    return deparment
+    department = crud.department.get_by_id(db, id=department_id)
+    if department is None:
+        raise HTTPException(status_code=404, detail="department not found")
+    return department
 
 
-@router.put("/{deparment_id}", response_model=schemas.Department)
-def update_company(
-    deparment_id: int,
-    deparment_in: schemas.DepartmentUpdate,
+@router.put("/{department_id}", response_model=schemas.Department)
+def update_department(
+    department_id: int,
+    department_in: schemas.DepartmentUpdate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.SUPER_ADMIN["name"]],
     ),
-) -> schemas.Company:
+) -> schemas.Department:
     """
-    Update a company by ID
+    Update a Department by ID
     """
-    deparment = crud.deparment.get_by_id(db, id=deparment_id)
-    if deparment is None:
-        raise HTTPException(status_code=404, detail="Deparment not found")
+    department = crud.department.get_by_id(db, id=department_id)
+    if department is None:
+        raise HTTPException(status_code=404, detail="department not found")
 
-    updated_deparment = crud.deparment.update(
-        db=db, db_obj=deparment, obj_in=deparment_in)
-    updated_deparment = jsonable_encoder(updated_deparment)
+    updated_department = crud.department.update(
+        db=db, db_obj=department, obj_in=department_in)
+    updated_department = jsonable_encoder(updated_department)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
-            "message": f"{deparment_in} Deparment updated successfully",
-            "deparment": updated_deparment
+            "message": f"{department_in} department updated successfully",
+            "department": updated_department
         },
     )
 
 
-@router.delete("/{deparment_id}", response_model=schemas.Department)
-def delete_company(
-    deparment_id: int,
+@router.delete("/{department_id}", response_model=schemas.Department)
+def delete_department(
+    department_id: int,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.SUPER_ADMIN["name"]],
     ),
-) -> schemas.Company:
+) -> schemas.Department:
     """
-    Delete a company by ID
+    Delete a Department by ID
     """
 
-    deparment = crud.deparment.remove(db=db, id=deparment_id)
-    if deparment is None:
-        raise HTTPException(status_code=404, detail="Deparment not found")
-    deparment = jsonable_encoder(deparment)
+    department = crud.department.remove(db=db, id=department_id)
+    if department is None:
+        raise HTTPException(status_code=404, detail="department not found")
+    department = jsonable_encoder(department)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
-            "message": "Deparment deleted successfully",
-            "deparment": deparment
+            "message": "Department deleted successfully",
+            "deparment": department,
         },
     )
