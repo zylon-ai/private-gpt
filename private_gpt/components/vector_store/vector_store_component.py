@@ -40,6 +40,21 @@ class VectorStoreComponent:
     @inject
     def __init__(self, settings: Settings) -> None:
         match settings.vectorstore.database:
+            case "pgvector":
+                from llama_index.vector_stores import PGVectorStore
+
+                if settings.pgvector is None:
+                    raise ValueError(
+                        "PGVectorStore settings not found. Please provide settings."
+                    )
+
+                self.vector_store = typing.cast(
+                    VectorStore,
+                    PGVectorStore.from_params(
+                        **settings.pgvector.model_dump(exclude_none=True)
+                    ),
+                )
+
             case "chroma":
                 try:
                     import chromadb  # type: ignore

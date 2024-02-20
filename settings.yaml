@@ -53,6 +53,16 @@ vectorstore:
 qdrant:
   path: local_data/private_gpt/qdrant
 
+pgvector:
+  host: localhost
+  port: 5432
+  database: postgres
+  user: postgres
+  password: postgres
+  embed_dim: 384 # 384 is for BAAI/bge-small-en-v1.5
+  schema_name: private_gpt
+  table_name: embeddings
+
 local:
   prompt_style: "mistral"
   llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF
