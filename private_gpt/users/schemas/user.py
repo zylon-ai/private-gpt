@@ -47,13 +47,10 @@ class UserSchema(UserBaseSchema):
 	class Config:
 		orm_mode = True
 
-# Additional properties to return via API
 
 
 class User(UserSchema):
     pass
-
-# Additional properties stored in DB
 
 
 class UserInDB(UserSchema):
@@ -72,3 +69,4 @@ class UserAdminUpdate(BaseModel):
 	id: int
 	fullname: str
 	role: str
+	department_id: Optional[int] = None

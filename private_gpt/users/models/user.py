@@ -39,6 +39,10 @@ class User(Base):
     uploaded_documents = relationship("Documents", back_populates="uploaded_by_user")
     user_role = relationship(
         "UserRole", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    
+    department_id = Column(Integer, ForeignKey(
+        "departments.id"), nullable=True)
+    department = relationship("Department", back_populates="users")
 
     def __repr__(self):
         """Returns string representation of model instance"""

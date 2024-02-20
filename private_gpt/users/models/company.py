@@ -15,3 +15,4 @@ class Company(Base):
     subscriptions = relationship("Subscription", back_populates="company")
     users = relationship("User", back_populates="company") 
     user_roles = relationship("UserRole", back_populates="company")
+    departments = relationship("Department", back_populates="company")

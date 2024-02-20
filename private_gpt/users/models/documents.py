@@ -21,3 +21,8 @@ class Documents(Base):
     )
     uploaded_by_user = relationship(
         "User", back_populates="uploaded_documents")
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    
+    uploaded_by_user = relationship(
+        "User", back_populates="uploaded_documents")
+    department = relationship("Department", back_populates="documents")

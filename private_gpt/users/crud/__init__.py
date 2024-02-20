@@ -4,3 +4,4 @@ from .user_role_crud import user_role
 from .company_crud import company
 from .subscription_crud import subscription
 from .document_crud import documents
+from .department_crud import deparment
