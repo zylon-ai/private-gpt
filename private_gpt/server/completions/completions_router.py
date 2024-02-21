@@ -1,5 +1,12 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Security, HTTPException, status
+from private_gpt.server.ingest.ingest_service import IngestService
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+import traceback
+import logging
+
+logger = logging.getLogger(__name__)
+
 from starlette.responses import StreamingResponse
 
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
@@ -9,7 +16,8 @@ from private_gpt.open_ai.openai_models import (
 )
 from private_gpt.server.chat.chat_router import ChatBody, chat_completion
 from private_gpt.server.utils.auth import authenticated
-
+from private_gpt.users import crud, models, schemas
+from private_gpt.users.api import deps
 completions_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
 
@@ -74,6 +82,62 @@ def prompt_completion(
     # If system prompt is passed, create a fake message with the system prompt.
     if body.system_prompt:
         messages.insert(0, OpenAIMessage(content=body.system_prompt, role="system"))
+
+    chat_body = ChatBody(
+        messages=messages,
+        use_context=body.use_context,
+        stream=body.stream,
+        include_sources=body.include_sources,
+        context_filter=body.context_filter,
+    )
+    return chat_completion(request, chat_body)
+
+
+@completions_router.post(
+    "/chat",
+    response_model=None,
+    summary="Completion",
+    responses={200: {"model": OpenAICompletion}},
+    tags=["Contextual Completions"],
+)
+def prompt_completion(
+    request: Request, 
+    body: CompletionsBody,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Security(
+        deps.get_current_user,
+    ),
+) -> OpenAICompletion | StreamingResponse:
+    try:
+        service = request.state.injector.get(IngestService)
+
+        department = crud.department.get_by_id(db, id=current_user.department_id)
+        if not department:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"No department assigned to you")
+        documents = crud.documents.get_multi_documents(db, department_id=department.id)
+        if not documents:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"No documents uploaded for your department.")
+        docs_list = [document.filename for document in documents]                
+        docs_ids = []
+        for filename in docs_list:
+            doc_id = service.get_doc_ids_by_filename(filename)
+            docs_ids.extend(doc_id)
+        body.context_filter = {"docs_ids": docs_ids}
+
+    except Exception as e:
+        print(traceback.format_exc())
+        logger.error(f"There was an error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+
+    messages = [OpenAIMessage(content=body.prompt, role="user")]
+    if body.system_prompt:
+        messages.insert(0, OpenAIMessage(
+            content=body.system_prompt, role="system"))
 
     chat_body = ChatBody(
         messages=messages,

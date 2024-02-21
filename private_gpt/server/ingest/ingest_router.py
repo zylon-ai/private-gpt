@@ -1,5 +1,7 @@
 import os
 import logging
+import traceback
+
 from pathlib import Path
 from typing import Literal, Optional, List
 
@@ -8,7 +10,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from private_gpt.home import Home
 from private_gpt.users import crud, models, schemas
 from private_gpt.users.api import deps
 from private_gpt.users.constants.role import Role
@@ -194,7 +195,7 @@ def ingest_file(
             )
 
         try:
-            docs_in = schemas.DocumentCreate(filename=file.filename, uploaded_by=current_user.id)
+            docs_in = schemas.DocumentCreate(filename=file.filename, uploaded_by=current_user.id, department_id=current_user.department_id)
             crud.documents.create(db=db, obj_in=docs_in)
         except Exception as e:
             raise HTTPException(
@@ -216,7 +217,6 @@ def ingest_file(
 
     except Exception as e:
         logger.error(f"There was an error uploading the file(s): {str(e)}")
-        print("ERROR: ", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error: Unable to ingest file.",
@@ -250,13 +250,11 @@ async def common_ingest_logic(
                 )
 
             docs_in = schemas.DocumentCreate(
-                filename=file_name, uploaded_by=current_user.id)
+                filename=file_name, uploaded_by=current_user.id, department_id=current_user.department_id)
             crud.documents.create(db=db, obj_in=docs_in)
 
             with open(upload_path, "wb") as f:
                 f.write(file.read())
-
-            # Ingest binary data
             file.seek(0)  # Move the file pointer back to the beginning
             ingested_documents = service.ingest_bin_data(file_name, file)
 
@@ -270,35 +268,7 @@ async def common_ingest_logic(
 
     except Exception as e:
         logger.error(f"There was an error uploading the file(s): {str(e)}")
-        print("ERROR: ", e)
         raise HTTPException(
             status_code=500,
             detail="Internal Server Error: Unable to ingest file.",
         )
-
-from private_gpt.users.schemas import Document
-
-@ingest_router.get("/ingest/list_files", response_model=List[schemas.Document], tags=["Ingestion"])
-def list_files(
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
-    current_user: models.User = Security(
-            deps.get_current_user,
-            scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
-
-    )
-):
-    try:
-        docs = crud.documents.get_multi(db, skip=skip, limit=limit)
-        return docs
-    except Exception as e:
-        logger.error(f"There was an error uploading the file(s): {str(e)}")
-        print("ERROR: ", e)
-        raise HTTPException(
-            status_code=500,
-            detail="Internal Server Error: Unable to ingest file.",
-        )
-
-    

@@ -95,7 +95,8 @@ def update_username(
     user_data = schemas.UserBaseSchema(
         email=user.email,
         fullname=user.fullname,
-        company_id=user.company_id
+        company_id=user.company_id,
+        department_id=user.department_id,
     )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -114,11 +115,11 @@ def read_user_me(
     Get current user.
     """
     role = current_user.user_role.role.name if current_user.user_role else None
-    print("THe role is: ", role)
     user_data = schemas.Profile(
         email=current_user.email,
         fullname=current_user.fullname,
         company_id = current_user.company_id,
+        department_id=current_user.department_id,
         role =role
     )
     return JSONResponse(
@@ -151,6 +152,7 @@ def change_password(
         email=current_user.email,
         fullname=current_user.fullname,
         company_id= current_user.company_id,
+        department_id=current_user.department_id,
     )
     
     return JSONResponse(
@@ -205,6 +207,8 @@ def update_user(
         id=user.id,
         email=user.email,
         fullname=user.fullname,
+        company_id=user.company_id,
+        department_id=user.department_id,
     )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -254,6 +258,7 @@ def admin_change_password(
         email=user.email,
         fullname=user.fullname,
         company_id=user.company_id,
+        department_id=user.department_id,
     )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -331,8 +336,7 @@ def admin_update_user(
     role = crud.user_role.update(db, db_obj=user_role, obj_in=role_in)
 
     user_in = schemas.UserUpdate(fullname=user_update.fullname,
-                                 email=existing_user.email, company_id=existing_user.user_role.company_id)
-    print("User in: ", user_in)
+                                 email=existing_user.email, company_id=existing_user.user_role.company_id, department_id=user_update.department_id)
     user = crud.user.update(db, db_obj=existing_user, obj_in=user_in)
 
     return JSONResponse(

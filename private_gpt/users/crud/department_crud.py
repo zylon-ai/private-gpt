@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from private_gpt.users.schemas.deparment import DepartmentCreate, DepartmentUpdate
+from private_gpt.users.schemas.department import DepartmentCreate, DepartmentUpdate
 from private_gpt.users.models.department import Department
 from private_gpt.users.crud.base import CRUDBase
 from typing import Optional

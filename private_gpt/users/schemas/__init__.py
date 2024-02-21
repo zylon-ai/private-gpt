@@ -4,5 +4,5 @@ from .user import User, UserCreate, UserInDB, UserUpdate, UserBaseSchema, Profil
 from .user_role import UserRole, UserRoleCreate, UserRoleInDB, UserRoleUpdate
 from .subscription import Subscription, SubscriptionBase, SubscriptionCreate, SubscriptionUpdate
 from .company import Company, CompanyBase, CompanyCreate, CompanyUpdate
-from .documents import Document, DocumentCreate, DocumentsBase, DocumentUpdate
-from .deparment import Department, DepartmentCreate, DepartmentUpdate
+from .documents import Document, DocumentCreate, DocumentsBase, DocumentUpdate, DocumentList
+from .department import Department, DepartmentCreate, DepartmentUpdate, DepartmentAdminCreate

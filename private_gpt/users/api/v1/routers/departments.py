@@ -10,7 +10,7 @@ from private_gpt.users.constants.role import Role
 from private_gpt.users import crud, models, schemas
 
 
-router = APIRouter(prefix="/departments", tags=["Deparments"])
+router = APIRouter(prefix="/departments", tags=["Departments"])
 
 
 @router.get("", response_model=List[schemas.Department])
@@ -42,7 +42,9 @@ def create_deparment(
     """
     Create a new department
     """
-    deparment = crud.department.create(db=db, obj_in=department_in)
+    company_id = current_user.company_id
+    department_create_in = schemas.DepartmentAdminCreate(name=department_in.name, company_id=company_id)
+    department = crud.department.create(db=db, obj_in=department_create_in)
     department = jsonable_encoder(department)
 
     return JSONResponse(

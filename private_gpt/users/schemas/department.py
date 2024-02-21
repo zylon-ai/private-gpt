@@ -21,6 +21,11 @@ class DepartmentInDB(DepartmentBase):
     class Config:
         orm_mode = True
 
+class DepartmentAdminCreate(DepartmentBase):
+    company_id: int
+
+    class Config:
+        orm_mode = True
 
 class Department(DepartmentInDB):
     pass
