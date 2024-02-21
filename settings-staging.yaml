@@ -9,8 +9,7 @@ embedding:
   mode: ${PGPT_EMBEDDING_MODE:openai}
 
 ui:
-  enabled: true
-  path: /
+  enabled: false
 
 qdrant:
   url: ${QDRANT_URL}
