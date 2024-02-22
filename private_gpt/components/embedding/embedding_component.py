@@ -47,6 +47,8 @@ class EmbeddingComponent:
                 tokenizer_name = model_name  # Keep tokenizer name as model name
 
                 if torch.cuda.is_available() and torch.cuda.device_count() > 1:
+                    # note this is greedy and will use all GPU's it sees
+                    # you can limit scope with CUDA_VISIBLE_DEVICES env var
                     logger.info(f"Configuring model for multi-GPU use with {torch.cuda.device_count()} GPUs")
                     model = CustomDataParallel(model)
 
