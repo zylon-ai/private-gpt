@@ -24,7 +24,7 @@ def list_files(
     limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
-        scopes=[Role.SUPER_ADMIN["name"]],
+        scopes=[Role.SUPER_ADMIN["name"], Role.ADMIN["name"]],
     )
 ):
     def get_department_name(db, id):
@@ -35,7 +35,13 @@ def list_files(
         user = crud.user.get_by_id(db=db, id=id) 
         return user.fullname
     try:
-        docs = crud.documents.get_multi(db, skip=skip, limit=limit)
+        role = current_user.user_role.role.name if current_user.user_role else None
+        if role == "SUPER_ADMIN":
+            docs = crud.documents.get_multi(db, skip=skip, limit=limit)
+        else:
+            docs = crud.documents.get_multi_documents(
+                db, department_id=current_user.department_id, skip=skip, limit=limit)
+            
         docs = [
             schemas.Document(
                 id=doc.id,

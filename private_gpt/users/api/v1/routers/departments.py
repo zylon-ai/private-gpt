@@ -20,7 +20,6 @@ def list_deparments(
     limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
-        scopes=[Role.SUPER_ADMIN["name"]],
     ),
 ) -> List[schemas.Department]:
     """

@@ -16,9 +16,9 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("", response_model=List[schemas.User])
 def read_users(
-    db: Session = Depends(deps.get_db),
     skip: int = 0,
     limit: int = 100,
+    db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
@@ -27,7 +27,11 @@ def read_users(
     """                                 
     Retrieve all users.
     """
-    users = crud.user.get_multi(db, skip=skip, limit=limit)
+    role = current_user.user_role.role.name if current_user.user_role else None
+    if role == "ADMIN":
+        users = crud.user.get_by_department_id(db=db, department_id=current_user.department_id, skip=skip, limit=limit)
+    else:
+        users = crud.user.get_multi(db, skip=skip, limit=limit)
     return users
 
 

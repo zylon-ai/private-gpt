@@ -92,7 +92,6 @@ def ad_user_register(
     email: str,
     fullname: str,
     password: str,
-
 ) -> models.User:
     """
     Register a new user in the database. Company id is directly given here.
