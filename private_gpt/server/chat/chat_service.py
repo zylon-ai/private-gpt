@@ -4,8 +4,14 @@ from injector import inject, singleton
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
 from llama_index.chat_engine import ContextChatEngine, SimpleChatEngine
 from llama_index.chat_engine.types import (
-    BaseChatEngine,
+    StreamingAgentChatResponse
 )
+
+from threading import Thread
+from typing import List, Optional
+import queue
+
+import time
 from llama_index.indices.postprocessor import MetadataReplacementPostProcessor
 from llama_index.llms import ChatMessage, MessageRole
 from llama_index.types import TokenGen
@@ -19,6 +25,51 @@ from private_gpt.components.vector_store.vector_store_component import (
 )
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chunks.chunks_service import Chunk
+
+class CustomStreamingAgentChatResponse(StreamingAgentChatResponse):
+    """Subclass of StreamingAgentChatResponse with custom behavior."""
+    
+    @property
+    def response_gen(self):
+        while not self._is_done or not self._queue.empty():
+            try:
+                delta = self._queue.get(block=False)
+                self._unformatted_response += delta
+                # time.sleep(1)
+                yield delta
+            except queue.Empty:
+                # Queue is empty, but we're not done yet. Sleep for 0 to release the GIL and allow other threads to run.
+                time.sleep(0)
+        self.response = self._unformatted_response.strip()
+
+class CustomSimpleChatEngine(SimpleChatEngine):
+    """Subclass of SimpleChatEngine with overridden stream_chat method."""
+    
+    def stream_chat(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> CustomStreamingAgentChatResponse:
+        if chat_history is not None:
+            self._memory.set(chat_history)
+        self._memory.put(ChatMessage(content=message, role="user"))
+        initial_token_count = len(
+            self._memory.tokenizer_fn(
+                " ".join([(m.content or "") for m in self._prefix_messages])
+            )
+        )
+        all_messages = self._prefix_messages + self._memory.get(
+            initial_token_count=initial_token_count
+        )
+
+        chat_response = CustomStreamingAgentChatResponse(
+            chat_stream=self._llm.stream_chat(all_messages)
+        )
+        thread = Thread(
+            target=chat_response.write_response_to_history, args=(self._memory,)
+        )
+        thread.start()
+
+        return chat_response
+
 
 
 class Completion(BaseModel):
@@ -97,7 +148,7 @@ class ChatService:
         system_prompt: str | None = None,
         use_context: bool = False,
         context_filter: ContextFilter | None = None,
-    ) -> BaseChatEngine:
+    ) -> CustomSimpleChatEngine:
         if use_context:
             vector_index_retriever = self.vector_store_component.get_retriever(
                 index=self.index, context_filter=context_filter
@@ -111,7 +162,7 @@ class ChatService:
                 ],
             )
         else:
-            return SimpleChatEngine.from_defaults(
+            return CustomSimpleChatEngine.from_defaults(
                 system_prompt=system_prompt,
                 service_context=self.service_context,
             )
