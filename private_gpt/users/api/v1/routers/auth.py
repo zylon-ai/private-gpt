@@ -34,13 +34,13 @@ def register_user(
     """
     Register a new user in the database.
     """
-    logging.info(f"User : {email} Password: {password} company_id: {company.id} deparment_id: {department}")
+    logging.info(f"User : {email} Password: {password} company_id: {company.id} deparment_id: {department.id}")
     user_in = schemas.UserCreate(
             email=email,
             password=password,
             fullname=fullname,
             company_id=company.id,
-            department_id=department,
+            department_id=department.id,
         )    
     try:
         send_registration_email(fullname, email, password)
@@ -204,8 +204,8 @@ def register(
     # password: str = Body(...),
     company_id: int = Body(None, title="Company ID",
                            description="Company ID for the user (if applicable)"),
-    department_id: int = Body(None, title="Department Id",
-                                description="Department Id for the user (if applicable)"),
+    department_name: str = Body(None, title="Department Name",
+                                description="Department name for the user (if applicable)"),
     role_name: str = Body(None, title="Role Name",
                           description="User role name (if applicable)"),
     current_user: models.User = Security(
@@ -232,15 +232,17 @@ def register(
                     status_code=404,
                     detail="Company not found.",
                 )
-
-            if not department_id:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Department not found.",
-                )
-            logging.info(f"Department is {department_id}")
+            if department_name:
+                department = crud.department.get_by_department_name(
+                    db=db, name=department_name)
+                if not department:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Department not found.",
+                    )
+                logging.info(f"Department is {department}")
             user = register_user(
-                db, email, fullname, random_password, company, department_id
+                db, email, fullname, random_password, company, department
             )
             user_role_name = role_name or Role.GUEST["name"]
             user_role = create_user_role(db, user, user_role_name, company)
