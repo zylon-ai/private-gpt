@@ -108,7 +108,7 @@ class IndexStore(BaseModel):
     mode: Literal["simple", "mongo", "redis"] = Field(
         "simple",
         description=(
-            "The Doc Store type"
+            "The Index Store type"
             "If `simple` - Using the local store. (default)\n"
             "If `mongo` - use a mongo server or cluster to store llm index \n"
             "If `redis` - use a redis server or cluster to store llm index \n"
