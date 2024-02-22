@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -11,12 +11,18 @@ class DepartmentCreate(DepartmentBase):
 
 
 class DepartmentUpdate(DepartmentBase):
-    pass
+    id: int
+
+class DepartmentDelete(BaseModel):
+    id: int
+
 
 
 class DepartmentInDB(DepartmentBase):
     id: int
     company_id: int
+    total_users: Optional[int]
+    total_documents: Optional[int]
 
     class Config:
         orm_mode = True
@@ -29,3 +35,4 @@ class DepartmentAdminCreate(DepartmentBase):
 
 class Department(DepartmentInDB):
     pass
+

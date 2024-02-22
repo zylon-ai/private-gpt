@@ -6,7 +6,7 @@ from typing import Optional
 
 
 class CRUDDepartments(CRUDBase[Department, DepartmentCreate, DepartmentUpdate]):
-    def get_by_id(self, db: Session, *, id: str) -> Optional[Department]:
+    def get_by_id(self, db: Session, *, id: int) -> Optional[Department]:
         return db.query(self.model).filter(Department.id == id).first()
 
     def get_by_department_name(self, db: Session, *, name: str) -> Optional[Department]:

@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/documents', tags=['Documents'])
 
+
 @router.get("", response_model=List[schemas.Document])
 def list_files(
     request: Request,
@@ -26,16 +27,34 @@ def list_files(
         scopes=[Role.SUPER_ADMIN["name"]],
     )
 ):
+    def get_department_name(db, id):
+        dep = crud.department.get_by_id(db=db, id=id)
+        return dep.name
+
+    def get_username(db, id):
+        user = crud.user.get_by_id(db=db, id=id) 
+        return user.fullname
     try:
         docs = crud.documents.get_multi(db, skip=skip, limit=limit)
+        docs = [
+            schemas.Document(
+                id=doc.id,
+                filename=doc.filename,
+                uploaded_at=doc.uploaded_at,
+                uploaded_by=get_username(db, doc.uploaded_by),
+                department=get_department_name(db, doc.department_id)
+            )
+            for doc in docs
+        ]
         return docs
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error listing the file(s).")
         raise HTTPException(
             status_code=500,
-            detail="Internal Server Error: Unable to ingest file.",
+            detail="Internal Server Error",
         )
+
 
 
 @router.get('{department_id}', response_model=List[schemas.Document])
@@ -62,7 +81,7 @@ def list_files_by_department(
         logger.error(f"There was an error listing the file(s).")
         raise HTTPException(
             status_code=500,
-            detail="Internal Server Error: Unable to ingest file.",
+            detail="Internal Server Error.",
         )
 
 
@@ -90,5 +109,5 @@ def list_files_by_department(
         logger.error(f"There was an error listing the file(s).")
         raise HTTPException(
             status_code=500,
-            detail="Internal Server Error: Unable to ingest file.",
+            detail="Internal Server Error.",
         )

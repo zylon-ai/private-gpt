@@ -56,7 +56,7 @@ def create_deparment(
     )
 
 
-@router.get("/{department_id}", response_model=schemas.Department)
+@router.post("/read", response_model=schemas.Department)
 def read_department(
     department_id: int,
     db: Session = Depends(deps.get_db),
@@ -74,9 +74,8 @@ def read_department(
     return department
 
 
-@router.put("/{department_id}", response_model=schemas.Department)
+@router.post("/update", response_model=schemas.Department)
 def update_department(
-    department_id: int,
     department_in: schemas.DepartmentUpdate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
@@ -87,7 +86,7 @@ def update_department(
     """
     Update a Department by ID
     """
-    department = crud.department.get_by_id(db, id=department_id)
+    department = crud.department.get_by_id(db, id=department_in.id)
     if department is None:
         raise HTTPException(status_code=404, detail="department not found")
 
@@ -103,9 +102,9 @@ def update_department(
     )
 
 
-@router.delete("/{department_id}", response_model=schemas.Department)
+@router.post("/delete", response_model=schemas.Department)
 def delete_department(
-    department_id: int,
+    department_in: schemas.DepartmentDelete,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
@@ -115,6 +114,10 @@ def delete_department(
     """
     Delete a Department by ID
     """
+    department_id = department_in.id
+    department = crud.department.get(db, id=department_id)
+    if department is None:
+        raise HTTPException(status_code=404, detail="User not found")
 
     department = crud.department.remove(db=db, id=department_id)
     if department is None:

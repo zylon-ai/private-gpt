@@ -104,4 +104,8 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             .limit(limit)
             .all()
         )
+    
+    def get_by_id(self, db: Session, *, id: int) -> Optional[User]:
+        return db.query(self.model).filter(User.id == id).first()
+    
 user = CRUDUser(User)

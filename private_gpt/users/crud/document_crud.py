@@ -6,7 +6,7 @@ from typing import Optional, List
 
 
 class CRUDDocuments(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
-    def get_by_id(self, db: Session, *, id: str) -> Optional[Document]:
+    def get_by_id(self, db: Session, *, id: int) -> Optional[Document]:
         return db.query(self.model).filter(Document.id == id).first()
 
     def get_by_filename(self, db: Session, *, file_name: str) -> Optional[Document]:

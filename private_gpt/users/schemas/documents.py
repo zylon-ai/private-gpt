@@ -23,9 +23,9 @@ class DocumentList(DocumentsBase):
 
 class Document(DocumentsBase):
     id: int
-    uploaded_by: int
+    uploaded_by: str
     uploaded_at: datetime
-    department_id: int
+    department: str
 
     class Config:
         orm_mode = True
