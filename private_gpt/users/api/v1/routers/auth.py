@@ -203,7 +203,7 @@ def register(
     # password: str = Body(...),
     company_id: int = Body(None, title="Company ID",
                            description="Company ID for the user (if applicable)"),
-    department_name: str = Body(None, title="Department Name",
+    department_id: str = Body(None, title="Department ID",
                                 description="Department name for the user (if applicable)"),
     role_name: str = Body(None, title="Role Name",
                           description="User role name (if applicable)"),
@@ -231,9 +231,9 @@ def register(
                     status_code=404,
                     detail="Company not found.",
                 )
-            if department_name:
-                department = crud.department.get_by_department_name(
-                    db=db, name=department_name)
+            if department_id:
+                department = crud.department.get_by_id(
+                    db=db, id=department_id)
                 if not department:
                     raise HTTPException(
                         status_code=404,
