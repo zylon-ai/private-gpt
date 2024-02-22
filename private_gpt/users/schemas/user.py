@@ -29,6 +29,7 @@ class UserUpdate(BaseModel):
 	last_login: Optional[datetime] = None
 
 
+
 class UserLoginSchema(BaseModel):
 	email: EmailStr = Field(alias="email")
 	password: str
@@ -70,4 +71,8 @@ class UserAdminUpdate(BaseModel):
 	id: int
 	fullname: str
 	role: str
+	department_id: int
+
+class UserAdmin(BaseModel):
+	fullname: str
 	department_id: int
