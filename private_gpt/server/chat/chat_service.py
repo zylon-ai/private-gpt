@@ -4,7 +4,8 @@ from injector import inject, singleton
 from llama_index import ServiceContext, StorageContext, VectorStoreIndex
 from llama_index.chat_engine import ContextChatEngine, SimpleChatEngine
 from llama_index.chat_engine.types import (
-    StreamingAgentChatResponse
+    StreamingAgentChatResponse,
+    ToolOutput
 )
 
 from threading import Thread
@@ -15,6 +16,7 @@ import time
 from llama_index.indices.postprocessor import MetadataReplacementPostProcessor
 from llama_index.llms import ChatMessage, MessageRole
 from llama_index.types import TokenGen
+from llama_index.memory import ChatMemoryBuffer
 from pydantic import BaseModel
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
@@ -70,6 +72,43 @@ class CustomSimpleChatEngine(SimpleChatEngine):
 
         return chat_response
 
+class CustomContextChatEngine(ContextChatEngine):
+    """Subclass of ContextChatEngine with overridden stream_chat method."""
+    def stream_chat(
+        self, message: str, chat_history: Optional[List[ChatMessage]] = None
+    ) -> StreamingAgentChatResponse:
+        if chat_history is not None:
+            self._memory.set(chat_history)
+        self._memory.put(ChatMessage(content=message, role="user"))
+
+        context_str_template, nodes = self._generate_context(message)
+        prefix_messages = self._get_prefix_messages_with_context(context_str_template)
+        initial_token_count = len(
+            self._memory.tokenizer_fn(
+                " ".join([(m.content or "") for m in prefix_messages])
+            )
+        )
+        all_messages = prefix_messages + self._memory.get(
+            initial_token_count=initial_token_count
+        )
+        chat_response = CustomStreamingAgentChatResponse(
+            chat_stream=self._llm.stream_chat(all_messages),
+            sources=[
+                ToolOutput(
+                    tool_name="retriever",
+                    content=str(prefix_messages[0]),
+                    raw_input={"message": message},
+                    raw_output=prefix_messages[0],
+                )
+            ],
+            source_nodes=nodes,
+        )
+        thread = Thread(
+            target=chat_response.write_response_to_history, args=(self._memory,)
+        )
+        thread.start()
+
+        return chat_response
 
 
 class Completion(BaseModel):
@@ -153,10 +192,12 @@ class ChatService:
             vector_index_retriever = self.vector_store_component.get_retriever(
                 index=self.index, context_filter=context_filter
             )
-            return ContextChatEngine.from_defaults(
+            memory = ChatMemoryBuffer.from_defaults(token_limit=1500)
+            return CustomContextChatEngine.from_defaults(
                 system_prompt=system_prompt,
                 retriever=vector_index_retriever,
                 service_context=self.service_context,
+                memory=memory,
                 node_postprocessors=[
                     MetadataReplacementPostProcessor(target_metadata_key="window"),
                 ],
