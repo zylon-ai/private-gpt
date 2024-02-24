@@ -1,6 +1,7 @@
 """This file should be imported only and only if you want to run the UI locally."""
 import itertools
 import logging
+import os
 import time
 from collections.abc import Iterable
 from pathlib import Path
@@ -409,11 +410,30 @@ class PrivateGptUi:
                         inputs=system_prompt_input,
                     )
 
+                def get_model_label() -> str | None:
+                    # Determine the model label based on PGPT_PROFILES env variable.
+                    pgpt_profiles = os.environ.get("PGPT_PROFILES")
+                    if pgpt_profiles == "ollama":
+                        return settings().ollama.model
+                    elif pgpt_profiles == "vllm":
+                        return settings().openai.model
+                    else:
+                        return None
+
                 with gr.Column(scale=7, elem_id="col"):
+                    # Determine the model label based on the value of PGPT_PROFILES
+                    model_label = get_model_label()
+                    if model_label is not None:
+                        label_text = (
+                            f"LLM: {settings().llm.mode} | Model: {model_label}"
+                        )
+                    else:
+                        label_text = f"LLM: {settings().llm.mode}"
+
                     _ = gr.ChatInterface(
                         self._chat,
                         chatbot=gr.Chatbot(
-                            label=f"LLM: {settings().llm.mode}",
+                            label=label_text,
                             show_copy_button=True,
                             elem_id="chatbot",
                             render=False,
