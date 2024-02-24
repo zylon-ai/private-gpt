@@ -5,3 +5,4 @@ from .role import Role
 from .document import Document
 from .subscription import Subscription
 from .department import Department
+from .audit import Audit

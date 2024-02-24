@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 LDAP_SERVER = settings.LDAP_SERVER
 # LDAP_ENABLE = settings.LDAP_ENABLE
-LDAP_ENABLE = True
+LDAP_ENABLE = False
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -108,6 +108,7 @@ def ad_user_register(
 
 @router.post("/login", response_model=schemas.TokenSchema)
 def login_access_token(
+    log_audit: models.Audit = Depends(deps.get_audit_logger),
     db: Session = Depends(deps.get_db),
     form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> Any:
@@ -168,6 +169,8 @@ def login_access_token(
         "user": token_payload,
         "token_type": "bearer",
     }
+    log_audit(model='User', action='update',
+              details=token_payload, user_id=user.id)
     return JSONResponse(content=response_dict)
 
 
@@ -197,6 +200,8 @@ def refresh_access_token(
 @router.post("/register", response_model=schemas.TokenSchema)
 def register(
     *,
+    log_audit: models.Audit = Depends(deps.get_audit_logger),
+
     db: Session = Depends(deps.get_db),
     email: str = Body(...),
     fullname: str = Body(...),
@@ -218,6 +223,8 @@ def register(
 
     existing_user = crud.user.get_by_email(db, email=email)
     if existing_user:
+        log_audit(model='User', action='creation',
+                  details={"status": '409', 'detail': "The user with this email already exists!", }, user_id=current_user.id)
         raise HTTPException(
             status_code=409,
             detail="The user with this email already exists!",
@@ -245,6 +252,8 @@ def register(
             )
             user_role_name = role_name or Role.GUEST["name"]
             user_role = create_user_role(db, user, user_role_name, company)
+            log_audit(model='user_roles', action='creation',
+                      details={"status": '201', 'detail': "User role created successfully.", }, user_id=current_user.id)
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(
@@ -258,4 +267,7 @@ def register(
         "token_type": "bearer",
         "password": random_password,
     }
+    log_audit(model='User', action='creation',
+              details={"status": '201', 'detail': "User created successfully.", }, user_id=current_user.id)
+
     return JSONResponse(content=response_dict, status_code=status.HTTP_201_CREATED)

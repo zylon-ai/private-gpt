@@ -1,3 +1,4 @@
+import traceback
 from typing import Any, List, Optional
 
 from sqlalchemy.orm import Session
@@ -13,6 +14,26 @@ from private_gpt.users import crud, models, schemas
 from private_gpt.users.core.security import verify_password, get_password_hash
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+def log_audit_user(
+    db: Session,
+    current_user: models.User,
+    action: str,
+    details: dict
+):
+    try:
+        audit_entry = models.Audit(
+            user_id=current_user.id,
+            model='User',
+            action=action,
+            details=details,
+        )
+        db.add(audit_entry)
+        db.commit()
+    except Exception as e:
+        print(traceback.format_exc())
+
 
 @router.get("", response_model=List[schemas.User])
 def read_users(
@@ -78,6 +99,17 @@ def create_user(
             detail="The user with this email already exists in the system.",
         )
     user = crud.user.create(db, obj_in=user_in)
+
+    details = {
+            'admin_id': current_user.id,
+            'user_id': user.id,
+            'email': user.email,
+            'fullname': user.fullname,
+            'company_id': user.company_id,
+            'department_id': user.department_id,
+        }
+    log_audit_user(db, current_user, 'create', details)
+
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content={"message": "User created successfully", "user": jsonable_encoder(user)},
@@ -102,6 +134,14 @@ def update_username(
         company_id=user.company_id,
         department_id=user.department_id,
     )
+    details = {
+            'user_id': user.id,
+            'email': user.email,
+            'fullname': user.fullname,
+            'company_id': user.company_id,
+            'department_id': user.department_id,
+        }
+    log_audit_user(db, current_user, 'update_username', details)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={"message": "Username updated successfully",
@@ -158,6 +198,15 @@ def change_password(
         company_id= current_user.company_id,
         department_id=current_user.department_id,
     )
+
+    details = {
+            'user_id': current_user.id,
+            'email': current_user.email,
+            'fullname': current_user.fullname,
+            'company_id': current_user.company_id,
+            'department_id': current_user.department_id,
+        }
+    log_audit_user(db, current_user, 'change_password', details)
     
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -201,6 +250,7 @@ def update_user(
     Update a user.
     """
     user = crud.user.get(db, id=user_id)
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -214,6 +264,14 @@ def update_user(
         company_id=user.company_id,
         department_id=user.department_id,
     )
+    details = {
+        'user_id': user.id,
+        'email': user.email,
+        'fullname': user.fullname,
+        'company_id': user.company_id,
+        'department_id': user.department_id,
+    }
+    log_audit_user(db, current_user, 'update user', details)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={"message": "User updated successfully", "user": jsonable_encoder(user_data)},
@@ -286,6 +344,18 @@ def delete_user(
     """
     user_id = delete_user.id
     user = crud.user.get(db, id=user_id)
+
+    details = {
+            'admin_id': current_user.id,
+            'deleted_user_id': user.id,
+            'email': user.email,
+            'fullname': user.fullname,
+            'company_id': user.company_id,
+            'department_id': user.department_id,
+        }
+
+    log_audit_user(db, current_user, 'delete', details)
+
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     crud.user.remove(db, id=user_id)
@@ -340,6 +410,17 @@ def admin_update_user(
     role = crud.user_role.update(db, db_obj=user_role, obj_in=role_in)
 
     user_in = schemas.UserAdmin(fullname=user_update.fullname, department_id=user_update.department_id)
+
+    details = {
+        'admin_id': current_user.id,
+        'user_id': existing_user.id,
+        'email': existing_user.email,
+        'fullname': existing_user.fullname,
+        'company_id': existing_user.company_id,
+        'department_id': existing_user.department_id,
+    }
+    log_audit_user(db, current_user, 'admin_update', details)
+
     crud.user.update(db, db_obj=existing_user, obj_in=user_in)
 
     return JSONResponse(

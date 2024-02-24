@@ -131,6 +131,7 @@ def delete_ingested(request: Request, doc_id: str) -> None:
 def delete_file(
         request: Request,
         delete_input: DeleteFilename,
+        log_audit: models.Audit = Depends(deps.get_audit_logger),
         db: Session = Depends(deps.get_db),
         current_user: models.User = Security(
             deps.get_current_user,
@@ -159,9 +160,12 @@ def delete_file(
             print("Unable to delete file from the static directory")
         document = crud.documents.get_by_filename(db,file_name=filename)
         if document:
+            log_audit(model='Document', action='delete',
+                      details={"status": "SUCCESS", "message": f"{filename}' successfully deleted."}, user_id=current_user.id)
             crud.documents.remove(db=db, id=document.id)
         return {"status": "SUCCESS", "message": f"{filename}' successfully deleted."}
     except Exception as e:
+        print(traceback.print_exc())
         logger.error(
             f"Unexpected error deleting documents with filename '{filename}': {str(e)}")
         raise HTTPException(
@@ -171,6 +175,8 @@ def delete_file(
 @ingest_router.post("/ingest/file", response_model=IngestResponse, tags=["Ingestion"])
 def ingest_file(
         request: Request,
+        log_audit: models.Audit = Depends(deps.get_audit_logger),
+
         db: Session = Depends(deps.get_db),
         file: UploadFile = File(...),
         current_user: models.User = Security(
@@ -210,12 +216,23 @@ def ingest_file(
         with open(upload_path, "rb") as f:
             ingested_documents = service.ingest_bin_data(file.filename, f)
         logger.info(f"{file.filename} is uploaded by the {current_user.fullname}.")
-
-        return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
+        response = IngestResponse(
+            object="list", model="private-gpt", data=ingested_documents)
+        log_audit(model='Document', action='create',
+                  details={
+                      'status': '200',
+                      'filename': file.filename,
+                      'user': current_user.fullname,
+                  }, user_id=current_user.id)
+        return response
     except HTTPException:
+        print(traceback.print_exc())
         raise
 
     except Exception as e:
+        print(traceback.print_exc())
+        log_audit(model='Document', action='create',
+                  details={"status": 500, "detail": "Internal Server Error: Unable to ingest file.", }, user_id=current_user.id)
         logger.error(f"There was an error uploading the file(s): {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -225,11 +242,13 @@ def ingest_file(
 
 async def common_ingest_logic(
     request: Request,
+    
     db: Session,
     ocr_file,
     current_user,
 ):
     service = request.state.injector.get(IngestService)
+    log_audit: models.Audit = Depends(deps.get_audit_logger)
     try:
         with open(ocr_file, 'rb') as file:
             file_name = Path(ocr_file).name
@@ -257,6 +276,8 @@ async def common_ingest_logic(
                 f.write(file.read())
             file.seek(0)  # Move the file pointer back to the beginning
             ingested_documents = service.ingest_bin_data(file_name, file)
+            log_audit(model='Document', action='create',
+                      details={'status': 200, 'message': "file uploaded successfully."}, user_id=current_user.id)
 
         logger.info(
             f"{file_name} is uploaded by the {current_user.fullname}.")
@@ -264,10 +285,13 @@ async def common_ingest_logic(
         return ingested_documents
 
     except HTTPException:
+        print(traceback.print_exc())
         raise
 
     except Exception as e:
-        logger.error(f"There was an error uploading the file(s): {str(e)}")
+        print(traceback.print_exc())
+        log_audit(model='Document', action='create',
+                  details={"status": 500, "detail": "Internal Server Error: Unable to ingest file.", }, user_id=current_user.id)
         raise HTTPException(
             status_code=500,
             detail="Internal Server Error: Unable to ingest file.",

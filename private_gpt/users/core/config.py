@@ -8,7 +8,7 @@ SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://{username}:{password}@{host}:{p
     port='5432',
     db_name='QuickGpt',
     username='postgres',
-    password="admin",
+    password="quick",
 )
 
 class Settings(BaseSettings):

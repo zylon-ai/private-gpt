@@ -1,3 +1,4 @@
+from fastapi import Request, Depends, HTTPException
 import logging
 from private_gpt.users.core.config import settings
 from private_gpt.users.constants.role import Role
@@ -5,7 +6,7 @@ from typing import Union, Any, Generator
 from datetime import datetime
 from private_gpt.users import crud, models, schemas
 from private_gpt.users.db.session import SessionLocal
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from private_gpt.users.core.security import (
     ALGORITHM,
@@ -13,6 +14,7 @@ from private_gpt.users.core.security import (
 )
 from fastapi import Depends, HTTPException, Security, status
 from jose import jwt
+from private_gpt.users.utils.audit import log_audit_entry
 from pydantic import ValidationError
 from private_gpt.users.constants.role import Role
 from private_gpt.users.schemas.token import TokenPayload
@@ -130,3 +132,10 @@ def get_active_subscription(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Access Forbidden - No Active Subscription",
     )
+
+
+def get_audit_logger(request: Request, db: Session = Depends(get_db)):
+    try:
+        return lambda model, action, details, user_id=None: log_audit_entry(db, model, action, details, user_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error in get_audit_logger: {str(e)}")

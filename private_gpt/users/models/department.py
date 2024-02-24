@@ -3,8 +3,8 @@ from sqlalchemy.orm import relationship, Session
 from sqlalchemy import Column, Integer, String
 
 from private_gpt.users.db.base_class import Base
-from private_gpt.users.models.document import Document
-from private_gpt.users.models.user import User
+# from private_gpt.users.models.document import Document
+# from private_gpt.users.models.user import User
 
 
 class Department(Base):
@@ -25,21 +25,25 @@ class Department(Base):
     total_documents = Column(Integer, default=0)
 
 
+# @event.listens_for(Department, 'after_insert')
+# @event.listens_for(Department, 'after_update')
+# def update_total_users(mapper, connection, target):
+#     print("--------------------------------------------------------------Calling Event User------------------------------------------------------------------------")
+#     connection.execute(
+#         Department.__table__.update().
+#         where(Department.id == target.id).
+#         values(total_users=Session.object_session(target).query(
+#             User).filter_by(department_id=target.id).count())
+#     )
 
-def update_total_users(mapper, connection, target):
-    session = Session(bind=connection)
-    target.total_users = session.query(User).filter_by(
-        department_id=target.id).count()
 
-
-def update_total_documents(mapper, connection, target):
-    session = Session(bind=connection)
-    target.total_documents = session.query(
-        Document).filter_by(department_id=target.id).count()
-
-
-# Attach event listeners to Department model
-event.listen(Department, 'after_insert', update_total_users)
-event.listen(Department, 'after_update', update_total_users)
-event.listen(Department, 'after_insert', update_total_documents)
-event.listen(Department, 'after_update', update_total_documents)
+# @event.listens_for(Department, 'after_insert')
+# @event.listens_for(Department, 'after_update')
+# def update_total_documents(mapper, connection, target):
+#     print("--------------------------------------------------------------Calling Event Department------------------------------------------------------------------------")
+#     connection.execute(
+#         Department.__table__.update().
+#         where(Department.id == target.id).
+#         values(total_documents=Session.object_session(target).query(
+#             Document).filter_by(department_id=target.id).count())
+#     )

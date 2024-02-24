@@ -9,9 +9,10 @@ from sqlalchemy import (
     DateTime,
     ForeignKey
 )
+from sqlalchemy import event, func, select, update
 from sqlalchemy.orm import relationship
 from private_gpt.users.db.base_class import Base
-
+from private_gpt.users.models.department import Department
 class User(Base):
     """Models a user table"""
     __tablename__ = "users"
@@ -53,3 +54,21 @@ class User(Base):
     __table_args__ = (
         UniqueConstraint('fullname', name='unique_username_no_spacing'),
     )
+
+
+@event.listens_for(User, 'after_insert')
+@event.listens_for(User, 'after_delete')
+def update_total_users(mapper, connection, target):
+    department_id = target.department_id
+    print(f"Department ID is: {department_id}")
+    total_users = connection.execute(
+        select([func.count()]).select_from(User).where(
+            User.department_id == department_id)
+    ).scalar()
+    print(f"Total users is: {total_users}")
+    connection.execute(
+        update(Department).values(total_users=total_users).where(
+            Department.id == department_id)
+    )
+
+

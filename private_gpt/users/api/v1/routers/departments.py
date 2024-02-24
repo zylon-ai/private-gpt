@@ -1,4 +1,5 @@
-from typing import Any, List
+import logging
+import traceback
 
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
@@ -9,28 +10,47 @@ from private_gpt.users.api import deps
 from private_gpt.users.constants.role import Role
 from private_gpt.users import crud, models, schemas
 
-
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/departments", tags=["Departments"])
 
 
-@router.get("", response_model=List[schemas.Department])
-def list_deparments(
+def log_audit_department(
+    db: Session,
+    current_user: models.User,
+    action: str,
+    details: dict
+):
+    try:
+        audit_entry = models.Audit(
+            user_id=current_user.id,
+            model='Department',
+            action=action,
+            details=details,
+        )
+        db.add(audit_entry)
+        db.commit()
+    except Exception as e:
+        print(traceback.format_exc())
+
+
+@router.get("", response_model=list[schemas.Department])
+def list_departments(
     db: Session = Depends(deps.get_db),
     skip: int = 0,
     limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
     ),
-) -> List[schemas.Department]:
+) -> list[schemas.Department]:
     """
-    Retrieve a list of department with pagination support.
+    Retrieve a list of departments with pagination support.
     """
-    deparments = crud.department.get_multi(db, skip=skip, limit=limit)
-    return deparments
+    departments = crud.department.get_multi(db, skip=skip, limit=limit)
+    return departments
 
 
 @router.post("/create", response_model=schemas.Department)
-def create_deparment(
+def create_department(
     department_in: schemas.DepartmentCreate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
@@ -41,18 +61,35 @@ def create_deparment(
     """
     Create a new department
     """
-    company_id = current_user.company_id
-    department_create_in = schemas.DepartmentAdminCreate(name=department_in.name, company_id=company_id)
-    department = crud.department.create(db=db, obj_in=department_create_in)
-    department = jsonable_encoder(department)
+    try:
+        company_id = current_user.company_id
+        department_create_in = schemas.DepartmentAdminCreate(
+            name=department_in.name, company_id=company_id)
+        department = crud.department.create(db=db, obj_in=department_create_in)
+        department1 = jsonable_encoder(department)
 
-    return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
-        content={
-            "message": "Department created successfully",
-            "department": department
-        },
-    )
+        details = {
+            'user_id': current_user.id,
+            'department_id': department.id,
+            'department_name': department.name
+        }
+
+        log_audit_department(db, current_user, 'create', details)
+
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content={
+                "message": "Department created successfully",
+                "department": department1
+            },
+        )
+    except Exception as e:
+        print(traceback.format_exc())
+        logger.error(f"Error creating department: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
 
 
 @router.post("/read", response_model=schemas.Department)
@@ -67,10 +104,28 @@ def read_department(
     """
     Read a Department by ID
     """
-    department = crud.department.get_by_id(db, id=department_id)
-    if department is None:
-        raise HTTPException(status_code=404, detail="department not found")
-    return department
+    try:
+        department = crud.department.get_by_id(db, id=department_id)
+        if department is None:
+            raise HTTPException(status_code=404, detail="Department not found")
+
+        details = {
+            'status': 200,
+            'user_id': current_user.id,
+            'department_id': department.id,
+            'department_name': department.name
+        }
+
+        log_audit_department(db, current_user, 'read', details)
+
+        return department
+    except Exception as e:
+        print(traceback.format_exc())
+        logger.error(f"Error reading department: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
 
 
 @router.post("/update", response_model=schemas.Department)
@@ -85,20 +140,40 @@ def update_department(
     """
     Update a Department by ID
     """
-    department = crud.department.get_by_id(db, id=department_in.id)
-    if department is None:
-        raise HTTPException(status_code=404, detail="department not found")
+    try:
+        department = crud.department.get_by_id(db, id=department_in.id)
+        old_name = department.name
+        if department is None:
+            raise HTTPException(status_code=404, detail="Department not found")
 
-    updated_department = crud.department.update(
-        db=db, db_obj=department, obj_in=department_in)
-    updated_department = jsonable_encoder(updated_department)
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "message": f"{department_in} department updated successfully",
-            "department": updated_department
-        },
-    )
+        updated_department = crud.department.update(
+            db=db, db_obj=department, obj_in=department_in)
+        updated_department = jsonable_encoder(updated_department)
+
+        details = {
+            'status': '200',
+            'user_id': current_user.id,
+            'department_id': department.id,
+            'old_department_name': old_name,
+            'new_department_name': department.name,
+        }
+
+        log_audit_department(db, current_user, 'update', details)
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "message": f"Department updated successfully",
+                "department": updated_department
+            },
+        )
+    except Exception as e:
+        print(traceback.format_exc())
+        logger.error(f"Error updating department: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
 
 
 @router.post("/delete", response_model=schemas.Department)
@@ -113,19 +188,36 @@ def delete_department(
     """
     Delete a Department by ID
     """
-    department_id = department_in.id
-    department = crud.department.get(db, id=department_id)
-    if department is None:
-        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        department_id = department_in.id
+        department = crud.department.get(db, id=department_id)
+        if department is None:
+            raise HTTPException(status_code=404, detail="Department not found")
 
-    department = crud.department.remove(db=db, id=department_id)
-    if department is None:
-        raise HTTPException(status_code=404, detail="department not found")
-    department = jsonable_encoder(department)
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "message": "Department deleted successfully",
-            "deparment": department,
-        },
-    )
+        details = {
+            'status': 200,
+            'user_id': current_user.id,
+            'department_id': department.id,
+            'department_name': department.name
+        }
+
+        log_audit_department(db, current_user, 'delete', details)
+
+        deleted_department = crud.department.remove(db=db, id=department_id)
+        deleted_department = jsonable_encoder(deleted_department)
+
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "message": "Department deleted successfully",
+                "department": deleted_department,
+            },
+        )
+    except Exception as e:
+        print(traceback.format_exc())
+        logger.error(f"Error deleting department: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
