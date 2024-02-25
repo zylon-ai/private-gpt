@@ -106,7 +106,6 @@ def prompt_completion(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
-        deps.get_active_subscription,
     ),
 ) -> OpenAICompletion | StreamingResponse:
     try:

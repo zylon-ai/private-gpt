@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 LDAP_SERVER = settings.LDAP_SERVER
 # LDAP_ENABLE = settings.LDAP_ENABLE
-LDAP_ENABLE = False
+LDAP_ENABLE = True
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -116,18 +116,26 @@ def login_access_token(
     """
     OAuth2 compatible token login, get an access token for future requests
     """
-    if LDAP_ENABLE:
-        existing_user = crud.user.get_by_email(db, email=form_data.username)
-        
-        if existing_user:
-            if existing_user.user_role.role.name == "SUPER_ADMIN":
-                pass
+    def ad_auth(LDAP_ENABLE):
+        if LDAP_ENABLE:
+            existing_user = crud.user.get_by_email(db, email=form_data.username)
+            
+            if existing_user:
+                if existing_user.user_role.role.name == "SUPER_ADMIN":
+                    return True
+                else:
+                    ldap = ldap_login(db=db, username=form_data.username, password=form_data.password)
             else:
                 ldap = ldap_login(db=db, username=form_data.username, password=form_data.password)
-        else:
-            ldap = ldap_login(db=db, username=form_data.username, password=form_data.password)
-            ad_user_register(db=db, email=form_data.username,fullname=ldap, password=form_data.password)
-
+                ad_user_register(db=db, email=form_data.username, fullname=ldap, password=form_data.password)
+                return True
+        return False
+    if not (ad_auth(LDAP_ENABLE)):
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid Credentials!!!",
+        )
+    
     user = crud.user.authenticate(
         db, email=form_data.username, password=form_data.password
     )
@@ -254,7 +262,7 @@ def register(
             user_role_name = role_name or Role.GUEST["name"]
             user_role = create_user_role(db, user, user_role_name, company)
             log_audit(model='user_roles', action='creation',
-                      details={"status": '201', 'detail': "User role created successfully.", }, user_id=current_user.id)
+                      details={'detail': "User role created successfully.", }, user_id=current_user.id)
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(

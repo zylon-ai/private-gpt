@@ -26,5 +26,16 @@ def list_companies(
     """
     Retrieve a list of companies with pagination support.
     """
-    logs = crud.audit.get_multi(db, skip=skip, limit=limit)
+    logs = crud.audit.get_multi_desc(db, skip=skip, limit=limit)
+    logs = [
+            schemas.Audit(
+                id=dep.id,
+                model=dep.model,
+                username=(crud.user.get_by_id(db, id=dep.user_id).fullname),
+                details=dep.details,
+                action=dep.action,
+                timestamp=dep.timestamp,
+            )
+            for dep in logs
+        ]
     return logs

@@ -26,5 +26,10 @@ class AuditInDB(AuditBase):
     class Config:
         orm_mode = True
 
-class Audit(AuditBase):
-    pass
+class Audit(BaseModel):
+    id: int
+    model: str
+    username: str
+    action: str
+    details: dict
+    timestamp: Optional[datetime]
