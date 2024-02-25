@@ -76,3 +76,7 @@ class UserAdminUpdate(BaseModel):
 class UserAdmin(BaseModel):
 	fullname: str
 	department_id: int
+
+
+class PasswordUpdate(BaseModel):
+	password_created: Optional[datetime] = None

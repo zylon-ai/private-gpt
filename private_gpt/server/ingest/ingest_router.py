@@ -220,7 +220,6 @@ def ingest_file(
             object="list", model="private-gpt", data=ingested_documents)
         log_audit(model='Document', action='create',
                   details={
-                      'status': '200',
                       'filename': file.filename,
                       'user': current_user.fullname,
                   }, user_id=current_user.id)
@@ -242,7 +241,6 @@ def ingest_file(
 
 async def common_ingest_logic(
     request: Request,
-    
     db: Session,
     ocr_file,
     current_user,
@@ -274,10 +272,10 @@ async def common_ingest_logic(
 
             with open(upload_path, "wb") as f:
                 f.write(file.read())
-            file.seek(0)  # Move the file pointer back to the beginning
+            file.seek(0)  
             ingested_documents = service.ingest_bin_data(file_name, file)
             log_audit(model='Document', action='create',
-                      details={'status': 200, 'message': "file uploaded successfully."}, user_id=current_user.id)
+                      details={'status': "SUCCESS", 'message': f"{file_name} uploaded successfully."}, user_id=current_user.id)
 
         logger.info(
             f"{file_name} is uploaded by the {current_user.fullname}.")

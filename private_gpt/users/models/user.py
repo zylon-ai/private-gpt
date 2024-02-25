@@ -13,6 +13,7 @@ from sqlalchemy import event, func, select, update
 from sqlalchemy.orm import relationship
 from private_gpt.users.db.base_class import Base
 from private_gpt.users.models.department import Department
+
 class User(Base):
     """Models a user table"""
     __tablename__ = "users"
@@ -34,6 +35,8 @@ class User(Base):
         default=datetime.datetime.utcnow,
         onupdate=datetime.datetime.utcnow,
     )
+    
+    password_created = Column(DateTime, nullable=True)
 
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  
     company = relationship("Company", back_populates="users") 
@@ -71,4 +74,30 @@ def update_total_users(mapper, connection, target):
             Department.id == department_id)
     )
 
+
+@event.listens_for(User, 'before_insert')
+def set_password_created(mapper, connection, target):
+    target.password_created = datetime.datetime.utcnow()
+    connection.execute(
+        update(User)
+        .values(password_created=datetime.datetime.utcnow())
+        .where(User.id == target.id)
+    )
+
+@event.listens_for(User, 'before_update', propagate=True)
+def check_password_expiry(mapper, connection, target):
+    if target.password_created and (
+            datetime.datetime.utcnow() - target.password_created).days > 90:
+        target.is_active = False
+        connection.execute(
+            update(User)
+            .values(is_active=False)
+            .where(User.id == target.id)
+        )
+    else:
+        connection.execute(
+            update(User)
+            .values(is_active=True)
+            .where(User.id == target.id)
+        )
 

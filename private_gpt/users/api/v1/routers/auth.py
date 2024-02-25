@@ -169,7 +169,7 @@ def login_access_token(
         "user": token_payload,
         "token_type": "bearer",
     }
-    log_audit(model='User', action='update',
+    log_audit(model='User', action='login',
               details=token_payload, user_id=user.id)
     return JSONResponse(content=response_dict)
 
@@ -213,7 +213,7 @@ def register(
     role_name: str = Body(None, title="Role Name",
                           description="User role name (if applicable)"),
     current_user: models.User = Security(
-        deps.get_current_user,
+        deps.get_current_active_user,
         scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
     ),
 ) -> Any:

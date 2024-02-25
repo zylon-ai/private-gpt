@@ -45,8 +45,31 @@ def list_departments(
     """
     Retrieve a list of departments with pagination support.
     """
-    departments = crud.department.get_multi(db, skip=skip, limit=limit)
-    return departments
+    try:
+        role = current_user.user_role.role.name if current_user.user_role else None
+        if role == "SUPER_ADMIN":
+            deps = crud.department.get_multi(db, skip=skip, limit=limit)
+        else:
+            deps = crud.department.get_multi_department(
+                db, department_id=current_user.department_id, skip=skip, limit=limit)
+            
+        deps = [
+            schemas.Department(
+                id=dep.id,
+                name=dep.name,
+                total_users=dep.total_users,
+                total_documents=dep.total_documents,
+            )
+            for dep in deps
+        ]
+        return deps
+    except Exception as e:
+        print(traceback.format_exc())
+        logger.error(f"There was an error listing the file(s).")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+        )
 
 
 @router.post("/create", response_model=schemas.Department)

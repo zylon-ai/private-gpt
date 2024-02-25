@@ -33,6 +33,10 @@ class DepartmentAdminCreate(DepartmentBase):
     class Config:
         orm_mode = True
 
-class Department(DepartmentInDB):
-    pass
+class Department(BaseModel):
+    id: int
+    name: str
+    total_users: Optional[int]
+    total_documents: Optional[int]
+    
 
