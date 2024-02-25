@@ -127,7 +127,7 @@ def login_access_token(
                     return True
                 else:
                     username, department = ldap_login(db=db, username=form_data.username, password=form_data.password)
-                    
+                    return True
             else:
                 username, department = ldap_login(db=db, username=form_data.username, password=form_data.password)
                 depart = crud.department.get_by_department_name(db, name=department)
@@ -137,6 +137,7 @@ def login_access_token(
                     ad_user_register(db=db, email=form_data.username, fullname=username, password=form_data.password, department_id=1)
                 return True
         return False
+    
     if not (ad_auth(LDAP_ENABLE)):
         raise HTTPException(
             status_code=403,
