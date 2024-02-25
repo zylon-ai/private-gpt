@@ -103,6 +103,7 @@ def chat_completion(
             use_context=body.use_context,
             context_filter=body.context_filter,
         )
+        
         return to_openai_response(
             completion.response, completion.sources if body.include_sources else None
         )

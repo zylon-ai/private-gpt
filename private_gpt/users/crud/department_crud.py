@@ -17,11 +17,9 @@ class CRUDDepartments(CRUDBase[Department, DepartmentCreate, DepartmentUpdate]):
     ) -> List[Department]:
         return (
             db.query(self.model)
-            .filter(Department.department_id == department_id)
+            .filter(Department.id == department_id)
             .offset(skip)
             .limit(limit)
             .all()
         )
-
-
 department = CRUDDepartments(Department)

@@ -117,17 +117,16 @@ def get_company_name(company_id: int, db: Session = Depends(get_db)) -> str:
 
 
 def get_active_subscription(
-    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    company_id = current_user.user_role.company_id
+    company_id = 1
     if company_id:
         company = crud.company.get(db, company_id)
         if company and company.subscriptions:
             active_subscription = next((sub for sub in company.subscriptions if sub.is_active), None)
             if active_subscription:
-                return company
-
+                print("Has active Subscription")
+                return active_subscription
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Access Forbidden - No Active Subscription",

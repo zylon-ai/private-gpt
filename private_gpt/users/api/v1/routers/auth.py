@@ -111,6 +111,7 @@ def login_access_token(
     log_audit: models.Audit = Depends(deps.get_audit_logger),
     db: Session = Depends(deps.get_db),
     form_data: OAuth2PasswordRequestForm = Depends(),
+    active_subscription: models.Subscription = Depends(deps.get_active_subscription)
 ) -> Any:
     """
     OAuth2 compatible token login, get an access token for future requests
@@ -208,7 +209,7 @@ def register(
     # password: str = Body(...),
     company_id: int = Body(None, title="Company ID",
                            description="Company ID for the user (if applicable)"),
-    department_id: str = Body(None, title="Department ID",
+    department_id: int = Body(None, title="Department ID",
                                 description="Department name for the user (if applicable)"),
     role_name: str = Body(None, title="Role Name",
                           description="User role name (if applicable)"),

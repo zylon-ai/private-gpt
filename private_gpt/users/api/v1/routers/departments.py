@@ -92,7 +92,7 @@ def create_department(
         department1 = jsonable_encoder(department)
 
         details = {
-            'user_id': current_user.id,
+            'detail': 'Department created successfully',
             'department_id': department.id,
             'department_name': department.name
         }
@@ -131,16 +131,6 @@ def read_department(
         department = crud.department.get_by_id(db, id=department_id)
         if department is None:
             raise HTTPException(status_code=404, detail="Department not found")
-
-        details = {
-            'status': 200,
-            'user_id': current_user.id,
-            'department_id': department.id,
-            'department_name': department.name
-        }
-
-        log_audit_department(db, current_user, 'read', details)
-
         return department
     except Exception as e:
         print(traceback.format_exc())
@@ -174,8 +164,7 @@ def update_department(
         updated_department = jsonable_encoder(updated_department)
 
         details = {
-            'status': '200',
-            'user_id': current_user.id,
+            'detail': 'Department updated successfully!',
             'department_id': department.id,
             'old_department_name': old_name,
             'new_department_name': department.name,
@@ -218,18 +207,16 @@ def delete_department(
             raise HTTPException(status_code=404, detail="Department not found")
 
         details = {
-            'status': 200,
-            'user_id': current_user.id,
+            'detail': "Department deleted successfully!",
             'department_id': department.id,
             'department_name': department.name
         }
 
-        log_audit_department(db, current_user, 'delete', details)
 
         deleted_department = crud.department.remove(db=db, id=department_id)
+        log_audit_department(db, current_user, 'delete', details)
+        
         deleted_department = jsonable_encoder(deleted_department)
-
-
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={

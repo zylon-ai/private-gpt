@@ -160,10 +160,17 @@ def delete_file(
             print("Unable to delete file from the static directory")
         document = crud.documents.get_by_filename(db,file_name=filename)
         if document:
-            log_audit(model='Document', action='delete',
-                      details={"status": "SUCCESS", "message": f"{filename}' successfully deleted."}, user_id=current_user.id)
+            log_audit(
+                model='Document', 
+                action='delete',
+                details={
+                    "detail": f"{filename}' deleted successfully.",
+                    'user': current_user.fullname,
+                    }, 
+                user_id=current_user.id
+            )
             crud.documents.remove(db=db, id=document.id)
-        return {"status": "SUCCESS", "message": f"{filename}' successfully deleted."}
+        return {"status": "SUCCESS", "message": f"{filename}' deleted successfully."}
     except Exception as e:
         print(traceback.print_exc())
         logger.error(
@@ -200,14 +207,14 @@ def ingest_file(
                 detail="No file name provided",
             )
 
-        try:
-            docs_in = schemas.DocumentCreate(filename=file.filename, uploaded_by=current_user.id, department_id=current_user.department_id)
-            crud.documents.create(db=db, obj_in=docs_in)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Unable to upload file.",
-            )
+        # try:
+        docs_in = schemas.DocumentCreate(filename=file.filename, uploaded_by=current_user.id, department_id=current_user.department_id)
+        crud.documents.create(db=db, obj_in=docs_in)
+        # except Exception as e:
+        #     raise HTTPException(
+        #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        #         detail="Unable to upload file.",
+        #     )
         upload_path = Path(f"{UPLOAD_DIR}/{file.filename}")
 
         with open(upload_path, "wb") as f:
@@ -218,11 +225,13 @@ def ingest_file(
         logger.info(f"{file.filename} is uploaded by the {current_user.fullname}.")
         response = IngestResponse(
             object="list", model="private-gpt", data=ingested_documents)
+        
         log_audit(model='Document', action='create',
                   details={
-                      'filename': file.filename,
+                      'filename': f"{file.filename} uploaded successfully",
                       'user': current_user.fullname,
                   }, user_id=current_user.id)
+        
         return response
     except HTTPException:
         print(traceback.print_exc())
@@ -274,8 +283,16 @@ async def common_ingest_logic(
                 f.write(file.read())
             file.seek(0)  
             ingested_documents = service.ingest_bin_data(file_name, file)
-            log_audit(model='Document', action='create',
-                      details={'status': "SUCCESS", 'message': f"{file_name} uploaded successfully."}, user_id=current_user.id)
+            
+            log_audit(
+                model='Document', 
+                action='create',
+                details={
+                    'detail': f"{file_name} uploaded successfully", 
+                    'user': f"{current_user.fullname}"
+                }, 
+                user_id=current_user.id
+            )
 
         logger.info(
             f"{file_name} is uploaded by the {current_user.fullname}.")
