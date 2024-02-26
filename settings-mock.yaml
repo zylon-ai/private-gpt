@@ -4,5 +4,9 @@ server:
 # This configuration allows you to use GPU for creating embeddings while avoiding loading LLM into vRAM
 llm:
   mode: mock
+
 embedding:
   mode: local
+
+qdrant:
+  path: local_data/private_gpt/qdrant

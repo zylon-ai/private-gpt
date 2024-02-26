@@ -1,3 +1,6 @@
+# Environment secrets
+.env
+
 .venv
 
 settings-me.yaml

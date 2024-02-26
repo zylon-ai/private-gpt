@@ -1,5 +1,5 @@
 server:
-  env_name: ${APP_ENV:docker}
+  env_name: staging
   port: ${PORT:8080}
 
 llm:
@@ -9,13 +9,12 @@ embedding:
   mode: ${PGPT_EMBEDDING_MODE:openai}
 
 ui:
-  enabled: true
-  path: /
+  enabled: false
 
 qdrant:
-  url: ${QDRANT_URL:}
-  api_key: ${QDRANT_API_KEY:}
+  url: ${QDRANT_URL}
+  api_key: ${QDRANT_API_KEY}
 
 openai:
-  api_key: ${OPENAI_API_KEY:}
+  api_key: ${OPENAI_API_KEY}
   model: ${OPENAI_MODEL:gpt-3.5-turbo}
