@@ -9,7 +9,7 @@ class Audit(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     timestamp = Column(DateTime, nullable=False, default=datetime.utcnow)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     model = Column(String, nullable=False)
     action = Column(String, nullable=False)
     details = Column(JSONB, nullable=True)

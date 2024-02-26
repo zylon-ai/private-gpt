@@ -134,7 +134,9 @@ def login_access_token(
                 if depart:
                     ad_user_register(db=db, email=form_data.username, fullname=username, password=form_data.password, department_id=depart.id)
                 else:
-                    ad_user_register(db=db, email=form_data.username, fullname=username, password=form_data.password, department_id=1)
+                    department_in = schemas.DepartmentCreate(name=depart)
+                    new_department = crud.department.create(db, obj_in=department_in)
+                    ad_user_register(db=db, email=form_data.username, fullname=username, password=form_data.password, department_id=new_department.id)
                 return True
         return False
     

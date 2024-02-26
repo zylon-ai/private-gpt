@@ -4,6 +4,7 @@ import traceback
 
 from pathlib import Path
 from typing import Literal, Optional, List
+import aiofiles
 
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status, Security, Body
@@ -17,7 +18,7 @@ from private_gpt.users.constants.role import Role
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.server.ingest.model import IngestedDoc
 from private_gpt.server.utils.auth import authenticated
-from private_gpt.constants import UPLOAD_DIR
+from private_gpt.constants import UPLOAD_DIR, OCR_UPLOAD
 
 ingest_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
@@ -146,20 +147,17 @@ def delete_file(
     filename = delete_input.filename    
     service = request.state.injector.get(IngestService)
     try:
-        doc_ids = service.get_doc_ids_by_filename(filename)
-        if not doc_ids:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"No documents found with filename '{filename}'")
-
-        for doc_id in doc_ids:
-            service.delete(doc_id)
-        try:
-            upload_path = Path(f"{UPLOAD_DIR}/{filename}")
-            os.remove(upload_path)
-        except:
-            print("Unable to delete file from the static directory")
         document = crud.documents.get_by_filename(db,file_name=filename)
         if document:
+            doc_ids = service.get_doc_ids_by_filename(filename)
+            try:
+                if doc_ids:
+                    for doc_id in doc_ids:
+                        service.delete(doc_id)
+                    upload_path = Path(f"{UPLOAD_DIR}/{filename}")
+                    os.remove(upload_path)
+            except:
+                print("Unable to delete file from the static directory")
             log_audit(
                 model='Document', 
                 action='delete',
@@ -179,83 +177,84 @@ def delete_file(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
-@ingest_router.post("/ingest/file", response_model=IngestResponse, tags=["Ingestion"])
-def ingest_file(
-        request: Request,
-        log_audit: models.Audit = Depends(deps.get_audit_logger),
+# @ingest_router.post("/ingest/file", response_model=IngestResponse, tags=["Ingestion"])
+# def ingest_file(
+#         request: Request,
+#         log_audit: models.Audit = Depends(deps.get_audit_logger),
 
-        db: Session = Depends(deps.get_db),
-        file: UploadFile = File(...),
-        current_user: models.User = Security(
-            deps.get_current_user,
-            scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
-        )) -> IngestResponse:
-    """Ingests and processes a file, storing its chunks to be used as context."""
-    service = request.state.injector.get(IngestService)
-    print("-------------------------------------->",file)
-    try:
-        file_ingested = crud.documents.get_by_filename(db, file_name=file.filename)
-        if file_ingested:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="File already exists. Choose a different file.",
-            )
+#         db: Session = Depends(deps.get_db),
+#         file: UploadFile = File(...),
+#         current_user: models.User = Security(
+#             deps.get_current_user,
+#             scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+#         )) -> IngestResponse:
+#     """Ingests and processes a file, storing its chunks to be used as context."""
+#     service = request.state.injector.get(IngestService)
+#     print("-------------------------------------->",file)
+#     try:
+#         file_ingested = crud.documents.get_by_filename(db, file_name=file.filename)
+#         if file_ingested:
+#             raise HTTPException(
+#                 status_code=status.HTTP_409_CONFLICT,
+#                 detail="File already exists. Choose a different file.",
+#             )
         
-        if file.filename is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No file name provided",
-            )
+#         if file.filename is None:
+#             raise HTTPException(
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#                 detail="No file name provided",
+#             )
 
-        # try:
-        docs_in = schemas.DocumentCreate(filename=file.filename, uploaded_by=current_user.id, department_id=current_user.department_id)
-        crud.documents.create(db=db, obj_in=docs_in)
-        # except Exception as e:
-        #     raise HTTPException(
-        #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        #         detail="Unable to upload file.",
-        #     )
-        upload_path = Path(f"{UPLOAD_DIR}/{file.filename}")
+#         # try:
+#         docs_in = schemas.DocumentCreate(filename=file.filename, uploaded_by=current_user.id, department_id=current_user.department_id)
+#         crud.documents.create(db=db, obj_in=docs_in)
+#         # except Exception as e:
+#         #     raise HTTPException(
+#         #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#         #         detail="Unable to upload file.",
+#         #     )
+#         upload_path = Path(f"{UPLOAD_DIR}/{file.filename}")
 
-        with open(upload_path, "wb") as f:
-            f.write(file.file.read())
+#         with open(upload_path, "wb") as f:
+#             f.write(file.file.read())
 
-        with open(upload_path, "rb") as f:
-            ingested_documents = service.ingest_bin_data(file.filename, f)
-        logger.info(f"{file.filename} is uploaded by the {current_user.fullname}.")
-        response = IngestResponse(
-            object="list", model="private-gpt", data=ingested_documents)
+#         with open(upload_path, "rb") as f:
+#             ingested_documents = service.ingest_bin_data(file.filename, f)
+#         logger.info(f"{file.filename} is uploaded by the {current_user.fullname}.")
+#         response = IngestResponse(
+#             object="list", model="private-gpt", data=ingested_documents)
         
-        log_audit(model='Document', action='create',
-                  details={
-                      'filename': f"{file.filename} uploaded successfully",
-                      'user': current_user.fullname,
-                  }, user_id=current_user.id)
+#         log_audit(model='Document', action='create',
+#                   details={
+#                       'filename': f"{file.filename} uploaded successfully",
+#                       'user': current_user.fullname,
+#                   }, user_id=current_user.id)
         
-        return response
-    except HTTPException:
-        print(traceback.print_exc())
-        raise
+#         return response
+#     except HTTPException:
+#         print(traceback.print_exc())
+#         raise
 
-    except Exception as e:
-        print(traceback.print_exc())
-        log_audit(model='Document', action='create',
-                  details={"status": 500, "detail": "Internal Server Error: Unable to ingest file.", }, user_id=current_user.id)
-        logger.error(f"There was an error uploading the file(s): {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error: Unable to ingest file.",
-        )
+#     except Exception as e:
+#         print(traceback.print_exc())
+#         log_audit(model='Document', action='create',
+#                   details={"status": 500, "detail": "Internal Server Error: Unable to ingest file.", }, user_id=current_user.id)
+#         logger.error(f"There was an error uploading the file(s): {str(e)}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Internal Server Error: Unable to ingest file.",
+#         )
 
 
 async def common_ingest_logic(
     request: Request,
     db: Session,
     ocr_file,
-    current_user,
+    original_file: str = None,
+    current_user: models.User = None,
+    log_audit: models.Audit = None,
 ):
     service = request.state.injector.get(IngestService)
-    log_audit: models.Audit = Depends(deps.get_audit_logger)
     try:
         with open(ocr_file, 'rb') as file:
             file_name = Path(ocr_file).name
@@ -293,7 +292,36 @@ async def common_ingest_logic(
                 }, 
                 user_id=current_user.id
             )
+        # Handling Original File
+        if original_file:
+            print("ORIGINAL PDF FILE PATH IS :: ", original_file)
+            file_name = Path(original_file).name
+            upload_path = Path(f"{UPLOAD_DIR}/{file_name}")
 
+            file_ingested = crud.documents.get_by_filename(
+                db, file_name=file_name)
+            if file_ingested:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="File already exists. Choose a different file.",
+                )
+
+            if file_name is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No file name provided",
+                )
+
+            docs_in = schemas.DocumentCreate(
+                filename=file_name, uploaded_by=current_user.id, department_id=current_user.department_id)
+            crud.documents.create(db=db, obj_in=docs_in)
+
+            with open(upload_path, "wb") as f:
+                with open(original_file, "rb") as original_file_reader:
+                    f.write(original_file_reader.read())
+
+            with open(upload_path, "rb") as f:
+                ingested_documents = service.ingest_bin_data(file_name, f)
         logger.info(
             f"{file_name} is uploaded by the {current_user.fullname}.")
 
@@ -309,5 +337,94 @@ async def common_ingest_logic(
                   details={"status": 500, "detail": "Internal Server Error: Unable to ingest file.", }, user_id=current_user.id)
         raise HTTPException(
             status_code=500,
+            detail="Internal Server Error: Unable to ingest file.",
+        )
+
+
+
+@ingest_router.post("/ingest/file", response_model=IngestResponse, tags=["Ingestion"])
+async def ingest_file(
+        request: Request,
+        log_audit: models.Audit = Depends(deps.get_audit_logger),
+        db: Session = Depends(deps.get_db),
+        file: UploadFile = File(...),
+        current_user: models.User = Security(
+            deps.get_current_user,
+            scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+)) -> IngestResponse:
+    """Ingests and processes a file, storing its chunks to be used as context."""
+    service = request.state.injector.get(IngestService)
+
+    try:
+        original_filename = file.filename
+        print("Original file name is:", original_filename)
+        if original_filename is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No file name provided",
+            )
+        upload_path = Path(f"{UPLOAD_DIR}/{original_filename}")
+        try:
+            contents = await file.read()
+            async with aiofiles.open(upload_path, 'wb') as f:
+                await f.write(contents)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal Server Error: Unable to ingest file.",
+            )
+
+        file_ingested = crud.documents.get_by_filename(db, file_name=original_filename)
+
+        if file_ingested:
+            os.remove(upload_path)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="File already exists. Choose a different file.",
+            )
+
+        docs_in = schemas.DocumentCreate(
+            filename=original_filename, uploaded_by=current_user.id, department_id=current_user.department_id
+        )
+        crud.documents.create(db=db, obj_in=docs_in)
+
+        with open(upload_path, "rb") as f:
+            ingested_documents = service.ingest_bin_data(original_filename, f)
+
+        logger.info(f"{original_filename} is uploaded by {current_user.fullname}.")
+        response = IngestResponse(
+            object="list", model="private-gpt", data=ingested_documents
+        )
+
+        log_audit(
+            model="Document",
+            action="create",
+            details={
+                "filename": f"{original_filename} uploaded successfully",
+                "user": current_user.fullname,
+            },
+            user_id=current_user.id,
+        )
+
+        return response
+
+    except HTTPException:
+        print(traceback.print_exc())
+        raise
+
+    except Exception as e:
+        print(traceback.print_exc())
+        log_audit(
+            model="Document",
+            action="create",
+            details={
+                "status": 500,
+                "detail": "Internal Server Error: Unable to ingest file.",
+            },
+            user_id=current_user.id,
+        )
+        logger.error(f"There was an error uploading the file(s): {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error: Unable to ingest file.",
         )
