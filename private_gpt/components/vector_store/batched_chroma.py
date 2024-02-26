@@ -1,9 +1,9 @@
 from typing import Any
 
-from llama_index.schema import BaseNode, MetadataMode
-from llama_index.vector_stores import ChromaVectorStore
-from llama_index.vector_stores.chroma import chunk_list
-from llama_index.vector_stores.utils import node_to_metadata_dict
+from llama_index.legacy.schema import BaseNode, MetadataMode
+from llama_index.legacy.vector_stores import ChromaVectorStore
+from llama_index.legacy.vector_stores.chroma import chunk_list
+from llama_index.legacy.vector_stores.utils import node_to_metadata_dict
 
 
 class BatchedChromaVectorStore(ChromaVectorStore):

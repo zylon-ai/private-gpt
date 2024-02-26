@@ -8,16 +8,16 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from llama_index import (
+from llama_index.legacy import (
     Document,
     ServiceContext,
     StorageContext,
     VectorStoreIndex,
     load_index_from_storage,
 )
-from llama_index.data_structs import IndexDict
-from llama_index.indices.base import BaseIndex
-from llama_index.ingestion import run_transformations
+from llama_index.legacy.data_structs import IndexDict
+from llama_index.legacy.indices.base import BaseIndex
+from llama_index.legacy.ingestion import run_transformations
 
 from private_gpt.components.ingest.ingest_helper import IngestionHelper
 from private_gpt.paths import local_data_path

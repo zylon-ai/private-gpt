@@ -7,32 +7,32 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import boto3  # type: ignore
-from llama_index.bridge.pydantic import Field
-from llama_index.llms import (
+from llama_index.legacy.bridge.pydantic import Field
+from llama_index.legacy.llms import (
     CompletionResponse,
     CustomLLM,
     LLMMetadata,
 )
-from llama_index.llms.base import (
+from llama_index.legacy.llms.base import (
     llm_chat_callback,
     llm_completion_callback,
 )
-from llama_index.llms.generic_utils import (
+from llama_index.legacy.llms.generic_utils import (
     completion_response_to_chat_response,
     stream_completion_response_to_chat_response,
 )
-from llama_index.llms.llama_utils import (
+from llama_index.legacy.llms.llama_utils import (
     completion_to_prompt as generic_completion_to_prompt,
 )
-from llama_index.llms.llama_utils import (
+from llama_index.legacy.llms.llama_utils import (
     messages_to_prompt as generic_messages_to_prompt,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from llama_index.callbacks import CallbackManager
-    from llama_index.llms import (
+    from llama_index.legacy.callbacks import CallbackManager
+    from llama_index.legacy.llms import (
         ChatMessage,
         ChatResponse,
         ChatResponseGen,

@@ -3,8 +3,8 @@ import logging
 from collections.abc import Sequence
 from typing import Any, Literal
 
-from llama_index.llms import ChatMessage, MessageRole
-from llama_index.llms.llama_utils import (
+from llama_index.legacy.llms import ChatMessage, MessageRole
+from llama_index.legacy.llms.llama_utils import (
     completion_to_prompt,
     messages_to_prompt,
 )

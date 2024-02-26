@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import AnyStr, BinaryIO
 
 from injector import inject, singleton
-from llama_index import (
+from llama_index.legacy import (
     ServiceContext,
     StorageContext,
 )
-from llama_index.node_parser import SentenceWindowNodeParser
+from llama_index.legacy.node_parser import SentenceWindowNodeParser
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import get_ingestion_component
