@@ -131,10 +131,11 @@ def login_access_token(
             else:
                 username, department = ldap_login(db=db, username=form_data.username, password=form_data.password)
                 depart = crud.department.get_by_department_name(db, name=department)
+
                 if depart:
                     ad_user_register(db=db, email=form_data.username, fullname=username, password=form_data.password, department_id=depart.id)
                 else:
-                    department_in = schemas.DepartmentCreate(name=depart)
+                    department_in = schemas.DepartmentCreate(name=department)
                     new_department = crud.department.create(db, obj_in=department_in)
                     ad_user_register(db=db, email=form_data.username, fullname=username, password=form_data.password, department_id=new_department.id)
                 return True
