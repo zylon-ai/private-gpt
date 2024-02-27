@@ -44,7 +44,7 @@ async def process_images_and_generate_doc(pdf_path: str, upload_dir: str):
     ocr = GetOCRText()
     img_tab = ImageToTable()
     pdf_doc = fitz.open(pdf_path)
-
+    
     for page_index in range(len(pdf_doc)):
         page = pdf_doc[page_index]
         image_list = page.get_images()

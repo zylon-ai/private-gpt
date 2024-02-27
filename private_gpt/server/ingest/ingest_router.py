@@ -294,34 +294,42 @@ async def common_ingest_logic(
             )
         # Handling Original File
         if original_file:
-            print("ORIGINAL PDF FILE PATH IS :: ", original_file)
-            file_name = Path(original_file).name
-            upload_path = Path(f"{UPLOAD_DIR}/{file_name}")
+            try:
+                print("ORIGINAL PDF FILE PATH IS :: ", original_file)
+                file_name = Path(original_file).name
+                upload_path = Path(f"{UPLOAD_DIR}/{file_name}")
 
-            file_ingested = crud.documents.get_by_filename(
-                db, file_name=file_name)
-            if file_ingested:
+                file_ingested = crud.documents.get_by_filename(
+                    db, file_name=file_name)
+                if file_ingested:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="File already exists. Choose a different file.",
+                    )
+
+                if file_name is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="No file name provided",
+                    )
+
+                docs_in = schemas.DocumentCreate(
+                    filename=file_name, uploaded_by=current_user.id, department_id=current_user.department_id)
+                crud.documents.create(db=db, obj_in=docs_in)
+
+                with open(upload_path, "wb") as f:
+                    with open(original_file, "rb") as original_file_reader:
+                        f.write(original_file_reader.read())
+
+                with open(upload_path, "rb") as f:
+                    ingested_documents = service.ingest_bin_data(file_name, f)
+            except Exception as e:
+                print(traceback.print_exc())
                 raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="File already exists. Choose a different file.",
+                    status_code=500,
+                    detail="Internal Server Error: Unable to ingest file.",
                 )
-
-            if file_name is None:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="No file name provided",
-                )
-
-            docs_in = schemas.DocumentCreate(
-                filename=file_name, uploaded_by=current_user.id, department_id=current_user.department_id)
-            crud.documents.create(db=db, obj_in=docs_in)
-
-            with open(upload_path, "wb") as f:
-                with open(original_file, "rb") as original_file_reader:
-                    f.write(original_file_reader.read())
-
-            with open(upload_path, "rb") as f:
-                ingested_documents = service.ingest_bin_data(file_name, f)
+                    
         logger.info(
             f"{file_name} is uploaded by the {current_user.fullname}.")
 
