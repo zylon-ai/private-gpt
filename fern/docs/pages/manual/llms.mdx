@@ -102,3 +102,33 @@ or
 
 When the server is started it will print a log *Application startup complete*.
 Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
+
+### Using Ollama
+
+Another option for a fully private setup is using [Ollama](https://ollama.ai/).
+
+Note: how to deploy Ollama and pull models onto it is out of the scope of this documentation.
+
+In order to do so, create a profile `settings-ollama.yaml` with the following contents:
+
+```yaml
+llm:
+  mode: ollama
+
+ollama:
+  model: <ollama_model_to_use> # Required Model to use.
+                               # Note: Ollama Models are listed here: https://ollama.ai/library
+                               #       Be sure to pull the model to your Ollama server
+  api_base: <ollama-api-base-url> # Defaults to http://localhost:11434
+```
+
+And run PrivateGPT loading that profile you just created:
+
+`PGPT_PROFILES=ollama make run`
+
+or
+
+`PGPT_PROFILES=ollama poetry run python -m private_gpt`
+
+When the server is started it will print a log *Application startup complete*.
+Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
