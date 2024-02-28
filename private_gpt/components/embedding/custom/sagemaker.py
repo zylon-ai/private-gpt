@@ -3,7 +3,7 @@ import json
 from typing import Any
 
 import boto3
-from llama_index.embeddings.base import BaseEmbedding
+from llama_index.core.base.embeddings.base import BaseEmbedding
 from pydantic import Field, PrivateAttr
 
 

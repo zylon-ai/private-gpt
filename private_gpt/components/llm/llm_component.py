@@ -32,7 +32,12 @@ class LLMComponent:
         logger.info("Initializing the LLM in mode=%s", llm_mode)
         match settings.llm.mode:
             case "local":
-                from llama_index.llms.llama_cpp import LlamaCPP
+                try:
+                    from llama_index.llms.llama_cpp import LlamaCPP
+                except ImportError as e:
+                    raise ImportError(
+                        "Local dependencies not found, install with `poetry install --extras local`"
+                    ) from e
 
                 prompt_style = get_prompt_style(settings.local.prompt_style)
 
@@ -52,7 +57,12 @@ class LLMComponent:
                 )
 
             case "sagemaker":
-                from private_gpt.components.llm.custom.sagemaker import SagemakerLLM
+                try:
+                    from private_gpt.components.llm.custom.sagemaker import SagemakerLLM
+                except ImportError as e:
+                    raise ImportError(
+                        "Sagemaker dependencies not found, install with `poetry install --extras sagemaker`"
+                    ) from e
 
                 self.llm = SagemakerLLM(
                     endpoint_name=settings.sagemaker.llm_endpoint_name,
@@ -60,7 +70,12 @@ class LLMComponent:
                     context_window=settings.llm.context_window,
                 )
             case "openai":
-                from llama_index.llms.openai import OpenAI
+                try:
+                    from llama_index.llms.openai import OpenAI
+                except ImportError as e:
+                    raise ImportError(
+                        "OpenAI dependencies not found, install with `poetry install --extras openai`"
+                    ) from e
 
                 openai_settings = settings.openai
                 self.llm = OpenAI(
@@ -69,7 +84,12 @@ class LLMComponent:
                     model=openai_settings.model,
                 )
             case "openailike":
-                from llama_index.llms.openai_like import OpenAILike
+                try:
+                    from llama_index.llms.openai_like import OpenAILike
+                except ImportError as e:
+                    raise ImportError(
+                        "OpenAILike dependencies not found, install with `poetry install --extras openailike`"
+                    ) from e
 
                 openai_settings = settings.openai
                 self.llm = OpenAILike(
@@ -80,12 +100,17 @@ class LLMComponent:
                     max_tokens=None,
                     api_version="",
                 )
-            case "mock":
-                self.llm = MockLLM()
             case "ollama":
-                from llama_index.llms.ollama import Ollama
+                try:
+                    from llama_index.llms.ollama import Ollama
+                except ImportError as e:
+                    raise ImportError(
+                        "Ollama dependencies not found, install with `poetry install --extras ollama`"
+                    ) from e
 
                 ollama_settings = settings.ollama
                 self.llm = Ollama(
                     model=ollama_settings.model, base_url=ollama_settings.api_base
                 )
+            case "mock":
+                self.llm = MockLLM()

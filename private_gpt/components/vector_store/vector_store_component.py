@@ -5,7 +5,6 @@ from injector import inject, singleton
 from llama_index.core.indices.vector_store import VectorIndexRetriever, VectorStoreIndex
 from llama_index.core.vector_stores.types import VectorStore
 
-from private_gpt.components.vector_store.batched_chroma import BatchedChromaVectorStore
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import Settings
@@ -40,7 +39,12 @@ class VectorStoreComponent:
     def __init__(self, settings: Settings) -> None:
         match settings.vectorstore.database:
             case "pgvector":
-                from llama_index.vector_stores.postgres import PGVectorStore
+                try:
+                    from llama_index.vector_stores.postgres import PGVectorStore
+                except ImportError as e:
+                    raise ImportError(
+                        "Postgres dependencies not found, install with `poetry install --extras postgres`"
+                    ) from e
 
                 if settings.pgvector is None:
                     raise ValueError(
@@ -56,15 +60,15 @@ class VectorStoreComponent:
 
             case "chroma":
                 try:
+                    from private_gpt.components.vector_store.batched_chroma import \
+                        BatchedChromaVectorStore
                     import chromadb  # type: ignore
                     from chromadb.config import (  # type: ignore
                         Settings as ChromaSettings,
                     )
                 except ImportError as e:
                     raise ImportError(
-                        "'chromadb' is not installed."
-                        "To use PrivateGPT with Chroma, install the 'chroma' extra."
-                        "`poetry install --extras chroma`"
+                        "ChromaDB dependencies not found, install with `poetry install --extras chroma`"
                     ) from e
 
                 chroma_settings = ChromaSettings(anonymized_telemetry=False)
@@ -84,8 +88,13 @@ class VectorStoreComponent:
                 )
 
             case "qdrant":
-                from llama_index.vector_stores.qdrant import QdrantVectorStore
-                from qdrant_client import QdrantClient
+                try:
+                    from llama_index.vector_stores.qdrant import QdrantVectorStore
+                    from qdrant_client import QdrantClient
+                except ImportError as e:
+                    raise ImportError(
+                        "Qdrant dependencies not found, install with `poetry install --extras qdrant`"
+                    ) from e
 
                 if settings.qdrant is None:
                     logger.info(

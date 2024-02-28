@@ -6,29 +6,42 @@ authors = ["Zylon <hi@zylon.ai>"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
+# PrivateGPT
 fastapi = { extras = ["all"], version = "^0.110.0" }
-boto3 = "^1.34.51"
+python-multipart = "^0.0.9"
 injector = "^0.21.0"
 pyyaml = "^6.0.1"
-python-multipart = "^0.0.9"
+watchdog = "^4.0.0"
+transformers = "^4.38.1"
+# LlamaIndex core libs
 llama-index-core = "^0.10.13"
 llama-index-readers-file = "^0.1.6"
-llama-index-embeddings-huggingface = "^0.1.4"
-llama-index-embeddings-openai = "^0.1.6"
-llama-index-vector-stores-qdrant = "^0.1.3"
-llama-index-vector-stores-chroma = "^0.1.4"
-llama-index-llms-llama-cpp = "^0.1.3"
-llama-index-llms-openai = "^0.1.6"
-llama-index-llms-openai-like = "^0.1.3"
-llama-index-llms-ollama = "^0.1.2"
-llama-index-vector-stores-postgres = "^0.1.2"
-watchdog = "^4.0.0"
-qdrant-client = "^1.7.3"
-chromadb = {version = "^0.4.13", optional = true}
-asyncpg = {version = "^0.29.0", optional = true}
-pgvector = {version = "^0.2.5", optional = true}
-psycopg2-binary = {version = "^2.9.9", optional = true}
-sqlalchemy = {version = "^2.0.27", optional = true}
+# Optional LlamaIndex integration libs
+llama-index-llms-llama-cpp = {version = "^0.1.3", optional = true}
+llama-index-llms-openai = {version = "^0.1.6", optional = true}
+llama-index-llms-openai-like = {version ="^0.1.3", optional = true}
+llama-index-llms-ollama = {version ="^0.1.2", optional = true}
+llama-index-embeddings-huggingface = {version ="^0.1.4", optional = true}
+llama-index-embeddings-openai = {version ="^0.1.6", optional = true}
+llama-index-vector-stores-qdrant = {version ="^0.1.3", optional = true}
+llama-index-vector-stores-chroma = {version ="^0.1.4", optional = true}
+llama-index-vector-stores-postgres = {version ="^0.1.2", optional = true}
+# Optional Sagemaker dependency
+boto3 = {version ="^1.34.51", optional = true}
+# Optional UI
+gradio = {version ="^4.19.2", optional = true}
+
+[tool.poetry.extras]
+ui = ["gradio"]
+local = ["llama-index-llms-llama-cpp", "llama-index-embeddings-huggingface"]
+openai = ["llama-index-llms-openai", "llama-index-embeddings-openai"]
+openai-like = ["llama-index-llms-openai-like"]
+ollama = ["llama-index-llms-ollama"]
+sagemaker = ["boto3"]
+qdrant = ["llama-index-vector-stores-qdrant"]
+chroma = ["llama-index-vector-stores-chroma"]
+postgres = ["llama-index-vector-stores-postgres"]
+
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
@@ -39,26 +52,6 @@ pytest-cov = "^3"
 ruff = "^0"
 pytest-asyncio = "^0.21.1"
 types-pyyaml = "^6.0.12.12"
-
-# Dependencies for gradio UI
-[tool.poetry.group.ui]
-optional = true
-[tool.poetry.group.ui.dependencies]
-gradio = "^4.19.0"
-
-[tool.poetry.group.local]
-optional = true
-[tool.poetry.group.local.dependencies]
-llama-cpp-python = "^0.2.23"
-numpy = "1.26.0"
-sentence-transformers = "^2.2.2"
-# https://stackoverflow.com/questions/76327419/valueerror-libcublas-so-0-9-not-found-in-the-system-path
-torch = ">=2.0.0, !=2.0.1, !=2.1.0"
-transformers = "^4.34.0"
-
-[tool.poetry.extras]
-chroma = ["chromadb"]
-pgvector = ["sqlalchemy", "pgvector", "psycopg2-binary", "asyncpg"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

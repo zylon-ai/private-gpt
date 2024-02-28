@@ -19,23 +19,37 @@ class EmbeddingComponent:
         logger.info("Initializing the embedding model in mode=%s", embedding_mode)
         match embedding_mode:
             case "local":
-                from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+                try:
+                    from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+                except ImportError as e:
+                    raise ImportError(
+                        "Local dependencies not found, install with `poetry install --extras local`"
+                    ) from e
 
                 self.embedding_model = HuggingFaceEmbedding(
                     model_name=settings.local.embedding_hf_model_name,
                     cache_folder=str(models_cache_path),
                 )
             case "sagemaker":
-
-                from private_gpt.components.embedding.custom.sagemaker import (
-                    SagemakerEmbedding,
-                )
+                try:
+                    from private_gpt.components.embedding.custom.sagemaker import (
+                        SagemakerEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Sagemaker dependencies not found, install with `poetry install --extras sagemaker`"
+                    ) from e
 
                 self.embedding_model = SagemakerEmbedding(
                     endpoint_name=settings.sagemaker.embedding_endpoint_name,
                 )
             case "openai":
-                from llama_index.embeddings.openai import OpenAIEmbedding
+                try:
+                    from llama_index.embeddings.openai import OpenAIEmbedding
+                except ImportError as e:
+                    raise ImportError(
+                        "OpenAI dependencies not found, install with `poetry install --extras openai`"
+                    ) from e
 
                 openai_settings = settings.openai.api_key
                 self.embedding_model = OpenAIEmbedding(api_key=openai_settings)
