@@ -14,6 +14,7 @@ env:
   ECS_CLUSTER: ec-private-gpt-staging
   ECS_TASK_DEFINITION: .aws/ecs-task-definition-staging.json
   CONTAINER_NAME: ec-private-gpt
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build:
@@ -23,6 +24,12 @@ jobs:
     steps:
       - name: Clone the repository
         uses: actions/checkout@v4
+
+      - name: Set up QEMU to be able to build against more platforms
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx to build multi-platform images
+        uses: docker/setup-buildx-action@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -34,16 +41,15 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push container image to Amazon ECR
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build \
-            -f Dockerfile.external \
-            --build-arg='PGPT_PROFILES=staging' \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "Built and pushed image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+      - name: Build and push image to Amazon ECR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.external
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: PGPT_PROFILES=staging
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
   deploy:
     name: Deploy
