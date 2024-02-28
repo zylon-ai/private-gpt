@@ -55,9 +55,10 @@ class Source(BaseModel):
 
             source = Source(file=file_name, page=page_label, text=chunk.text)
             curated_sources.append(source)
+            curated_sources = list(
+                dict.fromkeys(curated_sources).keys()
+            )  # Unique sources only
 
-        curated_sources = list(dict.fromkeys(curated_sources).keys()) # Unique sources only
-        
         return curated_sources
 
 
