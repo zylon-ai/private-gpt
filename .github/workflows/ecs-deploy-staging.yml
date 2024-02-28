@@ -25,7 +25,7 @@ jobs:
       - name: Clone the repository
         uses: actions/checkout@v4
 
-      - name: Set up QEMU to be able to build against more platforms
+      - name: Set up QEMU to be able to build against multi-platforms
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx to build multi-platform images
@@ -41,7 +41,7 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push image to Amazon ECR
+      - name: Build and push multi-platform image to Amazon ECR
         uses: docker/build-push-action@v5
         with:
           context: .
