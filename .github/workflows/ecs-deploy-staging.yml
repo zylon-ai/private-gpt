@@ -21,8 +21,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clone the repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -51,6 +50,8 @@ jobs:
     needs: build
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
