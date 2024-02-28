@@ -2438,12 +2438,12 @@ pyasn1 = ">=0.4.6"
 
 [[package]]
 name = "llama-cpp-python"
-version = "0.2.43"
+version = "0.2.53"
 description = "Python bindings for the llama.cpp library"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "llama_cpp_python-0.2.43.tar.gz", hash = "sha256:fb3fd97622f7c1e373b28de1147fcdcc6a203705e6cc6376074225cf4f94711b"},
+    {file = "llama_cpp_python-0.2.53.tar.gz", hash = "sha256:f7ff8eda538ca6c80521a8bbf80d3ef4527ecb28f6d08fa9b3bb1f0cfc3b684e"},
 ]
 
 [package.dependencies]
@@ -7238,4 +7238,4 @@ chroma = ["chromadb"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "281365e7beb25015eb71d4531d959724c7e108c6af0990b064483ef70e510749"
+content-hash = "9e14793e879c9de04c91618b1a54fc93933d10345e69195d6d436dc9492cbc03"

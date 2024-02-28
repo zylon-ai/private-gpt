@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 LDAP_SERVER = settings.LDAP_SERVER
 # LDAP_ENABLE = settings.LDAP_ENABLE
-LDAP_ENABLE = True
+LDAP_ENABLE = False
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -113,12 +113,12 @@ def login_access_token(
     log_audit: models.Audit = Depends(deps.get_audit_logger),
     db: Session = Depends(deps.get_db),
     form_data: OAuth2PasswordRequestForm = Depends(),
-    active_subscription: models.Subscription = Depends(deps.get_active_subscription)
+    # active_subscription: models.Subscription = Depends(deps.get_active_subscription)
 ) -> Any:
     """
     OAuth2 compatible token login, get an access token for future requests
     """
-    def ad_auth(LDAP_ENABLE):
+    def ad_auth():
         if LDAP_ENABLE:
             existing_user = crud.user.get_by_email(db, email=form_data.username)
             
@@ -133,23 +133,25 @@ def login_access_token(
                 depart = crud.department.get_by_department_name(db, name=department)
 
                 if depart:
-                    ad_user_register(db=db, email=form_data.username, fullname=username, password=form_data.password, department_id=depart.id)
+                    user = ad_user_register(db=db, email=form_data.username, fullname=username, password=form_data.password, department_id=depart.id)
                 else:
                     department_in = schemas.DepartmentCreate(name=department)
                     new_department = crud.department.create(db, obj_in=department_in)
-                    ad_user_register(db=db, email=form_data.username, fullname=username, password=form_data.password, department_id=new_department.id)
-                return True
-        return False
+                    user = ad_user_register(db=db, email=form_data.username, fullname=username, password=form_data.password, department_id=new_department.id)
+                return user
+        return None
     
-    if not (ad_auth(LDAP_ENABLE)):
-        raise HTTPException(
-            status_code=403,
-            detail="Invalid Credentials!!!",
+    if LDAP_ENABLE:
+        user = ad_auth()
+        if not user:
+            raise HTTPException(
+                status_code=403,
+                detail="Invalid Credentials!!!",
+            )
+    else:
+        user = crud.user.authenticate(
+            db, email=form_data.username, password=form_data.password
         )
-    
-    user = crud.user.authenticate(
-        db, email=form_data.username, password=form_data.password
-    )
     if not user:
         raise HTTPException(
             status_code=400, detail="Incorrect email or password"

@@ -100,7 +100,7 @@ class CompletionsBody(BaseModel):
     responses={200: {"model": OpenAICompletion}},
     tags=["Contextual Completions"],
 )
-def prompt_completion(
+async def prompt_completion(
     request: Request,
     body: CompletionsBody,
     db: Session = Depends(deps.get_db),
@@ -148,4 +148,4 @@ def prompt_completion(
         include_sources=body.include_sources,
         context_filter=body.context_filter,
     )
-    return chat_completion(request, chat_body)
+    return await chat_completion(request, chat_body)

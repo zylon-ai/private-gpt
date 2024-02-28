@@ -55,7 +55,7 @@ class ChatBody(BaseModel):
     responses={200: {"model": OpenAICompletion}},
     tags=["Contextual Completions"],
 )
-def chat_completion(
+async def chat_completion(
     request: Request, body: ChatBody
 ) -> OpenAICompletion | StreamingResponse:
     """Given a list of messages comprising a conversation, return a response.
