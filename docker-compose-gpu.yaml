@@ -1,0 +1,20 @@
+services:
+  private-gpt-gpu:
+    build:
+      dockerfile: Dockerfile.local.gpu
+    volumes:
+      - ./local_data/:/home/worker/app/local_data
+      - ./models/:/home/worker/app/models
+    ports:
+      - 8001:8080
+    environment:
+      PORT: 8080
+      PGPT_PROFILES: docker
+      PGPT_MODE: local
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

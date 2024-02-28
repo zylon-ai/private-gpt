@@ -1,4 +1,16 @@
-FROM python:3.11.6-slim-bookworm as base
+FROM nvidia/cuda:12.2.2-devel-ubuntu22.04 as base
+
+# For tzdata
+ENV DEBIAN_FRONTEND="noninteractive" TZ="Etc/UTC"
+
+# Install Python 3.11 and set it as default
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update && \ 
+    apt-get install -y python3.11 python3.11-venv python3-pip && \
+    ln -sf /usr/bin/python3.11 /usr/bin/python3 && \
+    python3 --version
 
 # Install poetry
 RUN pip install pipx
@@ -13,7 +25,8 @@ RUN apt update && apt install -y \
   ninja-build\
   build-essential\
   pkg-config\
-  wget
+  wget\
+  gcc
 
 # https://python-poetry.org/docs/configuration/#virtualenvsin-project
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
@@ -28,6 +41,10 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry config installer.max-workers 10
 RUN poetry install --with local
 RUN poetry install --with ui
+
+# Enable GPU support
+ENV LLAMA_CUBLAS=1
+RUN CMAKE_ARGS='-DLLAMA_CUBLAS=on' FORCE_CMAKE=1 poetry run pip install --upgrade --force-reinstall --no-cache-dir llama-cpp-python
 
 ################
 FROM base as app
