@@ -9,8 +9,8 @@ on:
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: ec-private-gpt
-  ECS_SERVICE: ec-private-gpt-service
-  ECS_CLUSTER: ec-private-gpt
+  ECS_SERVICE: ec-private-gpt-staging-service
+  ECS_CLUSTER: ec-private-gpt-staging
   ECS_TASK_DEFINITION: .aws/ecs-task-definition-staging.json
   CONTAINER_NAME: ec-private-gpt
 
