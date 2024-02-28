@@ -1,14 +1,53 @@
 import logging
 from pathlib import Path
+from typing import Dict, Type
 
-from llama_index import Document
-from llama_index.readers import JSONReader, StringIterableReader
-from llama_index.readers.file.base import DEFAULT_FILE_READER_CLS
+from llama_index.core.readers import StringIterableReader
+from llama_index.core.readers.base import BaseReader
+from llama_index.core.readers.json import JSONReader
+from llama_index.core.schema import Document
 
 logger = logging.getLogger(__name__)
 
+
+# Inspired by the `llama_index.core.readers.file.base` module
+def _try_loading_included_file_formats() -> Dict[str, Type[BaseReader]]:
+    try:
+        from llama_index.readers.file.docs import DocxReader, HWPReader, PDFReader
+        from llama_index.readers.file.epub import EpubReader
+        from llama_index.readers.file.image import ImageReader
+        from llama_index.readers.file.ipynb import IPYNBReader
+        from llama_index.readers.file.markdown import MarkdownReader
+        from llama_index.readers.file.mbox import MboxReader
+        from llama_index.readers.file.tabular import PandasCSVReader
+        from llama_index.readers.file.slides import PptxReader
+        from llama_index.readers.file.video_audio import VideoAudioReader
+    except ImportError:
+        raise ImportError("`llama-index-readers-file` package not found")
+
+    default_file_reader_cls: Dict[str, Type[BaseReader]] = {
+        ".hwp": HWPReader,
+        ".pdf": PDFReader,
+        ".docx": DocxReader,
+        ".pptx": PptxReader,
+        ".ppt": PptxReader,
+        ".pptm": PptxReader,
+        ".jpg": ImageReader,
+        ".png": ImageReader,
+        ".jpeg": ImageReader,
+        ".mp3": VideoAudioReader,
+        ".mp4": VideoAudioReader,
+        ".csv": PandasCSVReader,
+        ".epub": EpubReader,
+        ".md": MarkdownReader,
+        ".mbox": MboxReader,
+        ".ipynb": IPYNBReader,
+    }
+    return default_file_reader_cls
+
+
 # Patching the default file reader to support other file types
-FILE_READER_CLS = DEFAULT_FILE_READER_CLS.copy()
+FILE_READER_CLS = _try_loading_included_file_formats()
 FILE_READER_CLS.update(
     {
         ".json": JSONReader,

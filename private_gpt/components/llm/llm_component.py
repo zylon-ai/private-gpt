@@ -1,14 +1,15 @@
 import logging
 
 from injector import inject, singleton
-from llama_index import set_global_tokenizer
-from llama_index.llms import MockLLM
-from llama_index.llms.base import LLM
+from llama_index.core.llms import LLM, MockLLM
+from llama_index.core.utils import set_global_tokenizer
+from llama_index.core.settings import Settings as LlamaIndexSettings
 from transformers import AutoTokenizer  # type: ignore
 
 from private_gpt.components.llm.prompt_helper import get_prompt_style
 from private_gpt.paths import models_cache_path, models_path
 from private_gpt.settings.settings import Settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class LLMComponent:
         logger.info("Initializing the LLM in mode=%s", llm_mode)
         match settings.llm.mode:
             case "local":
-                from llama_index.llms import LlamaCPP
+                from llama_index.llms.llama_cpp import LlamaCPP
 
                 prompt_style = get_prompt_style(settings.local.prompt_style)
 
@@ -41,6 +42,7 @@ class LLMComponent:
                     max_new_tokens=settings.llm.max_new_tokens,
                     context_window=settings.llm.context_window,
                     generate_kwargs={},
+                    callback_manager=LlamaIndexSettings.callback_manager,
                     # All to GPU
                     model_kwargs={"n_gpu_layers": -1, "offload_kqv": True},
                     # transform inputs into Llama2 format
@@ -58,7 +60,7 @@ class LLMComponent:
                     context_window=settings.llm.context_window,
                 )
             case "openai":
-                from llama_index.llms import OpenAI
+                from llama_index.llms.openai import OpenAI
 
                 openai_settings = settings.openai
                 self.llm = OpenAI(
@@ -67,7 +69,7 @@ class LLMComponent:
                     model=openai_settings.model,
                 )
             case "openailike":
-                from llama_index.llms import OpenAILike
+                from llama_index.llms.openai_like import OpenAILike
 
                 openai_settings = settings.openai
                 self.llm = OpenAILike(
@@ -81,7 +83,7 @@ class LLMComponent:
             case "mock":
                 self.llm = MockLLM()
             case "ollama":
-                from llama_index.llms import Ollama
+                from llama_index.llms.ollama import Ollama
 
                 ollama_settings = settings.ollama
                 self.llm = Ollama(

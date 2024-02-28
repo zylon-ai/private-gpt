@@ -2,9 +2,8 @@ import logging
 import typing
 
 from injector import inject, singleton
-from llama_index import VectorStoreIndex
-from llama_index.indices.vector_store import VectorIndexRetriever
-from llama_index.vector_stores.types import VectorStore
+from llama_index.core.indices.vector_store import VectorIndexRetriever, VectorStoreIndex
+from llama_index.core.vector_stores.types import VectorStore
 
 from private_gpt.components.vector_store.batched_chroma import BatchedChromaVectorStore
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
@@ -41,7 +40,7 @@ class VectorStoreComponent:
     def __init__(self, settings: Settings) -> None:
         match settings.vectorstore.database:
             case "pgvector":
-                from llama_index.vector_stores import PGVectorStore
+                from llama_index.vector_stores.postgres import PGVectorStore
 
                 if settings.pgvector is None:
                     raise ValueError(

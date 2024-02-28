@@ -1,8 +1,7 @@
 import logging
 
 from injector import inject, singleton
-from llama_index import MockEmbedding
-from llama_index.embeddings.base import BaseEmbedding
+from llama_index.core.embeddings import BaseEmbedding, MockEmbedding
 
 from private_gpt.paths import models_cache_path
 from private_gpt.settings.settings import Settings
@@ -20,7 +19,7 @@ class EmbeddingComponent:
         logger.info("Initializing the embedding model in mode=%s", embedding_mode)
         match embedding_mode:
             case "local":
-                from llama_index.embeddings import HuggingFaceEmbedding
+                from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
                 self.embedding_model = HuggingFaceEmbedding(
                     model_name=settings.local.embedding_hf_model_name,
@@ -36,7 +35,7 @@ class EmbeddingComponent:
                     endpoint_name=settings.sagemaker.embedding_endpoint_name,
                 )
             case "openai":
-                from llama_index import OpenAIEmbedding
+                from llama_index.embeddings.openai import OpenAIEmbedding
 
                 openai_settings = settings.openai.api_key
                 self.embedding_model = OpenAIEmbedding(api_key=openai_settings)

@@ -3,7 +3,7 @@ import uuid
 from collections.abc import Iterator
 from typing import Literal
 
-from llama_index.llms import ChatResponse, CompletionResponse
+from llama_index.core.llms import ChatResponse, CompletionResponse
 from pydantic import BaseModel, Field
 
 from private_gpt.server.chunks.chunks_service import Chunk

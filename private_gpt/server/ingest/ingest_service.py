@@ -4,11 +4,8 @@ from pathlib import Path
 from typing import AnyStr, BinaryIO
 
 from injector import inject, singleton
-from llama_index import (
-    ServiceContext,
-    StorageContext,
-)
-from llama_index.node_parser import SentenceWindowNodeParser
+from llama_index.core.node_parser import SentenceWindowNodeParser
+from llama_index.core.storage import StorageContext
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import get_ingestion_component
@@ -40,17 +37,12 @@ class IngestService:
             index_store=node_store_component.index_store,
         )
         node_parser = SentenceWindowNodeParser.from_defaults()
-        self.ingest_service_context = ServiceContext.from_defaults(
-            llm=self.llm_service.llm,
-            embed_model=embedding_component.embedding_model,
-            node_parser=node_parser,
-            # Embeddings done early in the pipeline of node transformations, right
-            # after the node parsing
-            transformations=[node_parser, embedding_component.embedding_model],
-        )
 
         self.ingest_component = get_ingestion_component(
-            self.storage_context, self.ingest_service_context, settings=settings()
+            self.storage_context,
+            embed_model=embedding_component.embedding_model,
+            transformations=[node_parser, embedding_component.embedding_model],
+            settings=settings(),
         )
 
     def _ingest_data(self, file_name: str, file_data: AnyStr) -> list[IngestedDoc]:
