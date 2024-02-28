@@ -2,6 +2,8 @@
 .env
 
 .venv
+.env
+venv
 
 settings-me.yaml
 

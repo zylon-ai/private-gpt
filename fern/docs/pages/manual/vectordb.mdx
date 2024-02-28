@@ -1,7 +1,7 @@
 ## Vectorstores
-PrivateGPT supports [Qdrant](https://qdrant.tech/) and [Chroma](https://www.trychroma.com/) as vectorstore providers. Qdrant being the default.
+PrivateGPT supports [Qdrant](https://qdrant.tech/), [Chroma](https://www.trychroma.com/) and [PGVector](https://github.com/pgvector/pgvector) as vectorstore providers. Qdrant being the default.
 
-In order to select one or the other, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant` or `chroma`.
+In order to select one or the other, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant`, `chroma` or `pgvector`.
 
 ```yaml
 vectorstore:
@@ -48,3 +48,38 @@ poetry install --extras chroma
 ```
 
 By default `chroma` will use a disk-based database stored in local_data_path / "chroma_db" (being local_data_path defined in settings.yaml)
+
+### PGVector
+
+To enable PGVector, set the `vectorstore.database` property in the `settings.yaml` file to `pgvector` and install the `pgvector` extra.
+
+```bash
+poetry install --extras pgvector
+```
+
+PGVector settings can be configured by setting values to the `pgvector` property in the `settings.yaml` file.
+
+The available configuration options are:
+| Field         | Description                                               |
+|---------------|-----------------------------------------------------------|
+| **host**      | The server hosting the Postgres database. Default is `localhost` |
+| **port**      | The port on which the Postgres database is accessible. Default is `5432` |
+| **database**  | The specific database to connect to. Default is `postgres` |
+| **user**      | The username for database access. Default is `postgres` |
+| **password**  | The password for database access. (Required)            |
+| **embed_dim** | The dimensionality of the embedding model (Required)    |
+| **schema_name** | The database schema to use. Default is `private_gpt`       |
+| **table_name** | The database table to use. Default is `embeddings`    |
+
+For example:
+```yaml
+pgvector:
+  host: localhost
+  port: 5432
+  database: postgres
+  user: postgres
+  password: <PASSWORD>
+  embed_dim: 384 # 384 is for BAAI/bge-small-en-v1.5
+  schema_name: private_gpt
+  table_name: embeddings
+```
