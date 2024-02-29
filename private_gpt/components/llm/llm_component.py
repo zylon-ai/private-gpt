@@ -113,7 +113,9 @@ class LLMComponent:
                 )
             case "tensorrt":
                 try:
-                    from llama_index.llms.nvidia_tensorrt import LocalTensorRTLLM  # type: ignore
+                    from llama_index.llms.nvidia_tensorrt import (  # type: ignore
+                        LocalTensorRTLLM,
+                    )
                 except ImportError as e:
                     raise ImportError(
                         "Nvidia TensorRTLLM dependencies not found, install with `poetry install --extras llms-nvidia-tensorrt`"
