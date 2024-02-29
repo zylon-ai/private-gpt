@@ -39,10 +39,13 @@ async def save_uploaded_file(file: UploadFile, upload_dir: str):
     return file_path
 
 
-async def process_images_and_generate_doc(pdf_path: str, upload_dir: str):
+async def process_images_and_generate_doc(request: Request, pdf_path: str, upload_dir: str):
     doc = Document()
-    ocr = GetOCRText()
-    img_tab = ImageToTable()
+
+    ocr = request.state.injector.get(GetOCRText)
+    img_tab = request.state.injector.get(ImageToTable)
+    # ocr = GetOCRText()
+    # img_tab = ImageToTable()
     pdf_doc = fitz.open(pdf_path)
     
     for page_index in range(len(pdf_doc)):
@@ -87,7 +90,7 @@ async def process_pdf_ocr(
         print("The file name is: ", file.filename)
         pdf_path = await save_uploaded_file(file, UPLOAD_DIR)
         print("The file path: ", pdf_path)
-        ocr_doc_path = await process_images_and_generate_doc(pdf_path, UPLOAD_DIR)
+        ocr_doc_path = await process_images_and_generate_doc(request, pdf_path, UPLOAD_DIR)
         ingested_documents = await common_ingest_logic(
             request=request, db=db, ocr_file=ocr_doc_path, current_user=current_user, original_file=None, log_audit=log_audit
         )
@@ -110,7 +113,7 @@ async def process_both(
     UPLOAD_DIR = OCR_UPLOAD
     try:
         pdf_path = await save_uploaded_file(file, UPLOAD_DIR)
-        ocr_doc_path = await process_images_and_generate_doc(pdf_path, UPLOAD_DIR)
+        ocr_doc_path = await process_images_and_generate_doc(request, pdf_path, UPLOAD_DIR)
         ingested_documents = await common_ingest_logic(
             request=request, db=db, ocr_file=ocr_doc_path, current_user=current_user, original_file=pdf_path, log_audit=log_audit
         )

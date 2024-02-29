@@ -1,21 +1,20 @@
 """FastAPI app creation, logger configuration and main API routes."""
 import logging
 
+from injector import Injector
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from injector import Injector
-
-from private_gpt.server.chat.chat_router import chat_router
-from private_gpt.server.chunks.chunks_router import chunks_router
-from private_gpt.server.completions.completions_router import completions_router
-from private_gpt.server.embeddings.embeddings_router import embeddings_router
-from private_gpt.server.health.health_router import health_router
-from private_gpt.server.ingest.ingest_router import ingest_router
-from private_gpt.users.api.v1.api import api_router
-from private_gpt.components.ocr_components.table_ocr_api import pdf_router
 
 from private_gpt.settings.settings import Settings
-from private_gpt.home import home_router
+from private_gpt.users.api.v1.api import api_router
+from private_gpt.server.chat.chat_router import chat_router
+from private_gpt.server.health.health_router import health_router
+from private_gpt.server.chunks.chunks_router import chunks_router
+from private_gpt.server.ingest.ingest_router import ingest_router
+from private_gpt.components.ocr_components.table_ocr_api import pdf_router
+from private_gpt.server.completions.completions_router import completions_router
+from private_gpt.server.embeddings.embeddings_router import embeddings_router
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,8 +33,8 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(health_router)
     
     app.include_router(api_router)
-    # app.include_router(home_router)
     app.include_router(pdf_router)
+
     settings = root_injector.get(Settings)
     if settings.server.cors.enabled:
         logger.debug("Setting up CORS middleware")
