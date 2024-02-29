@@ -81,7 +81,7 @@ class DataSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: Literal["llamacpp", "openai", "openailike", "sagemaker", "mock", "ollama"]
+    mode: Literal["llamacpp", "openai", "openailike", "sagemaker", "mock", "ollama", "tensorrt"]
     max_new_tokens: int = Field(
         256,
         description="The maximum number of token that the LLM is authorized to generate in one completion.",
@@ -107,6 +107,22 @@ class VectorstoreSettings(BaseModel):
 class LlamaCPPSettings(BaseModel):
     llm_hf_repo_id: str
     llm_hf_model_file: str
+    prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] = Field(
+        "llama2",
+        description=(
+            "The prompt style to use for the chat engine. "
+            "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
+            "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
+            "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
+            "If `mistral` - use the `mistral prompt style. It shoudl look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]"
+            "`llama2` is the historic behaviour. `default` might work better with your custom models."
+        ),
+    )
+
+
+class TensorRTSettings(BaseModel):
+    model_path: str
+    engine_name: str
     prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] = Field(
         "llama2",
         description=(
@@ -296,6 +312,7 @@ class Settings(BaseModel):
     llm: LLMSettings
     embedding: EmbeddingSettings
     llamacpp: LlamaCPPSettings
+    tensorrt: TensorRTSettings
     huggingface: HuggingFaceSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings

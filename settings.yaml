@@ -79,3 +79,8 @@ openai:
 
 ollama:
   model: llama2-uncensored
+
+tensorrt:
+  model_path: models/tensorrt
+  engine_name: llama_float16_tp1_rank0.engine
+  prompt_style: "llama2"

@@ -1,0 +1,25 @@
+server:
+  env_name: ${APP_ENV:tensorrt}
+
+llm:
+  mode: tensorrt
+  max_new_tokens: 512
+  context_window: 3900
+
+tensorrt:
+  model_path: models/tensorrt
+  engine_name: llama_float16_tp1_rank0.engine
+  prompt_style: "llama2"
+
+embedding:
+  mode: huggingface
+
+huggingface:
+  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+
+vectorstore:
+  database: qdrant
+
+qdrant:
+  path: local_data/private_gpt/qdrant
+

@@ -47,6 +47,7 @@ Where `<extra>` can be any of the following:
 - llms-ollama: adds support for Ollama LLM, the easiest way to get a local LLM running
 - llms-llama-cpp: adds support for local LLM using LlamaCPP - expect a messy installation process on some platforms
 - llms-sagemaker: adds support for Amazon Sagemaker LLM, requires Sagemaker inference endpoints
+- llms-nvidia-tensorrt: add support for Nvidia TensorRT LLM
 - llms-openai: adds support for OpenAI LLM, requires OpenAI API key
 - llms-openai-like: adds support for 3rd party LLM providers that are compatible with OpenAI's API
 - embeddings-huggingface: adds support for local Embeddings using HuggingFace
@@ -67,7 +68,7 @@ The easiest way to run PrivateGPT fully locally is to depend on Ollama for the L
 
 Go to [ollama.ai](https://ollama.ai/) and follow the instructions to install Ollama on your machine.
 
-Once done, you can install PrivateGPT with the following command:
+Once done, you can install PrivateGPT dependencies with the following command:
 ```bash
 poetry install --extras "ui llms-ollama embeddings-huggingface vector-stores-qdrant"
 ```
@@ -96,7 +97,7 @@ You need to have access to sagemaker inference endpoints for the LLM and / or th
 
 Edit the `settings-sagemaker.yaml` file to include the correct Sagemaker endpoints.
 
-Then, install PrivateGPT with the following command:
+Then, install PrivateGPT dependencies with the following command:
 ```bash
 poetry install --extras "ui llms-sagemaker embeddings-sagemaker vector-stores-qdrant"
 ```
@@ -111,9 +112,49 @@ PrivateGPT will use the already existing `settings-sagemaker.yaml` settings file
 
 The UI will be available at http://localhost:8001
 
+### Local, TensorRT-powered setup
+
+To get the most out of NVIDIA GPUs, you can set up a fully local PrivateGPT using TensorRT as its LLM provider. For more information about Nvidia TensorRT, check the [official documentation](https://github.com/NVIDIA/TensorRT-LLM).
+
+Follow these steps to set up a local TensorRT-powered PrivateGPT:
+
+- Nvidia Cuda 12.2 or higher is currently required to run TensorRT-LLM.
+
+- For this example we will use Llama2. The Llama2 model files need to be created via scripts following the instructions [here](https://github.com/NVIDIA/trt-llm-rag-windows/blob/release/1.0/README.md#building-trt-engine).
+The following files will be created from following the steps in the link:
+
+* `Llama_float16_tp1_rank0.engine`: The main output of the build script, containing the executable graph of operations with the model weights embedded.
+
+* `config.jsonp`: Includes detailed information about the model, like its general structure and precision, as well as information about which plug-ins were incorporated into the engine.
+
+* `model.cache`: Caches some of the timing and optimization information from model compilation, making successive builds quicker.
+
+- Create a folder inside `models` called `tensorrt`, and move all of the files mentioned above to that directory.
+
+Once done, you can install PrivateGPT dependencies with the following command:
+```bash
+poetry install --extras "ui llms-nvidia-tensorrt embeddings-huggingface vector-stores-qdrant"
+```
+
+We are installing "embeddings-huggingface" dependency to support local embeddings, because TensorRT only covers the LLM.
+In order for local embeddings to work, you need to download the embeddings model to the `models` folder. You can do so by running the `setup` script:
+```bash
+poetry run python scripts/setup
+```
+
+Once installed, you can run PrivateGPT.
+
+```bash
+PGPT_PROFILES=tensorrt make run
+```
+
+PrivateGPT will use the already existing `settings-tensorrt.yaml` settings file, which is already configured to use Nvidia TensorRT LLM, local Embeddings, and Qdrant. Review it and adapt it to your needs (different LLM model, etc.)
+
+The UI will be available at http://localhost:8001
+
 ### Local, Llama-CPP powered setup
 
-If you want to run PrivateGPT fully locally without relying on Ollama, you can run the following command:
+If you want to run PrivateGPT fully locally without relying on Ollama, you can run the following command to install its dependencies:
 
 ```bash
 poetry install --extras "ui llms-llama-cpp embeddings-huggingface vector-stores-qdrant"
@@ -142,7 +183,7 @@ You need an OPENAI API key to run this setup.
 
 Edit the `settings-openai.yaml` file to include the correct API KEY. Never commit it! It's a secret! As an alternative to editing `settings-openai.yaml`, you can just set the env var OPENAI_API_KEY.
 
-Then, install PrivateGPT with the following command:
+Then, install PrivateGPT dependencies with the following command:
 ```bash
 poetry install --extras "ui llms-openai embeddings-openai vector-stores-qdrant"
 ```
@@ -159,7 +200,7 @@ The UI will be available at http://localhost:8001
 
 ### Local, Llama-CPP powered setup
 
-If you want to run PrivateGPT fully locally without relying on Ollama, you can run the following command:
+If you want to run PrivateGPT fully locally without relying on Ollama, you can run the following command to install its dependencies:
 
 ```bash
 poetry install --extras "ui llms-llama-cpp embeddings-huggingface vector-stores-qdrant"
