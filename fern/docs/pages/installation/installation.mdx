@@ -30,8 +30,8 @@ pyenv local 3.11
 PrivateGPT allows to customize the setup -from fully local to cloud based- by deciding the modules to use.
 Here are the different options available:
 
-- LLM: "local" (uses LlamaCPP), "ollama", "sagemaker", "openai", "openailike"
-- Embeddings: "local" (uses HuggingFace embeddings), "openai", "sagemaker"
+- LLM: "llama-cpp", "ollama", "sagemaker", "openai", "openailike"
+- Embeddings: "huggingface", "openai", "sagemaker"
 - Vector stores: "qdrant", "chroma", "postgres"
 - UI: whether or not to enable UI (Gradio) or just go with the API
 
@@ -44,14 +44,17 @@ poetry install --extras "<extra1> <extra2>..."
 Where `<extra>` can be any of the following:
 
 - ui: adds support for UI using Gradio
-- local: adds support for local LLM and Embeddings using LlamaCPP - expect a messy installation process on some platforms
-- openai: adds support for OpenAI LLM and Embeddings, requires OpenAI API key
-- sagemaker: adds support for Amazon Sagemaker LLM and Embeddings, requires Sagemaker endpoints
-- ollama: adds support for Ollama LLM, the easiest way to get a local LLM running
-- openai-like: adds support for 3rd party LLM providers that are compatible with OpenAI's API
-- qdrant: adds support for Qdrant vector store
-- chroma: adds support for Chroma DB vector store
-- postgres: adds support for Postgres vector store
+- llms-ollama: adds support for Ollama LLM, the easiest way to get a local LLM running
+- llms-llama-cpp: adds support for local LLM using LlamaCPP - expect a messy installation process on some platforms
+- llms-sagemaker: adds support for Amazon Sagemaker LLM, requires Sagemaker inference endpoints
+- llms-openai: adds support for OpenAI LLM, requires OpenAI API key
+- llms-openai-like: adds support for 3rd party LLM providers that are compatible with OpenAI's API
+- embeddings-huggingface: adds support for local Embeddings using HuggingFace
+- embeddings-sagemaker: adds support for Amazon Sagemaker Embeddings, requires Sagemaker inference endpoints
+- embeddings-openai = adds support for OpenAI Embeddings, requires OpenAI API key
+- vector-stores-qdrant: adds support for Qdrant vector store
+- vector-stores-chroma: adds support for Chroma DB vector store
+- vector-stores-postgres: adds support for Postgres vector store
 
 ## Recommended Setups
 
@@ -66,10 +69,10 @@ Go to [ollama.ai](https://ollama.ai/) and follow the instructions to install Oll
 
 Once done, you can install PrivateGPT with the following command:
 ```bash
-poetry install --extras "ui local ollama qdrant"
+poetry install --extras "ui llms-ollama embeddings-huggingface vector-stores-qdrant"
 ```
 
-We are installing "local" dependency to support local embeddings, because Ollama doesn't support embeddings just yet. But they working on it!
+We are installing "embeddings-huggingface" dependency to support local embeddings, because Ollama doesn't support embeddings just yet. But they working on it!
 In order for local embeddings to work, you need to download the embeddings model to the `models` folder. You can do so by running the `setup` script:
 ```bash
 poetry run python scripts/setup
@@ -95,7 +98,7 @@ Edit the `settings-sagemaker.yaml` file to include the correct Sagemaker endpoin
 
 Then, install PrivateGPT with the following command:
 ```bash
-poetry install --extras "ui sagemaker qdrant"
+poetry install --extras "ui llms-sagemaker embeddings-sagemaker vector-stores-qdrant"
 ```
 
 Once installed, you can run PrivateGPT. Make sure you have a working Ollama running locally before running the following command.
@@ -113,7 +116,7 @@ The UI will be available at http://localhost:8001
 If you want to run PrivateGPT fully locally without relying on Ollama, you can run the following command:
 
 ```bash
-poetry install --extras "ui local qdrant"
+poetry install --extras "ui llms-llama-cpp embeddings-huggingface vector-stores-qdrant"
 ```
 
 In order for local LLM and embeddings to work, you need to download the models to the `models` folder. You can do so by running the `setup` script:
@@ -127,7 +130,53 @@ Once installed, you can run PrivateGPT with the following command:
 PGPT_PROFILES=local make run
 ```
 
-PrivateGPT will load the already existing `settings-local.yaml` file, which is already configured to use LlamaCPP and Qdrant.
+PrivateGPT will load the already existing `settings-local.yaml` file, which is already configured to use LlamaCPP LLM, HuggingFace embeddings and Qdrant.
+
+The UI will be available at http://localhost:8001
+
+### Non-Private, OpenAI-powered test setup
+
+If you want to test PrivateGPT with OpenAI's LLM and Embeddings -taking into account your data is going to OpenAI!- you can run the following command:
+
+You need an OPENAI API key to run this setup.
+
+Edit the `settings-openai.yaml` file to include the correct API KEY. Never commit it! It's a secret! As an alternative to editing `settings-openai.yaml`, you can just set the env var OPENAI_API_KEY.
+
+Then, install PrivateGPT with the following command:
+```bash
+poetry install --extras "ui llms-openai embeddings-openai vector-stores-qdrant"
+```
+
+Once installed, you can run PrivateGPT.
+
+```bash
+PGPT_PROFILES=openai make run
+```
+
+PrivateGPT will use the already existing `settings-openai.yaml` settings file, which is already configured to use OpenAI LLM and Embeddings endpoints, and Qdrant.
+
+The UI will be available at http://localhost:8001
+
+### Local, Llama-CPP powered setup
+
+If you want to run PrivateGPT fully locally without relying on Ollama, you can run the following command:
+
+```bash
+poetry install --extras "ui llms-llama-cpp embeddings-huggingface vector-stores-qdrant"
+```
+
+In order for local LLM and embeddings to work, you need to download the models to the `models` folder. You can do so by running the `setup` script:
+```bash
+poetry run python scripts/setup
+```
+
+Once installed, you can run PrivateGPT with the following command:
+
+```bash
+PGPT_PROFILES=local make run
+```
+
+PrivateGPT will load the already existing `settings-local.yaml` file, which is already configured to use LlamaCPP LLM, HuggingFace embeddings and Qdrant.
 
 The UI will be available at http://localhost:8001
 

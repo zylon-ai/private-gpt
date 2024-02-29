@@ -18,18 +18,18 @@ class EmbeddingComponent:
         embedding_mode = settings.embedding.mode
         logger.info("Initializing the embedding model in mode=%s", embedding_mode)
         match embedding_mode:
-            case "local":
+            case "huggingface":
                 try:
                     from llama_index.embeddings.huggingface import (  # type: ignore
                         HuggingFaceEmbedding,
                     )
                 except ImportError as e:
                     raise ImportError(
-                        "Local dependencies not found, install with `poetry install --extras local`"
+                        "Local dependencies not found, install with `poetry install --extras embeddings-huggingface`"
                     ) from e
 
                 self.embedding_model = HuggingFaceEmbedding(
-                    model_name=settings.local.embedding_hf_model_name,
+                    model_name=settings.huggingface.embedding_hf_model_name,
                     cache_folder=str(models_cache_path),
                 )
             case "sagemaker":
@@ -39,7 +39,7 @@ class EmbeddingComponent:
                     )
                 except ImportError as e:
                     raise ImportError(
-                        "Sagemaker dependencies not found, install with `poetry install --extras sagemaker`"
+                        "Sagemaker dependencies not found, install with `poetry install --extras embeddings-sagemaker`"
                     ) from e
 
                 self.embedding_model = SagemakerEmbedding(
@@ -52,7 +52,7 @@ class EmbeddingComponent:
                     )
                 except ImportError as e:
                     raise ImportError(
-                        "OpenAI dependencies not found, install with `poetry install --extras openai`"
+                        "OpenAI dependencies not found, install with `poetry install --extras embeddings-openai`"
                     ) from e
 
                 openai_settings = settings.openai.api_key

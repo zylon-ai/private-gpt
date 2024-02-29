@@ -5895,17 +5895,20 @@ docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.link
 testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy (>=0.9.1)", "pytest-ruff"]
 
 [extras]
-chroma = ["llama-index-vector-stores-chroma"]
-local = ["llama-index-embeddings-huggingface", "llama-index-llms-llama-cpp"]
-ollama = ["llama-index-llms-ollama"]
-openai = ["llama-index-embeddings-openai", "llama-index-llms-openai"]
-openai-like = ["llama-index-llms-openai-like"]
-postgres = ["llama-index-vector-stores-postgres"]
-qdrant = ["llama-index-vector-stores-qdrant"]
-sagemaker = ["boto3"]
+embeddings-huggingface = ["llama-index-embeddings-huggingface"]
+embeddings-openai = ["llama-index-embeddings-openai"]
+embeddings-sagemaker = ["boto3"]
+llms-llama-cpp = ["llama-index-llms-llama-cpp"]
+llms-ollama = ["llama-index-llms-ollama"]
+llms-openai = ["llama-index-llms-openai"]
+llms-openai-like = ["llama-index-llms-openai-like"]
+llms-sagemaker = ["boto3"]
 ui = ["gradio"]
+vector-stores-chroma = ["llama-index-vector-stores-chroma"]
+vector-stores-postgres = ["llama-index-vector-stores-postgres"]
+vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "c2e3a4c948a9a49cc11ea085a20dc82b73dc0516fefa11ee941389b6f1ca1f3e"
+content-hash = "0249c25c783180d0c483c533d9102e3885e4a4f5261dc331a41323bd79d446f3"

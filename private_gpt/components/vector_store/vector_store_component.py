@@ -45,7 +45,7 @@ class VectorStoreComponent:
                     )
                 except ImportError as e:
                     raise ImportError(
-                        "Postgres dependencies not found, install with `poetry install --extras postgres`"
+                        "Postgres dependencies not found, install with `poetry install --extras vector-stores-postgres`"
                     ) from e
 
                 if settings.pgvector is None:
@@ -72,7 +72,7 @@ class VectorStoreComponent:
                     )
                 except ImportError as e:
                     raise ImportError(
-                        "ChromaDB dependencies not found, install with `poetry install --extras chroma`"
+                        "ChromaDB dependencies not found, install with `poetry install --extras vector-stores-chroma`"
                     ) from e
 
                 chroma_settings = ChromaSettings(anonymized_telemetry=False)
@@ -99,7 +99,7 @@ class VectorStoreComponent:
                     from qdrant_client import QdrantClient
                 except ImportError as e:
                     raise ImportError(
-                        "Qdrant dependencies not found, install with `poetry install --extras qdrant`"
+                        "Qdrant dependencies not found, install with `poetry install --extras vector-stores-qdrant`"
                     ) from e
 
                 if settings.qdrant is None:
