@@ -105,6 +105,7 @@ class ChatService:
             # TODO ContextChatEngine is still not migrated by LlamaIndex to accept
             # llm directly, so we are passing legacy ServiceContext until it is fixed.
             from llama_index.core import ServiceContext
+
             return ContextChatEngine.from_defaults(
                 system_prompt=system_prompt,
                 retriever=vector_index_retriever,

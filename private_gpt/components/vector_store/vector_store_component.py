@@ -60,11 +60,13 @@ class VectorStoreComponent:
 
             case "chroma":
                 try:
-                    from private_gpt.components.vector_store.batched_chroma import \
-                        BatchedChromaVectorStore
                     import chromadb  # type: ignore
                     from chromadb.config import (  # type: ignore
                         Settings as ChromaSettings,
+                    )
+
+                    from private_gpt.components.vector_store.batched_chroma import (
+                        BatchedChromaVectorStore,
                     )
                 except ImportError as e:
                     raise ImportError(

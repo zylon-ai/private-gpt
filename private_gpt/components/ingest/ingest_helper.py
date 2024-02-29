@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Dict, Type
 
 from llama_index.core.readers import StringIterableReader
 from llama_index.core.readers.base import BaseReader
@@ -11,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 # Inspired by the `llama_index.core.readers.file.base` module
-def _try_loading_included_file_formats() -> Dict[str, Type[BaseReader]]:
+def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
     try:
         from llama_index.readers.file.docs import DocxReader, HWPReader, PDFReader
         from llama_index.readers.file.epub import EpubReader
@@ -19,13 +18,13 @@ def _try_loading_included_file_formats() -> Dict[str, Type[BaseReader]]:
         from llama_index.readers.file.ipynb import IPYNBReader
         from llama_index.readers.file.markdown import MarkdownReader
         from llama_index.readers.file.mbox import MboxReader
-        from llama_index.readers.file.tabular import PandasCSVReader
         from llama_index.readers.file.slides import PptxReader
+        from llama_index.readers.file.tabular import PandasCSVReader
         from llama_index.readers.file.video_audio import VideoAudioReader
-    except ImportError:
-        raise ImportError("`llama-index-readers-file` package not found")
+    except ImportError as e:
+        raise ImportError("`llama-index-readers-file` package not found") from e
 
-    default_file_reader_cls: Dict[str, Type[BaseReader]] = {
+    default_file_reader_cls: dict[str, type[BaseReader]] = {
         ".hwp": HWPReader,
         ".pdf": PDFReader,
         ".docx": DocxReader,
