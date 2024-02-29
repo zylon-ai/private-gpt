@@ -47,9 +47,6 @@ embedding:
 vectorstore:
   database: qdrant
 
-qdrant:
-  path: local_data/private_gpt/qdrant
-
 pgvector:
   host: localhost
   port: 5432

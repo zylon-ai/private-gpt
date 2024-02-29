@@ -9,7 +9,10 @@ ENV PATH=".venv/bin/:$PATH"
 
 # Dependencies to build llama-cpp
 RUN apt-get update && apt-get install -y \
+    # required for building llama-cpp
     build-essential \
+    # required for the application health-check
+    curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
