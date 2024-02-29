@@ -40,7 +40,9 @@ class VectorStoreComponent:
         match settings.vectorstore.database:
             case "pgvector":
                 try:
-                    from llama_index.vector_stores.postgres import PGVectorStore
+                    from llama_index.vector_stores.postgres import (  # type: ignore
+                        PGVectorStore,
+                    )
                 except ImportError as e:
                     raise ImportError(
                         "Postgres dependencies not found, install with `poetry install --extras postgres`"
@@ -91,7 +93,9 @@ class VectorStoreComponent:
 
             case "qdrant":
                 try:
-                    from llama_index.vector_stores.qdrant import QdrantVectorStore
+                    from llama_index.vector_stores.qdrant import (  # type: ignore
+                        QdrantVectorStore,
+                    )
                     from qdrant_client import QdrantClient
                 except ImportError as e:
                     raise ImportError(

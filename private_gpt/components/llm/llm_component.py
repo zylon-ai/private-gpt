@@ -32,7 +32,7 @@ class LLMComponent:
         match settings.llm.mode:
             case "local":
                 try:
-                    from llama_index.llms.llama_cpp import LlamaCPP
+                    from llama_index.llms.llama_cpp import LlamaCPP  # type: ignore
                 except ImportError as e:
                     raise ImportError(
                         "Local dependencies not found, install with `poetry install --extras local`"
@@ -70,7 +70,7 @@ class LLMComponent:
                 )
             case "openai":
                 try:
-                    from llama_index.llms.openai import OpenAI
+                    from llama_index.llms.openai import OpenAI  # type: ignore
                 except ImportError as e:
                     raise ImportError(
                         "OpenAI dependencies not found, install with `poetry install --extras openai`"
@@ -84,7 +84,7 @@ class LLMComponent:
                 )
             case "openailike":
                 try:
-                    from llama_index.llms.openai_like import OpenAILike
+                    from llama_index.llms.openai_like import OpenAILike  # type: ignore
                 except ImportError as e:
                     raise ImportError(
                         "OpenAILike dependencies not found, install with `poetry install --extras openailike`"
@@ -101,7 +101,7 @@ class LLMComponent:
                 )
             case "ollama":
                 try:
-                    from llama_index.llms.ollama import Ollama
+                    from llama_index.llms.ollama import Ollama  # type: ignore
                 except ImportError as e:
                     raise ImportError(
                         "Ollama dependencies not found, install with `poetry install --extras ollama`"

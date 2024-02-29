@@ -20,7 +20,9 @@ class EmbeddingComponent:
         match embedding_mode:
             case "local":
                 try:
-                    from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+                    from llama_index.embeddings.huggingface import (  # type: ignore
+                        HuggingFaceEmbedding,
+                    )
                 except ImportError as e:
                     raise ImportError(
                         "Local dependencies not found, install with `poetry install --extras local`"
@@ -45,7 +47,9 @@ class EmbeddingComponent:
                 )
             case "openai":
                 try:
-                    from llama_index.embeddings.openai import OpenAIEmbedding
+                    from llama_index.embeddings.openai import (  # type: ignore
+                        OpenAIEmbedding,
+                    )
                 except ImportError as e:
                     raise ImportError(
                         "OpenAI dependencies not found, install with `poetry install --extras openai`"

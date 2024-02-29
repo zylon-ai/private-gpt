@@ -3,7 +3,7 @@ from typing import Any
 
 from llama_index.core.schema import BaseNode, MetadataMode
 from llama_index.core.vector_stores.utils import node_to_metadata_dict
-from llama_index.vector_stores.chroma import ChromaVectorStore
+from llama_index.vector_stores.chroma import ChromaVectorStore  # type: ignore
 
 
 def chunk_list(
@@ -22,7 +22,7 @@ def chunk_list(
         yield lst[i : i + max_chunk_size]
 
 
-class BatchedChromaVectorStore(ChromaVectorStore):
+class BatchedChromaVectorStore(ChromaVectorStore):  # type: ignore
     """Chroma vector store, batching additions to avoid reaching the max batch limit.
 
     In this vector store, embeddings are stored within a ChromaDB collection.

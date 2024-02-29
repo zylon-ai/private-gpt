@@ -145,6 +145,9 @@ explicit_package_bases = true
 warn_unused_ignores = false
 exclude = ["tests"]
 
+[tool.mypy-llama-index]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

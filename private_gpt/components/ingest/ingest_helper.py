@@ -12,15 +12,21 @@ logger = logging.getLogger(__name__)
 # Inspired by the `llama_index.core.readers.file.base` module
 def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
     try:
-        from llama_index.readers.file.docs import DocxReader, HWPReader, PDFReader
-        from llama_index.readers.file.epub import EpubReader
-        from llama_index.readers.file.image import ImageReader
-        from llama_index.readers.file.ipynb import IPYNBReader
-        from llama_index.readers.file.markdown import MarkdownReader
-        from llama_index.readers.file.mbox import MboxReader
-        from llama_index.readers.file.slides import PptxReader
-        from llama_index.readers.file.tabular import PandasCSVReader
-        from llama_index.readers.file.video_audio import VideoAudioReader
+        from llama_index.readers.file.docs import (  # type: ignore
+            DocxReader,
+            HWPReader,
+            PDFReader,
+        )
+        from llama_index.readers.file.epub import EpubReader  # type: ignore
+        from llama_index.readers.file.image import ImageReader  # type: ignore
+        from llama_index.readers.file.ipynb import IPYNBReader  # type: ignore
+        from llama_index.readers.file.markdown import MarkdownReader  # type: ignore
+        from llama_index.readers.file.mbox import MboxReader  # type: ignore
+        from llama_index.readers.file.slides import PptxReader  # type: ignore
+        from llama_index.readers.file.tabular import PandasCSVReader  # type: ignore
+        from llama_index.readers.file.video_audio import (  # type: ignore
+            VideoAudioReader,
+        )
     except ImportError as e:
         raise ImportError("`llama-index-readers-file` package not found") from e
 
