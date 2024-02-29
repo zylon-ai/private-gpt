@@ -1,0 +1,24 @@
+server:
+  env_name: ${APP_ENV:ollama}
+
+llm:
+  mode: ollama
+  max_new_tokens: 512
+  context_window: 3900
+
+ollama:
+  model: llama2
+  api_base: http://localhost:11434
+
+embedding:
+  mode: local
+
+vectorstore:
+  database: qdrant
+
+qdrant:
+  path: local_data/private_gpt/qdrant
+
+local:
+  prompt_style: "llama2"
+  embedding_hf_model_name: BAAI/bge-small-en-v1.5

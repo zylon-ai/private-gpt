@@ -34,7 +34,6 @@ ui:
   delete_file_button_enabled: true
   delete_all_files_button_enabled: true
 
-
 llm:
   mode: local
   # Should be matching the selected model
