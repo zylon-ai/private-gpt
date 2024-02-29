@@ -11,7 +11,7 @@ from transformers import AutoModelForObjectDetection
 from transformers import TableTransformerForObjectDetection
 
 from typing import Literal
-
+from injector import inject, singleton
 from private_gpt.components.ocr_components.table_ocr import GetOCRText
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -26,8 +26,9 @@ class MaxResize(object):
         resized_image = image.resize((int(round(scale*width)), int(round(scale*height))))
         return resized_image
 
-
+@singleton
 class ImageToTable:
+    @inject
     def __init__(self, tokens:list=None, detection_class_thresholds:dict=None) -> None:
         self._table_model = "microsoft/table-transformer-detection"
         self._structure_model = "microsoft/table-structure-recognition-v1.1-all"

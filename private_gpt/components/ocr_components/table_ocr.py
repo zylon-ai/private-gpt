@@ -3,10 +3,12 @@ import cv2
 import torch
 from doctr.models import ocr_predictor
 from doctr.io import DocumentFile
-
+from injector import singleton, inject
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
+@singleton
 class GetOCRText:
+    @inject
     def __init__(self) -> None:
         self._image = None
         # self.ocr = PaddleOCR(use_angle_cls=True, lang='en')
