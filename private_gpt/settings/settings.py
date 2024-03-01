@@ -127,7 +127,7 @@ class HuggingFaceSettings(BaseModel):
 
 
 class EmbeddingSettings(BaseModel):
-    mode: Literal["huggingface", "openai", "sagemaker", "mock"]
+    mode: Literal["huggingface", "openai", "sagemaker", "ollama", "mock"]
     ingest_mode: Literal["simple", "batch", "parallel"] = Field(
         "simple",
         description=(
@@ -176,9 +176,13 @@ class OllamaSettings(BaseModel):
         "http://localhost:11434",
         description="Base URL of Ollama API. Example: 'https://localhost:11434'.",
     )
-    model: str = Field(
+    llm_model: str = Field(
         None,
         description="Model to use. Example: 'llama2-uncensored'.",
+    )
+    embedding_model: str = Field(
+        None,
+        description="Model to use. Example: 'nomic-embed-text'.",
     )
 
 

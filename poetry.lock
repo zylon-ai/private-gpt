@@ -2098,6 +2098,20 @@ torch = ">=2.1.2,<3.0.0"
 transformers = ">=4.37.0,<5.0.0"
 
 [[package]]
+name = "llama-index-embeddings-ollama"
+version = "0.1.2"
+description = "llama-index embeddings ollama integration"
+optional = true
+python-versions = ">=3.8.1,<4.0"
+files = [
+    {file = "llama_index_embeddings_ollama-0.1.2-py3-none-any.whl", hash = "sha256:ac7afabfa1134059af351b021e05e256bf86dd15e5176ffa5ab0305bcf03b33f"},
+    {file = "llama_index_embeddings_ollama-0.1.2.tar.gz", hash = "sha256:a9e0809bddd2e4ad888f249519edc7e3d339c74e4e03fc5a40c3060dc41d47a9"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.1,<0.11.0"
+
+[[package]]
 name = "llama-index-embeddings-openai"
 version = "0.1.6"
 description = "llama-index embeddings openai integration"
@@ -5896,6 +5910,7 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [extras]
 embeddings-huggingface = ["llama-index-embeddings-huggingface"]
+embeddings-ollama = ["llama-index-embeddings-ollama"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
@@ -5911,4 +5926,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "0249c25c783180d0c483c533d9102e3885e4a4f5261dc331a41323bd79d446f3"
+content-hash = "c24bce23b7deccc8958979e2836151a7f5e5c08424d12945785a512119ac0f9c"

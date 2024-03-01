@@ -57,6 +57,21 @@ class EmbeddingComponent:
 
                 openai_settings = settings.openai.api_key
                 self.embedding_model = OpenAIEmbedding(api_key=openai_settings)
+            case "ollama":
+                try:
+                    from llama_index.embeddings.ollama import (  # type: ignore
+                        OllamaEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Local dependencies not found, install with `poetry install --extras embeddings-ollama`"
+                    ) from e
+
+                ollama_settings = settings.ollama
+                self.embedding_model = OllamaEmbedding(
+                    model_name=ollama_settings.embedding_model,
+                    base_url=ollama_settings.api_base
+                )
             case "mock":
                 # Not a random number, is the dimensionality used by
                 # the default embedding model

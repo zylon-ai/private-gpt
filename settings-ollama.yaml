@@ -6,15 +6,13 @@ llm:
   max_new_tokens: 512
   context_window: 3900
 
-ollama:
-  model: llama2
-  api_base: http://localhost:11434
-
 embedding:
-  mode: huggingface
+  mode: ollama
 
-huggingface:
-  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+ollama:
+  llm_model: mistral
+  embedding_model: nomic-embed-text
+  api_base: http://localhost:11434
 
 vectorstore:
   database: qdrant

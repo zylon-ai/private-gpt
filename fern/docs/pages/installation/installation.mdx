@@ -44,11 +44,12 @@ poetry install --extras "<extra1> <extra2>..."
 Where `<extra>` can be any of the following:
 
 - ui: adds support for UI using Gradio
-- llms-ollama: adds support for Ollama LLM, the easiest way to get a local LLM running
+- llms-ollama: adds support for Ollama LLM, the easiest way to get a local LLM running, requires Ollama running locally
 - llms-llama-cpp: adds support for local LLM using LlamaCPP - expect a messy installation process on some platforms
 - llms-sagemaker: adds support for Amazon Sagemaker LLM, requires Sagemaker inference endpoints
 - llms-openai: adds support for OpenAI LLM, requires OpenAI API key
 - llms-openai-like: adds support for 3rd party LLM providers that are compatible with OpenAI's API
+- embeddings-ollama: adds support for Ollama Embeddings, requires Ollama running locally
 - embeddings-huggingface: adds support for local Embeddings using HuggingFace
 - embeddings-sagemaker: adds support for Amazon Sagemaker Embeddings, requires Sagemaker inference endpoints
 - embeddings-openai = adds support for OpenAI Embeddings, requires OpenAI API key
@@ -78,21 +79,29 @@ set PGPT_PROFILES=ollama
 make run
 ```
 
-### Local, Ollama-powered setup
+### Local, Ollama-powered setup - RECOMMENDED
 
-The easiest way to run PrivateGPT fully locally is to depend on Ollama for the LLM. Ollama provides a local LLM that is easy to install and use.
+**The easiest way to run PrivateGPT fully locally** is to depend on Ollama for the LLM. Ollama provides local LLM and Embeddings super easy to install and use, abstracting the complexity of GPU support. It's the recommended setup for local development.
 
 Go to [ollama.ai](https://ollama.ai/) and follow the instructions to install Ollama on your machine.
 
-Once done, you can install PrivateGPT with the following command:
+After the installation, make sure the Ollama desktop app is closed.
+
+Install the models to be used, the default settings-ollama.yaml is configured to user `mistral 7b` LLM (~4GB) and `nomic-embed-text` Embeddings (~275MB). Therefore:
+
 ```bash
-poetry install --extras "ui llms-ollama embeddings-huggingface vector-stores-qdrant"
+ollama pull mistral
+ollama pull nomic-embed-text
 ```
 
-We are installing "embeddings-huggingface" dependency to support local embeddings, because Ollama doesn't support embeddings just yet. But they working on it!
-In order for local embeddings to work, you need to download the embeddings model to the `models` folder. You can do so by running the `setup` script:
+Now, start Ollama service (it will start a local inference server, serving both the LLM and the Embeddings):
 ```bash
-poetry run python scripts/setup
+ollama serve
+```
+
+Once done, on a different terminal, you can install PrivateGPT with the following command:
+```bash
+poetry install --extras "ui llms-ollama embeddings-ollama vector-stores-qdrant"
 ```
 
 Once installed, you can run PrivateGPT. Make sure you have a working Ollama running locally before running the following command.
@@ -101,7 +110,7 @@ Once installed, you can run PrivateGPT. Make sure you have a working Ollama runn
 PGPT_PROFILES=ollama make run
 ```
 
-PrivateGPT will use the already existing `settings-ollama.yaml` settings file, which is already configured to use Ollama LLM, local Embeddings, and Qdrant. Review it and adapt it to your needs (different LLM model, different Ollama port, etc.)
+PrivateGPT will use the already existing `settings-ollama.yaml` settings file, which is already configured to use Ollama LLM and Embeddings, and Qdrant. Review it and adapt it to your needs (different models, different Ollama port, etc.)
 
 The UI will be available at http://localhost:8001
 
@@ -125,29 +134,6 @@ PGPT_PROFILES=sagemaker make run
 ```
 
 PrivateGPT will use the already existing `settings-sagemaker.yaml` settings file, which is already configured to use Sagemaker LLM and Embeddings endpoints, and Qdrant.
-
-The UI will be available at http://localhost:8001
-
-### Local, Llama-CPP powered setup
-
-If you want to run PrivateGPT fully locally without relying on Ollama, you can run the following command:
-
-```bash
-poetry install --extras "ui llms-llama-cpp embeddings-huggingface vector-stores-qdrant"
-```
-
-In order for local LLM and embeddings to work, you need to download the models to the `models` folder. You can do so by running the `setup` script:
-```bash
-poetry run python scripts/setup
-```
-
-Once installed, you can run PrivateGPT with the following command:
-
-```bash
-PGPT_PROFILES=local make run
-```
-
-PrivateGPT will load the already existing `settings-local.yaml` file, which is already configured to use LlamaCPP LLM, HuggingFace embeddings and Qdrant.
 
 The UI will be available at http://localhost:8001
 

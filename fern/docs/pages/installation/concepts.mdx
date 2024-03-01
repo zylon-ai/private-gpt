@@ -40,20 +40,21 @@ In order to run PrivateGPT in a fully local setup, you will need to run the LLM,
 ### Vector stores
 The vector stores supported (Qdrant, ChromaDB and Postgres) run locally by default.
 ### Embeddings
-For local embeddings you need to install the 'embeddings-huggingface' extra dependencies. It will use Huggingface Embeddings.
+For local Embeddings there are two options:
+* (Recommended) You can use the 'ollama' option in PrivateGPT, which will connect to your local Ollama instance. Ollama simplifies a lot the installation of local LLMs.
+* You can use the 'embeddings-huggingface' option in PrivateGPT, which will use HuggingFace.
 
-Note: Ollama will support Embeddings in the short term for easier installation, but it doesn't as of today.
-
-In order for local embeddings to work, you need to download the embeddings model to the `models` folder. You can do so by running the `setup` script:
+In order for HuggingFace LLM to work (the second option), you need to download the embeddings model to the `models` folder. You can do so by running the `setup` script:
 ```bash
 poetry run python scripts/setup
 ```
+
 ### LLM
 For local LLM there are two options:
 * (Recommended) You can use the 'ollama' option in PrivateGPT, which will connect to your local Ollama instance. Ollama simplifies a lot the installation of local LLMs.
 * You can use the 'llms-llama-cpp' option in PrivateGPT, which will use LlamaCPP. It works great on Mac with Metal most of the times (leverages Metal GPU), but it can be tricky in certain Linux and Windows distributions, depending on the GPU. In the installation document you'll find guides and troubleshooting.
 
-In order for local LLM to work (the second option), you need to download the embeddings model to the `models` folder. You can do so by running the `setup` script:
+In order for LlamaCPP powered LLM to work (the second option), you need to download the LLM model to the `models` folder. You can do so by running the `setup` script:
 ```bash
 poetry run python scripts/setup
 ```

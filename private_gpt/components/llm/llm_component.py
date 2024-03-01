@@ -109,7 +109,7 @@ class LLMComponent:
 
                 ollama_settings = settings.ollama
                 self.llm = Ollama(
-                    model=ollama_settings.model, base_url=ollama_settings.api_base
+                    model=ollama_settings.llm_model, base_url=ollama_settings.api_base
                 )
             case "mock":
                 self.llm = MockLLM()
