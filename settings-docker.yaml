@@ -2,7 +2,7 @@ server:
   env_name: ${APP_ENV:docker}
   port: ${PORT:8080}
   auth:
-    enabled: true
+    enabled: false
     secret: ${PGPT_AUTH_SECRET}
 
 llm:

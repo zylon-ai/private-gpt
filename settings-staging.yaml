@@ -2,7 +2,7 @@ server:
   env_name: staging
   port: ${PORT:8080}
   auth:
-    enabled: true
+    enabled: false
     secret: ${PGPT_AUTH_SECRET}
 
 llm:
