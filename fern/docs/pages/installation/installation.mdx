@@ -61,6 +61,23 @@ Where `<extra>` can be any of the following:
 There are just some examples of recommended setups. You can mix and match the different options to fit your needs.
 You'll find more information in the Manual section of the documentation.
 
+> **Important for Windows**: In the examples below or how to run PrivateGPT with `make run`, `PGPT_PROFILES` env var is being set inline following Unix command line syntax (works on MacOS and Linux).
+If you are using Windows, you'll need to set the env var in a different way, for example:
+
+```powershell
+# Powershell
+$env:PGPT_PROFILES="ollama"
+make run
+```
+
+or
+
+```cmd
+# CMD
+set PGPT_PROFILES=ollama
+make run
+```
+
 ### Local, Ollama-powered setup
 
 The easiest way to run PrivateGPT fully locally is to depend on Ollama for the LLM. Ollama provides a local LLM that is easy to install and use.
