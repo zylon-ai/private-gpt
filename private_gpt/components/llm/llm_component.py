@@ -87,7 +87,7 @@ class LLMComponent:
                     from llama_index.llms.openai_like import OpenAILike  # type: ignore
                 except ImportError as e:
                     raise ImportError(
-                        "OpenAILike dependencies not found, install with `poetry install --extras llms-openailike`"
+                        "OpenAILike dependencies not found, install with `poetry install --extras llms-openai-like`"
                     ) from e
 
                 openai_settings = settings.openai

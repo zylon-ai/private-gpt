@@ -19,19 +19,19 @@ os.makedirs(models_path, exist_ok=True)
 
 # Download Embedding model
 embedding_path = models_path / "embedding"
-print(f"Downloading embedding {settings().local.embedding_hf_model_name}")
+print(f"Downloading embedding {settings().huggingface.embedding_hf_model_name}")
 snapshot_download(
-    repo_id=settings().local.embedding_hf_model_name,
+    repo_id=settings().huggingface.embedding_hf_model_name,
     cache_dir=models_cache_path,
     local_dir=embedding_path,
 )
 print("Embedding model downloaded!")
 
 # Download LLM and create a symlink to the model file
-print(f"Downloading LLM {settings().local.llm_hf_model_file}")
+print(f"Downloading LLM {settings().llamacpp.llm_hf_model_file}")
 hf_hub_download(
-    repo_id=settings().local.llm_hf_repo_id,
-    filename=settings().local.llm_hf_model_file,
+    repo_id=settings().llamacpp.llm_hf_repo_id,
+    filename=settings().llamacpp.llm_hf_model_file,
     cache_dir=models_cache_path,
     local_dir=models_path,
     resume_download=resume_download,
