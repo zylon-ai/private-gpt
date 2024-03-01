@@ -2127,6 +2127,22 @@ llama-cpp-python = ">=0.2.32,<0.3.0"
 llama-index-core = ">=0.10.1,<0.11.0"
 
 [[package]]
+name = "llama-index-llms-nvidia-tensorrt"
+version = "0.1.4"
+description = "llama-index llms nvidia tensorrt integration"
+optional = true
+python-versions = ">=3.8.1,<4.0"
+files = [
+    {file = "llama_index_llms_nvidia_tensorrt-0.1.4-py3-none-any.whl", hash = "sha256:146b249de86317985d57d1acb89e5af1ef1564462899e6711f1ec97b3ba9ce7c"},
+    {file = "llama_index_llms_nvidia_tensorrt-0.1.4.tar.gz", hash = "sha256:7edddbe1ad2bc8f9fc2812853b800c8ad2b610931b870d49ad7d5be920e6dbfc"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.1,<0.11.0"
+torch = ">=2.1.2,<3.0.0"
+transformers = ">=4.37.0,<5.0.0"
+
+[[package]]
 name = "llama-index-llms-ollama"
 version = "0.1.2"
 description = "llama-index llms ollama integration"
@@ -4857,6 +4873,16 @@ files = [
 doc = ["reno", "sphinx", "tornado (>=4.5)"]
 
 [[package]]
+name = "tensorrt-llm"
+version = "0.8.0"
+description = "A fake package to warn the user they are not installing the correct package."
+optional = true
+python-versions = ">=3.7, <4"
+files = [
+    {file = "tensorrt-llm-0.8.0.tar.gz", hash = "sha256:8bd59bf59766bb16f81bd330ca38765a532a21a35d323fd33929c80a6ec53eaf"},
+]
+
+[[package]]
 name = "tiktoken"
 version = "0.5.2"
 description = "tiktoken is a fast BPE tokeniser for use with OpenAI's models"
@@ -5899,6 +5925,7 @@ embeddings-huggingface = ["llama-index-embeddings-huggingface"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
+llms-nvidia-tensorrt = ["llama-index-llms-nvidia-tensorrt", "tensorrt_llm"]
 llms-ollama = ["llama-index-llms-ollama"]
 llms-openai = ["llama-index-llms-openai"]
 llms-openai-like = ["llama-index-llms-openai-like"]
@@ -5911,4 +5938,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "0249c25c783180d0c483c533d9102e3885e4a4f5261dc331a41323bd79d446f3"
+content-hash = "68f6ce6bd92419ce73a68c4a260ccf3016b38528c563ccad56d1bb68e7c09aae"

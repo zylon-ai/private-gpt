@@ -111,5 +111,22 @@ class LLMComponent:
                 self.llm = Ollama(
                     model=ollama_settings.model, base_url=ollama_settings.api_base
                 )
+            case "tensorrt":
+                try:
+                    from llama_index.llms.nvidia_tensorrt import (  # type: ignore
+                        LocalTensorRTLLM,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Nvidia TensorRTLLM dependencies not found, install with `poetry install --extras llms-nvidia-tensorrt`"
+                    ) from e
+
+                prompt_style = get_prompt_style(settings.tensorrt.prompt_style)
+                self.llm = LocalTensorRTLLM(
+                    model_path=settings.tensorrt.model_path,
+                    engine_name=settings.tensorrt.engine_name,
+                    tokenizer_dir=settings.llm.tokenizer,
+                    completion_to_prompt=prompt_style.completion_to_prompt,
+                )
             case "mock":
                 self.llm = MockLLM()
