@@ -1,4 +1,4 @@
-name: Deploy to AWS ECS [staging]
+name: Deploy [staging]
 
 on:
   push:
@@ -8,20 +8,28 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  ECR_REGISTRY: 363611146132.dkr.ecr.us-east-1.amazonaws.com
   ECR_REPOSITORY: ec-private-gpt
-  ECS_SERVICE: ec-private-gpt-service
-  ECS_CLUSTER: ec-private-gpt
+  ECS_SERVICE: ec-private-gpt-staging-service
+  ECS_CLUSTER: ec-private-gpt-staging
   ECS_TASK_DEFINITION: .aws/ecs-task-definition-staging.json
   CONTAINER_NAME: ec-private-gpt
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  deploy:
-    name: Deploy
+  build:
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
       - name: Clone the repository
         uses: actions/checkout@v4
+
+      - name: Set up QEMU to be able to build against multi-platforms
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx to build multi-platform images
+        uses: docker/setup-buildx-action@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -31,26 +39,51 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push container image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Free up space
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          sudo rm -rf /usr/local/lib/android  # will release about 10 GB if you don't need Android
+          sudo rm -rf /usr/share/dotnet # will release about 20GB if you don't need .NET
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+      - name: Build and push multi-platform image to Amazon ECR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.external
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: PGPT_PROFILES=staging
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: render-task-definition
         uses: aws-actions/amazon-ecs-render-task-definition@v1
+        env:
+          IMAGE_TAG: ${{ github.sha }}
         with:
           task-definition: ${{ env.ECS_TASK_DEFINITION }}
           container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
+          image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
