@@ -102,18 +102,10 @@ class ChatService:
             vector_index_retriever = self.vector_store_component.get_retriever(
                 index=self.index, context_filter=context_filter
             )
-            # TODO ContextChatEngine is still not migrated by LlamaIndex to accept
-            # llm directly, so we are passing legacy ServiceContext until it is fixed.
-            from llama_index.core import ServiceContext
-
             return ContextChatEngine.from_defaults(
                 system_prompt=system_prompt,
                 retriever=vector_index_retriever,
                 llm=self.llm_component.llm,  # Takes no effect at the moment
-                service_context=ServiceContext.from_defaults(
-                    llm=self.llm_component.llm,
-                    embed_model=self.embedding_component.embedding_model,
-                ),
                 node_postprocessors=[
                     MetadataReplacementPostProcessor(target_metadata_key="window"),
                 ],

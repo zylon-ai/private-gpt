@@ -2039,13 +2039,13 @@ test = ["httpx (>=0.24.1)", "pytest (>=7.4.0)", "scipy (>=1.10)"]
 
 [[package]]
 name = "llama-index-core"
-version = "0.10.13"
+version = "0.10.14.post1"
 description = "Interface between LLMs and your data"
 optional = false
 python-versions = ">=3.8.1,<4.0"
 files = [
-    {file = "llama_index_core-0.10.13-py3-none-any.whl", hash = "sha256:40c76fc02be7cd948a333ca541f2ff38cf02774e1c960674e2b68c61943bac90"},
-    {file = "llama_index_core-0.10.13.tar.gz", hash = "sha256:826fded00767923fba8aca94f46c32b259e8879f517016ab7a3801b1b37187a1"},
+    {file = "llama_index_core-0.10.14.post1-py3-none-any.whl", hash = "sha256:7b12ebebe023e8f5e50c0fcff4af7a67e4842b2e1ca6a84b09442394d2689de6"},
+    {file = "llama_index_core-0.10.14.post1.tar.gz", hash = "sha256:adb931fced7bff092b26599e7f89952c171bf2994872906b5712ecc8107d4727"},
 ]
 
 [package.dependencies]
@@ -5146,13 +5146,13 @@ telegram = ["requests"]
 
 [[package]]
 name = "transformers"
-version = "4.38.1"
+version = "4.38.2"
 description = "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow"
 optional = false
 python-versions = ">=3.8.0"
 files = [
-    {file = "transformers-4.38.1-py3-none-any.whl", hash = "sha256:a7a9265fb060183e9d975cbbadc4d531b10281589c43f6d07563f86322728973"},
-    {file = "transformers-4.38.1.tar.gz", hash = "sha256:86dc84ccbe36123647e84cbd50fc31618c109a41e6be92514b064ab55bf1304c"},
+    {file = "transformers-4.38.2-py3-none-any.whl", hash = "sha256:c4029cb9f01b3dd335e52f364c52d2b37c65b4c78e02e6a08b1919c5c928573e"},
+    {file = "transformers-4.38.2.tar.gz", hash = "sha256:c5fc7ad682b8a50a48b2a4c05d4ea2de5567adb1bdd00053619dbe5960857dd5"},
 ]
 
 [package.dependencies]
@@ -5926,4 +5926,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "c24bce23b7deccc8958979e2836151a7f5e5c08424d12945785a512119ac0f9c"
+content-hash = "41849a9d15848a354fd4cc0ca9d752148e76fee64d8bb5b881210c2290fc8072"

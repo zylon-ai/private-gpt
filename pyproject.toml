@@ -12,9 +12,9 @@ python-multipart = "^0.0.9"
 injector = "^0.21.0"
 pyyaml = "^6.0.1"
 watchdog = "^4.0.0"
-transformers = "^4.38.1"
+transformers = "^4.38.2"
 # LlamaIndex core libs
-llama-index-core = "^0.10.13"
+llama-index-core = "^0.10.14"
 llama-index-readers-file = "^0.1.6"
 # Optional LlamaIndex integration libs
 llama-index-llms-llama-cpp = {version = "^0.1.3", optional = true}
