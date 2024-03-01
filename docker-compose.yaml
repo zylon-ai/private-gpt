@@ -10,6 +10,7 @@ services:
     environment:
       PORT: 8080
       PGPT_PROFILES: docker
+      PGPT_AUTH_SECRET: ${PGPT_AUTH_SECRET}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       QDRANT_URL: ${QDRANT_URL}
       QDRANT_API_KEY: ${QDRANT_API_KEY}
