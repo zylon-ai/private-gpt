@@ -102,7 +102,6 @@ class PrivateGptUi:
                     if source.file not in used_files:
                         sources_text = sources_text +f"{index}. {source.file} (page {source.page}) \n\n"
                         used_files.add(source.file + "-" + source.page)
-                        logger.info(urllib.parse.unquote(source.file))
                 full_response += sources_text
             yield full_response
 
