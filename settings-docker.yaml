@@ -1,6 +1,9 @@
 server:
   env_name: ${APP_ENV:docker}
   port: ${PORT:8080}
+  auth:
+    enabled: false
+    secret: ${PGPT_AUTH_SECRET}
 
 llm:
   mode: ${PGPT_INFERENCE_MODE:openai}
