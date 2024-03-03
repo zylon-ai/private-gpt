@@ -1,5 +1,26 @@
-### IMPORTANT, THIS IMAGE CAN ONLY BE RUN IN LINUX DOCKER
-### You will run into a segfault in mac
+# Use the official CUDA image as the base
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu20.04 as cuda_base
+
+# Set noninteractive mode
+ENV DEBIAN_FRONTEND noninteractive
+
+# Install necessary dependencies including CMake and g++
+RUN apt-get update && apt-get install -y \
+    libopenblas-dev \
+    ninja-build \
+    build-essential \
+    pkg-config \
+    wget \
+    make \
+    cmake \
+    g++
+
+# Set the C++ compiler
+ENV CMAKE_CXX_COMPILER=g++
+ENV CC=gcc
+ENV CXX=g++
+
+# Switch to the Python image for the final build stage
 FROM python:3.11.6-slim-bookworm as base
 
 # Install poetry
@@ -9,23 +30,29 @@ RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
 ENV PATH=".venv/bin/:$PATH"
 
-# Dependencies to build llama-cpp
-RUN apt update && apt install -y \
-  libopenblas-dev\
-  ninja-build\
-  build-essential\
-  pkg-config\
-  wget
+# Copy CUDA dependencies from the CUDA base image
+COPY --from=cuda_base /usr/local/cuda /usr/local/cuda
+
+# Set environment variables for CUDA
+ENV PATH="/usr/local/cuda/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH}"
 
 # https://python-poetry.org/docs/configuration/#virtualenvsin-project
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 
+# Continue with the rest of your Dockerfile
 FROM base as dependencies
 WORKDIR /home/worker/app
 COPY pyproject.toml poetry.lock ./
 
+# Install dependencies with CUDA support
+ENV CMAKE_ARGS="-DLLAMA_CUBLAS=on"
 RUN poetry install --with local
 RUN poetry install --with ui
+
+# Install llama-cpp-python with CUDA support
+RUN poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python
+RUN poetry run python scripts/setup
 
 FROM base as app
 

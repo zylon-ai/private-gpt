@@ -1,4 +1,4 @@
-from private_gpt.users.core.config import SQLALCHEMY_DATABASE_URI
+from private_gpt.users.core.db_config import SQLALCHEMY_DATABASE_URI
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import logging

@@ -6,7 +6,7 @@ from sqlalchemy import pool
 from alembic import context
 
 from private_gpt.users.db.base_class import Base
-from private_gpt.users.core.config import SQLALCHEMY_DATABASE_URI
+from private_gpt.users.core.db_config import SQLALCHEMY_DATABASE_URI
 
 
 from private_gpt.users.models.user import User

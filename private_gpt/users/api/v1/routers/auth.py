@@ -1,3 +1,4 @@
+import logging
 import traceback
 from typing import Any, Optional
 from datetime import timedelta, datetime
@@ -13,13 +14,12 @@ from private_gpt.users.constants.role import Role
 from private_gpt.users.core.config import settings
 from private_gpt.users import crud, models, schemas
 from private_gpt.users.utils import send_registration_email, Ldap
-import logging
 
 logger = logging.getLogger(__name__)
 
 LDAP_SERVER = settings.LDAP_SERVER
-# LDAP_ENABLE = settings.LDAP_ENABLE
-LDAP_ENABLE = False
+LDAP_ENABLE = settings.LDAP_ENABLE
+# LDAP_ENABLE=False
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

@@ -27,7 +27,9 @@ docx2txt = "^0.8"
 gradio = "^4.18.0"
 ldap3 = "^2.9.1"
 uvicorn = "^0.27.1"
-python-doctr = {extras = ["torch"], version = "^0.7.0"}
+python-doctr = "0.7.0"
+pymupdf = "1.21.1"
+python-docx = "1.1.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
