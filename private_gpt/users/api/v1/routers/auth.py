@@ -117,16 +117,16 @@ def login_access_token(
     """
     OAuth2 compatible token login, get an access token for future requests
     """
-    def ad_auth():
+    def ad_auth(LDAP_ENABLE):
         if LDAP_ENABLE:
             existing_user = crud.user.get_by_email(db, email=form_data.username)
             
             if existing_user:
                 if existing_user.user_role.role.name == "SUPER_ADMIN":
-                    return True
+                    return existing_user
                 else:
                     username, department = ldap_login(db=db, username=form_data.username, password=form_data.password)
-                    return True
+                    return crud.user.get_by_name(db, name=username)
             else:
                 username, department = ldap_login(db=db, username=form_data.username, password=form_data.password)
                 depart = crud.department.get_by_department_name(db, name=department)
@@ -141,7 +141,7 @@ def login_access_token(
         return None
     
     if LDAP_ENABLE:
-        user = ad_auth()
+        user = ad_auth(LDAP_ENABLE)
         if not user:
             raise HTTPException(
                 status_code=403,
