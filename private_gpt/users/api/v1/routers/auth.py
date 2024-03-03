@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 LDAP_SERVER = settings.LDAP_SERVER
 LDAP_ENABLE = settings.LDAP_ENABLE
-# LDAP_ENABLE=False
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
