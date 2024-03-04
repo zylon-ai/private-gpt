@@ -13,6 +13,7 @@ from private_gpt.settings.settings import Settings
 logger = logging.getLogger(__name__)
 
 
+
 @singleton
 class LLMComponent:
     llm: LLM
@@ -39,16 +40,22 @@ class LLMComponent:
                     ) from e
 
                 prompt_style = get_prompt_style(settings.llamacpp.prompt_style)
+                settings_kwargs={
+                    "tfs_z": settings.llamacpp.llm.tfs_z, #ollama and llama-cpp
+                    "top_k": settings.llamacpp.llm.top_k, # ollama and llama-cpp
+                    "top_p": settings.llamacpp.llm.top_p, # ollama and llama-cpp
+                    "repeat_penalty": settings.llamacpp.repeat_penalty, # ollama llama-cpp
+                }
 
                 self.llm = LlamaCPP(
                     model_path=str(models_path / settings.llamacpp.llm_hf_model_file),
-                    temperature=0.1,
+                    temperature=settings.llm.temperature,
                     max_new_tokens=settings.llm.max_new_tokens,
                     context_window=settings.llm.context_window,
                     generate_kwargs={},
                     callback_manager=LlamaIndexSettings.callback_manager,
                     # All to GPU
-                    model_kwargs={"n_gpu_layers": -1, "offload_kqv": True},
+                    model_kwargs=Merge(settings_kwargs, {"n_gpu_layers": -1, "offload_kqv": True}),
                     # transform inputs into Llama2 format
                     messages_to_prompt=prompt_style.messages_to_prompt,
                     completion_to_prompt=prompt_style.completion_to_prompt,
@@ -81,6 +88,7 @@ class LLMComponent:
                     api_base=openai_settings.api_base,
                     api_key=openai_settings.api_key,
                     model=openai_settings.model,
+                    temperature=settings.llm.temperature,
                 )
             case "openailike":
                 try:
@@ -108,8 +116,23 @@ class LLMComponent:
                     ) from e
 
                 ollama_settings = settings.ollama
+
+                settings_kwargs={
+                    "tfs_z": ollama_settings.tfs_z, #ollama and llama-cpp
+                    "num_predict": ollama_settings.num_predict, #ollama only
+                    "top_k": ollama_settings.top_k, # ollama and llama-cpp
+                    "top_p": ollama_settings.top_p, # ollama and llama-cpp
+                    "repeat_last_n": ollama_settings.repeat_last_n, # ollama
+                    "repeat_penalty": ollama_settings.repeat_penalty, # ollama llama-cpp
+                }
+
+
                 self.llm = Ollama(
-                    model=ollama_settings.llm_model, base_url=ollama_settings.api_base
+                    model=ollama_settings.llm_model,
+                    base_url=ollama_settings.api_base,
+                    temperature=settings.llm.temperature,
+                    context_window=settings.llm.context_window,
+                    additional_kwargs=settings_kwargs,
                 )
             case "mock":
                 self.llm = MockLLM()
