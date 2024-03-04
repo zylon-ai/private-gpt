@@ -12,7 +12,10 @@ from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
 
-
+def Merge(dict1, dict2):
+    for i in dict2.keys():
+        dict1[i]=dict2[i]
+    return dict1
 
 @singleton
 class LLMComponent:
