@@ -12,10 +12,6 @@ from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
 
-def Merge(dict1, dict2):
-    for i in dict2:
-        dict1[i]=dict2[i]
-    return dict1
 
 @singleton
 class LLMComponent:
@@ -43,11 +39,13 @@ class LLMComponent:
                     ) from e
 
                 prompt_style = get_prompt_style(settings.llamacpp.prompt_style)
-                settings_kwargs={
-                    "tfs_z": settings.llamacpp.llm.tfs_z, #ollama and llama-cpp
-                    "top_k": settings.llamacpp.llm.top_k, # ollama and llama-cpp
-                    "top_p": settings.llamacpp.llm.top_p, # ollama and llama-cpp
-                    "repeat_penalty": settings.llamacpp.repeat_penalty, # ollama llama-cpp
+                settings_kwargs = {
+                    "tfs_z": settings.llamacpp.tfs_z,  # ollama and llama-cpp
+                    "top_k": settings.llamacpp.top_k,  # ollama and llama-cpp
+                    "top_p": settings.llamacpp.top_p,  # ollama and llama-cpp
+                    "repeat_penalty": settings.llamacpp.repeat_penalty,  # ollama llama-cpp
+                    "n_gpu_layers": -1,
+                    "offload_kqv": True,
                 }
 
                 self.llm = LlamaCPP(
@@ -58,7 +56,7 @@ class LLMComponent:
                     generate_kwargs={},
                     callback_manager=LlamaIndexSettings.callback_manager,
                     # All to GPU
-                    model_kwargs=Merge(settings_kwargs, {"n_gpu_layers": -1, "offload_kqv": True}),
+                    model_kwargs=settings_kwargs,
                     # transform inputs into Llama2 format
                     messages_to_prompt=prompt_style.messages_to_prompt,
                     completion_to_prompt=prompt_style.completion_to_prompt,
@@ -120,15 +118,14 @@ class LLMComponent:
 
                 ollama_settings = settings.ollama
 
-                settings_kwargs={
-                    "tfs_z": ollama_settings.tfs_z, #ollama and llama-cpp
-                    "num_predict": ollama_settings.num_predict, #ollama only
-                    "top_k": ollama_settings.top_k, # ollama and llama-cpp
-                    "top_p": ollama_settings.top_p, # ollama and llama-cpp
-                    "repeat_last_n": ollama_settings.repeat_last_n, # ollama
-                    "repeat_penalty": ollama_settings.repeat_penalty, # ollama llama-cpp
+                settings_kwargs = {
+                    "tfs_z": ollama_settings.tfs_z,  # ollama and llama-cpp
+                    "num_predict": ollama_settings.num_predict,  # ollama only
+                    "top_k": ollama_settings.top_k,  # ollama and llama-cpp
+                    "top_p": ollama_settings.top_p,  # ollama and llama-cpp
+                    "repeat_last_n": ollama_settings.repeat_last_n,  # ollama
+                    "repeat_penalty": ollama_settings.repeat_penalty,  # ollama llama-cpp
                 }
-
 
                 self.llm = Ollama(
                     model=ollama_settings.llm_model,
