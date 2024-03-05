@@ -20,4 +20,4 @@ qdrant:
 
 openai:
   api_key: ${OPENAI_API_KEY}
-  model: ${OPENAI_MODEL:gpt-3.5-turbo}
+  model: ${OPENAI_MODEL:gpt-4-1106-preview}
