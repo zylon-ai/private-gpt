@@ -9,6 +9,7 @@ class AuditBase(BaseModel):
     user_id: int
     action: str
     details: dict
+    ip_address: str
     timestamp: Optional[datetime]
 
 
@@ -33,3 +34,8 @@ class Audit(BaseModel):
     action: str
     details: dict
     timestamp: Optional[datetime]
+    ip_address: str
+
+
+class GetAudit(BaseModel):
+    id: int

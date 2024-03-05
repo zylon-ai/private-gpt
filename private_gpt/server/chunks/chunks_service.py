@@ -93,7 +93,7 @@ class ChunksService:
 
         return explored_nodes_texts
 
-    def retrieve_relevant(
+    async def retrieve_relevant(
         self,
         text: str,
         context_filter: ContextFilter | None = None,

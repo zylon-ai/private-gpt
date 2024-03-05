@@ -132,13 +132,11 @@ def get_active_subscription(
         detail="Access Forbidden - No Active Subscription",
     )
 
-
 def get_audit_logger(request: Request, db: Session = Depends(get_db)):
     try:
-        return lambda model, action, details, user_id=None: log_audit_entry(db, model, action, details, user_id)
+        return lambda model, action, details, user_id=None, ip_address=request.client.host: log_audit_entry(db, model, action, details, user_id, ip_address)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in get_audit_logger: {str(e)}")
-
 
 def get_current_active_user(
     current_user: models.User = Security(get_current_user, scopes=[],),

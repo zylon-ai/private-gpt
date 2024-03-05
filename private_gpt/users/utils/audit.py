@@ -8,6 +8,7 @@ def log_audit_entry(
     action: str,
     details: dict,
     user_id: int = None,
+    ip_address: str = None,
 ):
     audit_entry = Audit(
         timestamp=datetime.utcnow(),
@@ -15,8 +16,9 @@ def log_audit_entry(
         model=model,
         action=action,
         details=details,
+        ip_address=ip_address
     )
-
+    
     session.add(audit_entry)
     session.commit()
 

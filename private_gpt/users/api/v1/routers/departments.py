@@ -4,7 +4,7 @@ import traceback
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from fastapi import APIRouter, Depends, HTTPException, status, Security
+from fastapi import APIRouter, Depends, HTTPException, status, Security, Request
 
 from private_gpt.users.api import deps
 from private_gpt.users.constants.role import Role
@@ -15,10 +15,11 @@ router = APIRouter(prefix="/departments", tags=["Departments"])
 
 
 def log_audit_department(
+    request: Request,
     db: Session,
     current_user: models.User,
     action: str,
-    details: dict
+    details: dict,
 ):
     try:
         audit_entry = models.Audit(
@@ -26,6 +27,7 @@ def log_audit_department(
             model='Department',
             action=action,
             details=details,
+            ip_address=request.client.host,
         )
         db.add(audit_entry)
         db.commit()

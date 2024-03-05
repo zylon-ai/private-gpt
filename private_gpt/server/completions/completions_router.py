@@ -104,37 +104,39 @@ async def prompt_completion(
     request: Request,
     body: CompletionsBody,
     db: Session = Depends(deps.get_db),
+    log_audit: models.Audit = Depends(deps.get_audit_logger),
     current_user: models.User = Security(
         deps.get_current_user,
     ),
 ) -> OpenAICompletion | StreamingResponse:
-    try:
-        service = request.state.injector.get(IngestService)
+    
+    # service = request.state.injector.get(IngestService)
+    # try:
 
-        department = crud.department.get_by_id(
-            db, id=current_user.department_id)
-        if not department:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"No department assigned to you")
-        documents = crud.documents.get_multi_documents(
-            db, department_id=department.id)
-        if not documents:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"No documents uploaded for your department.")
-        docs_list = [document.filename for document in documents]
-        docs_ids = []
-        for filename in docs_list:
-            doc_id = service.get_doc_ids_by_filename(filename)
-            docs_ids.extend(doc_id)
-        body.context_filter = {"docs_ids": docs_ids}
+    #     department = crud.department.get_by_id(
+    #         db, id=current_user.department_id)
+    #     if not department:
+    #         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+    #                             detail=f"No department assigned to you")
+    #     documents = crud.documents.get_multi_documents(
+    #         db, department_id=department.id)
+    #     if not documents:
+    #         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+    #                             detail=f"No documents uploaded for your department.")
+    #     docs_list = [document.filename for document in documents]
+    #     docs_ids = []
+    #     for filename in docs_list:
+    #         doc_id = service.get_doc_ids_by_filename(filename)
+    #         docs_ids.extend(doc_id)
+    #     body.context_filter = {"docs_ids": docs_ids}
 
-    except Exception as e:
-        print(traceback.format_exc())
-        logger.error(f"There was an error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error",
-        )
+    # except Exception as e:
+    #     print(traceback.format_exc())
+    #     logger.error(f"There was an error: {str(e)}")
+    #     raise HTTPException(
+    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #         detail="Internal Server Error",
+    #     )
 
     messages = [OpenAIMessage(content=body.prompt, role="user")]
     if body.system_prompt:
@@ -147,5 +149,14 @@ async def prompt_completion(
         stream=body.stream,
         include_sources=body.include_sources,
         context_filter=body.context_filter,
+    )
+    log_audit(
+        model='Chat', 
+        action='Chat',
+        details={
+            "query": body.prompt,
+            'user': current_user.fullname,
+            }, 
+        user_id=current_user.id
     )
     return await chat_completion(request, chat_body)

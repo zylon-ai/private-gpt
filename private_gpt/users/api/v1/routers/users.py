@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from pydantic.networks import EmailStr
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from fastapi import APIRouter, Body, Depends, HTTPException, Security, status, Path
+from fastapi import APIRouter, Body, Depends, HTTPException, Security, status, Path, Request
 
 from private_gpt.users.api import deps
 from private_gpt.users.constants.role import Role
@@ -17,6 +17,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 def log_audit_user(
+    request: Request,
     db: Session,
     current_user: models.User,
     action: str,
@@ -28,6 +29,7 @@ def log_audit_user(
             model='User',
             action=action,
             details=details,
+            ip_address=request.client.host,
         )
         db.add(audit_entry)
         db.commit()

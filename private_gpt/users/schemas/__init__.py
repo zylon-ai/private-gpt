@@ -6,4 +6,4 @@ from .subscription import Subscription, SubscriptionBase, SubscriptionCreate, Su
 from .company import Company, CompanyBase, CompanyCreate, CompanyUpdate
 from .documents import Document, DocumentCreate, DocumentsBase, DocumentUpdate, DocumentList
 from .department import Department, DepartmentCreate, DepartmentUpdate, DepartmentAdminCreate, DepartmentDelete
-from .audit import AuditBase, AuditCreate, AuditUpdate, Audit
+from .audit import AuditBase, AuditCreate, AuditUpdate, Audit, GetAudit

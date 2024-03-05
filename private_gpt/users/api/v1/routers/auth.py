@@ -289,6 +289,6 @@ def register(
         "password": random_password,
     }
     log_audit(model='User', action='creation',
-              details={"status": '201', 'detail': "User created successfully.", }, user_id=current_user.id)
+              details={'detail': "User created successfully.",'username':fullname}, user_id=current_user.id)
 
     return JSONResponse(content=response_dict, status_code=status.HTTP_201_CREATED)

@@ -13,6 +13,7 @@ class Audit(Base):
     model = Column(String, nullable=False)
     action = Column(String, nullable=False)
     details = Column(JSONB, nullable=True)
+    ip_address = Column(String, nullable=True)
 
     def __repr__(self):
         return f"<Audit(id={self.id}, timestamp={self.timestamp}, user_id={self.user_id}, model={self.model}, action={self.action}, details={self.details})>"
