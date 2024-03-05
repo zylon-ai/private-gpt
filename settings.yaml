@@ -37,8 +37,9 @@ ui:
 llm:
   mode: llamacpp
   # Should be matching the selected model
-  max_new_tokens: 512
+  max_new_tokens: 1024
   context_window: 3900
+  tokenizer: "mistralai/mistral-7b-instruct-v0.2"
 
 llamacpp:
   prompt_style: "mistral"

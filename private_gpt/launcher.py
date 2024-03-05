@@ -4,7 +4,8 @@ import logging
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from injector import Injector
-from llama_index.core.callbacks import CallbackManager
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
 from llama_index.core.callbacks.global_handlers import create_global_handler
 from llama_index.core.settings import Settings as LlamaIndexSettings
 
@@ -34,9 +35,15 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(embeddings_router)
     app.include_router(health_router)
 
+    settings = root_injector.get(Settings)
+    tokenizer = AutoTokenizer.from_pretrained(settings.llm.tokenizer)
+    token_counter = TokenCountingHandler(
+        # tokenizer=tokenizer,
+        verbose=True
+    )
     # Add LlamaIndex simple observability
-    global_handler = create_global_handler("simple")
-    LlamaIndexSettings.callback_manager = CallbackManager([global_handler])
+    # global_handler = create_global_handler("simple")
+    LlamaIndexSettings.callback_manager = CallbackManager([token_counter])
 
     settings = root_injector.get(Settings)
     if settings.server.cors.enabled:

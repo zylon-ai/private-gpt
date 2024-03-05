@@ -89,7 +89,7 @@ class IngestionHelper:
             )
             # Read as a plain text
             string_reader = StringIterableReader()
-            return string_reader.load_data([file_data.read_text()])
+            return string_reader.load_data([file_data.read_text(encoding='utf-8')])
 
         logger.debug("Specific reader found for extension=%s", extension)
         return reader_cls().load_data(file_data)
