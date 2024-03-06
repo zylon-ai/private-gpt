@@ -76,6 +76,7 @@ def list_departments(
 
 @router.post("/create", response_model=schemas.Department)
 def create_department(
+    request: Request,
     department_in: schemas.DepartmentCreate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
@@ -99,7 +100,7 @@ def create_department(
             'department_name': department.name
         }
 
-        log_audit_department(db, current_user, 'create', details)
+        log_audit_department(request, db, current_user, 'create', details)
 
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,
@@ -145,6 +146,7 @@ def read_department(
 
 @router.post("/update", response_model=schemas.Department)
 def update_department(
+    request: Request,
     department_in: schemas.DepartmentUpdate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
@@ -172,7 +174,7 @@ def update_department(
             'new_department_name': department.name,
         }
 
-        log_audit_department(db, current_user, 'update', details)
+        log_audit_department(request, db, current_user, 'update', details)
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -192,6 +194,7 @@ def update_department(
 
 @router.post("/delete", response_model=schemas.Department)
 def delete_department(
+    request: Request,
     department_in: schemas.DepartmentDelete,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
@@ -213,10 +216,8 @@ def delete_department(
             'department_id': department.id,
             'department_name': department.name
         }
-
-
         deleted_department = crud.department.remove(db=db, id=department_id)
-        log_audit_department(db, current_user, 'delete', details)
+        log_audit_department(request, db, current_user, 'delete', details)
         
         deleted_department = jsonable_encoder(deleted_department)
         return JSONResponse(

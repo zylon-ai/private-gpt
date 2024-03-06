@@ -84,6 +84,7 @@ def read_users_by_company(
 @router.post("", response_model=schemas.User)
 def create_user(
     *,
+    request: Request,
     db: Session = Depends(deps.get_db),
     user_in: schemas.UserCreate,
     current_user: models.User = Security(
@@ -110,7 +111,7 @@ def create_user(
             'company_id': user.company_id,
             'department_id': user.department_id,
         }
-    log_audit_user(db, current_user, 'create', details)
+    log_audit_user(request, db, current_user, 'create', details)
 
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
@@ -121,6 +122,7 @@ def create_user(
 @router.put("/me", response_model=schemas.User)
 def update_username(
     *,
+    request: Request,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
     update_in: schemas.UsernameUpdate,
@@ -141,7 +143,7 @@ def update_username(
             'old_fullname': old_fullname,
             'new_fullname': user.fullname,
         }
-    log_audit_user(db, current_user, 'update_username', details)
+    log_audit_user(request=request, db=db, current_user=current_user, action='update_username', details=details)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={"message": "Username updated successfully",
@@ -175,6 +177,7 @@ def read_user_me(
 @router.patch("/me/change-password", response_model=schemas.User)
 def change_password(
     *,
+    request: Request,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
     old_password: str = Body(..., embed=True),
@@ -203,7 +206,7 @@ def change_password(
             'detail': 'Password changed successfully!',
             'user_id': current_user.id,
         }
-    log_audit_user(db, current_user, 'change_password', details)
+    log_audit_user(request, db, current_user, 'change_password', details)
     
     return JSONResponse(
         status_code=status.HTTP_200_OK,
@@ -235,6 +238,7 @@ def read_user_by_id(
 @router.put("/{user_id}", response_model=schemas.User)
 def update_user(
     *,
+    request: Request,
     db: Session = Depends(deps.get_db),
     user_id: int,
     user_in: schemas.UserUpdate,
@@ -268,7 +272,7 @@ def update_user(
         'company_id': user.company_id,
         'department_id': user.department_id,
     }
-    log_audit_user(db, current_user, 'update user', details)
+    log_audit_user(request, db, current_user, 'update user', details)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={"message": "User updated successfully", "user": jsonable_encoder(user_data)},
@@ -319,6 +323,7 @@ def admin_change_password(
         company_id=user.company_id,
         department_id=user.department_id,
     )
+    
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={"message": "User password changed successfully",
@@ -329,6 +334,7 @@ def admin_change_password(
 @router.post("/delete")
 def delete_user(
     *,
+    request: Request,
     db: Session = Depends(deps.get_db),
     delete_user: schemas.DeleteUser,
     current_user: models.User = Security(
@@ -349,7 +355,7 @@ def delete_user(
             'department_id': user.department_id,
         }
 
-    log_audit_user(db, current_user, 'delete', details)
+    log_audit_user(request, db, current_user, 'delete', details)
 
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -363,6 +369,7 @@ def delete_user(
 @router.post("/update_user")
 def admin_update_user(
     *,
+    request: Request,
     db: Session = Depends(deps.get_db),
     user_update: schemas.UserAdminUpdate,
     current_user: models.User = Security(
@@ -376,20 +383,17 @@ def admin_update_user(
     try:
 
         existing_user = crud.user.get_by_id(db, id=user_update.id)
-
         if existing_user is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"User not found with id: {user_update.id}",
             )
         old_detail = {
-            'fullnam': existing_user.fullname,
+            'fullname': existing_user.fullname,
             'role': existing_user.user_role.role.name,
             'department': existing_user.department_id
         }
-        if existing_user.fullname == user_update.fullname:
-            pass
-        else:
+        if not (existing_user.fullname == user_update.fullname):
             fullname = crud.user.get_by_name(db, name=user_update.fullname)
             if fullname:
                 raise HTTPException(
@@ -410,19 +414,18 @@ def admin_update_user(
             role_id=role.id,
         )
         role = crud.user_role.update(db, db_obj=user_role, obj_in=role_in)
-        print(f"THe new user name : {user_update.fullname} Department: {user_update.department_id}")
         user_update_in = schemas.UserAdmin(fullname=user_update.fullname, department_id=user_update.department_id)
 
         new_detail = {
-            'email': existing_user.email,
-            'fullname': existing_user.fullname,
-            'department_id': existing_user.department_id,
+            'fullname': user_update.fullname,
+            'role': user_update.role,
+            'department': user_update.department_id
         }
         details = {
             'old detail': old_detail,
             'new detail': new_detail,
         }
-        log_audit_user(db, current_user, 'admin_update', details)
+        log_audit_user(request, db, current_user, 'admin_update', details)
         user = crud.user.get_by_id(db, id=existing_user.id)
         crud.user.update(db, db_obj=user, obj_in=user_update_in)
 

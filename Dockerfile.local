@@ -12,13 +12,9 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     wget \
     make \
-    cmake \
-    g++
-
-# Set the C++ compiler
-ENV CMAKE_CXX_COMPILER=g++
-ENV CC=gcc
-ENV CXX=g++
+    cmake \ 
+    g++ \ 
+    gcc 
 
 # Switch to the Python image for the final build stage
 FROM python:3.11.6-slim-bookworm as base

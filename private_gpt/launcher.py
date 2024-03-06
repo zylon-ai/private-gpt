@@ -31,7 +31,7 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(ingest_router)
     app.include_router(embeddings_router)
     app.include_router(health_router)
-    
+
     app.include_router(api_router)
     app.include_router(pdf_router)
 
