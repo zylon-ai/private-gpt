@@ -1,8 +1,7 @@
 import logging
 
 from injector import inject, singleton
-from llama_index import MockEmbedding
-from llama_index.embeddings.base import BaseEmbedding
+from llama_index.core.embeddings import BaseEmbedding, MockEmbedding
 
 from private_gpt.paths import models_cache_path
 from private_gpt.settings.settings import Settings
@@ -19,27 +18,60 @@ class EmbeddingComponent:
         embedding_mode = settings.embedding.mode
         logger.info("Initializing the embedding model in mode=%s", embedding_mode)
         match embedding_mode:
-            case "local":
-                from llama_index.embeddings import HuggingFaceEmbedding
+            case "huggingface":
+                try:
+                    from llama_index.embeddings.huggingface import (  # type: ignore
+                        HuggingFaceEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Local dependencies not found, install with `poetry install --extras embeddings-huggingface`"
+                    ) from e
 
                 self.embedding_model = HuggingFaceEmbedding(
-                    model_name=settings.local.embedding_hf_model_name,
+                    model_name=settings.huggingface.embedding_hf_model_name,
                     cache_folder=str(models_cache_path),
                 )
             case "sagemaker":
-
-                from private_gpt.components.embedding.custom.sagemaker import (
-                    SagemakerEmbedding,
-                )
+                try:
+                    from private_gpt.components.embedding.custom.sagemaker import (
+                        SagemakerEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Sagemaker dependencies not found, install with `poetry install --extras embeddings-sagemaker`"
+                    ) from e
 
                 self.embedding_model = SagemakerEmbedding(
                     endpoint_name=settings.sagemaker.embedding_endpoint_name,
                 )
             case "openai":
-                from llama_index import OpenAIEmbedding
+                try:
+                    from llama_index.embeddings.openai import (  # type: ignore
+                        OpenAIEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "OpenAI dependencies not found, install with `poetry install --extras embeddings-openai`"
+                    ) from e
 
                 openai_settings = settings.openai.api_key
                 self.embedding_model = OpenAIEmbedding(api_key=openai_settings)
+            case "ollama":
+                try:
+                    from llama_index.embeddings.ollama import (  # type: ignore
+                        OllamaEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Local dependencies not found, install with `poetry install --extras embeddings-ollama`"
+                    ) from e
+
+                ollama_settings = settings.ollama
+                self.embedding_model = OllamaEmbedding(
+                    model_name=ollama_settings.embedding_model,
+                    base_url=ollama_settings.api_base,
+                )
             case "mock":
                 # Not a random number, is the dimensionality used by
                 # the default embedding model

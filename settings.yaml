@@ -34,18 +34,24 @@ ui:
   delete_file_button_enabled: true
   delete_all_files_button_enabled: true
 
-
 llm:
-  mode: local
+  mode: llamacpp
   # Should be matching the selected model
   max_new_tokens: 512
   context_window: 3900
-  tokenizer: mistralai/Mistral-7B-Instruct-v0.2
+
+llamacpp:
+  prompt_style: "mistral"
+  llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF
+  llm_hf_model_file: mistral-7b-instruct-v0.2.Q4_K_M.gguf
 
 embedding:
   # Should be matching the value above in most cases
-  mode: local
+  mode: huggingface
   ingest_mode: simple
+
+huggingface:
+  embedding_hf_model_name: BAAI/bge-small-en-v1.5
 
 vectorstore:
   database: qdrant
@@ -63,12 +69,6 @@ pgvector:
   schema_name: private_gpt
   table_name: embeddings
 
-local:
-  prompt_style: "mistral"
-  llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF
-  llm_hf_model_file: mistral-7b-instruct-v0.2.Q4_K_M.gguf
-  embedding_hf_model_name: BAAI/bge-small-en-v1.5
-
 sagemaker:
   llm_endpoint_name: huggingface-pytorch-tgi-inference-2023-09-25-19-53-32-140
   embedding_endpoint_name: huggingface-pytorch-inference-2023-11-03-07-41-36-479
@@ -78,4 +78,6 @@ openai:
   model: gpt-3.5-turbo
 
 ollama:
-  model: llama2-uncensored
+  llm_model: llama2
+  embedding_model: nomic-embed-text
+  api_base: http://localhost:11434

@@ -1,11 +1,14 @@
+server:
+  env_name: ${APP_ENV:vllm}
+
 llm:
   mode: openailike
 
 embedding:
-  mode: local
+  mode: huggingface
   ingest_mode: simple
 
-local:
+huggingface:
   embedding_hf_model_name: BAAI/bge-small-en-v1.5
 
 openai:

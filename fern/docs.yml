@@ -30,15 +30,15 @@ navigation:
     layout:
       - section: Welcome
         contents:
-          - page: Welcome
+          - page: Introduction
             path: ./docs/pages/overview/welcome.mdx
-          - page: Quickstart
-            path: ./docs/pages/overview/quickstart.mdx
   # How to install privateGPT, with FAQ and troubleshooting
   - tab: installation
     layout:
       - section: Getting started
         contents:
+          - page: Main Concepts
+            path: ./docs/pages/installation/concepts.mdx
           - page: Installation
             path: ./docs/pages/installation/installation.mdx
   # Manual of privateGPT: how to use it and configure it
