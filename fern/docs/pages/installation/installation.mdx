@@ -137,7 +137,11 @@ Follow these steps to set up a local TensorRT-powered PrivateGPT:
 
 - Nvidia Cuda 12.2 or higher is currently required to run TensorRT-LLM.
 
-- Install tensorrt_llm via pip with pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt-llm as explained [here](https://pypi.org/project/tensorrt-llm/)
+- Install tensorrt_llm via pip as explained [here](https://pypi.org/project/tensorrt-llm/)
+
+```bash
+pip install --no-cache-dir --extra-index-url https://pypi.nvidia.com tensorrt-llm
+````
 
 - For this example we will use Llama2. The Llama2 model files need to be created via scripts following the instructions [here](https://github.com/NVIDIA/trt-llm-rag-windows/blob/release/1.0/README.md#building-trt-engine).
 The following files will be created from following the steps in the link:
