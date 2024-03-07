@@ -31,6 +31,11 @@ llama-index-vector-stores-postgres = {version ="^0.1.2", optional = true}
 boto3 = {version ="^1.34.51", optional = true}
 # Optional UI
 gradio = {version ="^4.19.2", optional = true}
+llama-index-storage-docstore-mongodb = "^0.1.2"
+llama-index-storage-index-store-mongodb = "^0.1.2"
+llama-index-vector-stores-redis = "^0.1.2"
+pymongo = "^4.6.2"
+motor = "^3.3.2"
 
 [tool.poetry.extras]
 ui = ["gradio"]
@@ -46,6 +51,7 @@ embeddings-sagemaker = ["boto3"]
 vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
 vector-stores-postgres = ["llama-index-vector-stores-postgres"]
+storage-docstore-mongodb = ["llama-index-storage-docstore-mongodb"]
 
 
 [tool.poetry.group.dev.dependencies]

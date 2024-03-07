@@ -17,6 +17,10 @@ ollama:
 vectorstore:
   database: qdrant
 
+indexstore:
+  mode: mongo
+  host: mongodb+srv://unfreeze-gmk:y9t9mJBdhECC1BBq@unfreeze-pggpt-gmk.wh9chmw.mongodb.net/?retryWrites=true&w=majority&appName=unfreeze-pggpt-gmk
+  port: 27017
+
 qdrant:
   path: local_data/private_gpt/qdrant
-
