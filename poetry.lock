@@ -4907,16 +4907,6 @@ files = [
 doc = ["reno", "sphinx", "tornado (>=4.5)"]
 
 [[package]]
-name = "tensorrt-llm"
-version = "0.8.0"
-description = "A fake package to warn the user they are not installing the correct package."
-optional = true
-python-versions = ">=3.7, <4"
-files = [
-    {file = "tensorrt-llm-0.8.0.tar.gz", hash = "sha256:8bd59bf59766bb16f81bd330ca38765a532a21a35d323fd33929c80a6ec53eaf"},
-]
-
-[[package]]
 name = "tiktoken"
 version = "0.5.2"
 description = "tiktoken is a fast BPE tokeniser for use with OpenAI's models"
@@ -5971,7 +5961,7 @@ embeddings-huggingface = ["llama-index-embeddings-huggingface"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
-llms-nvidia-tensorrt = ["llama-index-llms-nvidia-tensorrt", "tensorrt_llm"]
+llms-nvidia-tensorrt = ["llama-index-llms-nvidia-tensorrt"]
 llms-ollama = ["llama-index-llms-ollama"]
 llms-openai = ["llama-index-llms-openai"]
 llms-openai-like = ["llama-index-llms-openai-like"]
@@ -5984,4 +5974,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "da01e96bb8eb18aa3b6608cf60384771ad674b6ec7a26a685a62274c0302c8f9"
+content-hash = "39f0ac666402807cde29f763c14dfb6b2fc9862c0cd31de398c67a1fedbb4b12"
