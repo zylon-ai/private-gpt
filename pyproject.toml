@@ -5,7 +5,7 @@ description = "Private GPT"
 authors = ["Zylon <hi@zylon.ai>"]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.10,<3.12"
 # PrivateGPT
 fastapi = { extras = ["all"], version = "^0.110.0" }
 python-multipart = "^0.0.9"
