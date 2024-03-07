@@ -15,17 +15,24 @@ class DocumentCreate(DocumentsBase):
 class DocumentUpdate(DocumentsBase):
     pass
 
+class DocumentEnable(DocumentsBase):
+    is_enabled: bool
+
+class DocumentDepartmentUpdate(DocumentsBase):
+    departments: List[int] = []
 
 class DocumentList(DocumentsBase):
     id: int
+    is_enabled: bool
     uploaded_by: int
     uploaded_at: datetime
     departments: List[DepartmentList] = []
 
-class Document(DocumentsBase):
+class Document(BaseModel):
     id: int
+    is_enabled: bool
     filename: str
-    uploaded_by: int
+    uploaded_by: str
     uploaded_at: datetime
     departments: List[DepartmentList] = []
 

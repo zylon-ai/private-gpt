@@ -184,7 +184,7 @@ async def create_documents(
         db: Session, 
         file_name: str = None, 
         current_user: models.User = None,
-        departments: schemas.DepartmentList = Depends(),
+        departments: schemas.DocumentDepartmentList = Depends(),
         log_audit: models.Audit = None,
     ):
     """
@@ -226,7 +226,7 @@ async def common_ingest_logic(
     ocr_file,
     original_file: str = None,
     current_user: models.User = None,
-    departments: schemas.DepartmentList = Depends(),
+    departments: schemas.DocumentDepartmentList = Depends(),
     log_audit: models.Audit = None,
 ):
     service = request.state.injector.get(IngestService)
@@ -245,8 +245,7 @@ async def common_ingest_logic(
             with open(upload_path, "wb") as f:
                 f.write(file.read())
             file.seek(0)  
-            ingested_documents = service.ingest_bin_data(file_name, file)
-        
+            ingested_documents = service.ingest_bin_data(file_name, file)        
         # Handling Original File
         if original_file:
             try:
@@ -297,7 +296,7 @@ async def common_ingest_logic(
 @ingest_router.post("/ingest/file", response_model=IngestResponse, tags=["Ingestion"])
 async def ingest_file(
         request: Request,
-        departments: schemas.DepartmentList = Depends(),
+        departments: schemas.DocumentDepartmentList = Depends(),
         file: UploadFile = File(...),
         log_audit: models.Audit = Depends(deps.get_audit_logger),
         db: Session = Depends(deps.get_db),

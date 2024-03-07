@@ -80,3 +80,6 @@ class UserAdmin(BaseModel):
 
 class PasswordUpdate(BaseModel):
 	password_created: Optional[datetime] = None
+
+class SuperMakerUpdate(BaseModel):
+	checker: bool

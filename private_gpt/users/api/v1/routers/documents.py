@@ -27,10 +27,6 @@ def list_files(
         scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
     )
 ):
-    def get_department_name(db, id):
-        dep = crud.department.get_by_id(db=db, id=id)
-        return dep.name
-
     def get_username(db, id):
         user = crud.user.get_by_id(db=db, id=id) 
         return user.fullname
@@ -43,18 +39,21 @@ def list_files(
             docs = crud.documents.get_multi_documents(
                 db, department_id=current_user.department_id, skip=skip, limit=limit)
         
-        docs = [
+        documents = [
             schemas.Document(
                 id=doc.id,
                 filename=doc.filename,
-                uploaded_at=doc.uploaded_at,
                 uploaded_by=get_username(db, doc.uploaded_by),
-                # department=get_department_name(db, doc.department_id)
-                department="deparments"
+                uploaded_at=doc.uploaded_at,
+                is_enabled=doc.is_enabled,
+                departments=[
+                    schemas.DepartmentList(id=dep.id, name=dep.name)
+                    for dep in doc.departments
+                ]
             )
             for doc in docs
         ]
-        return docs
+        return documents
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error listing the file(s).")
@@ -64,8 +63,7 @@ def list_files(
         )
 
 
-
-@router.get('{department_id}', response_model=List[schemas.Document])
+@router.get('{department_id}', response_model=List[schemas.DocumentList])
 def list_files_by_department(
     request: Request,
     department_id: int,
@@ -81,7 +79,7 @@ def list_files_by_department(
     Listing the documents by the department id
     '''
     try:
-        docs = crud.documents.get_multi_documents(
+        docs = crud.documents.get_documents_by_departments(
             db, department_id=department_id, skip=skip, limit=limit)
         return docs
     except Exception as e:
@@ -101,7 +99,7 @@ def list_files_by_department(
     limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
-        scopes=[Role.ADMIN["name"]],
+        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
     )
 ):
     '''
@@ -109,7 +107,7 @@ def list_files_by_department(
     '''
     try:
         department_id = current_user.department_id
-        docs = crud.documents.get_multi_documents(
+        docs = crud.documents.get_documents_by_departments(
             db, department_id=department_id, skip=skip, limit=limit)
         return docs
     except Exception as e:
@@ -119,3 +117,88 @@ def list_files_by_department(
             status_code=500,
             detail="Internal Server Error.",
         )
+
+
+
+@router.post('/update', response_model=schemas.DocumentEnable)
+def update_document(
+    request: Request,
+    document_in: schemas.DocumentEnable ,
+    db: Session = Depends(deps.get_db),
+    log_audit: models.Audit = Depends(deps.get_audit_logger),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
+    )
+):
+    try:
+        document = crud.documents.get_by_filename(
+            db, file_name=document_in.filename)
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document with this filename doesn't exist!",
+            )
+        docs = crud.documents.update(db=db, db_obj=document, obj_in=document_in)
+        log_audit(
+            model='Document', 
+            action='update',
+            details={
+                'detail': f'{document_in.filename} status changed to {document_in.is_enabled} from {document.is_enabled}'
+            }, 
+            user_id=current_user.id
+        )
+        return docs
+    except Exception as e:
+        print(traceback.format_exc())
+        logger.error(f"There was an error listing the file(s).")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error.",
+        )
+    
+
+@router.post('/department_update', response_model=schemas.DocumentList)
+def update_department(
+    request: Request,
+    document_in: schemas.DocumentDepartmentUpdate ,
+    db: Session = Depends(deps.get_db),
+    log_audit: models.Audit = Depends(deps.get_audit_logger),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
+    )
+):
+    """
+    Update the department list for the documents
+    """
+    try:
+        document = crud.documents.get_by_filename(
+            db, file_name=document_in.filename)
+        old_departments = document.departments
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document with this filename doesn't exist!",
+            )
+        department_ids = [int(number) for number in document_in.departments]
+        print("Department update: ", document_in, department_ids)
+        for department_id in department_ids:
+            db.execute(models.document_department_association.insert().values(document_id=document.id, department_id=department_id))
+        log_audit(
+            model='Document', 
+            action='update',
+            details={
+                'detail': f'{document_in.filename} assigned to {department_ids} from {old_departments}'
+            }, 
+            user_id=current_user.id
+        )
+        return document
+    except Exception as e:
+        print(traceback.format_exc())
+        logger.error(f"There was an error listing the file(s).")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error.",
+        )
+    

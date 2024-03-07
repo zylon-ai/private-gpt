@@ -51,5 +51,5 @@ class Department(DepartmentBase):
         orm_mode = True
 
 
-class DepartmentList(BaseModel):
+class DocumentDepartmentList(BaseModel):
     departments_ids: str = Form(...)

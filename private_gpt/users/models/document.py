@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import event, select, func, update
+from sqlalchemy import Boolean, event, select, func, update
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Table
 from private_gpt.users.models.department import Department
@@ -26,7 +26,7 @@ class Document(Base):
     )
     uploaded_by_user = relationship(
         "User", back_populates="uploaded_documents")
-
+    is_enabled = Column(Boolean, default=True)
     # Use document_department_association as the secondary for the relationship
     departments = relationship(
         "Department",

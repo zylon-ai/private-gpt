@@ -125,7 +125,7 @@ async def process_both(
 @pdf_router.post("/pdf_ocr")
 async def get_pdf_ocr_wrapper(
     request: Request,
-    departments: schemas.DepartmentList = Depends(),
+    departments: schemas.DocumentDepartmentList = Depends(),
     db: Session = Depends(deps.get_db),
     log_audit: models.Audit = Depends(deps.get_audit_logger),
     file: UploadFile = File(...),
@@ -140,7 +140,7 @@ async def get_pdf_ocr_wrapper(
 @pdf_router.post("/both")
 async def get_both_wrapper(
     request: Request,
-    departments: schemas.DepartmentList = Depends(),
+    departments: schemas.DocumentDepartmentList = Depends(),
     db: Session = Depends(deps.get_db),
     log_audit: models.Audit = Depends(deps.get_audit_logger),
     file: UploadFile = File(...),

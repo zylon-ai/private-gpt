@@ -37,6 +37,7 @@ class User(Base):
     )
     
     password_created = Column(DateTime, nullable=True)
+    checker = Column(Boolean, default=False)
 
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  
     company = relationship("Company", back_populates="users") 
