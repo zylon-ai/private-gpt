@@ -199,6 +199,36 @@ class IndexStore(BaseModel):
         description="The index store compatiable Password",
     )
 
+
+class DocStore(BaseModel):
+    mode: Literal["simple", "mongo", "redis"] = Field(
+        "simple",
+        description=(
+            "The Index Store type"
+            "If `simple` - Using the local store. (default)\n"
+            "If `mongo` - use a mongo server or cluster to store llm index \n"
+            "If `redis` - use a redis server or cluster to store llm index \n"
+            "`mongo` has a size limit fo 16M for index document, but is fast. \n"
+            "`simple` might work better for some test cases."
+        ),
+    )
+    host: str = Field(
+        "127.0.0.1",
+        description="The host for the index store",
+    )
+    port: int = Field(
+        None,
+        description="The Port for the index store",
+    )
+    user: str = Field(
+        "",
+        description="The index store compatiable Username",
+    )
+    password: str = Field(
+        "",
+        description="The index store compatiable Password",
+    )    
+
 class OllamaSettings(BaseModel):
     api_base: str = Field(
         "http://localhost:11434",
@@ -334,6 +364,7 @@ class Settings(BaseModel):
     ollama: OllamaSettings
     vectorstore: VectorstoreSettings
     indexstore: IndexStore
+    docstore: DocStore
     qdrant: QdrantSettings | None = None
     pgvector: PGVectorSettings | None = None
 

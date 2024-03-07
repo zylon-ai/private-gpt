@@ -57,11 +57,14 @@ vectorstore:
   database: qdrant
 
 indexstore:
-  mode: simple
+  mode: mongo
+
+docstore:
+  mode: mongo
 
 qdrant:
-  path: local_data/private_gpt/qdrant
-
+  #path: local_data/private_gpt/qdrant
+  url: http://localhost:6333
 pgvector:
   host: localhost
   port: 5432
