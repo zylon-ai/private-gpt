@@ -1,31 +1,33 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
-
+from typing import List
 
 class DocumentsBase(BaseModel):
     filename: str
 
+class DepartmentList(BaseModel):
+    id: int
+    name: str
 
 class DocumentCreate(DocumentsBase):
     uploaded_by: int
-    department_id: int
-
 
 class DocumentUpdate(DocumentsBase):
     pass
+
 
 class DocumentList(DocumentsBase):
     id: int
     uploaded_by: int
     uploaded_at: datetime
-
+    departments: List[DepartmentList] = []
 
 class Document(DocumentsBase):
     id: int
-    uploaded_by: str
+    filename: str
+    uploaded_by: int
     uploaded_at: datetime
-    department: str
+    departments: List[DepartmentList] = []
 
     class Config:
         orm_mode = True

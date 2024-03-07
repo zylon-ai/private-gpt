@@ -20,6 +20,7 @@ def assign_user_role(
         deps.get_current_user,
         scopes=[
             Role.SUPER_ADMIN["name"],
+            Role.OPERATOR["name"],  
         ],
     ),
 ) -> Any:
@@ -49,6 +50,7 @@ def update_user_role(
         deps.get_current_user,
         scopes=[
             Role.SUPER_ADMIN["name"],
+            Role.OPERATOR["name"],  
         ],
     ),
 ) -> Any:

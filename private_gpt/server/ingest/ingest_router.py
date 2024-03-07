@@ -3,11 +3,11 @@ import logging
 import traceback
 
 from pathlib import Path
-from typing import Literal, Optional, List
+from typing import Literal
 import aiofiles
 
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status, Security, Body
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status, Security, Body, Form
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -136,7 +136,7 @@ def delete_file(
         db: Session = Depends(deps.get_db),
         current_user: models.User = Security(
             deps.get_current_user,
-            scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+            scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]],
 
         )) -> dict:
     """Delete the specified filename.
@@ -168,6 +168,9 @@ def delete_file(
                 user_id=current_user.id
             )
             crud.documents.remove(db=db, id=document.id)
+            db.execute(models.document_department_association.delete().where(
+                            models.document_department_association.c.document_id == document.id
+                        ))
         return {"status": "SUCCESS", "message": f"{filename}' deleted successfully."}
     except Exception as e:
         print(traceback.print_exc())
@@ -177,12 +180,53 @@ def delete_file(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
+async def create_documents(
+        db: Session, 
+        file_name: str = None, 
+        current_user: models.User = None,
+        departments: schemas.DepartmentList = Depends(),
+        log_audit: models.Audit = None,
+    ):
+    """
+    Create documents in the `Document` table and update the \n
+    `Document Department Association` table with the departments ids for the documents.
+    """
+    department_ids = departments.departments_ids
+    print("Department IDS: ", department_ids)
+    file_ingested = crud.documents.get_by_filename(
+        db, file_name=file_name)
+    if file_ingested:
+        raise HTTPException(
+            status_code=409,
+            detail="File already exists. Choose a different file.",
+        )
+    docs_in = schemas.DocumentCreate(
+        filename=file_name, uploaded_by=current_user.id
+    )
+    document = crud.documents.create(db=db, obj_in=docs_in)
+    department_ids = [int(number) for number in department_ids.split(",")]
+    for department_id in department_ids:
+        db.execute(models.document_department_association.insert().values(document_id=document.id, department_id=department_id))
+    log_audit(
+            model='Document', 
+            action='create',
+            details={
+                'detail': f"{file_name} uploaded successfully", 
+                'user': f"{current_user.fullname}",
+                'departments': f"{department_ids}"
+            }, 
+            user_id=current_user.id
+        )
+    return document
+
+
 async def common_ingest_logic(
     request: Request,
     db: Session,
     ocr_file,
     original_file: str = None,
     current_user: models.User = None,
+    departments: schemas.DepartmentList = Depends(),
     log_audit: models.Audit = None,
 ):
     service = request.state.injector.get(IngestService)
@@ -191,38 +235,18 @@ async def common_ingest_logic(
             file_name = Path(ocr_file).name
             upload_path = Path(f"{UPLOAD_DIR}/{file_name}")
 
-            file_ingested = crud.documents.get_by_filename(
-                db, file_name=file_name)
-            if file_ingested:
-                raise HTTPException(
-                    status_code=409,
-                    detail="File already exists. Choose a different file.",
-                )
-
             if file_name is None:
                 raise HTTPException(
                     status_code=400,
                     detail="No file name provided",
                 )
 
-            docs_in = schemas.DocumentCreate(
-                filename=file_name, uploaded_by=current_user.id, department_id=current_user.department_id)
-            crud.documents.create(db=db, obj_in=docs_in)
-
+            await create_documents(db, file_name, current_user, departments, log_audit)
             with open(upload_path, "wb") as f:
                 f.write(file.read())
             file.seek(0)  
             ingested_documents = service.ingest_bin_data(file_name, file)
-            
-            log_audit(
-                model='Document', 
-                action='create',
-                details={
-                    'detail': f"{file_name} uploaded successfully", 
-                    'user': f"{current_user.fullname}"
-                }, 
-                user_id=current_user.id
-            )
+        
         # Handling Original File
         if original_file:
             try:
@@ -230,23 +254,13 @@ async def common_ingest_logic(
                 file_name = Path(original_file).name
                 upload_path = Path(f"{UPLOAD_DIR}/{file_name}")
 
-                file_ingested = crud.documents.get_by_filename(
-                    db, file_name=file_name)
-                if file_ingested:
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail="File already exists. Choose a different file.",
-                    )
-
                 if file_name is None:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail="No file name provided",
                     )
 
-                docs_in = schemas.DocumentCreate(
-                    filename=file_name, uploaded_by=current_user.id, department_id=current_user.department_id)
-                crud.documents.create(db=db, obj_in=docs_in)
+                await create_documents(db, file_name, current_user, departments, log_audit)
 
                 with open(upload_path, "wb") as f:
                     with open(original_file, "rb") as original_file_reader:
@@ -280,20 +294,19 @@ async def common_ingest_logic(
         )
 
 
-
 @ingest_router.post("/ingest/file", response_model=IngestResponse, tags=["Ingestion"])
 async def ingest_file(
         request: Request,
+        departments: schemas.DepartmentList = Depends(),
+        file: UploadFile = File(...),
         log_audit: models.Audit = Depends(deps.get_audit_logger),
         db: Session = Depends(deps.get_db),
-        file: UploadFile = File(...),
         current_user: models.User = Security(
             deps.get_current_user,
-            scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+            scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]],
 )) -> IngestResponse:
     """Ingests and processes a file, storing its chunks to be used as context."""
     service = request.state.injector.get(IngestService)
-
     try:
         original_filename = file.filename
         print("Original file name is:", original_filename)
@@ -313,38 +326,14 @@ async def ingest_file(
                 detail="Internal Server Error: Unable to ingest file.",
             )
 
-        file_ingested = crud.documents.get_by_filename(db, file_name=original_filename)
-
-        if file_ingested:
-            os.remove(upload_path)
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="File already exists. Choose a different file.",
-            )
-
-        docs_in = schemas.DocumentCreate(
-            filename=original_filename, uploaded_by=current_user.id, department_id=current_user.department_id
-        )
-        crud.documents.create(db=db, obj_in=docs_in)
-
+        await create_documents(db, original_filename, current_user, departments, log_audit)
         with open(upload_path, "rb") as f:
             ingested_documents = service.ingest_bin_data(original_filename, f)
 
-        logger.info(f"{original_filename} is uploaded by {current_user.fullname}.")
+        logger.info(f"{original_filename} is uploaded by {current_user.fullname} in {departments.departments_ids}")
         response = IngestResponse(
             object="list", model="private-gpt", data=ingested_documents
         )
-
-        log_audit(
-            model="Document",
-            action="create",
-            details={
-                "filename": f"{original_filename} uploaded successfully",
-                "user": current_user.fullname,
-            },
-            user_id=current_user.id,
-        )
-
         return response
 
     except HTTPException:

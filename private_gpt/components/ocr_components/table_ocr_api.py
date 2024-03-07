@@ -1,26 +1,24 @@
 import os
-import aiofiles
 import fitz
+import aiofiles
 import requests
-from docx import Document
-from fastapi import HTTPException, status, File, UploadFile, APIRouter, Request, Security, Depends
-from sqlalchemy.orm import Session
-from private_gpt.users import models
-from private_gpt.users.api import deps
-from private_gpt.users.constants.role import Role
-from private_gpt.server.ingest.ingest_router import common_ingest_logic, IngestResponse
-from private_gpt.constants import OCR_UPLOAD
-from private_gpt.components.ocr_components.TextExtraction import ImageToTable
-from private_gpt.components.ocr_components.table_ocr import GetOCRText
 import traceback
+from docx import Document
+from sqlalchemy.orm import Session
+from fastapi import HTTPException, status, File, UploadFile, APIRouter, Request, Security, Depends
+
+from private_gpt.users.api import deps
+from private_gpt.constants import OCR_UPLOAD
+from private_gpt.users import models, schemas
+from private_gpt.users.constants.role import Role
+from private_gpt.components.ocr_components.table_ocr import GetOCRText
+from private_gpt.components.ocr_components.TextExtraction import ImageToTable
+from private_gpt.server.ingest.ingest_router import common_ingest_logic, IngestResponse
 pdf_router = APIRouter(prefix="/v1", tags=["ocr"])
 
 
 async def save_uploaded_file(file: UploadFile, upload_dir: str):
     file_path = os.path.join(upload_dir, file.filename)
-    print("The file name is: ",file.filename);
-    print("THe file path is: ", file_path)
-
     try:
         contents = await file.read()
         async with aiofiles.open(file_path, 'wb') as f:
@@ -31,11 +29,7 @@ async def save_uploaded_file(file: UploadFile, upload_dir: str):
             detail=f"There was an error uploading the file."
         )
     finally:
-        await file.close()
-
-    # with open(file_path, "wb") as f:
-    #     f.write(file.file.read())
-    
+        await file.close()    
     return file_path
 
 
@@ -44,8 +38,6 @@ async def process_images_and_generate_doc(request: Request, pdf_path: str, uploa
 
     ocr = request.state.injector.get(GetOCRText)
     img_tab = request.state.injector.get(ImageToTable)
-    # ocr = GetOCRText()
-    # img_tab = ImageToTable()
     pdf_doc = fitz.open(pdf_path)
     
     for page_index in range(len(pdf_doc)):
@@ -83,7 +75,8 @@ async def process_pdf_ocr(
         db: Session,
         file: UploadFile,
         current_user: models.User,
-        log_audit: models.Audit
+        log_audit: models.Audit,
+        departments: schemas.DepartmentList = Depends()
 ):
     UPLOAD_DIR = OCR_UPLOAD
     try:
@@ -92,7 +85,7 @@ async def process_pdf_ocr(
         print("The file path: ", pdf_path)
         ocr_doc_path = await process_images_and_generate_doc(request, pdf_path, UPLOAD_DIR)
         ingested_documents = await common_ingest_logic(
-            request=request, db=db, ocr_file=ocr_doc_path, current_user=current_user, original_file=None, log_audit=log_audit
+            request=request, db=db, ocr_file=ocr_doc_path, current_user=current_user, original_file=None, log_audit=log_audit, departments=departments
         )
         return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
 
@@ -108,14 +101,15 @@ async def process_both(
     db: Session,
     file: UploadFile,
     current_user: models.User,
-    log_audit: models.Audit
+    log_audit: models.Audit,
+    departments: schemas.DepartmentList = Depends()
 ):
     UPLOAD_DIR = OCR_UPLOAD
     try:
         pdf_path = await save_uploaded_file(file, UPLOAD_DIR)
         ocr_doc_path = await process_images_and_generate_doc(request, pdf_path, UPLOAD_DIR)
         ingested_documents = await common_ingest_logic(
-            request=request, db=db, ocr_file=ocr_doc_path, current_user=current_user, original_file=pdf_path, log_audit=log_audit
+            request=request, db=db, ocr_file=ocr_doc_path, current_user=current_user, original_file=pdf_path, log_audit=log_audit, departments=departments
         )
         return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
 
@@ -131,6 +125,7 @@ async def process_both(
 @pdf_router.post("/pdf_ocr")
 async def get_pdf_ocr_wrapper(
     request: Request,
+    departments: schemas.DepartmentList = Depends(),
     db: Session = Depends(deps.get_db),
     log_audit: models.Audit = Depends(deps.get_audit_logger),
     file: UploadFile = File(...),
@@ -139,12 +134,13 @@ async def get_pdf_ocr_wrapper(
         scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
     )
 ):
-    return await process_pdf_ocr(request, db, file, current_user, log_audit)
+    return await process_pdf_ocr(request, db, file, current_user, log_audit, departments)
 
 
 @pdf_router.post("/both")
 async def get_both_wrapper(
     request: Request,
+    departments: schemas.DepartmentList = Depends(),
     db: Session = Depends(deps.get_db),
     log_audit: models.Audit = Depends(deps.get_audit_logger),
     file: UploadFile = File(...),
@@ -153,4 +149,4 @@ async def get_both_wrapper(
         scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
     )
 ):
-    return await process_both(request, db, file, current_user, log_audit)
+    return await process_both(request, db, file, current_user, log_audit, departments)

@@ -44,7 +44,7 @@ def read_users(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
-        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
     ),
 ) -> Any:
     """                                 
@@ -219,7 +219,7 @@ def read_user_by_id(
     user_id: int,
     current_user: models.User = Security(
         deps.get_current_user,
-        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
     ),
     db: Session = Depends(deps.get_db),
 ) -> Any:
@@ -299,7 +299,7 @@ def admin_change_password(
     new_password: str = Body(..., embed=True),
     current_user: models.User = Security(
         deps.get_current_user,
-        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
     ),
 ) -> Any:
     """
@@ -402,7 +402,7 @@ def admin_update_user(
                 )
 
         role = crud.role.get_by_name(db, name=user_update.role)
-        if role.id == 1:
+        if (role.id == 1) or (role.id == 4) :
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Cannot create SUPER ADMIN!",

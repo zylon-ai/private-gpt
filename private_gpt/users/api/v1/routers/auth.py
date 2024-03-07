@@ -98,7 +98,6 @@ def ad_user_register(
     Register a new user in the database. Company id is directly given here.
     """
     user_in = schemas.UserCreate(email=email, password=password, fullname=fullname, company_id=1, department_id=department_id)
-    print("user is: ", user_in)
     user = crud.user.create(db, obj_in=user_in)
     user_role_name = Role.GUEST["name"]
     company = crud.company.get(db, 1)
@@ -190,8 +189,12 @@ def login_access_token(
         "user": token_payload,
         "token_type": "bearer",
     }
-    log_audit(model='User', action='login',
-              details=token_payload, user_id=user.id)
+    log_audit(
+        model='User', 
+        action='login',
+        details=token_payload, 
+        user_id=user.id
+    )
     return JSONResponse(content=response_dict)
 
 
@@ -244,8 +247,12 @@ def register(
 
     existing_user = crud.user.get_by_email(db, email=email)
     if existing_user:
-        log_audit(model='User', action='creation',
-                  details={"status": '409', 'detail': "The user with this email already exists!", }, user_id=current_user.id)
+        log_audit(
+            model='User', 
+            action='creation',
+            details={"status": '409', 'detail': "The user with this email already exists!", },
+            user_id=current_user.id
+        )
         raise HTTPException(
             status_code=409,
             detail="The user with this email already exists!",

@@ -5,13 +5,18 @@ class Role:
 
     GUEST = {
         "name": "GUEST",
-        "description": "A Guest Account",
+        "description": "General users",
     }
     ADMIN = {
         "name": "ADMIN",
-        "description": "Admin of Application Ecosystem",
+        "description": "Admin of Department Ecosystem",
     }
     SUPER_ADMIN = {
         "name": "SUPER_ADMIN",
         "description": "Super Administrator of Application Ecosystem",
     }
+    OPERATOR = {
+        "name": "OPERATOR",
+        "description": "Document Administrator",
+    }
+    
