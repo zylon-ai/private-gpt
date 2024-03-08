@@ -3,14 +3,16 @@ server:
   port: ${PORT:8080}
 
 llm:
-  mode: ${PGPT_MODE:mock}
+  mode: ${PGPT_LLM_MODE:mock}
+  tokenizer: ${PGPT_TOKENIZER:mistralai/Mistral-7B-Instruct-v0.2}
 
 embedding:
-  mode: ${PGPT_MODE:sagemaker}
+  mode: ${PGPT_EMBEDDING_MODE:sagemaker}
 
 llamacpp:
-  llm_hf_repo_id: ${PGPT_HF_REPO_ID:TheBloke/Mistral-7B-Instruct-v0.1-GGUF}
-  llm_hf_model_file: ${PGPT_HF_MODEL_FILE:mistral-7b-instruct-v0.1.Q4_K_M.gguf}
+  prompt_style: ${PGPT_PROMPT_STYLE:mistral}
+  llm_hf_repo_id: ${PGPT_HF_REPO_ID:TheBloke/Mistral-7B-Instruct-v0.2-GGUF}
+  llm_hf_model_file: ${PGPT_HF_MODEL_FILE:mistral-7b-instruct-v0.2.Q4_K_M.gguf}
 
 huggingface:
   embedding_hf_model_name: ${PGPT_EMBEDDING_HF_MODEL_NAME:BAAI/bge-small-en-v1.5}
