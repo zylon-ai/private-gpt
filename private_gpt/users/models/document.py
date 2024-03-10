@@ -1,8 +1,10 @@
 from datetime import datetime
-from sqlalchemy import Boolean, event, select, func, update
-from sqlalchemy.orm import relationship
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Table
+from sqlalchemy import Boolean, event, select, func, update, insert
+from sqlalchemy.orm import relationship, backref
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+
 from private_gpt.users.models.department import Department
+from private_gpt.users.models.makerchecker import MakerChecker
 from private_gpt.users.db.base_class import Base
 
 from private_gpt.users.models.document_department import document_department_association
@@ -28,10 +30,18 @@ class Document(Base):
         "User", back_populates="uploaded_documents")
     is_enabled = Column(Boolean, default=True)
     # Use document_department_association as the secondary for the relationship
+    verified = Column(Boolean, default=False)  # Added verified column
     departments = relationship(
         "Department",
         secondary=document_department_association,
         back_populates="documents"
+    )
+    # Relationship with MakerChecker
+    maker_checker_entry = relationship(
+        "MakerChecker",
+        backref=backref("document", uselist=False),
+        foreign_keys="[MakerChecker.record_id]",
+        primaryjoin="and_(MakerChecker.table_name=='document', MakerChecker.record_id==Document.id)",
     )
 
 # Event listeners for updating total_documents in Department
