@@ -81,7 +81,7 @@ class DataSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: Literal["llamacpp", "openai", "openailike", "sagemaker", "mock", "ollama"]
+    mode: Literal["llamacpp", "openai", "openailike", "azopenai", "sagemaker", "mock", "ollama"]
     max_new_tokens: int = Field(
         256,
         description="The maximum number of token that the LLM is authorized to generate in one completion.",
@@ -127,7 +127,7 @@ class HuggingFaceSettings(BaseModel):
 
 
 class EmbeddingSettings(BaseModel):
-    mode: Literal["huggingface", "openai", "sagemaker", "ollama", "mock"]
+    mode: Literal["huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock"]
     ingest_mode: Literal["simple", "batch", "parallel"] = Field(
         "simple",
         description=(
@@ -185,6 +185,23 @@ class OllamaSettings(BaseModel):
         description="Model to use. Example: 'nomic-embed-text'.",
     )
 
+class AzureOpenAISettings(BaseModel):
+    api_key: str
+    azure_endpoint: str
+    api_version: str = Field(
+        "2023_05_15",
+        description="The API version to use for this operation. This follows the YYYY-MM-DD format.",
+    )
+    embedding_deployment_name: str
+    embedding_model: str = Field(
+        "text-embedding-ada-002",
+        description="OpenAI Model to use. Example: 'text-embedding-ada-002'.",
+    )
+    llm_deployment_name: str
+    llm_model: str = Field(
+        "gpt-35-turbo",
+        description="OpenAI Model to use. Example: 'gpt-4'.",
+    )
 
 class UISettings(BaseModel):
     enabled: bool
@@ -304,6 +321,7 @@ class Settings(BaseModel):
     sagemaker: SagemakerSettings
     openai: OpenAISettings
     ollama: OllamaSettings
+    azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
     qdrant: QdrantSettings | None = None
     pgvector: PGVectorSettings | None = None
