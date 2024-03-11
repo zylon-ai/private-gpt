@@ -12,6 +12,7 @@ Authorization can be done by following fastapi's guides:
 * https://fastapi.tiangolo.com/tutorial/security/
 * https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-in-path-operation-decorators/
 """
+
 # mypy: ignore-errors
 # Disabled mypy error: All conditional function variants must have identical signatures
 # We are changing the implementation of the authenticated method, based on
