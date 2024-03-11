@@ -1,4 +1,5 @@
 """private-gpt."""
+
 import logging
 import os
 
