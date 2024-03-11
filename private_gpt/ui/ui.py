@@ -44,8 +44,8 @@ class Source(BaseModel):
         frozen = True
 
     @staticmethod
-    def curate_sources(sources: list[Chunk]) -> set["Source"]:
-        curated_sources = set()
+    def curate_sources(sources: list[Chunk]) -> list["Source"]:
+        curated_sources = []
 
         for chunk in sources:
             doc_metadata = chunk.document.doc_metadata
@@ -54,7 +54,10 @@ class Source(BaseModel):
             page_label = doc_metadata.get("page_label", "-") if doc_metadata else "-"
 
             source = Source(file=file_name, page=page_label, text=chunk.text)
-            curated_sources.add(source)
+            curated_sources.append(source)
+            curated_sources = list(
+                dict.fromkeys(curated_sources).keys()
+            )  # Unique sources only
 
         return curated_sources
 
