@@ -19,7 +19,6 @@ ollama:
   top_p: 0.9            # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
   repeat_last_n: 64     # Sets how far back for the model to look back to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)
   repeat_penalty: 1.2   # Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)
-  #num_predict: 512     # Maximum number of tokens to predict when generating text. Recommended to leave this blank to use context_window (Default: 128, -1 = infinite generation, -2 = fill Context)
 
 vectorstore:
   database: qdrant
