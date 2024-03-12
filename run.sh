@@ -38,6 +38,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --yes --quiet --no-install-recomm
     python3.11-lib2to3 \
     python3.11-gdbm \
     python3.11-tk \
+    python3-poetry \
     pip \
     git
 
@@ -48,10 +49,10 @@ export TERM=xterm-256color
 export CMAKE_ARGS='-DLLAMA_CUBLAS=on'
 
 
-python3.11 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
 
-pip install --upgrade pip poetry
+pip install --upgrade pip poetry ffmpy llama-cpp-python
 
 poetry install --extras "ui llms-llama-cpp embeddings-huggingface vector-stores-qdrant"
 poetry run pip install huggingface_hub
