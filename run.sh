@@ -46,17 +46,16 @@ DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-r
     python3.11-lib2to3 \
     python3.11-gdbm \
     python3.11-tk \
-    # python3-poetry \
-    # gcc \
-    # g++ \
-    # cmake \
-    # jq \ 
-    # nvidia-cudnn \
-    # git
+    python3-poetry \
+    gcc \
+    g++ \
+    cmake \
+    nvidia-cudnn \
+    git
 
 
 # curl https://pyenv.run | bash
-eval "$(pyenv virtualenv-init -)"
+#eval "$(pyenv virtualenv-init -)"
 
 curl -sSL https://install.python-poetry.org | python3 -
 export POETRY_HOME=/opt/poetry
