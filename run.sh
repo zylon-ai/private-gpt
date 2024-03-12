@@ -38,10 +38,10 @@ DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-r
     pkg-config \
     wget \
     curl \
+    python3-pip \
     python3.11 \
     python3.11-dev \
     python3.11-venv \
-    python3.11-pip \
     python3.11-distutils \
     python3.11-lib2to3 \
     python3.11-gdbm \
@@ -54,8 +54,6 @@ DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-r
     nvidia-cudnn \
     git
 
-
-install  python3-pip python3-dev python3-ven
 
 # curl https://pyenv.run | bash
 eval "$(pyenv virtualenv-init -)"
