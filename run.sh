@@ -25,10 +25,17 @@ sudo apt clean
 echo "System update complete."
 
 DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-recommends \
-    libopenblas-dev\
-    ninja-build\
-    build-essential\
-    pkg-config\
+    libopenblas-dev \
+    libssl-dev \
+    zlib1g-dev \
+    libffi-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    liblzma-dev \
+    ninja-build \
+    build-essential \
+    pkg-config \
     wget \
     curl \
     python3.11 \
@@ -41,6 +48,10 @@ DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-r
     python3-poetry \
     pip \
     git
+
+
+curl https://pyenv.run | bash
+eval "$(pyenv virtualenv-init -)"
 
 curl -sSL https://install.python-poetry.org | python3 -
 export POETRY_HOME=/opt/poetry
