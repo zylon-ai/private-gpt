@@ -106,14 +106,6 @@ class LLMSettings(BaseModel):
         None,
         description="If set, any documents retrieved from the RAG must meet a certain score. Acceptable values are between 0 and 1.",
     )
-    keywords_include: list[str] = Field(
-        [],
-        description="If set, any documents retrieved from the RAG Must include this keyword",
-    )
-    keywords_exclude: list[str] = Field(
-        [],
-        description="If set, any documents retrieved from the RAG Must exclude this keyword",
-    )
 
 
 class VectorstoreSettings(BaseModel):

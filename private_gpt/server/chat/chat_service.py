@@ -9,7 +9,6 @@ from llama_index.core.indices import VectorStoreIndex
 from llama_index.core.indices.postprocessor import MetadataReplacementPostProcessor
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.postprocessor import (
-    KeywordNodePostprocessor,
     SimilarityPostprocessor,
 )
 from llama_index.core.storage import StorageContext
@@ -107,38 +106,17 @@ class ChatService:
             vector_index_retriever = self.vector_store_component.get_retriever(
                 index=self.index, context_filter=context_filter
             )
-
-            # To use the keyword search, you must install spacy:
-            # pip install spacy
-            if settings().llm.keywords_include or settings().llm.keywords_exclude:
-                return ContextChatEngine.from_defaults(
-                    system_prompt=system_prompt,
-                    retriever=vector_index_retriever,
-                    llm=self.llm_component.llm,  # Takes no effect at the moment
-                    node_postprocessors=[
-                        MetadataReplacementPostProcessor(target_metadata_key="window"),
-                        SimilarityPostprocessor(
-                            similarity_cutoff=settings().llm.similarity_value
-                        ),
-                        KeywordNodePostprocessor(
-                            required_keywords=settings().llm.keywords_include,
-                            exclude_keywords=settings().llm.keywords_exclude,
-                        ),
-                    ],
-                )
-            else:
-                return ContextChatEngine.from_defaults(
-                    system_prompt=system_prompt,
-                    retriever=vector_index_retriever,
-                    llm=self.llm_component.llm,  # Takes no effect at the moment
-                    node_postprocessors=[
-                        MetadataReplacementPostProcessor(target_metadata_key="window"),
-                        SimilarityPostprocessor(
-                            similarity_cutoff=settings().llm.similarity_value
-                        ),
-                    ],
-                )
-
+            return ContextChatEngine.from_defaults(
+                system_prompt=system_prompt,
+                retriever=vector_index_retriever,
+                llm=self.llm_component.llm,  # Takes no effect at the moment
+                node_postprocessors=[
+                    MetadataReplacementPostProcessor(target_metadata_key="window"),
+                    SimilarityPostprocessor(
+                        similarity_cutoff=settings().llm.similarity_value
+                    ),
+                ],
+            )
         else:
             return SimpleChatEngine.from_defaults(
                 system_prompt=system_prompt,
