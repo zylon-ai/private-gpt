@@ -1,4 +1,5 @@
 """FastAPI app creation, logger configuration and main API routes."""
+
 import logging
 
 from fastapi import Depends, FastAPI, Request

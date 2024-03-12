@@ -137,9 +137,11 @@ class VectorStoreComponent:
             index=index,
             similarity_top_k=similarity_top_k,
             doc_ids=context_filter.docs_ids if context_filter else None,
-            filters=_doc_id_metadata_filter(context_filter)
-            if self.settings.vectorstore.database != "qdrant"
-            else None,
+            filters=(
+                _doc_id_metadata_filter(context_filter)
+                if self.settings.vectorstore.database != "qdrant"
+                else None
+            ),
         )
 
     def close(self) -> None:
