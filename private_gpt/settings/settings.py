@@ -103,8 +103,10 @@ class LLMSettings(BaseModel):
 class VectorstoreSettings(BaseModel):
     database: Literal["chroma", "qdrant", "pgvector"]
 
+
 class NodeStoreSettings(BaseModel):
     database: Literal["simple", "postgres"]
+
 
 class LlamaCPPSettings(BaseModel):
     llm_hf_repo_id: str
@@ -205,6 +207,7 @@ class UISettings(BaseModel):
         False, description="If the button to delete all files is enabled or not."
     )
 
+
 class PostgresSettings(BaseModel):
     host: str = Field(
         "localhost",
@@ -231,7 +234,7 @@ class PostgresSettings(BaseModel):
         description="The name of the schema in the Postgres database to use",
     )
 
-    
+
 class PGVectorSettings(PostgresSettings):
     embed_dim: int = Field(
         384,

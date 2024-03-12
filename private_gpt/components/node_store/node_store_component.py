@@ -1,12 +1,12 @@
 import logging
 
 from injector import inject, singleton
-from private_gpt.settings.settings import Settings
 from llama_index.core.storage.docstore import BaseDocumentStore, SimpleDocumentStore
 from llama_index.core.storage.index_store import SimpleIndexStore
 from llama_index.core.storage.index_store.types import BaseIndexStore
 
 from private_gpt.paths import local_data_path
+from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -38,22 +38,28 @@ class NodeStoreComponent:
 
             case "postgres":
                 try:
-                    from llama_index.core.storage.index_store.postgres_index_store import PostgresIndexStore
-                    from llama_index.core.storage.docstore.postgres_docstore import PostgresDocumentStore
-                except ImportError as e:
-                    raise ImportError (
+                    from llama_index.core.storage.docstore.postgres_docstore import (
+                        PostgresDocumentStore,
+                    )
+                    from llama_index.core.storage.index_store.postgres_index_store import (
+                        PostgresIndexStore,
+                    )
+                except ImportError:
+                    raise ImportError(
                         "Postgres dependencies not found, install with `poetry install --extras storage-postgres`"
-                        )
-                
+                    ) from None
+
                 if settings.postgres is None:
                     raise ValueError("Postgres index/doc store settings not found.")
 
-                self.index_store = PostgresIndexStore.from_params(**settings.postgres.model_dump(exclude_none=True))
-                self.doc_store = PostgresDocumentStore.from_params(**settings.postgres.model_dump(exclude_none=True))
+                self.index_store = PostgresIndexStore.from_params(
+                    **settings.postgres.model_dump(exclude_none=True)
+                )
+                self.doc_store = PostgresDocumentStore.from_params(
+                    **settings.postgres.model_dump(exclude_none=True)
+                )
 
             case _:
                 # Should be unreachable
                 # The settings validator should have caught this
-                raise ValueError(
-                    f"Database {settings.docstore.database} not supported"
-                )
+                raise ValueError(f"Database {settings.docstore.database} not supported")
