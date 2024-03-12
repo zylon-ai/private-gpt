@@ -102,6 +102,18 @@ class LLMSettings(BaseModel):
         0.1,
         description="The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual.",
     )
+    similarity_value: float = Field(
+        None,
+        description="If set, any documents retrieved from the RAG must meet a certain score. Acceptable values are between 0 and 1.",
+    )
+    keywords_include: list[str] = Field(
+        [],
+        description="If set, any documents retrieved from the RAG Must include this keyword",
+    )
+    keywords_exclude: list[str] = Field(
+        [],
+        description="If set, any documents retrieved from the RAG Must exclude this keyword",
+    )
 
 
 class VectorstoreSettings(BaseModel):
@@ -122,7 +134,6 @@ class LlamaCPPSettings(BaseModel):
             "`llama2` is the historic behaviour. `default` might work better with your custom models."
         ),
     )
-
     tfs_z: float = Field(
         1.0,
         description="Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting.",

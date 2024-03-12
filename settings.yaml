@@ -40,6 +40,9 @@ llm:
   max_new_tokens: 512
   context_window: 3900
   temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
+  #similarity_value: 0.4    #If set, any documents retrieved from the RAG must meet a certain score. Acceptable values are between 0 and 1.
+  #keywords_include: ["Apples","Bananas"] #Optional - requires spacy package: pip install spacy
+  #keywords_exclude: ["Pears","Mangos"]   #Optional - requires spacy package: pip install spacy
 
 llamacpp:
   prompt_style: "mistral"
