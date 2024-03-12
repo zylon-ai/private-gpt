@@ -4,11 +4,11 @@ set -xe;
 # chmod +x run.sh
 # run with bash
 
-# Check if the script is run with sudo privileges
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run this script with sudo or as root."
-  exit 1
-fi
+# # Check if the script is run with sudo privileges
+# if [ "$EUID" -ne 0 ]; then
+#   echo "Please run this script with sudo or as root."
+#   exit 1
+# fi
 
 # Update the package list
 apt update
@@ -52,7 +52,7 @@ export CMAKE_ARGS='-DLLAMA_CUBLAS=on'
 python3.11 -m venv .venv
 source .venv/bin/activate
 
-poetry run pip install --upgrade wheel pip poetry ffmpy llama-cpp-python
+pip install --upgrade wheel pip poetry ffmpy llama-cpp-python
 
 poetry install --extras "ui llms-llama-cpp embeddings-huggingface vector-stores-qdrant"
 poetry run pip install huggingface_hub
