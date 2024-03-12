@@ -57,7 +57,7 @@ vectorstore:
   database: qdrant
 
 docstore:
-  database: local
+  database: simple
 
 qdrant:
   path: local_data/private_gpt/qdrant
