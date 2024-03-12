@@ -11,20 +11,20 @@ set -xe;
 # fi
 
 # Update the package list
-apt update
+sudo apt update
 
 # Upgrade installed packages
-apt upgrade -y
+sudo apt upgrade -y
 
 # Remove unnecessary packages
-apt autoremove -y
+sudo apt autoremove -y
 
 # Clean up cached package files
-apt clean
+sudo apt clean
 
 echo "System update complete."
 
-DEBIAN_FRONTEND=noninteractive apt-get install --yes --quiet --no-install-recommends \
+DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-recommends \
     libopenblas-dev\
     ninja-build\
     build-essential\
