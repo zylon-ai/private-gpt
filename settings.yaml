@@ -76,10 +76,11 @@ docstore:
   host: mongodb+srv://unfreeze-gmk:y9t9mJBdhECC1BBq@unfreeze-pggpt-gmk.wh9chmw.mongodb.net/?retryWrites=true&w=majority&appName=unfreeze-pggpt-gmk
   port: 27017
 
+# qdrant:
+#   url: https://8eb8990c-21fc-49e6-8848-3d4304aa7792.us-east4-0.gcp.cloud.qdrant.io:6333/
+#   api_key: dXmYcQzar7z0eQJTsw7g8ARP4VC5Xh6Ka6cji1xFLljKsekgtLKRuA
 qdrant:
-  url: https://8eb8990c-21fc-49e6-8848-3d4304aa7792.us-east4-0.gcp.cloud.qdrant.io:6333/
-  api_key: dXmYcQzar7z0eQJTsw7g8ARP4VC5Xh6Ka6cji1xFLljKsekgtLKRuA
-
+  path: local_data/private_gpt/qdrant
   
 pgvector:
   host: localhost
