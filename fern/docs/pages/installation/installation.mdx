@@ -1,8 +1,8 @@
-## Installation and Settings
+It is important that you review the Main Concepts before you start the installation process.
 
-### Base requirements to run PrivateGPT
+## Base requirements to run PrivateGPT
 
-* Git clone PrivateGPT repository, and navigate to it:
+* Clone PrivateGPT repository, and navigate to it:
 
 ```bash
   git clone https://github.com/imartinez/privateGPT
@@ -21,93 +21,180 @@ pyenv local 3.11
 
 * Install [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) for dependency management:
 
-* Have a valid C++ compiler like gcc. See [Troubleshooting: C++ Compiler](#troubleshooting-c-compiler) for more details.
-
-* Install `make` for scripts:
+* Install `make` to be able to run the different scripts:
     * osx: (Using homebrew): `brew install make`
     * windows: (Using chocolatey) `choco install make`
 
-### Install dependencies
+## Install and run your desired setup
 
-Install the dependencies:
+PrivateGPT allows to customize the setup -from fully local to cloud based- by deciding the modules to use.
+Here are the different options available:
 
-```bash
-poetry install --with ui
-```
+- LLM: "llama-cpp", "ollama", "sagemaker", "openai", "openailike"
+- Embeddings: "huggingface", "openai", "sagemaker"
+- Vector stores: "qdrant", "chroma", "postgres"
+- UI: whether or not to enable UI (Gradio) or just go with the API
 
-Verify everything is working by running `make run` (or `poetry run python -m private_gpt`) and navigate to
-http://localhost:8001. You should see a [Gradio UI](https://gradio.app/) **configured with a mock LLM** that will
-echo back the input. Below we'll see how to configure a real LLM.
-
-### Settings
-
-<Callout intent="info">
-The default settings of PrivateGPT should work out-of-the-box for a 100% local setup. **However**, as is, it runs exclusively on your CPU.
-Skip this section if you just want to test PrivateGPT locally, and come back later to learn about more configuration options (and have better performances).
-</Callout>
-
-<br />
-
-### Local LLM requirements
-
-Install extra dependencies for local execution:
+In order to only install the required dependencies, PrivateGPT offers different `extras` that can be combined during the installation process:
 
 ```bash
-poetry install --with local
+poetry install --extras "<extra1> <extra2>..."
 ```
 
-For PrivateGPT to run fully locally GPU acceleration is required
-(CPU execution is possible, but very slow), however,
-typical Macbook laptops or window desktops with mid-range GPUs lack VRAM to run
-even the smallest LLMs. For that reason
-**local execution is only supported for models compatible with [llama.cpp](https://github.com/ggerganov/llama.cpp)**
+Where `<extra>` can be any of the following:
 
-These two models are known to work well:
+- ui: adds support for UI using Gradio
+- llms-ollama: adds support for Ollama LLM, the easiest way to get a local LLM running, requires Ollama running locally
+- llms-llama-cpp: adds support for local LLM using LlamaCPP - expect a messy installation process on some platforms
+- llms-sagemaker: adds support for Amazon Sagemaker LLM, requires Sagemaker inference endpoints
+- llms-openai: adds support for OpenAI LLM, requires OpenAI API key
+- llms-openai-like: adds support for 3rd party LLM providers that are compatible with OpenAI's API
+- embeddings-ollama: adds support for Ollama Embeddings, requires Ollama running locally
+- embeddings-huggingface: adds support for local Embeddings using HuggingFace
+- embeddings-sagemaker: adds support for Amazon Sagemaker Embeddings, requires Sagemaker inference endpoints
+- embeddings-openai = adds support for OpenAI Embeddings, requires OpenAI API key
+- vector-stores-qdrant: adds support for Qdrant vector store
+- vector-stores-chroma: adds support for Chroma DB vector store
+- vector-stores-postgres: adds support for Postgres vector store
 
-* https://huggingface.co/TheBloke/Llama-2-7B-chat-GGUF
-* https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF (recommended)
+## Recommended Setups
 
-To ease the installation process, use the `setup` script that will download both
-the embedding and the LLM model and place them in the correct location (under `models` folder):
+There are just some examples of recommended setups. You can mix and match the different options to fit your needs.
+You'll find more information in the Manual section of the documentation.
 
+> **Important for Windows**: In the examples below or how to run PrivateGPT with `make run`, `PGPT_PROFILES` env var is being set inline following Unix command line syntax (works on MacOS and Linux).
+If you are using Windows, you'll need to set the env var in a different way, for example:
+
+```powershell
+# Powershell
+$env:PGPT_PROFILES="ollama"
+make run
+```
+
+or
+
+```cmd
+# CMD
+set PGPT_PROFILES=ollama
+make run
+```
+
+### Local, Ollama-powered setup - RECOMMENDED
+
+**The easiest way to run PrivateGPT fully locally** is to depend on Ollama for the LLM. Ollama provides local LLM and Embeddings super easy to install and use, abstracting the complexity of GPU support. It's the recommended setup for local development.
+
+Go to [ollama.ai](https://ollama.ai/) and follow the instructions to install Ollama on your machine.
+
+After the installation, make sure the Ollama desktop app is closed.
+
+Install the models to be used, the default settings-ollama.yaml is configured to user `mistral 7b` LLM (~4GB) and `nomic-embed-text` Embeddings (~275MB). Therefore:
+
+```bash
+ollama pull mistral
+ollama pull nomic-embed-text
+```
+
+Now, start Ollama service (it will start a local inference server, serving both the LLM and the Embeddings):
+```bash
+ollama serve
+```
+
+Once done, on a different terminal, you can install PrivateGPT with the following command:
+```bash
+poetry install --extras "ui llms-ollama embeddings-ollama vector-stores-qdrant"
+```
+
+Once installed, you can run PrivateGPT. Make sure you have a working Ollama running locally before running the following command.
+
+```bash
+PGPT_PROFILES=ollama make run
+```
+
+PrivateGPT will use the already existing `settings-ollama.yaml` settings file, which is already configured to use Ollama LLM and Embeddings, and Qdrant. Review it and adapt it to your needs (different models, different Ollama port, etc.)
+
+The UI will be available at http://localhost:8001
+
+### Private, Sagemaker-powered setup
+
+If you need more performance, you can run a version of PrivateGPT that relies on powerful AWS Sagemaker machines to serve the LLM and Embeddings.
+
+You need to have access to sagemaker inference endpoints for the LLM and / or the embeddings, and have AWS credentials properly configured.
+
+Edit the `settings-sagemaker.yaml` file to include the correct Sagemaker endpoints.
+
+Then, install PrivateGPT with the following command:
+```bash
+poetry install --extras "ui llms-sagemaker embeddings-sagemaker vector-stores-qdrant"
+```
+
+Once installed, you can run PrivateGPT. Make sure you have a working Ollama running locally before running the following command.
+
+```bash
+PGPT_PROFILES=sagemaker make run
+```
+
+PrivateGPT will use the already existing `settings-sagemaker.yaml` settings file, which is already configured to use Sagemaker LLM and Embeddings endpoints, and Qdrant.
+
+The UI will be available at http://localhost:8001
+
+### Non-Private, OpenAI-powered test setup
+
+If you want to test PrivateGPT with OpenAI's LLM and Embeddings -taking into account your data is going to OpenAI!- you can run the following command:
+
+You need an OPENAI API key to run this setup.
+
+Edit the `settings-openai.yaml` file to include the correct API KEY. Never commit it! It's a secret! As an alternative to editing `settings-openai.yaml`, you can just set the env var OPENAI_API_KEY.
+
+Then, install PrivateGPT with the following command:
+```bash
+poetry install --extras "ui llms-openai embeddings-openai vector-stores-qdrant"
+```
+
+Once installed, you can run PrivateGPT.
+
+```bash
+PGPT_PROFILES=openai make run
+```
+
+PrivateGPT will use the already existing `settings-openai.yaml` settings file, which is already configured to use OpenAI LLM and Embeddings endpoints, and Qdrant.
+
+The UI will be available at http://localhost:8001
+
+### Local, Llama-CPP powered setup
+
+If you want to run PrivateGPT fully locally without relying on Ollama, you can run the following command:
+
+```bash
+poetry install --extras "ui llms-llama-cpp embeddings-huggingface vector-stores-qdrant"
+```
+
+In order for local LLM and embeddings to work, you need to download the models to the `models` folder. You can do so by running the `setup` script:
 ```bash
 poetry run python scripts/setup
 ```
 
-If you are ok with CPU execution, you can skip the rest of this section.
+Once installed, you can run PrivateGPT with the following command:
 
-As stated before, llama.cpp is required and in
+```bash
+PGPT_PROFILES=local make run
+```
+
+PrivateGPT will load the already existing `settings-local.yaml` file, which is already configured to use LlamaCPP LLM, HuggingFace embeddings and Qdrant.
+
+The UI will be available at http://localhost:8001
+
+#### Llama-CPP support
+
+For PrivateGPT to run fully locally without Ollama, Llama.cpp is required and in
 particular [llama-cpp-python](https://github.com/abetlen/llama-cpp-python)
 is used.
+
+You'll need to have a valid C++ compiler like gcc installed. See [Troubleshooting: C++ Compiler](#troubleshooting-c-compiler) for more details.
 
 > It's highly encouraged that you fully read llama-cpp and llama-cpp-python documentation relevant to your platform.
 > Running into installation issues is very likely, and you'll need to troubleshoot them yourself.
 
-#### Customizing low level parameters
-
-Currently, not all the parameters of `llama.cpp` and `llama-cpp-python` are available at PrivateGPT's `settings.yaml` file.
-In case you need to customize parameters such as the number of layers loaded into the GPU, you might change
-these at the `llm_component.py` file under the `private_gpt/components/llm/llm_component.py`.
-
-##### Available LLM config options
-
-The `llm` section of the settings allows for the following configurations:
-
-- `mode`: how to run your llm
-- `max_new_tokens`: this lets you configure the number of new tokens the LLM will generate and add to the context window (by default Llama.cpp uses `256`)
-
-Example:
-
-```yaml
-llm:
-  mode: local
-  max_new_tokens: 256
-```
-
-If you are getting an out of memory error, you might also try a smaller model or stick to the proposed
-recommended models, instead of custom tuning the parameters.
-
-#### OSX GPU support
+##### Llama-CPP OSX GPU support
 
 You will need to build [llama.cpp](https://github.com/ggerganov/llama.cpp) with metal support.
 
@@ -127,7 +214,7 @@ More information is available in the documentation of the libraries themselves:
 * [llama-cpp-python's documentation](https://llama-cpp-python.readthedocs.io/en/latest/#installation-with-hardware-acceleration)
 * [llama.cpp](https://github.com/ggerganov/llama.cpp#build)
 
-#### Windows NVIDIA GPU support
+##### Llama-CPP Windows NVIDIA GPU support
 
 Windows GPU support is done through CUDA.
 Follow the instructions on the original [llama.cpp](https://github.com/ggerganov/llama.cpp) repo to install the required
@@ -160,7 +247,7 @@ Note that llama.cpp offloads matrix calculations to the GPU but the performance 
 still hit heavily due to latency between CPU and GPU communication. You might need to tweak
 batch sizes and other parameters to get the best performance for your particular system.
 
-#### Linux NVIDIA GPU support and Windows-WSL
+##### Llama-CPP Linux NVIDIA GPU support and Windows-WSL
 
 Linux GPU support is done through CUDA.
 Follow the instructions on the original [llama.cpp](https://github.com/ggerganov/llama.cpp) repo to install the required
@@ -188,7 +275,7 @@ llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, co
 AVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | NEON = 0 | ARM_FMA = 0 | F16C = 1 | FP16_VA = 0 | WASM_SIMD = 0 | BLAS = 1 | SSE3 = 1 | SSSE3 = 0 | VSX = 0 |
 ```
 
-### Known issues and Troubleshooting
+##### Llama-CPP Known issues and Troubleshooting
 
 Execution of LLMs locally still has a lot of sharp edges, specially when running on non Linux platforms.
 You might encounter several issues:
@@ -205,7 +292,7 @@ If, during your installation, something does not go as planned, retry in *verbos
 
 For example, when installing packages with `pip install`, you can add the option `-vvv` to show the details of the installation.
 
-#### Troubleshooting: C++ Compiler
+##### Llama-CPP Troubleshooting: C++ Compiler
 
 If you encounter an error while building a wheel during the `pip install` process, you may need to install a C++
 compiler on your computer.
@@ -227,7 +314,7 @@ To install a C++ compiler on Windows 10/11, follow these steps:
    Store and search for Xcode and install it. **Or** you can install the command line tools by running `xcode-select --install`.
 2. If not, you can install clang or gcc with homebrew `brew install gcc`
 
-#### Troubleshooting: Mac Running Intel
+##### Llama-CPP Troubleshooting: Mac Running Intel
 
 When running a Mac with Intel hardware (not M1), you may run into _clang: error: the clang compiler does not support '
 -march=native'_ during pip install.

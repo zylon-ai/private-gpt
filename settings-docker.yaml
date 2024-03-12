@@ -8,9 +8,11 @@ llm:
 embedding:
   mode: ${PGPT_MODE:sagemaker}
 
-local:
+llamacpp:
   llm_hf_repo_id: ${PGPT_HF_REPO_ID:TheBloke/Mistral-7B-Instruct-v0.1-GGUF}
   llm_hf_model_file: ${PGPT_HF_MODEL_FILE:mistral-7b-instruct-v0.1.Q4_K_M.gguf}
+
+huggingface:
   embedding_hf_model_name: ${PGPT_EMBEDDING_HF_MODEL_NAME:BAAI/bge-small-en-v1.5}
 
 sagemaker:

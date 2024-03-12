@@ -41,10 +41,7 @@ FROM base as dependencies
 WORKDIR /home/worker/app
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies with CUDA support
-ENV CMAKE_ARGS="-DLLAMA_CUBLAS=on"
-RUN poetry install --with local
-RUN poetry install --with ui
+RUN poetry install --extras "ui embeddings-huggingface llms-llama-cpp vector-stores-qdrant"
 
 # Install llama-cpp-python with CUDA support
 RUN poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python

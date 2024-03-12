@@ -1,12 +1,28 @@
+from collections.abc import Generator
 from typing import Any
 
-from llama_index.schema import BaseNode, MetadataMode
-from llama_index.vector_stores import ChromaVectorStore
-from llama_index.vector_stores.chroma import chunk_list
-from llama_index.vector_stores.utils import node_to_metadata_dict
+from llama_index.core.schema import BaseNode, MetadataMode
+from llama_index.core.vector_stores.utils import node_to_metadata_dict
+from llama_index.vector_stores.chroma import ChromaVectorStore  # type: ignore
 
 
-class BatchedChromaVectorStore(ChromaVectorStore):
+def chunk_list(
+    lst: list[BaseNode], max_chunk_size: int
+) -> Generator[list[BaseNode], None, None]:
+    """Yield successive max_chunk_size-sized chunks from lst.
+
+    Args:
+        lst (List[BaseNode]): list of nodes with embeddings
+        max_chunk_size (int): max chunk size
+
+    Yields:
+        Generator[List[BaseNode], None, None]: list of nodes with embeddings
+    """
+    for i in range(0, len(lst), max_chunk_size):
+        yield lst[i : i + max_chunk_size]
+
+
+class BatchedChromaVectorStore(ChromaVectorStore):  # type: ignore
     """Chroma vector store, batching additions to avoid reaching the max batch limit.
 
     In this vector store, embeddings are stored within a ChromaDB collection.

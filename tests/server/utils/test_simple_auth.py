@@ -5,6 +5,7 @@ NOTE: We are not testing the switch based on the config in
       is currently architecture (it is hard to patch the `settings` and the app while
       the tests are directly importing them).
 """
+
 from typing import Annotated
 
 import pytest

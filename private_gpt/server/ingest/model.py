@@ -1,6 +1,6 @@
 from typing import Any, Literal
-import os
-from llama_index import Document
+
+from llama_index.core.schema import Document
 from pydantic import BaseModel, Field
 from private_gpt.constants import UPLOAD_DIR
 from pathlib import Path
