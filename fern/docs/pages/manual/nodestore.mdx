@@ -1,7 +1,7 @@
 ## NodeStores
 PrivateGPT supports **Simple** and [Postgres](https://www.postgresql.org/) providers. Simple being the default.
 
-In order to select one or the other, set the `docstore.database` property in the `settings.yaml` file to `simple` or `postgres`.
+In order to select one or the other, set the `nodestore.database` property in the `settings.yaml` file to `simple` or `postgres`.
 
 ```yaml
 nodestore:
@@ -12,7 +12,7 @@ nodestore:
 
 Setting up simple document store: Persist data with in-memory and disk storage.
 
-Enabling the simple document store is an excellent choice for small projects or proofs of concept where you need to persist data while maintaining minimal setup complexity. To get started, set the docstore.database property in your settings.yaml file as follows:
+Enabling the simple document store is an excellent choice for small projects or proofs of concept where you need to persist data while maintaining minimal setup complexity. To get started, set the nodestore.database property in your settings.yaml file as follows:
 
 ```yaml
 nodestore:
@@ -22,7 +22,7 @@ The beauty of the simple document store is its flexibility and ease of implement
 
 ### Postgres Document Store
 
-To enable Postgres, set the `docstore.database` property in the `settings.yaml` file to `postgres` and install the `storage-postgres` extra.  Note: Vector Embeddings Storage in Postgres is configured separately
+To enable Postgres, set the `nodestore.database` property in the `settings.yaml` file to `postgres` and install the `storage-postgres` extra.  Note: Vector Embeddings Storage in Postgres is configured separately
 
 ```bash
 poetry install --extras storage-postgres
