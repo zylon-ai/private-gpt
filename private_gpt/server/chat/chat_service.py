@@ -7,9 +7,11 @@ from llama_index.core.chat_engine.types import (
 )
 from llama_index.core.indices import VectorStoreIndex
 from llama_index.core.indices.postprocessor import MetadataReplacementPostProcessor
-from llama_index.core.postprocessor import SimilarityPostprocessor
-from llama_index.core.postprocessor import KeywordNodePostprocessor
 from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core.postprocessor import (
+    KeywordNodePostprocessor,
+    SimilarityPostprocessor,
+)
 from llama_index.core.storage import StorageContext
 from llama_index.core.types import TokenGen
 from pydantic import BaseModel
@@ -23,6 +25,7 @@ from private_gpt.components.vector_store.vector_store_component import (
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chunks.chunks_service import Chunk
 from private_gpt.settings.settings import settings
+
 
 class Completion(BaseModel):
     response: str
@@ -105,7 +108,7 @@ class ChatService:
                 index=self.index, context_filter=context_filter
             )
 
-            #To use the keyword search, you must install spacy:
+            # To use the keyword search, you must install spacy:
             # pip install spacy
             if settings().llm.keywords_include or settings().llm.keywords_exclude:
                 return ContextChatEngine.from_defaults(
@@ -114,8 +117,13 @@ class ChatService:
                     llm=self.llm_component.llm,  # Takes no effect at the moment
                     node_postprocessors=[
                         MetadataReplacementPostProcessor(target_metadata_key="window"),
-                        SimilarityPostprocessor(similarity_cutoff=settings().llm.similarity_value),
-                        KeywordNodePostprocessor(required_keywords=settings().llm.keywords_include, exclude_keywords=settings().llm.keywords_exclude),
+                        SimilarityPostprocessor(
+                            similarity_cutoff=settings().llm.similarity_value
+                        ),
+                        KeywordNodePostprocessor(
+                            required_keywords=settings().llm.keywords_include,
+                            exclude_keywords=settings().llm.keywords_exclude,
+                        ),
                     ],
                 )
             else:
@@ -125,7 +133,9 @@ class ChatService:
                     llm=self.llm_component.llm,  # Takes no effect at the moment
                     node_postprocessors=[
                         MetadataReplacementPostProcessor(target_metadata_key="window"),
-                        SimilarityPostprocessor(similarity_cutoff=settings().llm.similarity_value),
+                        SimilarityPostprocessor(
+                            similarity_cutoff=settings().llm.similarity_value
+                        ),
                     ],
                 )
 
