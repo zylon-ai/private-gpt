@@ -34,12 +34,14 @@ ui:
   delete_file_button_enabled: true
   delete_all_files_button_enabled: true
 
+
 llm:
   mode: llamacpp
   # Should be matching the selected model
   max_new_tokens: 512
   context_window: 3900
-  temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
+  tokenizer: mistralai/Mistral-7B-Instruct-v0.2
+  temperature: 0.1
 
 llamacpp:
   prompt_style: "mistral"
@@ -53,23 +55,32 @@ llamacpp:
 embedding:
   # Should be matching the value above in most cases
   mode: huggingface
-  ingest_mode: simple
+  ingest_mode: batch
+  worker: 2
 
 huggingface:
   embedding_hf_model_name: BAAI/bge-small-en-v1.5
 
+
 vectorstore:
   database: qdrant
+  #host: http://localhost:6333
 
 indexstore:
   mode: mongo
+  host: mongodb+srv://unfreeze-gmk:y9t9mJBdhECC1BBq@unfreeze-pggpt-gmk.wh9chmw.mongodb.net/?retryWrites=true&w=majority&appName=unfreeze-pggpt-gmk
+  port: 27017
 
 docstore:
   mode: mongo
+  host: mongodb+srv://unfreeze-gmk:y9t9mJBdhECC1BBq@unfreeze-pggpt-gmk.wh9chmw.mongodb.net/?retryWrites=true&w=majority&appName=unfreeze-pggpt-gmk
+  port: 27017
 
 qdrant:
-  #path: local_data/private_gpt/qdrant
-  url: http://localhost:6333
+  url: https://8eb8990c-21fc-49e6-8848-3d4304aa7792.us-east4-0.gcp.cloud.qdrant.io:6333/
+  api_key: dXmYcQzar7z0eQJTsw7g8ARP4VC5Xh6Ka6cji1xFLljKsekgtLKRuA
+
+  
 pgvector:
   host: localhost
   port: 5432
