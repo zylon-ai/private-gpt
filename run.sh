@@ -50,7 +50,7 @@ DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-r
     git
 
 
-curl https://pyenv.run | bash
+# curl https://pyenv.run | bash
 eval "$(pyenv virtualenv-init -)"
 
 curl -sSL https://install.python-poetry.org | python3 -
