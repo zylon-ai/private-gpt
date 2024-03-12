@@ -62,4 +62,4 @@ class NodeStoreComponent:
             case _:
                 # Should be unreachable
                 # The settings validator should have caught this
-                raise ValueError(f"Database {settings.docstore.database} not supported")
+                raise ValueError(f"Database {settings.nodestore.database} not supported")
