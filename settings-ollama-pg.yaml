@@ -15,7 +15,7 @@ ollama:
   embedding_model: nomic-embed-text
   api_base: http://localhost:11434
 
-docstore:
+nodestore:
   database: postgres
 
 vectorstore:

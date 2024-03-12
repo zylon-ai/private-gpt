@@ -56,7 +56,7 @@ huggingface:
 vectorstore:
   database: qdrant
 
-docstore:
+nodestore:
   database: simple
 
 qdrant:

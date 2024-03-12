@@ -103,8 +103,8 @@ class LLMSettings(BaseModel):
 class VectorstoreSettings(BaseModel):
     database: Literal["chroma", "qdrant", "pgvector"]
 
-class DocstoreSettings(BaseModel):
-    database: Literal["local", "postgres"]
+class NodeStoreSettings(BaseModel):
+    database: Literal["simple", "postgres"]
 
 class LlamaCPPSettings(BaseModel):
     llm_hf_repo_id: str
@@ -309,7 +309,7 @@ class Settings(BaseModel):
     openai: OpenAISettings
     ollama: OllamaSettings
     vectorstore: VectorstoreSettings
-    docstore: DocstoreSettings
+    nodestore: NodeStoreSettings
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
     pgvector: PGVectorSettings | None = None

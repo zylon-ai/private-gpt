@@ -18,7 +18,7 @@ class NodeStoreComponent:
 
     @inject
     def __init__(self, settings: Settings) -> None:
-        match settings.docstore.database:
+        match settings.nodestore.database:
             case "simple":
                 try:
                     self.index_store = SimpleIndexStore.from_persist_dir(
@@ -40,7 +40,7 @@ class NodeStoreComponent:
                 try:
                     from llama_index.core.storage.index_store.postgres_index_store import PostgresIndexStore
                     from llama_index.core.storage.docstore.postgres_docstore import PostgresDocumentStore
-                except Import Error as e:
+                except ImportError as e:
                     raise ImportError (
                         "Postgres dependencies not found, install with `poetry install --extras storage-postgres`"
                         )
