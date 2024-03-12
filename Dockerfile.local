@@ -55,4 +55,4 @@ RUN chmod +x /entrypoint.sh
 
 ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
 
-ENTRYPOINT /entrypoint.sh python -m private_gpt
+ENTRYPOINT ["/entrypoint.sh", "python", "-m", "private_gpt"]
