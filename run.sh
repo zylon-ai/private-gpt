@@ -52,7 +52,8 @@ export CMAKE_ARGS='-DLLAMA_CUBLAS=on'
 python3.11 -m venv .venv
 source .venv/bin/activate
 
-pip install --upgrade wheel pip poetry ffmpy llama-cpp-python
+pip install --upgrade wheel pip poetry 
+pip install --upgrade ffmpy llama-cpp-python
 
 poetry install --extras "ui llms-llama-cpp embeddings-huggingface vector-stores-qdrant"
 poetry run pip install huggingface_hub
