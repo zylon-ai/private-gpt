@@ -93,7 +93,8 @@ class BaseIngestComponentWithIndex(BaseIngestComponent, abc.ABC):
         return index
 
     def _save_index(self) -> None:
-        self._index.storage_context.persist(persist_dir=local_data_path)
+        logger.info("BaseIngestComponent _save_index called but not executed")
+        ##self._index.storage_context.persist(persist_dir=local_data_path)
 
     def delete(self, doc_id: str) -> None:
         with self._index_thread_lock:
