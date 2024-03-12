@@ -49,7 +49,7 @@ export TERM=xterm-256color
 export CMAKE_ARGS='-DLLAMA_CUBLAS=on'
 
 
-python -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
 
 pip install --upgrade pip poetry ffmpy llama-cpp-python
