@@ -37,7 +37,7 @@ DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-r
     build-essential \
     pkg-config \
     wget \
-    curl 
+    curl \
     python3-pip \
     python3.11 \
     python3.11-dev \
