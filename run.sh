@@ -24,6 +24,8 @@ sudo apt clean
 
 echo "System update complete."
 
+sudo add-apt-repository ppa:deadsnakes/ppa -y 
+
 DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-recommends \
     libopenblas-dev \
     libssl-dev \
@@ -39,6 +41,7 @@ DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-r
     wget \
     curl \
     python3-pip \
+    python3-smbus \
     python3.11 \
     python3.11-dev \
     python3.11-venv \
@@ -51,6 +54,12 @@ DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-r
     g++ \
     cmake \
     nvidia-cudnn \
+    openssl \
+    tk-dev \
+    libncursesw5-dev \
+    libgdbm-dev \
+    libc6-dev \
+    unzip \
     git
 
 
@@ -61,7 +70,9 @@ curl -sSL https://install.python-poetry.org | python3 -
 export POETRY_HOME=/opt/poetry
 export POETRY_VIRTUALENVS_IN_PROJECT=true
 export TERM=xterm-256color 
-export CMAKE_ARGS='-DLLAMA_CUBLAS=on'
+export LLAMA_CUBLAS=1
+export FORCE_CMAKE=1
+export CMAKE_ARGS="-DLLAMA_CUBLAS=on" 
 
 
 python3.11 -m venv .venv
@@ -71,8 +82,8 @@ pip install --upgrade wheel pip poetry
 pip install --upgrade ffmpy llama-cpp-python
 
 poetry install --extras "ui llms-llama-cpp embeddings-huggingface vector-stores-qdrant"
-poetry run pip install huggingface_hub
-poetry run python scripts/setup
+pip install huggingface_hub
+./scripts/setup
 poetry run python scripts/setup
 
 export PORT=8080
