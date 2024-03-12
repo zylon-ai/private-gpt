@@ -429,7 +429,7 @@ class PrivateGptUi:
 
                         # Mapping of 'llm_mode' to corresponding model labels
                         model_mapping = {
-                            "local": config_settings.local.llm_hf_model_file,
+                            "llamacpp": config_settings.llamacpp.llm_hf_model_file,
                             "openai": config_settings.openai.model,
                             "openailike": config_settings.openai.model,
                             "sagemaker": config_settings.sagemaker.llm_endpoint_name,
