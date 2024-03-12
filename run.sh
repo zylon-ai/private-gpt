@@ -4,11 +4,8 @@ set -xe;
 # chmod +x run.sh
 # run with bash
 
-# # Check if the script is run with sudo privileges
-# if [ "$EUID" -ne 0 ]; then
-#   echo "Please run this script with sudo or as root."
-#   exit 1
-# fi
+sudo add-apt-repository ppa:deadsnakes/ppa -y 
+sudo add-apt-repository ppa:graphics-drivers/ppa --yes
 
 # Update the package list
 sudo apt update
@@ -24,7 +21,8 @@ sudo apt clean
 
 echo "System update complete."
 
-sudo add-apt-repository ppa:deadsnakes/ppa -y 
+
+sudo apt update
 
 DEBIAN_FRONTEND=noninteractive sudo apt-get install --yes --quiet --no-install-recommends \
     libopenblas-dev \
