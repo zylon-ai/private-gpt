@@ -437,12 +437,11 @@ class PrivateGptUi:
                             "ollama": config_settings.ollama.model,
                         }
 
-                        try:
-                            return model_mapping[llm_mode]
-                        except KeyError:
-                            raise ValueError(
-                                f"Invalid 'llm mode': {llm_mode}"
-                            ) from None
+                        if llm_mode not in model_mapping:
+                            print(f"Invalid 'llm mode': {llm_mode}")
+                            return None
+
+                        return model_mapping[llm_mode]
 
                 with gr.Column(scale=7, elem_id="col"):
                     # Determine the model label based on the value of PGPT_PROFILES
