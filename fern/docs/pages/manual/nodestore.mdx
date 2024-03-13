@@ -22,10 +22,10 @@ The beauty of the simple document store is its flexibility and ease of implement
 
 ### Postgres Document Store
 
-To enable Postgres, set the `nodestore.database` property in the `settings.yaml` file to `postgres` and install the `storage-postgres` extra.  Note: Vector Embeddings Storage in Postgres is configured separately
+To enable Postgres, set the `nodestore.database` property in the `settings.yaml` file to `postgres` and install the `storage-nodestore-postgres` extra.  Note: Vector Embeddings Storage in Postgres is configured separately
 
 ```bash
-poetry install --extras storage-postgres
+poetry install --extras storage-nodestore-postgres
 ```
 
 The available configuration options are:

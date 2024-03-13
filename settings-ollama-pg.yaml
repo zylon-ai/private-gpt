@@ -1,6 +1,6 @@
 # Using ollama and postgres for the vector, doc and index store. Ollama is also used for embeddings.
 # To use install these extras:
-# poetry install --extras "llms-ollama ui vector-stores-postgres embeddings-ollama storage-postgres"
+# poetry install --extras "llms-ollama ui vector-stores-postgres embeddings-ollama storage-nodestore-postgres"
 server:
   env_name: ${APP_ENV:ollama}
 

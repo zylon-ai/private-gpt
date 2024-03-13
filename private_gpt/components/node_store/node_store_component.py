@@ -46,7 +46,7 @@ class NodeStoreComponent:
                     )
                 except ImportError:
                     raise ImportError(
-                        "Postgres dependencies not found, install with `poetry install --extras storage-postgres`"
+                        "Postgres dependencies not found, install with `poetry install --extras storage-nodestore-postgres`"
                     ) from None
 
                 if settings.postgres is None:

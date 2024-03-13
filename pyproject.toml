@@ -52,7 +52,7 @@ embeddings-sagemaker = ["boto3"]
 vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
 vector-stores-postgres = ["llama-index-vector-stores-postgres"]
-storage-postgres = ["llama-index-storage-docstore-postgres","llama-index-storage-index-store-postgres","psycopg2-binary","asyncpg"]
+storage-nodestore-postgres = ["llama-index-storage-docstore-postgres","llama-index-storage-index-store-postgres","psycopg2-binary","asyncpg"]
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"
