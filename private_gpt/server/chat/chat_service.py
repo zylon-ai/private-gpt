@@ -23,7 +23,7 @@ from private_gpt.components.vector_store.vector_store_component import (
 )
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chunks.chunks_service import Chunk
-from private_gpt.settings.settings import settings
+from private_gpt.settings.settings import Settings
 
 
 class Completion(BaseModel):
@@ -72,14 +72,18 @@ class ChatEngineInput:
 
 @singleton
 class ChatService:
+    settings: Settings
+
     @inject
     def __init__(
         self,
+        settings: Settings,
         llm_component: LLMComponent,
         vector_store_component: VectorStoreComponent,
         embedding_component: EmbeddingComponent,
         node_store_component: NodeStoreComponent,
     ) -> None:
+        self.settings = settings
         self.llm_component = llm_component
         self.embedding_component = embedding_component
         self.vector_store_component = vector_store_component
@@ -102,6 +106,7 @@ class ChatService:
         use_context: bool = False,
         context_filter: ContextFilter | None = None,
     ) -> BaseChatEngine:
+        settings = self.settings
         if use_context:
             vector_index_retriever = self.vector_store_component.get_retriever(
                 index=self.index, context_filter=context_filter
@@ -113,7 +118,7 @@ class ChatService:
                 node_postprocessors=[
                     MetadataReplacementPostProcessor(target_metadata_key="window"),
                     SimilarityPostprocessor(
-                        similarity_cutoff=settings().llm.similarity_value
+                        similarity_cutoff=settings.llm.similarity_value
                     ),
                 ],
             )
