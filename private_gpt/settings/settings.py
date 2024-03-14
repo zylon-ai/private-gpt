@@ -108,6 +108,10 @@ class VectorstoreSettings(BaseModel):
     database: Literal["chroma", "qdrant", "pgvector"]
 
 
+class NodeStoreSettings(BaseModel):
+    database: Literal["simple", "postgres"]
+
+
 class LlamaCPPSettings(BaseModel):
     llm_hf_repo_id: str
     llm_hf_model_file: str
@@ -249,7 +253,7 @@ class UISettings(BaseModel):
     )
 
 
-class PGVectorSettings(BaseModel):
+class PostgresSettings(BaseModel):
     host: str = Field(
         "localhost",
         description="The server hosting the Postgres database",
@@ -270,13 +274,16 @@ class PGVectorSettings(BaseModel):
         "postgres",
         description="The database to use to connect to the Postgres database",
     )
+    schema_name: str = Field(
+        "public",
+        description="The name of the schema in the Postgres database to use",
+    )
+
+
+class PGVectorSettings(PostgresSettings):
     embed_dim: int = Field(
         384,
         description="The dimension of the embeddings stored in the Postgres database",
-    )
-    schema_name: str = Field(
-        "public",
-        description="The name of the schema in the Postgres database where the embeddings are stored",
     )
     table_name: str = Field(
         "embeddings",
@@ -350,7 +357,9 @@ class Settings(BaseModel):
     openai: OpenAISettings
     ollama: OllamaSettings
     vectorstore: VectorstoreSettings
+    nodestore: NodeStoreSettings
     qdrant: QdrantSettings | None = None
+    postgres: PostgresSettings | None = None
     pgvector: PGVectorSettings | None = None
 
 

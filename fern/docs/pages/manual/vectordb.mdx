@@ -51,10 +51,10 @@ By default `chroma` will use a disk-based database stored in local_data_path / "
 
 ### PGVector
 
-To enable PGVector, set the `vectorstore.database` property in the `settings.yaml` file to `pgvector` and install the `pgvector` extra.
+To enable PGVector, set the `vectorstore.database` property in the `settings.yaml` file to `pgvector` and install the `vector-stores-postgres` extra.
 
 ```bash
-poetry install --extras pgvector
+poetry install --extras vector-stores-postgres
 ```
 
 PGVector settings can be configured by setting values to the `pgvector` property in the `settings.yaml` file.
