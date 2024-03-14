@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-import os
 import argparse
+import os
 
 from huggingface_hub import hf_hub_download, snapshot_download
 from transformers import AutoTokenizer
 
-from private_gpt.paths import models_path, models_cache_path
+from private_gpt.paths import models_cache_path, models_path
 from private_gpt.settings.settings import settings
 
 resume_download = True
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog='Setup: Download models from Hugging Face')
-    parser.add_argument('--resume', default=True, action=argparse.BooleanOptionalAction, help='Enable/Disable resume_download options to restart the download progress interrupted')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog="Setup: Download models from huggingface")
+    parser.add_argument("--resume", default=True, action=argparse.BooleanOptionalAction, help="Enable/Disable resume_download options to restart the download progress interrupted")
     args = parser.parse_args()
     resume_download = args.resume
 
@@ -27,12 +27,12 @@ snapshot_download(
 )
 print("Embedding model downloaded!")
 
-if settings().reranker.enabled:
+if settings().reranker.enabled and settings().reranker.mode == "flagembedding":
     # Download Reranker model
-    reranker_path = models_path / "reranker"
-    print(f"Downloading reranker {settings().reranker.hf_model_name}")
+    reranker_path = models_path / "flagembedding_reranker"
+    print(f"Downloading reranker {settings().flagembedding_reranker.hf_model_name}")
     snapshot_download(
-        repo_id=settings().reranker.hf_model_name,
+        repo_id=settings().flagembedding_reranker.hf_model_name,
         cache_dir=models_cache_path,
         local_dir=reranker_path,
     )

@@ -59,6 +59,9 @@ llamacpp:
 
 reranker:
   enabled: true
+  mode: flagembedding
+
+flagembedding_reranker:
   hf_model_name: BAAI/bge-reranker-large
   top_n: 5
   cut_off: 0.75

@@ -28,7 +28,7 @@ from private_gpt.server.chunks.chunks_service import Chunk
 from private_gpt.settings.settings import Settings
 
 if typing.TYPE_CHECKING:
-    from llama_index.postprocessor.types import BaseNodePostprocessor
+    from llama_index.core.indices.postprocessor import BaseNodePostprocessor
 
 
 class Completion(BaseModel):

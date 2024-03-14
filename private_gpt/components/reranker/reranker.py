@@ -1,46 +1,55 @@
+import logging
 from typing import (  # noqa: UP035, we need to keep the consistence with llamaindex
     List,
-    Tuple,
 )
 
-from FlagEmbedding import FlagReranker  # type: ignore
 from injector import inject, singleton
-from llama_index.bridge.pydantic import Field
-from llama_index.postprocessor.types import BaseNodePostprocessor
-from llama_index.schema import NodeWithScore, QueryBundle
+from llama_index.core.bridge.pydantic import Field
+from llama_index.core.indices.postprocessor import BaseNodePostprocessor
+from llama_index.core.schema import NodeWithScore, QueryBundle
 
-from private_gpt.paths import models_path
 from private_gpt.settings.settings import Settings
+
+logger = logging.getLogger(__name__)
 
 
 @singleton
 class RerankerComponent(BaseNodePostprocessor):
     """Reranker component.
 
-    - top_n: Top N nodes to return.
-    - cut_off: Cut off score for nodes.
+    - mode: Reranker mode.
+    - enabled: Reranker enabled.
 
-    If the number of nodes with score > cut_off is <= top_n, then return top_n nodes.
-    Otherwise, return all nodes with score > cut_off.
     """
 
-    reranker: FlagReranker = Field(description="Reranker class.")
-    top_n: int = Field(description="Top N nodes to return.")
-    cut_off: float = Field(description="Cut off score for nodes.")
+    nodePostPorcesser: BaseNodePostprocessor = Field(description="BaseNodePostprocessor class.")
 
     @inject
     def __init__(self, settings: Settings) -> None:
         if settings.reranker.enabled is False:
             raise ValueError("Reranker component is not enabled.")
 
-        path = models_path / "reranker"
-        self.top_n = settings.reranker.top_n
-        self.cut_off = settings.reranker.cut_off
-        self.reranker = FlagReranker(
-            model_name_or_path=path,
-        )
+        match settings.reranker.mode:
+            case "flagembedding":
+                logger.info("Initializing the reranker model in mode=%s", settings.reranker.mode)
 
-        super().__init__()
+                try:
+                    from private_gpt.components.reranker.flagembedding_reranker import (
+                        FlagEmbeddingRerankerComponent,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Local dependencies not found, install with `poetry install --extras reranker-flagembedding`"
+                    ) from e
+
+                nodePostPorcesser = FlagEmbeddingRerankerComponent(settings)
+
+            case _:
+                raise ValueError("Reranker mode not supported, currently only support flagembedding.")
+
+        super().__init__(
+            nodePostPorcesser=nodePostPorcesser,
+        )
 
     @classmethod
     def class_name(cls) -> str:
@@ -51,22 +60,4 @@ class RerankerComponent(BaseNodePostprocessor):
         nodes: List[NodeWithScore],  # noqa: UP006
         query_bundle: QueryBundle | None = None,
     ) -> List[NodeWithScore]:  # noqa: UP006
-        if query_bundle is None:
-            raise ValueError("Query bundle must be provided.")
-
-        query_str = query_bundle.query_str
-        sentence_pairs: List[Tuple[str, str]] = []  # noqa: UP006
-        for node in nodes:
-            content = node.get_content()
-            sentence_pairs.append((query_str, content))
-
-        scores = self.reranker.compute_score(sentence_pairs)
-        for i, node in enumerate(nodes):
-            node.score = scores[i]
-
-        # cut off nodes with low scores
-        res = [node for node in nodes if (node.score or 0.0) > self.cut_off]
-        if len(res) > self.top_n:
-            return res
-
-        return sorted(nodes, key=lambda x: x.score or 0.0, reverse=True)[: self.top_n]
+        return self.nodePostPorcesser._postprocess_nodes(nodes, query_bundle)
