@@ -22,7 +22,9 @@ class RerankerComponent(BaseNodePostprocessor):
 
     """
 
-    nodePostPorcesser: BaseNodePostprocessor = Field(description="BaseNodePostprocessor class.")
+    nodePostPorcesser: BaseNodePostprocessor = Field(
+        description="BaseNodePostprocessor class."
+    )
 
     @inject
     def __init__(self, settings: Settings) -> None:
@@ -31,7 +33,9 @@ class RerankerComponent(BaseNodePostprocessor):
 
         match settings.reranker.mode:
             case "flagembedding":
-                logger.info("Initializing the reranker model in mode=%s", settings.reranker.mode)
+                logger.info(
+                    "Initializing the reranker model in mode=%s", settings.reranker.mode
+                )
 
                 try:
                     from private_gpt.components.reranker.flagembedding_reranker import (
@@ -45,7 +49,9 @@ class RerankerComponent(BaseNodePostprocessor):
                 nodePostPorcesser = FlagEmbeddingRerankerComponent(settings)
 
             case _:
-                raise ValueError("Reranker mode not supported, currently only support flagembedding.")
+                raise ValueError(
+                    "Reranker mode not supported, currently only support flagembedding."
+                )
 
         super().__init__(
             nodePostPorcesser=nodePostPorcesser,
