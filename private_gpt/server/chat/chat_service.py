@@ -129,7 +129,7 @@ class ChatService:
             ]
 
             if self.reranker_component:
-                node_postprocessors.append(self.reranker_component)
+                node_postprocessors.append(self.reranker_component.nodePostPorcesser)
 
             return ContextChatEngine.from_defaults(
                 system_prompt=system_prompt,
