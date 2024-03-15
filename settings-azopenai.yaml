@@ -1,0 +1,17 @@
+server:
+  env_name: ${APP_ENV:azopenai}
+
+llm:
+  mode: azopenai
+
+embedding:
+  mode: azopenai
+
+azopenai:
+  api_key: ${AZ_OPENAI_API_KEY:}
+  azure_endpoint: ${AZ_OPENAI_ENDPOINT:}
+  embedding_deployment_name: ${AZ_OPENAI_EMBEDDING_DEPLOYMENT_NAME:}
+  llm_deployment_name: ${AZ_OPENAI_LLM_DEPLOYMENT_NAME:}
+  api_version: "2023-05-15"
+  embedding_model: text-embedding-ada-002
+  llm_model: gpt-35-turbo
