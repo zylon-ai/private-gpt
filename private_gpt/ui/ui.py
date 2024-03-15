@@ -30,7 +30,7 @@ THIS_DIRECTORY_RELATIVE = Path(__file__).parent.relative_to(PROJECT_ROOT_PATH)
 # Should be "private_gpt/ui/avatar-bot.ico"
 AVATAR_BOT = THIS_DIRECTORY_RELATIVE / "avatar-bot.ico"
 
-UI_TAB_TITLE = "My Private GPT"
+UI_TAB_TITLE = "MTU Teaching Assitant"
 
 SOURCES_SEPARATOR = "\n\n Sources: \n"
 
@@ -87,8 +87,8 @@ class PrivateGptUi:
         self._system_prompt = self._get_default_system_prompt(self.mode)
 
     def _chat(self, message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
-        # Modify the _chat method to set the mode to "Query Docs" by default
-        mode = "Query Docs"
+        # Modify the _chat method to set the mode to "Query Files" by default
+        mode = "Query Files"
         def yield_deltas(completion_gen: CompletionGen) -> Iterable[str]:
             full_response: str = ""
             stream = completion_gen.response
@@ -437,7 +437,7 @@ class PrivateGptUi:
                     _ = gr.ChatInterface(
                         self._chat,
                         chatbot=gr.Chatbot(
-                            label=f"LLM: {settings().llm.mode}",
+                            label=f"MTU Teaching Assistant:8002",
                             show_copy_button=True,
                             elem_id="chatbot",
                             render=False,
