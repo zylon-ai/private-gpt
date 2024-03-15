@@ -100,10 +100,18 @@ class LLMSettings(BaseModel):
         "like `HuggingFaceH4/zephyr-7b-beta`. If not set, will load a tokenizer matching "
         "gpt-3.5-turbo LLM.",
     )
+    temperature: float = Field(
+        0.1,
+        description="The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual.",
+    )
 
 
 class VectorstoreSettings(BaseModel):
-    database: Literal["chroma", "qdrant", "pgvector"]
+    database: Literal["chroma", "qdrant", "postgres"]
+
+
+class NodeStoreSettings(BaseModel):
+    database: Literal["simple", "postgres"]
 
 
 class LlamaCPPSettings(BaseModel):
@@ -119,6 +127,23 @@ class LlamaCPPSettings(BaseModel):
             "If `mistral` - use the `mistral prompt style. It shoudl look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]"
             "`llama2` is the historic behaviour. `default` might work better with your custom models."
         ),
+    )
+
+    tfs_z: float = Field(
+        1.0,
+        description="Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting.",
+    )
+    top_k: int = Field(
+        40,
+        description="Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)",
+    )
+    top_p: float = Field(
+        0.9,
+        description="Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)",
+    )
+    repeat_penalty: float = Field(
+        1.1,
+        description="Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)",
     )
 
 
@@ -154,6 +179,10 @@ class EmbeddingSettings(BaseModel):
             "Do not set it higher than your number of threads of your CPU."
         ),
     )
+    embed_dim: int = Field(
+        384,
+        description="The dimension of the embeddings stored in the Postgres database",
+    )
 
 
 class SagemakerSettings(BaseModel):
@@ -185,6 +214,30 @@ class OllamaSettings(BaseModel):
     embedding_model: str = Field(
         None,
         description="Model to use. Example: 'nomic-embed-text'.",
+    )
+    tfs_z: float = Field(
+        1.0,
+        description="Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting.",
+    )
+    num_predict: int = Field(
+        None,
+        description="Maximum number of tokens to predict when generating text. (Default: 128, -1 = infinite generation, -2 = fill context)",
+    )
+    top_k: int = Field(
+        40,
+        description="Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)",
+    )
+    top_p: float = Field(
+        0.9,
+        description="Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)",
+    )
+    repeat_last_n: int = Field(
+        64,
+        description="Sets how far back for the model to look back to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)",
+    )
+    repeat_penalty: float = Field(
+        1.1,
+        description="Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)",
     )
 
 
@@ -225,7 +278,7 @@ class UISettings(BaseModel):
     )
 
 
-class PGVectorSettings(BaseModel):
+class PostgresSettings(BaseModel):
     host: str = Field(
         "localhost",
         description="The server hosting the Postgres database",
@@ -246,17 +299,9 @@ class PGVectorSettings(BaseModel):
         "postgres",
         description="The database to use to connect to the Postgres database",
     )
-    embed_dim: int = Field(
-        384,
-        description="The dimension of the embeddings stored in the Postgres database",
-    )
     schema_name: str = Field(
         "public",
-        description="The name of the schema in the Postgres database where the embeddings are stored",
-    )
-    table_name: str = Field(
-        "embeddings",
-        description="The name of the table in the Postgres database where the embeddings are stored",
+        description="The name of the schema in the Postgres database to use",
     )
 
 
@@ -327,8 +372,9 @@ class Settings(BaseModel):
     ollama: OllamaSettings
     azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
+    nodestore: NodeStoreSettings
     qdrant: QdrantSettings | None = None
-    pgvector: PGVectorSettings | None = None
+    postgres: PostgresSettings | None = None
 
 
 """
