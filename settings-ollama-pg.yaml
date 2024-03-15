@@ -22,7 +22,7 @@ nodestore:
   database: postgres
 
 vectorstore:
-  database: pgvector
+  database: postgres
 
 postgres:
   host: localhost
