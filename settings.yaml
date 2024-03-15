@@ -88,6 +88,6 @@ azopenai:
   azure_endpoint: ${AZ_OPENAI_ENDPOINT:}
   embedding_deployment_name: ${AZ_OPENAI_EMBEDDING_DEPLOYMENT_NAME:}
   llm_deployment_name: ${AZ_OPENAI_LLM_DEPLOYMENT_NAME:}
-  api_version: 2023_05_15
+  api_version: "2023-05-15"
   embedding_model: text-embedding-ada-002
   llm_model: gpt-35-turbo
