@@ -81,7 +81,9 @@ class DataSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: Literal["llamacpp", "openai", "openailike", "sagemaker", "mock", "ollama"]
+    mode: Literal[
+        "llamacpp", "openai", "openailike", "azopenai", "sagemaker", "mock", "ollama"
+    ]
     max_new_tokens: int = Field(
         256,
         description="The maximum number of token that the LLM is authorized to generate in one completion.",
@@ -152,7 +154,7 @@ class HuggingFaceSettings(BaseModel):
 
 
 class EmbeddingSettings(BaseModel):
-    mode: Literal["huggingface", "openai", "sagemaker", "ollama", "mock"]
+    mode: Literal["huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock"]
     ingest_mode: Literal["simple", "batch", "parallel"] = Field(
         "simple",
         description=(
@@ -236,6 +238,25 @@ class OllamaSettings(BaseModel):
     repeat_penalty: float = Field(
         1.1,
         description="Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)",
+    )
+
+
+class AzureOpenAISettings(BaseModel):
+    api_key: str
+    azure_endpoint: str
+    api_version: str = Field(
+        "2023_05_15",
+        description="The API version to use for this operation. This follows the YYYY-MM-DD format.",
+    )
+    embedding_deployment_name: str
+    embedding_model: str = Field(
+        "text-embedding-ada-002",
+        description="OpenAI Model to use. Example: 'text-embedding-ada-002'.",
+    )
+    llm_deployment_name: str
+    llm_model: str = Field(
+        "gpt-35-turbo",
+        description="OpenAI Model to use. Example: 'gpt-4'.",
     )
 
 
@@ -349,6 +370,7 @@ class Settings(BaseModel):
     sagemaker: SagemakerSettings
     openai: OpenAISettings
     ollama: OllamaSettings
+    azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
     nodestore: NodeStoreSettings
     qdrant: QdrantSettings | None = None
