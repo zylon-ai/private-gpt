@@ -24,3 +24,6 @@ vectorstore:
 
 qdrant:
   path: local_data/private_gpt/qdrant
+
+rag:
+  similarity_value: # Leave empty to not use.  Otherwise set between 0 and 1.  This value checks for how well sources match your context.

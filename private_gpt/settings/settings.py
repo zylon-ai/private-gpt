@@ -102,14 +102,9 @@ class LLMSettings(BaseModel):
         0.1,
         description="The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual.",
     )
-    similarity_value: float = Field(
-        None,
-        description="If set, any documents retrieved from the RAG must meet a certain score. Acceptable values are between 0 and 1.",
-    )
-
 
 class RagSettings(BaseModel):
-    similarity_value: float = Field(
+    similarity_value: float | None = Field(
         None,
         description="If set, any documents retrieved from the RAG must meet a certain score. Acceptable values are between 0 and 1.",
     )
