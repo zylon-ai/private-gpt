@@ -80,6 +80,7 @@ openai:
 
 ollama:
   model: llama2-uncensored
+  request_timeout: 30.0
 
 tensorrt:
   model_path: models/tensorrt

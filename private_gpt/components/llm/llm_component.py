@@ -109,7 +109,7 @@ class LLMComponent:
 
                 ollama_settings = settings.ollama
                 self.llm = Ollama(
-                    model=ollama_settings.model, base_url=ollama_settings.api_base
+                    model=ollama_settings.model, base_url=ollama_settings.api_base, request_timeout=ollama_settings.request_timeout
                 )
             case "tensorrt":
                 try:
@@ -127,6 +127,12 @@ class LLMComponent:
                     engine_name=settings.tensorrt.engine_name,
                     tokenizer_dir=settings.llm.tokenizer,
                     completion_to_prompt=prompt_style.completion_to_prompt,
+                    temperature=0.0,
+                    max_new_tokens=settings.llm.max_new_tokens,
+                    context_window=settings.llm.context_window,
+                    generate_kwargs={},
+                    model_kwargs={},
+                    verbose=True
                 )
             case "mock":
                 self.llm = MockLLM()
