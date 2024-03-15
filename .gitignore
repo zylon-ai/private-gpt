@@ -26,6 +26,8 @@ __pycache__/
 .vscode/
 /.run/
 .fleet/
+*~
+*brett*
 
 # macOS
 .DS_Store
