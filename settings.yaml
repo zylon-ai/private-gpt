@@ -55,6 +55,7 @@ embedding:
   # Should be matching the value above in most cases
   mode: huggingface
   ingest_mode: simple
+  # gpu: cuda[0]      # if you have more than one GPU and you want to select another. defaults to cuda[0], or cpu if cuda not available
 
 huggingface:
   embedding_hf_model_name: BAAI/bge-small-en-v1.5

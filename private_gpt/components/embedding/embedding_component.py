@@ -7,7 +7,7 @@ from private_gpt.paths import models_cache_path
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
-
+import torch
 
 @singleton
 class EmbeddingComponent:
@@ -28,9 +28,33 @@ class EmbeddingComponent:
                         "Local dependencies not found, install with `poetry install --extras embeddings-huggingface`"
                     ) from e
 
+                # Get the number of available GPUs
+                num_gpus = torch.cuda.device_count()
+
+                if num_gpus > 0:
+                    print("Available CUDA devices:")
+                    for i in range(num_gpus):
+                        print(f"GPU {i}: {torch.cuda.get_device_name(i)}")
+                else:
+                    print("No CUDA devices available. Switching to CPU.")
+
+                # Check if CUDA is available
+                if torch.cuda.is_available():
+                    # If settings.embedding.gpu is specified, use that GPU index
+                    if hasattr(settings, 'embedding') and hasattr(settings.embedding, 'gpu'):
+                        gpu_index = settings.embedding.gpu
+                        device = torch.device(f"cuda:{gpu_index}")
+                    else:
+                        # Use the default GPU (index 0)
+                        device = torch.device("cuda:0")
+                else:
+                    # If CUDA is not available, use CPU
+                    device = torch.device("cpu")
+
                 self.embedding_model = HuggingFaceEmbedding(
                     model_name=settings.huggingface.embedding_hf_model_name,
                     cache_folder=str(models_cache_path),
+                    device=device
                 )
             case "sagemaker":
                 try:
