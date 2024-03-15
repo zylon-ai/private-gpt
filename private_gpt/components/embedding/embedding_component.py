@@ -74,7 +74,9 @@ class EmbeddingComponent:
                 )
             case "azopenai":
                 try:
-                    from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding  # type: ignore
+                    from llama_index.embeddings.azure_openai import (  # type: ignore
+                        AzureOpenAIEmbedding,
+                    )
                 except ImportError as e:
                     raise ImportError(
                         "Azure OpenAI dependencies not found, install with `poetry install --extras embeddings-azopenai`"

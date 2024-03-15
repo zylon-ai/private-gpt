@@ -113,7 +113,9 @@ class LLMComponent:
                 )
             case "azopenai":
                 try:
-                    from llama_index.llms.azure_openai import AzureOpenAI  # type: ignore
+                    from llama_index.llms.azure_openai import (  # type: ignore
+                        AzureOpenAI,
+                    )
                 except ImportError as e:
                     raise ImportError(
                         "Azure OpenAI dependencies not found, install with `poetry install --extras llms-azopenai`"

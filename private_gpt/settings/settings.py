@@ -81,7 +81,9 @@ class DataSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: Literal["llamacpp", "openai", "openailike", "azopenai", "sagemaker", "mock", "ollama"]
+    mode: Literal[
+        "llamacpp", "openai", "openailike", "azopenai", "sagemaker", "mock", "ollama"
+    ]
     max_new_tokens: int = Field(
         256,
         description="The maximum number of token that the LLM is authorized to generate in one completion.",
@@ -185,6 +187,7 @@ class OllamaSettings(BaseModel):
         description="Model to use. Example: 'nomic-embed-text'.",
     )
 
+
 class AzureOpenAISettings(BaseModel):
     api_key: str
     azure_endpoint: str
@@ -202,6 +205,7 @@ class AzureOpenAISettings(BaseModel):
         "gpt-35-turbo",
         description="OpenAI Model to use. Example: 'gpt-4'.",
     )
+
 
 class UISettings(BaseModel):
     enabled: bool
