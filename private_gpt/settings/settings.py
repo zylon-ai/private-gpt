@@ -105,7 +105,7 @@ class LLMSettings(BaseModel):
 
 
 class VectorstoreSettings(BaseModel):
-    database: Literal["chroma", "qdrant", "pgvector"]
+    database: Literal["chroma", "qdrant", "postgres"]
 
 
 class NodeStoreSettings(BaseModel):
@@ -176,6 +176,10 @@ class EmbeddingSettings(BaseModel):
             "Do not go too high with this number, as it might cause memory issues. (especially in `parallel` mode)\n"
             "Do not set it higher than your number of threads of your CPU."
         ),
+    )
+    embed_dim: int = Field(
+        384,
+        description="The dimension of the embeddings stored in the Postgres database",
     )
 
 
@@ -280,17 +284,6 @@ class PostgresSettings(BaseModel):
     )
 
 
-class PGVectorSettings(PostgresSettings):
-    embed_dim: int = Field(
-        384,
-        description="The dimension of the embeddings stored in the Postgres database",
-    )
-    table_name: str = Field(
-        "embeddings",
-        description="The name of the table in the Postgres database where the embeddings are stored",
-    )
-
-
 class QdrantSettings(BaseModel):
     location: str | None = Field(
         None,
@@ -360,7 +353,6 @@ class Settings(BaseModel):
     nodestore: NodeStoreSettings
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
-    pgvector: PGVectorSettings | None = None
 
 
 """

@@ -11,6 +11,7 @@ llm:
 
 embedding:
   mode: ollama
+  embed_dim: 768
 
 ollama:
   llm_model: mistral
@@ -21,17 +22,7 @@ nodestore:
   database: postgres
 
 vectorstore:
-  database: pgvector
-
-pgvector:
-  host: localhost
-  port: 5432
   database: postgres
-  user: postgres
-  password: admin
-  embed_dim: 768
-  schema_name: private_gpt
-  table_name: embeddings
 
 postgres:
   host: localhost
