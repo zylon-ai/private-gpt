@@ -19,7 +19,7 @@ ollama:
   top_p: 0.9            # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
   repeat_last_n: 64     # Sets how far back for the model to look back to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)
   repeat_penalty: 1.2   # Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)
-  request_timeout: 30.0 # Time elapsed until ollama times out the request. Default is 30s. Format is float.
+  request_timeout: 120.0 # Time elapsed until ollama times out the request. Default is 120s. Format is float.
 
 vectorstore:
   database: qdrant
