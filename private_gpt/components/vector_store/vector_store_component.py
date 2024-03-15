@@ -130,12 +130,12 @@ class VectorStoreComponent:
         self,
         index: VectorStoreIndex,
         context_filter: ContextFilter | None = None,
-        similarity_top_k: int = 2,
+        sim_top_k = settings.rag.similarity_top_k,
     ) -> VectorIndexRetriever:
         # This way we support qdrant (using doc_ids) and the rest (using filters)
         return VectorIndexRetriever(
             index=index,
-            similarity_top_k=similarity_top_k,
+            similarity_top_k=sim_top_k,
             doc_ids=context_filter.docs_ids if context_filter else None,
             filters=(
                 _doc_id_metadata_filter(context_filter)

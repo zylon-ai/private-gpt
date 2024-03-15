@@ -108,6 +108,10 @@ class RagSettings(BaseModel):
         None,
         description="If set, any documents retrieved from the RAG must meet a certain score. Acceptable values are between 0 and 1.",
     )
+    similarity_top_k: int = Field(
+        2,
+        description="An integer that specifies the number of documents to use when searching the RAG database",
+    )
 
 
 class VectorstoreSettings(BaseModel):
