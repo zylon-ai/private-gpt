@@ -107,6 +107,12 @@ class LLMSettings(BaseModel):
         description="If set, any documents retrieved from the RAG must meet a certain score. Acceptable values are between 0 and 1.",
     )
 
+class RagSettings(BaseModel):
+    similarity_value: float = Field(
+        None,
+        description="If set, any documents retrieved from the RAG must meet a certain score. Acceptable values are between 0 and 1.",
+    )
+
 
 class VectorstoreSettings(BaseModel):
     database: Literal["chroma", "qdrant", "pgvector"]
@@ -346,6 +352,7 @@ class Settings(BaseModel):
     data: DataSettings
     ui: UISettings
     llm: LLMSettings
+    rag: RagSettings
     embedding: EmbeddingSettings
     llamacpp: LlamaCPPSettings
     huggingface: HuggingFaceSettings

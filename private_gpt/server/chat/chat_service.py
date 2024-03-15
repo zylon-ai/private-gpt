@@ -118,7 +118,7 @@ class ChatService:
                 node_postprocessors=[
                     MetadataReplacementPostProcessor(target_metadata_key="window"),
                     SimilarityPostprocessor(
-                        similarity_cutoff=settings.llm.similarity_value
+                        similarity_cutoff=settings.rag.similarity_value
                     ),
                 ],
             )
