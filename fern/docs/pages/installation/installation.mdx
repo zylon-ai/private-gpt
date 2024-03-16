@@ -30,8 +30,8 @@ pyenv local 3.11
 PrivateGPT allows to customize the setup -from fully local to cloud based- by deciding the modules to use.
 Here are the different options available:
 
-- LLM: "llama-cpp", "ollama", "sagemaker", "openai", "openailike"
-- Embeddings: "huggingface", "openai", "sagemaker"
+- LLM: "llama-cpp", "ollama", "sagemaker", "openai", "openailike", "azopenai"
+- Embeddings: "huggingface", "openai", "sagemaker", "azopenai"
 - Vector stores: "qdrant", "chroma", "postgres"
 - UI: whether or not to enable UI (Gradio) or just go with the API
 
@@ -49,10 +49,12 @@ Where `<extra>` can be any of the following:
 - llms-sagemaker: adds support for Amazon Sagemaker LLM, requires Sagemaker inference endpoints
 - llms-openai: adds support for OpenAI LLM, requires OpenAI API key
 - llms-openai-like: adds support for 3rd party LLM providers that are compatible with OpenAI's API
+- llms-azopenai: adds support for Azure OpenAI LLM, requires Azure OpenAI inference endpoints
 - embeddings-ollama: adds support for Ollama Embeddings, requires Ollama running locally
 - embeddings-huggingface: adds support for local Embeddings using HuggingFace
 - embeddings-sagemaker: adds support for Amazon Sagemaker Embeddings, requires Sagemaker inference endpoints
 - embeddings-openai = adds support for OpenAI Embeddings, requires OpenAI API key
+- embeddings-azopenai = adds support for Azure OpenAI Embeddings, requires Azure OpenAI inference endpoints
 - vector-stores-qdrant: adds support for Qdrant vector store
 - vector-stores-chroma: adds support for Chroma DB vector store
 - vector-stores-postgres: adds support for Postgres vector store
@@ -157,6 +159,29 @@ PGPT_PROFILES=openai make run
 ```
 
 PrivateGPT will use the already existing `settings-openai.yaml` settings file, which is already configured to use OpenAI LLM and Embeddings endpoints, and Qdrant.
+
+The UI will be available at http://localhost:8001
+
+### Non-Private, Azure OpenAI-powered test setup
+
+If you want to test PrivateGPT with Azure OpenAI's LLM and Embeddings -taking into account your data is going to Azure OpenAI!- you can run the following command:
+
+You need to have access to Azure OpenAI inference endpoints for the LLM and / or the embeddings, and have Azure OpenAI credentials properly configured.
+
+Edit the `settings-azopenai.yaml` file to include the correct Azure OpenAI endpoints.
+
+Then, install PrivateGPT with the following command:
+```bash
+poetry install --extras "ui llms-azopenai embeddings-azopenai vector-stores-qdrant"
+```
+
+Once installed, you can run PrivateGPT.
+
+```bash
+PGPT_PROFILES=azopenai make run
+```
+
+PrivateGPT will use the already existing `settings-azopenai.yaml` settings file, which is already configured to use Azure OpenAI LLM and Embeddings endpoints, and Qdrant.
 
 The UI will be available at http://localhost:8001
 

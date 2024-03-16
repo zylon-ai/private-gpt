@@ -132,5 +132,23 @@ class LLMComponent:
                     context_window=settings.llm.context_window,
                     additional_kwargs=settings_kwargs,
                 )
+            case "azopenai":
+                try:
+                    from llama_index.llms.azure_openai import (  # type: ignore
+                        AzureOpenAI,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Azure OpenAI dependencies not found, install with `poetry install --extras llms-azopenai`"
+                    ) from e
+
+                azopenai_settings = settings.azopenai
+                self.llm = AzureOpenAI(
+                    model=azopenai_settings.llm_model,
+                    deployment_name=azopenai_settings.llm_deployment_name,
+                    api_key=azopenai_settings.api_key,
+                    azure_endpoint=azopenai_settings.azure_endpoint,
+                    api_version=azopenai_settings.api_version,
+                )
             case "mock":
                 self.llm = MockLLM()
