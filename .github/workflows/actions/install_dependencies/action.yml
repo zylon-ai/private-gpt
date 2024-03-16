@@ -25,6 +25,6 @@ runs:
         python-version: ${{ inputs.python_version }}
         cache: "poetry"
     - name: Install Dependencies
-      run: poetry install --with ui --no-root
+      run: poetry install --extras "ui vector-stores-qdrant" --no-root
       shell: bash
 

@@ -4,5 +4,6 @@ server:
 # This configuration allows you to use GPU for creating embeddings while avoiding loading LLM into vRAM
 llm:
   mode: mock
+
 embedding:
-  mode: local
+  mode: huggingface

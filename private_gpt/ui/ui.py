@@ -1,4 +1,5 @@
 """This file should be imported if and only if you want to run the UI locally."""
+
 import itertools
 import logging
 import time
@@ -10,7 +11,7 @@ import gradio as gr  # type: ignore
 from fastapi import FastAPI
 from gradio.themes.utils.colors import slate  # type: ignore
 from injector import inject, singleton
-from llama_index.llms import ChatMessage, ChatResponse, MessageRole
+from llama_index.core.llms import ChatMessage, ChatResponse, MessageRole
 from pydantic import BaseModel
 
 from private_gpt.constants import PROJECT_ROOT_PATH
@@ -44,8 +45,8 @@ class Source(BaseModel):
         frozen = True
 
     @staticmethod
-    def curate_sources(sources: list[Chunk]) -> set["Source"]:
-        curated_sources = set()
+    def curate_sources(sources: list[Chunk]) -> list["Source"]:
+        curated_sources = []
 
         for chunk in sources:
             doc_metadata = chunk.document.doc_metadata
@@ -54,7 +55,10 @@ class Source(BaseModel):
             page_label = doc_metadata.get("page_label", "-") if doc_metadata else "-"
 
             source = Source(file=file_name, page=page_label, text=chunk.text)
-            curated_sources.add(source)
+            curated_sources.append(source)
+            curated_sources = list(
+                dict.fromkeys(curated_sources).keys()
+            )  # Unique sources only
 
         return curated_sources
 
@@ -96,10 +100,15 @@ class PrivateGptUi:
             if completion_gen.sources:
                 full_response += SOURCES_SEPARATOR
                 cur_sources = Source.curate_sources(completion_gen.sources)
-                sources_text = "\n\n\n".join(
-                    f"{index}. {source.file} (page {source.page})"
-                    for index, source in enumerate(cur_sources, start=1)
-                )
+                sources_text = "\n\n\n"
+                used_files = set()
+                for index, source in enumerate(cur_sources, start=1):
+                    if (source.file + "-" + source.page) not in used_files:
+                        sources_text = (
+                            sources_text
+                            + f"{index}. {source.file} (page {source.page}) \n\n"
+                        )
+                        used_files.add(source.file + "-" + source.page)
                 full_response += sources_text
             yield full_response
 

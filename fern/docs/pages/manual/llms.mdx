@@ -25,6 +25,30 @@ When the server is started it will print a log *Application startup complete*.
 Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API
 using Swagger UI.
 
+#### Customizing low level parameters
+
+Currently, not all the parameters of `llama.cpp` and `llama-cpp-python` are available at PrivateGPT's `settings.yaml` file.
+In case you need to customize parameters such as the number of layers loaded into the GPU, you might change
+these at the `llm_component.py` file under the `private_gpt/components/llm/llm_component.py`.
+
+##### Available LLM config options
+
+The `llm` section of the settings allows for the following configurations:
+
+- `mode`: how to run your llm
+- `max_new_tokens`: this lets you configure the number of new tokens the LLM will generate and add to the context window (by default Llama.cpp uses `256`)
+
+Example:
+
+```yaml
+llm:
+  mode: local
+  max_new_tokens: 256
+```
+
+If you are getting an out of memory error, you might also try a smaller model or stick to the proposed
+recommended models, instead of custom tuning the parameters.
+
 ### Using OpenAI
 
 If you cannot run a local model (because you don't have a GPU, for example) or for testing purposes, you may
@@ -73,6 +97,43 @@ As an example, you can follow the [vLLM quickstart guide](https://docs.vllm.ai/e
 to run an OpenAI compatible server. Then, you can run PrivateGPT using the `settings-vllm.yaml` profile:
 
 `PGPT_PROFILES=vllm make run`
+
+### Using Azure OpenAI
+
+If you cannot run a local model (because you don't have a GPU, for example) or for testing purposes, you may
+decide to run PrivateGPT using Azure OpenAI as the LLM and Embeddings model.
+
+In order to do so, create a profile `settings-azopenai.yaml` with the following contents:
+
+```yaml
+llm:
+  mode: azopenai
+
+embedding:
+  mode: azopenai
+
+azopenai:
+  api_key: <your_azopenai_api_key>  # You could skip this configuration and use the AZ_OPENAI_API_KEY env var instead
+  azure_endpoint: <your_azopenai_endpoint> # You could skip this configuration and use the AZ_OPENAI_ENDPOINT env var instead
+  api_version: <api_version> # The API version to use. Default is "2023_05_15"
+  embedding_deployment_name: <your_embedding_deployment_name> # You could skip this configuration and use the AZ_OPENAI_EMBEDDING_DEPLOYMENT_NAME env var instead
+  embedding_model: <openai_embeddings_to_use> # Optional model to use. Default is "text-embedding-ada-002" 
+  llm_deployment_name: <your_model_deployment_name> # You could skip this configuration and use the AZ_OPENAI_LLM_DEPLOYMENT_NAME env var instead
+  llm_model: <openai_model_to_use> # Optional model to use. Default is "gpt-35-turbo"
+```
+
+And run PrivateGPT loading that profile you just created:
+
+`PGPT_PROFILES=azopenai make run`
+
+or
+
+`PGPT_PROFILES=azopenai poetry run python -m private_gpt`
+
+When the server is started it will print a log *Application startup complete*.
+Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
+You'll notice the speed and quality of response is higher, given you are using Azure OpenAI's servers for the heavy
+computations.
 
 ### Using AWS Sagemaker
 

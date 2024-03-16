@@ -2,11 +2,14 @@ import logging
 import typing
 
 from injector import inject, singleton
-from llama_index import VectorStoreIndex
-from llama_index.indices.vector_store import VectorIndexRetriever
-from llama_index.vector_stores.types import VectorStore
+from llama_index.core.indices.vector_store import VectorIndexRetriever, VectorStoreIndex
+from llama_index.core.vector_stores.types import (
+    FilterCondition,
+    MetadataFilter,
+    MetadataFilters,
+    VectorStore,
+)
 
-from private_gpt.components.vector_store.batched_chroma import BatchedChromaVectorStore
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import Settings
@@ -14,44 +17,48 @@ from private_gpt.settings.settings import Settings
 logger = logging.getLogger(__name__)
 
 
-@typing.no_type_check
-def _chromadb_doc_id_metadata_filter(
+def _doc_id_metadata_filter(
     context_filter: ContextFilter | None,
-) -> dict | None:
-    if context_filter is None or context_filter.docs_ids is None:
-        return {}  # No filter
-    elif len(context_filter.docs_ids) < 1:
-        return {"doc_id": "-"}  # Effectively filtering out all docs
-    else:
-        doc_filter_items = []
-        if len(context_filter.docs_ids) > 1:
-            doc_filter = {"$or": doc_filter_items}
-            for doc_id in context_filter.docs_ids:
-                doc_filter_items.append({"doc_id": doc_id})
-        else:
-            doc_filter = {"doc_id": context_filter.docs_ids[0]}
-        return doc_filter
+) -> MetadataFilters:
+    filters = MetadataFilters(filters=[], condition=FilterCondition.OR)
+
+    if context_filter is not None and context_filter.docs_ids is not None:
+        for doc_id in context_filter.docs_ids:
+            filters.filters.append(MetadataFilter(key="doc_id", value=doc_id))
+
+    return filters
 
 
 @singleton
 class VectorStoreComponent:
+    settings: Settings
     vector_store: VectorStore
 
     @inject
     def __init__(self, settings: Settings) -> None:
+        self.settings = settings
         match settings.vectorstore.database:
-            case "pgvector":
-                from llama_index.vector_stores import PGVectorStore
+            case "postgres":
+                try:
+                    from llama_index.vector_stores.postgres import (  # type: ignore
+                        PGVectorStore,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Postgres dependencies not found, install with `poetry install --extras vector-stores-postgres`"
+                    ) from e
 
-                if settings.pgvector is None:
+                if settings.postgres is None:
                     raise ValueError(
-                        "PGVectorStore settings not found. Please provide settings."
+                        "Postgres settings not found. Please provide settings."
                     )
 
                 self.vector_store = typing.cast(
                     VectorStore,
                     PGVectorStore.from_params(
-                        **settings.pgvector.model_dump(exclude_none=True)
+                        **settings.postgres.model_dump(exclude_none=True),
+                        table_name="embeddings",
+                        embed_dim=settings.embedding.embed_dim,
                     ),
                 )
 
@@ -61,11 +68,13 @@ class VectorStoreComponent:
                     from chromadb.config import (  # type: ignore
                         Settings as ChromaSettings,
                     )
+
+                    from private_gpt.components.vector_store.batched_chroma import (
+                        BatchedChromaVectorStore,
+                    )
                 except ImportError as e:
                     raise ImportError(
-                        "'chromadb' is not installed."
-                        "To use PrivateGPT with Chroma, install the 'chroma' extra."
-                        "`poetry install --extras chroma`"
+                        "ChromaDB dependencies not found, install with `poetry install --extras vector-stores-chroma`"
                     ) from e
 
                 chroma_settings = ChromaSettings(anonymized_telemetry=False)
@@ -85,8 +94,15 @@ class VectorStoreComponent:
                 )
 
             case "qdrant":
-                from llama_index.vector_stores.qdrant import QdrantVectorStore
-                from qdrant_client import QdrantClient
+                try:
+                    from llama_index.vector_stores.qdrant import (  # type: ignore
+                        QdrantVectorStore,
+                    )
+                    from qdrant_client import QdrantClient  # type: ignore
+                except ImportError as e:
+                    raise ImportError(
+                        "Qdrant dependencies not found, install with `poetry install --extras vector-stores-qdrant`"
+                    ) from e
 
                 if settings.qdrant is None:
                     logger.info(
@@ -112,20 +128,22 @@ class VectorStoreComponent:
                     f"Vectorstore database {settings.vectorstore.database} not supported"
                 )
 
-    @staticmethod
     def get_retriever(
+        self,
         index: VectorStoreIndex,
         context_filter: ContextFilter | None = None,
         similarity_top_k: int = 2,
     ) -> VectorIndexRetriever:
-        # This way we support qdrant (using doc_ids) and chroma (using where clause)
+        # This way we support qdrant (using doc_ids) and the rest (using filters)
         return VectorIndexRetriever(
             index=index,
             similarity_top_k=similarity_top_k,
             doc_ids=context_filter.docs_ids if context_filter else None,
-            vector_store_kwargs={
-                "where": _chromadb_doc_id_metadata_filter(context_filter)
-            },
+            filters=(
+                _doc_id_metadata_filter(context_filter)
+                if self.settings.vectorstore.database != "qdrant"
+                else None
+            ),
         )
 
     def close(self) -> None:

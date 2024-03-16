@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request
-from llama_index.llms import ChatMessage, MessageRole
+from llama_index.core.llms import ChatMessage, MessageRole
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
