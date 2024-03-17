@@ -45,7 +45,7 @@ class Document(BaseModel):
 class DocumentMakerChecker(DocumentCreate):
     action_type: str
     status: str
-
+    doc_type_id: int
 
 class DocumentMakerCreate(DocumentMakerChecker):
     pass

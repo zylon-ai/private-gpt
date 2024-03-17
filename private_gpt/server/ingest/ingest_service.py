@@ -72,7 +72,7 @@ class IngestService:
         logger.debug("Ingesting text data with file_name=%s", file_name)
         return self._ingest_data(file_name, text)
 
-    def ingest_bin_data(
+    async def ingest_bin_data(
         self, file_name: str, raw_file_data: BinaryIO
     ) -> list[IngestedDoc]:
         logger.debug("Ingesting binary data with file_name=%s", file_name)

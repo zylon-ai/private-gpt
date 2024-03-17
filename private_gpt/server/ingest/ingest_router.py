@@ -44,13 +44,13 @@ class IngestResponse(BaseModel):
 class DeleteFilename(BaseModel):
     filename: str
 
-@ingest_router.post("/ingest", tags=["Ingestion"], deprecated=True)
-def ingest(request: Request, file: UploadFile) -> IngestResponse:
-    """Ingests and processes a file.
+# @ingest_router.post("/ingest", tags=["Ingestion"], deprecated=True)
+# def ingest(request: Request, file: UploadFile) -> IngestResponse:
+#     """Ingests and processes a file.
 
-    Deprecated. Use ingest/file instead.
-    """
-    return ingest_file(request, file)
+#     Deprecated. Use ingest/file instead.
+#     """
+#     return ingest_file(request, file)
 
 
 @ingest_router.post("/ingest/file1", tags=["Ingestion"])
@@ -205,7 +205,8 @@ async def create_documents(
         filename=file_name, 
         uploaded_by=current_user.id, 
         action_type=MakerCheckerActionType.INSERT,
-        status=MakerCheckerStatus.PENDING
+        status=MakerCheckerStatus.PENDING,
+        doc_type_id=departments.doc_type_id,
     )
     print("DOCUMENT CREATE: ", docs_in)
     document = crud.documents.create(db=db, obj_in=docs_in)
@@ -298,35 +299,26 @@ async def common_ingest_logic(
 
 
 async def ingest(request: Request, file_path: str) -> IngestResponse:
-    """Ingests and processes a file, storing its chunks to be used as context.
-
-    The context obtained from files is later used in
-    `/chat/completions`, `/completions`, and `/chunks` APIs.
-
-    Most common document
-    formats are supported, but you may be prompted to install an extra dependency to
-    manage a specific file type.
-
-    A file can generate different Documents (for example a PDF generates one Document
-    per page). All Documents IDs are returned in the response, together with the
-    extracted Metadata (which is later used to improve context retrieval). Those IDs
-    can be used to filter the context used to create responses in
-    `/chat/completions`, `/completions`, and `/chunks` APIs.
-    """
+    """Ingests and processes a file, storing its chunks to be used as context."""
     service = request.state.injector.get(IngestService)
+
     try:
         with open(file_path, 'rb') as file:
             file_name = Path(file_path).name
             upload_path = Path(f"{UPLOAD_DIR}/{file_name}")
-            
-            with open(upload_path, "wb") as f:
-                f.write(file.file.read())
-            with open(upload_path, "rb") as f:
-                ingested_documents = service.ingest_bin_data(file.filename, f)
+
+            with upload_path.open('wb') as f:
+                f.write(file.read())
+
+            with upload_path.open('rb') as f:
+                ingested_documents = await service.ingest_bin_data(file_name, f)
+
     except Exception as e:
         return {"message": f"There was an error uploading the file(s)\n {e}"}
+
     finally:
-        file.file.close()
+        upload_path.unlink(missing_ok=True)
+
     return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
 
 

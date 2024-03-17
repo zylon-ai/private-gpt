@@ -15,6 +15,7 @@ from private_gpt.users.constants.role import Role
 from private_gpt.users import crud, models, schemas
 from private_gpt.server.ingest.ingest_router import create_documents, ingest
 from private_gpt.users.models.document import MakerCheckerActionType, MakerCheckerStatus
+from private_gpt.components.ocr_components.table_ocr_api import process_both_ocr, process_ocr
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/documents', tags=['Documents'])
@@ -262,7 +263,7 @@ async def upload_documents(
         )
 
 
-@router.post('/verify', response_model=schemas.Document)
+@router.post('/verify')
 async def verify_documents(
     request: Request,
     checker_in: schemas.DocumentUpdate = Depends(),
@@ -284,8 +285,7 @@ async def verify_documents(
                 detail="Document not found!",
             )
         unchecked_path = Path(f"{UNCHECKED_DIR}/{document.filename}")
-        print(checker_in.status)
-        print(MakerCheckerStatus.APPROVED.value)
+
         if checker_in.status == MakerCheckerStatus.APPROVED.value:
             checker = schemas.DocumentCheckerUpdate(
                     status=MakerCheckerStatus.APPROVED,
@@ -296,9 +296,9 @@ async def verify_documents(
             crud.documents.update(db=db, db_obj= document, obj_in=checker)
 
             if document.doc_type_id == 2:
-                return await ingest(request, unchecked_path)
+                return await process_ocr(request, unchecked_path)
             elif document.doc_type_id == 3:
-                return await ingest(request, unchecked_path)
+                return await process_both_ocr(request, unchecked_path)
             else:
                 return await ingest(request, unchecked_path)
             

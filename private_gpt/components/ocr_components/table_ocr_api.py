@@ -13,7 +13,7 @@ from private_gpt.users import models, schemas
 from private_gpt.users.constants.role import Role
 from private_gpt.components.ocr_components.table_ocr import GetOCRText
 from private_gpt.components.ocr_components.TextExtraction import ImageToTable
-from private_gpt.server.ingest.ingest_router import common_ingest_logic, IngestResponse
+from private_gpt.server.ingest.ingest_router import common_ingest_logic, IngestResponse, ingest
 pdf_router = APIRouter(prefix="/v1", tags=["ocr"])
 
 
@@ -80,9 +80,7 @@ async def process_pdf_ocr(
 ):
     UPLOAD_DIR = OCR_UPLOAD
     try:
-        print("The file name is: ", file.filename)
         pdf_path = await save_uploaded_file(file, UPLOAD_DIR)
-        print("The file path: ", pdf_path)
         ocr_doc_path = await process_images_and_generate_doc(request, pdf_path, UPLOAD_DIR)
         ingested_documents = await common_ingest_logic(
             request=request, db=db, ocr_file=ocr_doc_path, current_user=current_user, original_file=None, log_audit=log_audit, departments=departments
@@ -95,6 +93,43 @@ async def process_pdf_ocr(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"There was an error processing OCR: {e}"
         )
+
+
+async def process_ocr(
+        request: Request,
+        pdf_path: str,
+):
+    UPLOAD_DIR = OCR_UPLOAD
+    try:
+        ocr_doc_path = await process_images_and_generate_doc(request, pdf_path, UPLOAD_DIR)
+        ingested_documents = await ingest(request=request, file_path=ocr_doc_path)
+        return ingested_documents
+    except Exception as e:
+        print(traceback.print_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"There was an error processing OCR: {e}"
+        )
+
+async def process_both_ocr(
+        request: Request, 
+        pdf_path: str
+):
+    UPLOAD_DIR = OCR_UPLOAD
+    try:
+        ocr_doc_path = await process_images_and_generate_doc(request, pdf_path, UPLOAD_DIR)
+        ingested_ocr_documents = await ingest(request=request, file_path=ocr_doc_path) # ingest ocr
+        ingested_documents = await ingest(request=request, file_path=pdf_path) # ingest pdf 
+        return ingested_documents
+    
+    except Exception as e:
+        print(traceback.print_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"There was an error processing OCR: {e}"
+        )
+
+    
 
 async def process_both(
     request: Request,

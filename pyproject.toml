@@ -50,6 +50,8 @@ boto3 = {version ="^1.34.51", optional = true}
 
 # Optional UI
 gradio = {version ="^4.19.2", optional = true}
+aiofiles = "^23.2.1"
+timm = "^0.9.16"
 
 [tool.poetry.extras]
 ui = ["gradio"]
