@@ -1,6 +1,6 @@
-from typing import List, Optional
-from pydantic import BaseModel, EmailStr
-from fastapi import Form
+from typing import Optional
+from pydantic import BaseModel
+
 
 
 class DepartmentBase(BaseModel):
@@ -51,5 +51,3 @@ class Department(DepartmentBase):
         orm_mode = True
 
 
-class DocumentDepartmentList(BaseModel):
-    departments_ids: str = Form(...)

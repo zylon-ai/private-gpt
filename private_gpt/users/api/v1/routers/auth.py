@@ -37,7 +37,7 @@ def register_user(
     user_in = schemas.UserCreate(
             email=email,
             password=password,
-            fullname=fullname,
+            username=fullname,
             company_id=company.id,
             department_id=department.id,
         )    
@@ -97,7 +97,7 @@ def ad_user_register(
     """
     Register a new user in the database. Company id is directly given here.
     """
-    user_in = schemas.UserCreate(email=email, password=password, fullname=fullname, company_id=1, department_id=department_id)
+    user_in = schemas.UserCreate(email=email, password=password, username=fullname, company_id=1, department_id=department_id)
     user = crud.user.create(db, obj_in=user_in)
     user_role_name = Role.GUEST["name"]
     company = crud.company.get(db, 1)
@@ -229,9 +229,7 @@ def register(
     db: Session = Depends(deps.get_db),
     email: str = Body(...),
     fullname: str = Body(...),
-    # password: str = Body(...),
-    company_id: int = Body(None, title="Company ID",
-                           description="Company ID for the user (if applicable)"),
+    password: str = Body(...),
     department_id: int = Body(None, title="Department ID",
                                 description="Department name for the user (if applicable)"),
     role_name: str = Body(None, title="Role Name",
@@ -257,8 +255,11 @@ def register(
             status_code=409,
             detail="The user with this email already exists!",
         )
-    random_password = security.generate_random_password()
+    # random_password = security.generate_random_password()
+    random_password = password
+    
     try:
+        company_id = current_user.company_id
         if company_id:
             company = crud.company.get(db, company_id)
             if not company:
@@ -280,20 +281,21 @@ def register(
             )
             user_role_name = role_name or Role.GUEST["name"]
             user_role = create_user_role(db, user, user_role_name, company)
-            log_audit(model='user_roles', action='creation',
+            log_audit(model='user_roles', action='create',
                       details={'detail': "User role created successfully.", }, user_id=current_user.id)
+            
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(
             status_code=500,
             detail="Unable to create account.",
         )
+    
     token_payload = create_token_payload(user, user_role)
     response_dict = {
         "access_token": security.create_access_token(token_payload, expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)),
         "refresh_token": security.create_refresh_token(token_payload, expires_delta=timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)),
         "token_type": "bearer",
-        "password": random_password,
     }
     log_audit(model='User', action='creation',
               details={'detail': "User created successfully.",'username':fullname}, user_id=current_user.id)

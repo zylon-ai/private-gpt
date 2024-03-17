@@ -1,5 +1,5 @@
 from private_gpt.users.db.base_class import Base
-from sqlalchemy import Column, Integer, String, Table, ForeignKey
+from sqlalchemy import Column, Integer, Table, ForeignKey
 
 document_department_association = Table(
     "document_department_association",

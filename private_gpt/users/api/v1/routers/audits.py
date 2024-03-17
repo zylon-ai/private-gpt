@@ -1,9 +1,7 @@
 from typing import Any, List
 
 from sqlalchemy.orm import Session
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
-from fastapi import APIRouter, Depends, HTTPException, status, Security, Request
+from fastapi import APIRouter, Depends, HTTPException, Security, Request
 
 from private_gpt.users.api import deps
 from private_gpt.users.constants.role import Role
@@ -15,7 +13,6 @@ router = APIRouter(prefix="/audit", tags=["Companies"])
 
 @router.get("", response_model=List[schemas.Audit])
 def list_auditlog(
-    request: Request,
     db: Session = Depends(deps.get_db),
     skip: int = 0,
     limit: int = 100,
@@ -30,7 +27,7 @@ def list_auditlog(
     def get_fullname(id):
         user = crud.user.get_by_id(db, id=id)
         if user:
-            return user.fullname
+            return user.username
         return ""
     
     logs = crud.audit.get_multi_desc(db, skip=skip, limit=limit)
@@ -52,7 +49,6 @@ def list_auditlog(
 
 @router.post("", response_model=schemas.Audit)
 def get_auditlog(
-    request: Request,
     audit: schemas.GetAudit,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
@@ -66,7 +62,7 @@ def get_auditlog(
     def get_fullname(id):
         user = crud.user.get_by_id(db, id=id)
         if user:
-            return user.fullname
+            return user.username
         return ""
     
     logs = crud.audit.get_by_id(db, id=audit.id)

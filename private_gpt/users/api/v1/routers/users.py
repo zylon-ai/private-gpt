@@ -107,7 +107,7 @@ def create_user(
             'admin_id': current_user.id,
             'user_id': user.id,
             'email': user.email,
-            'fullname': user.fullname,
+            'username': user.username,
             'company_id': user.company_id,
             'department_id': user.department_id,
         }
@@ -130,26 +130,21 @@ def update_username(
     """
     Update own username.
     """
-    user_in = schemas.UserUpdate(fullname=update_in.fullname, email=current_user.email, company_id=current_user.company_id)
-    old_fullname = current_user.fullname
+    user_in = schemas.UsernameUpdate(
+        username=update_in.username)
+    
+    old_username = current_user.username
     user = crud.user.update(db, db_obj=current_user, obj_in=user_in)
-    user_data = schemas.UserBaseSchema(
-        email=user.email,
-        fullname=user.fullname,
-        company_id=user.company_id,
-        department_id=user.department_id,
-    )
     details = {
-            'old_fullname': old_fullname,
-            'new_fullname': user.fullname,
+        'before': old_username,
+            'after': user.username,
         }
-    log_audit_user(request=request, db=db, current_user=current_user, action='update_username', details=details)
+    
+    log_audit_user(request=request, db=db, current_user=current_user, action='update', details=details)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={"message": "Username updated successfully",
-                 "user": jsonable_encoder(user_data)},
+        content={"message": "Username updated successfully"},
     )
-
 
 
 @router.get("/me", response_model=schemas.User)
@@ -163,7 +158,7 @@ def read_user_me(
     role = current_user.user_role.role.name if current_user.user_role else None
     user_data = schemas.Profile(
         email=current_user.email,
-        fullname=current_user.fullname,
+        username=current_user.username,
         company_id = current_user.company_id,
         department_id=current_user.department_id,
         role =role
@@ -193,24 +188,14 @@ def change_password(
     current_user.hashed_password = new_password_hashed
     db.commit()
 
-    role = current_user.user_role.role.name if current_user.user_role else None
-    user_data = schemas.UserBaseSchema(
-        id=current_user.id,
-        email=current_user.email,
-        fullname=current_user.fullname,
-        company_id= current_user.company_id,
-        department_id=current_user.department_id,
-    )
-
     details = {
             'detail': 'Password changed successfully!',
-            'user_id': current_user.id,
         }
-    log_audit_user(request, db, current_user, 'change_password', details)
+    log_audit_user(request, db, current_user, 'update', details)
     
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={"message": "Password changed successfully", "user": jsonable_encoder(user_data)},
+        content={"message": "Password changed successfully"},
     )
 
 
@@ -234,49 +219,6 @@ def read_user_by_id(
         content={"message": "User retrieved successfully", "user": jsonable_encoder(user)},
     )
 
-
-@router.put("/{user_id}", response_model=schemas.User)
-def update_user(
-    *,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    user_id: int,
-    user_in: schemas.UserUpdate,
-    current_user: models.User = Security(
-        deps.get_current_user,
-        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
-    ),
-) -> Any:
-    """
-    Update a user.
-    """
-    user = crud.user.get(db, id=user_id)
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="The user with this id does not exist in the system",
-        )
-    user = crud.user.update(db, db_obj=user, obj_in=user_in)
-    user_data = schemas.UserBaseSchema(
-        id=user.id,
-        email=user.email,
-        fullname=user.fullname,
-        company_id=user.company_id,
-        department_id=user.department_id,
-    )
-    details = {
-        'user_id': user.id,
-        'email': user.email,
-        'fullname': user.fullname,
-        'company_id': user.company_id,
-        'department_id': user.department_id,
-    }
-    log_audit_user(request, db, current_user, 'update user', details)
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={"message": "User updated successfully", "user": jsonable_encoder(user_data)},
-    )
 
 
 @router.get("/")
@@ -316,18 +258,9 @@ def admin_change_password(
     user.hashed_password = new_password_hashed
     db.commit()
 
-    user_data = schemas.UserBaseSchema(
-        id=user.id,
-        email=user.email,
-        fullname=user.fullname,
-        company_id=user.company_id,
-        department_id=user.department_id,
-    )
-    
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={"message": "User password changed successfully",
-                 "user": jsonable_encoder(user_data)},
+        content={"message": "User password changed successfully"},
     )
 
 
@@ -349,11 +282,10 @@ def delete_user(
     user = crud.user.get(db, id=user_id)
 
     details = {
-            'detail': "user deleted successfully!",
-            'email': user.email,
-            'fullname': user.fullname,
-            'department_id': user.department_id,
-        }
+        'email': user.email,
+        'username': user.username,
+        'department_id': user.department_id,
+    }
 
     log_audit_user(request, db, current_user, 'delete', details)
 
@@ -378,10 +310,9 @@ def admin_update_user(
     ),
 ) -> Any:
     """
-    Update the user by the Admin/Super_ADMIN 
+    Update the user by the Admin/Super_ADMIN/Operator
     """
     try:
-
         existing_user = crud.user.get_by_id(db, id=user_update.id)
         if existing_user is None:
             raise HTTPException(
@@ -389,13 +320,13 @@ def admin_update_user(
                 detail=f"User not found with id: {user_update.id}",
             )
         old_detail = {
-            'fullname': existing_user.fullname,
+            'username': existing_user.username,
             'role': existing_user.user_role.role.name,
             'department': existing_user.department_id
         }
-        if not (existing_user.fullname == user_update.fullname):
-            fullname = crud.user.get_by_name(db, name=user_update.fullname)
-            if fullname:
+        if not (existing_user.username == user_update.username):
+            username = crud.user.get_by_name(db, name=user_update.username)
+            if username:
                 raise HTTPException(
                     status_code=409,
                     detail="The user with this username already exists!",
@@ -414,18 +345,18 @@ def admin_update_user(
             role_id=role.id,
         )
         role = crud.user_role.update(db, db_obj=user_role, obj_in=role_in)
-        user_update_in = schemas.UserAdmin(fullname=user_update.fullname, department_id=user_update.department_id)
+        user_update_in = schemas.UserAdmin(username=user_update.username, department_id=user_update.department_id)
 
         new_detail = {
-            'fullname': user_update.fullname,
+            'username': user_update.username,
             'role': user_update.role,
             'department': user_update.department_id
         }
         details = {
-            'old detail': old_detail,
-            'new detail': new_detail,
+            'before': old_detail,
+            'after': new_detail,
         }
-        log_audit_user(request, db, current_user, 'admin_update', details)
+        log_audit_user(request, db, current_user, 'update', details)
         user = crud.user.get_by_id(db, id=existing_user.id)
         crud.user.update(db, db_obj=user, obj_in=user_update_in)
 
@@ -433,6 +364,7 @@ def admin_update_user(
             status_code=status.HTTP_200_OK,
             content={"message": "User updated successfully"}
         )
+    
     except Exception as e:
         print(traceback.print_exc())
         return HTTPException(

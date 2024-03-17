@@ -1,13 +1,32 @@
 from datetime import datetime
-from sqlalchemy import Boolean, event, select, func, update, insert
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship
+from sqlalchemy import Boolean, event, select, func, update
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 
-from private_gpt.users.models.department import Department
-from private_gpt.users.models.makerchecker import MakerChecker
 from private_gpt.users.db.base_class import Base
-
+from private_gpt.users.models.department import Department
 from private_gpt.users.models.document_department import document_department_association
+from sqlalchemy import Enum
+from enum import Enum as PythonEnum
+
+class MakerCheckerStatus(PythonEnum):
+    PENDING = 'pending'
+    APPROVED = 'approved'
+    REJECTED = 'rejected'
+
+
+class MakerCheckerActionType(PythonEnum):
+    INSERT = 'insert'
+    UPDATE = 'update'
+    DELETE = 'delete'
+
+class DocumentType(Base):
+    """Models a document table"""
+    __tablename__ = "document_type"
+
+    id = Column(Integer, primary_key=True, index=True)
+    type = Column(String(225), nullable=False, unique=True)
+    documents = relationship("Document", back_populates='doc_type')
 
 
 class Document(Base):
@@ -29,21 +48,27 @@ class Document(Base):
     uploaded_by_user = relationship(
         "User", back_populates="uploaded_documents")
     is_enabled = Column(Boolean, default=True)
-    # Use document_department_association as the secondary for the relationship
-    verified = Column(Boolean, default=False)  # Added verified column
+    verified = Column(Boolean, default=False) 
+    
+    doc_type_id = Column(Integer, ForeignKey("document_type.id"))
+    doc_type = relationship("DocumentType", back_populates='documents')
+
+    action_type = Column(Enum(MakerCheckerActionType), nullable=False,
+                         default=MakerCheckerActionType.INSERT)  # 'insert' or 'update' or 'delete'
+    # 'pending', 'approved', or 'rejected'
+    status = Column(Enum(MakerCheckerStatus), nullable=False,
+                    default=MakerCheckerStatus.PENDING)
+
+    verified_at = Column(DateTime, nullable=True)
+    verified_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+
     departments = relationship(
         "Department",
         secondary=document_department_association,
         back_populates="documents"
     )
-    # Relationship with MakerChecker
-    maker_checker_entry = relationship(
-        "MakerChecker",
-        backref=backref("document", uselist=False),
-        foreign_keys="[MakerChecker.record_id]",
-        primaryjoin="and_(MakerChecker.table_name=='document', MakerChecker.record_id==Document.id)",
-    )
-
+    
 # Event listeners for updating total_documents in Department
 @event.listens_for(Document, 'after_insert')
 @event.listens_for(Document, 'after_delete')

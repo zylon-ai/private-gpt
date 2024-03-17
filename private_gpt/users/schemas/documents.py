@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List
+from fastapi import Form, UploadFile, File
 
 class DocumentsBase(BaseModel):
     filename: str
@@ -12,8 +13,10 @@ class DepartmentList(BaseModel):
 class DocumentCreate(DocumentsBase):
     uploaded_by: int
 
-class DocumentUpdate(DocumentsBase):
-    pass
+class DocumentUpdate(BaseModel):
+    id: int
+    status: str
+    is_enabled: bool
 
 class DocumentEnable(DocumentsBase):
     is_enabled: bool
@@ -38,3 +41,23 @@ class Document(BaseModel):
 
     class Config:
         orm_mode = True
+
+class DocumentMakerChecker(DocumentCreate):
+    action_type: str
+    status: str
+
+
+class DocumentMakerCreate(DocumentMakerChecker):
+    pass
+
+
+class DocumentCheckerUpdate(BaseModel):
+    status: str
+    is_enabled: bool
+    verified_at: datetime
+    verified_by: int
+
+
+class DocumentDepartmentList(BaseModel):
+    departments_ids: str = Form(...)
+    doc_type_id: int

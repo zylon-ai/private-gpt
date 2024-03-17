@@ -1,18 +1,22 @@
-import traceback
+import os
 import logging
+import aiofiles
+import traceback
+from pathlib import Path
+from datetime import datetime
+
 from typing import Any, List
 from sqlalchemy.orm import Session
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
-from fastapi import APIRouter, Depends, HTTPException, status, Security, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Security, Request, File, UploadFile
 
 from private_gpt.users.api import deps
+from private_gpt.constants import UNCHECKED_DIR
 from private_gpt.users.constants.role import Role
 from private_gpt.users import crud, models, schemas
-from private_gpt.users.schemas import Document
+from private_gpt.server.ingest.ingest_router import create_documents, ingest
+from private_gpt.users.models.makerchecker import MakerCheckerActionType, MakerCheckerStatus
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix='/documents', tags=['Documents'])
 
 
@@ -27,9 +31,12 @@ def list_files(
         scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
     )
 ):
+    """
+    List the documents based on the role. 
+    """
     def get_username(db, id):
-        user = crud.user.get_by_id(db=db, id=id) 
-        return user.fullname
+        user = crud.user.get_by_id(db=db, id=id)
+        return user.username
 
     try:
         role = current_user.user_role.role.name if current_user.user_role else None
@@ -119,7 +126,6 @@ def list_files_by_department(
         )
 
 
-
 @router.post('/update', response_model=schemas.DocumentEnable)
 def update_document(
     request: Request,
@@ -131,6 +137,9 @@ def update_document(
         scopes=[Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
     )
 ):
+    '''
+    Function to enable or disable document.
+    '''
     try:
         document = crud.documents.get_by_filename(
             db, file_name=document_in.filename)
@@ -161,7 +170,7 @@ def update_document(
 @router.post('/department_update', response_model=schemas.DocumentList)
 def update_department(
     request: Request,
-    document_in: schemas.DocumentDepartmentUpdate ,
+    document_in: schemas.DocumentDepartmentUpdate,
     db: Session = Depends(deps.get_db),
     log_audit: models.Audit = Depends(deps.get_audit_logger),
     current_user: models.User = Security(
@@ -182,7 +191,6 @@ def update_department(
                 detail="Document with this filename doesn't exist!",
             )
         department_ids = [int(number) for number in document_in.departments]
-        print("Department update: ", document_in, department_ids)
         for department_id in department_ids:
             db.execute(models.document_department_association.insert().values(document_id=document.id, department_id=department_id))
         log_audit(
@@ -202,3 +210,120 @@ def update_department(
             detail="Internal Server Error.",
         )
     
+
+@router.post('/upload', response_model=schemas.Document)
+async def upload_documents(
+    request: Request,
+    departments: schemas.DocumentDepartmentList = Depends(),
+    file: UploadFile = File(...),
+
+    log_audit: models.Audit = Depends(deps.get_audit_logger),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.ADMIN["name"],
+                Role.SUPER_ADMIN["name"], 
+                Role.OPERATOR["name"]],
+    )
+):
+    """Upload the documents."""
+    try:
+        original_filename = file.filename
+        if original_filename is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No file name provided",
+            )
+        upload_path = Path(f"{UNCHECKED_DIR}/{original_filename}")
+        try:
+            contents = await file.read()
+            async with aiofiles.open(upload_path, 'wb') as f:
+                await f.write(contents)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal Server Error: Unable to ingest file.",
+            )
+        document = await create_documents(db, original_filename, current_user, departments, log_audit)
+        logger.info(
+            f"{original_filename} is uploaded by {current_user.username} in {departments.departments_ids}")
+        return document
+
+    except HTTPException:
+        print(traceback.print_exc())
+        raise
+
+    except Exception as e:
+        print(traceback.print_exc())
+        logger.error(f"There was an error uploading the file(s): {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error: Unable to upload file.",
+        )
+
+
+@router.post('/verify', response_model=schemas.Document)
+async def verify_documents(
+    request: Request,
+    checker_in: schemas.DocumentUpdate = Depends(),
+    log_audit: models.Audit = Depends(deps.get_audit_logger),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.ADMIN["name"],
+                Role.SUPER_ADMIN["name"],
+                Role.OPERATOR["name"]],
+    )
+):
+    """Upload the documents."""
+    try:
+        document = crud.documents.get_by_id(db, id=checker_in.id)
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Document not found!",
+            )
+        unchecked_path = Path(f"{UNCHECKED_DIR}/{document.filename}")
+        if checker_in.status == MakerCheckerStatus.APPROVED:
+            checker = schemas.DocumentCheckerUpdate(
+                    status=MakerCheckerStatus.APPROVED,
+                    is_enabled=checker_in.is_enabled,
+                    verified_at=datetime.now(),
+                    verified_by=current_user.id,
+                )
+            crud.documents.update(db=db, db_obj= document, obj_in=checker)
+
+            if document.doc_type_id == 2:
+                return ingest(request, unchecked_path)
+            elif document.doc_type_id == 3:
+                return ingest(request, unchecked_path)
+            else:
+                return ingest(request, unchecked_path)
+            
+        elif checker_in.status == MakerCheckerStatus.REJECTED:
+            checker = schemas.DocumentCheckerUpdate(
+                status=MakerCheckerStatus.REJECTED,
+                is_enabled=checker_in.is_enabled,
+                verified_at=datetime.now(),
+                verified_by=current_user.id,
+            )
+            crud.documents.update(db=db, db_obj=document, obj_in=checker)
+            os.remove(unchecked_path)
+
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot change status to PENDING!",
+            )
+
+    except HTTPException:
+        print(traceback.print_exc())
+        raise
+
+    except Exception as e:
+        print(traceback.print_exc())
+        logger.error(f"There was an error uploading the file(s): {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error: Unable to upload file.",
+        )

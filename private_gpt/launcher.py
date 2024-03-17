@@ -18,7 +18,7 @@ from private_gpt.server.chunks.chunks_router import chunks_router
 from private_gpt.server.ingest.ingest_router import ingest_router
 from private_gpt.components.ocr_components.table_ocr_api import pdf_router
 from private_gpt.server.completions.completions_router import completions_router
-from private_gpt.server.embeddings.embeddings_router import embeddings_router
+from private_gpt.server.embeddings.embeddings_router import embxeddings_router
 
 logger = logging.getLogger(__name__)
 
@@ -58,14 +58,5 @@ def create_app(root_injector: Injector) -> FastAPI:
             allow_methods=["DELETE", "GET", "POST", "PUT", "OPTIONS", "PATCH"],
             allow_headers=["*"],
         )
-
-    if settings.ui.enabled:
-        logger.debug("Importing the UI module")
-        try:
-            from private_gpt.ui.ui import PrivateGptUi
-        except ImportError as e:
-            raise ImportError(
-                "UI dependencies not found, install with `poetry install --extras ui`"
-            ) from e
 
     return app

@@ -165,22 +165,21 @@ def update_department(
 
         updated_department = crud.department.update(
             db=db, db_obj=department, obj_in=department_in)
-        updated_department = jsonable_encoder(updated_department)
-
         details = {
-            'detail': 'Department updated successfully!',
             'department_id': department.id,
-            'old_department_name': old_name,
-            'new_department_name': department.name,
+            'before': {
+                'name': old_name
+            },
+            'after': {
+                'name': department_in.name
+            }
         }
-
         log_audit_department(request, db, current_user, 'update', details)
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
                 "message": f"Department updated successfully",
-                "department": updated_department
             },
         )
     except Exception as e:
@@ -212,19 +211,15 @@ def delete_department(
             raise HTTPException(status_code=404, detail="Department not found")
 
         details = {
-            'detail': "Department deleted successfully!",
             'department_id': department.id,
             'department_name': department.name
         }
-        deleted_department = crud.department.remove(db=db, id=department_id)
+        crud.department.remove(db=db, id=department_id)
         log_audit_department(request, db, current_user, 'delete', details)
-        
-        deleted_department = jsonable_encoder(deleted_department)
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
                 "message": "Department deleted successfully",
-                "department": deleted_department,
             },
         )
     except Exception as e:

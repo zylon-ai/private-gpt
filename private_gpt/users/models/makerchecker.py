@@ -1,34 +1,27 @@
-from datetime import datetime
-from sqlalchemy import Boolean, event, select, func, update
-from sqlalchemy.orm import relationship
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
-from private_gpt.users.db.base_class import Base
-from sqlalchemy import Enum
-from enum import Enum as PythonEnum
+# from sqlalchemy import Enum
+# from datetime import datetime
+# from enum import Enum as PythonEnum
+# from private_gpt.users.db.base_class import Base
+# from sqlalchemy import Column, Integer, ForeignKey, DateTime
 
-class MakerCheckerStatus(PythonEnum):
-    PENDING = 'pending'
-    APPROVED = 'approved'
-    REJECTED = 'rejected'
+# class MakerCheckerStatus(PythonEnum):
+#     PENDING = 'pending'
+#     APPROVED = 'approved'
+#     REJECTED = 'rejected'
 
 
-class MakerCheckerActionType(PythonEnum):
-    INSERT = 'insert'
-    UPDATE = 'update'
+# class MakerCheckerActionType(PythonEnum):
+#     INSERT = 'insert'
+#     UPDATE = 'update'
+#     DELETE = 'delete'
 
 
-class MakerChecker(Base):
-    """Models a maker-checker table"""
-    __tablename__ = "maker_checker"
+# class MakerChecker(Base):
+#     """Models a maker-checker base"""
 
-    id = Column(Integer, primary_key=True, index=True)
-    table_name = Column(String(50), nullable=False)
-    record_id = Column(Integer, nullable=False)
-    action_type = Column(Enum(MakerCheckerActionType), nullable=False, default=MakerCheckerActionType.INSERT)  # 'insert' or 'update'
-    status = Column(Enum(MakerCheckerStatus), nullable=False, default=MakerCheckerStatus.PENDING)  # 'pending', 'approved', or 'rejected'
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    verified_at = Column(DateTime, nullable=True)
-    verified_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+#     action_type = Column(Enum(MakerCheckerActionType), nullable=False, default=MakerCheckerActionType.INSERT)  # 'insert' or 'update' or 'delete'
+#     status = Column(Enum(MakerCheckerStatus), nullable=False, default=MakerCheckerStatus.PENDING)  # 'pending', 'approved', or 'rejected'
 
-    def __repr__(self):
-        return f"<MakerChecker {self.table_name} {self.record_id}>"
+#     verified_at = Column(DateTime, nullable=True)
+#     verified_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
