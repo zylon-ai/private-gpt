@@ -35,7 +35,7 @@ class Document(BaseModel):
     id: int
     is_enabled: bool
     filename: str
-    uploaded_by: str
+    uploaded_by: int
     uploaded_at: datetime
     departments: List[DepartmentList] = []
 

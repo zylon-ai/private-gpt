@@ -200,12 +200,14 @@ async def create_documents(
             status_code=409,
             detail="File already exists. Choose a different file.",
         )
+    print(f"{file_name} uploaded by {current_user.id} action {MakerCheckerActionType.INSERT.value} and status {MakerCheckerStatus.PENDING.value}")
     docs_in = schemas.DocumentMakerCreate(
         filename=file_name, 
         uploaded_by=current_user.id, 
         action_type=MakerCheckerActionType.INSERT,
         status=MakerCheckerStatus.PENDING
     )
+    print("DOCUMENT CREATE: ", docs_in)
     document = crud.documents.create(db=db, obj_in=docs_in)
     department_ids = [int(number) for number in department_ids.split(",")]
     for department_id in department_ids:

@@ -41,7 +41,8 @@ class User(Base):
     company = relationship("Company", back_populates="users")
 
     uploaded_documents = relationship(
-        "Document", back_populates="uploaded_by_user")
+        "Document", back_populates="uploaded_by_user",
+        foreign_keys="[Document.uploaded_by]")
 
     user_role = relationship(
         "UserRole", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -61,18 +62,18 @@ class User(Base):
 
 
 # Event listeners
-@event.listens_for(User, 'after_insert')
-@event.listens_for(User, 'after_delete')
-def update_total_users(mapper, connection, target):
-    department_id = target.department_id
-    total_users = connection.execute(
-        select([func.count()]).select_from(User).where(
-            User.department_id == department_id)
-    ).scalar()
-    connection.execute(
-        update(Department).values(total_users=total_users).where(
-            Department.id == department_id)
-    )
+# @event.listens_for(User, 'after_insert')
+# @event.listens_for(User, 'after_delete')
+# def update_total_users(mapper, connection, target):
+#     department_id = target.department_id
+#     total_users = connection.execute(
+#         select([func.count()]).select_from(User).where(
+#             User.department_id == department_id)
+#     ).scalar()
+#     connection.execute(
+#         update(Department).values(total_users=total_users).where(
+#             Department.id == department_id)
+#     )
 
 
 @event.listens_for(User, 'before_insert')

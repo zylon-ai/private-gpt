@@ -14,7 +14,7 @@ from private_gpt.constants import UNCHECKED_DIR
 from private_gpt.users.constants.role import Role
 from private_gpt.users import crud, models, schemas
 from private_gpt.server.ingest.ingest_router import create_documents, ingest
-from private_gpt.users.models.makerchecker import MakerCheckerActionType, MakerCheckerStatus
+from private_gpt.users.models.document import MakerCheckerActionType, MakerCheckerStatus
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/documents', tags=['Documents'])
@@ -284,7 +284,9 @@ async def verify_documents(
                 detail="Document not found!",
             )
         unchecked_path = Path(f"{UNCHECKED_DIR}/{document.filename}")
-        if checker_in.status == MakerCheckerStatus.APPROVED:
+        print(checker_in.status)
+        print(MakerCheckerStatus.APPROVED.value)
+        if checker_in.status == MakerCheckerStatus.APPROVED.value:
             checker = schemas.DocumentCheckerUpdate(
                     status=MakerCheckerStatus.APPROVED,
                     is_enabled=checker_in.is_enabled,
@@ -294,13 +296,13 @@ async def verify_documents(
             crud.documents.update(db=db, db_obj= document, obj_in=checker)
 
             if document.doc_type_id == 2:
-                return ingest(request, unchecked_path)
+                return await ingest(request, unchecked_path)
             elif document.doc_type_id == 3:
-                return ingest(request, unchecked_path)
+                return await ingest(request, unchecked_path)
             else:
-                return ingest(request, unchecked_path)
+                return await ingest(request, unchecked_path)
             
-        elif checker_in.status == MakerCheckerStatus.REJECTED:
+        elif checker_in.status == MakerCheckerStatus.REJECTED.value:
             checker = schemas.DocumentCheckerUpdate(
                 status=MakerCheckerStatus.REJECTED,
                 is_enabled=checker_in.is_enabled,

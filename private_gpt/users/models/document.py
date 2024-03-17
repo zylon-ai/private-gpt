@@ -10,15 +10,15 @@ from sqlalchemy import Enum
 from enum import Enum as PythonEnum
 
 class MakerCheckerStatus(PythonEnum):
-    PENDING = 'pending'
-    APPROVED = 'approved'
-    REJECTED = 'rejected'
+    PENDING = 'PENDING'
+    APPROVED = 'APPROVED'
+    REJECTED = 'REJECTED'
 
 
 class MakerCheckerActionType(PythonEnum):
-    INSERT = 'insert'
-    UPDATE = 'update'
-    DELETE = 'delete'
+    INSERT = 'INSERT'
+    UPDATE = 'UPDATE'
+    DELETE = 'DELETE'
 
 class DocumentType(Base):
     """Models a document table"""
@@ -38,7 +38,7 @@ class Document(Base):
     uploaded_by = Column(
         Integer,
         ForeignKey("users.id"),
-        nullable=False,
+        nullable=False
     )
     uploaded_at = Column(
         DateTime,
@@ -46,7 +46,9 @@ class Document(Base):
         nullable=False,
     )
     uploaded_by_user = relationship(
-        "User", back_populates="uploaded_documents")
+        "User", back_populates="uploaded_documents",
+        foreign_keys="[Document.uploaded_by]")
+    
     is_enabled = Column(Boolean, default=True)
     verified = Column(Boolean, default=False) 
     
@@ -69,23 +71,22 @@ class Document(Base):
         back_populates="documents"
     )
     
-# Event listeners for updating total_documents in Department
-@event.listens_for(Document, 'after_insert')
-@event.listens_for(Document, 'after_delete')
-def update_total_documents(mapper, connection, target):
-    total_documents = connection.execute(
-        select([func.count()]).select_from(document_department_association).where(
-            document_department_association.c.document_id == target.id)
-    ).scalar()
+# @event.listens_for(Document, 'after_insert')
+# @event.listens_for(Document, 'after_delete')
+# def update_total_documents(mapper, connection, target):
+#     total_documents = connection.execute(
+#         func.count().select().select_from(document_department_association).where(
+#             document_department_association.c.document_id == target.id)
+#     ).scalar()
 
-    department_ids = [assoc.department_id for assoc in connection.execute(
-        select([document_department_association.c.department_id]).where(
-            document_department_association.c.document_id == target.id)
-    )]
+#     department_ids = [assoc.department_id for assoc in connection.execute(
+#         select([document_department_association.c.department_id]).where(
+#             document_department_association.c.document_id == target.id)
+#     )]
 
-    # Update total_documents for each associated department
-    for department_id in department_ids:
-        connection.execute(
-            update(Department).values(total_documents=total_documents).where(
-                Department.id == department_id)
-        )
+#     # Update total_documents for each associated department
+#     for department_id in department_ids:
+#         connection.execute(
+#             update(Department).values(total_documents=total_documents).where(
+#                 Department.id == department_id)
+#         )

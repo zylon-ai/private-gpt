@@ -41,12 +41,12 @@ def register_user(
             company_id=company.id,
             department_id=department.id,
         )    
-    try:
-        send_registration_email(fullname, email, password)
-    except Exception as e:
-        logging.info(f"Failed to send registration email: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to send registration email.")
+    # try:
+    #     send_registration_email(fullname, email, password)
+    # except Exception as e:
+    #     logging.info(f"Failed to send registration email: {str(e)}")
+    #     raise HTTPException(
+    #         status_code=500, detail=f"Failed to send registration email.")
     return crud.user.create(db, obj_in=user_in)
 
 
@@ -82,7 +82,7 @@ def create_token_payload(user: models.User, user_role: models.UserRole) -> dict:
         "id": str(user.id),
         "email": str(user.email),
         "role": user_role.role.name,
-        "username": str(user.fullname),
+        "username": str(user.username),
         "company_id": user_role.company.id if user_role.company else None,
         "department_id": user.department_id
     }
@@ -173,7 +173,7 @@ def login_access_token(
     token_payload = {
         "id": str(user.id),
         "email": str(user.email),
-        "username": str(user.fullname),
+        "username": str(user.username),
         "role": role,
         "company_id": company_id,
         "department_id": str(user.department_id),
@@ -229,7 +229,7 @@ def register(
     db: Session = Depends(deps.get_db),
     email: str = Body(...),
     fullname: str = Body(...),
-    password: str = Body(...),
+    # password: str = Body(...),
     department_id: int = Body(None, title="Department ID",
                                 description="Department name for the user (if applicable)"),
     role_name: str = Body(None, title="Role Name",
@@ -249,14 +249,14 @@ def register(
             model='User', 
             action='creation',
             details={"status": '409', 'detail': "The user with this email already exists!", },
-            user_id=current_user.id
+            # user_id=current_user.id
         )
         raise HTTPException(
             status_code=409,
             detail="The user with this email already exists!",
         )
-    # random_password = security.generate_random_password()
-    random_password = password
+    random_password = security.generate_random_password()
+    # random_password = password
     
     try:
         company_id = current_user.company_id
