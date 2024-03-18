@@ -10,9 +10,6 @@ pipeline {
             steps {
                 script {
                 sh """
-                python3 -m venv ./venv
-                . ./venv/bin/activate
-                pip install poetry
                 poetry install --extras "ui vector-stores-qdrant" --no-root
                 """
                 }
