@@ -22,7 +22,7 @@ pipeline {
         }
         stage('Building our image') {
             steps {
-                sh "docker build -f Dockerfile.local -t vinnimous/privategpt:latest"
+                sh "docker build -f Dockerfile.local -t vinnimous/privategpt:latest ."
             }
         }
         stage('Login to Docker') {
