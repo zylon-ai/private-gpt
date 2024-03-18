@@ -2,6 +2,9 @@
 
 pipeline {
     agent any
+    options {
+        buildDiscarder(logRotator(numToKeepStr: "3", artifactNumToKeepStr: "3"))
+    }
     stages {
         stage('Setup') { // Install any dependencies you need to perform testing
             steps {
