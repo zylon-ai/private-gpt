@@ -162,7 +162,7 @@ async def prompt_completion(
         action='Chat',
         details={
             "query": body.prompt,
-            'user': current_user.fullname,
+            'user': current_user.username,
             }, 
         user_id=current_user.id
     )

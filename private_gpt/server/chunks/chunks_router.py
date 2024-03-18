@@ -70,7 +70,7 @@ async def chunks_retrieval(
         action='Chat',
         details={
             "query": body.text,
-            'user': current_user.fullname,
+            'user': current_user.username,
             }, 
         user_id=current_user.id
     )

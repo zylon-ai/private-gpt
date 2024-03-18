@@ -249,7 +249,7 @@ def register(
             model='User', 
             action='creation',
             details={"status": '409', 'detail': "The user with this email already exists!", },
-            # user_id=current_user.id
+            user_id=current_user.id
         )
         raise HTTPException(
             status_code=409,

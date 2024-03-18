@@ -18,7 +18,8 @@ class DocumentUpdate(BaseModel):
     status: str
     is_enabled: bool
 
-class DocumentEnable(DocumentsBase):
+class DocumentEnable(BaseModel):
+    id: int
     is_enabled: bool
 
 class DocumentDepartmentUpdate(DocumentsBase):
@@ -52,6 +53,7 @@ class DocumentMakerCreate(DocumentMakerChecker):
 
 
 class DocumentCheckerUpdate(BaseModel):
+    action_type: str
     status: str
     is_enabled: bool
     verified_at: datetime
@@ -60,4 +62,20 @@ class DocumentCheckerUpdate(BaseModel):
 
 class DocumentDepartmentList(BaseModel):
     departments_ids: str = Form(...)
-    doc_type_id: int
+    doc_type_id: int = Form(...)
+    file: UploadFile = File(...)
+
+
+
+class DocumentView(BaseModel):
+    id: int
+    is_enabled: bool
+    filename: str
+    uploaded_by: str
+    uploaded_at: datetime
+    departments: List[DepartmentList] = []
+    action_type: str
+    status: str
+
+    class Config:
+        orm_mode = True

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/documents', tags=['Documents'])
 
 
-@router.get("", response_model=List[schemas.Document])
+@router.get("", response_model=List[schemas.DocumentView])
 def list_files(
     request: Request,
     db: Session = Depends(deps.get_db),
@@ -44,11 +44,11 @@ def list_files(
         if (role == "SUPER_ADMIN") or (role == "OPERATOR"):
             docs = crud.documents.get_multi(db, skip=skip, limit=limit)
         else:
-            docs = crud.documents.get_multi_documents(
+            docs = crud.documents.get_documents_by_departments(
                 db, department_id=current_user.department_id, skip=skip, limit=limit)
         
         documents = [
-            schemas.Document(
+            schemas.DocumentView(
                 id=doc.id,
                 filename=doc.filename,
                 uploaded_by=get_username(db, doc.uploaded_by),
@@ -57,7 +57,9 @@ def list_files(
                 departments=[
                     schemas.DepartmentList(id=dep.id, name=dep.name)
                     for dep in doc.departments
-                ]
+                ],
+                action_type=doc.action_type,
+                status=doc.status
             )
             for doc in docs
         ]
@@ -135,26 +137,28 @@ def update_document(
     log_audit: models.Audit = Depends(deps.get_audit_logger),
     current_user: models.User = Security(
         deps.get_current_user,
-        scopes=[Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
+        scopes=[Role.ADMIN["name"],
+                Role.SUPER_ADMIN["name"],
+                Role.OPERATOR["name"]]
     )
 ):
     '''
     Function to enable or disable document.
     '''
     try:
-        document = crud.documents.get_by_filename(
-            db, file_name=document_in.filename)
+        document = crud.documents.get_by_id(
+            db, id=document_in.id)
         if not document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Document with this filename doesn't exist!",
+                detail="Document with this id doesn't exist!",
             )
         docs = crud.documents.update(db=db, db_obj=document, obj_in=document_in)
         log_audit(
             model='Document', 
             action='update',
             details={
-                'detail': f'{document_in.filename} status changed to {document_in.is_enabled} from {document.is_enabled}'
+                'detail': f'{document.filename} status changed to {document_in.is_enabled} from {document.is_enabled}'
             }, 
             user_id=current_user.id
         )
@@ -216,8 +220,6 @@ def update_department(
 async def upload_documents(
     request: Request,
     departments: schemas.DocumentDepartmentList = Depends(),
-    file: UploadFile = File(...),
-
     log_audit: models.Audit = Depends(deps.get_audit_logger),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
@@ -229,6 +231,7 @@ async def upload_documents(
 ):
     """Upload the documents."""
     try:
+        file = departments.file
         original_filename = file.filename
         if original_filename is None:
             raise HTTPException(
@@ -288,6 +291,7 @@ async def verify_documents(
 
         if checker_in.status == MakerCheckerStatus.APPROVED.value:
             checker = schemas.DocumentCheckerUpdate(
+                    action_type=MakerCheckerActionType.UPDATE,
                     status=MakerCheckerStatus.APPROVED,
                     is_enabled=checker_in.is_enabled,
                     verified_at=datetime.now(),
@@ -304,8 +308,9 @@ async def verify_documents(
             
         elif checker_in.status == MakerCheckerStatus.REJECTED.value:
             checker = schemas.DocumentCheckerUpdate(
+                action_type=MakerCheckerActionType.DELETE,
                 status=MakerCheckerStatus.REJECTED,
-                is_enabled=checker_in.is_enabled,
+                is_enabled=False,
                 verified_at=datetime.now(),
                 verified_by=current_user.id,
             )

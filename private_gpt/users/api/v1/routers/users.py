@@ -333,7 +333,7 @@ def admin_update_user(
                 )
 
         role = crud.role.get_by_name(db, name=user_update.role)
-        if (role.id == 1) or (role.id == 4) :
+        if (role.id == 1) or (role.id == 3): # role id for SUPER_ADMIN and OPERATOR 
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Cannot create SUPER ADMIN!",
