@@ -10,4 +10,4 @@ services:
     environment:
       PORT: 8080
       PGPT_PROFILES: docker
-      PGPT_MODE: ollama
+      PGPT_MODE: llamacpp
