@@ -46,5 +46,7 @@ COPY --chown=worker scripts/ scripts
 
 ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
 
+RUN poetry run python /scripts/setup
+RUN CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall
 USER worker
 ENTRYPOINT python -m private_gpt

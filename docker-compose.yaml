@@ -1,9 +1,9 @@
 services:
   private-gpt:
-    image: allfunc/privategpt:latest
+    # image: allfunc/privategpt:latest
 
-    # build:
-    #   dockerfile: Dockerfile.local
+    build:
+      dockerfile: Dockerfile.local
       
     volumes:
       - /srv/dev-disk-by-uuid-17681c56-e3a1-4eb9-95da-2196a64acca3/configs/privateGPT/local_data/conf:/home/worker/app/local_data
