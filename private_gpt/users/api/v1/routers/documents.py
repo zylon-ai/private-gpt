@@ -357,7 +357,6 @@ async def verify_documents(
                 detail="Cannot verify by same user!",
             )
         
-    
         unchecked_path = Path(f"{UNCHECKED_DIR}/{document.filename}")
 
         if checker_in.status == MakerCheckerStatus.APPROVED.value:
