@@ -20,6 +20,7 @@ from llama_index.core.storage import StorageContext
 from private_gpt.components.ingest.ingest_helper import IngestionHelper
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import Settings
+from private_gpt.utils.eta import eta
 
 logger = logging.getLogger(__name__)
 
@@ -358,7 +359,11 @@ class PipelineIngestComponent(BaseIngestComponentWithIndex):
         # Using a shallow queue causes the filesystem parser to block
         # when it reaches capacity. This ensures it doesn't outpace the
         # computationally intensive embeddings phase, avoiding unnecessary
-        # memory consumption
+        # memory consumption.  The semaphore is used to bound the async worker
+        # embedding computations to cause the doc Q to fill and block.
+        self.doc_semaphore = multiprocessing.Semaphore(
+            self.count_workers
+        )  # limit the doc queue to # items.
         self.doc_q: Queue[tuple[str, str | None, list[Document] | None]] = Queue(20)
         # node_q stores documents parsed into nodes (embeddings).
         # Larger queue size so we don't block the embedding workers during a slow
@@ -379,6 +384,8 @@ class PipelineIngestComponent(BaseIngestComponentWithIndex):
                     )  # Documents for a file
                     if cmd == "process":
                         # Push CPU/GPU embedding work to the worker pool
+                        # Acquire semaphore to control access to worker pool
+                        self.doc_semaphore.acquire()
                         pool.apply_async(
                             self._doc_to_node_worker, (file_name, documents)
                         )
@@ -398,6 +405,7 @@ class PipelineIngestComponent(BaseIngestComponentWithIndex):
             )
             self.node_q.put(("process", file_name, documents, nodes))
         finally:
+            self.doc_semaphore.release()
             self.doc_q.task_done()  # unblock Q joins
 
     def _save_docs(
@@ -459,7 +467,7 @@ class PipelineIngestComponent(BaseIngestComponentWithIndex):
 
     def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[Document]:
         docs = []
-        for file_name, file_data in files:
+        for file_name, file_data in eta(files):
             try:
                 documents = IngestionHelper.transform_file_into_documents(
                     file_name, file_data
