@@ -1,7 +1,7 @@
 ## Vectorstores
 PrivateGPT supports [Qdrant](https://qdrant.tech/), [Chroma](https://www.trychroma.com/) and [PGVector](https://github.com/pgvector/pgvector) as vectorstore providers. Qdrant being the default.
 
-In order to select one or the other, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant`, `chroma` or `pgvector`.
+In order to select one or the other, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant`, `chroma` or `postgres`.
 
 ```yaml
 vectorstore:
@@ -50,14 +50,15 @@ poetry install --extras chroma
 By default `chroma` will use a disk-based database stored in local_data_path / "chroma_db" (being local_data_path defined in settings.yaml)
 
 ### PGVector
+To use the PGVector store a [postgreSQL](https://www.postgresql.org/) database with the PGVector extension must be used.
 
-To enable PGVector, set the `vectorstore.database` property in the `settings.yaml` file to `pgvector` and install the `pgvector` extra.
+To enable PGVector, set the `vectorstore.database` property in the `settings.yaml` file to `postgres` and install the `vector-stores-postgres` extra.
 
 ```bash
-poetry install --extras pgvector
+poetry install --extras vector-stores-postgres
 ```
 
-PGVector settings can be configured by setting values to the `pgvector` property in the `settings.yaml` file.
+PGVector settings can be configured by setting values to the `postgres` property in the `settings.yaml` file.
 
 The available configuration options are:
 | Field         | Description                                               |
@@ -67,19 +68,36 @@ The available configuration options are:
 | **database**  | The specific database to connect to. Default is `postgres` |
 | **user**      | The username for database access. Default is `postgres` |
 | **password**  | The password for database access. (Required)            |
-| **embed_dim** | The dimensionality of the embedding model (Required)    |
 | **schema_name** | The database schema to use. Default is `private_gpt`       |
-| **table_name** | The database table to use. Default is `embeddings`    |
 
 For example:
 ```yaml
-pgvector:
+vectorstore:
+  database: postgres
+
+postgres:
   host: localhost
   port: 5432
   database: postgres
   user: postgres
   password: <PASSWORD>
-  embed_dim: 384 # 384 is for BAAI/bge-small-en-v1.5
   schema_name: private_gpt
-  table_name: embeddings
 ```
+
+The following table will be created in the database
+```
+postgres=# \d private_gpt.data_embeddings
+                                      Table "private_gpt.data_embeddings"
+  Column   |       Type        | Collation | Nullable |                         Default
+-----------+-------------------+-----------+----------+---------------------------------------------------------
+ id        | bigint            |           | not null | nextval('private_gpt.data_embeddings_id_seq'::regclass)
+ text      | character varying |           | not null |
+ metadata_ | json              |           |          |
+ node_id   | character varying |           |          |
+ embedding | vector(768)       |           |          |
+Indexes:
+    "data_embeddings_pkey" PRIMARY KEY, btree (id)
+
+postgres=# 
+```
+The dimensions of the embeddings columns will be set based on the `embedding.embed_dim` value.  If the embedding model changes this table may need to be dropped and recreated to avoid a dimension mismatch.

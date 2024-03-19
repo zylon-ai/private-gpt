@@ -72,6 +72,24 @@ class EmbeddingComponent:
                     model_name=ollama_settings.embedding_model,
                     base_url=ollama_settings.api_base,
                 )
+            case "azopenai":
+                try:
+                    from llama_index.embeddings.azure_openai import (  # type: ignore
+                        AzureOpenAIEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Azure OpenAI dependencies not found, install with `poetry install --extras embeddings-azopenai`"
+                    ) from e
+
+                azopenai_settings = settings.azopenai
+                self.embedding_model = AzureOpenAIEmbedding(
+                    model=azopenai_settings.embedding_model,
+                    deployment_name=azopenai_settings.embedding_deployment_name,
+                    api_key=azopenai_settings.api_key,
+                    azure_endpoint=azopenai_settings.azure_endpoint,
+                    api_version=azopenai_settings.api_version,
+                )
             case "mock":
                 # Not a random number, is the dimensionality used by
                 # the default embedding model

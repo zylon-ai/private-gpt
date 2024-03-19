@@ -38,7 +38,7 @@ class VectorStoreComponent:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         match settings.vectorstore.database:
-            case "pgvector":
+            case "postgres":
                 try:
                     from llama_index.vector_stores.postgres import (  # type: ignore
                         PGVectorStore,
@@ -48,15 +48,17 @@ class VectorStoreComponent:
                         "Postgres dependencies not found, install with `poetry install --extras vector-stores-postgres`"
                     ) from e
 
-                if settings.pgvector is None:
+                if settings.postgres is None:
                     raise ValueError(
-                        "PGVectorStore settings not found. Please provide settings."
+                        "Postgres settings not found. Please provide settings."
                     )
 
                 self.vector_store = typing.cast(
                     VectorStore,
                     PGVectorStore.from_params(
-                        **settings.pgvector.model_dump(exclude_none=True)
+                        **settings.postgres.model_dump(exclude_none=True),
+                        table_name="embeddings",
+                        embed_dim=settings.embedding.embed_dim,
                     ),
                 )
 

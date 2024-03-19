@@ -58,6 +58,8 @@ navigation:
         contents:
           - page: Vector Stores
             path: ./docs/pages/manual/vectordb.mdx
+          - page: Node Stores
+            path: ./docs/pages/manual/nodestore.mdx
       - section: Advanced Setup
         contents:
           - page: LLM Backends
