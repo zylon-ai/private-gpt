@@ -1256,6 +1256,27 @@ uvicorn = {version = ">=0.12.0", extras = ["standard"], optional = true, markers
 all = ["email-validator (>=2.0.0)", "httpx (>=0.23.0)", "itsdangerous (>=1.1.0)", "jinja2 (>=2.11.2)", "orjson (>=3.2.1)", "pydantic-extra-types (>=2.0.0)", "pydantic-settings (>=2.0.0)", "python-multipart (>=0.0.7)", "pyyaml (>=5.3.1)", "ujson (>=4.0.1,!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0)", "uvicorn[standard] (>=0.12.0)"]
 
 [[package]]
+name = "fastapi-filter"
+version = "1.1.0"
+description = "FastAPI filter"
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "fastapi_filter-1.1.0-py3-none-any.whl", hash = "sha256:9807a65f76855580a51c232d51b15c5d69a033b6662ef445282a4f982280347f"},
+    {file = "fastapi_filter-1.1.0.tar.gz", hash = "sha256:94e2fec595afbcc383ccd7cbcfabe38b83ff4a7971eb404e92e1ad1da29274b2"},
+]
+
+[package.dependencies]
+fastapi = ">=0.100.0,<1.0"
+pydantic = ">=2.0.0,<3.0.0"
+SQLAlchemy = {version = ">=1.4.36,<2.1.0", optional = true, markers = "extra == \"sqlalchemy\" or extra == \"all\""}
+
+[package.extras]
+all = ["SQLAlchemy (>=1.4.36,<2.1.0)", "mongoengine (>=0.24.1,<0.28.0)"]
+mongoengine = ["mongoengine (>=0.24.1,<0.28.0)"]
+sqlalchemy = ["SQLAlchemy (>=1.4.36,<2.1.0)"]
+
+[[package]]
 name = "ffmpy"
 version = "0.3.2"
 description = "A simple Python wrapper for ffmpeg"
@@ -7126,4 +7147,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "98b94c8e94a361f61d52e33c22bb62703abfa63f72f1df0256b1db3de497c05e"
+content-hash = "b0715db49b2b01f8b6c1b3d122d93de58ef052be999114390fab9fa19cc9e794"

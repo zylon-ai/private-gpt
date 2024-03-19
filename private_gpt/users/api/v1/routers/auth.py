@@ -29,6 +29,7 @@ def register_user(
     password: str,
     company: Optional[models.Company] = None,
     department: Optional[models.Department] = None,
+    role: Optional[str] = None,
 ) -> models.User:
     """
     Register a new user in the database.
@@ -40,6 +41,7 @@ def register_user(
             username=fullname,
             company_id=company.id,
             department_id=department.id,
+            checker= True if role == 'OPERATOR' else False
         )    
     # try:
     #     send_registration_email(fullname, email, password)
@@ -97,7 +99,7 @@ def ad_user_register(
     """
     Register a new user in the database. Company id is directly given here.
     """
-    user_in = schemas.UserCreate(email=email, password=password, username=fullname, company_id=1, department_id=department_id)
+    user_in = schemas.UserCreate(email=email, password=password, username=fullname, company_id=1, department_id=department_id, checker=False)
     user = crud.user.create(db, obj_in=user_in)
     user_role_name = Role.GUEST["name"]
     company = crud.company.get(db, 1)
@@ -236,7 +238,9 @@ def register(
                           description="User role name (if applicable)"),
     current_user: models.User = Security(
         deps.get_current_active_user,
-        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
+        scopes=[Role.ADMIN["name"], 
+                Role.SUPER_ADMIN["name"],
+                Role.OPERATOR["name"]],
     ),
 ) -> Any:
     """
@@ -277,7 +281,7 @@ def register(
                     )
                 logging.info(f"Department is {department}")
             user = register_user(
-                db, email, fullname, random_password, company, department
+                db, email, fullname, random_password, company, department, role_name
             )
             user_role_name = role_name or Role.GUEST["name"]
             user_role = create_user_role(db, user, user_role_name, company)

@@ -1,10 +1,11 @@
+from typing import Optional
+from fastapi_filter.contrib.sqlalchemy import Filter
 from datetime import datetime
 from sqlalchemy.orm import relationship
 from sqlalchemy import Boolean, event, select, func, update
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 
 from private_gpt.users.db.base_class import Base
-from private_gpt.users.models.department import Department
 from private_gpt.users.models.document_department import document_department_association
 from sqlalchemy import Enum
 from enum import Enum as PythonEnum
@@ -90,3 +91,4 @@ class Document(Base):
 #             update(Department).values(total_documents=total_documents).where(
 #                 Department.id == department_id)
 #         )
+

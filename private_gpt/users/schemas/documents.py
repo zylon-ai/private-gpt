@@ -1,7 +1,11 @@
+from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List
 from fastapi import Form, UploadFile, File
+
+from fastapi_filter.contrib.sqlalchemy import Filter
+
 
 class DocumentsBase(BaseModel):
     filename: str
@@ -16,7 +20,6 @@ class DocumentCreate(DocumentsBase):
 class DocumentUpdate(BaseModel):
     id: int
     status: str
-    is_enabled: bool
 
 class DocumentEnable(BaseModel):
     id: int
@@ -58,7 +61,7 @@ class DocumentCheckerUpdate(BaseModel):
     is_enabled: bool
     verified_at: datetime
     verified_by: int
-
+    verified: bool
 
 class DocumentDepartmentList(BaseModel):
     departments_ids: str = Form(...)
@@ -79,3 +82,25 @@ class DocumentView(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class DocumentVerify(BaseModel):
+    id: int
+    filename: str
+    uploaded_by: str
+    uploaded_at: datetime
+    departments: List[DepartmentList] = []
+    status: str
+
+    class Config:
+        orm_mode = True
+
+
+
+class DocumentFilter(BaseModel):
+    filename: Optional[str] = None
+    uploaded_by: Optional[str] = None
+    action_type: Optional[str] = None
+    status: Optional[str] = None
+    order_by: Optional[str] = None
+

@@ -12,6 +12,7 @@ class UserBaseSchema(BaseModel):
 	username: str
 	company_id: int
 	department_id: int
+	checker: bool
 
 	class Config:
 		arbitrary_types_allowed = True
