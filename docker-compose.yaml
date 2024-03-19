@@ -11,10 +11,10 @@ services:
     networks:
       - gpt-net
     ports:
-      - 80:80
+      - 8001:8080
     restart: on-failure
     environment:
-      PORT: 80
+      PORT: 8080
       PGPT_PROFILES: docker
       PGPT_MODE: local
 
