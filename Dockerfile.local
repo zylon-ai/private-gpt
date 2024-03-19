@@ -25,9 +25,6 @@ WORKDIR /home/worker/app
 COPY pyproject.toml poetry.lock ./
 
 RUN poetry install --extras "ui embeddings-huggingface llms-llama-cpp vector-stores-qdrant"
-# Added by me for testing
-RUN poetry run python /scripts/setup
-RUN CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall
 
 FROM base as app
 
