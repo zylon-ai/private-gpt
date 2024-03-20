@@ -1,7 +1,7 @@
 services:
-  private-gpt:
+  private-gpt-gpu:
     build:
-      dockerfile: Dockerfile.local
+      dockerfile: Dockerfile.local.gpu
     volumes:
       - ./local_data/:/home/worker/app/local_data
       - ./models/:/home/worker/app/models
@@ -12,4 +12,10 @@ services:
       PGPT_PROFILES: docker
       PGPT_LLM_MODE: llamacpp
       PGPT_EMBEDDING_MODE: huggingface
-
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
