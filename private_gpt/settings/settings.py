@@ -243,7 +243,7 @@ class OllamaSettings(BaseModel):
     )
     request_timeout: float = Field(
         120.0,
-        description="Time elapsed until ollama times out the request. Default is 120s. Format is float. "
+        description="Time elapsed until ollama times out the request. Default is 120s. Format is float. ",
     )
 
 
