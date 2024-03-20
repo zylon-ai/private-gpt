@@ -15,13 +15,13 @@ You get to decide the setup for these 3 main components:
 There is an extra component that can be enabled or disabled: the UI. It is a Gradio UI that allows to interact with the API in a more user-friendly way.
 
 ### Setups and Dependencies
-Your setup will be the combination of the different options available. You'll find recommended setups in the [installation](/installation) section.
+Your setup will be the combination of the different options available. You'll find recommended setups in the [installation](./installation) section.
 PrivateGPT uses poetry to manage its dependencies. You can install the dependencies for the different setups by running `poetry install --extras "<extra1> <extra2>..."`.
 Extras are the different options available for each component. For example, to install the dependencies for a a local setup with UI and qdrant as vector database, Ollama as LLM and HuggingFace as local embeddings, you would run
 
 `poetry install --extras "ui vector-stores-qdrant llms-ollama embeddings-huggingface"`.
 
-Refer to the [installation](/installation) section for more details.
+Refer to the [installation](./installation) section for more details.
 
 ### Setups and Configuration
 PrivateGPT uses yaml to define its configuration in files named `settings-<profile>.yaml`.
