@@ -54,10 +54,11 @@ embedding:
   # Should be matching the value above in most cases
   mode: huggingface
   ingest_mode: simple
-  # gpu: cuda[0]      # if you have more than one GPU and you want to select another. defaults to cuda[0], or cpu if cuda not available
-
+    
 huggingface:
   embedding_hf_model_name: BAAI/bge-small-en-v1.5
+  gpu_type: cuda      #GPU typedevice for embedding, can be 'cuda', rocm or cpu". defaults to cuda[0], or cpu if cuda not available
+  gpu_number: 1       #Directly select a device, normally 0 if only a single GPU
 
 vectorstore:
   database: qdrant

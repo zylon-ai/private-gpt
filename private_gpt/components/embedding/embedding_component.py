@@ -41,16 +41,14 @@ class EmbeddingComponent:
                 # Check if CUDA is available
                 if torch.cuda.is_available():
                     # If settings.embedding.gpu is specified, use that GPU index
-                    if hasattr(settings, 'embedding') and hasattr(settings.embedding, 'gpu'):
-                        gpu_index = settings.embedding.gpu
-                        device = torch.device(f"cuda:{gpu_index}")
+                    if hasattr(settings, 'huggingface') and hasattr(settings.huggingface, 'gpu_type'):
+                        device = torch.device(f"{settings.huggingface.gpu_type}:{settings.huggingface.gpu_number}")
                     else:
-                        # Use the default GPU (index 0)
-                        device = torch.device("cuda:0")
+                        device = torch.device('cuda:0')
                 else:
                     # If CUDA is not available, use CPU
                     device = torch.device("cpu")
-
+                print("Embedding Device: ",device)
                 self.embedding_model = HuggingFaceEmbedding(
                     model_name=settings.huggingface.embedding_hf_model_name,
                     cache_folder=str(models_cache_path),

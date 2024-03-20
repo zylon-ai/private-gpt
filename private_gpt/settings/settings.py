@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -144,6 +144,13 @@ class LlamaCPPSettings(BaseModel):
 class HuggingFaceSettings(BaseModel):
     embedding_hf_model_name: str = Field(
         description="Name of the HuggingFace model to use for embeddings"
+    )
+    gpu_type: Optional[Literal["cuda","cpu"]] = Field(
+        description="GPU typedevice for embedding, can be 'cuda' or cpu"
+    )
+    gpu_number: int = Field(
+        0,
+        description="GPU device number for embedding, will be presented to torch like 'cuda:x'"
     )
 
 
