@@ -135,7 +135,6 @@ class VectorStoreComponent:
         similarity_top_k: int = 2,
     ) -> VectorIndexRetriever:
         # This way we support qdrant (using doc_ids) and the rest (using filters)
-        similarity_top_k = self.settings.rag.similarity_top_k
         return VectorIndexRetriever(
             index=index,
             similarity_top_k=similarity_top_k,

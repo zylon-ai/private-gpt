@@ -109,7 +109,7 @@ class ChatService:
         settings = self.settings
         if use_context:
             vector_index_retriever = self.vector_store_component.get_retriever(
-                index=self.index, context_filter=context_filter
+                index=self.index, context_filter=context_filter, similarity_top_k=self.settings.rag.similarity_top_k,
             )
             return ContextChatEngine.from_defaults(
                 system_prompt=system_prompt,
