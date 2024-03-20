@@ -131,6 +131,7 @@ class LLMComponent:
                     temperature=settings.llm.temperature,
                     context_window=settings.llm.context_window,
                     additional_kwargs=settings_kwargs,
+                    request_timeout=ollama_settings.request_timeout,
                 )
             case "azopenai":
                 try:
