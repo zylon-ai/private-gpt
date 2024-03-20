@@ -42,6 +42,12 @@ llm:
   tokenizer: mistralai/Mistral-7B-Instruct-v0.2
   temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
 
+rag:
+  similarity_top_k: 2
+  #This value controls how many "top" documents the RAG returns to use in the context.
+  #similarity_value: 0.45
+  #This value is disabled by default.  If you enable this settings, the RAG will only use articles that meet a certain percentage score.
+
 llamacpp:
   prompt_style: "mistral"
   llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF

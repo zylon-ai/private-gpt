@@ -284,6 +284,17 @@ class UISettings(BaseModel):
     )
 
 
+class RagSettings(BaseModel):
+    similarity_top_k: int = Field(
+        2,
+        description="This value controls the number of documents returned by the RAG pipeline",
+    )
+    similarity_value: float = Field(
+        None,
+        description="If set, any documents retrieved from the RAG must meet a certain match score. Acceptable values are between 0 and 1.",
+    )
+
+
 class PostgresSettings(BaseModel):
     host: str = Field(
         "localhost",
@@ -379,6 +390,7 @@ class Settings(BaseModel):
     azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
     nodestore: NodeStoreSettings
+    rag: RagSettings
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
 
