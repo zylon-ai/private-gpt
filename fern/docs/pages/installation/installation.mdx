@@ -300,6 +300,40 @@ llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, co
 AVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | NEON = 0 | ARM_FMA = 0 | F16C = 1 | FP16_VA = 0 | WASM_SIMD = 0 | BLAS = 1 | SSE3 = 1 | SSSE3 = 0 | VSX = 0 |
 ```
 
+##### Llama-CPP Linux AMD GPU support
+
+Linux GPU support is done through ROCm.
+Some tips:
+* Install ROCm from [quick-start install guide](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/tutorial/quick-start.html)
+* [Install PyTorch for ROCm](https://rocm.docs.amd.com/projects/radeon/en/latest/docs/install/install-pytorch.html)
+```bash
+wget https://repo.radeon.com/rocm/manylinux/rocm-rel-6.0/torch-2.1.1%2Brocm6.0-cp311-cp311-linux_x86_64.whl
+poetry run pip install --force-reinstall --no-cache-dir torch-2.1.1+rocm6.0-cp311-cp311-linux_x86_64.whl
+```
+* Install bitsandbytes for ROCm
+```bash
+PYTORCH_ROCM_ARCH=gfx900,gfx906,gfx908,gfx90a,gfx1030,gfx1100,gfx1101,gfx940,gfx941,gfx942
+BITSANDBYTES_VERSION=62353b0200b8557026c176e74ac48b84b953a854
+git clone https://github.com/arlo-phoenix/bitsandbytes-rocm-5.6
+cd bitsandbytes-rocm-5.6
+git checkout ${BITSANDBYTES_VERSION}
+make hip ROCM_TARGET=${PYTORCH_ROCM_ARCH} ROCM_HOME=/opt/rocm/
+pip install . --extra-index-url https://download.pytorch.org/whl/nightly
+```
+
+After that running the following command in the repository will install llama.cpp with GPU support:
+```bash
+LLAMA_CPP_PYTHON_VERSION=0.2.56
+DAMDGPU_TARGETS=gfx900;gfx906;gfx908;gfx90a;gfx1030;gfx1100;gfx1101;gfx940;gfx941;gfx942
+CMAKE_ARGS="-DLLAMA_HIPBLAS=ON -DCMAKE_C_COMPILER=/opt/rocm/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/llvm/bin/clang++ -DAMDGPU_TARGETS=${DAMDGPU_TARGETS}" poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python==${LLAMA_CPP_PYTHON_VERSION}
+```
+
+If your installation was correct, you should see a message similar to the following next time you start the server `BLAS = 1`.
+
+```
+AVX = 1 | AVX_VNNI = 0 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | NEON = 0 | ARM_FMA = 0 | F16C = 1 | FP16_VA = 0 | WASM_SIMD = 0 | BLAS = 1 | SSE3 = 1 | SSSE3 = 1 | VSX = 0 | MATMUL_INT8 = 0 |
+```
+
 ##### Llama-CPP Known issues and Troubleshooting
 
 Execution of LLMs locally still has a lot of sharp edges, specially when running on non Linux platforms.
