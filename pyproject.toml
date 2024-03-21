@@ -67,6 +67,8 @@ pytest-cov = "^3"
 ruff = "^0"
 pytest-asyncio = "^0.21.1"
 types-pyyaml = "^6.0.12.12"
+nbconvert = ^7.16.2
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
