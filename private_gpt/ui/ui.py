@@ -443,7 +443,7 @@ class PrivateGptUi:
                             "openailike": config_settings.openai.model,
                             "sagemaker": config_settings.sagemaker.llm_endpoint_name,
                             "mock": llm_mode,
-                            "ollama": config_settings.ollama.model,
+                            "ollama": config_settings.ollama.llm_model,
                         }
 
                         if llm_mode not in model_mapping:
