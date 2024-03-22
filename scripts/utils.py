@@ -78,9 +78,7 @@ class Postgres:
             cur.execute(sql)
             for row in cur.fetchall():
                 formatted_row_count = f"{row[1]:,}"
-                print(
-                    f"{row[0]:<15} | {formatted_row_count:>15} | {row[2]:>9}"
-                )
+                print(f"{row[0]:<15} | {formatted_row_count:>15} | {row[2]:>9}")
 
             print()
         finally:
