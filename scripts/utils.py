@@ -11,7 +11,7 @@ def wipe() -> None:
         "simple": wipe_simple,  # node store
         "chroma": wipe_chroma,  # vector store
         "postgres": wipe_postgres,  # node, index and vector store
-        "qdrant": wipe_qdrant, # vector store
+        "qdrant": wipe_qdrant,  # vector store
     }
     for dbtype in ("nodestore", "vectorstore"):
         database = getattr(settings(), dbtype).database
@@ -104,11 +104,11 @@ def wipe_qdrant(dbtype: str) -> None:
     try:
         from qdrant_client import QdrantClient  # type: ignore
     except ImportError:
-        raise ImportError("Qdrant dependencies not found")
-    client = QdrantClient(
-                        **settings().qdrant.model_dump(exclude_none=True)
-                    )
-    collection_name = "make_this_parameterizable_per_api_call" # ?! see vector_store_component.py
+        raise ImportError("Qdrant dependencies not found") from None
+    client = QdrantClient(**settings().qdrant.model_dump(exclude_none=True))
+    collection_name = (
+        "make_this_parameterizable_per_api_call"  # ?! see vector_store_component.py
+    )
     try:
         client.delete_collection(collection_name)
         print("Collection dropped successfully.")
