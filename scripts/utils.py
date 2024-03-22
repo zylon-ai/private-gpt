@@ -5,10 +5,6 @@ from typing import Any, ClassVar
 
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import settings
-from private_gpt.components.vector_store.vector_store_component import (
-    VectorStoreComponent,
-)
-from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 
 
 def wipe_file(file: str) -> None:
@@ -41,7 +37,7 @@ def wipe_tree(path: str) -> None:
 
 
 class Postgres:
-    tables = {
+    tables: ClassVar[dict[str, list[str]]] = {
         "nodestore": ["data_docstore", "data_indexstore"],
         "vectorstore": ["data_embeddings"],
     }
@@ -50,7 +46,7 @@ class Postgres:
         try:
             import psycopg2
         except ModuleNotFoundError:
-            raise ModuleNotFoundError("Postgres dependencies not found")
+            raise ModuleNotFoundError("Postgres dependencies not found") from None
 
         connection = settings().postgres.model_dump(exclude_none=True)
         self.schema = connection.pop("schema_name")
@@ -81,11 +77,9 @@ class Postgres:
 
             cur.execute(sql)
             for row in cur.fetchall():
-                formatted_row_count = "{:,}".format(row[1])
+                formatted_row_count = f"{row[1]:,}"
                 print(
-                    "{:<15} | {:>15} | {:>9}".format(
-                        row[0], formatted_row_count, row[2]
-                    )
+                    f"{row[0]:<15} | {formatted_row_count:>15} | {row[2]:>9}"
                 )
 
             print()
