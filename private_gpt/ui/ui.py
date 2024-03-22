@@ -103,12 +103,12 @@ class PrivateGptUi:
                 sources_text = "\n\n\n"
                 used_files = set()
                 for index, source in enumerate(cur_sources, start=1):
-                    if (source.file + "-" + source.page) not in used_files:
+                    if f"{source.file}-{source.page}" not in used_files:
                         sources_text = (
                             sources_text
                             + f"{index}. {source.file} (page {source.page}) \n\n"
                         )
-                        used_files.add(source.file + "-" + source.page)
+                        used_files.add(f"{source.file}-{source.page}")
                 full_response += sources_text
             yield full_response
 
