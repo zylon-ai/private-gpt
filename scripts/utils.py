@@ -159,7 +159,7 @@ class Command:
             handler_class = self.DB_HANDLERS.get(database)
             if handler_class is None:
                 print(f"No handler found for database '{database}'")
-                return
+                continue
             handler_instance = handler_class()  # Instantiate the class
             # If the DB can handle this cmd dispatch it.
             if hasattr(handler_instance, cmd) and callable(
