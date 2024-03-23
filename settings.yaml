@@ -70,7 +70,7 @@ vectorstore:
   database: qdrant
 
 nodestore:
-  database: simple
+  database: postgres
 
 qdrant:
   path: local_data/private_gpt/qdrant

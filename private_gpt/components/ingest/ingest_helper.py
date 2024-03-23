@@ -27,6 +27,10 @@ def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
         from llama_index.readers.file.video_audio import (  # type: ignore
             VideoAudioReader,
         )
+        from llama_index.readers.file.xml import XMLReader  # type: ignore
+        from private_gpt.components.ingest.readers.xlsx_parser import XLSXParser  # type: ignore
+        from private_gpt.components.ingest.readers.html_parser import HTMLParser  # type: ignore
+        from private_gpt.components.ingest.readers.doc_parser import DOCParser  # type: ignore
     except ImportError as e:
         raise ImportError("`llama-index-readers-file` package not found") from e
 
@@ -47,6 +51,16 @@ def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
         ".md": MarkdownReader,
         ".mbox": MboxReader,
         ".ipynb": IPYNBReader,
+        # // delete desktop.ini and *.eps files. 
+        ".markdown": MarkdownReader,
+        ".html": HTMLParser,
+        ".htm": HTMLParser,
+        ".xlsx": XLSXParser,
+        ".xml": XMLReader,
+        ".eps": ImageReader,
+        ".tif": ImageReader,
+        ".gif": ImageReader,
+        ".doc": DOCParser,
     }
     return default_file_reader_cls
 
@@ -87,12 +101,36 @@ class IngestionHelper:
                 "No reader found for extension=%s, using default string reader",
                 extension,
             )
-            # Read as a plain text
+            # Attempt to read as a plain text with UTF-8 encoding, if fails read as ASCII
+            try:
+                file_content = file_data.read_text(encoding='utf-8')
+            except UnicodeDecodeError:
+                try:
+                    logger.debug(
+                        "Failed to read file_name=%s as UTF-8 encoded text, trying with ASCII",
+                        file_name,
+                    )
+                    # Fallback to ASCII decoding
+                    file_content = file_data.read_text(encoding='ascii')
+                except UnicodeDecodeError:
+                    logger.debug(
+                        "Failed to read file_name=%s as ASCII encoded text, returning empty document",
+                        file_name,
+                    )
+                    return []
             string_reader = StringIterableReader()
-            return string_reader.load_data([file_data.read_text()])
+            return string_reader.load_data([file_content])
 
         logger.debug("Specific reader found for extension=%s", extension)
-        return reader_cls().load_data(file_data)
+        try:
+            return reader_cls().load_data(file_data)
+        except Exception as e:
+            logger.debug(
+                "Failed to read file_name=%s e=%s",
+                file_name,
+                e
+            )
+            return []
 
     @staticmethod
     def _exclude_metadata(documents: list[Document]) -> None:

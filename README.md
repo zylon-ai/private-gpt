@@ -1,3 +1,7 @@
+# Notes
+poetry run pip install bs4 openpyxl flask transformers python-pptx Pillow cryptography
+apt-get install antiword
+
 # 🔒 PrivateGPT 📑
 
 [![Tests](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml/badge.svg)](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml?query=branch%3Amain)
