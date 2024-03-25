@@ -24,7 +24,8 @@ FROM base as dependencies
 WORKDIR /home/worker/app
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry install --extras "ui embeddings-huggingface llms-llama-cpp vector-stores-qdrant"
+ARG POETRY_EXTRAS="ui embeddings-huggingface llms-llama-cpp vector-stores-qdrant"
+RUN poetry install --extras "${POETRY_EXTRAS}"
 
 FROM base as app
 
