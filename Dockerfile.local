@@ -46,6 +46,7 @@ COPY --chown=worker private_gpt/ private_gpt
 COPY --chown=worker fern/ fern
 COPY --chown=worker *.yaml *.md ./
 COPY --chown=worker scripts/ scripts
+COPY --chown=worker Makefile .
 
 ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
 
