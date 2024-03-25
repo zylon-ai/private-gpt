@@ -6,7 +6,7 @@ llm:
   mode: ${PGPT_MODE:mock}
 
 embedding:
-  mode: ${PGPT_MODE:sagemaker}
+  mode: ${PGPT_EMBEDDING_MODE:sagemaker}
 
 llamacpp:
   llm_hf_repo_id: ${PGPT_HF_REPO_ID:TheBloke/Mistral-7B-Instruct-v0.1-GGUF}
