@@ -1,5 +1,3 @@
-### IMPORTANT, THIS IMAGE CAN ONLY BE RUN IN LINUX DOCKER
-### You will run into a segfault in mac
 FROM python:3.11.6-slim-bookworm as base
 
 # Install poetry
@@ -7,6 +5,7 @@ RUN pip install pipx
 RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
 ENV PATH=".venv/bin/:$PATH"
+
 # https://python-poetry.org/docs/configuration/#virtualenvsin-project
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 
@@ -20,11 +19,12 @@ RUN apt update && apt install -y \
   pkg-config\
   wget
 COPY pyproject.toml poetry.lock ./
-ARG POETRY_EXTRAS="ui embeddings-huggingface llms-llama-cpp vector-stores-qdrant"
+
+# Extras possible are: llms-llama-cpp embeddings-huggingface
+ARG POETRY_EXTRAS="ui vector-stores-qdrant llms-ollama embeddings-ollama"
 RUN poetry install --no-root --extras "${POETRY_EXTRAS}"
 
 FROM base as app
-
 ENV \
   PYTHONUNBUFFERED=1 \
   PORT=8080 \
@@ -59,7 +59,7 @@ RUN mkdir models && chown worker models
 COPY --chown=worker --from=dependencies /home/worker/app/.venv/ .venv
 COPY --chown=worker private_gpt/ private_gpt
 COPY --chown=worker fern/ fern
-COPY --chown=worker *.yaml ./
+COPY --chown=worker *.yaml .
 COPY --chown=worker scripts/ scripts
 COPY --chown=worker Makefile .
 
