@@ -11,8 +11,16 @@ ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 
 FROM base as dependencies
 WORKDIR /home/worker/app
+# Dependencies to build llama-cpp
+RUN apt update && apt install -y \
+  libopenblas-dev\
+  ninja-build\
+  build-essential\
+  pkg-config\
+  wget
 COPY pyproject.toml poetry.lock ./
 
+# Extras possible are: llms-llama-cpp embeddings-huggingface
 ARG POETRY_EXTRAS="ui vector-stores-qdrant llms-ollama embeddings-ollama"
 RUN poetry install --no-root --extras "${POETRY_EXTRAS}"
 

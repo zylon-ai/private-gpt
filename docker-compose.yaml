@@ -1,7 +1,10 @@
 services:
   private-gpt:
     build:
-      dockerfile: Dockerfile.external
+      context: .
+      # context: https://github.com/zylon-ai/private-gpt.git#main
+      args:
+        - POETRY_EXTRAS=ui vector-stores-qdrant llms-ollama embeddings-ollama
     volumes:
       - ./local_data/:/home/worker/app/local_data
     ports:
