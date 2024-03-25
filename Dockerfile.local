@@ -48,7 +48,7 @@ COPY --chown=worker *.yaml ./
 COPY --chown=worker scripts/ scripts
 COPY --chown=worker Makefile .
 
-ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
+ENV PYTHONPATH="$PYTHONPATH:/home/worker/app/private_gpt/"
 
 USER worker
 ENTRYPOINT python -m private_gpt
