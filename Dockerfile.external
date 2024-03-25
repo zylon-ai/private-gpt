@@ -26,7 +26,8 @@ EXPOSE 8080
 # Prepare a non-root user
 ARG UID=100
 ARG GID=65534
-RUN adduser --system --uid ${UID} --gid ${GID} worker
+RUN adduser --group --gid ${GID} worker
+RUN adduser --system --ingroup worker --uid ${UID} --home /home/worker worker
 WORKDIR /home/worker/app
 
 RUN mkdir local_data; chown worker local_data
