@@ -7,7 +7,11 @@ RUN pip install pipx
 RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
 ENV PATH=".venv/bin/:$PATH"
+# https://python-poetry.org/docs/configuration/#virtualenvsin-project
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 
+FROM base as dependencies
+WORKDIR /home/worker/app
 # Dependencies to build llama-cpp
 RUN apt update && apt install -y \
   libopenblas-dev\
@@ -15,14 +19,7 @@ RUN apt update && apt install -y \
   build-essential\
   pkg-config\
   wget
-
-# https://python-poetry.org/docs/configuration/#virtualenvsin-project
-ENV POETRY_VIRTUALENVS_IN_PROJECT=true
-
-FROM base as dependencies
-WORKDIR /home/worker/app
 COPY pyproject.toml poetry.lock ./
-
 ARG POETRY_EXTRAS="ui embeddings-huggingface llms-llama-cpp vector-stores-qdrant"
 RUN poetry install --no-root --extras "${POETRY_EXTRAS}"
 
