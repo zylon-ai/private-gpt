@@ -24,5 +24,14 @@ ollama:
 vectorstore:
   database: qdrant
 
+graphstore:
+  database: neo4j
+
 qdrant:
   path: local_data/private_gpt/qdrant
+
+neo4j:
+  url: neo4j://localhost:7687
+  username: neo4j
+  password: password
+  database: neo4j
