@@ -27,6 +27,10 @@ def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
         from llama_index.readers.file.video_audio import (  # type: ignore
             VideoAudioReader,
         )
+
+        from private_gpt.components.ingest.readers.rdfreader import (  # type: ignore
+            RDFReader,
+        )
     except ImportError as e:
         raise ImportError("`llama-index-readers-file` package not found") from e
 
@@ -48,7 +52,10 @@ def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
         ".mbox": MboxReader,
         ".ipynb": IPYNBReader,
     }
-    return default_file_reader_cls
+    optional_file_reader_cls: dict[str, type[BaseReader]] = {
+        ".ttl": RDFReader,
+    }
+    return {**default_file_reader_cls, **optional_file_reader_cls}
 
 
 # Patching the default file reader to support other file types
