@@ -1,0 +1,358 @@
+@prefix ns1: <http://www.wikidata.org/entity/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ns1:Q1044339 rdfs:label "Valeriano Balloni" ;
+    ns1:hasTeam ns1:Q13385,
+        ns1:Q289029,
+        ns1:Q297430,
+        ns1:Q650365,
+        ns1:Q6767 .
+
+ns1:Q110992321 rdfs:label "Tim Karius" ;
+    ns1:hasTeam ns1:Q1387210,
+        ns1:Q655591 .
+
+ns1:Q12402730 rdfs:label "Xoaquín Álvarez Corbacho" ;
+    ns1:hasTeam ns1:Q8749 .
+
+ns1:Q12813965 rdfs:label "József Cserháti" ;
+    ns1:hasTeam ns1:Q732885 .
+
+ns1:Q13101502 rdfs:label "Alphonse Weicker" ;
+    ns1:hasTeam ns1:Q184266,
+        ns1:Q693092 .
+
+ns1:Q1497593 rdfs:label "Gediminas Budnikas" ;
+    ns1:hasTeam ns1:Q393357 .
+
+ns1:Q1531063 rdfs:label "Glenn W. Harrison" ;
+    ns1:hasTeam ns1:Q1034556 .
+
+ns1:Q16081110 rdfs:label "Moon Hyung-pyo" ;
+    ns1:hasTeam ns1:Q39988 .
+
+ns1:Q16091117 rdfs:label "Lee Ju-yeol" ;
+    ns1:hasTeam ns1:Q39988 .
+
+ns1:Q16299411 rdfs:label "Juha Joenväärä" ;
+    ns1:hasTeam ns1:Q1130636,
+        ns1:Q1232297 .
+
+ns1:Q1686485 rdfs:label "Jeff Immelt" ;
+    ns1:hasTeam ns1:Q5225674 .
+
+ns1:Q16942062 rdfs:label "Tito Montaño" ;
+    ns1:hasTeam ns1:Q127925 .
+
+ns1:Q1776728 rdfs:label "Svein Gjedrem" ;
+    ns1:hasTeam ns1:Q737937 .
+
+ns1:Q17917747 rdfs:label "Noel Newton Nethersole" ;
+    ns1:hasTeam ns1:Q3590248 .
+
+ns1:Q18541191 rdfs:label "Adalbert Kassai" ;
+    ns1:hasTeam ns1:Q1135735,
+        ns1:Q1195647,
+        ns1:Q1386940,
+        ns1:Q1689705,
+        ns1:Q841245,
+        ns1:Q842134 .
+
+ns1:Q18562973 rdfs:label "István Hagelmayer" ;
+    ns1:hasTeam ns1:Q606773 .
+
+ns1:Q192533 rdfs:label "Mark Carney" ;
+    ns1:hasTeam ns1:Q5676342 .
+
+ns1:Q1930105 rdfs:label "Michaela Vosbeck" ;
+    ns1:hasTeam ns1:Q1715018,
+        ns1:Q1792079,
+        ns1:Q2931573,
+        ns1:Q300032 .
+
+ns1:Q202693 rdfs:label "Jo Nesbø" ;
+    ns1:hasTeam ns1:Q208552 .
+
+ns1:Q2055385 rdfs:label "Alexandre Baptista" ;
+    ns1:hasTeam ns1:Q267245,
+        ns1:Q75729 .
+
+ns1:Q22003558 rdfs:label "Colin Cannonier" ;
+    ns1:hasTeam ns1:Q3590581 .
+
+ns1:Q2535499 rdfs:label "Tadao Horie" ;
+    ns1:hasTeam ns1:Q170566 .
+
+ns1:Q27491470 rdfs:label "Telesfor Banaszkiewicz" ;
+    ns1:hasTeam ns1:Q11821053,
+        ns1:Q1198772 .
+
+ns1:Q30308976 rdfs:label "Thomas Howden Fraser" ;
+    ns1:hasTeam ns1:Q117467 .
+
+ns1:Q311025 rdfs:label "Henry Paulson" ;
+    ns1:hasTeam ns1:Q5225674 .
+
+ns1:Q3132658 rdfs:label "Henry Braddon" ;
+    ns1:hasTeam ns1:Q55801 .
+
+ns1:Q313682 rdfs:label "Oleguer Presas" ;
+    ns1:hasTeam ns1:Q10467,
+        ns1:Q17228,
+        ns1:Q2220788,
+        ns1:Q7156,
+        ns1:Q81888 .
+
+ns1:Q3470333 rdfs:label "Salvador Servià i Costa" ;
+    ns1:hasTeam ns1:Q188217,
+        ns1:Q35896 .
+
+ns1:Q354317 rdfs:label "Vebjørn Rodal" ;
+    ns1:hasTeam ns1:Q11993950 .
+
+ns1:Q3592042 rdfs:label "Étienne Antonelli" ;
+    ns1:hasTeam ns1:Q132885 .
+
+ns1:Q3808555 rdfs:label "Joan Trayter" ;
+    ns1:hasTeam ns1:Q3091261 .
+
+ns1:Q4011129 rdfs:label "Vicente Locaso" ;
+    ns1:hasTeam ns1:Q15799,
+        ns1:Q18640,
+        ns1:Q327172,
+        ns1:Q79800 .
+
+ns1:Q457755 rdfs:label "Alfred Lawson" ;
+    ns1:hasTeam ns1:Q461595,
+        ns1:Q653772 .
+
+ns1:Q4908745 rdfs:label "Bill Demory" ;
+    ns1:hasTeam ns1:Q219602,
+        ns1:Q4791461 .
+
+ns1:Q4939229 rdfs:label "Bolesław Banaś" ;
+    ns1:hasTeam ns1:Q3593958 .
+
+ns1:Q4961008 rdfs:label "Brendan Menton, Sr." ;
+    ns1:hasTeam ns1:Q629300 .
+
+ns1:Q4968933 rdfs:label "Rune Gerhardsen" ;
+    ns1:hasTeam ns1:Q2042878 .
+
+ns1:Q5405396 rdfs:label "Alejandro Brand" ;
+    ns1:hasTeam ns1:Q212564,
+        ns1:Q391984 .
+
+ns1:Q559712 rdfs:label "Magomedsalam Magomedov" ;
+    ns1:hasTeam ns1:Q2494171 .
+
+ns1:Q60735037 rdfs:label "Peter Morgan" ;
+    ns1:hasTeam ns1:Q18516 .
+
+ns1:Q6148645 rdfs:label "Tomás Soley Güell" ;
+    ns1:hasTeam ns1:Q7156 .
+
+ns1:Q65624037 rdfs:label "Thomas Staub" ;
+    ns1:hasTeam ns1:Q201969 .
+
+ns1:Q6708659 rdfs:label "Lyndhurst Falkiner Giblin" ;
+    ns1:hasTeam ns1:Q378628 .
+
+ns1:Q7172847 rdfs:label "Peter Henry" ;
+    ns1:hasTeam ns1:Q7054630 .
+
+ns1:Q7193582 rdfs:label "Pike Curtin" ;
+    ns1:hasTeam ns1:Q3589750 .
+
+ns1:Q732476 rdfs:label "Xavier Sala-i-Martin" ;
+    ns1:hasTeam ns1:Q3091261 .
+
+ns1:Q7436183 rdfs:label "Scott Cowen" ;
+    ns1:hasTeam ns1:Q16959086 .
+
+ns1:Q75748 rdfs:label "Hans Tietmeyer" ;
+    ns1:hasTeam ns1:Q2385504 .
+
+ns1:Q769073 rdfs:label "W. Morrissey" ;
+    ns1:hasTeam ns1:Q2367373 .
+
+ns1:Q84218605 rdfs:label "José María Echevarría Arteche" ;
+    ns1:hasTeam ns1:Q1103198 .
+
+ns1:Q8667562 rdfs:label "Valerijonas Balčiūnas" ;
+    ns1:hasTeam ns1:Q186276 .
+
+ns1:Q89141301 rdfs:label "Anna Potok" ;
+    ns1:hasTeam ns1:Q4841 .
+
+ns1:Q9199508 rdfs:label "Czesława Pilarska" ;
+    ns1:hasTeam ns1:Q11733016 .
+
+ns1:Q947814 rdfs:label "Steinar Hoen" ;
+    ns1:hasTeam ns1:Q4573629 .
+
+ns1:Q963421 rdfs:label "Carl-Henric Svanberg" ;
+    ns1:hasTeam ns1:Q1653574 .
+
+ns1:Q98072140 rdfs:label "Q98072140" ;
+    ns1:hasTeam ns1:Q28214543 .
+
+ns1:Q1034556 rdfs:label "Hawthorn Football Club" .
+
+ns1:Q10467 rdfs:label "FC Barcelona Atlètic" .
+
+ns1:Q1103198 rdfs:label "Club de Campo Villa de Madrid" .
+
+ns1:Q1130636 rdfs:label "Oulun Kärpät" .
+
+ns1:Q1135735 rdfs:label "CS Corvinul Hunedoara" .
+
+ns1:Q11733016 rdfs:label "Stilon Gorzów Wielkopolski" .
+
+ns1:Q117467 rdfs:label "Royal Society of Edinburgh" .
+
+ns1:Q11821053 rdfs:label "Q11821053" .
+
+ns1:Q1195647 rdfs:label "FC Progresul București" .
+
+ns1:Q1198772 rdfs:label "Warta Poznań" .
+
+ns1:Q11993950 rdfs:label "Oppdal IL" .
+
+ns1:Q1232297 rdfs:label "Djurgårdens IF Hockey" .
+
+ns1:Q127925 rdfs:label "Club Aurora" .
+
+ns1:Q132885 rdfs:label "Olympique de Marseille" .
+
+ns1:Q13385 rdfs:label "Società Polisportiva Ars et Labor" .
+
+ns1:Q1386940 rdfs:label "FC Bihor Oradea" .
+
+ns1:Q1387210 rdfs:label "FC Jeunesse Canach" .
+
+ns1:Q15799 rdfs:label "Club Atlético River Plate" .
+
+ns1:Q1653574 rdfs:label "IF Björklöven" .
+
+ns1:Q1689705 rdfs:label "FC Jiul Petroșani" .
+
+ns1:Q16959086 rdfs:label "UConn Huskies football" .
+
+ns1:Q170566 rdfs:label "Japan national football team" .
+
+ns1:Q1715018 rdfs:label "TV Hörde" .
+
+ns1:Q17228 rdfs:label "Catalonia national football team" .
+
+ns1:Q1792079 rdfs:label "VC Schwerte" .
+
+ns1:Q184266 rdfs:label "Luxembourg national football team" .
+
+ns1:Q18516 rdfs:label "Hereford United F.C." .
+
+ns1:Q186276 rdfs:label "Lithuania national football team" .
+
+ns1:Q18640 rdfs:label "Gimnasia y Esgrima La Plata" .
+
+ns1:Q188217 rdfs:label "SEAT" .
+
+ns1:Q201969 rdfs:label "FC Winterthur" .
+
+ns1:Q2042878 rdfs:label "Aktiv SK" .
+
+ns1:Q208552 rdfs:label "Molde FK" .
+
+ns1:Q212564 rdfs:label "Colombia national football team" .
+
+ns1:Q219602 rdfs:label "New York Jets" .
+
+ns1:Q2220788 rdfs:label "UDA Gramenet" .
+
+ns1:Q2367373 rdfs:label "NYU Violets" .
+
+ns1:Q2385504 rdfs:label "Q2385504" .
+
+ns1:Q2494171 rdfs:label "FC Dynamo Makhachkala" .
+
+ns1:Q267245 rdfs:label "Portugal national association football team" .
+
+ns1:Q28214543 rdfs:label "Trabzonspor" .
+
+ns1:Q289029 rdfs:label "U.S. Ancona" .
+
+ns1:Q2931573 rdfs:label "CJD Feuerbach" .
+
+ns1:Q297430 rdfs:label "S.S. Arezzo" .
+
+ns1:Q300032 rdfs:label "Germany women's national volleyball team" .
+
+ns1:Q327172 rdfs:label "Club Atlético Huracán" .
+
+ns1:Q35896 rdfs:label "Lancia" .
+
+ns1:Q3589750 rdfs:label "Western Australia cricket team" .
+
+ns1:Q3590248 rdfs:label "Jamaica national cricket team" .
+
+ns1:Q3590581 rdfs:label "Leeward Islands cricket team" .
+
+ns1:Q3593958 rdfs:label "ŁKS Łódź" .
+
+ns1:Q378628 rdfs:label "England national rugby union team" .
+
+ns1:Q391984 rdfs:label "Millonarios" .
+
+ns1:Q393357 rdfs:label "BC Žalgiris" .
+
+ns1:Q4573629 rdfs:label "IK Tjalve" .
+
+ns1:Q461595 rdfs:label "Atlanta Braves" .
+
+ns1:Q4791461 rdfs:label "Arizona Wildcats football" .
+
+ns1:Q4841 rdfs:label "Lech Poznań" .
+
+ns1:Q55801 rdfs:label "New Zealand national rugby union team" .
+
+ns1:Q5676342 rdfs:label "Harvard Crimson men's ice hockey" .
+
+ns1:Q606773 rdfs:label "Dorogi FC" .
+
+ns1:Q629300 rdfs:label "Home Farm F.C." .
+
+ns1:Q650365 rdfs:label "Carrarese Calcio" .
+
+ns1:Q653772 rdfs:label "Pittsburgh Pirates" .
+
+ns1:Q655591 rdfs:label "FC Koeppchen Wormeldange" .
+
+ns1:Q6767 rdfs:label "U.S. Livorno 1915" .
+
+ns1:Q693092 rdfs:label "Racing FC Union Luxembourg" .
+
+ns1:Q7054630 rdfs:label "North Carolina Tar Heels football" .
+
+ns1:Q732885 rdfs:label "Salgótarjáni BTC" .
+
+ns1:Q737937 rdfs:label "Lyn 1896 FK" .
+
+ns1:Q75729 rdfs:label "Sporting CP" .
+
+ns1:Q79800 rdfs:label "Argentina national association football team" .
+
+ns1:Q81888 rdfs:label "AFC Ajax" .
+
+ns1:Q841245 rdfs:label "FC Argeș" .
+
+ns1:Q842134 rdfs:label "FC Sportul Studențesc București" .
+
+ns1:Q8749 rdfs:label "RC Celta de Vigo" .
+
+ns1:Q3091261 rdfs:label "FC Barcelona" .
+
+ns1:Q39988 rdfs:label "Yonsei University" .
+
+ns1:Q5225674 rdfs:label "Dartmouth Big Green football" .
+
+ns1:Q7156 rdfs:label "FC Barcelona" .

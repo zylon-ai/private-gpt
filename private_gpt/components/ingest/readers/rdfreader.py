@@ -46,7 +46,7 @@ class RDFReader(BaseReader):
         if len(labels) > 0:
             return labels[0].value
 
-        raise Exception(f"Label not found for: {uri}")
+        return None  # Return None if label not found
 
     def load_data(self, file: Path, extra_info: dict | None = None) -> list[Document]:
         """Parse file."""
@@ -64,14 +64,19 @@ class RDFReader(BaseReader):
         for s, p, o in self.g_local:
             if p == RDFS.label:
                 continue
-            print(s, p, o)
-            triple = (
-                f"<{self.fetch_label_in_graphs(s, lang=lang)}> "
-                f"<{self.fetch_label_in_graphs(p, lang=lang)}> "
-                f"<{self.fetch_label_in_graphs(o, lang=lang)}>"
-            )
+
+            subj_label = self.fetch_label_in_graphs(s, lang=lang)
+            pred_label = self.fetch_label_in_graphs(p, lang=lang)
+            obj_label = self.fetch_label_in_graphs(o, lang=lang)
+
+            if subj_label is None or pred_label is None or obj_label is None:
+                continue
+
+            triple = f"<{subj_label}> " f"<{pred_label}> " f"<{obj_label}>"
             text_list.append(triple)
 
         text = "\n".join(text_list)
+        return [self._text_to_document(text, extra_info)]
 
-        return [Document(text, extra_info=extra_info)]
+    def _text_to_document(self, text: str, extra_info: dict | None = None) -> Document:
+        return Document(text=text, extra_info=extra_info or {})
