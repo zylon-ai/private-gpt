@@ -9,6 +9,7 @@ llm:
 
 embedding:
   mode: ollama
+  ingest_mode: simple # Enabled simple that stores the embeddings and triples in the graphstore.
 
 ollama:
   llm_model: mistral

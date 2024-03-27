@@ -51,6 +51,7 @@ class IngestService:
             embed_model=embedding_component.embedding_model,
             transformations=[node_parser, embedding_component.embedding_model],
             settings=settings(),
+            llm=self.llm_service.llm,
         )
 
     def _ingest_data(self, file_name: str, file_data: AnyStr) -> list[IngestedDoc]:
