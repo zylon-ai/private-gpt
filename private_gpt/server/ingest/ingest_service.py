@@ -8,6 +8,7 @@ from llama_index.core.node_parser import SentenceWindowNodeParser
 from llama_index.core.storage import StorageContext
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
+from private_gpt.components.graph_store.graph_store_component import GraphStoreComponent
 from private_gpt.components.ingest.ingest_component import get_ingestion_component
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
@@ -30,12 +31,16 @@ class IngestService:
         self,
         llm_component: LLMComponent,
         vector_store_component: VectorStoreComponent,
+        graph_store_component: GraphStoreComponent,
         embedding_component: EmbeddingComponent,
         node_store_component: NodeStoreComponent,
     ) -> None:
         self.llm_service = llm_component
         self.storage_context = StorageContext.from_defaults(
             vector_store=vector_store_component.vector_store,
+            graph_store=graph_store_component.graph_store
+            if graph_store_component and graph_store_component.graph_store
+            else None,
             docstore=node_store_component.doc_store,
             index_store=node_store_component.index_store,
         )

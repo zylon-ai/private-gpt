@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @singleton
 class GraphStoreComponent:
     settings: Settings
-    graph_store: GraphStore
+    graph_store: GraphStore | None = None
 
     @inject
     def __init__(self, settings: Settings) -> None:
@@ -60,12 +60,12 @@ class GraphStoreComponent:
 
     def get_knowledge_graph(
         self,
+        storage_context: StorageContext,
         llm: LLM,
     ) -> KnowledgeGraphRAGRetriever:
         if self.graph_store is None:
             raise ValueError("GraphStore not defined in settings")
 
-        storage_context = StorageContext.from_defaults(graph_store=self.graph_store)
         return KnowledgeGraphRAGRetriever(
             storage_context=storage_context,
             llm=llm,
@@ -73,5 +73,5 @@ class GraphStoreComponent:
         )
 
     def close(self) -> None:
-        if hasattr(self.graph_store.client, "close"):
+        if self.graph_store and hasattr(self.graph_store.client, "close"):
             self.graph_store.client.close()
