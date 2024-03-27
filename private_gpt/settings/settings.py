@@ -254,6 +254,7 @@ class OllamaSettings(BaseModel):
         description="Time elapsed until ollama times out the request. Default is 120s. Format is float. ",
     )
 
+
 class AzureOpenAISettings(BaseModel):
     api_key: str
     azure_endpoint: str

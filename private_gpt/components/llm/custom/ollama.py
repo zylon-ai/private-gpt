@@ -11,7 +11,8 @@ class CustomOllama(Ollama):
     )
 
     def __init__(self, *args, **kwargs) -> None:
-        keep_alive = kwargs.pop('keep_alive', '5m')  # fetch keep_alive from kwargs or use 5m if not found.
+        # fetch keep_alive from kwargs or use 5m if not found.
+        keep_alive = kwargs.pop("keep_alive", "5m")
         super().__init__(*args, **kwargs)
         self.keep_alive = keep_alive
 
