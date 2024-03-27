@@ -418,7 +418,7 @@ class PrivateGptUi:
                         inputs=system_prompt_input,
                     )
 
-                    def get_model_label() -> str:
+                    def get_model_label() -> str | None:
                         """Get model label from llm mode setting YAML.
 
                         Raises:
