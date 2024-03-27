@@ -108,7 +108,9 @@ class LLMComponent:
                 )
             case "ollama":
                 try:
-                    from private_gpt.components.llm.custom.ollama import CustomOllama  # type: ignore
+                    from private_gpt.components.llm.custom.ollama import (
+                        CustomOllama,  # type: ignore
+                    )
                 except ImportError as e:
                     raise ImportError(
                         "Ollama dependencies not found, install with `poetry install --extras llms-ollama`"
