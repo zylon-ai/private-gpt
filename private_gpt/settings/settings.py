@@ -155,13 +155,14 @@ class HuggingFaceSettings(BaseModel):
 
 class EmbeddingSettings(BaseModel):
     mode: Literal["huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock"]
-    ingest_mode: Literal["simple", "batch", "parallel"] = Field(
+    ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",
         description=(
             "The ingest mode to use for the embedding engine:\n"
             "If `simple` - ingest files sequentially and one by one. It is the historic behaviour.\n"
             "If `batch` - if multiple files, parse all the files in parallel, "
             "and send them in batch to the embedding model.\n"
+            "In `pipeline` - The Embedding engine is kept as busy as possible\n"
             "If `parallel` - parse the files in parallel using multiple cores, and embedd them in parallel.\n"
             "`parallel` is the fastest mode for local setup, as it parallelize IO RW in the index.\n"
             "For modes that leverage parallelization, you can specify the number of "
@@ -174,6 +175,7 @@ class EmbeddingSettings(BaseModel):
             "The number of workers to use for file ingestion.\n"
             "In `batch` mode, this is the number of workers used to parse the files.\n"
             "In `parallel` mode, this is the number of workers used to parse the files and embed them.\n"
+            "In `pipeline` mode, this is the number of workers that can perform embeddings.\n"
             "This is only used if `ingest_mode` is not `simple`.\n"
             "Do not go too high with this number, as it might cause memory issues. (especially in `parallel` mode)\n"
             "Do not set it higher than your number of threads of your CPU."
@@ -239,6 +241,10 @@ class OllamaSettings(BaseModel):
         1.1,
         description="Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)",
     )
+    request_timeout: float = Field(
+        120.0,
+        description="Time elapsed until ollama times out the request. Default is 120s. Format is float. ",
+    )
 
 
 class AzureOpenAISettings(BaseModel):
@@ -275,6 +281,17 @@ class UISettings(BaseModel):
     )
     delete_all_files_button_enabled: bool = Field(
         False, description="If the button to delete all files is enabled or not."
+    )
+
+
+class RagSettings(BaseModel):
+    similarity_top_k: int = Field(
+        2,
+        description="This value controls the number of documents returned by the RAG pipeline",
+    )
+    similarity_value: float = Field(
+        None,
+        description="If set, any documents retrieved from the RAG must meet a certain match score. Acceptable values are between 0 and 1.",
     )
 
 
@@ -373,6 +390,7 @@ class Settings(BaseModel):
     azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
     nodestore: NodeStoreSettings
+    rag: RagSettings
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
 
