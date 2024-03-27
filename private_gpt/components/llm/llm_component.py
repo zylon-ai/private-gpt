@@ -108,7 +108,7 @@ class LLMComponent:
                 )
             case "ollama":
                 try:
-                    from llama_index.llms.ollama import Ollama  # type: ignore
+                    from private_gpt.components.llm.custom.ollama import CustomOllama  # type: ignore
                 except ImportError as e:
                     raise ImportError(
                         "Ollama dependencies not found, install with `poetry install --extras llms-ollama`"
@@ -125,14 +125,14 @@ class LLMComponent:
                     "repeat_penalty": ollama_settings.repeat_penalty,  # ollama llama-cpp
                 }
 
-                self.llm = Ollama(
+                self.llm = CustomOllama(
                     model=ollama_settings.llm_model,
                     base_url=ollama_settings.api_base,
                     temperature=settings.llm.temperature,
                     context_window=settings.llm.context_window,
                     additional_kwargs=settings_kwargs,
                     request_timeout=ollama_settings.request_timeout,
-                    keep_alive = ollama_settings.keep_alive,
+                    keep_alive=ollama_settings.keep_alive,
                 )
             case "azopenai":
                 try:
