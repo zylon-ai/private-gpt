@@ -3,7 +3,7 @@ from pydantic import Field
 
 
 class CustomOllama(Ollama):
-    """Custom llama_index Ollama class with the only intention of passing on the keep_alive parameter."""
+    """Custom Ollama class to fill in "keep_alive" when sending requests."""
 
     keep_alive: str = Field(
         default="5m",
