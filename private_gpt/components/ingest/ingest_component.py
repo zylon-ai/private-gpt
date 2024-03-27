@@ -526,6 +526,8 @@ def get_ingestion_component(
     embed_model: EmbedType,
     transformations: list[TransformComponent],
     settings: Settings,
+    *args: Any,
+    **kwargs: Any,
 ) -> BaseIngestComponent:
     """Get the ingestion component for the given configuration."""
     ingest_mode = settings.embedding.ingest_mode
@@ -535,6 +537,7 @@ def get_ingestion_component(
             embed_model=embed_model,
             transformations=transformations,
             count_workers=settings.embedding.count_workers,
+            llm=kwargs.get("llm"),
         )
     elif ingest_mode == "parallel":
         return ParallelizedIngestComponent(
@@ -542,6 +545,7 @@ def get_ingestion_component(
             embed_model=embed_model,
             transformations=transformations,
             count_workers=settings.embedding.count_workers,
+            llm=kwargs.get("llm"),
         )
     elif ingest_mode == "pipeline":
         return PipelineIngestComponent(
@@ -549,10 +553,12 @@ def get_ingestion_component(
             embed_model=embed_model,
             transformations=transformations,
             count_workers=settings.embedding.count_workers,
+            llm=kwargs.get("llm"),
         )
     else:
         return SimpleIngestComponent(
             storage_context=storage_context,
             embed_model=embed_model,
             transformations=transformations,
+            llm=kwargs.get("llm"),
         )
