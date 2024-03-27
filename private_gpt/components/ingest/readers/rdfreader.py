@@ -10,6 +10,7 @@ Original code:
 https://github.com/run-llama/llama-hub
 """
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,8 @@ from llama_index.core.readers.base import BaseReader
 from llama_index.core.schema import Document
 from rdflib import Graph, URIRef
 from rdflib.namespace import RDF, RDFS
+
+logger = logging.getLogger(__name__)
 
 
 class RDFReader(BaseReader):
@@ -46,11 +49,17 @@ class RDFReader(BaseReader):
         if len(labels) > 0:
             return labels[0].value
 
-        return None  # Return None if label not found
+        return str(uri)
 
     def load_data(self, file: Path, extra_info: dict | None = None) -> list[Document]:
         """Parse file."""
-        lang = extra_info["lang"] if extra_info is not None else "en"
+        extra_info = extra_info or {}
+        extra_info["graph_type"] = "rdf"
+        lang = (
+            extra_info["lang"]
+            if extra_info is not None and "lang" in extra_info
+            else "en"
+        )
 
         self.g_local = Graph()
         self.g_local.parse(file)
@@ -62,6 +71,7 @@ class RDFReader(BaseReader):
         text_list = []
 
         for s, p, o in self.g_local:
+            logger.debug("s=%s, p=%s, o=%s", s, p, o)
             if p == RDFS.label:
                 continue
 
