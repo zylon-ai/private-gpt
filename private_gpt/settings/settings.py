@@ -412,7 +412,7 @@ class Settings(BaseModel):
     ollama: OllamaSettings
     azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
-    graphstore: GraphStoreSettings
+    graphstore: GraphStoreSettings | None = None
     nodestore: NodeStoreSettings
     rag: RagSettings
     qdrant: QdrantSettings | None = None
