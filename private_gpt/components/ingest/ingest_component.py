@@ -179,13 +179,34 @@ class SimpleIngestComponent(BaseIngestComponentWithIndex):
     def _save_docs(self, documents: list[Document]) -> list[Document]:
         logger.debug("Transforming count=%s documents into nodes", len(documents))
         with self._index_thread_lock:
-            for document in documents:
-                self._index.insert(document, show_progress=True)
-            logger.debug("Persisting the index and nodes")
-            # persist the index and nodes
-            self._save_index()
+            logger.debug("Persisting the index and nodes in the vector store")
+            self._save_to_index(documents)
+
+            logger.debug("Persisting the index and nodes in the knowledge graph")
+            self._save_to_knowledge_graph(documents)
+
             logger.debug("Persisted the index and nodes")
         return documents
+
+    def _save_to_index(self, documents: list[Document]) -> None:
+        logger.debug("Inserting count=%s documents in the index", len(documents))
+        for document in documents:
+            logger.info("Inserting document=%s in the index", document)
+            self._index.insert(document, show_progress=True)
+        self._save_index()
+        pass
+
+    def _save_to_knowledge_graph(self, documents: list[Document]) -> None:
+        logger.debug(
+            "Inserting count=%s documents in the knowledge graph", len(documents)
+        )
+        for document in [
+            d for d in documents if d.extra_info.get("graph_type", None) is not None
+        ]:
+            logger.info("Inserting document=%s in the knowledge graph", document)
+            logger.info("Document=%s", document.extra_info)
+            self._knowledge_graph.insert(document, show_progress=True)
+        self._save_knowledge_graph()
 
 
 class BatchIngestComponent(BaseIngestComponentWithIndex):
