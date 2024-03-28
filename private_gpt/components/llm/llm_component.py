@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from typing import Any
 
 from injector import inject, singleton
 from llama_index.core.llms import LLM, MockLLM
@@ -109,9 +110,7 @@ class LLMComponent:
                 )
             case "ollama":
                 try:
-                    from llama_index.llms.ollama import (
-                        Ollama,  # type: ignore
-                    )
+                    from llama_index.llms.ollama import Ollama  # type: ignore
                 except ImportError as e:
                     raise ImportError(
                         "Ollama dependencies not found, install with `poetry install --extras llms-ollama`"
@@ -142,8 +141,8 @@ class LLMComponent:
                     != ollama_settings.model_fields["keep_alive"].default
                 ):
                     # Modify Ollama methods to use the "keep_alive" field.
-                    def add_keep_alive(func: Callable) -> Callable:
-                        def wrapper(*args, **kwargs) -> Callable:
+                    def add_keep_alive(func: Callable[..., Any]) -> Callable[..., Any]:
+                        def wrapper(*args: Any, **kwargs: Any) -> Any:
                             kwargs["keep_alive"] = ollama_settings.keep_alive
                             return func(*args, **kwargs)
 
