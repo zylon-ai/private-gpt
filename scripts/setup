@@ -10,7 +10,7 @@ from private_gpt.settings.settings import settings
 
 resume_download = True
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog='Setup: Download models from huggingface')
+    parser = argparse.ArgumentParser(prog='Setup: Download models from Hugging Face')
     parser.add_argument('--resume', default=True, action=argparse.BooleanOptionalAction, help='Enable/Disable resume_download options to restart the download progress interrupted')
     args = parser.parse_args()
     resume_download = args.resume

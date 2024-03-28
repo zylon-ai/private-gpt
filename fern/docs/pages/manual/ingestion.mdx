@@ -62,6 +62,7 @@ The following ingestion mode exist:
 * `simple`: historic behavior, ingest one document at a time, sequentially
 * `batch`: read, parse, and embed multiple documents using batches (batch read, and then batch parse, and then batch embed)
 * `parallel`: read, parse, and embed multiple documents in parallel. This is the fastest ingestion mode for local setup.
+* `pipeline`: Alternative to parallel.
 To change the ingestion mode, you can use the `embedding.ingest_mode` configuration value. The default value is `simple`.
 
 To configure the number of workers used for parallel or batched ingestion, you can use

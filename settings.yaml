@@ -39,7 +39,14 @@ llm:
   # Should be matching the selected model
   max_new_tokens: 512
   context_window: 3900
+  tokenizer: mistralai/Mistral-7B-Instruct-v0.2
   temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
+
+rag:
+  similarity_top_k: 2
+  #This value controls how many "top" documents the RAG returns to use in the context.
+  #similarity_value: 0.45
+  #This value is disabled by default.  If you enable this settings, the RAG will only use articles that meet a certain percentage score.
 
 llamacpp:
   prompt_style: "mistral"
@@ -54,6 +61,7 @@ embedding:
   # Should be matching the value above in most cases
   mode: huggingface
   ingest_mode: simple
+  embed_dim: 384 # 384 is for BAAI/bge-small-en-v1.5
 
 huggingface:
   embedding_hf_model_name: BAAI/bge-small-en-v1.5
@@ -61,18 +69,19 @@ huggingface:
 vectorstore:
   database: qdrant
 
+nodestore:
+  database: simple
+
 qdrant:
   path: local_data/private_gpt/qdrant
 
-pgvector:
+postgres:
   host: localhost
   port: 5432
   database: postgres
   user: postgres
   password: postgres
-  embed_dim: 384 # 384 is for BAAI/bge-small-en-v1.5
   schema_name: private_gpt
-  table_name: embeddings
 
 sagemaker:
   llm_endpoint_name: huggingface-pytorch-tgi-inference-2023-09-25-19-53-32-140
@@ -86,3 +95,13 @@ ollama:
   llm_model: llama2
   embedding_model: nomic-embed-text
   api_base: http://localhost:11434
+  request_timeout: 120.0
+
+azopenai:
+  api_key: ${AZ_OPENAI_API_KEY:}
+  azure_endpoint: ${AZ_OPENAI_ENDPOINT:}
+  embedding_deployment_name: ${AZ_OPENAI_EMBEDDING_DEPLOYMENT_NAME:}
+  llm_deployment_name: ${AZ_OPENAI_LLM_DEPLOYMENT_NAME:}
+  api_version: "2023-05-15"
+  embedding_model: text-embedding-ada-002
+  llm_model: gpt-35-turbo
