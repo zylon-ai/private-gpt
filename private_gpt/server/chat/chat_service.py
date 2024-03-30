@@ -9,6 +9,7 @@ from llama_index.core.indices import VectorStoreIndex
 from llama_index.core.indices.postprocessor import MetadataReplacementPostProcessor
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.postprocessor import (
+    SentenceTransformerRerank,
     SimilarityPostprocessor,
 )
 from llama_index.core.storage import StorageContext
@@ -113,16 +114,24 @@ class ChatService:
                 context_filter=context_filter,
                 similarity_top_k=self.settings.rag.similarity_top_k,
             )
+            node_postprocessors = [
+                MetadataReplacementPostProcessor(target_metadata_key="window"),
+                SimilarityPostprocessor(
+                    similarity_cutoff=settings.rag.similarity_value
+                ),
+            ]
+
+            if settings.rag.rerank.enabled:
+                rerank_postprocessor = SentenceTransformerRerank(
+                    model=settings.rag.rerank.model, top_n=settings.rag.rerank.top_n
+                )
+                node_postprocessors.append(rerank_postprocessor)
+
             return ContextChatEngine.from_defaults(
                 system_prompt=system_prompt,
                 retriever=vector_index_retriever,
                 llm=self.llm_component.llm,  # Takes no effect at the moment
-                node_postprocessors=[
-                    MetadataReplacementPostProcessor(target_metadata_key="window"),
-                    SimilarityPostprocessor(
-                        similarity_cutoff=settings.rag.similarity_value
-                    ),
-                ],
+                node_postprocessors=node_postprocessors,
             )
         else:
             return SimpleChatEngine.from_defaults(
