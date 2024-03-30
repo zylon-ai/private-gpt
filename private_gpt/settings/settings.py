@@ -284,15 +284,31 @@ class UISettings(BaseModel):
     )
 
 
+class RerankSettings(BaseModel):
+    enabled: bool = Field(
+        False,
+        description="This value controls whether a reranker should be included in the RAG pipeline.",
+    )
+    model: str = Field(
+        "cross-encoder/ms-marco-MiniLM-L-2-v2",
+        description="Rerank model to use. Limited to SentenceTransformer cross-encoder models.",
+    )
+    top_n: int = Field(
+        2,
+        description="This value controls the number of documents returned by the RAG pipeline.",
+    )
+
+
 class RagSettings(BaseModel):
     similarity_top_k: int = Field(
         2,
-        description="This value controls the number of documents returned by the RAG pipeline",
+        description="This value controls the number of documents returned by the RAG pipeline or considered for reranking if enabled.",
     )
     similarity_value: float = Field(
         None,
         description="If set, any documents retrieved from the RAG must meet a certain match score. Acceptable values are between 0 and 1.",
     )
+    rerank: RerankSettings
 
 
 class PostgresSettings(BaseModel):
