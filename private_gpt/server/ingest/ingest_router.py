@@ -211,6 +211,7 @@ async def create_documents(
     )
     print("DOCUMENT CREATE: ", docs_in)
     document = crud.documents.create(db=db, obj_in=docs_in)
+    department_ids = department_ids if department_ids else "1"
     department_ids = [int(number) for number in department_ids.split(",")]
     for department_id in department_ids:
         db.execute(models.document_department_association.insert().values(document_id=document.id, department_id=department_id))

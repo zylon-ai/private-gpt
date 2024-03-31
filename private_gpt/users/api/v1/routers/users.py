@@ -161,7 +161,8 @@ def read_user_me(
         username=current_user.username,
         company_id = current_user.company_id,
         department_id=current_user.department_id,
-        role =role
+        role =role,
+        checker=current_user.checker
     )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
