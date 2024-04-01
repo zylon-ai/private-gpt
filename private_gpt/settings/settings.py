@@ -114,6 +114,10 @@ class NodeStoreSettings(BaseModel):
     database: Literal["simple", "postgres"]
 
 
+class GraphStoreSettings(BaseModel):
+    database: Literal["neo4j"]
+
+
 class LlamaCPPSettings(BaseModel):
     llm_hf_repo_id: str
     llm_hf_model_file: str
@@ -376,6 +380,25 @@ class QdrantSettings(BaseModel):
     )
 
 
+class Neo4jSettings(BaseModel):
+    url: str | None = Field(
+        "bolt://localhost:7687",
+        description="URL of the Neo4j database.",
+    )
+    username: str | None = Field(
+        "neo4j",
+        description="Username to connect to the Neo4j database.",
+    )
+    password: str | None = Field(
+        "password",
+        description="Password to connect to the Neo4j database.",
+    )
+    database: str | None = Field(
+        "neo4j",
+        description="Database name to connect to the Neo4j database.",
+    )
+
+
 class Settings(BaseModel):
     server: ServerSettings
     data: DataSettings
@@ -389,10 +412,12 @@ class Settings(BaseModel):
     ollama: OllamaSettings
     azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
+    graphstore: GraphStoreSettings | None = None
     nodestore: NodeStoreSettings
     rag: RagSettings
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
+    neo4j: Neo4jSettings | None = None
 
 
 """

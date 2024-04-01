@@ -1,0 +1,33 @@
+# GraphStore Providers
+PrivateGPT supports [Neo4J](https://neo4j.com/).
+
+In order to select one or the other, set the `graphstore.database` property in the `settings.yaml` file to `neo4j`.
+
+```yaml
+graphstore:
+  database: neo4j
+```
+
+## Neo4j
+
+Neo4j is a graph database management system that provides an efficient and scalable solution for storing and querying graph data.
+
+### Configuration
+
+To configure Neo4j as the graph store provider, specify the following parameters in the `settings.yaml` file:
+
+```yaml
+graphstore:
+  database: neo4j
+
+neo4j:
+  url: neo4j://localhost:7687
+  username: neo4j
+  password: password
+  database: neo4j
+```
+
+- **url**: The URL of the Neo4j server.
+- **username**: The username for accessing the Neo4j database.
+- **password**: The password for accessing the Neo4j database.
+- **database**: The name of the Neo4j database.

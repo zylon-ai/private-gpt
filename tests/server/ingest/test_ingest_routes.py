@@ -19,6 +19,12 @@ def test_ingest_accepts_pdf_files(ingest_helper: IngestHelper) -> None:
     assert len(ingest_result.data) == 1
 
 
+def test_ingest_accepts_ttf_files(ingest_helper: IngestHelper) -> None:
+    path = Path(__file__).parents[0] / "test.ttl"
+    ingest_result = ingest_helper.ingest_file(path)
+    assert len(ingest_result.data) == 1
+
+
 def test_ingest_list_returns_something_after_ingestion(
     test_client: TestClient, ingest_helper: IngestHelper
 ) -> None:

@@ -9,11 +9,16 @@ from pathlib import Path
 from queue import Queue
 from typing import Any
 
+from llama_index.core import KnowledgeGraphIndex
 from llama_index.core.data_structs import IndexDict
 from llama_index.core.embeddings.utils import EmbedType
-from llama_index.core.indices import VectorStoreIndex, load_index_from_storage
+from llama_index.core.indices import (
+    VectorStoreIndex,
+    load_index_from_storage,
+)
 from llama_index.core.indices.base import BaseIndex
 from llama_index.core.ingestion import run_transformations
+from llama_index.core.llms.llm import LLM
 from llama_index.core.schema import BaseNode, Document, TransformComponent
 from llama_index.core.storage import StorageContext
 
@@ -67,9 +72,13 @@ class BaseIngestComponentWithIndex(BaseIngestComponent, abc.ABC):
         self._index_thread_lock = (
             threading.Lock()
         )  # Thread lock! Not Multiprocessing lock
-        self._index = self._initialize_index()
+        self._index = self._initialize_index(**kwargs)
+        self._knowledge_graph = self._initialize_knowledge_graph(**kwargs)
 
-    def _initialize_index(self) -> BaseIndex[IndexDict]:
+    def _initialize_index(
+        self,
+        llm: LLM,
+    ) -> BaseIndex[IndexDict]:
         """Initialize the index from the storage context."""
         try:
             # Load the index with store_nodes_override=True to be able to delete them
@@ -79,6 +88,7 @@ class BaseIngestComponentWithIndex(BaseIngestComponent, abc.ABC):
                 show_progress=self.show_progress,
                 embed_model=self.embed_model,
                 transformations=self.transformations,
+                llm=llm,
             )
         except ValueError:
             # There are no index in the storage context, creating a new one
@@ -94,8 +104,33 @@ class BaseIngestComponentWithIndex(BaseIngestComponent, abc.ABC):
             index.storage_context.persist(persist_dir=local_data_path)
         return index
 
+    def _initialize_knowledge_graph(
+        self,
+        llm: LLM,
+        max_triplets_per_chunk: int = 10,
+        include_embeddings: bool = True,
+    ) -> KnowledgeGraphIndex:
+        """Initialize the index from the storage context."""
+        index = KnowledgeGraphIndex.from_documents(
+            [],
+            storage_context=self.storage_context,
+            show_progress=self.show_progress,
+            embed_model=self.embed_model,
+            transformations=self.transformations,
+            llm=llm,
+            max_triplets_per_chunk=max_triplets_per_chunk,
+            include_embeddings=include_embeddings,
+        )
+        index.storage_context.persist(persist_dir=local_data_path)
+        return index
+
     def _save_index(self) -> None:
+        logger.debug("Persisting the index")
         self._index.storage_context.persist(persist_dir=local_data_path)
+
+    def _save_knowledge_graph(self) -> None:
+        logger.debug("Persisting the knowledge graph")
+        self._knowledge_graph.storage_context.persist(persist_dir=local_data_path)
 
     def delete(self, doc_id: str) -> None:
         with self._index_thread_lock:
@@ -104,6 +139,12 @@ class BaseIngestComponentWithIndex(BaseIngestComponent, abc.ABC):
 
             # Save the index
             self._save_index()
+
+            # Delete the document from the knowledge graph
+            self._knowledge_graph.delete_ref_doc(doc_id, delete_from_docstore=True)
+
+            # Save the knowledge graph
+            self._save_knowledge_graph()
 
 
 class SimpleIngestComponent(BaseIngestComponentWithIndex):
@@ -138,13 +179,34 @@ class SimpleIngestComponent(BaseIngestComponentWithIndex):
     def _save_docs(self, documents: list[Document]) -> list[Document]:
         logger.debug("Transforming count=%s documents into nodes", len(documents))
         with self._index_thread_lock:
-            for document in documents:
-                self._index.insert(document, show_progress=True)
-            logger.debug("Persisting the index and nodes")
-            # persist the index and nodes
-            self._save_index()
+            logger.debug("Persisting the index and nodes in the vector store")
+            self._save_to_index(documents)
+
+            logger.debug("Persisting the index and nodes in the knowledge graph")
+            self._save_to_knowledge_graph(documents)
+
             logger.debug("Persisted the index and nodes")
         return documents
+
+    def _save_to_index(self, documents: list[Document]) -> None:
+        logger.debug("Inserting count=%s documents in the index", len(documents))
+        for document in documents:
+            logger.info("Inserting document=%s in the index", document)
+            self._index.insert(document, show_progress=True)
+        self._save_index()
+        pass
+
+    def _save_to_knowledge_graph(self, documents: list[Document]) -> None:
+        logger.debug(
+            "Inserting count=%s documents in the knowledge graph", len(documents)
+        )
+        for document in [
+            d for d in documents if d.extra_info.get("graph_type", None) is not None
+        ]:
+            logger.info("Inserting document=%s in the knowledge graph", document)
+            logger.info("Document=%s", document.extra_info)
+            self._knowledge_graph.insert(document, show_progress=True)
+        self._save_knowledge_graph()
 
 
 class BatchIngestComponent(BaseIngestComponentWithIndex):
@@ -485,6 +547,8 @@ def get_ingestion_component(
     embed_model: EmbedType,
     transformations: list[TransformComponent],
     settings: Settings,
+    *args: Any,
+    **kwargs: Any,
 ) -> BaseIngestComponent:
     """Get the ingestion component for the given configuration."""
     ingest_mode = settings.embedding.ingest_mode
@@ -494,6 +558,7 @@ def get_ingestion_component(
             embed_model=embed_model,
             transformations=transformations,
             count_workers=settings.embedding.count_workers,
+            llm=kwargs.get("llm"),
         )
     elif ingest_mode == "parallel":
         return ParallelizedIngestComponent(
@@ -501,6 +566,7 @@ def get_ingestion_component(
             embed_model=embed_model,
             transformations=transformations,
             count_workers=settings.embedding.count_workers,
+            llm=kwargs.get("llm"),
         )
     elif ingest_mode == "pipeline":
         return PipelineIngestComponent(
@@ -508,10 +574,12 @@ def get_ingestion_component(
             embed_model=embed_model,
             transformations=transformations,
             count_workers=settings.embedding.count_workers,
+            llm=kwargs.get("llm"),
         )
     else:
         return SimpleIngestComponent(
             storage_context=storage_context,
             embed_model=embed_model,
             transformations=transformations,
+            llm=kwargs.get("llm"),
         )
