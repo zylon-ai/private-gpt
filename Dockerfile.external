@@ -14,7 +14,7 @@ WORKDIR /home/worker/app
 COPY pyproject.toml poetry.lock ./
 
 ARG POETRY_EXTRAS="ui vector-stores-qdrant llms-ollama embeddings-ollama"
-RUN poetry install --extras "${POETRY_EXTRAS}"
+RUN poetry install --no-root --extras "${POETRY_EXTRAS}"
 
 FROM base as app
 ENV \
