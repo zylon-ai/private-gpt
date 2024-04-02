@@ -210,8 +210,8 @@ class OllamaSettings(BaseModel):
         description="Base URL of Ollama API. Example: 'https://localhost:11434'.",
     )
     embedding_api_base: str = Field(
-        api_base,  # default is same as api_base, unless specified differently
-        description="Base URL of Ollama embedding API. Defaults to the same value as api_base",
+        "http://localhost:11434",
+        description="Base URL of Ollama embedding API. Example: 'https://localhost:11434'.",
     )
     llm_model: str = Field(
         None,

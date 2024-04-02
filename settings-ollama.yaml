@@ -14,8 +14,8 @@ ollama:
   llm_model: mistral
   embedding_model: nomic-embed-text
   api_base: http://localhost:11434
+  embedding_api_base: http://localhost:11434  # change if your embedding model runs on another ollama
   keep_alive: 5m
-  # embedding_api_base: http://ollama_embedding:11434  # uncomment if your embedding model runs on another ollama
   tfs_z: 1.0              # Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting.
   top_k: 40               # Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)
   top_p: 0.9              # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
