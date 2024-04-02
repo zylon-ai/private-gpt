@@ -64,6 +64,8 @@ navigation:
         contents:
           - page: LLM Backends
             path: ./docs/pages/manual/llms.mdx
+          - page: Reranking
+            path: ./docs/pages/manual/reranker.mdx
       - section: User Interface
         contents:
           - page: User interface (Gradio) Manual

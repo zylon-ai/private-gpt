@@ -47,6 +47,10 @@ rag:
   #This value controls how many "top" documents the RAG returns to use in the context.
   #similarity_value: 0.45
   #This value is disabled by default.  If you enable this settings, the RAG will only use articles that meet a certain percentage score.
+  rerank:
+    enabled: false
+    model: cross-encoder/ms-marco-MiniLM-L-2-v2
+    top_n: 1
 
 llamacpp:
   prompt_style: "mistral"
