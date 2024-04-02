@@ -209,6 +209,10 @@ class OllamaSettings(BaseModel):
         "http://localhost:11434",
         description="Base URL of Ollama API. Example: 'https://localhost:11434'.",
     )
+    embedding_api_base: str = Field(
+        api_base,  # default is same as api_base, unless specified differently
+        description="Base URL of Ollama embedding API. Defaults to the same value as api_base",
+    )
     llm_model: str = Field(
         None,
         description="Model to use. Example: 'llama2-uncensored'.",
@@ -216,6 +220,10 @@ class OllamaSettings(BaseModel):
     embedding_model: str = Field(
         None,
         description="Model to use. Example: 'nomic-embed-text'.",
+    )
+    keep_alive: str = Field(
+        "5m",
+        description="Time the model will stay loaded in memory after a request. examples: 5m, 5h, '-1' ",
     )
     tfs_z: float = Field(
         1.0,

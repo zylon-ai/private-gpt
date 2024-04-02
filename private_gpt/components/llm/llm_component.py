@@ -1,4 +1,6 @@
 import logging
+from collections.abc import Callable
+from typing import Any
 
 from injector import inject, singleton
 from llama_index.core.llms import LLM, MockLLM
@@ -133,6 +135,24 @@ class LLMComponent:
                     additional_kwargs=settings_kwargs,
                     request_timeout=ollama_settings.request_timeout,
                 )
+
+                if (
+                    ollama_settings.keep_alive
+                    != ollama_settings.model_fields["keep_alive"].default
+                ):
+                    # Modify Ollama methods to use the "keep_alive" field.
+                    def add_keep_alive(func: Callable[..., Any]) -> Callable[..., Any]:
+                        def wrapper(*args: Any, **kwargs: Any) -> Any:
+                            kwargs["keep_alive"] = ollama_settings.keep_alive
+                            return func(*args, **kwargs)
+
+                        return wrapper
+
+                    Ollama.chat = add_keep_alive(Ollama.chat)
+                    Ollama.stream_chat = add_keep_alive(Ollama.stream_chat)
+                    Ollama.complete = add_keep_alive(Ollama.complete)
+                    Ollama.stream_complete = add_keep_alive(Ollama.stream_complete)
+
             case "azopenai":
                 try:
                     from llama_index.llms.azure_openai import (  # type: ignore
