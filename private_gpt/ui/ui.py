@@ -1,4 +1,4 @@
-"""This file should be imported only and only if you want to run the UI locally."""
+"""This file should be imported if and only if you want to run the UI locally."""
 
 import itertools
 import logging
@@ -418,11 +418,54 @@ class PrivateGptUi:
                         inputs=system_prompt_input,
                     )
 
+                    def get_model_label() -> str | None:
+                        """Get model label from llm mode setting YAML.
+
+                        Raises:
+                            ValueError: If an invalid 'llm_mode' is encountered.
+
+                        Returns:
+                            str: The corresponding model label.
+                        """
+                        # Get model label from llm mode setting YAML
+                        # Labels: local, openai, openailike, sagemaker, mock, ollama
+                        config_settings = settings()
+                        if config_settings is None:
+                            raise ValueError("Settings are not configured.")
+
+                        # Get llm_mode from settings
+                        llm_mode = config_settings.llm.mode
+
+                        # Mapping of 'llm_mode' to corresponding model labels
+                        model_mapping = {
+                            "llamacpp": config_settings.llamacpp.llm_hf_model_file,
+                            "openai": config_settings.openai.model,
+                            "openailike": config_settings.openai.model,
+                            "sagemaker": config_settings.sagemaker.llm_endpoint_name,
+                            "mock": llm_mode,
+                            "ollama": config_settings.ollama.llm_model,
+                        }
+
+                        if llm_mode not in model_mapping:
+                            print(f"Invalid 'llm mode': {llm_mode}")
+                            return None
+
+                        return model_mapping[llm_mode]
+
                 with gr.Column(scale=7, elem_id="col"):
+                    # Determine the model label based on the value of PGPT_PROFILES
+                    model_label = get_model_label()
+                    if model_label is not None:
+                        label_text = (
+                            f"LLM: {settings().llm.mode} | Model: {model_label}"
+                        )
+                    else:
+                        label_text = f"LLM: {settings().llm.mode}"
+
                     _ = gr.ChatInterface(
                         self._chat,
                         chatbot=gr.Chatbot(
-                            label=f"LLM: {settings().llm.mode}",
+                            label=label_text,
                             show_copy_button=True,
                             elem_id="chatbot",
                             render=False,
