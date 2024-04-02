@@ -33,6 +33,7 @@ ENV \
   PORT=8080 \
   PYTHONPATH="$PYTHONPATH:/home/worker/app/private_gpt/" \
   APP_ENV=prod \
+  PGPT_PROFILES=docker \
   PGPT_MODE=mock \
   PGPT_EMBEDDING_MODE=sagemaker \
   PGPT_HF_REPO_ID=TheBloke/Mistral-7B-Instruct-v0.1-GGUF \
