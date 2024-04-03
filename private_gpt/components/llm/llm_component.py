@@ -1,4 +1,6 @@
 import logging
+from collections.abc import Callable
+from typing import Any
 
 from injector import inject, singleton
 from llama_index.core.llms import LLM, MockLLM
@@ -131,6 +133,43 @@ class LLMComponent:
                     temperature=settings.llm.temperature,
                     context_window=settings.llm.context_window,
                     additional_kwargs=settings_kwargs,
+                    request_timeout=ollama_settings.request_timeout,
+                )
+
+                if (
+                    ollama_settings.keep_alive
+                    != ollama_settings.model_fields["keep_alive"].default
+                ):
+                    # Modify Ollama methods to use the "keep_alive" field.
+                    def add_keep_alive(func: Callable[..., Any]) -> Callable[..., Any]:
+                        def wrapper(*args: Any, **kwargs: Any) -> Any:
+                            kwargs["keep_alive"] = ollama_settings.keep_alive
+                            return func(*args, **kwargs)
+
+                        return wrapper
+
+                    Ollama.chat = add_keep_alive(Ollama.chat)
+                    Ollama.stream_chat = add_keep_alive(Ollama.stream_chat)
+                    Ollama.complete = add_keep_alive(Ollama.complete)
+                    Ollama.stream_complete = add_keep_alive(Ollama.stream_complete)
+
+            case "azopenai":
+                try:
+                    from llama_index.llms.azure_openai import (  # type: ignore
+                        AzureOpenAI,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Azure OpenAI dependencies not found, install with `poetry install --extras llms-azopenai`"
+                    ) from e
+
+                azopenai_settings = settings.azopenai
+                self.llm = AzureOpenAI(
+                    model=azopenai_settings.llm_model,
+                    deployment_name=azopenai_settings.llm_deployment_name,
+                    api_key=azopenai_settings.api_key,
+                    azure_endpoint=azopenai_settings.azure_endpoint,
+                    api_version=azopenai_settings.api_version,
                 )
             case "mock":
                 self.llm = MockLLM()

@@ -1,16 +1,16 @@
 services:
   private-gpt:
     build:
-      dockerfile: Dockerfile.local
+      dockerfile: Dockerfile.external
     volumes:
       - ./local_data/:/home/worker/app/local_data
-      - ./models/:/home/worker/app/models
     ports:
-      - 8000:8000
+      - 8001:8080
     environment:
-      PORT: 8000
+      PORT: 8080
       PGPT_PROFILES: docker
-      PGPT_MODE: local
-
-    env_file:
-      - .env
+      PGPT_MODE: ollama
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ./models:/root/.ollama

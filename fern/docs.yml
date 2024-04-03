@@ -58,10 +58,14 @@ navigation:
         contents:
           - page: Vector Stores
             path: ./docs/pages/manual/vectordb.mdx
+          - page: Node Stores
+            path: ./docs/pages/manual/nodestore.mdx
       - section: Advanced Setup
         contents:
           - page: LLM Backends
             path: ./docs/pages/manual/llms.mdx
+          - page: Reranking
+            path: ./docs/pages/manual/reranker.mdx
       - section: User Interface
         contents:
           - page: User interface (Gradio) Manual
