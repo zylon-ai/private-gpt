@@ -6,3 +6,4 @@ from .subscription_crud import subscription
 from .document_crud import documents
 from .department_crud import department
 from .audit_crud import audit
+from .chathistory_crud import chat

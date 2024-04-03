@@ -30,7 +30,6 @@ class UserUpdate(BaseModel):
 	last_login: Optional[datetime] = None
 
 
-
 class UserLoginSchema(BaseModel):
 	email: EmailStr = Field(alias="email")
 	password: str

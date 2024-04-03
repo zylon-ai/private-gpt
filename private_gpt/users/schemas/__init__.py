@@ -7,3 +7,4 @@ from .company import Company, CompanyBase, CompanyCreate, CompanyUpdate
 from .documents import Document, DocumentCreate, DocumentsBase, DocumentUpdate, DocumentList, DepartmentList, DocumentEnable, DocumentDepartmentUpdate, DocumentCheckerUpdate, DocumentMakerCreate, DocumentDepartmentList, DocumentView, DocumentVerify, DocumentFilter
 from .department import Department, DepartmentCreate, DepartmentUpdate, DepartmentAdminCreate, DepartmentDelete
 from .audit import AuditBase, AuditCreate, AuditUpdate, Audit, GetAudit
+from .chat_history import Chat, ChatBase, ChatCreate, ChatDelete, ChatUpdate, ChatMessages

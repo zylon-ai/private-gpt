@@ -7,3 +7,4 @@ from .subscription import Subscription
 from .department import Department
 from .audit import Audit
 from .document_department import document_department_association
+from .chat_history import ChatHistory

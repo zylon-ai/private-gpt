@@ -1,3 +1,6 @@
+from private_gpt.users import crud, models, schemas
+import itertools
+from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 from fastapi import APIRouter, Depends, Request, Security, HTTPException, status
 from private_gpt.server.ingest.ingest_service import IngestService
 from pydantic import BaseModel
@@ -17,11 +20,13 @@ from private_gpt.open_ai.openai_models import (
 from private_gpt.server.chat.chat_router import ChatBody, chat_completion
 from private_gpt.server.utils.auth import authenticated
 from private_gpt.users.api import deps
-from private_gpt.users import crud, models, schemas
+from pydantic import Optional
+
 completions_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
 
 class CompletionsBody(BaseModel):
+    conversation_id: Optional[int]
     prompt: str
     system_prompt: str | None = None
     use_context: bool = False
@@ -145,25 +150,82 @@ async def prompt_completion(
             detail="Internal Server Error",
         )
 
-    messages = [OpenAIMessage(content=body.prompt, role="user")]
+    if body.conversation_id:
+        chat_history = crud.chat.get_by_id(db, id=body.conversation_id)
+        if chat_history is None or chat_history.user_id != current_user.id:
+            raise HTTPException(
+                status_code=404, detail="Chat history not found")
+    else:
+        chat_create_in = schemas.ChatCreate(user_id=current_user.id)
+        chat_history = crud.chat.create(db=db, obj_in=chat_create_in)
+
+    _history = chat_history.messages or []
+
+    def build_history() -> list[ChatMessage]:
+        history_messages: list[ChatMessage] = []
+        for interaction in _history:
+            user_message = interaction.get("user", "")
+            ai_message = interaction.get("ai", "")
+            if user_message:
+                history_messages.append(
+                    ChatMessage(
+                        content=user_message,
+                        role=MessageRole.USER
+                    )
+                )
+            if ai_message:
+                history_messages.append(
+                    ChatMessage(
+                        content=ai_message,
+                        role=MessageRole.ASSISTANT
+                    )
+                )
+
+        # max 20 messages to try to avoid context overflow
+        return history_messages[:20]
+
+    # Prepare new messages
+    new_messages = []
+
+    if body.prompt:
+        new_messages.append(OpenAIMessage(content=body.prompt, role="user"))
     if body.system_prompt:
-        messages.insert(0, OpenAIMessage(
+        new_messages.insert(0, OpenAIMessage(
             content=body.system_prompt, role="system"))
 
+    # Update chat history with new user messages
+    if new_messages:
+        new_message = ChatMessage(content=new_messages, role=MessageRole.USER)
+        _history.append(new_message.dict())
+
+    # Process chat completion
     chat_body = ChatBody(
-        messages=messages,
+        messages=build_history(),
         use_context=body.use_context,
         stream=body.stream,
         include_sources=body.include_sources,
         context_filter=body.context_filter,
     )
-    log_audit(
-        model='Chat', 
-        action='Chat',
-        details={
-            "query": body.prompt,
-            'user': current_user.username,
-            }, 
-        user_id=current_user.id
-    )
-    return await chat_completion(request, chat_body)
+
+    ai_response = await chat_completion(request, chat_body)
+
+    # Update chat history with AI response
+    if ai_response.messages:
+        ai_message = OpenAIMessage(
+            content=ai_response.messages, role="assistant")
+        _history.append(ai_message.dict())
+
+    # Update chat history in the database
+    chat_obj_in = schemas.ChatUpdate(messages=build_history())
+    crud.chat.update_messages(db, db_obj=chat_history, obj_in=chat_obj_in)
+
+    return ai_response
+    # log_audit(
+    #     model='Chat', 
+    #     action='Chat',
+    #     details={
+    #         "query": body.prompt,
+    #         'user': current_user.username,
+    #         }, 
+    #     user_id=current_user.id
+    # )

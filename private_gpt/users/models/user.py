@@ -51,6 +51,7 @@ class User(Base):
         Integer, ForeignKey("departments.id"), nullable=False)
     
     department = relationship("Department", back_populates="users")
+    chat_histories = relationship("ChatHistory", back_populates="user")
 
     __table_args__ = (
         UniqueConstraint('username', name='unique_username_no_spacing'),
