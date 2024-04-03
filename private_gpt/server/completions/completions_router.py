@@ -22,6 +22,7 @@ completions_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated
 
 
 class CompletionsBody(BaseModel):
+    conversation_id: int
     prompt: str
     system_prompt: str | None = None
     use_context: bool = False
@@ -33,6 +34,7 @@ class CompletionsBody(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
+                    "conversation_id": 123,
                     "prompt": "How do you fry an egg?",
                     "system_prompt": "You are a rapper. Always answer with a rap.",
                     "stream": False,
@@ -92,6 +94,14 @@ class CompletionsBody(BaseModel):
 #     )
 #     return chat_completion(request, chat_body)
 
+def create_chat_item(db, sender, content, conversation_id):
+    chat_item_create = schemas.ChatItemCreate(
+            sender=sender,
+            content=content,
+            conversation_id=conversation_id
+        )
+    return crud.chat_item.create(db, obj_in=chat_item_create)
+
 
 @completions_router.post(
     "/chat",
@@ -137,6 +147,43 @@ async def prompt_completion(
             docs_ids.extend(doc_id)
         body.context_filter = {"docs_ids": docs_ids}
 
+        chat_history = crud.chat.get_by_id(
+            db, id=body.conversation_id
+        )
+        if (chat_history is None) and (chat_history.user_id != current_user.id):
+            raise HTTPException(
+                status_code=404, detail="Chat history not found")
+        
+        messages = [OpenAIMessage(content=body.prompt, role="user")]
+        create_chat_item(db, "user", body.prompt, body.conversation_id)
+
+        if body.system_prompt:
+            messages.insert(0, OpenAIMessage(
+                content=body.system_prompt, role="system"))
+
+        chat_body = ChatBody(
+            messages=messages,
+            use_context=body.use_context,
+            stream=body.stream,
+            include_sources=body.include_sources,
+            context_filter=body.context_filter,
+        )
+        log_audit(
+            model='Chat', 
+            action='Chat',
+            details={
+                "query": body.prompt,
+                'user': current_user.username,
+                }, 
+            user_id=current_user.id
+        )
+        chat_response = await chat_completion(request, chat_body)
+        print(chat_response)
+        create_chat_item(db, "assistant", chat_response.choices[0].message.content, body.conversation_id)
+
+        return chat_response
+    
+    
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error: {str(e)}")
@@ -144,26 +191,3 @@ async def prompt_completion(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error",
         )
-
-    messages = [OpenAIMessage(content=body.prompt, role="user")]
-    if body.system_prompt:
-        messages.insert(0, OpenAIMessage(
-            content=body.system_prompt, role="system"))
-
-    chat_body = ChatBody(
-        messages=messages,
-        use_context=body.use_context,
-        stream=body.stream,
-        include_sources=body.include_sources,
-        context_filter=body.context_filter,
-    )
-    log_audit(
-        model='Chat', 
-        action='Chat',
-        details={
-            "query": body.prompt,
-            'user': current_user.username,
-            }, 
-        user_id=current_user.id
-    )
-    return await chat_completion(request, chat_body)

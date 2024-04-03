@@ -129,9 +129,7 @@ class ChatService:
             else None
         )
         system_prompt = (
-            chat_engine_input.system_message.content
-            if chat_engine_input.system_message
-            else None
+            "You can only answer questions about the provided context. If you know the answer but it is not based in the provided context, don't provide the answer, just state the answer is not in the context provided."
         )
         chat_history = (
             chat_engine_input.chat_history if chat_engine_input.chat_history else None
@@ -165,9 +163,7 @@ class ChatService:
             else None
         )
         system_prompt = (
-            chat_engine_input.system_message.content
-            if chat_engine_input.system_message
-            else None
+            "You can only answer questions about the provided context. If you know the answer but it is not based in the provided context, don't provide the answer, just state the answer is not in the context provided."
         )
         chat_history = (
             chat_engine_input.chat_history if chat_engine_input.chat_history else None

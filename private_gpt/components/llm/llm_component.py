@@ -11,8 +11,7 @@ from private_gpt.paths import models_cache_path, models_path
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
-
-
+local_path = models_path / "tokenizer/Mistral-7B-Instruct-v0.1"
 @singleton
 class LLMComponent:
     llm: LLM
@@ -23,8 +22,7 @@ class LLMComponent:
         if settings.llm.tokenizer:
             set_global_tokenizer(
                 AutoTokenizer.from_pretrained(
-                    pretrained_model_name_or_path=settings.llm.tokenizer,
-                    cache_dir=str(models_cache_path),
+                    local_path
                 )
             )
 

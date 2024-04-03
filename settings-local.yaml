@@ -8,16 +8,24 @@ llm:
   context_window: 3900
   tokenizer: mistralai/Mistral-7B-Instruct-v0.2
 
+ 
 llamacpp:
-  prompt_style: "mistral"
-  llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF
-  llm_hf_model_file: mistral-7b-instruct-v0.2.Q4_K_M.gguf
+  prompt_style: "chatml"
+  llm_hf_repo_id: TheBloke/OpenHermes-2.5-Mistral-7B-GGUF
+  llm_hf_model_file: openhermes-2.5-mistral-7b.Q5_K_M.gguf
+  tfs_z: 1.0            # Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting
+  top_k: 40             # Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)
+  top_p: 0.9            # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
+  repeat_last_n: 64     # Sets how far back for the model to look back to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)
+  repeat_penalty: 1.1   # Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)
 
 embedding:
+  # Should be matching the value above in most cases
   mode: huggingface
+  ingest_mode: simple
 
 huggingface:
-  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+  embedding_hf_model_name: BAAI/bge-large-en-v1.5
 
 vectorstore:
   database: qdrant
