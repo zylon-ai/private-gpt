@@ -1,15 +1,17 @@
+import uuid
 from datetime import datetime
 from sqlalchemy.orm import relationship
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean
-from private_gpt.users.db.base_class import Base
+from sqlalchemy.dialects.postgresql import UUID 
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, event
 
+from private_gpt.users.db.base_class import Base
 
 class ChatHistory(Base):
     """Models a chat history table"""
 
     __tablename__ = "chat_history"
 
-    conversation_id = Column(Integer, nullable=False, primary_key=True)
+    conversation_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now,
@@ -18,6 +20,7 @@ class ChatHistory(Base):
     user = relationship("User", back_populates="chat_histories")
     chat_items = relationship(
         "ChatItem", back_populates="chat_history", cascade="all, delete-orphan")
+    _title_generated = Column(Boolean, default=False)
 
     def __init__(self, user_id, chat_items=None, **kwargs):
         super().__init__(**kwargs)
@@ -32,7 +35,7 @@ class ChatHistory(Base):
             first_user_chat_item = user_chat_items[0]
             self.title = first_user_chat_item.content[:30]
         else:
-            self.title = "Untitled Chat"
+            self.title = str(self.conversation_id)
 
     def __repr__(self):
         """Returns string representation of model instance"""
@@ -51,10 +54,18 @@ class ChatItem(Base):
     updated_at = Column(DateTime, default=datetime.now,
                         onupdate=datetime.now)
     like = Column(Boolean, default=True)
-    conversation_id = Column(Integer, ForeignKey(
+    conversation_id = Column(UUID(as_uuid=True), ForeignKey(
         "chat_history.conversation_id"), nullable=False)
     chat_history = relationship("ChatHistory", back_populates="chat_items")
 
     def __repr__(self):
         """Returns string representation of model instance"""
         return f"<ChatItem {self.id!r}>"
+
+
+@event.listens_for(ChatHistory, "after_insert")
+def receive_after_insert(mapper, connection, target):
+    """Update title after insertion to reflect the conversation_id"""
+    if not target._title_generated:
+        target.generate_title()
+        target._title_generated = True

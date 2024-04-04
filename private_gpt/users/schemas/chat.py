@@ -1,10 +1,10 @@
 from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel
-
+import uuid
 
 class ChatItemBase(BaseModel):
-    conversation_id: int
+    conversation_id: uuid.UUID
     sender: str
     content: Optional[str]
 
@@ -38,10 +38,10 @@ class ChatHistoryUpdate(ChatHistoryBase):
     chat_items: Optional[List[ChatItemCreate]]
 
 class Chat(BaseModel):
-    conversation_id: int
+    conversation_id: uuid.UUID
 
 class ChatHistory(ChatHistoryBase):
-    conversation_id: int
+    conversation_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
     chat_items: List[ChatItem]
@@ -50,7 +50,7 @@ class ChatHistory(ChatHistoryBase):
         orm_mode = True
 
 class ChatDelete(BaseModel):
-    conversation_id: int
+    conversation_id: uuid.UUID
 
 class CreateChatHistory(BaseModel):
     user_id: int

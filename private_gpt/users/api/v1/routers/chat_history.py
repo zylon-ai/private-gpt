@@ -1,6 +1,6 @@
 import logging
 import traceback
-
+import uuid
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 from fastapi import APIRouter, Depends, HTTPException, status, Security
@@ -63,9 +63,9 @@ def create_chat_history(
         )
 
 
-@router.get("/{chat_history_id}", response_model=schemas.ChatHistory)
+@router.get("/{conversation_id}", response_model=schemas.ChatHistory)
 def read_chat_history(
-    chat_history_id: int,
+    conversation_id: uuid.UUID,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
@@ -75,7 +75,7 @@ def read_chat_history(
     Read a chat history by ID
     """
     try:
-        chat_history = crud.chat.get_by_id(db, id=chat_history_id)
+        chat_history = crud.chat.get_by_id(db, id=conversation_id)
         if chat_history is None or chat_history.user_id != current_user.id:
             raise HTTPException(
                 status_code=404, detail="Chat history not found")
@@ -121,3 +121,5 @@ def delete_chat_history(
             status_code=500,
             detail="Internal Server Error",
         )
+
+

@@ -53,6 +53,7 @@ gradio = {version ="^4.19.2", optional = true}
 aiofiles = "^23.2.1"
 timm = "^0.9.16"
 fastapi-filter = {extras = ["sqlalchemy"], version = "^1.1.0"}
+uuid = "^1.30"
 
 [tool.poetry.extras]
 ui = ["gradio"]

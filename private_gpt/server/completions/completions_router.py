@@ -18,11 +18,12 @@ from private_gpt.server.chat.chat_router import ChatBody, chat_completion
 from private_gpt.server.utils.auth import authenticated
 from private_gpt.users.api import deps
 from private_gpt.users import crud, models, schemas
+import uuid
 completions_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
 
 class CompletionsBody(BaseModel):
-    conversation_id: int
+    conversation_id: uuid.UUID
     prompt: str
     system_prompt: str | None = None
     use_context: bool = False
