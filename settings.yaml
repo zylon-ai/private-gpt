@@ -36,6 +36,7 @@ ui:
 
 llm:
   mode: llamacpp
+  prompt_style: "mistral"
   # Should be matching the selected model
   max_new_tokens: 512
   context_window: 3900
