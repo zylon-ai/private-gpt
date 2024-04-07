@@ -1,12 +1,12 @@
 from datetime import datetime
-from typing import List, Optional
-from pydantic import BaseModel
+from typing import List, Optional, Union, Dict
+from pydantic import BaseModel, Json
 import uuid
 
 class ChatItemBase(BaseModel):
     conversation_id: uuid.UUID
     sender: str
-    content: Optional[str]
+    content: Union[str, Dict]
 
 
 class ChatItemCreate(ChatItemBase):

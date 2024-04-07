@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, Request, Security, HTTPException, status
 from private_gpt.server.ingest.ingest_service import IngestService
 from pydantic import BaseModel
+from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 import traceback
 import logging
-
+import json
 logger = logging.getLogger(__name__)
 
 from starlette.responses import StreamingResponse
@@ -46,6 +47,9 @@ class CompletionsBody(BaseModel):
         }
     }
 
+
+class ChatContentCreate(BaseModel):
+    content: Dict[str, Any]
 
 # @completions_router.post(
 #     "/completions",
@@ -155,8 +159,15 @@ async def prompt_completion(
             raise HTTPException(
                 status_code=404, detail="Chat history not found")
         
-        messages = [OpenAIMessage(content=body.prompt, role="user")]
-        create_chat_item(db, "user", body.prompt, body.conversation_id)
+        user_message = OpenAIMessage(content=body.prompt, role="user")
+        user_message = user_message.model_dump(mode="json")
+
+        user_message_json = {
+            'text': body.prompt,
+        }
+        create_chat_item(db, "user", json.dumps(user_message_json) , body.conversation_id)
+        
+        messages = [user_message]
 
         if body.system_prompt:
             messages.insert(0, OpenAIMessage(
@@ -178,9 +189,21 @@ async def prompt_completion(
                 }, 
             user_id=current_user.id
         )
+        
         chat_response = await chat_completion(request, chat_body)
-        print(chat_response)
-        create_chat_item(db, "assistant", chat_response.choices[0].message.content, body.conversation_id)
+        ai_response = chat_response.model_dump(mode="json")
+    
+        text_list = [choice['message']['content'] for choice in ai_response['choices']]
+        sources_list = [source['document']['doc_metadata'] for choice in ai_response['choices'] for source in choice['sources']]
+
+        ai_response_json = {
+            'text': text_list[0],
+            'sources': sources_list
+        }
+        ai_response_json_str = json.dumps(ai_response_json)
+        print("The ai response: ",ai_response_json_str)
+
+        create_chat_item(db, "assistant", ai_response, body.conversation_id)
 
         return chat_response
     

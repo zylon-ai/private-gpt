@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, event
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, event, JSON
 
 from private_gpt.users.db.base_class import Base
 
@@ -49,7 +49,7 @@ class ChatItem(Base):
 
     id = Column(Integer, nullable=False, primary_key=True)
     sender = Column(String(225), nullable=False)
-    content = Column(Text, nullable=True)
+    content = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now,
                         onupdate=datetime.now)
