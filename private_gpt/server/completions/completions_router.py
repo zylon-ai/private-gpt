@@ -145,7 +145,6 @@ async def prompt_completion(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail=f"No documents uploaded for your department.")
         docs_list = [document.filename for document in documents]
-        print("DOCUMENTS ASSIGNED TO THIS DEPARTMENTS: ", docs_list)
         docs_ids = []
         for filename in docs_list:
             doc_id = service.get_doc_ids_by_filename(filename)
@@ -165,7 +164,7 @@ async def prompt_completion(
         user_message_json = {
             'text': body.prompt,
         }
-        create_chat_item(db, "user", json.dumps(user_message_json) , body.conversation_id)
+        create_chat_item(db, "user", user_message_json , body.conversation_id)
         
         messages = [user_message]
 
@@ -192,21 +191,8 @@ async def prompt_completion(
         
         chat_response = await chat_completion(request, chat_body)
         ai_response = chat_response.model_dump(mode="json")
-    
-        text_list = [choice['message']['content'] for choice in ai_response['choices']]
-        sources_list = [source['document']['doc_metadata'] for choice in ai_response['choices'] for source in choice['sources']]
-
-        ai_response_json = {
-            'text': text_list[0],
-            'sources': sources_list
-        }
-        ai_response_json_str = json.dumps(ai_response_json)
-        print("The ai response: ",ai_response_json_str)
-
         create_chat_item(db, "assistant", ai_response, body.conversation_id)
-
         return chat_response
-    
     
     except Exception as e:
         print(traceback.format_exc())

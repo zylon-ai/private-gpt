@@ -35,9 +35,10 @@ class CRUDDocuments(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
                 .join(document_department_association)
                 .join(Department)
                 .filter(document_department_association.c.department_id == department_id)
+                .order_by(desc(getattr(Document, 'uploaded_at')))
                 .offset(skip)
                 .limit(limit)
-                .all().order_by(desc(getattr(Document, 'uploaded_at')))
+                .all()
             )
     
     def get_files_to_verify(

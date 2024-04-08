@@ -25,7 +25,7 @@ def list_chat_histories(
     Retrieve a list of chat histories with pagination support.
     """
     try:
-        chat_histories = crud.chat.get_multi(
+        chat_histories = crud.chat.get_chat_history(
             db, skip=skip, limit=limit)
         return chat_histories
     except Exception as e:
