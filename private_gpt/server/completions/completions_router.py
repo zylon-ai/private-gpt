@@ -4,10 +4,11 @@ from llama_index.llms import ChatMessage, ChatResponse, MessageRole
 from fastapi import APIRouter, Depends, Request, Security, HTTPException, status
 from private_gpt.server.ingest.ingest_service import IngestService
 from pydantic import BaseModel
+from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 import traceback
 import logging
-
+import json
 logger = logging.getLogger(__name__)
 
 from starlette.responses import StreamingResponse
@@ -20,13 +21,13 @@ from private_gpt.open_ai.openai_models import (
 from private_gpt.server.chat.chat_router import ChatBody, chat_completion
 from private_gpt.server.utils.auth import authenticated
 from private_gpt.users.api import deps
-from pydantic import Optional
-
+from private_gpt.users import crud, models, schemas
+import uuid
 completions_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated)])
 
 
 class CompletionsBody(BaseModel):
-    conversation_id: Optional[int]
+    conversation_id: uuid.UUID
     prompt: str
     system_prompt: str | None = None
     use_context: bool = False
@@ -38,6 +39,7 @@ class CompletionsBody(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
+                    "conversation_id": 123,
                     "prompt": "How do you fry an egg?",
                     "system_prompt": "You are a rapper. Always answer with a rap.",
                     "stream": False,
@@ -48,6 +50,9 @@ class CompletionsBody(BaseModel):
         }
     }
 
+
+class ChatContentCreate(BaseModel):
+    content: Dict[str, Any]
 
 # @completions_router.post(
 #     "/completions",
@@ -97,6 +102,14 @@ class CompletionsBody(BaseModel):
 #     )
 #     return chat_completion(request, chat_body)
 
+def create_chat_item(db, sender, content, conversation_id):
+    chat_item_create = schemas.ChatItemCreate(
+            sender=sender,
+            content=content,
+            conversation_id=conversation_id
+        )
+    return crud.chat_item.create(db, obj_in=chat_item_create)
+
 
 @completions_router.post(
     "/chat",
@@ -135,13 +148,55 @@ async def prompt_completion(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail=f"No documents uploaded for your department.")
         docs_list = [document.filename for document in documents]
-        print("DOCUMENTS ASSIGNED TO THIS DEPARTMENTS: ", docs_list)
         docs_ids = []
         for filename in docs_list:
             doc_id = service.get_doc_ids_by_filename(filename)
             docs_ids.extend(doc_id)
         body.context_filter = {"docs_ids": docs_ids}
 
+        chat_history = crud.chat.get_by_id(
+            db, id=body.conversation_id
+        )
+        if (chat_history is None) and (chat_history.user_id != current_user.id):
+            raise HTTPException(
+                status_code=404, detail="Chat history not found")
+        
+        user_message = OpenAIMessage(content=body.prompt, role="user")
+        user_message = user_message.model_dump(mode="json")
+
+        user_message_json = {
+            'text': body.prompt,
+        }
+        create_chat_item(db, "user", user_message_json , body.conversation_id)
+        
+        messages = [user_message]
+
+        if body.system_prompt:
+            messages.insert(0, OpenAIMessage(
+                content=body.system_prompt, role="system"))
+
+        chat_body = ChatBody(
+            messages=messages,
+            use_context=body.use_context,
+            stream=body.stream,
+            include_sources=body.include_sources,
+            context_filter=body.context_filter,
+        )
+        log_audit(
+            model='Chat', 
+            action='Chat',
+            details={
+                "query": body.prompt,
+                'user': current_user.username,
+                }, 
+            user_id=current_user.id
+        )
+        
+        chat_response = await chat_completion(request, chat_body)
+        ai_response = chat_response.model_dump(mode="json")
+        create_chat_item(db, "assistant", ai_response, body.conversation_id)
+        return chat_response
+    
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error: {str(e)}")
@@ -149,83 +204,3 @@ async def prompt_completion(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error",
         )
-
-    if body.conversation_id:
-        chat_history = crud.chat.get_by_id(db, id=body.conversation_id)
-        if chat_history is None or chat_history.user_id != current_user.id:
-            raise HTTPException(
-                status_code=404, detail="Chat history not found")
-    else:
-        chat_create_in = schemas.ChatCreate(user_id=current_user.id)
-        chat_history = crud.chat.create(db=db, obj_in=chat_create_in)
-
-    _history = chat_history.messages or []
-
-    def build_history() -> list[ChatMessage]:
-        history_messages: list[ChatMessage] = []
-        for interaction in _history:
-            user_message = interaction.get("user", "")
-            ai_message = interaction.get("ai", "")
-            if user_message:
-                history_messages.append(
-                    ChatMessage(
-                        content=user_message,
-                        role=MessageRole.USER
-                    )
-                )
-            if ai_message:
-                history_messages.append(
-                    ChatMessage(
-                        content=ai_message,
-                        role=MessageRole.ASSISTANT
-                    )
-                )
-
-        # max 20 messages to try to avoid context overflow
-        return history_messages[:20]
-
-    # Prepare new messages
-    new_messages = []
-
-    if body.prompt:
-        new_messages.append(OpenAIMessage(content=body.prompt, role="user"))
-    if body.system_prompt:
-        new_messages.insert(0, OpenAIMessage(
-            content=body.system_prompt, role="system"))
-
-    # Update chat history with new user messages
-    if new_messages:
-        new_message = ChatMessage(content=new_messages, role=MessageRole.USER)
-        _history.append(new_message.dict())
-
-    # Process chat completion
-    chat_body = ChatBody(
-        messages=build_history(),
-        use_context=body.use_context,
-        stream=body.stream,
-        include_sources=body.include_sources,
-        context_filter=body.context_filter,
-    )
-
-    ai_response = await chat_completion(request, chat_body)
-
-    # Update chat history with AI response
-    if ai_response.messages:
-        ai_message = OpenAIMessage(
-            content=ai_response.messages, role="assistant")
-        _history.append(ai_message.dict())
-
-    # Update chat history in the database
-    chat_obj_in = schemas.ChatUpdate(messages=build_history())
-    crud.chat.update_messages(db, db_obj=chat_history, obj_in=chat_obj_in)
-
-    return ai_response
-    # log_audit(
-    #     model='Chat', 
-    #     action='Chat',
-    #     details={
-    #         "query": body.prompt,
-    #         'user': current_user.username,
-    #         }, 
-    #     user_id=current_user.id
-    # )

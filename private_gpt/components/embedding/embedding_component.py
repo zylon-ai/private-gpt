@@ -3,7 +3,7 @@ import logging
 from injector import inject, singleton
 from llama_index.core.embeddings import BaseEmbedding, MockEmbedding
 
-from private_gpt.paths import models_cache_path
+from private_gpt.paths import models_cache_path, models_path
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,6 @@ class EmbeddingComponent:
                     raise ImportError(
                         "Local dependencies not found, install with `poetry install --extras embeddings-huggingface`"
                     ) from e
-
                 self.embedding_model = HuggingFaceEmbedding(
                     model_name=settings.huggingface.embedding_hf_model_name,
                     cache_folder=str(models_cache_path),

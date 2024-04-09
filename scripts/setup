@@ -10,7 +10,7 @@ from private_gpt.settings.settings import settings
 
 resume_download = True
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog='Setup: Download models from huggingface')
+    parser = argparse.ArgumentParser(prog='Setup: Download models from Hugging Face')
     parser.add_argument('--resume', default=True, action=argparse.BooleanOptionalAction, help='Enable/Disable resume_download options to restart the download progress interrupted')
     args = parser.parse_args()
     resume_download = args.resume
@@ -40,9 +40,9 @@ print("LLM model downloaded!")
 
 # Download Tokenizer
 print(f"Downloading tokenizer {settings().llm.tokenizer}")
+local_path = models_path / "tokenizer/Mistral-7B-Instruct-v0.1"
 AutoTokenizer.from_pretrained(
-    pretrained_model_name_or_path=settings().llm.tokenizer,
-    cache_dir=models_cache_path,
+    local_path
 )
 print("Tokenizer downloaded!")
 
