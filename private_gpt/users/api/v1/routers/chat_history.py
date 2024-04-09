@@ -102,7 +102,7 @@ def delete_chat_history(
     """
     try:
         chat_history_id = chat_history_in.conversation_id
-        chat_history = crud.chat.get(db, id=chat_history_id)
+        chat_history = crud.chat.get_by_id(db, id=chat_history_id)
         if chat_history is None or chat_history.user_id != current_user.id:
             raise HTTPException(
                 status_code=404, detail="Chat history not found")

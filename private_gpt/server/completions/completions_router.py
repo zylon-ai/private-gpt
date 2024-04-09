@@ -1,6 +1,6 @@
 from private_gpt.users import crud, models, schemas
 import itertools
-from llama_index.llms import ChatMessage, ChatResponse, MessageRole
+from llama_index.core.llms import ChatMessage, ChatResponse, MessageRole
 from fastapi import APIRouter, Depends, Request, Security, HTTPException, status
 from private_gpt.server.ingest.ingest_service import IngestService
 from pydantic import BaseModel
