@@ -4,7 +4,7 @@ from llama_index.core.llms import ChatMessage, ChatResponse, MessageRole
 from fastapi import APIRouter, Depends, Request, Security, HTTPException, status
 from private_gpt.server.ingest.ingest_service import IngestService
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 import traceback
 import logging
@@ -28,6 +28,7 @@ completions_router = APIRouter(prefix="/v1", dependencies=[Depends(authenticated
 
 class CompletionsBody(BaseModel):
     conversation_id: uuid.UUID
+    history: Optional[list[OpenAIMessage]]
     prompt: str
     system_prompt: str | None = None
     use_context: bool = False
@@ -39,7 +40,17 @@ class CompletionsBody(BaseModel):
         "json_schema_extra": {
             "examples": [
                 {
-                    "conversation_id": 123,
+                    "conversation_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "history": [
+                        {
+                            "role": "user",
+                            "content": "Hello!"
+                        },
+                        {
+                            "role": "assistant",
+                            "content": "Hello, how can I help you?"
+                        }
+                    ],
                     "prompt": "How do you fry an egg?",
                     "system_prompt": "You are a rapper. Always answer with a rap.",
                     "stream": False,
@@ -49,7 +60,6 @@ class CompletionsBody(BaseModel):
             ]
         }
     }
-
 
 class ChatContentCreate(BaseModel):
     content: Dict[str, Any]
@@ -159,11 +169,31 @@ async def prompt_completion(
         )
         if (chat_history is None) and (chat_history.user_id != current_user.id):
             raise HTTPException(
-                status_code=404, detail="Chat history not found")
+                status_code=404, detail="Chat not found")
         
-        user_message = OpenAIMessage(content=body.prompt, role="user")
-        user_message = user_message.model_dump(mode="json")
+        _history = body.history if body.history else []
 
+        def build_history() -> list[OpenAIMessage]:
+            history_messages: list[OpenAIMessage] = []
+            for interaction in _history:
+                role = interaction.role
+                if role == 'user':
+                    history_messages.append(
+                        OpenAIMessage(
+                            content=interaction.content,
+                            role="user"
+                        )
+                    )
+                else:
+                    history_messages.append(
+                        OpenAIMessage(
+                            content=interaction.content,
+                            role="assistant"
+                        )
+                    )
+            return history_messages
+        
+        user_message = OpenAIMessage(content=body.prompt, role="user")        
         user_message_json = {
             'text': body.prompt,
         }
@@ -174,9 +204,10 @@ async def prompt_completion(
         if body.system_prompt:
             messages.insert(0, OpenAIMessage(
                 content=body.system_prompt, role="system"))
-
+            
+        all_messages = [*build_history(), user_message]
         chat_body = ChatBody(
-            messages=messages,
+            messages=all_messages,
             use_context=body.use_context,
             stream=body.stream,
             include_sources=body.include_sources,
