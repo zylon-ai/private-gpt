@@ -1,7 +1,8 @@
 from typing import Optional
 from fastapi_filter.contrib.sqlalchemy import Filter
 from datetime import datetime
-from sqlalchemy.orm import relationship
+from private_gpt.users.models.department import Department
+from sqlalchemy.orm import relationship, Session
 from sqlalchemy import Boolean, event, select, func, update
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 
@@ -58,37 +59,48 @@ class Document(Base):
 
     action_type = Column(Enum(MakerCheckerActionType), nullable=False,
                          default=MakerCheckerActionType.INSERT)  # 'insert' or 'update' or 'delete'
-    # 'pending', 'approved', or 'rejected'
     status = Column(Enum(MakerCheckerStatus), nullable=False,
-                    default=MakerCheckerStatus.PENDING)
+                    default=MakerCheckerStatus.PENDING)      # 'pending', 'approved', or 'rejected'
 
     verified_at = Column(DateTime, nullable=True)
     verified_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-
 
     departments = relationship(
         "Department",
         secondary=document_department_association,
         back_populates="documents"
     )
-    
+
+
+
+
+# def get_associated_department(db: Session, document_id: int) -> list:
+#     print(db.query(document_department_association.c.department_id).all())
+#     print("DOcument:", document_id)
+#     associated_departments = db.query(document_department_association).filter(
+#         document_department_association.c.document_id == document_id
+#     ).all()
+#     print("HELLO",associated_departments)
+#     associated_departments_ids = [department.id for department in associated_departments]
+
+#     return associated_departments_ids
+
+
 # @event.listens_for(Document, 'after_insert')
 # @event.listens_for(Document, 'after_delete')
 # def update_total_documents(mapper, connection, target):
-#     total_documents = connection.execute(
-#         func.count().select().select_from(document_department_association).where(
-#             document_department_association.c.document_id == target.id)
-#     ).scalar()
-
-#     department_ids = [assoc.department_id for assoc in connection.execute(
-#         select([document_department_association.c.department_id]).where(
-#             document_department_association.c.document_id == target.id)
-#     )]
-
+#     session = Session(connection)
+#     print("Session object: ", session)
+#     # Get the department IDs associated with the target document
+#     associated_department_ids = get_associated_department(session, target.id)
+#     print('Department: ', associated_department_ids)
+        
 #     # Update total_documents for each associated department
-#     for department_id in department_ids:
-#         connection.execute(
-#             update(Department).values(total_documents=total_documents).where(
-#                 Department.id == department_id)
-#         )
-
+#     for department_id in associated_department_ids:
+#         department = session.query(Department).get(department_id)
+#         department.total_documents = session.query(func.count()).select_from(document_department_association).filter(
+#             document_department_association.document_id
+#         ).scalar()
+    
+#     session.commit()
+#     session.close()

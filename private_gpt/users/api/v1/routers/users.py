@@ -1,16 +1,15 @@
 import traceback
-from typing import Any, List, Optional
+from typing import Any, List
 
 from sqlalchemy.orm import Session
-from pydantic.networks import EmailStr
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi import APIRouter, Body, Depends, HTTPException, Security, status, Path, Request
 
 from private_gpt.users.api import deps
 from private_gpt.users.constants.role import Role
-from private_gpt.users.core.config import settings
 from private_gpt.users import crud, models, schemas
+from private_gpt.users.utils.utils import validate_password
 from private_gpt.users.core.security import verify_password, get_password_hash
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -182,6 +181,7 @@ def change_password(
     """
     Change current user's password.
     """
+    validate_password(new_password)
     if not verify_password(old_password, current_user.hashed_password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Old password is incorrect")
 

@@ -1,10 +1,5 @@
 # start a fastapi server with uvicorn
 
-from datetime import datetime
-from fastapi.middleware import Middleware
-from private_gpt.users.db.session import SessionLocal
-from private_gpt.users.models import Audit, User, Department, Document
-from private_gpt.users.api.deps import get_audit_logger, get_db
 import uvicorn
 
 from private_gpt.main import app

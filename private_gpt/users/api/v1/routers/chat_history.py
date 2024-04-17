@@ -26,7 +26,7 @@ def list_chat_histories(
     """
     try:
         chat_histories = crud.chat.get_chat_history(
-            db, skip=skip, limit=limit)
+            db, user_id=current_user.id, skip=skip, limit=limit)
         return chat_histories
     except Exception as e:
         print(traceback.format_exc())

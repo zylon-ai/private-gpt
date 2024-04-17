@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Session
 from sqlalchemy.dialects.postgresql import UUID 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, event, JSON
 
@@ -48,6 +48,7 @@ class ChatItem(Base):
     __tablename__ = "chat_items"
 
     id = Column(Integer, nullable=False, primary_key=True)
+    index = Column(Integer, nullable=False)
     sender = Column(String(225), nullable=False)
     content = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
@@ -61,6 +62,23 @@ class ChatItem(Base):
     def __repr__(self):
         """Returns string representation of model instance"""
         return f"<ChatItem {self.id!r}>"
+
+
+
+def get_next_index(db: Session, conversation_id: uuid.UUID) -> int:
+    """Get the next index value for the given conversation_id."""
+    max_index = db.query(ChatItem).filter(ChatItem.conversation_id == conversation_id).order_by(ChatItem.index.desc()).first()
+    if max_index is None:
+        return 0  
+    return max_index.index + 1
+
+
+@event.listens_for(ChatItem, "before_insert")
+def receive_before_insert(mapper, connection, target):
+    """Set the index value before inserting a new ChatItem."""
+    if target.conversation_id:
+        session = Session.object_session(target)
+        target.index = get_next_index(session, target.conversation_id)
 
 
 @event.listens_for(ChatHistory, "after_insert")

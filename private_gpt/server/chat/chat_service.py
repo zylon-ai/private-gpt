@@ -129,7 +129,9 @@ class ChatService:
             else None
         )
         system_prompt = (
-            "You can only answer questions about the provided context. If you know the answer but it is not based in the provided context, don't provide the answer, just state the answer is not in the context provided."
+            chat_engine_input.system_message.content
+            if chat_engine_input.system_message
+            else None
         )
         chat_history = (
             chat_engine_input.chat_history if chat_engine_input.chat_history else None
@@ -163,8 +165,18 @@ class ChatService:
             else None
         )
         system_prompt = (
-            "You can only answer questions about the provided context. If you know the answer but it is not based in the provided context, don't provide the answer, just state the answer is not in the context provided."
+            """
+            You should answer questions only in English or Nepali. 
+            Responses should be based on the context documents provided 
+            and should be relevant, informative, and easy to understand. 
+            You should aim to deliver high-quality responses that are 
+            respectful and helpful, using clear and concise language. 
+            Avoid providing information outside of the context documents unless 
+            it is necessary for clarity or completeness. Focus on providing 
+            accurate and reliable answers based on the given context.
+            """
         )
+
         chat_history = (
             chat_engine_input.chat_history if chat_engine_input.chat_history else None
         )

@@ -5,11 +5,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.util import object_mapper
 
 from private_gpt.users.crud.base import CRUDBase
-from private_gpt.users.models.chat_history import ChatHistory
-from private_gpt.users.schemas.chat_history import ChatCreate, ChatUpdate
+from private_gpt.users.models.chat import ChatHistory
+from private_gpt.users.schemas.chat import ChatHistoryCreate, ChatHistoryUpdate
 
 
-class CRUDChat(CRUDBase[ChatHistory, ChatCreate, ChatUpdate]):
+class CRUDChat(CRUDBase[ChatHistory, ChatHistoryCreate, ChatHistoryUpdate]):
     def get_by_id(self, db: Session, *, id: int) -> Optional[ChatHistory]:
         return db.query(self.model).filter(ChatHistory.conversation_id == id).first()
 
@@ -18,7 +18,7 @@ class CRUDChat(CRUDBase[ChatHistory, ChatCreate, ChatUpdate]):
         db: Session,
         *,
         db_obj: ChatHistory,
-        obj_in: Union[ChatUpdate, Dict[str, Any]]
+        obj_in: Union[ChatHistoryUpdate, Dict[str, Any]]
     ) -> ChatHistory:
         try:
             obj_data = object_mapper(db_obj).data

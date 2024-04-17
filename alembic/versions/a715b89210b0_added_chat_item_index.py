@@ -1,8 +1,8 @@
-"""Added chat items
+"""Added chat item index
 
-Revision ID: bdfec4101648
+Revision ID: a715b89210b0
 Revises: 
-Create Date: 2024-04-09 15:55:47.769162
+Create Date: 2024-04-15 16:10:00.510135
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'bdfec4101648'
+revision: str = 'a715b89210b0'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -32,6 +32,7 @@ def upgrade() -> None:
     )
     op.create_table('chat_items',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('index', sa.Integer(), nullable=False),
     sa.Column('sender', sa.String(length=225), nullable=False),
     sa.Column('content', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),

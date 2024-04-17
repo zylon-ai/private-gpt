@@ -8,7 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     DateTime
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Session
 from sqlalchemy import event, func, select, update
 
 from private_gpt.users.db.base_class import Base
@@ -60,21 +60,26 @@ class User(Base):
     def __repr__(self):
         """Returns string representation of model instance"""
         return "<User {username!r}>".format(username=self.username)
+    
 
+@event.listens_for(User, 'after_insert')
+@event.listens_for(User, 'after_delete')
+def update_total_users(mapper, connection, target):
+    session = Session.object_session(target)
+    department_id = target.department_id
 
-# Event listeners
-# @event.listens_for(User, 'after_insert')
-# @event.listens_for(User, 'after_delete')
-# def update_total_users(mapper, connection, target):
-#     department_id = target.department_id
-#     total_users = connection.execute(
-#         select([func.count()]).select_from(User).where(
-#             User.department_id == department_id)
-#     ).scalar()
-#     connection.execute(
-#         update(Department).values(total_users=total_users).where(
-#             Department.id == department_id)
-#     )
+    total_users_subquery = (
+        select([func.count(User.id).label('total_users')])
+        .where(User.department_id == department_id)
+        .scalar_subquery()
+    )
+    update_stmt = (
+        update(Department)
+        .values(total_users=total_users_subquery)
+        .where(Department.id == department_id)
+    )
+    session.execute(update_stmt)
+    session.commit()
 
 
 @event.listens_for(User, 'before_insert')
