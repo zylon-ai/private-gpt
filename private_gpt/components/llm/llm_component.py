@@ -105,8 +105,12 @@ class LLMComponent:
                     api_key=openai_settings.api_key,
                     model=openai_settings.model,
                     is_chat_model=True,
-                    max_tokens=None,
+                    max_tokens=settings.llm.max_new_tokens,
                     api_version="",
+                    temperature=settings.llm.temperature,
+                    tokenizer=settings.llm.tokenizer,
+                    timeout=openai_settings.request_timeout,
+                    reuse_client=False,
                 )
             case "ollama":
                 try:
