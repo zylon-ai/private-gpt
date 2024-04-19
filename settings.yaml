@@ -69,6 +69,7 @@ embedding:
 
 huggingface:
   embedding_hf_model_name: BAAI/bge-small-en-v1.5
+  access_token: ${HUGGINGFACE_TOKEN:}
 
 vectorstore:
   database: qdrant
