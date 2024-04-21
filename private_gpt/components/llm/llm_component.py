@@ -22,13 +22,24 @@ class LLMComponent:
     @inject
     def __init__(self, settings: Settings) -> None:
         llm_mode = settings.llm.mode
-        if settings.llm.tokenizer:
-            set_global_tokenizer(
-                AutoTokenizer.from_pretrained(
-                    pretrained_model_name_or_path=settings.llm.tokenizer,
-                    cache_dir=str(models_cache_path),
+        if settings.llm.tokenizer and settings.llm.mode != "mock":
+            # Try to download the tokenizer. If it fails, the LLM will still work
+            # using the default one, which is less accurate.
+            try:
+                set_global_tokenizer(
+                    AutoTokenizer.from_pretrained(
+                        pretrained_model_name_or_path=settings.llm.tokenizer,
+                        cache_dir=str(models_cache_path),
+                        token=settings.huggingface.access_token,
+                    )
                 )
-            )
+            except Exception as e:
+                logger.warning(
+                    "Failed to download tokenizer %s. Falling back to "
+                    "default tokenizer.",
+                    settings.llm.tokenizer,
+                    e,
+                )
 
         logger.info("Initializing the LLM in mode=%s", llm_mode)
         match settings.llm.mode:
