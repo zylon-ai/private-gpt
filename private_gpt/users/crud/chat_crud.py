@@ -11,12 +11,20 @@ from private_gpt.users.schemas.chat import ChatHistoryCreate, ChatHistoryCreate,
 
 class CRUDChat(CRUDBase[ChatHistory, ChatHistoryCreate, ChatHistoryCreate]):
     def get_by_id(self, db: Session, *, id: uuid.UUID) -> Optional[ChatHistory]:
-        return (
-             db.query(self.model)
-             .filter(ChatHistory.conversation_id == id)
-             .order_by(asc(getattr(ChatHistory, 'created_at')))
-             .first()
+        chat_history = (
+            db.query(self.model)
+            .filter(ChatHistory.conversation_id == id)
+            .order_by(asc(getattr(ChatHistory, 'created_at')))
+            .first()
+        )
+        if chat_history:
+            chat_history.chat_items = (
+                db.query(ChatItem)
+                .filter(ChatItem.conversation_id == id)
+                .order_by(asc(getattr(ChatItem, 'index')))
+                .all()
             )
+        return chat_history
 
     def get_chat_history(
             self, db: Session, *,user_id:int, skip: int = 0, limit: int = 100

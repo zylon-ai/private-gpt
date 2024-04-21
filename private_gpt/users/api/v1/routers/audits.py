@@ -46,6 +46,39 @@ def list_auditlog(
     return logs
 
 
+@router.get("filter/", response_model=List[schemas.Audit])
+def filter_auditlog(
+    db: Session = Depends(deps.get_db),
+    filter_in= Depends(schemas.AuditFilter),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"]],
+    ),
+) -> List[schemas.Audit]:
+    """
+    Retrieve a list of audit logs with pagination support.
+    """
+    def get_fullname(id):
+        user = crud.user.get_by_id(db, id=id)
+        if user:
+            return user.username
+        return ""
+    
+    logs = crud.audit.filter(db, obj_in=filter_in)
+    logs = [
+            schemas.Audit(
+                id=dep.id,
+                model=dep.model,
+                username=get_fullname(dep.user_id),
+                details=dep.details,
+                action=dep.action,
+                timestamp=dep.timestamp,
+                ip_address=dep.ip_address,
+            )
+            for dep in logs
+        ]
+    return logs
+
 
 @router.post("", response_model=schemas.Audit)
 def get_auditlog(

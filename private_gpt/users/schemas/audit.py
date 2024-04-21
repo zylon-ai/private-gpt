@@ -39,3 +39,13 @@ class Audit(BaseModel):
 
 class GetAudit(BaseModel):
     id: int
+
+
+class AuditFilter(BaseModel):
+    skip: Optional[int],
+    limit: Optional[int],
+    model: Optional[str] = None
+    username: Optional[str] = None
+    action: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None

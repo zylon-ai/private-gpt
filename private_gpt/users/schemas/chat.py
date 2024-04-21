@@ -20,6 +20,7 @@ class ChatItem(ChatItemBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    index: int
 
     class Config:
         orm_mode = True
@@ -28,6 +29,7 @@ class ChatItem(ChatItemBase):
 class ChatHistoryBase(BaseModel):
     user_id: int
     title: Optional[str]
+    
 
 
 class ChatHistoryCreate(ChatHistoryBase):
@@ -46,8 +48,14 @@ class ChatHistory(ChatHistoryBase):
     updated_at: datetime
     chat_items: List[ChatItem]
 
+    @property
+    def ordered_chat_items(self):
+        return sorted(self.chat_items, key=lambda x: x.index)
+    
     class Config:
         orm_mode = True
+
+
 
 class ChatDelete(BaseModel):
     conversation_id: uuid.UUID
