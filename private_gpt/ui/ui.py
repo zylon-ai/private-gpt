@@ -376,8 +376,8 @@ class PrivateGptUi:
                         label="Model Temperature",
                         interactive=True,
                         visible=settings().ui.adjust_temperature_enabled,
-                        minimum=0.1,
-                        maximum=1,
+                        minimum=0.05,
+                        maximum=0.95,
                     )
 
                     deselect_file_button.click(
