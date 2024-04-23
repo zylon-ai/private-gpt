@@ -206,6 +206,10 @@ class PrivateGptUi:
         logger.info(f"Setting system prompt to: {system_prompt_input}")
         self._system_prompt = system_prompt_input
 
+    def _set_model_temperature(self, model_temperature_input: str) -> None:
+        logger.info(f"Setting Model Temperature to: {model_temperature_input}")
+        self._model_temperature = model_temperature_input
+
     def _set_current_mode(self, mode: str) -> Any:
         self.mode = mode
         self._set_system_prompt(self._get_default_system_prompt(mode))
@@ -367,6 +371,15 @@ class PrivateGptUi:
                         size="sm",
                         visible=settings().ui.delete_all_files_button_enabled,
                     )
+                    adjust_model_temperature = gr.components.Number(
+                        value=settings().llm.temperature,
+                        label="Model Temperature",
+                        interactive=True,
+                        visible=settings().ui.adjust_temperature_enabled,
+                        minimum=0.1,
+                        maximum=1,
+                    )
+
                     deselect_file_button.click(
                         self._deselect_selected_file,
                         outputs=[
@@ -416,6 +429,10 @@ class PrivateGptUi:
                     system_prompt_input.blur(
                         self._set_system_prompt,
                         inputs=system_prompt_input,
+                    )
+                    adjust_model_temperature.input(
+                        self._set_model_temperature,
+                        inputs=adjust_model_temperature,
                     )
 
                     def get_model_label() -> str | None:
