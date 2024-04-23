@@ -151,10 +151,6 @@ class HuggingFaceSettings(BaseModel):
     embedding_hf_model_name: str = Field(
         description="Name of the HuggingFace model to use for embeddings"
     )
-    access_token: str = Field(
-        None,
-        description="Huggingface access token, required to download some models",
-    )
 
 
 class EmbeddingSettings(BaseModel):
@@ -293,6 +289,9 @@ class UISettings(BaseModel):
     )
     delete_all_files_button_enabled: bool = Field(
         False, description="If the button to delete all files is enabled or not."
+    )
+    adjust_temperature_enabled: bool = Field(
+        False, description="If editing function of the Model temperature is enabled or not"
     )
 
 
