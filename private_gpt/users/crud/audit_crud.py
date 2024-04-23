@@ -37,6 +37,31 @@ class CRUDAudit(CRUDBase[Audit, AuditCreate, AuditUpdate]):
 
         return query.order_by(desc(self.model.timestamp)).offset(obj_in.skip).limit(obj_in.limit).all()
         
+        
+    def excel_filter(
+        self, db: Session, *, obj_in : AuditFilter
+    ) -> List[Audit]:
+        
+        def get_id(username):
+            user = crud.user.get_by_name(db, name=username)
+            if user:
+                return user.id
+            return None
+        query = db.query(Audit)
+        if obj_in.model:
+            query = query.filter(Audit.model == obj_in.model)
+        if obj_in.username:
+            query = query.filter(Audit.user_id == get_id(obj_in.username))
+        if obj_in.action:
+            query = query.filter(Audit.action == obj_in.action)
+        if obj_in.start_date:
+            query = query.filter(Audit.timestamp >= obj_in.start_date)
+        if obj_in.end_date:
+            query = query.filter(Audit.timestamp <= obj_in.end_date)
+
+        return query.order_by(desc(self.model.timestamp)).all()
+        
+
     def get_by_id(self, db: Session, *, id: str) -> Optional[Audit]:
         return db.query(self.model).filter(Audit.id == id).first()
 

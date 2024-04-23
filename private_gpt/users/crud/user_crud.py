@@ -45,9 +45,9 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return super().update(db, db_obj=db_obj, obj_in=update_data)
 
     def get_multi(
-        self, db: Session, *, skip: int = 0, limit: int = 100,
+        self, db: Session,
     ) -> List[User]:
-        return db.query(self.model).offset(skip).limit(limit).all()
+        return db.query(self.model).all()
 
     def authenticate(
         self, db: Session, *, email: str, password: str
@@ -67,27 +67,21 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         db: Session,
         *,
         account_id: int,
-        skip: int = 0,
-        limit: int = 100,
     ) -> List[User]:
         return (
             db.query(self.model)
             .filter(User.account_id == account_id)
-            .offset(skip)
-            .limit(limit)
             .all()
         )
 
     def get_multi_by_company_id(
-        self, db: Session, *, company_id: str, skip: int = 0, limit: int = 100
+        self, db: Session, *, company_id: str
     ) -> List[User]:
         return (
             db.query(self.model)
             .join(User.user_role)
             .filter(UserRole.company_id == company_id)
             .options(joinedload(User.user_role).joinedload(UserRole.role))
-            .offset(skip)
-            .limit(limit)
             .all()
         )
 
@@ -95,13 +89,11 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return db.query(self.model).filter(User.username == name).first()
 
     def get_by_department_id(
-        self, db: Session, *, department_id: int, skip: int = 0, limit: int = 100
+        self, db: Session, *, department_id: int
     ) -> List[User]:
         return (
             db.query(self.model)
             .filter(User.department_id == department_id)
-            .offset(skip)
-            .limit(limit)
             .all()
         )
     

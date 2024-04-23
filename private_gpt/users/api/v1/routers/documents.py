@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any, List
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from fastapi_pagination import Page, paginate
 from fastapi import APIRouter, Depends, HTTPException, status, Security, Request, File, UploadFile
 
 from private_gpt.users.api import deps
@@ -17,28 +18,28 @@ from private_gpt.users import crud, models, schemas
 from private_gpt.server.ingest.ingest_router import create_documents, ingest
 from private_gpt.users.models.document import MakerCheckerActionType, MakerCheckerStatus
 from private_gpt.components.ocr_components.table_ocr_api import process_both_ocr, process_ocr
-from fastapi_filter import FilterDepends, with_prefix
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/documents', tags=['Documents'])
+
+
+CHECKER = False
+ENABLE_MAKER = False
 
 def get_username(db, id):
     user = crud.user.get_by_id(db=db, id=id)
     return user.username
 
-CHECKER = True
 
-@router.get("", response_model=List[schemas.DocumentView])
+@router.get("")
 def list_files(
     request: Request,
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
     )
-):
+)-> Page[schemas.DocumentView]:
     """
     List the documents based on the role. 
     """
@@ -47,10 +48,10 @@ def list_files(
         role = current_user.user_role.role.name if current_user.user_role else None
         if (role == "SUPER_ADMIN") or (role == "OPERATOR"):
             docs = crud.documents.get_multi_documents(
-                db, skip=skip, limit=limit)
+                db)
         else:
             docs = crud.documents.get_documents_by_departments(
-                db, department_id=current_user.department_id, skip=skip, limit=limit)
+                db, department_id=current_user.department_id)
         
         documents = [
             schemas.DocumentView(
@@ -68,7 +69,7 @@ def list_files(
             )
             for doc in docs
         ]
-        return documents
+        return paginate(documents)
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error listing the file(s).")
@@ -78,12 +79,10 @@ def list_files(
         )
 
 
-@router.get("/pending", response_model=List[schemas.DocumentVerify])
+@router.get("/pending", response_model=Page[schemas.DocumentVerify])
 def list_pending_files(
     request: Request,
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
@@ -98,7 +97,8 @@ def list_pending_files(
 
     try:
         docs = crud.documents.get_files_to_verify(
-            db, department_id=current_user.department_id, skip=skip, limit=limit)
+            db
+        )
         
         documents = [
             schemas.DocumentVerify(
@@ -114,7 +114,7 @@ def list_pending_files(
             )
             for doc in docs
         ]
-        return documents
+        return paginate(documents)
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error listing the file(s).")
@@ -123,13 +123,11 @@ def list_pending_files(
             detail="Internal Server Error",
         )
 
-@router.get('{department_id}', response_model=List[schemas.DocumentList])
+@router.get('{department_id}', response_model=Page[schemas.DocumentList])
 def list_files_by_department(
     request: Request,
     department_id: int,
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.SUPER_ADMIN["name"]],
@@ -140,8 +138,8 @@ def list_files_by_department(
     '''
     try:
         docs = crud.documents.get_documents_by_departments(
-            db, department_id=department_id, skip=skip, limit=limit)
-        return docs
+            db, department_id=department_id)
+        return paginate(docs)
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error listing the file(s).")
@@ -151,12 +149,10 @@ def list_files_by_department(
         )
 
 
-@router.get('/files', response_model=List[schemas.DocumentList])
+@router.get('/files', response_model=Page[schemas.DocumentList])
 def list_files_by_department(
     request: Request,
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]], 
@@ -168,8 +164,8 @@ def list_files_by_department(
     try:
         department_id = current_user.department_id
         docs = crud.documents.get_documents_by_departments(
-            db, department_id=department_id, skip=skip, limit=limit)
-        return docs
+            db, department_id=department_id)
+        return paginate(docs)
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error listing the file(s).")
@@ -293,6 +289,7 @@ async def upload_documents(
             contents = await file.read()
             async with aiofiles.open(upload_path, 'wb') as f:
                 await f.write(contents)
+
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -301,6 +298,13 @@ async def upload_documents(
         document = await create_documents(db, original_filename, current_user, departments, log_audit)
         logger.info(
             f"{original_filename} is uploaded by {current_user.username} in {departments.departments_ids}")
+        
+        if not ENABLE_MAKER:
+            checker_in = schemas.DocumentUpdate(
+                id=document.id,
+                status=MakerCheckerStatus.APPROVED.value
+            )
+            await verify_documents(request=request, checker_in=checker_in, db=db, log_audit=log_audit, current_user=current_user)
         return document
 
     except HTTPException:
@@ -338,24 +342,25 @@ async def verify_documents(
                 detail="Document not found!",
             )
         
-        if document.verified:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Document already verified!",
-            )
+        
         if CHECKER:
-            print("Current user is checker: ", current_user.checker)
+            if document.verified:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Document already verified!",
+                )
+            
             if not current_user.checker:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="You are not the checker!",
                 )
         
-        if document.uploaded_by == current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot verify by same user!",
-            )
+            if document.uploaded_by == current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot verify by same user!",
+                )
         
         unchecked_path = Path(f"{UNCHECKED_DIR}/{document.filename}")
 

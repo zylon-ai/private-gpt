@@ -193,7 +193,6 @@ async def create_documents(
     `Document Department Association` table with the departments ids for the documents.
     """
     department_ids = departments.departments_ids
-    print("Department ids: ", department_ids)
     file_ingested = crud.documents.get_by_filename(
         db, file_name=file_name)
     if file_ingested:

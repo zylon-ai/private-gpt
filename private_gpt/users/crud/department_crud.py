@@ -13,13 +13,11 @@ class CRUDDepartments(CRUDBase[Department, DepartmentCreate, DepartmentUpdate]):
         return db.query(self.model).filter(Department.name == name).first()
 
     def get_multi_department(
-        self, db: Session, *, department_id: int, skip: int = 0, limit: int = 100
+        self, db: Session, *, department_id: int
     ) -> List[Department]:
         return (
             db.query(self.model)
             .filter(Department.id == department_id)
-            .offset(skip)
-            .limit(limit)
             .all()
         )
 department = CRUDDepartments(Department)

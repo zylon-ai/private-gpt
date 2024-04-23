@@ -15,8 +15,6 @@ router = APIRouter(prefix="/c", tags=["Chat Histories"])
 @router.get("", response_model=list[schemas.ChatHistory])
 def list_chat_histories(
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
     ),
@@ -26,7 +24,7 @@ def list_chat_histories(
     """
     try:
         chat_histories = crud.chat.get_chat_history(
-            db, user_id=current_user.id, skip=skip, limit=limit)
+            db, user_id=current_user.id)
         return chat_histories
     except Exception as e:
         print(traceback.format_exc())

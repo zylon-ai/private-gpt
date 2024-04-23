@@ -7,6 +7,7 @@ from private_gpt.users.models.department import Department
 from private_gpt.users.models.document_department import document_department_association
 from private_gpt.users.crud.base import CRUDBase
 from typing import Optional, List
+from fastapi_pagination import Page, paginate
 
 
 class CRUDDocuments(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
@@ -17,18 +18,16 @@ class CRUDDocuments(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
         return db.query(self.model).filter(Document.filename == file_name).first()
     
     def get_multi_documents(
-        self, db: Session, *, skip: int = 0, limit: int = 100
+        self, db: Session,
     ) -> List[Document]:
         return (
             db.query(self.model)
             .order_by(desc(getattr(Document, 'uploaded_at')))
-            .offset(skip)
-            .limit(limit)
             .all()
         )
 
     def get_documents_by_departments(
-            self, db: Session, *, department_id: int, skip: int = 0, limit: int = 100
+            self, db: Session, *, department_id: int
         ) -> List[Document]:
             return (
                 db.query(self.model)
@@ -36,24 +35,20 @@ class CRUDDocuments(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
                 .join(Department)
                 .filter(document_department_association.c.department_id == department_id)
                 .order_by(desc(getattr(Document, 'uploaded_at')))
-                .offset(skip)
-                .limit(limit)
                 .all()
             )
     
     def get_files_to_verify(
-            self, db: Session, *, skip: int = 0, limit: int = 100
+            self, db: Session,
         ) -> List[Document]:
             return (
                 db.query(self.model)
                 .filter(Document.status == 'PENDING')
-                .offset(skip)
-                .limit(limit)
                 .all()
             )
     
     def get_enabled_documents_by_departments(
-            self, db: Session, *, department_id: int, skip: int = 0, limit: int = 100
+            self, db: Session, *, department_id: int
         ) -> List[Document]:
             all_department_id = 1 # department ID for "ALL" is 1
 
@@ -73,8 +68,6 @@ class CRUDDocuments(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
                         ),
                     )
                 )
-                .offset(skip)
-                .limit(limit)
                 .all()
             )
 
@@ -85,8 +78,6 @@ class CRUDDocuments(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
         action_type: Optional[str] = None,
         status: Optional[str] = None,
         order_by: Optional[str] = None,
-        skip: int = 0,
-        limit: int = 100
     ) -> List[Document]:
         query = db.query(Document)
         if filename:
@@ -105,6 +96,6 @@ class CRUDDocuments(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
         else:
             query = query.order_by(asc(getattr(Document, 'uploaded_at')))
 
-        return query.offset(skip).limit(limit).all()
+        return query.all()
 
 documents = CRUDDocuments(Document)

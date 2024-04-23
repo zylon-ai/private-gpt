@@ -42,8 +42,15 @@ class GetAudit(BaseModel):
 
 
 class AuditFilter(BaseModel):
-    skip: Optional[int],
-    limit: Optional[int],
+    skip: int = 0,
+    limit: int = 100,
+    model: Optional[str] = None
+    username: Optional[str] = None
+    action: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+class ExcelFilter(BaseModel):
     model: Optional[str] = None
     username: Optional[str] = None
     action: Optional[str] = None

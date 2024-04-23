@@ -18,7 +18,7 @@ from .documents import (
 from .department import (
     Department, DepartmentCreate, DepartmentUpdate, DepartmentAdminCreate, DepartmentDelete
 )
-from .audit import AuditBase, AuditCreate, AuditUpdate, Audit, GetAudit, AuditFilter
+from .audit import AuditBase, AuditCreate, AuditUpdate, Audit, GetAudit, AuditFilter, ExcelFilter
 from .chat import (
     ChatHistory, ChatHistoryBase, ChatHistoryCreate, ChatHistoryUpdate, ChatDelete,
     ChatItem, ChatItemBase, ChatItemCreate, ChatItemUpdate, CreateChatHistory

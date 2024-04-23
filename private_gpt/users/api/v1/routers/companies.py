@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi import APIRouter, Depends, HTTPException, status, Security
+from fastapi_pagination import Page, paginate
 
 from private_gpt.users.api import deps
 from private_gpt.users.constants.role import Role
@@ -13,21 +14,19 @@ from private_gpt.users import crud, models, schemas
 router = APIRouter(prefix="/companies", tags=["Companies"])
 
 
-@router.get("", response_model=List[schemas.Company])
+@router.get("", response_model=Page[schemas.Company])
 def list_companies(
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.SUPER_ADMIN["name"]],
     ),
-) -> List[schemas.Company]:
+) -> Page[schemas.Company]:
     """
     Retrieve a list of companies with pagination support.
     """
-    companies = crud.company.get_multi(db, skip=skip, limit=limit)
-    return companies
+    companies = crud.company.get_multi(db)
+    return paginate(companies)
 
 
 @router.post("/create", response_model=schemas.Company)
@@ -54,21 +53,19 @@ def create_company(
     )
 
 
-@router.get("", response_model=List[schemas.Company])
+@router.get("", response_model=Page[schemas.Company])
 def list_companies(
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
         scopes=[Role.SUPER_ADMIN["name"]],
     ),
-) -> List[schemas.Company]:
+) -> Page[schemas.Company]:
     """
     Retrieve a list of companies with pagination support.
     """
-    companies = crud.company.get_multi(db, skip=skip, limit=limit)
-    return companies
+    companies = crud.company.get_multi(db)
+    return paginate(companies)
 
 @router.get("/{company_id}", response_model=schemas.Company)
 def read_company(

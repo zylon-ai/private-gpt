@@ -4,6 +4,8 @@ import traceback
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+from fastapi_pagination import Page, paginate
+
 from fastapi import APIRouter, Depends, HTTPException, status, Security, Request
 
 from private_gpt.users.api import deps
@@ -35,25 +37,23 @@ def log_audit_department(
         print(traceback.format_exc())
 
 
-@router.get("", response_model=list[schemas.Department])
+@router.get("", response_model=Page[schemas.Department])
 def list_departments(
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
     ),
-) -> list[schemas.Department]:
+) -> Page[schemas.Department]:
     """
     Retrieve a list of departments with pagination support.
     """
     try:
         role = current_user.user_role.role.name if current_user.user_role else None
         if role == "SUPER_ADMIN":
-            deps = crud.department.get_multi(db, skip=skip, limit=limit)
+            deps = crud.department.get_multi(db)
         else:
             deps = crud.department.get_multi_department(
-                db, department_id=current_user.department_id, skip=skip, limit=limit)
+                db, department_id=current_user.department_id)
             
         deps = [
             schemas.Department(
@@ -64,7 +64,7 @@ def list_departments(
             )
             for dep in deps
         ]
-        return deps
+        return paginate(deps)
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error listing the file(s).")

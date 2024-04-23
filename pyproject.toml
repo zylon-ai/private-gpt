@@ -54,6 +54,9 @@ aiofiles = "^23.2.1"
 timm = "^0.9.16"
 fastapi-filter = {extras = ["sqlalchemy"], version = "^1.1.0"}
 uuid = "^1.30"
+openpyxl = "^3.1.2"
+pandas = "^2.2.2"
+fastapi-pagination = "^0.12.23"
 
 [tool.poetry.extras]
 ui = ["gradio"]

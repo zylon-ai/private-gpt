@@ -4,6 +4,7 @@ from typing import Any, List
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+from fastapi_pagination import Page, paginate
 from fastapi import APIRouter, Body, Depends, HTTPException, Security, status, Path, Request
 
 from private_gpt.users.api import deps
@@ -36,10 +37,8 @@ def log_audit_user(
         print(traceback.format_exc())
 
 
-@router.get("", response_model=List[schemas.User])
+@router.get("", response_model=Page[schemas.User])
 def read_users(
-    skip: int = 0,
-    limit: int = 100,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
@@ -53,11 +52,11 @@ def read_users(
     if role == "ADMIN":
         users = crud.user.get_by_department_id(db=db, department_id=current_user.department_id, skip=skip, limit=limit)
     else:
-        users = crud.user.get_multi(db, skip=skip, limit=limit)
-    return users
+        users = crud.user.get_multi(db)
+    return paginate(users)
 
 
-@router.get("/company/{company_id}", response_model=List[schemas.User])
+@router.get("/company/{company_id}", response_model=Page[schemas.User])
 def read_users_by_company(
     company_id: int = Path(..., title="Company ID",
                            description="Only for company admin"),
@@ -77,7 +76,7 @@ def read_users_by_company(
         )
 
     users = crud.user.get_multi_by_company_id(db, company_id=company.id)
-    return users
+    return paginate(users)
 
 
 @router.post("", response_model=schemas.User)
