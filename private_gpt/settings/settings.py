@@ -329,7 +329,7 @@ class ClickHouseSettings(BaseModel):
         description="The server hosting the ClickHouse database",
     )
     port: int = Field(
-        8123,
+        8443,
         description="The port on which the ClickHouse database is accessible",
     )
     username: str = Field(
