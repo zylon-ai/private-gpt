@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional, Dict, Any, Union
 
 from pydantic import BaseModel, Field
 
@@ -15,7 +15,7 @@ class CorsSettings(BaseModel):
 
     enabled: bool = Field(
         description="Flag indicating if CORS headers are set or not."
-        "If set to True, the CORS headers will be set to allow all origins, methods and headers.",
+                    "If set to True, the CORS headers will be set to allow all origins, methods and headers.",
         default=False,
     )
     allow_credentials: bool = Field(
@@ -54,8 +54,8 @@ class AuthSettings(BaseModel):
     )
     secret: str = Field(
         description="The secret to be used for authentication. "
-        "It can be any non-blank string. For HTTP basic authentication, "
-        "this value should be the whole 'Authorization' header that is expected"
+                    "It can be any non-blank string. For HTTP basic authentication, "
+                    "this value should be the whole 'Authorization' header that is expected"
     )
 
 
@@ -76,7 +76,7 @@ class ServerSettings(BaseModel):
 class DataSettings(BaseModel):
     local_data_folder: str = Field(
         description="Path to local storage."
-        "It will be treated as an absolute path if it starts with /"
+                    "It will be treated as an absolute path if it starts with /"
     )
 
 
@@ -95,10 +95,10 @@ class LLMSettings(BaseModel):
     tokenizer: str = Field(
         None,
         description="The model id of a predefined tokenizer hosted inside a model repo on "
-        "huggingface.co. Valid model ids can be located at the root-level, like "
-        "`bert-base-uncased`, or namespaced under a user or organization name, "
-        "like `HuggingFaceH4/zephyr-7b-beta`. If not set, will load a tokenizer matching "
-        "gpt-3.5-turbo LLM.",
+                    "huggingface.co. Valid model ids can be located at the root-level, like "
+                    "`bert-base-uncased`, or namespaced under a user or organization name, "
+                    "like `HuggingFaceH4/zephyr-7b-beta`. If not set, will load a tokenizer matching "
+                    "gpt-3.5-turbo LLM.",
     )
     temperature: float = Field(
         0.1,
@@ -107,7 +107,7 @@ class LLMSettings(BaseModel):
 
 
 class VectorstoreSettings(BaseModel):
-    database: Literal["chroma", "qdrant", "postgres"]
+    database: Literal["chroma", "qdrant", "postgres", "clickhouse"]
 
 
 class NodeStoreSettings(BaseModel):
@@ -323,6 +323,77 @@ class RagSettings(BaseModel):
     rerank: RerankSettings
 
 
+class ClickHouseSettings(BaseModel):
+    host: str = Field(
+        "localhost",
+        description="The server hosting the ClickHouse database",
+    )
+    port: int = Field(
+        8123,
+        description="The port on which the ClickHouse database is accessible",
+    )
+    username: str = Field(
+        "default",
+        description="The username to use to connect to the ClickHouse database",
+    )
+    password: str = Field(
+        "",
+        description="The password to use to connect to the ClickHouse database",
+    )
+    database: str = Field(
+        "__default__",
+        description="The default database to use for connections",
+    )
+    secure: Union[bool, str] = Field(
+        False,
+        description="Use https/TLS for secure connection to the server",
+    )
+    interface: Optional[str] = Field(
+        None,
+        description="Must be either 'http' or 'https'. Determines the protocol to use for the connection",
+    )
+    settings: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Specific ClickHouse server settings to be used with the session",
+    )
+    connect_timeout: Optional[int] = Field(
+        None,
+        description="Timeout in seconds for establishing a connection",
+    )
+    send_receive_timeout: Optional[int] = Field(
+        None,
+        description="Read timeout in seconds for http connection",
+    )
+    verify: Optional[bool] = Field(
+        None,
+        description="Verify the server certificate in secure/https mode",
+    )
+    ca_cert: Optional[str] = Field(
+        None,
+        description="Path to Certificate Authority root certificate (.pem format)",
+    )
+    client_cert: Optional[str] = Field(
+        None,
+        description="Path to TLS Client certificate (.pem format)",
+    )
+    client_cert_key: Optional[str] = Field(
+        None,
+        description="Path to the private key for the TLS Client certificate",
+    )
+    http_proxy: Optional[str] = Field(
+        None,
+        description="HTTP proxy address",
+    )
+    https_proxy: Optional[str] = Field(
+        None,
+        description="HTTPS proxy address",
+    )
+    server_host_name: Optional[str] = Field(
+        None,
+        description="Server host name to be checked against the TLS certificate",
+    )
+
+
 class PostgresSettings(BaseModel):
     host: str = Field(
         "localhost",
@@ -421,6 +492,7 @@ class Settings(BaseModel):
     rag: RagSettings
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
+    clickhouse: ClickHouseSettings | None = None
 
 
 """

@@ -121,6 +121,25 @@ class VectorStoreComponent:
                         collection_name="make_this_parameterizable_per_api_call",
                     ),  # TODO
                 )
+            case "clickhouse":
+                try:
+                    from llama_index.vector_stores.clickhouse import ClickHouseVectorStore
+                    from clickhouse_connect import get_client
+                except ImportError as e:
+                    raise ImportError(
+                        "ClickHouse dependencies not found, install with `poetry install --extras vector-stores-clickhouse`"
+                    ) from e
+
+                if settings.clickhouse is None:
+                    raise ValueError("ClickHouse settings not found. Please provide settings.")
+
+                clickhouse_client = get_client(
+                    host=settings.clickhouse.host,
+                    port=settings.clickhouse.port,
+                    username=settings.clickhouse.username,
+                    password=settings.clickhouse.password,
+                )
+                self.vector_store = ClickHouseVectorStore(clickhouse_client=clickhouse_client)
             case _:
                 # Should be unreachable
                 # The settings validator should have caught this

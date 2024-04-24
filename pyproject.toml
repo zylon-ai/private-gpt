@@ -31,11 +31,15 @@ llama-index-embeddings-azure-openai = {version ="^0.1.6", optional = true}
 llama-index-vector-stores-qdrant = {version ="^0.1.3", optional = true}
 llama-index-vector-stores-chroma = {version ="^0.1.4", optional = true}
 llama-index-vector-stores-postgres = {version ="^0.1.2", optional = true}
+llama-index-vector-stores-clickhouse = {version ="^0.1.3", optional = true}
 llama-index-storage-docstore-postgres = {version ="^0.1.2", optional = true}
 llama-index-storage-index-store-postgres = {version ="^0.1.2", optional = true}
 # Postgres
 psycopg2-binary = {version ="^2.9.9", optional = true}
 asyncpg = {version="^0.29.0", optional = true}
+
+# ClickHouse
+clickhouse-connect = {version = "^0.7.8", optional = true}
 
 # Optional Sagemaker dependency
 boto3 = {version ="^1.34.51", optional = true}
@@ -61,6 +65,7 @@ embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
 vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
+vector-stores-clickhouse = ["llama-index-vector-stores-clickhouse", "clickhouse_connect"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
 vector-stores-postgres = ["llama-index-vector-stores-postgres"]
 storage-nodestore-postgres = ["llama-index-storage-docstore-postgres","llama-index-storage-index-store-postgres","psycopg2-binary","asyncpg"]
