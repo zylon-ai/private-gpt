@@ -23,8 +23,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/documents', tags=['Documents'])
 
 
-CHECKER = False
-ENABLE_MAKER = False
+ENABLE_MAKER_CHECKER = False
 
 def get_username(db, id):
     user = crud.user.get_by_id(db=db, id=id)
@@ -299,7 +298,7 @@ async def upload_documents(
         logger.info(
             f"{original_filename} is uploaded by {current_user.username} in {departments.departments_ids}")
         
-        if not ENABLE_MAKER:
+        if not ENABLE_MAKER_CHECKER:
             checker_in = schemas.DocumentUpdate(
                 id=document.id,
                 status=MakerCheckerStatus.APPROVED.value
@@ -343,7 +342,7 @@ async def verify_documents(
             )
         
         
-        if CHECKER:
+        if ENABLE_MAKER_CHECKER:
             if document.verified:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,

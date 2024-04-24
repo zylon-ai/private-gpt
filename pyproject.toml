@@ -57,6 +57,7 @@ uuid = "^1.30"
 openpyxl = "^3.1.2"
 pandas = "^2.2.2"
 fastapi-pagination = "^0.12.23"
+xlsxwriter = "^3.2.0"
 
 [tool.poetry.extras]
 ui = ["gradio"]
