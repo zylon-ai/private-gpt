@@ -1,9 +1,9 @@
 FROM python:3.11.6-slim-bookworm as base
 
 # Install poetry
-RUN pip install pipx
-RUN python3 -m pipx ensurepath
-RUN pipx install poetry
+# RUN pip install pipx
+# RUN python3 -m pipx ensurepath
+RUN pip install poetry
 ENV PATH="/root/.local/bin:$PATH"
 ENV PATH=".venv/bin/:$PATH"
 
@@ -14,7 +14,8 @@ FROM base as dependencies
 WORKDIR /home/worker/app
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry install --extras "ui vector-stores-qdrant llms-ollama embeddings-ollama"
+ARG POETRY_EXTRAS="ui vector-stores-postgres llms-ollama llms-openai-like embeddings-ollama"
+RUN poetry install --extras "$POETRY_EXTRAS"
 
 FROM base as app
 
@@ -28,6 +29,7 @@ WORKDIR /home/worker/app
 
 RUN mkdir local_data; chown worker local_data
 RUN mkdir models; chown worker models
+RUN mkdir tiktoken_cache; chown worker tiktoken_cache
 COPY --chown=worker --from=dependencies /home/worker/app/.venv/ .venv
 COPY --chown=worker private_gpt/ private_gpt
 COPY --chown=worker fern/ fern

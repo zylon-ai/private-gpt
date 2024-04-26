@@ -1,0 +1,45 @@
+server:
+  env_name: ${APP_ENV:prod}
+  port: ${PORT:8080}
+
+llm:
+  mode: openailike
+  tokenizer: ${VLLM_MODEL:lmsys/vicuna-7b-v1.5}
+  max_new_tokens: 5000
+  context_window: 2048
+  temperature: 0.1
+
+openai:
+  api_base: ${VLLM_API_BASE:http://localhost:8000/v1}
+  api_key: EMPTY
+  model: ${VLLM_MODEL:lmsys/vicuna-7b-v1.5}
+
+embedding:
+  mode: ollama
+  embed_dim: 768
+  # ingest_mode: simple
+
+ollama:
+  # Note: if you change embedding model, you'll need to use a dedicated DB for ingext storage
+  embedding_model: nomic-embed-text
+  # api_base: ${OLLAMA_API_BASE:http://localhost:11434}
+  embedding_api_base: ${OLLAMA_API_BASE:http://localhost:11434}
+  request_timeout: 300.0
+
+nodestore:
+  database: postgres
+
+vectorstore:
+  database: postgres
+
+postgres:
+  host: ${POSTGRES_HOST:localhost}
+  port: ${POSTGRES_PORT:5432}
+  database: ${POSTGRES_DB:postgres}
+  user: ${POSTGRES_USER:postgres}
+  password: ${POSTGRES_PASSWORD:postgres}
+  schema_name: private_gpt
+
+ui:
+  enabled: true
+  path: /

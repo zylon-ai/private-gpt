@@ -1,0 +1,103 @@
+kind: live
+title: private-gpt
+
+# other files from https://github.com/zylon-ai/private-gpt
+
+defaults:
+  life_span: 5d
+
+images:
+  privategpt:
+    ref: image:$[[ project.id ]]:v1
+    dockerfile: $[[ flow.workspace ]]/Dockerfile.external
+    context: $[[ flow.workspace ]]/
+    build_preset: cpu-large
+
+volumes:
+  cache:
+    remote: storage:$[[ flow.project_id ]]/cache
+    mount: /root/.cache/huggingface
+    local: cache
+  data:
+    remote: storage:$[[ flow.project_id ]]/data
+    mount: /home/worker/app/local_data
+    local: local_data
+  pgdata:
+    remote: storage:$[[ flow.project_id ]]/pgdata
+    mount: /var/lib/postgresql/data
+    local: pgdata
+  pgdata_onprem:
+    remote: disk:pgdata
+    mount: /var/lib/postgresql/data
+  ollama_models:
+    remote: storage:$[[ flow.project_id ]]/ollama_models
+    mount: /root/.ollama
+    local: models
+  project:
+    remote: storage:$[[ flow.project_id ]]
+    mount: /project
+    local: .
+  settings:
+    remote: storage:$[[ flow.project_id ]]/settings
+    mount: /home/worker/app/settings
+    local: settings
+  tiktoken_cache:
+    remote: storage:$[[ flow.project_id ]]/tiktoken_cache
+    mount: /home/worker/app/tiktoken_cache
+    local: tiktoken_cache
+
+jobs:
+  pgpt:
+    image: ${{ images.privategpt.ref }}
+    name: pgpt
+    preset: cpu-small
+    http_port: "8080"
+    # detach: true
+    browse: true
+    volumes:
+      - ${{ volumes.data.ref_rw }}
+      - ${{ upload(volumes.settings).ref_rw }}
+      - ${{ volumes.tiktoken_cache.ref_rw }}
+    env:
+      PORT: 8080
+      PGPT_PROFILES: vllm-pgvector
+      PGPT_SETTINGS_FOLDER: ${{ volumes.settings.mount }}
+      VLLM_API_BASE: http://${{ inspect_job('vllm').internal_hostname_named }}:8000/v1
+      OLLAMA_API_BASE: http://${{ inspect_job('ollama').internal_hostname_named }}:11434
+      POSTGRES_HOST: ${{ inspect_job('pgvector').internal_hostname_named }}
+      VLLM_MODEL: stabilityai/StableBeluga-13B
+
+  vllm:
+    image: vllm/vllm-openai:v0.4.0
+    name: vllm
+    preset: gpu-2x3090
+    detach: true
+    http_port: "8000"
+    volumes:
+      - ${{ volumes.cache.ref_rw }}
+    cmd: --model stabilityai/StableBeluga-13B --tokenizer stabilityai/StableBeluga-13B --dtype=half --tensor-parallel-size=2
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ${{ volumes.ollama_models.ref_rw }}
+    preset: gpu-small
+    detach: true
+    env:
+      MODEL: "nomic-embed-text"
+      GIN_MODE: release
+    http_port: "11434"
+    entrypoint: "bash -c 'ollama serve & sleep 10 && ollama pull ${MODEL} && sleep infinity'"
+
+  pgvector:
+    image: pgvector/pgvector:pg16
+    detach: true
+    preset: cpu-small
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      PGDATA: ${{ volumes.pgdata.mount }}
+    volumes:
+      # - ${{ volumes.pgdata.ref_rw }}
+      - ${{ volumes.pgdata_onprem.ref_rw }}
