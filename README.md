@@ -1,5 +1,16 @@
 # 🔒 PrivateGPT 📑
 
+## Run on apolo / neu.ro platform
+Note: this setup is mostly for POC purposes. For production-ready setup, you'll need to replace some of it's components with production-ready Apps.
+
+1. `git clone` this repo && `cd` into root of it. We assume you've installed CLIs for the platform and authorized to the cluster.
+1. Build image for web app with `neuro-flow build privategpt`
+2. Create block storage for PGVector with `neuro disk create --name pgdata 10G --timeout-unused 100d`
+3. `neuro-flow run pgvector` -- start vector store
+4. `neuro-flow run ollama` -- start embeddings server
+5. `neuro-flow run vllm` -- start LLM inference server. Note: if you want to change LLM hosted there, change it in bash command and in `env.VLLM_MODEL` of `pgpt` job.
+6. `neuro-flow run pgpt` -- start PrivateGPT web server.
+
 [![Tests](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml/badge.svg)](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml?query=branch%3Amain)
 [![Website](https://img.shields.io/website?up_message=check%20it&down_message=down&url=https%3A%2F%2Fdocs.privategpt.dev%2F&label=Documentation)](https://docs.privategpt.dev/)
 
