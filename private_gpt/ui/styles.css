@@ -1,0 +1,58 @@
+.logo {
+    font-size: 2em;
+    font-weight: bold;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #00353a;
+    border-radius: 8px;
+    text-align: center;
+}
+
+* {
+    font-family: 'Roboto', 'sans-serif';
+    box-sizing: border-box;
+}
+
+body {
+    background-color: rgb(163, 49, 11)
+}
+
+.logo img {
+    height: 25%;
+}
+
+.contain {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+#component-0,
+#component-3,
+#component-10,
+#component-8 {
+    height: 100%;
+}
+
+#chatbot {
+    flex-grow: 1;
+    height: 60vh !important;
+    overflow: auto;
+}
+
+::-webkit-scrollbar {
+    width: 0px;
+}
+
+#col {
+    height: calc(95vh);
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+footer {
+    display: none !important;
+}

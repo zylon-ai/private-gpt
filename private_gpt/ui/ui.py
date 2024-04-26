@@ -5,7 +5,7 @@ import logging
 import time
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any , List
 
 import gradio as gr  # type: ignore
 from fastapi import FastAPI
@@ -23,18 +23,23 @@ from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.settings.settings import settings
 from private_gpt.ui.images import logo_svg
 
+# import stylesheet from the same directory/styles.css
+with open(Path(__file__).parent / "styles.css", "r") as f:
+    stylesheet = f.read()
+
 logger = logging.getLogger(__name__)
 
 THIS_DIRECTORY_RELATIVE = Path(__file__).parent.relative_to(PROJECT_ROOT_PATH)
 # Should be "private_gpt/ui/avatar-bot.ico"
 AVATAR_BOT = THIS_DIRECTORY_RELATIVE / "avatar-bot.ico"
-
-UI_TAB_TITLE = "My Private GPT"
+UI_TAB_TITLE = "DocChat : Chat with your documents"
 
 SOURCES_SEPARATOR = "\n\n Sources: \n"
 
 MODES = ["Query Files", "Search Files", "LLM Chat (no context from files)"]
-
+P_UI_THEME = "green"
+S_UI_Theme =  "yellow"
+B_UI_Theme = "slate"
 
 class Source(BaseModel):
     file: str
@@ -79,7 +84,7 @@ class PrivateGptUi:
         # Cache the UI blocks
         self._ui_block = None
 
-        self._selected_filename = None
+        self._selected_filename = List[str] | None
 
         # Initialize system prompt based on default mode
         self.mode = MODES[0]
@@ -295,29 +300,14 @@ class PrivateGptUi:
             gr.components.Button(interactive=True),
             gr.components.Textbox(self._selected_filename),
         ]
-
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
         with gr.Blocks(
             title=UI_TAB_TITLE,
-            theme=gr.themes.Soft(primary_hue=slate),
-            css=".logo { "
-            "display:flex;"
-            "background-color: #C7BAFF;"
-            "height: 80px;"
-            "border-radius: 8px;"
-            "align-content: center;"
-            "justify-content: center;"
-            "align-items: center;"
-            "}"
-            ".logo img { height: 25% }"
-            ".contain { display: flex !important; flex-direction: column !important; }"
-            "#component-0, #component-3, #component-10, #component-8  { height: 100% !important; }"
-            "#chatbot { flex-grow: 1 !important; overflow: auto !important;}"
-            "#col { height: calc(100vh - 112px - 16px) !important; }",
+            theme= gr.themes.Soft(primary_hue=P_UI_THEME, secondary_hue=S_UI_Theme, neutral_hue= B_UI_Theme),
+            css= stylesheet,
         ) as blocks:
-            with gr.Row():
-                gr.HTML(f"<div class='logo'/><img src={logo_svg} alt=PrivateGPT></div")
+
 
             with gr.Row(equal_height=False):
                 with gr.Column(scale=3):
