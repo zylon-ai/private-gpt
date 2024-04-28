@@ -1,7 +1,7 @@
 import logging
 import tempfile
 from pathlib import Path
-from typing import AnyStr, BinaryIO
+from typing import TYPE_CHECKING, AnyStr, BinaryIO
 
 from injector import inject, singleton
 from llama_index.core.node_parser import SentenceWindowNodeParser
@@ -16,6 +16,9 @@ from private_gpt.components.vector_store.vector_store_component import (
 )
 from private_gpt.server.ingest.model import IngestedDoc
 from private_gpt.settings.settings import settings
+
+if TYPE_CHECKING:
+    from llama_index.core.storage.docstore.types import RefDocInfo
 
 logger = logging.getLogger(__name__)
 
@@ -86,17 +89,15 @@ class IngestService:
         return [IngestedDoc.from_document(document) for document in documents]
 
     def list_ingested(self) -> list[IngestedDoc]:
-        ingested_docs = []
+        ingested_docs: list[IngestedDoc] = []
         try:
             docstore = self.storage_context.docstore
-            ingested_docs_ids: set[str] = set()
+            ref_docs: dict[str, RefDocInfo] | None = docstore.get_all_ref_doc_info()
 
-            for node in docstore.docs.values():
-                if node.ref_doc_id is not None:
-                    ingested_docs_ids.add(node.ref_doc_id)
+            if not ref_docs:
+                return ingested_docs
 
-            for doc_id in ingested_docs_ids:
-                ref_doc_info = docstore.get_ref_doc_info(ref_doc_id=doc_id)
+            for doc_id, ref_doc_info in ref_docs.items():
                 doc_metadata = None
                 if ref_doc_info is not None and ref_doc_info.metadata is not None:
                     doc_metadata = IngestedDoc.curate_metadata(ref_doc_info.metadata)

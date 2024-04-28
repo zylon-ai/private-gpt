@@ -1,3 +1,4 @@
+# poetry install --extras "ui llms-llama-cpp vector-stores-qdrant embeddings-huggingface"
 server:
   env_name: ${APP_ENV:local}
 

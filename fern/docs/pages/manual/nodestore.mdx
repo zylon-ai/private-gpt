@@ -1,0 +1,66 @@
+## NodeStores
+PrivateGPT supports **Simple** and [Postgres](https://www.postgresql.org/) providers. Simple being the default.
+
+In order to select one or the other, set the `nodestore.database` property in the `settings.yaml` file to `simple` or `postgres`.
+
+```yaml
+nodestore:
+  database: simple
+```
+
+### Simple Document Store
+
+Setting up simple document store: Persist data with in-memory and disk storage.
+
+Enabling the simple document store is an excellent choice for small projects or proofs of concept where you need to persist data while maintaining minimal setup complexity. To get started, set the nodestore.database property in your settings.yaml file as follows:
+
+```yaml
+nodestore:
+  database: simple
+```
+The beauty of the simple document store is its flexibility and ease of implementation. It provides a solid foundation for managing and retrieving data without the need for complex setup or configuration. The combination of in-memory processing and disk persistence ensures that you can efficiently handle small to medium-sized datasets while maintaining data consistency across runs.
+
+### Postgres Document Store
+
+To enable Postgres, set the `nodestore.database` property in the `settings.yaml` file to `postgres` and install the `storage-nodestore-postgres` extra.  Note: Vector Embeddings Storage in Postgres is configured separately
+
+```bash
+poetry install --extras storage-nodestore-postgres
+```
+
+The available configuration options are:
+| Field         | Description                                               |
+|---------------|-----------------------------------------------------------|
+| **host**      | The server hosting the Postgres database. Default is `localhost` |
+| **port**      | The port on which the Postgres database is accessible. Default is `5432` |
+| **database**  | The specific database to connect to. Default is `postgres` |
+| **user**      | The username for database access. Default is `postgres` |
+| **password**  | The password for database access. (Required)            |
+| **schema_name** | The database schema to use. Default is `private_gpt`       |
+
+For example:
+```yaml
+nodestore:
+  database: postgres
+
+postgres:
+  host: localhost
+  port: 5432
+  database: postgres
+  user: postgres
+  password: <PASSWORD>
+  schema_name: private_gpt
+```
+
+Given the above configuration, Two PostgreSQL tables will be created upon successful connection: one for storing metadata related to the index and another for document data itself.
+
+```
+postgres=# \dt private_gpt.*
+                  List of relations
+   Schema    |      Name       | Type  |    Owner     
+-------------+-----------------+-------+--------------
+ private_gpt | data_docstore   | table | postgres
+ private_gpt | data_indexstore | table | postgres
+
+postgres=# 
+```

@@ -81,7 +81,9 @@ class DataSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    mode: Literal["llamacpp", "openai", "openailike", "sagemaker", "mock", "ollama"]
+    mode: Literal[
+        "llamacpp", "openai", "openailike", "azopenai", "sagemaker", "mock", "ollama"
+    ]
     max_new_tokens: int = Field(
         256,
         description="The maximum number of token that the LLM is authorized to generate in one completion.",
@@ -105,7 +107,11 @@ class LLMSettings(BaseModel):
 
 
 class VectorstoreSettings(BaseModel):
-    database: Literal["chroma", "qdrant", "pgvector"]
+    database: Literal["chroma", "qdrant", "postgres"]
+
+
+class NodeStoreSettings(BaseModel):
+    database: Literal["simple", "postgres"]
 
 
 class LlamaCPPSettings(BaseModel):
@@ -148,14 +154,15 @@ class HuggingFaceSettings(BaseModel):
 
 
 class EmbeddingSettings(BaseModel):
-    mode: Literal["huggingface", "openai", "sagemaker", "ollama", "mock"]
-    ingest_mode: Literal["simple", "batch", "parallel"] = Field(
+    mode: Literal["huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock"]
+    ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",
         description=(
             "The ingest mode to use for the embedding engine:\n"
             "If `simple` - ingest files sequentially and one by one. It is the historic behaviour.\n"
             "If `batch` - if multiple files, parse all the files in parallel, "
             "and send them in batch to the embedding model.\n"
+            "In `pipeline` - The Embedding engine is kept as busy as possible\n"
             "If `parallel` - parse the files in parallel using multiple cores, and embedd them in parallel.\n"
             "`parallel` is the fastest mode for local setup, as it parallelize IO RW in the index.\n"
             "For modes that leverage parallelization, you can specify the number of "
@@ -168,10 +175,15 @@ class EmbeddingSettings(BaseModel):
             "The number of workers to use for file ingestion.\n"
             "In `batch` mode, this is the number of workers used to parse the files.\n"
             "In `parallel` mode, this is the number of workers used to parse the files and embed them.\n"
+            "In `pipeline` mode, this is the number of workers that can perform embeddings.\n"
             "This is only used if `ingest_mode` is not `simple`.\n"
             "Do not go too high with this number, as it might cause memory issues. (especially in `parallel` mode)\n"
             "Do not set it higher than your number of threads of your CPU."
         ),
+    )
+    embed_dim: int = Field(
+        384,
+        description="The dimension of the embeddings stored in the Postgres database",
     )
 
 
@@ -197,6 +209,10 @@ class OllamaSettings(BaseModel):
         "http://localhost:11434",
         description="Base URL of Ollama API. Example: 'https://localhost:11434'.",
     )
+    embedding_api_base: str = Field(
+        "http://localhost:11434",
+        description="Base URL of Ollama embedding API. Example: 'https://localhost:11434'.",
+    )
     llm_model: str = Field(
         None,
         description="Model to use. Example: 'llama2-uncensored'.",
@@ -204,6 +220,10 @@ class OllamaSettings(BaseModel):
     embedding_model: str = Field(
         None,
         description="Model to use. Example: 'nomic-embed-text'.",
+    )
+    keep_alive: str = Field(
+        "5m",
+        description="Time the model will stay loaded in memory after a request. examples: 5m, 5h, '-1' ",
     )
     tfs_z: float = Field(
         1.0,
@@ -229,6 +249,29 @@ class OllamaSettings(BaseModel):
         1.1,
         description="Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)",
     )
+    request_timeout: float = Field(
+        120.0,
+        description="Time elapsed until ollama times out the request. Default is 120s. Format is float. ",
+    )
+
+
+class AzureOpenAISettings(BaseModel):
+    api_key: str
+    azure_endpoint: str
+    api_version: str = Field(
+        "2023_05_15",
+        description="The API version to use for this operation. This follows the YYYY-MM-DD format.",
+    )
+    embedding_deployment_name: str
+    embedding_model: str = Field(
+        "text-embedding-ada-002",
+        description="OpenAI Model to use. Example: 'text-embedding-ada-002'.",
+    )
+    llm_deployment_name: str
+    llm_model: str = Field(
+        "gpt-35-turbo",
+        description="OpenAI Model to use. Example: 'gpt-4'.",
+    )
 
 
 class UISettings(BaseModel):
@@ -249,7 +292,34 @@ class UISettings(BaseModel):
     )
 
 
-class PGVectorSettings(BaseModel):
+class RerankSettings(BaseModel):
+    enabled: bool = Field(
+        False,
+        description="This value controls whether a reranker should be included in the RAG pipeline.",
+    )
+    model: str = Field(
+        "cross-encoder/ms-marco-MiniLM-L-2-v2",
+        description="Rerank model to use. Limited to SentenceTransformer cross-encoder models.",
+    )
+    top_n: int = Field(
+        2,
+        description="This value controls the number of documents returned by the RAG pipeline.",
+    )
+
+
+class RagSettings(BaseModel):
+    similarity_top_k: int = Field(
+        2,
+        description="This value controls the number of documents returned by the RAG pipeline or considered for reranking if enabled.",
+    )
+    similarity_value: float = Field(
+        None,
+        description="If set, any documents retrieved from the RAG must meet a certain match score. Acceptable values are between 0 and 1.",
+    )
+    rerank: RerankSettings
+
+
+class PostgresSettings(BaseModel):
     host: str = Field(
         "localhost",
         description="The server hosting the Postgres database",
@@ -270,17 +340,9 @@ class PGVectorSettings(BaseModel):
         "postgres",
         description="The database to use to connect to the Postgres database",
     )
-    embed_dim: int = Field(
-        384,
-        description="The dimension of the embeddings stored in the Postgres database",
-    )
     schema_name: str = Field(
         "public",
-        description="The name of the schema in the Postgres database where the embeddings are stored",
-    )
-    table_name: str = Field(
-        "embeddings",
-        description="The name of the table in the Postgres database where the embeddings are stored",
+        description="The name of the schema in the Postgres database to use",
     )
 
 
@@ -349,9 +411,12 @@ class Settings(BaseModel):
     sagemaker: SagemakerSettings
     openai: OpenAISettings
     ollama: OllamaSettings
+    azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
+    nodestore: NodeStoreSettings
+    rag: RagSettings
     qdrant: QdrantSettings | None = None
-    pgvector: PGVectorSettings | None = None
+    postgres: PostgresSettings | None = None
 
 
 """
