@@ -208,7 +208,6 @@ async def create_documents(
         status=MakerCheckerStatus.PENDING,
         doc_type_id=departments.doc_type_id,
     )
-    print("DOCUMENT CREATE: ", docs_in)
     document = crud.documents.create(db=db, obj_in=docs_in)
     department_ids = department_ids if department_ids else "1"
     department_ids = [int(number) for number in department_ids.split(",")]

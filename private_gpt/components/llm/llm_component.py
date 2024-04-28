@@ -11,7 +11,6 @@ from private_gpt.paths import models_cache_path, models_path
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
-local_path = models_path / "tokenizer/Mistral-7B-Instruct-v0.1"
 @singleton
 class LLMComponent:
     llm: LLM
@@ -20,11 +19,22 @@ class LLMComponent:
     def __init__(self, settings: Settings) -> None:
         llm_mode = settings.llm.mode
         if settings.llm.tokenizer:
-            set_global_tokenizer(
-                AutoTokenizer.from_pretrained(
-                    local_path
+            try:
+                set_global_tokenizer(
+                    AutoTokenizer.from_pretrained(
+                        pretrained_model_name_or_path=settings.llm.tokenizer,
+                        cache_dir=str(models_cache_path),
+                        token=settings.huggingface.access_token,
+                    )
                 )
-            )
+            except Exception as e:
+                logger.warning(
+                    "Failed to download tokenizer %s. Falling back to "
+                    "default tokenizer.",
+                    settings.llm.tokenizer,
+                    e,
+                )
+
 
         logger.info("Initializing the LLM in mode=%s", llm_mode)
         match settings.llm.mode:

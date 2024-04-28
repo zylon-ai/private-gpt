@@ -6,11 +6,12 @@ services:
       - ./local_data/:/home/worker/app/local_data
       - ./models/:/home/worker/app/models
     ports:
-      - 8000:8000
+      - 80:80
     environment:
-      PORT: 8000
+      PORT: 80
       PGPT_PROFILES: docker
       PGPT_MODE: local
 
     env_file:
       - .env
+    

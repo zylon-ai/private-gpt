@@ -1,4 +1,3 @@
-import os
 import random
 import string
 from datetime import datetime, timedelta
@@ -6,14 +5,13 @@ from typing import Dict, Any, Optional, Union
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from private_gpt.users.core.config import settings
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 1   # 12 hrs
-REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 1   # 12 hrs # Default Value
+REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days  # Default Value
 ALGORITHM = "HS256"
-# JWT_SECRET_KEY = os.environ['JWT_SECRET_KEY']     # should be kept secret
-# JWT_REFRESH_SECRET_KEY = os.environ['JWT_REFRESH_SECRET_KEY']      # should be kept secret
-JWT_SECRET_KEY = "QUICKGPT"
-JWT_REFRESH_SECRET_KEY = "QUICKGPT_REFRESH"
+JWT_SECRET_KEY = settings.SECRET_KEY
+JWT_REFRESH_SECRET_KEY = settings.REFRESH_KEY
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

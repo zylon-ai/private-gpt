@@ -40,9 +40,9 @@ print("LLM model downloaded!")
 
 # Download Tokenizer
 print(f"Downloading tokenizer {settings().llm.tokenizer}")
-local_path = models_path / "tokenizer/Mistral-7B-Instruct-v0.1"
 AutoTokenizer.from_pretrained(
-    local_path
+    pretrained_model_name_or_path=settings().llm.tokenizer,
+    cache_dir=models_cache_path,
 )
 print("Tokenizer downloaded!")
 

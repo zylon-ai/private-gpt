@@ -3,9 +3,11 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "AUTHENTICATION AND AUTHORIZATION"
+    PROJECT_NAME: str = "QuickGPT"
     API_V1_STR: str = "/v1"
     SECRET_KEY: str
+    REFRESH_KEY: str
+
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     REFRESH_TOKEN_EXPIRE_MINUTES: int
 
@@ -30,7 +32,8 @@ class Settings(BaseSettings):
 
     LDAP_SERVER: str
     LDAP_ENABLE: bool
-
+    ENABLE_MAKER_CHECKER: bool
+    
     class Config:
         case_sensitive = True
         env_file = ".env"

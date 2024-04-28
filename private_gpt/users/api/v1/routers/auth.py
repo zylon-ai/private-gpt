@@ -43,12 +43,12 @@ def register_user(
             department_id=department.id,
             checker= True if role == 'OPERATOR' else False
         )    
-    # try:
-    #     send_registration_email(fullname, email, password)
-    # except Exception as e:
-    #     logging.info(f"Failed to send registration email: {str(e)}")
-    #     raise HTTPException(
-    #         status_code=500, detail=f"Failed to send registration email.")
+    try:
+        send_registration_email(fullname, email, password)
+    except Exception as e:
+        logging.info(f"Failed to send registration email: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to send registration email.")
     return crud.user.create(db, obj_in=user_in)
 
 

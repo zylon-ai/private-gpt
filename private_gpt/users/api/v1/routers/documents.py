@@ -7,13 +7,13 @@ from datetime import datetime
 
 from typing import Any, List
 from sqlalchemy.orm import Session
-from sqlalchemy import select
 from fastapi_pagination import Page, paginate
 from fastapi import APIRouter, Depends, HTTPException, status, Security, Request, File, UploadFile
 
 from private_gpt.users.api import deps
 from private_gpt.constants import UNCHECKED_DIR
 from private_gpt.users.constants.role import Role
+from private_gpt.users.core.config import settings
 from private_gpt.users import crud, models, schemas
 from private_gpt.server.ingest.ingest_router import create_documents, ingest
 from private_gpt.users.models.document import MakerCheckerActionType, MakerCheckerStatus
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/documents', tags=['Documents'])
 
 
-ENABLE_MAKER_CHECKER = False
+ENABLE_MAKER_CHECKER = settings.ENABLE_MAKER_CHECKER
 
 def get_username(db, id):
     user = crud.user.get_by_id(db=db, id=id)
@@ -259,7 +259,6 @@ def update_department(
             status_code=500,
             detail="Internal Server Error.",
         )
-    
 
 @router.post('/upload', response_model=schemas.Document)
 async def upload_documents(
@@ -384,12 +383,12 @@ async def verify_documents(
                 user_id=current_user.id
             )
 
-            if document.doc_type_id == 2:
+            if document.doc_type_id == 2:  # For OCR
                 return await process_ocr(request, unchecked_path)
-            elif document.doc_type_id == 3:
+            elif document.doc_type_id == 3: # For BOTH
                 return await process_both_ocr(request, unchecked_path)
             else:
-                return await ingest(request, unchecked_path)
+                return await ingest(request, unchecked_path) # For pdf
             
             
         elif checker_in.status == MakerCheckerStatus.REJECTED.value:

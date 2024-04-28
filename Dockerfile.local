@@ -10,11 +10,7 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     build-essential \
     pkg-config \
-    wget \
-    make \
-    cmake \ 
-    g++ \ 
-    gcc 
+    wget 
 
 # Switch to the Python image for the final build stage
 FROM python:3.11.6-slim-bookworm as base
@@ -50,11 +46,12 @@ RUN poetry run python scripts/setup
 FROM base as app
 
 ENV PYTHONUNBUFFERED=1
-ENV PORT=8080
-EXPOSE 8080
+ENV PORT=80
+EXPOSE 80
 
 # Prepare a non-root user
-RUN adduser --system worker
+RUN adduser --group worker
+RUN adduser --system --ingroup worker worker
 WORKDIR /home/worker/app
 
 RUN mkdir local_data; chown worker local_data
@@ -68,4 +65,4 @@ COPY --chown=worker scripts/ scripts
 ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
 
 USER worker
-ENTRYPOINT python -m private_gpt
+ENTRYPOINT uvicorn private_gpt.main:app --host 0.0.0.0 --port 80

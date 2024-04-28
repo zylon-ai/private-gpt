@@ -166,7 +166,8 @@ class ChatService:
         )
         system_prompt = (
             """
-            You should answer questions only in English or Nepali. 
+            You are a helpful assistant that should answer questions 
+            only in English or Nepali. 
             Responses should be based on the context documents provided 
             and should be relevant, informative, and easy to understand. 
             You should aim to deliver high-quality responses that are 
