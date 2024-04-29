@@ -84,7 +84,7 @@ list:
 
 .PHONY: build-image
 build-image:
-	docker build -t $(IMAGE_NAME):latest .
+	docker build -t $(IMAGE_NAME):latest -f Dockerfile.external .
 
 .PHONY: push-image
 push-image:
