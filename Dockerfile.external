@@ -19,6 +19,8 @@ RUN poetry install --extras "$POETRY_EXTRAS"
 
 FROM base as app
 
+LABEL org.opencontainers.image.source = "https://github.com/neuro-inc/private-gpt"
+
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8080
 EXPOSE 8080

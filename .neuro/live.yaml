@@ -66,6 +66,7 @@ jobs:
       OLLAMA_API_BASE: http://${{ inspect_job('ollama').internal_hostname_named }}:11434
       POSTGRES_HOST: ${{ inspect_job('pgvector').internal_hostname_named }}
       VLLM_MODEL: stabilityai/StableBeluga-13B
+      VLLM_TOKENIZER: stabilityai/StableBeluga-13B
 
   vllm:
     image: vllm/vllm-openai:v0.4.0

@@ -1,6 +1,11 @@
 # Any args passed to the make script, use with $(call args, default_value)
 args = `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
 
+IMAGE_REPO ?= ghcr.io/neuro-inc
+IMAGE_NAME ?= private-gpt
+IMAGE_TAG ?= latest
+IMAGE_REF = $(IMAGE_REPO)/$(IMAGE_NAME):$(IMAGE_TAG)
+
 ########################################################################################################################
 # Quality checks
 ########################################################################################################################
@@ -76,3 +81,12 @@ list:
 	@echo "  ingest          : Ingest data using specified script"
 	@echo "  wipe            : Wipe data using specified script"
 	@echo "  setup           : Setup the application"
+
+.PHONY: build-image
+build-image:
+	docker build -t $(IMAGE_NAME):latest .
+
+.PHONY: push-image
+push-image:
+	docker tag $(IMAGE_NAME):latest $(IMAGE_REF)
+	docker push $(IMAGE_REF)
