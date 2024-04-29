@@ -13,6 +13,8 @@ from private_gpt.paths import models_cache_path, models_path
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
+
+
 @singleton
 class LLMComponent:
     llm: LLM
@@ -20,7 +22,9 @@ class LLMComponent:
     @inject
     def __init__(self, settings: Settings) -> None:
         llm_mode = settings.llm.mode
-        if settings.llm.tokenizer:
+        if settings.llm.tokenizer and settings.llm.mode != "mock":
+            # Try to download the tokenizer. If it fails, the LLM will still work
+            # using the default one, which is less accurate.
             try:
                 set_global_tokenizer(
                     AutoTokenizer.from_pretrained(
@@ -36,7 +40,6 @@ class LLMComponent:
                     settings.llm.tokenizer,
                     e,
                 )
-
 
         logger.info("Initializing the LLM in mode=%s", llm_mode)
         match settings.llm.mode:
@@ -58,7 +61,8 @@ class LLMComponent:
                     "offload_kqv": True,
                 }
                 self.llm = LlamaCPP(
-                    model_path=str(models_path / settings.llamacpp.llm_hf_model_file),
+                    model_path=str(
+                        models_path / settings.llamacpp.llm_hf_model_file),
                     temperature=settings.llm.temperature,
                     max_new_tokens=settings.llm.max_new_tokens,
                     context_window=settings.llm.context_window,
@@ -159,7 +163,8 @@ class LLMComponent:
                     Ollama.chat = add_keep_alive(Ollama.chat)
                     Ollama.stream_chat = add_keep_alive(Ollama.stream_chat)
                     Ollama.complete = add_keep_alive(Ollama.complete)
-                    Ollama.stream_complete = add_keep_alive(Ollama.stream_complete)
+                    Ollama.stream_complete = add_keep_alive(
+                        Ollama.stream_complete)
 
             case "azopenai":
                 try:

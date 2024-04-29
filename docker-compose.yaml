@@ -1,28 +1,46 @@
+version: '3.8'
+
 services:
   private-gpt:
     build:
       dockerfile: Dockerfile.external
-    volumes:
-      - ./local_data/:/home/worker/app/local_data
-    ports:
-<<<<<<< HEAD
-      - 80:80
-    environment:
-      PORT: 80
-      PGPT_PROFILES: docker
-      PGPT_MODE: local
+    entrypoint: ./docker-entrypoint.sh
 
     env_file:
       - .env
-    
-=======
-      - 8001:8080
+    volumes:
+      - ./local_data/:/home/worker/app/local_data
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+      - ollama
     environment:
-      PORT: 8080
+      PORT: 8000
       PGPT_PROFILES: docker
       PGPT_MODE: ollama
+      DATABASE_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}
+    
   ollama:
     image: ollama/ollama:latest
     volumes:
       - ./models:/root/.ollama
->>>>>>> dev
+
+  db:
+    image: postgres:15-alpine
+    container_name: db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      # POSTGRES_HOST_AUTH_METHOD: trust
+    restart: always
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - 5433:${DB_PORT}
+
+volumes:
+  postgres-data:

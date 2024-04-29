@@ -10,3 +10,5 @@ terraform
 tests
 Dockerfile
 Dockerfile.*
+private_gpt/static/unchecked
+local_data/private_gpt

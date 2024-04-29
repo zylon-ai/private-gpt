@@ -1,4 +1,16 @@
 FROM python:3.11.6-slim-bookworm as base
+# Set noninteractive mode
+ENV DEBIAN_FRONTEND noninteractive
+# Install necessary dependencies including CMake and g++
+RUN apt-get update && apt-get install -y \
+    libopenblas-dev \
+    ninja-build \
+    build-essential \
+    pkg-config \
+    wget \
+    libgl1-mesa-glx \
+    python3-opencv \
+    && apt-get clean
 
 # Install poetry
 RUN pip install pipx
@@ -6,36 +18,39 @@ RUN python3 -m pipx ensurepath
 RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
 ENV PATH=".venv/bin/:$PATH"
-
 # https://python-poetry.org/docs/configuration/#virtualenvsin-project
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 
 FROM base as dependencies
 WORKDIR /home/worker/app
 COPY pyproject.toml poetry.lock ./
-
 RUN poetry install --extras "ui vector-stores-qdrant llms-ollama embeddings-ollama"
 
 FROM base as app
-
 ENV PYTHONUNBUFFERED=1
-ENV PORT=8080
-EXPOSE 8080
+ENV PORT=8000
 
 # Prepare a non-root user
 RUN adduser --system worker
 WORKDIR /home/worker/app
-
 RUN mkdir local_data; chown worker local_data
 RUN mkdir models; chown worker models
+RUN mkdir tiktoken_cache; chown worker tiktoken_cache
 COPY --chown=worker --from=dependencies /home/worker/app/.venv/ .venv
 COPY --chown=worker private_gpt/ private_gpt
+COPY --chown=worker alembic/ alembic
 COPY --chown=worker fern/ fern
 COPY --chown=worker *.yaml *.md ./
 COPY --chown=worker scripts/ scripts
-RUN 
+COPY --chown=worker *.ini ./ 
+# Copy the docker-entrypoint.sh file
+COPY docker-entrypoint.sh /home/worker/app/
 
+RUN chmod +x /home/worker/app/docker-entrypoint.sh
 ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
-
 USER worker
-ENTRYPOINT python -m private_gpt
+
+EXPOSE 8000
+# Copy the rest of the application code into the container
+COPY . /home/worker/app
+ENTRYPOINT [ "/home/worker/app/docker-entrypoint.sh" ]
