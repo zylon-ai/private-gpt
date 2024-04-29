@@ -11,6 +11,42 @@ Note: this setup is mostly for POC purposes. For production-ready setup, you'll 
 5. `neuro-flow run vllm` -- start LLM inference server. Note: if you want to change LLM hosted there, change it in bash command and in `env.VLLM_MODEL` of `pgpt` job.
 6. `neuro-flow run pgpt` -- start PrivateGPT web server.
 
+<details>
+<summary>Running PrivateGPT as stand-alone job</summary>
+
+Currently, we support only deployment case with vLLM as LLM inference server, PGVector as a vector store and Ollama as embeddings server.
+
+Use following environment variables to configure PrivateGPT running within the job:
+
+Scheme: `env name (value type, required/optional) -- description`.
+
+LLM config section:
+- `VLLM_API_BASE` (URL, required) -- HTTP endpoint for LLM inference
+- `VLLM_MODEL` (hugging face model reference, required) -- LLM model name to use (must be available at inference server).
+- `VLLM_TOKENIZER` (hugging face model reference, required) -- tokenized to use while sending requests to LLM
+- `VLLM_MAX_NEW_TOKENS` (int, required) -- controls the response size from LLM
+- `VLLM_CONTEXT_WINDOW` (int, required) -- controls context size that will be sent to LLM
+- `VLLM_TEMPERATURE` (float 0 < x < 1, optional) -- temperature parameter ('creativeness') for LLM. Less value -- more strict penalty for going out of provided context.
+
+PGVector config section:
+- `POSTGRES_HOST` (str, required) -- hostname for Postgres instance with PGVector installed
+- `POSTGRES_PORT` (int, optional) -- TCP port for Postgres instance
+- `POSTGRES_DB` (str, required) -- Postgres database name
+- `POSTGRES_USER` (str, required) -- username for Postgres DB
+- `POSTGRES_PASSWORD` (str, required) -- password for Postgres DB
+
+Embeddings config section:
+- `OLLAMA_API_BASE` (URL, required) -- Ollama server endpoint. Must be already running.
+- `OLLAMA_EMBEDDING_MODEL` (str, optional) -- embeddings model to use. Must be already loaded into Ollama instance
+
+Having above values, run job with
+`neuro run --volume storage:.apps/pgpt/data:/home/worker/app/local_data --http-port=8080 ghcr.io/neuro-inc/private-gpt`
+
+Other platform-related configurations like `--life-span`, etc. also work here.
+
+</details>
+
+
 [![Tests](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml/badge.svg)](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml?query=branch%3Amain)
 [![Website](https://img.shields.io/website?up_message=check%20it&down_message=down&url=https%3A%2F%2Fdocs.privategpt.dev%2F&label=Documentation)](https://docs.privategpt.dev/)
 
