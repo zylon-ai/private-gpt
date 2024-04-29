@@ -30,3 +30,6 @@ jobs:
 
           export IMAGE_TAG=latest
           make push-image
+
+          export IMAGE_TAG=$(cat version.txt)
+          make push-image
