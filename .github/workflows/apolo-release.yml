@@ -2,10 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [apolo]
     tags: ["v*"]
   pull_request:
-    branches: [master]
+    branches: [apolo]
 
 jobs:
   release:
