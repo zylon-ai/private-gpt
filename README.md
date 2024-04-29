@@ -11,8 +11,9 @@ Note: this setup is mostly for POC purposes. For production-ready setup, you'll 
 5. `neuro-flow run vllm` -- start LLM inference server. Note: if you want to change LLM hosted there, change it in bash command and in `env.VLLM_MODEL` of `pgpt` job.
 6. `neuro-flow run pgpt` -- start PrivateGPT web server.
 
+### Running PrivateGPT as stand-alone job
 <details>
-<summary>Running PrivateGPT as stand-alone job</summary>
+<summary> Instruction </summary>
 
 Currently, we support only deployment case with vLLM as LLM inference server, PGVector as a vector store and Ollama as embeddings server.
 
