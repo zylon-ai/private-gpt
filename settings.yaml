@@ -36,6 +36,7 @@ ui:
 
 llm:
   mode: llamacpp
+  prompt_style: "mistral"
   # Should be matching the selected model
   max_new_tokens: 512
   context_window: 3900
@@ -53,7 +54,6 @@ rag:
     top_n: 1
 
 llamacpp:
-  prompt_style: "mistral"
   llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF
   llm_hf_model_file: mistral-7b-instruct-v0.2.Q4_K_M.gguf
   tfs_z: 1.0            # Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting

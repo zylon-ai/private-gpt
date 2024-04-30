@@ -104,6 +104,17 @@ class LLMSettings(BaseModel):
         0.1,
         description="The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual.",
     )
+    prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] = Field(
+        "llama2",
+        description=(
+            "The prompt style to use for the chat engine. "
+            "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
+            "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
+            "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
+            "If `mistral` - use the `mistral prompt style. It shoudl look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]"
+            "`llama2` is the historic behaviour. `default` might work better with your custom models."
+        ),
+    )
 
 
 class VectorstoreSettings(BaseModel):
@@ -117,18 +128,6 @@ class NodeStoreSettings(BaseModel):
 class LlamaCPPSettings(BaseModel):
     llm_hf_repo_id: str
     llm_hf_model_file: str
-    prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] = Field(
-        "llama2",
-        description=(
-            "The prompt style to use for the chat engine. "
-            "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
-            "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
-            "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
-            "If `mistral` - use the `mistral prompt style. It shoudl look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]"
-            "`llama2` is the historic behaviour. `default` might work better with your custom models."
-        ),
-    )
-
     tfs_z: float = Field(
         1.0,
         description="Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting.",

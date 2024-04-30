@@ -51,7 +51,7 @@ class LLMComponent:
                         "Local dependencies not found, install with `poetry install --extras llms-llama-cpp`"
                     ) from e
 
-                prompt_style = get_prompt_style(settings.llamacpp.prompt_style)
+                prompt_style = get_prompt_style(settings.llm.prompt_style)
                 settings_kwargs = {
                     "tfs_z": settings.llamacpp.tfs_z,  # ollama and llama-cpp
                     "top_k": settings.llamacpp.top_k,  # ollama and llama-cpp
@@ -109,15 +109,20 @@ class LLMComponent:
                     raise ImportError(
                         "OpenAILike dependencies not found, install with `poetry install --extras llms-openai-like`"
                     ) from e
-
+                prompt_style = get_prompt_style(settings.llm.prompt_style)
                 openai_settings = settings.openai
                 self.llm = OpenAILike(
                     api_base=openai_settings.api_base,
                     api_key=openai_settings.api_key,
                     model=openai_settings.model,
                     is_chat_model=True,
-                    max_tokens=None,
+                    max_tokens=settings.llm.max_new_tokens,
                     api_version="",
+                    temperature=settings.llm.temperature,
+                    context_window=settings.llm.context_window,
+                    max_new_tokens=settings.llm.max_new_tokens,
+                    messages_to_prompt=prompt_style.messages_to_prompt,
+                    completion_to_prompt=prompt_style.completion_to_prompt,
                 )
             case "ollama":
                 try:
