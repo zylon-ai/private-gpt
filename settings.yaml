@@ -100,7 +100,7 @@ openai:
 
 ollama:
   llm_model: llama3
-  embedding_model: nomic-embed-text
+  embedding_model: mxbai-embed-large
   api_base: http://localhost:11434
   embedding_api_base: http://localhost:11434  # change if your embedding model runs on another ollama
   keep_alive: 5m

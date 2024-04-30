@@ -9,8 +9,7 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     wget \
     libgl1-mesa-glx \
-    python3-opencv \
-    && apt-get clean
+    python3-opencv 
 
 # Install poetry
 RUN pip install pipx
@@ -43,14 +42,15 @@ COPY --chown=worker fern/ fern
 COPY --chown=worker *.yaml *.md ./
 COPY --chown=worker scripts/ scripts
 COPY --chown=worker *.ini ./ 
-# Copy the docker-entrypoint.sh file
-COPY docker-entrypoint.sh /home/worker/app/
-
+# Copy the docker-entrypoint.sh file and make it executable
+COPY --chown=worker docker-entrypoint.sh /home/worker/app/
 RUN chmod +x /home/worker/app/docker-entrypoint.sh
-ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
+
+# Set the user to run the container
 USER worker
 
 EXPOSE 8000
 # Copy the rest of the application code into the container
-COPY . /home/worker/app
-ENTRYPOINT [ "/home/worker/app/docker-entrypoint.sh" ]
+COPY --chown=worker . /home/worker/app
+# Set the entrypoint
+ENTRYPOINT ["/home/worker/app/docker-entrypoint.sh"]
