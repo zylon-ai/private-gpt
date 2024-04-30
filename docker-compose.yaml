@@ -4,8 +4,7 @@ services:
   private-gpt:
     build:
       dockerfile: Dockerfile.external
-    entrypoint: ./docker-entrypoint.sh
-
+    # entrypoint: ./docker-entrypoint.sh
     env_file:
       - .env
     volumes:

@@ -7,7 +7,6 @@ from private_gpt.users.models.department import Department
 from private_gpt.users.models.document_department import document_department_association
 from private_gpt.users.crud.base import CRUDBase
 from typing import Optional, List
-from fastapi_pagination import Page, paginate
 
 
 class CRUDDocuments(CRUDBase[Document, DocumentCreate, DocumentUpdate]):

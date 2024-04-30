@@ -4,6 +4,7 @@ import uuid
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 from fastapi import APIRouter, Depends, HTTPException, status, Security
+from fastapi_pagination import Page, paginate
 
 from private_gpt.users.api import deps
 from private_gpt.users import crud, models, schemas
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/c", tags=["Chat Histories"])
 
 
-@router.get("", response_model=list[schemas.ChatHistory])
+@router.get("", response_model=Page[schemas.ChatHistory])
 def list_chat_histories(
     db: Session = Depends(deps.get_db),
     skip: int = 0,
@@ -20,14 +21,14 @@ def list_chat_histories(
     current_user: models.User = Security(
         deps.get_current_user,
     ),
-) -> list[schemas.ChatHistory]:
+) -> Page[schemas.ChatHistory]:
     """
     Retrieve a list of chat histories with pagination support.
     """
     try:
         chat_histories = crud.chat.get_chat_history(
             db, user_id=current_user.id, skip=skip, limit=limit)
-        return chat_histories
+        return paginate(chat_histories)
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"Error listing chat histories: {str(e)}")
@@ -63,14 +64,14 @@ def create_chat_history(
         )
 
 
-@router.get("/{conversation_id}", response_model=schemas.ChatHistory)
+@router.get("/{conversation_id}", response_model=Page[schemas.ChatHistory])
 def read_chat_history(
     conversation_id: uuid.UUID,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
     ),
-) -> schemas.ChatHistory:
+) -> Page[schemas.ChatHistory]:
     """
     Read a chat history by ID
     """
@@ -79,7 +80,7 @@ def read_chat_history(
         if chat_history is None or chat_history.user_id != current_user.id:
             raise HTTPException(
                 status_code=404, detail="Chat history not found")
-        return chat_history
+        return paginate(chat_history)
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"Error reading chat history: {str(e)}")

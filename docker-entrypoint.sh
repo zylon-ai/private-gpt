@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 
 # Initialize alembic ini
