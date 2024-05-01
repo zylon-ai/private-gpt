@@ -1,5 +1,17 @@
 # Notes
-poetry run pip install bs4 openpyxl flask transformers python-pptx Pillow cryptography
+sudo apt-get install build-essential
+sudo apt-get install git gcc make openssl libssl-dev libbz2-dev libreadline-dev
+sudo apt-get install lzma
+sudo apt-get install liblzma-dev
+
+curl -sSL https://install.python-poetry.org | python3 -
+
+cd privateGPT
+poetry install --extras "ui llms-llama-cpp"
+CMAKE_ARGS='-DLLAMA_CUBLAS=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python
+
+poetry run python scripts/setup
+poetry run pip install bs4 openpyxl flask transformers python-pptx Pillow cryptography llama_index.vector_stores.postgres llama_index.embeddings.huggingface sentencepiece
 apt-get install antiword
 
 # 🔒 PrivateGPT 📑

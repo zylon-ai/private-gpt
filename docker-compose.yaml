@@ -12,7 +12,7 @@ services:
   #     PGPT_PROFILES: docker
   #     PGPT_MODE: local
   postgres:
-    image: "postgres"
+    image: "ankane/pgvector:latest"
     environment:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
@@ -21,14 +21,15 @@ services:
       - "5432:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: always
-  phppgadmin:
-    image: "dockage/phppgadmin"
-    environment:
-      PHP_PG_ADMIN_SERVER_HOST: "postgres"
-      PHP_PG_ADMIN_SERVER_PORT: "5432"
-      PHP_PG_ADMIN_SERVER_DEFAULT_DB: "postgres"
-      PHP_PG_ADMIN_OWNED_ONLY: "false"
-    ports:
-      - "8080:80"
-    restart: always
+  # phppgadmin:
+  #   image: "dockage/phppgadmin"
+  #   environment:
+  #     PHP_PG_ADMIN_SERVER_HOST: "postgres"
+  #     PHP_PG_ADMIN_SERVER_PORT: "5432"
+  #     PHP_PG_ADMIN_SERVER_DEFAULT_DB: "postgres"
+  #     PHP_PG_ADMIN_OWNED_ONLY: "false"
+  #   ports:
+  #     - "8080:80"
+  #   restart: always

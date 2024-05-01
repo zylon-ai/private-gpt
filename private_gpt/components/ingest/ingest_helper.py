@@ -18,7 +18,8 @@ def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
             PDFReader,
         )
         from llama_index.readers.file.epub import EpubReader  # type: ignore
-        from llama_index.readers.file.image import ImageReader  # type: ignore
+        #from llama_index.readers.file.image import ImageReader  # type: ignore
+        from llama_index.readers.file.image_vision_llm import ImageVisionLLMReader  # type: ignore
         from llama_index.readers.file.ipynb import IPYNBReader  # type: ignore
         from llama_index.readers.file.markdown import MarkdownReader  # type: ignore
         from llama_index.readers.file.mbox import MboxReader  # type: ignore
@@ -41,9 +42,9 @@ def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
         ".pptx": PptxReader,
         ".ppt": PptxReader,
         ".pptm": PptxReader,
-        ".jpg": ImageReader,
-        ".png": ImageReader,
-        ".jpeg": ImageReader,
+        ".jpg": ImageVisionLLMReader,
+        ".png": ImageVisionLLMReader,
+        ".jpeg": ImageVisionLLMReader,
         ".mp3": VideoAudioReader,
         ".mp4": VideoAudioReader,
         ".csv": PandasCSVReader,
@@ -57,9 +58,9 @@ def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
         ".htm": HTMLParser,
         ".xlsx": XLSXParser,
         ".xml": XMLReader,
-        ".eps": ImageReader,
-        ".tif": ImageReader,
-        ".gif": ImageReader,
+        ".eps": ImageVisionLLMReader,
+        ".tif": ImageVisionLLMReader,
+        ".gif": ImageVisionLLMReader,
         ".doc": DOCParser,
     }
     return default_file_reader_cls
@@ -119,11 +120,11 @@ class IngestionHelper:
                     )
                     return []
             string_reader = StringIterableReader()
-            return string_reader.load_data([file_content])
+            return string_reader.load_data([file_content.replace("\x00", "")])
 
         logger.debug("Specific reader found for extension=%s", extension)
         try:
-            return reader_cls().load_data(file_data)
+            return reader_cls().load_data(str(file_data).replace("\x00", ""))
         except Exception as e:
             logger.debug(
                 "Failed to read file_name=%s e=%s",
