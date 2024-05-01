@@ -104,6 +104,17 @@ class LLMSettings(BaseModel):
         0.1,
         description="The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual.",
     )
+    prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] = Field(
+        "llama2",
+        description=(
+            "The prompt style to use for the chat engine. "
+            "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
+            "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
+            "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
+            "If `mistral` - use the `mistral prompt style. It shoudl look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]"
+            "`llama2` is the historic behaviour. `default` might work better with your custom models."
+        ),
+    )
 
 
 class VectorstoreSettings(BaseModel):
@@ -117,18 +128,6 @@ class NodeStoreSettings(BaseModel):
 class LlamaCPPSettings(BaseModel):
     llm_hf_repo_id: str
     llm_hf_model_file: str
-    prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] = Field(
-        "llama2",
-        description=(
-            "The prompt style to use for the chat engine. "
-            "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
-            "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
-            "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
-            "If `mistral` - use the `mistral prompt style. It shoudl look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]"
-            "`llama2` is the historic behaviour. `default` might work better with your custom models."
-        ),
-    )
-
     tfs_z: float = Field(
         1.0,
         description="Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting.",
@@ -150,6 +149,10 @@ class LlamaCPPSettings(BaseModel):
 class HuggingFaceSettings(BaseModel):
     embedding_hf_model_name: str = Field(
         description="Name of the HuggingFace model to use for embeddings"
+    )
+    access_token: str = Field(
+        None,
+        description="Huggingface access token, required to download some models",
     )
 
 
@@ -209,6 +212,10 @@ class OllamaSettings(BaseModel):
         "http://localhost:11434",
         description="Base URL of Ollama API. Example: 'https://localhost:11434'.",
     )
+    embedding_api_base: str = Field(
+        "http://localhost:11434",
+        description="Base URL of Ollama embedding API. Example: 'https://localhost:11434'.",
+    )
     llm_model: str = Field(
         None,
         description="Model to use. Example: 'llama2-uncensored'.",
@@ -216,6 +223,10 @@ class OllamaSettings(BaseModel):
     embedding_model: str = Field(
         None,
         description="Model to use. Example: 'nomic-embed-text'.",
+    )
+    keep_alive: str = Field(
+        "5m",
+        description="Time the model will stay loaded in memory after a request. examples: 5m, 5h, '-1' ",
     )
     tfs_z: float = Field(
         1.0,
@@ -284,15 +295,31 @@ class UISettings(BaseModel):
     )
 
 
+class RerankSettings(BaseModel):
+    enabled: bool = Field(
+        False,
+        description="This value controls whether a reranker should be included in the RAG pipeline.",
+    )
+    model: str = Field(
+        "cross-encoder/ms-marco-MiniLM-L-2-v2",
+        description="Rerank model to use. Limited to SentenceTransformer cross-encoder models.",
+    )
+    top_n: int = Field(
+        2,
+        description="This value controls the number of documents returned by the RAG pipeline.",
+    )
+
+
 class RagSettings(BaseModel):
     similarity_top_k: int = Field(
         2,
-        description="This value controls the number of documents returned by the RAG pipeline",
+        description="This value controls the number of documents returned by the RAG pipeline or considered for reranking if enabled.",
     )
     similarity_value: float = Field(
         None,
         description="If set, any documents retrieved from the RAG must meet a certain match score. Acceptable values are between 0 and 1.",
     )
+    rerank: RerankSettings
 
 
 class PostgresSettings(BaseModel):

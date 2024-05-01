@@ -1,4 +1,6 @@
 import logging
+from collections.abc import Callable
+from typing import Any
 
 from injector import inject, singleton
 from llama_index.core.llms import LLM, MockLLM
@@ -20,13 +22,24 @@ class LLMComponent:
     @inject
     def __init__(self, settings: Settings) -> None:
         llm_mode = settings.llm.mode
-        if settings.llm.tokenizer:
-            set_global_tokenizer(
-                AutoTokenizer.from_pretrained(
-                    pretrained_model_name_or_path=settings.llm.tokenizer,
-                    cache_dir=str(models_cache_path),
+        if settings.llm.tokenizer and settings.llm.mode != "mock":
+            # Try to download the tokenizer. If it fails, the LLM will still work
+            # using the default one, which is less accurate.
+            try:
+                set_global_tokenizer(
+                    AutoTokenizer.from_pretrained(
+                        pretrained_model_name_or_path=settings.llm.tokenizer,
+                        cache_dir=str(models_cache_path),
+                        token=settings.huggingface.access_token,
+                    )
                 )
-            )
+            except Exception as e:
+                logger.warning(
+                    "Failed to download tokenizer %s. Falling back to "
+                    "default tokenizer.",
+                    settings.llm.tokenizer,
+                    e,
+                )
 
         logger.info("Initializing the LLM in mode=%s", llm_mode)
         match settings.llm.mode:
@@ -38,7 +51,7 @@ class LLMComponent:
                         "Local dependencies not found, install with `poetry install --extras llms-llama-cpp`"
                     ) from e
 
-                prompt_style = get_prompt_style(settings.llamacpp.prompt_style)
+                prompt_style = get_prompt_style(settings.llm.prompt_style)
                 settings_kwargs = {
                     "tfs_z": settings.llamacpp.tfs_z,  # ollama and llama-cpp
                     "top_k": settings.llamacpp.top_k,  # ollama and llama-cpp
@@ -96,15 +109,20 @@ class LLMComponent:
                     raise ImportError(
                         "OpenAILike dependencies not found, install with `poetry install --extras llms-openai-like`"
                     ) from e
-
+                prompt_style = get_prompt_style(settings.llm.prompt_style)
                 openai_settings = settings.openai
                 self.llm = OpenAILike(
                     api_base=openai_settings.api_base,
                     api_key=openai_settings.api_key,
                     model=openai_settings.model,
                     is_chat_model=True,
-                    max_tokens=None,
+                    max_tokens=settings.llm.max_new_tokens,
                     api_version="",
+                    temperature=settings.llm.temperature,
+                    context_window=settings.llm.context_window,
+                    max_new_tokens=settings.llm.max_new_tokens,
+                    messages_to_prompt=prompt_style.messages_to_prompt,
+                    completion_to_prompt=prompt_style.completion_to_prompt,
                 )
             case "ollama":
                 try:
@@ -133,6 +151,24 @@ class LLMComponent:
                     additional_kwargs=settings_kwargs,
                     request_timeout=ollama_settings.request_timeout,
                 )
+
+                if (
+                    ollama_settings.keep_alive
+                    != ollama_settings.model_fields["keep_alive"].default
+                ):
+                    # Modify Ollama methods to use the "keep_alive" field.
+                    def add_keep_alive(func: Callable[..., Any]) -> Callable[..., Any]:
+                        def wrapper(*args: Any, **kwargs: Any) -> Any:
+                            kwargs["keep_alive"] = ollama_settings.keep_alive
+                            return func(*args, **kwargs)
+
+                        return wrapper
+
+                    Ollama.chat = add_keep_alive(Ollama.chat)
+                    Ollama.stream_chat = add_keep_alive(Ollama.stream_chat)
+                    Ollama.complete = add_keep_alive(Ollama.complete)
+                    Ollama.stream_complete = add_keep_alive(Ollama.stream_complete)
+
             case "azopenai":
                 try:
                     from llama_index.llms.azure_openai import (  # type: ignore

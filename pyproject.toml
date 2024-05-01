@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "private-gpt"
-version = "0.4.0"
+version = "0.5.0"
 description = "Private GPT"
 authors = ["Zylon <hi@zylon.ai>"]
 
@@ -13,6 +13,8 @@ injector = "^0.21.0"
 pyyaml = "^6.0.1"
 watchdog = "^4.0.0"
 transformers = "^4.38.2"
+docx2txt = "^0.8"
+cryptography = "^3.1"
 # LlamaIndex core libs
 llama-index-core = "^0.10.14"
 llama-index-readers-file = "^0.1.6"
@@ -37,6 +39,11 @@ asyncpg = {version="^0.29.0", optional = true}
 
 # Optional Sagemaker dependency
 boto3 = {version ="^1.34.51", optional = true}
+
+# Optional Reranker dependencies
+torch = {version ="^2.1.2", optional = true}
+sentence-transformers = {version ="^2.6.1", optional = true}
+
 # Optional UI
 gradio = {version ="^4.19.2", optional = true}
 
@@ -57,6 +64,7 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
 vector-stores-postgres = ["llama-index-vector-stores-postgres"]
 storage-nodestore-postgres = ["llama-index-storage-docstore-postgres","llama-index-storage-index-store-postgres","psycopg2-binary","asyncpg"]
+rerank-sentence-transformers = ["torch", "sentence-transformers"]
 
 [tool.poetry.group.dev.dependencies]
 black = "^22"

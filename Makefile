@@ -51,6 +51,9 @@ api-docs:
 ingest:
 	@poetry run python scripts/ingest_folder.py $(call args)
 
+stats:
+	poetry run python scripts/utils.py stats
+
 wipe:
 	poetry run python scripts/utils.py wipe
 
