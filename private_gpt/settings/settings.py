@@ -201,6 +201,10 @@ class OpenAISettings(BaseModel):
         description="Base URL of OpenAI API. Example: 'https://api.openai.com/v1'.",
     )
     api_key: str
+    embedding_model: str = Field(
+        "text-embedding-ada-002",
+        description="OpenAI Model to use. Example: 'text-embedding-ada-002'.",
+    )
     model: str = Field(
         "gpt-3.5-turbo",
         description="OpenAI Model to use. Example: 'gpt-4'.",

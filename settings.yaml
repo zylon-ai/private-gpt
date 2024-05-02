@@ -95,6 +95,7 @@ sagemaker:
 openai:
   api_key: ${OPENAI_API_KEY:}
   model: gpt-3.5-turbo
+  embedding_model: text-embedding-ada-002
 
 ollama:
   llm_model: llama2

@@ -3,6 +3,7 @@ server:
 
 llm:
   mode: openai
+  embedding_model: text-embedding-ada-002
 
 embedding:
   mode: openai

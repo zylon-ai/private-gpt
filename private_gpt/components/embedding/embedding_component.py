@@ -56,7 +56,10 @@ class EmbeddingComponent:
                     ) from e
 
                 openai_settings = settings.openai.api_key
-                self.embedding_model = OpenAIEmbedding(api_key=openai_settings)
+                self.embedding_model = OpenAIEmbedding(
+                    api_key=openai_settings,
+                    model=openai_settings.embedding_model,
+                )
             case "ollama":
                 try:
                     from llama_index.embeddings.ollama import (  # type: ignore
