@@ -261,7 +261,6 @@ def register(
         )
     random_password = security.generate_random_password()
     # random_password = password
-    
     try:
         company_id = current_user.company_id
         if company_id:

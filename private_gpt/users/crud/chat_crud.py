@@ -7,10 +7,11 @@ import uuid
 from private_gpt.users.crud.base import CRUDBase
 from private_gpt.users.models.chat import ChatHistory, ChatItem
 from private_gpt.users.schemas.chat import ChatHistoryCreate, ChatHistoryCreate, ChatItemCreate, ChatItemUpdate
+from fastapi_pagination import Page, paginate
 
 
 class CRUDChat(CRUDBase[ChatHistory, ChatHistoryCreate, ChatHistoryCreate]):
-    def get_by_id(self, db: Session, *, id: uuid.UUID) -> Optional[ChatHistory]:
+    def get_by_id(self, db: Session, *, id: uuid.UUID, skip: int=0, limit: int=10) -> Optional[ChatHistory]:
         chat_history = (
             db.query(self.model)
             .filter(ChatHistory.conversation_id == id)
@@ -21,7 +22,9 @@ class CRUDChat(CRUDBase[ChatHistory, ChatHistoryCreate, ChatHistoryCreate]):
             chat_history.chat_items = (
                 db.query(ChatItem)
                 .filter(ChatItem.conversation_id == id)
-                .order_by(asc(getattr(ChatItem, 'index')))
+                .order_by(desc(getattr(ChatItem, 'index')))
+                .offset(skip)
+                .limit(limit)
                 .all()
             )
         return chat_history

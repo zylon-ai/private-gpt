@@ -14,8 +14,8 @@ embedding:
   embed_dim: 768
 
 ollama:
-  llm_model: mistral
-  embedding_model: nomic-embed-text
+  llm_model: llama3
+  embedding_model: mxbai-embed-large
   api_base: http://localhost:11434
 
 nodestore:

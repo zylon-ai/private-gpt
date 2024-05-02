@@ -42,7 +42,8 @@ class AbstractPromptStyle(abc.ABC):
 
     def completion_to_prompt(self, completion: str) -> str:
         prompt = self._completion_to_prompt(completion)
-        logger.debug("Got for completion='%s' the prompt='%s'", completion, prompt)
+        logger.debug("Got for completion='%s' the prompt='%s'",
+                     completion, prompt)
         return prompt
 
 
@@ -58,8 +59,10 @@ class DefaultPromptStyle(AbstractPromptStyle):
 
         # Hacky way to override the functions
         # Override the functions to be None, and pass None to the LLM.
-        self.messages_to_prompt = None  # type: ignore[method-assign, assignment]
-        self.completion_to_prompt = None  # type: ignore[method-assign, assignment]
+        # type: ignore[method-assign, assignment]
+        self.messages_to_prompt = None
+        # type: ignore[method-assign, assignment]
+        self.completion_to_prompt = None
 
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
         return ""
@@ -215,7 +218,8 @@ class ChatMLPromptStyle(AbstractPromptStyle):
 
 
 def get_prompt_style(
-    prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] | None
+    prompt_style: Literal["default", "llama2",
+                          "tag", "mistral", "chatml"] | None
 ) -> AbstractPromptStyle:
     """Get the prompt style to use from the given string.
 
