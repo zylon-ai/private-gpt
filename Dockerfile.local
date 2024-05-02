@@ -10,7 +10,14 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     build-essential \
     pkg-config \
-    wget 
+    wget \
+        nvidia-container-runtime
+
+# Set up Nvidia Container Toolkit
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+ENV NVIDIA_REQUIRE_CUDA "cuda>=11.0"
+
 
 # Switch to the Python image for the final build stage
 FROM python:3.11.6-slim-bookworm as base

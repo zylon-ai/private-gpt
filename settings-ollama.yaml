@@ -11,7 +11,7 @@ embedding:
   mode: ollama
 
 ollama:
-  llm_model: llama3
+  llm_model: openhermes
   embedding_model: mxbai-embed-large
   api_base: http://localhost:11434
   embedding_api_base: http://localhost:11434  # change if your embedding model runs on another ollama

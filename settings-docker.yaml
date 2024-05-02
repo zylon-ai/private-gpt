@@ -20,7 +20,7 @@ sagemaker:
   embedding_endpoint_name: ${PGPT_SAGEMAKER_EMBEDDING_ENDPOINT_NAME:}
 
 ollama:
-  llm_model: ${PGPT_OLLAMA_LLM_MODEL:llama3}
+  llm_model: ${PGPT_OLLAMA_LLM_MODEL:openhermes}
   embedding_model: ${PGPT_OLLAMA_EMBEDDING_MODEL:mxbai-embed-large}
   api_base: ${PGPT_OLLAMA_API_BASE:http://ollama:11434}
   tfs_z: ${PGPT_OLLAMA_TFS_Z:1.0}

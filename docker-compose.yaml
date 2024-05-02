@@ -25,6 +25,8 @@ services:
     image: ollama/ollama:latest
     volumes:
       - ./models:/root/.ollama
+    ports:
+      - 11434:11434
 
   db:
     image: postgres:15-alpine
@@ -41,6 +43,6 @@ services:
       - postgres-data:/var/lib/postgresql/data
     ports:
       - 5433:${DB_PORT}
-
+  
 volumes:
   postgres-data:

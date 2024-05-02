@@ -35,6 +35,10 @@ WORKDIR /home/worker/app
 RUN mkdir local_data; chown worker local_data
 RUN mkdir models; chown worker models
 RUN mkdir tiktoken_cache; chown worker tiktoken_cache
+RUN mkdir static; chown worker static
+RUN mkdir static/unchecked; chown worker static/unchecked
+RUN mkdir static/checked; chown worker static/checked
+RUN mkdir uploads; chown worker uploads
 COPY --chown=worker --from=dependencies /home/worker/app/.venv/ .venv
 COPY --chown=worker private_gpt/ private_gpt
 COPY --chown=worker alembic/ alembic
@@ -45,6 +49,16 @@ COPY --chown=worker *.ini ./
 # Copy the docker-entrypoint.sh file and make it executable
 COPY --chown=worker docker-entrypoint.sh /home/worker/app/
 RUN chmod +x /home/worker/app/docker-entrypoint.sh
+
+
+########################################
+#### ---- Set up NVIDIA-Docker ---- ####
+########################################
+## ref: https://github.com/NVIDIA/nvidia-docker/wiki/Installation-(Native-GPU-Support)#usage
+ENV TOKENIZERS_PARALLELISM=false
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+
 
 # Set the user to run the container
 USER worker

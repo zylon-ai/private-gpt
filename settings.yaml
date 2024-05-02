@@ -49,7 +49,7 @@ rag:
   #similarity_value: 0.45
   #This value is disabled by default.  If you enable this settings, the RAG will only use articles that meet a certain percentage score.
   rerank:
-    enabled: true
+    enabled: false
     model: cross-encoder/ms-marco-MiniLM-L-2-v2
     top_n: 3
 
@@ -99,10 +99,10 @@ openai:
   model: gpt-3.5-turbo
 
 ollama:
-  llm_model: llama3
+  llm_model: openhermes
   embedding_model: mxbai-embed-large
-  api_base: http://localhost:11434
-  embedding_api_base: http://localhost:11434  # change if your embedding model runs on another ollama
+  api_base: http://privategpt-ollama-1:11434
+  embedding_api_base: http://privategpt-ollama-1:11434  # change if your embedding model runs on another ollama
   keep_alive: 5m
   request_timeout: 120.0
 
