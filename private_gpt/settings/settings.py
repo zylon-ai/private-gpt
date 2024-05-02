@@ -205,6 +205,10 @@ class OpenAISettings(BaseModel):
         "gpt-3.5-turbo",
         description="OpenAI Model to use. Example: 'gpt-4'.",
     )
+    request_timeout: float = Field(
+        120.0,
+        description="Time elapsed until openailike server times out the request. Default is 120s. Format is float. ",
+    )
 
 
 class OllamaSettings(BaseModel):

@@ -123,6 +123,9 @@ class LLMComponent:
                     max_new_tokens=settings.llm.max_new_tokens,
                     messages_to_prompt=prompt_style.messages_to_prompt,
                     completion_to_prompt=prompt_style.completion_to_prompt,
+                    tokenizer=settings.llm.tokenizer,
+                    timeout=openai_settings.request_timeout,
+                    reuse_client=False,
                 )
             case "ollama":
                 try:
