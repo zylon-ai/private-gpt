@@ -8,9 +8,9 @@ llm:
   max_new_tokens: 512
   context_window: 3900
   tokenizer: mistralai/Mistral-7B-Instruct-v0.2
+  prompt_style: "mistral"
 
 llamacpp:
-  prompt_style: "mistral"
   llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF
   llm_hf_model_file: mistral-7b-instruct-v0.2.Q4_K_M.gguf
 
