@@ -54,7 +54,6 @@ def list_departments(
         else:
             deps = crud.department.get_multi_department(
                 db, department_id=current_user.department_id)
-            
         deps = [
             schemas.Department(
                 id=dep.id,

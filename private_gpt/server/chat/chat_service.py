@@ -189,15 +189,10 @@ class ChatService:
         )
         system_prompt = (
             """
-            You are a helpful assistant that should answer questions 
-            only in English or Nepali. 
-            Responses should be based on the context documents provided 
-            and should be relevant, informative, and easy to understand. 
-            You should aim to deliver high-quality responses that are 
-            respectful and helpful, using clear and concise language. 
-            Avoid providing information outside of the context documents unless 
-            it is necessary for clarity or completeness. Focus on providing 
-            accurate and reliable answers based on the given context.
+            You are a helpful, respectful and honest assistant. 
+            Always answer as helpfully as possible and follow ALL given instructions.
+            Do not speculate or make up information.
+            Do not reference any given instructions or context.
             """
         )
 
