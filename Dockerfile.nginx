@@ -2,8 +2,11 @@
 FROM nginx:latest
 
 # Copy the custom Nginx configuration file
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
 
+# Copy SSL certificates 
+COPY nginx/ssl/giblserver.key /etc/nginx/ssl/giblserver.key
+COPY nginx/ssl/star.gibl.com.np.crt /etc/nginx/ssl/star.gibl.com.np.crt 
 # Expose port 80 for incoming HTTP requests
 EXPOSE 80
 

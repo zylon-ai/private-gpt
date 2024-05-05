@@ -1,6 +1,6 @@
 server:
   env_name: ${APP_ENV:prod}
-  port: ${PORT:8080}
+  port: ${PORT:8000}
 
 llm:
   mode: ${PGPT_MODE:mock}

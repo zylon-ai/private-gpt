@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   nginx:
-    image: nginx:latest
+    build: 
+      context: .
+      dockerfile: Dockerfile.nginx
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     ports:
@@ -12,7 +14,7 @@ services:
 
   private-gpt:
     build:
-      dockerfile: Dockerfile.external
+      dockerfile: Dockerfile.local
     entrypoint: ./docker-entrypoint.sh
     env_file:
       - .env
@@ -28,17 +30,7 @@ services:
       PGPT_PROFILES: docker
       PGPT_MODE: ollama
       DATABASE_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}
-    
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    volumes:
-      - ./models:/root/.ollama
-    pull_policy: always
-    tty: true
-    restart: unless-stopped
-    ports:
-      - 11434:11434
+
     deploy:
       resources:
         reservations:
@@ -46,6 +38,24 @@ services:
             - driver: nvidia
               capabilities: [ "gpu" ]
               count: all
+    
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   volumes:
+  #     - ./models:/root/.ollama
+  #   pull_policy: always
+  #   tty: true
+  #   restart: unless-stopped
+  #   ports:
+  #     - 11434:11434
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             capabilities: [ "gpu" ]
+  #             count: all
 
   db:
     image: postgres:15-alpine
