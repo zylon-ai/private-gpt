@@ -43,6 +43,17 @@ services:
       - postgres-data:/var/lib/postgresql/data
     ports:
       - 5433:${DB_PORT}
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - private-gpt
   
 volumes:
   postgres-data:
