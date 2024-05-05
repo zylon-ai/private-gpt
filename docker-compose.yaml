@@ -33,10 +33,21 @@ services:
     
   ollama:
     image: ollama/ollama:latest
+    container_name: ollama
     volumes:
       - ./models:/root/.ollama
+    pull_policy: always
+    tty: true
+    restart: unless-stopped
     ports:
       - 11434:11434
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
 
   db:
     image: postgres:15-alpine
