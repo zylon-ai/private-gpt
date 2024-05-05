@@ -46,8 +46,8 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
+              capabilities: [ "gpu" ]
+              count: all
 
   db:
     image: postgres:15-alpine
