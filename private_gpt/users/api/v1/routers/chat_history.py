@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/c", tags=["Chat Histories"])
 
 
-@router.get("", response_model=Page[schemas.ChatHistory])
+@router.get("", response_model=Page[schemas.Chat])
 def list_chat_histories(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
     ),
-) -> Page[schemas.ChatHistory]:
+) -> Page[schemas.Chat]:
     """
     Retrieve a list of chat histories with pagination support.
     """

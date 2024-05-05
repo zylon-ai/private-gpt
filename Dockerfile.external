@@ -46,6 +46,7 @@ COPY --chown=worker fern/ fern
 COPY --chown=worker *.yaml *.md ./
 COPY --chown=worker scripts/ scripts
 COPY --chown=worker *.ini ./ 
+
 # Copy the docker-entrypoint.sh file and make it executable
 COPY --chown=worker docker-entrypoint.sh /home/worker/app/
 RUN chmod +x /home/worker/app/docker-entrypoint.sh
