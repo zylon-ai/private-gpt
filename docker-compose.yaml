@@ -2,13 +2,11 @@ version: '3.8'
 
 services:
   nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
-    ports:
-      - 80:80
+    image: nginx:latest
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - 80:80
     depends_on:
       - private-gpt
 
