@@ -118,8 +118,9 @@ def create_chat_item(db, sender, content, conversation_id):
             content=content,
             conversation_id=conversation_id
         )
+    chat_history = crud.chat.get_conversation(db, conversation_id=conversation_id)
+    chat_history.generate_title()
     return crud.chat_item.create(db, obj_in=chat_item_create)
-
 
 @completions_router.post(
     "/chat",

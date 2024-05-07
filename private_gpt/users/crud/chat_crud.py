@@ -28,7 +28,14 @@ class CRUDChat(CRUDBase[ChatHistory, ChatHistoryCreate, ChatHistoryCreate]):
                 .all()
             )
         return chat_history
-
+        
+    def get_conversation(self, db: Session, conversation_id: uuid.UUID) -> Optional[ChatHistory]:
+         return (
+                db.query(self.model)
+                .filter(ChatHistory.conversation_id == conversation_id)
+                .first()
+            )
+    
     def get_chat_history(
             self, db: Session, *,user_id:int
         ) -> List[ChatHistory]:
