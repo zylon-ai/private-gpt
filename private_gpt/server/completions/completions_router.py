@@ -232,7 +232,4 @@ async def prompt_completion(
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error",
-        )
+        raise

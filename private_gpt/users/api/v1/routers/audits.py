@@ -40,26 +40,26 @@ def list_auditlog(
     logs = crud.audit.get_multi_desc(db, skip=skip, limit=limit)
     return convert_audit_logs(db, logs)
 
-@router.get("filter/", response_model=List[schemas.Audit])
+@router.get("/filter", response_model=List[schemas.Audit])
 def filter_auditlog(
     db: Session = Depends(deps.get_db),
     filter_in= Depends(schemas.AuditFilter),
-    # current_user: models.User = Security(
-    #     deps.get_current_user,
-    #     scopes=[Role.SUPER_ADMIN["name"]],
-    # ),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"]],
+    ),
 ) -> List[schemas.Audit]:
     logs = crud.audit.filter(db, obj_in=filter_in)
     return convert_audit_logs(db, logs)
 
-@router.get("download/")
+@router.get("/download")
 def download_auditlog(
     db: Session = Depends(deps.get_db),
     filter_in= Depends(schemas.ExcelFilter),
-    # current_user: models.User = Security(
-    #     deps.get_current_user,
-    #     scopes=[Role.SUPER_ADMIN["name"]],
-    # ),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"]],
+    ),
 ):
     logs = crud.audit.excel_filter(db, obj_in=filter_in)
     username = filter_in.username if filter_in.username else None

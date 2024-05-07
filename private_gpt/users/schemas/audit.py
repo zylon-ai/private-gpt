@@ -5,11 +5,11 @@ from pydantic import BaseModel
 
 class AuditBase(BaseModel):
     id: int
-    model: str
-    user_id: int
-    action: str
-    details: dict
-    ip_address: str
+    model: Optional[str] = None
+    user_id: Optional[int] = None
+    action: Optional[str] = None
+    details: Optional[dict] = None
+    ip_address: Optional[str] = None
     timestamp: Optional[datetime]
 
 
@@ -29,12 +29,12 @@ class AuditInDB(AuditBase):
 
 class Audit(BaseModel):
     id: int
-    model: str
-    username: str
-    action: str
-    details: dict
-    timestamp: Optional[datetime]
-    ip_address: str
+    model: Optional[str] = None
+    username: Optional[str] = None
+    action: Optional[str] = None
+    details: Optional[dict] = None
+    timestamp: Optional[datetime]= None
+    ip_address: Optional[str] = None
 
 
 class GetAudit(BaseModel):
