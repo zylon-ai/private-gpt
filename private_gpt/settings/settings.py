@@ -151,6 +151,10 @@ class HuggingFaceSettings(BaseModel):
     embedding_hf_model_name: str = Field(
         description="Name of the HuggingFace model to use for embeddings"
     )
+    access_token: str = Field(
+        None,
+        description="Huggingface access token, required to download some models",
+    )
 
 
 class EmbeddingSettings(BaseModel):
