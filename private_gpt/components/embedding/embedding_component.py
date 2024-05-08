@@ -55,8 +55,17 @@ class EmbeddingComponent:
                         "OpenAI dependencies not found, install with `poetry install --extras embeddings-openai`"
                     ) from e
 
-                openai_settings = settings.openai.api_key
-                self.embedding_model = OpenAIEmbedding(api_key=openai_settings)
+                api_base = (
+                    settings.openai.embedding_api_base or settings.openai.api_base
+                )
+                api_key = settings.openai.embedding_api_key or settings.openai.api_key
+                model = settings.openai.embedding_model
+
+                self.embedding_model = OpenAIEmbedding(
+                    api_base=api_base,
+                    api_key=api_key,
+                    model=model,
+                )
             case "ollama":
                 try:
                     from llama_index.embeddings.ollama import (  # type: ignore
