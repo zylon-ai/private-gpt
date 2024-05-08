@@ -216,7 +216,7 @@ class OpenAISettings(BaseModel):
     embedding_api_key: str
     embedding_model: str = Field(
         "text-embedding-ada-002",
-        description="OpenAI Model to use. Example: 'gpt-4'.",
+        description="OpenAI embedding Model to use. Example: 'text-embedding-3-large'.",
     )
 
 
