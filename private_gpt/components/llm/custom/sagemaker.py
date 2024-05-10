@@ -218,7 +218,7 @@ class SagemakerLLM(CustomLLM):
 
         response_body = resp["Body"]
         response_str = response_body.read().decode("utf-8")
-        response_dict = eval(response_str)
+        response_dict = json.loads(response_str)
 
         return CompletionResponse(
             text=response_dict[0]["generated_text"][len(prompt) :], raw=resp
