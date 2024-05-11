@@ -6,10 +6,11 @@ Note: this setup is mostly for POC purposes. For production-ready setup, you'll 
 1. `git clone` this repo && `cd` into root of it. We assume you've installed CLIs for the platform and authorized to the cluster.
 1. Build image for web app with `neuro-flow build privategpt`
 2. Create block storage for PGVector with `neuro disk create --name pgdata 10G --timeout-unused 100d`
-3. `neuro-flow run pgvector` -- start vector store
-4. `neuro-flow run ollama` -- start embeddings server
-5. `neuro-flow run vllm` -- start LLM inference server. Note: if you want to change LLM hosted there, change it in bash command and in `env.VLLM_MODEL` of `pgpt` job.
-6. `neuro-flow run pgpt` -- start PrivateGPT web server.
+3. Create secret with HuggingFace token to pull models `neuro secret add HF_TOKEN <token>` (see https://huggingface.co/settings/tokens)
+4. `neuro-flow run pgvector` -- start vector store
+5. `neuro-flow run ollama` -- start embeddings server
+6. `neuro-flow run vllm` -- start LLM inference server. Note: if you want to change LLM hosted there, change it in bash command and in `env.VLLM_MODEL` of `pgpt` job.
+7. `neuro-flow run pgpt` -- start PrivateGPT web server.
 
 ### Running PrivateGPT as stand-alone job
 <details>

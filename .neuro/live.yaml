@@ -65,8 +65,8 @@ jobs:
       VLLM_API_BASE: http://${{ inspect_job('vllm').internal_hostname_named }}:8000/v1
       OLLAMA_API_BASE: http://${{ inspect_job('ollama').internal_hostname_named }}:11434
       POSTGRES_HOST: ${{ inspect_job('pgvector').internal_hostname_named }}
-      VLLM_MODEL: stabilityai/StableBeluga-13B
-      VLLM_TOKENIZER: stabilityai/StableBeluga-13B
+      VLLM_MODEL: meta-llama/Meta-Llama-3-8B-Instruct
+      VLLM_TOKENIZER: meta-llama/Meta-Llama-3-8B-Instruct
 
   vllm:
     image: vllm/vllm-openai:v0.4.0
@@ -76,7 +76,9 @@ jobs:
     http_port: "8000"
     volumes:
       - ${{ volumes.cache.ref_rw }}
-    cmd: --model stabilityai/StableBeluga-13B --tokenizer stabilityai/StableBeluga-13B --dtype=half --tensor-parallel-size=2
+    env:
+      HF_TOKEN: secret:HF_TOKEN
+    cmd: --model meta-llama/Meta-Llama-3-8B-Instruct --tokenizer meta-llama/Meta-Llama-3-8B-Instruct --dtype=half --tensor-parallel-size=2
 
   ollama:
     image: ollama/ollama:latest
