@@ -366,7 +366,7 @@ async def verify_documents(
             checker = schemas.DocumentCheckerUpdate(
                     action_type=MakerCheckerActionType.UPDATE,
                     status=MakerCheckerStatus.APPROVED,
-                    is_enabled=False,
+                    is_enabled=True,
                     verified_at=datetime.now(),
                     verified_by=current_user.id,
                     verified=True,

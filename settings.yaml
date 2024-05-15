@@ -37,10 +37,11 @@ ui:
 
 llm:
   mode: llamacpp
+  prompt_style: "chatml"
   # Should be matching the selected model
-  max_new_tokens: 512
-  context_window: 3900
-  tokenizer: mistralai/Mistral-7B-Instruct-v0.2
+  max_new_tokens: 1024
+  context_window: 8192
+  tokenizer: meta-llama/Meta-Llama-3-8B-Instruct
   temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
 
 rag:
@@ -51,12 +52,13 @@ rag:
   rerank:
     enabled: true
     model: cross-encoder/ms-marco-MiniLM-L-2-v2
-    top_n: 3
+    top_n: 2
 
 llamacpp:
-  prompt_style: "chatml"
-  llm_hf_repo_id: TheBloke/OpenHermes-2.5-Mistral-7B-GGUF
-  llm_hf_model_file: openhermes-2.5-mistral-7b.Q5_K_M.gguf
+  # llm_hf_repo_id: bartowski/Meta-Llama-3-8B-Instruct-GGUF
+  # llm_hf_model_file: Meta-Llama-3-8B-Instruct-Q6_K.gguf
+  llm_hf_repo_id: qwp4w3hyb/Hermes-2-Pro-Llama-3-8B-iMat-GGUF
+  llm_hf_model_file: hermes-2-pro-llama-3-8b-imat-Q6_K.gguf
   tfs_z: 1.0            # Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting
   top_k: 40             # Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)
   top_p: 0.9            # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
@@ -70,7 +72,8 @@ embedding:
   embed_dim: 384 # 384 is for BAAI/bge-small-en-v1.5
 
 huggingface:
-  embedding_hf_model_name: mixedbread-ai/mxbai-embed-large-v1
+  embedding_hf_model_name: Snowflake/snowflake-arctic-embed-l
+  access_token: ${HUGGINGFACE_TOKEN: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}
 
 vectorstore:
   database: qdrant
@@ -87,7 +90,6 @@ postgres:
   database: postgres
   user: postgres
   password: postgres
-  embed_dim: 768 # 384 is for BAAI/bge-small-en-v1.5
   schema_name: private_gpt
 
 sagemaker:
@@ -99,10 +101,10 @@ openai:
   model: gpt-3.5-turbo
 
 ollama:
-  llm_model: llama3
-  embedding_model: nomic-embed-text
-  api_base: http://localhost:11434
-  embedding_api_base: http://localhost:11434  # change if your embedding model runs on another ollama
+  llm_model: openhermes
+  embedding_model: mxbai-embed-large
+  api_base: http://privategpt-ollama-1:11434
+  embedding_api_base: http://privategpt-ollama-1:11434  # change if your embedding model runs on another ollama
   keep_alive: 5m
   request_timeout: 120.0
 

@@ -49,12 +49,11 @@ def list_departments(
     """
     try:
         role = current_user.user_role.role.name if current_user.user_role else None
-        if role == "SUPER_ADMIN":
+        if (role == "SUPER_ADMIN") or (role == "OPERATOR"):
             deps = crud.department.get_multi(db)
         else:
             deps = crud.department.get_multi_department(
                 db, department_id=current_user.department_id)
-            
         deps = [
             schemas.Department(
                 id=dep.id,

@@ -62,24 +62,24 @@ class User(Base):
         return "<User {username!r}>".format(username=self.username)
     
 
-@event.listens_for(User, 'after_insert')
-@event.listens_for(User, 'after_delete')
-def update_total_users(mapper, connection, target):
-    session = Session.object_session(target)
-    department_id = target.department_id
+# @event.listens_for(User, 'after_insert')
+# @event.listens_for(User, 'after_delete')
+# def update_total_users(mapper, connection, target):
+#     session = Session.object_session(target)
+#     department_id = target.department_id
 
-    total_users_subquery = (
-        select([func.count(User.id).label('total_users')])
-        .where(User.department_id == department_id)
-        .scalar_subquery()
-    )
-    update_stmt = (
-        update(Department)
-        .values(total_users=total_users_subquery)
-        .where(Department.id == department_id)
-    )
-    session.execute(update_stmt)
-    session.commit()
+#     total_users_subquery = (
+#         select([func.count(User.id).label('total_users')])
+#         .where(User.department_id == department_id)
+#         .scalar_subquery()
+#     )
+#     update_stmt = (
+#         update(Department)
+#         .values(total_users=total_users_subquery)
+#         .where(Department.id == department_id)
+#     )
+#     session.execute(update_stmt)
+#     session.commit()
 
 
 @event.listens_for(User, 'before_insert')

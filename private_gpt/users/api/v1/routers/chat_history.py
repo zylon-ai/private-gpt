@@ -13,21 +13,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/c", tags=["Chat Histories"])
 
 
-@router.get("", response_model=Page[schemas.ChatHistory])
+@router.get("", response_model=Page[schemas.Chat])
 def list_chat_histories(
     db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = 100,
     current_user: models.User = Security(
         deps.get_current_user,
     ),
-) -> Page[schemas.ChatHistory]:
+) -> Page[schemas.Chat]:
     """
     Retrieve a list of chat histories with pagination support.
     """
     try:
         chat_histories = crud.chat.get_chat_history(
-            db, user_id=current_user.id, skip=skip, limit=limit)
+            db, user_id=current_user.id)
         return paginate(chat_histories)
     except Exception as e:
         print(traceback.format_exc())
@@ -64,23 +62,25 @@ def create_chat_history(
         )
 
 
-@router.get("/{conversation_id}", response_model=Page[schemas.ChatHistory])
+@router.get("/{conversation_id}", response_model=schemas.ChatHistory)
 def read_chat_history(
     conversation_id: uuid.UUID,
+    skip: int = 0,
+    limit: int = 20,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Security(
         deps.get_current_user,
     ),
-) -> Page[schemas.ChatHistory]:
+) -> schemas.ChatHistory:
     """
     Read a chat history by ID
     """
     try:
-        chat_history = crud.chat.get_by_id(db, id=conversation_id)
+        chat_history = crud.chat.get_by_id(db, id=conversation_id, skip=skip, limit=limit)
         if chat_history is None or chat_history.user_id != current_user.id:
             raise HTTPException(
                 status_code=404, detail="Chat history not found")
-        return paginate(chat_history)
+        return chat_history
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"Error reading chat history: {str(e)}")

@@ -14,9 +14,9 @@ embedding:
   embed_dim: 768
 
 ollama:
-  llm_model: mistral
-  embedding_model: nomic-embed-text
-  api_base: http://localhost:11434
+  llm_model: openhermes
+  embedding_model: mxbai-embed-large
+  api_base: http://ollama-1:11434
 
 nodestore:
   database: postgres
@@ -25,7 +25,7 @@ vectorstore:
   database: postgres
 
 postgres:
-  host: localhost
+  host: db
   port: 5432
   database: postgres
   user: postgres

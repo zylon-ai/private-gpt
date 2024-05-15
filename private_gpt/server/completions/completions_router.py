@@ -118,8 +118,9 @@ def create_chat_item(db, sender, content, conversation_id):
             content=content,
             conversation_id=conversation_id
         )
+    chat_history = crud.chat.get_conversation(db, conversation_id=conversation_id)
+    chat_history.generate_title()
     return crud.chat_item.create(db, obj_in=chat_item_create)
-
 
 @completions_router.post(
     "/chat",
@@ -152,11 +153,13 @@ async def prompt_completion(
         if not department:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail=f"No department assigned to you")
+        
         documents = crud.documents.get_enabled_documents_by_departments(
             db, department_id=department.id)
         if not documents:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail=f"No documents uploaded for your department.")
+        
         docs_list = [document.filename for document in documents]
         docs_ids = []
         for filename in docs_list:
@@ -192,12 +195,11 @@ async def prompt_completion(
                         )
                     )
             return history_messages
-        
         user_message = OpenAIMessage(content=body.prompt, role="user")        
         user_message_json = {
             'text': body.prompt,
         }
-        create_chat_item(db, "user", user_message_json , body.conversation_id)
+        create_chat_item(db, "user", user_message_json , body.conversation_id) # store every query in the db
         
         messages = [user_message]
 
@@ -231,7 +233,4 @@ async def prompt_completion(
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error",
-        )
+        raise

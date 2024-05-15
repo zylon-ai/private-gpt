@@ -1,0 +1,14 @@
+# Use the official Nginx image as the base
+FROM nginx:latest
+
+# Copy the custom Nginx configuration file
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
+
+# Copy SSL certificates 
+COPY nginx/ssl/giblserver.key /etc/nginx/ssl/giblserver.key
+COPY nginx/ssl/star.gibl.com.np.crt /etc/nginx/ssl/star.gibl.com.np.crt 
+# Expose port 80 for incoming HTTP requests
+EXPOSE 80
+
+# Start Nginx in the foreground
+CMD ["nginx", "-g", "daemon off;"]

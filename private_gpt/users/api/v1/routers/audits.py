@@ -40,7 +40,7 @@ def list_auditlog(
     logs = crud.audit.get_multi_desc(db, skip=skip, limit=limit)
     return convert_audit_logs(db, logs)
 
-@router.get("filter/", response_model=List[schemas.Audit])
+@router.get("/filter", response_model=List[schemas.Audit])
 def filter_auditlog(
     db: Session = Depends(deps.get_db),
     filter_in= Depends(schemas.AuditFilter),
@@ -52,7 +52,7 @@ def filter_auditlog(
     logs = crud.audit.filter(db, obj_in=filter_in)
     return convert_audit_logs(db, logs)
 
-@router.get("download/")
+@router.get("/download")
 def download_auditlog(
     db: Session = Depends(deps.get_db),
     filter_in= Depends(schemas.ExcelFilter),

@@ -33,7 +33,8 @@ class ChatHistory(Base):
             item for item in self.chat_items if item.sender == "user"]
         if user_chat_items:
             first_user_chat_item = user_chat_items[0]
-            self.title = first_user_chat_item.content[:30]
+            print("Chat items: ", first_user_chat_item.content['text'])
+            self.title = first_user_chat_item.content['text'][:30]
         else:
             self.title = str(self.conversation_id)
 

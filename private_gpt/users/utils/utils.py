@@ -19,7 +19,7 @@ def send_registration_email(fullname: str, email: str, random_password: str) -> 
             
             <p>Your temporary password is: <strong>{random_password}</strong></p>
             
-            <p>Please log in to QuickGPT <a href="http://quickgpt.gibl.com.np">here</a>.</p>
+            <p>Please log in to QuickGPT <a href="http://quickgpt.ngrok.app">here</a>.</p>
             
             <p>Please use this password to log in and consider changing it to a more secure one after logging in.</p>
             
@@ -40,7 +40,7 @@ def send_registration_email(fullname: str, email: str, random_password: str) -> 
     
     try:
         with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
-            # server.starttls()
+            server.starttls()
             server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
             server.sendmail(settings.SMTP_SENDER_EMAIL, email, msg.as_string())
     except Exception as e:

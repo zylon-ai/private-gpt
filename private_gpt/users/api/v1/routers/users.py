@@ -50,7 +50,7 @@ def read_users(
     """
     role = current_user.user_role.role.name if current_user.user_role else None
     if role == "ADMIN":
-        users = crud.user.get_by_department_id(db=db, department_id=current_user.department_id, skip=skip, limit=limit)
+        users = crud.user.get_by_department_id(db=db, department_id=current_user.department_id)
     else:
         users = crud.user.get_multi(db)
     return paginate(users)

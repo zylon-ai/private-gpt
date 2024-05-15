@@ -53,8 +53,8 @@ def create_app(root_injector: Injector) -> FastAPI:
                            "http://10.1.101.125", "http://quickgpt.gibl.com.np", "http://localhost:8000", "http://192.168.1.93", "http://192.168.1.93:88", 
                            "http://192.168.1.98", "http://192.168.1.98:3000", "http://localhost:3000","https://globaldocquery.gibl.com.np/", "http://127.0.0.1/", "http://localhost/", 
                            "http://localhost:80", "http://192.168.1.131", 'http://192.168.1.131:3000'
-                           , "http://192.168.1.127", 'http://192.168.1.127:3000'
-                           , "http://192.168.1.89", 'http://192.168.1.89:3000'
+                           , "http://192.168.1.119", 'http://192.168.1.119:3001'
+                           , "http://192.168.1.100", 'http://192.168.1.100:3000' 
                            ],
             allow_methods=["DELETE", "GET", "POST", "PUT", "OPTIONS", "PATCH"],
             allow_headers=["*"],

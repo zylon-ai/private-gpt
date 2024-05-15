@@ -21,5 +21,5 @@ from .department import (
 from .audit import AuditBase, AuditCreate, AuditUpdate, Audit, GetAudit, AuditFilter, ExcelFilter
 from .chat import (
     ChatHistory, ChatHistoryBase, ChatHistoryCreate, ChatHistoryUpdate, ChatDelete,
-    ChatItem, ChatItemBase, ChatItemCreate, ChatItemUpdate, CreateChatHistory
+    ChatItem, ChatItemBase, ChatItemCreate, ChatItemUpdate, CreateChatHistory, Chat
 )

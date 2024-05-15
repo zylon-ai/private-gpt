@@ -42,7 +42,8 @@ class AbstractPromptStyle(abc.ABC):
 
     def completion_to_prompt(self, completion: str) -> str:
         prompt = self._completion_to_prompt(completion)
-        logger.debug("Got for completion='%s' the prompt='%s'", completion, prompt)
+        logger.debug("Got for completion='%s' the prompt='%s'",
+                     completion, prompt)
         return prompt
 
 
@@ -58,8 +59,10 @@ class DefaultPromptStyle(AbstractPromptStyle):
 
         # Hacky way to override the functions
         # Override the functions to be None, and pass None to the LLM.
-        self.messages_to_prompt = None  # type: ignore[method-assign, assignment]
-        self.completion_to_prompt = None  # type: ignore[method-assign, assignment]
+        # type: ignore[method-assign, assignment]
+        self.messages_to_prompt = None
+        # type: ignore[method-assign, assignment]
+        self.completion_to_prompt = None
 
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
         return ""
@@ -138,40 +141,6 @@ class Llama2PromptStyle(AbstractPromptStyle):
         )
 
 
-class Llama3PromptStyle(AbstractPromptStyle):
-    """Simple prompt style that uses llama 3 prompt style.
-
-    Inspired by llama_index/legacy/llms/llama_utils.py
-
-    It transforms the sequence of messages into a prompt that should look like:
-    ```
-    <|begin_of_text|><|start_header_id|>system<|end_header_id|>
-    You are a helpful assistant<|eot_id|><|start_header_id|>user<|end_header_id|>
-    {prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-    ```
-    """
-
-    def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
-        prompt = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n"
-        for message in messages:
-            role = message.role
-            content = message.content or ""
-            if role.lower() == "system":
-                message_from_user = f"{content.strip()}"
-                prompt += message_from_user
-            elif role.lower() == "user":
-                prompt += "<|eot_id|><|start_header_id|>user<|end_header_id|>\n"
-                message_from_user = f"{content.strip()}<|eot_id|>\n"
-                prompt += message_from_user
-        prompt += "<|start_header_id|>assistant<|end_header_id|>\n"
-        print("THE PROMPT MESSAGE: ", prompt)
-        return prompt
-
-    def _completion_to_prompt(self, completion: str) -> str:
-        return self._messages_to_prompt(
-            [ChatMessage(content=completion, role=MessageRole.USER)]
-        )
-    
 class TagPromptStyle(AbstractPromptStyle):
     """Tag prompt style (used by Vigogne) that uses the prompt style `<|ROLE|>`.
 
@@ -249,7 +218,8 @@ class ChatMLPromptStyle(AbstractPromptStyle):
 
 
 def get_prompt_style(
-    prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] | None
+    prompt_style: Literal["default", "llama2",
+                          "tag", "mistral", "chatml"] | None
 ) -> AbstractPromptStyle:
     """Get the prompt style to use from the given string.
 
@@ -260,8 +230,6 @@ def get_prompt_style(
         return DefaultPromptStyle()
     elif prompt_style == "llama2":
         return Llama2PromptStyle()
-    elif prompt_style == "llama3":
-        return Llama3PromptStyle()
     elif prompt_style == "tag":
         return TagPromptStyle()
     elif prompt_style == "mistral":

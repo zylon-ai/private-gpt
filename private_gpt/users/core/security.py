@@ -10,8 +10,11 @@ from private_gpt.users.core.config import settings
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 1   # 12 hrs # Default Value
 REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days  # Default Value
 ALGORITHM = "HS256"
-JWT_SECRET_KEY = settings.SECRET_KEY
-JWT_REFRESH_SECRET_KEY = settings.REFRESH_KEY
+# JWT_SECRET_KEY = settings.SECRET_KEY
+# JWT_REFRESH_SECRET_KEY = settings.REFRESH_KEY
+
+JWT_SECRET_KEY = "QUICKGPT"
+JWT_REFRESH_SECRET_KEY = "QUICKGPT_REFRESH"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

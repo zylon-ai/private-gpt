@@ -41,6 +41,7 @@ class ChatHistoryUpdate(ChatHistoryBase):
 
 class Chat(BaseModel):
     conversation_id: uuid.UUID
+    title: Optional[str]
 
 class ChatHistory(ChatHistoryBase):
     conversation_id: uuid.UUID
@@ -54,8 +55,6 @@ class ChatHistory(ChatHistoryBase):
     
     class Config:
         orm_mode = True
-
-
 
 class ChatDelete(BaseModel):
     conversation_id: uuid.UUID
