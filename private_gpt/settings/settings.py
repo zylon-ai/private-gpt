@@ -209,6 +209,15 @@ class OpenAISettings(BaseModel):
         120.0,
         description="Time elapsed until openailike server times out the request. Default is 120s. Format is float. ",
     )
+    embedding_api_base: str = Field(
+        None,
+        description="Base URL of OpenAI API. Example: 'https://api.openai.com/v1'.",
+    )
+    embedding_api_key: str
+    embedding_model: str = Field(
+        "text-embedding-ada-002",
+        description="OpenAI embedding Model to use. Example: 'text-embedding-3-large'.",
+    )
 
 
 class OllamaSettings(BaseModel):
