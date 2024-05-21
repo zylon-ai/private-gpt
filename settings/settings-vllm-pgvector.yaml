@@ -12,6 +12,7 @@ llm:
 openai:
   api_base: ${VLLM_API_BASE:http://localhost:8000/v1}
   api_key: ${VLLM_API_KEY:EMPTY}
+  embedding_api_key: ${EMBEDDING_API_KEY:EMPTY}
   model: ${VLLM_MODEL:lmsys/vicuna-7b-v1.5}
 
 embedding:
