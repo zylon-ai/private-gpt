@@ -300,6 +300,7 @@ class PrivateGptUi:
             gr.components.Button(interactive=True),
             gr.components.Textbox(self._selected_filename),
         ]
+    
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
         with gr.Blocks(
@@ -311,6 +312,12 @@ class PrivateGptUi:
 
             with gr.Row(equal_height=False):
                 with gr.Column(scale=3):
+                
+                    HHeader = gr.components.Button(
+                        "Doc Chat",
+                        size="m",
+                    )
+
                     mode = gr.Radio(
                         MODES,
                         label="Mode",
@@ -444,18 +451,18 @@ class PrivateGptUi:
 
                 with gr.Column(scale=7, elem_id="col"):
                     # Determine the model label based on the value of PGPT_PROFILES
-                    model_label = get_model_label()
-                    if model_label is not None:
-                        label_text = (
-                            f"LLM: {settings().llm.mode} | Model: {model_label}"
-                        )
-                    else:
-                        label_text = f"LLM: {settings().llm.mode}"
+                    # model_label = get_model_label()
+                    # if model_label is not None:
+                    #     label_text = (
+                    #         f"LLM: {settings().llm.mode} | Model: {model_label}"
+                    #     )
+                    # else:
+                    #     label_text = f"LLM: {settings().llm.mode}"
 
                     _ = gr.ChatInterface(
                         self._chat,
                         chatbot=gr.Chatbot(
-                            label=label_text,
+                            # label=label_text,
                             show_copy_button=True,
                             elem_id="chatbot",
                             render=False,
@@ -478,7 +485,6 @@ class PrivateGptUi:
         blocks.queue()
         logger.info("Mounting the gradio UI, at path=%s", path)
         gr.mount_gradio_app(app, blocks, path=path)
-
 
 if __name__ == "__main__":
     ui = global_injector.get(PrivateGptUi)
