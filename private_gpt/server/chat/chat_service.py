@@ -5,7 +5,7 @@ from llama_index.core.chat_engine import ContextChatEngine, SimpleChatEngine
 from llama_index.core.chat_engine.types import (
     BaseChatEngine,
 )
-from llama_index.core.indices import VectorStoreIndex
+from llama_index.core.indices import VectorStoreIndex, SimpleKeywordTableIndex
 from llama_index.core.indices.postprocessor import MetadataReplacementPostProcessor
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.postprocessor import (
@@ -99,6 +99,12 @@ class ChatService:
             embed_model=embedding_component.embedding_model,
             show_progress=True,
         )
+        self.keyword_index = SimpleKeywordTableIndex.from_documents(
+            vector_store_component.vector_store,
+            storage_context=self.storage_context,
+            embed_model=embedding_component.embedding_model,
+            show_progress=True,
+        )
 
     def _chat_engine(
         self,
@@ -110,6 +116,7 @@ class ChatService:
         if use_context:
             vector_index_retriever = self.vector_store_component.get_retriever(
                 index=self.index,
+                keyword_index=self.keyword_index,
                 context_filter=context_filter,
                 similarity_top_k=self.settings.rag.similarity_top_k,
             )

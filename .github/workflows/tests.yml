@@ -1,0 +1,67 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/workflows/actions/install_dependencies
+
+  checks:
+    needs: setup
+    runs-on: ubuntu-latest
+    name: ${{ matrix.quality-command }}
+    strategy:
+      matrix:
+        quality-command:
+          - black
+          - ruff
+          - mypy
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/workflows/actions/install_dependencies
+      - name: run ${{ matrix.quality-command }}
+        run: make ${{ matrix.quality-command }}
+
+  test:
+    needs: setup
+    runs-on: ubuntu-latest
+    name: test
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/workflows/actions/install_dependencies
+      - name: run test
+        run: make test-coverage
+      # Run even if make test fails for coverage reports
+      # TODO: select a better xml results displayer
+      - name: Archive test results coverage results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test_results
+          path: tests-results.xml
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: code-coverage-report
+          path: htmlcov/
+
+  all_checks_passed:
+    # Used to easily force requirements checks in GitHub
+    needs:
+      - checks
+      - test
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "All checks passed"
