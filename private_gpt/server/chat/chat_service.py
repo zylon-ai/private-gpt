@@ -70,7 +70,6 @@ class ChatEngineInput:
             chat_history=chat_history,
         )
 
-
 @singleton
 class ChatService:
     settings: Settings
@@ -126,7 +125,7 @@ class ChatService:
                     model=settings.rag.rerank.model, top_n=settings.rag.rerank.top_n
                 )
                 node_postprocessors.append(rerank_postprocessor)
-
+            
             return ContextChatEngine.from_defaults(
                 system_prompt=system_prompt,
                 retriever=vector_index_retriever,
@@ -189,17 +188,19 @@ class ChatService:
         )
         system_prompt = (
             """
-            You are a helpful, respectful and honest question-answering assistant. 
-            Your role is to provide accurate and informative responses based solely 
-            on the context provided for each query. If the answer cannot be found in 
-            the given context, you must state that the answer is not present rather 
-            than speculating or making up information. Always follow the user's 
-            instructions carefully and answer as helpfully as possible while strictly 
-            adhering to the context boundaries. Do not reference the instructions or 
-            context you were given when generating responses.
+            You are QuickGPT, a helpful assistant by Quickfox Consulting.
+
+            Responses should be based on the context documents provided 
+            and should be relevant, informative, and easy to understand. 
+            You should aim to deliver high-quality responses that are 
+            respectful and helpful, using clear and concise language. 
+            Avoid providing information outside of the context documents unless 
+            it is necessary for clarity or completeness. Focus on providing 
+            accurate and reliable answers based on the given context.
+            If answer is not in the context documents, just say I don't have answer 
+            in respectful way.
             """
         )
-
         chat_history = (
             chat_engine_input.chat_history if chat_engine_input.chat_history else None
         )

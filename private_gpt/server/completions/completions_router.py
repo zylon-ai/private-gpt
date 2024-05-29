@@ -195,7 +195,9 @@ async def prompt_completion(
                         )
                     )
             return history_messages
-        user_message = OpenAIMessage(content=body.prompt, role="user")        
+        message = body.prompt 
+        # message = body.prompt + 'Only answer if there is answer in the provided documents'
+        user_message = OpenAIMessage(content=message, role="user")        
         user_message_json = {
             'text': body.prompt,
         }

@@ -28,11 +28,21 @@ class CRUDDocuments(CRUDBase[Document, DocumentCreate, DocumentUpdate]):
     def get_documents_by_departments(
             self, db: Session, *, department_id: int
         ) -> List[Document]:
+            all_department_id = 1 # department ID for "ALL" is 1
             return (
                 db.query(self.model)
                 .join(document_department_association)
                 .join(Department)
-                .filter(document_department_association.c.department_id == department_id)
+                .filter(
+                     or_(
+                        and_(
+                            document_department_association.c.department_id == department_id,
+                        ),
+                        and_(
+                            document_department_association.c.department_id == all_department_id,
+                        ),
+                    )
+                )
                 .order_by(desc(getattr(Document, 'uploaded_at')))
                 .all()
             )
