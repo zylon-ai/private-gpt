@@ -177,13 +177,13 @@ class MistralPromptStyle(AbstractPromptStyle):
         text = ""
         for message in messages:
             if message.role == MessageRole.SYSTEM:
-                inst_buffer.append(message.content.strip())
+                inst_buffer.append(str(message.content).strip())
             elif message.role == MessageRole.USER:
-                inst_buffer.append(message.content.strip())
+                inst_buffer.append(str(message.content).strip())
                 text += "<s>[/INST] " + "\n".join(inst_buffer) + " [/INST]"
                 inst_buffer.clear()
             elif message.role == MessageRole.ASSISTANT:
-                text += " " + message.content.strip() + "</s>"
+                text += " " + str(message.content).strip() + "</s>"
             else:
                 raise ValueError(f"Unknown message role {message.role}")
         return text
