@@ -69,16 +69,20 @@ def test_tag_prompt_style_format_with_system_prompt():
 def test_mistral_prompt_style_format():
     prompt_style = MistralPromptStyle()
     messages = [
-        ChatMessage(content="You are an AI assistant.", role=MessageRole.SYSTEM),
-        ChatMessage(content="Hello, how are you doing?", role=MessageRole.USER),
+        ChatMessage(content="A", role=MessageRole.SYSTEM),
+        ChatMessage(content="B", role=MessageRole.USER),
     ]
-
-    expected_prompt = (
-        "<s>[INST] You are an AI assistant. [/INST]</s>"
-        "[INST] Hello, how are you doing? [/INST]"
-    )
-
+    expected_prompt = "<s>[INST] A\nB [/INST]"
     assert prompt_style.messages_to_prompt(messages) == expected_prompt
+
+    messages2 = [
+        ChatMessage(content="A", role=MessageRole.SYSTEM),
+        ChatMessage(content="B", role=MessageRole.USER),
+        ChatMessage(content="C", role=MessageRole.ASSISTANT),
+        ChatMessage(content="D", role=MessageRole.USER),
+    ]
+    expected_prompt2 = "<s>[INST] A\nB [/INST] C</s><s>[INST] D [/INST]"
+    assert prompt_style.messages_to_prompt(messages2) == expected_prompt2
 
 
 def test_chatml_prompt_style_format():
