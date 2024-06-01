@@ -71,20 +71,20 @@ jobs:
   vllm:
     image: vllm/vllm-openai:v0.4.0
     name: vllm
-    preset: gpu-2x3090
+    preset: H100x1
     detach: true
     http_port: "8000"
     volumes:
       - ${{ volumes.cache.ref_rw }}
     env:
       HF_TOKEN: secret:HF_TOKEN
-    cmd: --model meta-llama/Meta-Llama-3-8B-Instruct --tokenizer meta-llama/Meta-Llama-3-8B-Instruct --dtype=half --tensor-parallel-size=2
+    cmd: --model meta-llama/Meta-Llama-3-8B-Instruct --tokenizer meta-llama/Meta-Llama-3-8B-Instruct --dtype=half
 
   ollama:
     image: ollama/ollama:latest
     volumes:
       - ${{ volumes.ollama_models.ref_rw }}
-    preset: gpu-small
+    preset: H100x1
     detach: true
     env:
       MODEL: "nomic-embed-text"
@@ -100,7 +100,7 @@ jobs:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
-      PGDATA: ${{ volumes.pgdata.mount }}
+      PGDATA: ${{ volumes.pgdata.mount }}/pgdata
     volumes:
       # - ${{ volumes.pgdata.ref_rw }}
       - ${{ volumes.pgdata_onprem.ref_rw }}
