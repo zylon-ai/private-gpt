@@ -81,14 +81,13 @@ jobs:
     cmd: --model meta-llama/Meta-Llama-3-8B-Instruct --tokenizer meta-llama/Meta-Llama-3-8B-Instruct --dtype=half
 
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.1.35
     volumes:
       - ${{ volumes.ollama_models.ref_rw }}
     preset: H100x1
     detach: true
     env:
       MODEL: "nomic-embed-text"
-      GIN_MODE: release
     http_port: "11434"
     entrypoint: "bash -c 'ollama serve & sleep 10 && ollama pull ${MODEL} && sleep infinity'"
 
