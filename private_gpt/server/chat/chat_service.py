@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from injector import inject, singleton
-from llama_index.core.chat_engine import ContextChatEngine, SimpleChatEngine
+from llama_index.core.chat_engine import ContextChatEngine, SimpleChatEngine, CondensePlusContextChatEngine
 from llama_index.core.chat_engine.types import (
     BaseChatEngine,
 )
@@ -126,7 +126,7 @@ class ChatService:
                 )
                 node_postprocessors.append(rerank_postprocessor)
             
-            return ContextChatEngine.from_defaults(
+            return CondensePlusContextChatEngine.from_defaults(
                 system_prompt=system_prompt,
                 retriever=vector_index_retriever,
                 llm=self.llm_component.llm,  # Takes no effect at the moment
@@ -209,6 +209,7 @@ class ChatService:
             use_context=use_context,
             context_filter=context_filter,
         )
+        # chat_engine = chat_engine.as_chat_engine(chat_mode="react", llm=self.llm_component.llm, verbose=True) # configuring ReAct Chat engine
         wrapped_response = chat_engine.chat(
             message=last_message if last_message is not None else "",
             chat_history=chat_history,
