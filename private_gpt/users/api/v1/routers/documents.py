@@ -17,7 +17,7 @@ from private_gpt.users.core.config import settings
 from private_gpt.users import crud, models, schemas
 from private_gpt.server.ingest.ingest_router import create_documents, ingest
 from private_gpt.users.models.document import MakerCheckerActionType, MakerCheckerStatus
-from private_gpt.components.ocr_components.table_ocr_api import process_both_ocr, process_ocr
+from private_gpt.components.ocr_components.table_ocr_api import process_ocr
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/documents', tags=['Documents'])
@@ -385,8 +385,6 @@ async def verify_documents(
 
             if document.doc_type_id == 2:  # For OCR
                 return await process_ocr(request, unchecked_path)
-            elif document.doc_type_id == 3: # For BOTH
-                return await process_both_ocr(request, unchecked_path)
             else:
                 return await ingest(request, unchecked_path) # For pdf
             

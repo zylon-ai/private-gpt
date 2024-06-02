@@ -5,7 +5,7 @@ from llama_index.core.chat_engine import ContextChatEngine, SimpleChatEngine
 from llama_index.core.chat_engine.types import (
     BaseChatEngine,
 )
-from llama_index.core.indices import VectorStoreIndex, SimpleKeywordTableIndex
+from llama_index.core.indices import VectorStoreIndex
 from llama_index.core.indices.postprocessor import MetadataReplacementPostProcessor
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.postprocessor import (
@@ -99,12 +99,6 @@ class ChatService:
             embed_model=embedding_component.embedding_model,
             show_progress=True,
         )
-        self.keyword_index = SimpleKeywordTableIndex.from_documents(
-            vector_store_component.vector_store,
-            storage_context=self.storage_context,
-            embed_model=embedding_component.embedding_model,
-            show_progress=True,
-        )
 
     def _chat_engine(
         self,
@@ -116,7 +110,6 @@ class ChatService:
         if use_context:
             vector_index_retriever = self.vector_store_component.get_retriever(
                 index=self.index,
-                keyword_index=self.keyword_index,
                 context_filter=context_filter,
                 similarity_top_k=self.settings.rag.similarity_top_k,
             )
@@ -195,17 +188,17 @@ class ChatService:
         )
         system_prompt = (
             """
-            You are QuickGPT, a helpful assistant by Quickfox Consulting.
+            You are a helpful assistant named QuickGPT by Quickfox Consulting.
+            Your responses must be strictly and exclusively based on the context documents provided.
 
-            Responses should be based on the context documents provided 
-            and should be relevant, informative, and easy to understand. 
-            You should aim to deliver high-quality responses that are 
-            respectful and helpful, using clear and concise language. 
-            Avoid providing information outside of the context documents unless 
-            it is necessary for clarity or completeness. Focus on providing 
-            accurate and reliable answers based on the given context.
-            If answer is not in the context documents, just say I don't have answer 
-            in respectful way.
+            You are not allowed to use any information, knowledge, or external sources outside of the given context documents.
+            If the answer to a query is not present in the context documents, 
+            you should respond with "I do not have enough information in the provided context to answer this question."
+
+            Your responses should be relevant, informative, and easy to understand. 
+            Aim to deliver high-quality answers that are respectful and helpful, using clear and concise language.
+            Focus on providing accurate and reliable answers based solely on the given context. 
+            Do not make assumptions, inferences, or draw upon any prior knowledge beyond what is explicitly stated in the context documents.
             """
         )
         chat_history = (

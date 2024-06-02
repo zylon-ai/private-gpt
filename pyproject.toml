@@ -68,6 +68,8 @@ openpyxl = "^3.1.2"
 pandas = "^2.2.2"
 fastapi-pagination = "^0.12.23"
 xlsxwriter = "^3.2.0"
+pdf2image = "^1.17.0"
+pymupdf = "^1.24.4"
 
 [tool.poetry.extras]
 ui = ["gradio"]

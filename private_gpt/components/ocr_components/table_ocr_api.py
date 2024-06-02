@@ -34,10 +34,9 @@ async def save_uploaded_file(file: UploadFile, upload_dir: str):
 
 
 async def process_images_and_generate_doc(request: Request, pdf_path: str, upload_dir: str):
-    doc = Document()
-
     ocr = request.state.injector.get(GetOCRText)
-    img_tab = request.state.injector.get(ImageToTable)
+    # img_tab = request.state.injector.get(ImageToTable)
+    pdf_writer = fitz.open()
     pdf_doc = fitz.open(pdf_path)
     
     for page_index in range(len(pdf_doc)):
@@ -55,18 +54,19 @@ async def process_images_and_generate_doc(request: Request, pdf_path: str, uploa
                 pix = fitz.Pixmap(fitz.csRGB, pix)(
                     "RGB", [pix.width, pix.height], pix.samples)
 
-            image_path = f"page_{page_index}-image_{image_index}.png"
+            image_path = f"temp_page_{page_index}_image_{image_index}.png"
             pix.save(image_path)
+
             extracted_text = ocr.extract_text(
                 image_file=True, file_path=image_path)
-            doc.add_paragraph(extracted_text)
-            table_data = img_tab.table_to_csv(image_path)
-            doc.add_paragraph(table_data)
+            # Create a new page with the same dimensions as the original page
+            pdf_page = pdf_writer.new_page(width=page.rect.width, height=page.rect.height)
+            pdf_page.insert_text((10, 10), extracted_text, fontsize=9)
             os.remove(image_path)
 
-    save_path = os.path.join(
-        upload_dir, f"{os.path.splitext(os.path.basename(pdf_path))[0]}_ocr.docx")
-    doc.save(save_path)
+    save_path = os.path.join(upload_dir, f"{os.path.splitext(os.path.basename(pdf_path))[0]}.pdf")
+    pdf_writer.save(save_path)
+    pdf_writer.close()
     return save_path
 
 
@@ -82,6 +82,7 @@ async def process_pdf_ocr(
     try:
         pdf_path = await save_uploaded_file(file, UPLOAD_DIR)
         ocr_doc_path = await process_images_and_generate_doc(request, pdf_path, UPLOAD_DIR)
+        print("FILE PATH:", ocr_doc_path)
         ingested_documents = await common_ingest_logic(
             request=request, db=db, ocr_file=ocr_doc_path, current_user=current_user, original_file=None, log_audit=log_audit, departments=departments
         )
@@ -110,26 +111,6 @@ async def process_ocr(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"There was an error processing OCR: {e}"
         )
-
-async def process_both_ocr(
-        request: Request, 
-        pdf_path: str
-):
-    UPLOAD_DIR = OCR_UPLOAD
-    try:
-        ocr_doc_path = await process_images_and_generate_doc(request, pdf_path, UPLOAD_DIR)
-        ingested_ocr_documents = await ingest(request=request, file_path=ocr_doc_path) # ingest ocr
-        ingested_documents = await ingest(request=request, file_path=pdf_path) # ingest pdf 
-        return ingested_documents
-    
-    except Exception as e:
-        print(traceback.print_exc())
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"There was an error processing OCR: {e}"
-        )
-
-    
 
 async def process_both(
     request: Request,
@@ -170,18 +151,3 @@ async def get_pdf_ocr_wrapper(
     )
 ):
     return await process_pdf_ocr(request, db, file, current_user, log_audit, departments)
-
-
-@pdf_router.post("/both")
-async def get_both_wrapper(
-    request: Request,
-    departments: schemas.DocumentDepartmentList = Depends(),
-    db: Session = Depends(deps.get_db),
-    log_audit: models.Audit = Depends(deps.get_audit_logger),
-    file: UploadFile = File(...),
-    current_user: models.User = Security(
-        deps.get_current_user,
-        scopes=[Role.ADMIN["name"], Role.SUPER_ADMIN["name"]],
-    )
-):
-    return await process_both(request, db, file, current_user, log_audit, departments)

@@ -57,8 +57,8 @@ rag:
 llamacpp:
   # llm_hf_repo_id: bartowski/Meta-Llama-3-8B-Instruct-GGUF
   # llm_hf_model_file: Meta-Llama-3-8B-Instruct-Q6_K.gguf
-  llm_hf_repo_id: NousResearch/Hermes-2-Theta-Llama-3-8B-GGUF
-  llm_hf_model_file: Hermes-2-Pro-Llama-3-Instruct-Merged-DPO-Q6_K.gguf
+  llm_hf_repo_id: qwp4w3hyb/Hermes-2-Pro-Llama-3-8B-iMat-GGUF
+  llm_hf_model_file: hermes-2-pro-llama-3-8b-imat-Q6_K.gguf
   tfs_z: 1.0            # Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting
   top_k: 40             # Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)
   top_p: 0.9            # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)

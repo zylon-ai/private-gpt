@@ -3,14 +3,12 @@ import typing
 
 from injector import inject, singleton
 from llama_index.core.indices.vector_store import VectorIndexRetriever, VectorStoreIndex
-from llama_index.core.indices import SimpleKeywordTableIndex
 from llama_index.core.vector_stores.types import (
     FilterCondition,
     MetadataFilter,
     MetadataFilters,
     VectorStore,
 )
-from private_gpt.utils.vector_store import VectorStoreIndex1
 
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.paths import local_data_path
@@ -132,43 +130,21 @@ class VectorStoreComponent:
 
     def get_retriever(
         self,
-        index: VectorStoreIndex1,
+        index: VectorStoreIndex,
         context_filter: ContextFilter | None = None,
         similarity_top_k: int = 2,
     ) -> VectorIndexRetriever:
         # This way we support qdrant (using doc_ids) and the rest (using filters)
-        
-        # from llama_index.core import get_response_synthesizer
-        # from llama_index.core.query_engine import RetrieverQueryEngine
-        from .retriever import CustomRetriever
-        from llama_index.core.retrievers import (
-            VectorIndexRetriever,
-            KeywordTableSimpleRetriever,
-        )
-
-        vector_retriever = VectorIndexRetriever(
+        return VectorIndexRetriever(
             index=index,
             similarity_top_k=similarity_top_k,
             doc_ids=context_filter.docs_ids if context_filter else None,
             filters=(
-                _doc_id_metadata_filter(context_filter) 
+                _doc_id_metadata_filter(context_filter)
                 if self.settings.vectorstore.database != "qdrant"
                 else None
             ),
         )
-        keyword_retriever = KeywordTableSimpleRetriever(index=index.keyword_index)
-        custom_retriever = CustomRetriever(vector_retriever, keyword_retriever)
-
-        # define response synthesizer
-        # response_synthesizer = get_response_synthesizer()
-
-        # # assemble query engine
-        # custom_query_engine = RetrieverQueryEngine(
-        #     retriever=custom_retriever,
-        #     response_synthesizer=response_synthesizer,
-        # )
-
-        return custom_retriever
 
     def close(self) -> None:
         if hasattr(self.vector_store.client, "close"):

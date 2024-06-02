@@ -253,34 +253,6 @@ async def common_ingest_logic(
                 f.write(file.read())
             file.seek(0)  
             ingested_documents = service.ingest_bin_data(file_name, file)        
-        # Handling Original File
-        if original_file:
-            try:
-                print("ORIGINAL PDF FILE PATH IS :: ", original_file)
-                file_name = Path(original_file).name
-                upload_path = Path(f"{UPLOAD_DIR}/{file_name}")
-
-                if file_name is None:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="No file name provided",
-                    )
-
-                await create_documents(db, file_name, current_user, departments, log_audit)
-
-                with open(upload_path, "wb") as f:
-                    with open(original_file, "rb") as original_file_reader:
-                        f.write(original_file_reader.read())
-
-                with open(upload_path, "rb") as f:
-                    ingested_documents = service.ingest_bin_data(file_name, f)
-            except Exception as e:
-                print(traceback.print_exc())
-                raise HTTPException(
-                    status_code=500,
-                    detail="Internal Server Error: Unable to ingest file.",
-                )
-                    
         logger.info(
             f"{file_name} is uploaded by the {current_user.username}.")
 

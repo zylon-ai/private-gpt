@@ -11,8 +11,7 @@ from typing import Any
 
 from llama_index.core.data_structs import IndexDict
 from llama_index.core.embeddings.utils import EmbedType
-from llama_index.core.indices import VectorStoreIndex, load_index_from_storage, SimpleKeywordTableIndex
-from private_gpt.utils.vector_store import VectorStoreIndex1
+from llama_index.core.indices import VectorStoreIndex, load_index_from_storage
 from llama_index.core.indices.base import BaseIndex
 from llama_index.core.ingestion import run_transformations
 from llama_index.core.schema import BaseNode, Document, TransformComponent
@@ -84,7 +83,7 @@ class BaseIngestComponentWithIndex(BaseIngestComponent, abc.ABC):
         except ValueError:
             # There are no index in the storage context, creating a new one
             logger.info("Creating a new vector store index")
-            index = VectorStoreIndex1.from_documents(
+            index = VectorStoreIndex.from_documents(
                 [],
                 storage_context=self.storage_context,
                 store_nodes_override=True,  # Force store nodes in index and document stores
@@ -93,17 +92,6 @@ class BaseIngestComponentWithIndex(BaseIngestComponent, abc.ABC):
                 transformations=self.transformations,
             )
             index.storage_context.persist(persist_dir=local_data_path)
-
-        keyword_index = SimpleKeywordTableIndex.from_documents(
-            [],
-            storage_context=self.storage_context,
-            store_nodes_override=True,  # Force store nodes in index and document stores
-            show_progress=self.show_progress,
-            transformations=self.transformations,
-            llm= 
-        )
-        # Store the keyword index in the vector store
-        index.keyword_index = keyword_index
         return index
 
     def _save_index(self) -> None:
