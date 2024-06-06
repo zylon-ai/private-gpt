@@ -120,6 +120,10 @@ class LLMSettings(BaseModel):
 
 class VectorstoreSettings(BaseModel):
     database: Literal["chroma", "qdrant", "postgres"]
+    inject_win_size: int = Field(
+        3,
+        description="How many sentences on either side to capture, when parsing files",
+    )
 
 
 class NodeStoreSettings(BaseModel):

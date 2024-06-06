@@ -74,6 +74,7 @@ huggingface:
 
 vectorstore:
   database: qdrant
+  inject_win_size: 2
 
 nodestore:
   database: simple

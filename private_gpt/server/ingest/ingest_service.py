@@ -39,13 +39,14 @@ class IngestService:
             docstore=node_store_component.doc_store,
             index_store=node_store_component.index_store,
         )
-        node_parser = SentenceWindowNodeParser.from_defaults()
+        self._settings = settings()
+        node_parser = SentenceWindowNodeParser.from_defaults(window_size=self._settings.vectorstore.inject_win_size)
 
         self.ingest_component = get_ingestion_component(
             self.storage_context,
             embed_model=embedding_component.embedding_model,
             transformations=[node_parser, embedding_component.embedding_model],
-            settings=settings(),
+            settings=self._settings,
         )
 
     def _ingest_data(self, file_name: str, file_data: AnyStr) -> list[IngestedDoc]:
