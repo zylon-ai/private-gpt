@@ -89,10 +89,16 @@ class IngestionHelper:
             )
             # Read as a plain text
             string_reader = StringIterableReader()
-            return string_reader.load_data([file_data.read_text()])
+            return string_reader.load_data([file_data.read_text(errors='replace')])
 
         logger.debug("Specific reader found for extension=%s", extension)
-        return reader_cls().load_data(file_data)
+        try:
+            res = reader_cls().load_data(file_data)
+        except:
+            string_reader = StringIterableReader()
+            res = string_reader.load_data([file_data.read_text(errors='replace')])
+            pass
+        return res
 
     @staticmethod
     def _exclude_metadata(documents: list[Document]) -> None:

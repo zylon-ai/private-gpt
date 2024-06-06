@@ -104,12 +104,13 @@ class LLMSettings(BaseModel):
         0.1,
         description="The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual.",
     )
-    prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] = Field(
+    prompt_style: Literal["default", "llama2", "llama3", "tag", "mistral", "chatml"] = Field(
         "llama2",
         description=(
             "The prompt style to use for the chat engine. "
             "If `default` - use the default prompt style from the llama_index. It should look like `role: message`.\n"
             "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
+            "If `llama3` - use the llama3 prompt style from the llama_index."
             "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
             "If `mistral` - use the `mistral prompt style. It shoudl look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]"
             "`llama2` is the historic behaviour. `default` might work better with your custom models."
@@ -119,6 +120,10 @@ class LLMSettings(BaseModel):
 
 class VectorstoreSettings(BaseModel):
     database: Literal["chroma", "qdrant", "postgres"]
+    inject_win_size: int = Field(
+        3,
+        description="How many sentences on either side to capture, when parsing files",
+    )
 
 
 class NodeStoreSettings(BaseModel):
@@ -149,6 +154,10 @@ class LlamaCPPSettings(BaseModel):
 class HuggingFaceSettings(BaseModel):
     embedding_hf_model_name: str = Field(
         description="Name of the HuggingFace model to use for embeddings"
+    )
+    embedding_hf_max_length: int = Field(
+        None,
+        description="Some embedding models have a maximum length for input, provide here for not crashing"
     )
     access_token: str = Field(
         None,
