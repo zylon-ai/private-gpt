@@ -69,6 +69,7 @@ embedding:
 
 huggingface:
   embedding_hf_model_name: BAAI/bge-small-en-v1.5
+  embedding_hf_max_length: 512 # some models have a maximum length for input
   access_token: ${HUGGINGFACE_TOKEN:}
 
 vectorstore:

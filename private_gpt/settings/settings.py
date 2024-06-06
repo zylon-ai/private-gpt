@@ -151,6 +151,10 @@ class HuggingFaceSettings(BaseModel):
     embedding_hf_model_name: str = Field(
         description="Name of the HuggingFace model to use for embeddings"
     )
+    embedding_hf_max_length: int = Field(
+        None,
+        description="Some embedding models have a maximum length for input, provide here for not crashing"
+    )
     access_token: str = Field(
         None,
         description="Huggingface access token, required to download some models",
