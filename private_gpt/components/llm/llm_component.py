@@ -192,3 +192,16 @@ class LLMComponent:
                 )
             case "mock":
                 self.llm = MockLLM()
+            case "gemini":
+                try:
+                    from llama_index.llms.gemini import (  # type: ignore
+                        Gemini,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Google Gemini dependencies not found, install with `poetry install --extras llms-gemini`"
+                    ) from e
+                gemini_settings = settings.gemini
+                self.llm = Gemini(
+                    model_name=gemini_settings.model, api_key=gemini_settings.api_key
+                )

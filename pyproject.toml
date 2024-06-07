@@ -16,7 +16,7 @@ transformers = "^4.38.2"
 docx2txt = "^0.8"
 cryptography = "^3.1"
 # LlamaIndex core libs
-llama-index-core = "^0.10.14"
+llama-index-core = "^0.10.40"
 llama-index-readers-file = "^0.1.6"
 # Optional LlamaIndex integration libs
 llama-index-llms-llama-cpp = {version = "^0.1.3", optional = true}
@@ -24,10 +24,12 @@ llama-index-llms-openai = {version = "^0.1.6", optional = true}
 llama-index-llms-openai-like = {version ="^0.1.3", optional = true}
 llama-index-llms-ollama = {version ="^0.1.2", optional = true}
 llama-index-llms-azure-openai = {version ="^0.1.5", optional = true}
+llama-index-llms-gemini = {version ="^0.1.9", optional = true}
 llama-index-embeddings-ollama = {version ="^0.1.2", optional = true}
 llama-index-embeddings-huggingface = {version ="^0.1.4", optional = true}
 llama-index-embeddings-openai = {version ="^0.1.6", optional = true}
 llama-index-embeddings-azure-openai = {version ="^0.1.6", optional = true}
+llama-index-embeddings-gemini = {version ="^0.1.7", optional = true}
 llama-index-vector-stores-qdrant = {version ="^0.1.3", optional = true}
 llama-index-vector-stores-chroma = {version ="^0.1.4", optional = true}
 llama-index-vector-stores-postgres = {version ="^0.1.2", optional = true}
@@ -47,6 +49,9 @@ sentence-transformers = {version ="^2.6.1", optional = true}
 # Optional UI
 gradio = {version ="^4.19.2", optional = true}
 
+# Optional Google Gemini dependency
+google-generativeai = {version ="^0.5.4", optional = true}
+
 [tool.poetry.extras]
 ui = ["gradio"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
@@ -55,11 +60,13 @@ llms-openai-like = ["llama-index-llms-openai-like"]
 llms-ollama = ["llama-index-llms-ollama"]
 llms-sagemaker = ["boto3"]
 llms-azopenai = ["llama-index-llms-azure-openai"]
+llms-gemini = ["llama-index-llms-gemini", "google-generativeai"]
 embeddings-ollama = ["llama-index-embeddings-ollama"]
 embeddings-huggingface = ["llama-index-embeddings-huggingface"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
+embeddings-gemini = ["llama-index-embeddings-gemini"]
 vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
 vector-stores-postgres = ["llama-index-vector-stores-postgres"]
