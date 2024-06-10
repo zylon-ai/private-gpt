@@ -13,6 +13,7 @@ from llama_index.core.vector_stores.types import (
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import Settings
+from .hybrid_fn import sparse_query_vectors, sparse_doc_vectors, relative_score_fusion
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +120,11 @@ class VectorStoreComponent:
                     QdrantVectorStore(
                         client=client,
                         collection_name="make_this_parameterizable_per_api_call",
+                        enable_hybrid=True, 
+                        batch_size=20,
+                        sparse_doc_fn=sparse_doc_vectors,
+                        sparse_query_fn=sparse_query_vectors,
+                        # hybrid_fusion_fn=relative_score_fusion,
                     ),  # TODO
                 )
             case _:
@@ -144,6 +150,9 @@ class VectorStoreComponent:
                 if self.settings.vectorstore.database != "qdrant"
                 else None
             ),
+            sparse_top_k=12, 
+            vector_store_query_mode="hybrid",
+            alpha=0.5
         )
 
     def close(self) -> None:

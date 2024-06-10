@@ -16,6 +16,9 @@ from llama_index.core.storage import StorageContext
 from llama_index.core.types import TokenGen
 from pydantic import BaseModel
 
+from llama_index.core import get_response_synthesizer
+from llama_index.core.query_engine import RetrieverQueryEngine
+
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
@@ -26,6 +29,7 @@ from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chunks.chunks_service import Chunk
 from private_gpt.settings.settings import Settings
 
+from private_gpt.paths import models_path
 
 class Completion(BaseModel):
     response: str
@@ -36,7 +40,7 @@ class CompletionGen(BaseModel):
     response: TokenGen
     sources: list[Chunk] | None = None
 
-
+reranker_path = models_path / 'reranker'
 @dataclass
 class ChatEngineInput:
     system_message: ChatMessage | None = None
@@ -126,9 +130,16 @@ class ChatService:
                 )
                 node_postprocessors.append(rerank_postprocessor)
             
-            return CondensePlusContextChatEngine.from_defaults(
-                system_prompt=system_prompt,
+            response_synthesizer = get_response_synthesizer(structured_answer_filtering=True, llm=self.llm_component.llm)
+            
+            custom_query_engine = RetrieverQueryEngine(
                 retriever=vector_index_retriever,
+                response_synthesizer=response_synthesizer
+            )
+            
+            return ContextChatEngine.from_defaults(
+                system_prompt=system_prompt,
+                retriever=custom_query_engine,
                 llm=self.llm_component.llm,  # Takes no effect at the moment
                 node_postprocessors=node_postprocessors,
             )
@@ -189,16 +200,15 @@ class ChatService:
         system_prompt = (
             """
             You are a helpful assistant named QuickGPT by Quickfox Consulting.
-            Your responses must be strictly and exclusively based on the context documents provided.
 
-            You are not allowed to use any information, knowledge, or external sources outside of the given context documents.
-            If the answer to a query is not present in the context documents, 
-            you should respond with "I do not have enough information in the provided context to answer this question."
+            Engage in a two-way conversation, ensuring that your responses are strictly and exclusively based on the relevant context documents provided.
 
-            Your responses should be relevant, informative, and easy to understand. 
+            Do not use any prior knowledge or external sources or make assumptions, inferences, or draw upon any prior knowledge beyond what is explicitly stated in the relevant context documents. 
+            If the answer to a query is not present in the relevant context documents, respond with "I do not have enough information in the provided context to answer this question."
+
+            Your responses must be relevant, informative, and easy to understand. 
             Aim to deliver high-quality answers that are respectful and helpful, using clear and concise language.
-            Focus on providing accurate and reliable answers based solely on the given context. 
-            Do not make assumptions, inferences, or draw upon any prior knowledge beyond what is explicitly stated in the context documents.
+            Consider previous queries only if the latest query is directly related to them. Address only the most recent query unless it explicitly builds upon a previous one.
             """
         )
         chat_history = (
@@ -209,7 +219,6 @@ class ChatService:
             use_context=use_context,
             context_filter=context_filter,
         )
-        # chat_engine = chat_engine.as_chat_engine(chat_mode="react", llm=self.llm_component.llm, verbose=True) # configuring ReAct Chat engine
         wrapped_response = chat_engine.chat(
             message=last_message if last_message is not None else "",
             chat_history=chat_history,

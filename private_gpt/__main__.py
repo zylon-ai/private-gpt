@@ -8,7 +8,8 @@ from fastapi_pagination import add_pagination
 from private_gpt.settings.settings import settings
 from fastapi.staticfiles import StaticFiles
 from private_gpt.constants import UPLOAD_DIR
-
+# import nest_asyncio
+# nest_asyncio.apply()
 # Set log_config=None to do not use the uvicorn logging configuration, and
 # use ours instead. For reference, see below:
 # https://github.com/tiangolo/fastapi/discussions/7457#discussioncomment-5141108

@@ -51,14 +51,14 @@ rag:
   #This value is disabled by default.  If you enable this settings, the RAG will only use articles that meet a certain percentage score.
   rerank:
     enabled: true
-    model: mixedbread-ai/mxbai-embed-large-v1
+    model: avsolatorio/GIST-Embedding-v0
     top_n: 2
 
 llamacpp:
   # llm_hf_repo_id: bartowski/Meta-Llama-3-8B-Instruct-GGUF
   # llm_hf_model_file: Meta-Llama-3-8B-Instruct-Q6_K.gguf
   llm_hf_repo_id: qwp4w3hyb/Hermes-2-Pro-Llama-3-8B-iMat-GGUF
-  llm_hf_model_file: hermes-2-pro-llama-3-8b-imat-Q6_K.gguf
+  llm_hf_model_file:  hermes-2-pro-llama-3-8b-imat-Q4_K_S.gguf
   tfs_z: 1.0            # Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting
   top_k: 40             # Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)
   top_p: 0.9            # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
@@ -68,11 +68,11 @@ llamacpp:
 embedding:
   # Should be matching the value above in most cases
   mode: huggingface
-  ingest_mode: parallel
+  ingest_mode: pipeline
   embed_dim: 384 # 384 is for BAAI/bge-small-en-v1.5
 
 huggingface:
-  embedding_hf_model_name: mixedbread-ai/mxbai-embed-large-v1
+  embedding_hf_model_name: BAAI/bge-large-en
   access_token: ${HUGGINGFACE_TOKEN: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}
 
 vectorstore:
