@@ -4892,6 +4892,20 @@ files = [
 PyMuPDFb = "1.24.3"
 
 [[package]]
+name = "pymupdf4llm"
+version = "0.0.5"
+description = "PyMuPDF Utilities for LLM/RAG"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pymupdf4llm-0.0.5-py3-none-any.whl", hash = "sha256:9882e42789dcefbad25c8e570d9c8d72eaf34e6a1f16ef3f555faf5f7718654f"},
+    {file = "pymupdf4llm-0.0.5.tar.gz", hash = "sha256:3256dbc5feec8ec3149586e2e2688f3f47fa733395c33e21a7af15f9b7531689"},
+]
+
+[package.dependencies]
+pymupdf = ">=1.24.2"
+
+[[package]]
 name = "pymupdfb"
 version = "1.24.3"
 description = "MuPDF shared libraries for PyMuPDF."
@@ -7545,4 +7559,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "340cc561cf928802b001b918eb03605a9055b9f0068937203b18c390dea93494"
+content-hash = "463d14cd284646ece2ac8105207e0b197f3b208f4fa667d458f4ffbea1f2a353"

@@ -12,6 +12,7 @@ from llama_index.core.postprocessor import (
     SentenceTransformerRerank,
     SimilarityPostprocessor,
 )
+from llama_index.core.postprocessor import SentenceEmbeddingOptimizer
 from llama_index.core.storage import StorageContext
 from llama_index.core.types import TokenGen
 from pydantic import BaseModel
@@ -30,6 +31,16 @@ from private_gpt.server.chunks.chunks_service import Chunk
 from private_gpt.settings.settings import Settings
 
 from private_gpt.paths import models_path
+
+
+DEFAULT_CONDENSE_PROMPT_TEMPLATE = """
+  Given the following conversation between a user and an AI assistant and a follow up question from user,
+  rephrase the follow up question to be a standalone question based on the given context.
+
+  Chat History:
+  {chat_history}
+  Follow Up Input: {question}
+  Standalone question:"""
 
 class Completion(BaseModel):
     response: str
@@ -123,21 +134,20 @@ class ChatService:
                     similarity_cutoff=settings.rag.similarity_value
                 ),
             ]
-
             if settings.rag.rerank.enabled:
                 rerank_postprocessor = SentenceTransformerRerank(
                     model=settings.rag.rerank.model, top_n=settings.rag.rerank.top_n
                 )
                 node_postprocessors.append(rerank_postprocessor)
             
-            response_synthesizer = get_response_synthesizer(structured_answer_filtering=True, llm=self.llm_component.llm)
+            response_synthesizer = get_response_synthesizer(response_mode="no_text", llm=self.llm_component.llm)
             
             custom_query_engine = RetrieverQueryEngine(
                 retriever=vector_index_retriever,
                 response_synthesizer=response_synthesizer
             )
             
-            return ContextChatEngine.from_defaults(
+            return CondensePlusContextChatEngine.from_defaults(
                 system_prompt=system_prompt,
                 retriever=custom_query_engine,
                 llm=self.llm_component.llm,  # Takes no effect at the moment
@@ -201,7 +211,7 @@ class ChatService:
             """
             You are a helpful assistant named QuickGPT by Quickfox Consulting.
 
-            Engage in a two-way conversation, ensuring that your responses are strictly and exclusively based on the relevant context documents provided.
+            Engage in a two-way conversation, ensuring that your responses are strictly and exclusively based on the relevant context documents provided without adding extra information from your prior knowledge.
 
             Do not use any prior knowledge or external sources or make assumptions, inferences, or draw upon any prior knowledge beyond what is explicitly stated in the relevant context documents. 
             If the answer to a query is not present in the relevant context documents, respond with "I do not have enough information in the provided context to answer this question."
@@ -209,6 +219,11 @@ class ChatService:
             Your responses must be relevant, informative, and easy to understand. 
             Aim to deliver high-quality answers that are respectful and helpful, using clear and concise language.
             Consider previous queries only if the latest query is directly related to them. Address only the most recent query unless it explicitly builds upon a previous one.
+
+            Here are the relevant documents for the context:
+            {context_str}
+            Instruction: Based on the above documents, provide a detailed answer for the user question below.
+            Answer "don't know" if not present in the document.
             """
         )
         chat_history = (
@@ -222,6 +237,7 @@ class ChatService:
         wrapped_response = chat_engine.chat(
             message=last_message if last_message is not None else "",
             chat_history=chat_history,
+            
         )
         sources = [Chunk.from_node(node) for node in wrapped_response.source_nodes]
         completion = Completion(response=wrapped_response.response, sources=sources)

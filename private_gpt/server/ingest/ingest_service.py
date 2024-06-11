@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, AnyStr, BinaryIO, Sequence, Any, List
 
 from injector import inject, singleton
-from llama_index.core.node_parser import SemanticSplitterNodeParser, SentenceSplitter
+from llama_index.core.node_parser import SemanticSplitterNodeParser, SentenceSplitter, SentenceWindowNodeParser
 from llama_index.core.storage import StorageContext
 from llama_index.core.schema import BaseNode , ObjectType , TextNode
 
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_CHUNK_SIZE = 512
-SENTENCE_CHUNK_OVERLAP = 20
+SENTENCE_CHUNK_OVERLAP = 50
 
 class SafeSemanticSplitter(SemanticSplitterNodeParser):
 
@@ -72,22 +72,23 @@ class IngestService:
             docstore=node_store_component.doc_store,
             index_store=node_store_component.index_store,
         )
-        # splitter = SentenceSplitter(chunk_size=512, chunk_overlap=128)
         node_parser = SafeSemanticSplitter.from_defaults(
             embed_model=embedding_component.embedding_model,
-            # sentence_splitter=splitter,
             include_metadata=True,
             include_prev_next_rel=True,
         )
-
+        # node_parser =  SentenceWindowNodeParser.from_defaults(
+        #     window_size=3,
+        #     window_metadata_key="window",
+        #     original_text_metadata_key="original_text",
+        # )
         self.ingest_component = get_ingestion_component(
             self.storage_context,
             embed_model=embedding_component.embedding_model,
             transformations=[
                 node_parser,
-                TitleExtractor(nodes=1, llm=self.llm_service.llm),
-                QuestionsAnsweredExtractor(questions=1,llm=self.llm_service.llm),
-                embedding_component.embedding_model],
+                embedding_component.embedding_model
+            ],
             settings=settings(),
         )
 

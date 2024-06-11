@@ -124,6 +124,7 @@ class VectorStoreComponent:
                         batch_size=20,
                         sparse_doc_fn=sparse_doc_vectors,
                         sparse_query_fn=sparse_query_vectors,
+                        use_async=True,
                         # hybrid_fusion_fn=relative_score_fusion,
                     ),  # TODO
                 )
