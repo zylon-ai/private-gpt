@@ -24,7 +24,7 @@ EXPOSE 8080
 
 WORKDIR /home/worker/app
 
-# Fix for permissions, for pod
+# Fix permissions, for k8s pod usage
 RUN chgrp -R 0 /home/worker/app && chmod -R g=u /home/worker/app
 RUN chown -R 1001:0 /home/worker/app && chmod 775 /home/worker/app
 
