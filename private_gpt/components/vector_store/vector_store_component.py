@@ -7,7 +7,7 @@ from llama_index.core.vector_stores.types import (
     FilterCondition,
     MetadataFilter,
     MetadataFilters,
-    VectorStore,
+    BasePydanticVectorStore,
 )
 
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
@@ -32,7 +32,7 @@ def _doc_id_metadata_filter(
 @singleton
 class VectorStoreComponent:
     settings: Settings
-    vector_store: VectorStore
+    vector_store: BasePydanticVectorStore
 
     @inject
     def __init__(self, settings: Settings) -> None:
@@ -54,7 +54,7 @@ class VectorStoreComponent:
                     )
 
                 self.vector_store = typing.cast(
-                    VectorStore,
+                    BasePydanticVectorStore,
                     PGVectorStore.from_params(
                         **settings.postgres.model_dump(exclude_none=True),
                         table_name="embeddings",
@@ -87,7 +87,7 @@ class VectorStoreComponent:
                 )  # TODO
 
                 self.vector_store = typing.cast(
-                    VectorStore,
+                    BasePydanticVectorStore,
                     BatchedChromaVectorStore(
                         chroma_client=chroma_client, chroma_collection=chroma_collection
                     ),
@@ -115,7 +115,7 @@ class VectorStoreComponent:
                         **settings.qdrant.model_dump(exclude_none=True)
                     )
                 self.vector_store = typing.cast(
-                    VectorStore,
+                    BasePydanticVectorStore,
                     QdrantVectorStore(
                         client=client,
                         collection_name="make_this_parameterizable_per_api_call",

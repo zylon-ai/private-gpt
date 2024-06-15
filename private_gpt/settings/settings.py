@@ -104,7 +104,9 @@ class LLMSettings(BaseModel):
         0.1,
         description="The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual.",
     )
-    prompt_style: Literal["default", "llama2", "llama3", "tag", "mistral", "chatml"] = Field(
+    prompt_style: Literal[
+        "default", "llama2", "llama3", "tag", "mistral", "chatml"
+    ] = Field(
         "llama2",
         description=(
             "The prompt style to use for the chat engine. "

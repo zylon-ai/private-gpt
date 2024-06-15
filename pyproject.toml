@@ -102,7 +102,7 @@ target-version = ['py311']
 target-version = 'py311'
 
 # See all rules at https://beta.ruff.rs/docs/rules/
-select = [
+lint.select = [
     "E", # pycodestyle
     "W", # pycodestyle
     "F", # Pyflakes
@@ -119,7 +119,7 @@ select = [
     "RUF", # Ruff-specific rules
 ]
 
-ignore = [
+lint.ignore = [
     "E501", # "Line too long"
     # -> line length already regulated by black
     "PT011", # "pytest.raises() should specify expected exception"
@@ -137,24 +137,24 @@ ignore = [
     # -> "Missing docstring in public function too restrictive"
 ]
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 # Automatically disable rules that are incompatible with Google docstring convention
 convention = "google"
 
-[tool.ruff.pycodestyle]
+[tool.ruff.lint.pycodestyle]
 max-doc-length = 88
 
-[tool.ruff.flake8-tidy-imports]
+[tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
-[tool.ruff.flake8-type-checking]
+[tool.ruff.lint.flake8-type-checking]
 strict = true
 runtime-evaluated-base-classes = ["pydantic.BaseModel"]
 # Pydantic needs to be able to evaluate types at runtime
 # see https://pypi.org/project/flake8-type-checking/ for flake8-type-checking documentation
 # see https://beta.ruff.rs/docs/settings/#flake8-type-checking-runtime-evaluated-base-classes for ruff documentation
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # Allow missing docstrings for tests
 "tests/**/*.py" = ["D1"]
 
