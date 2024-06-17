@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, AnyStr, BinaryIO, Sequence, Any, List
 
 from injector import inject, singleton
-from llama_index.core.node_parser import SemanticSplitterNodeParser, SentenceSplitter, SentenceWindowNodeParser
+from llama_index.core.node_parser import SemanticSplitterNodeParser, SentenceSplitter
 from llama_index.core.storage import StorageContext
 from llama_index.core.schema import BaseNode , ObjectType , TextNode
 
@@ -20,14 +20,15 @@ from private_gpt.settings.settings import settings
 
 
 from llama_index.core.extractors import (
-    QuestionsAnsweredExtractor,
-    TitleExtractor,
+    SummaryExtractor
 )
 if TYPE_CHECKING:
     from llama_index.core.storage.docstore.types import RefDocInfo
 
 logger = logging.getLogger(__name__)
 
+from langchain.text_splitter import MarkdownTextSplitter
+from llama_index.core.node_parser import LangchainNodeParser
 
 DEFAULT_CHUNK_SIZE = 512
 SENTENCE_CHUNK_OVERLAP = 50
@@ -71,7 +72,9 @@ class IngestService:
             vector_store=vector_store_component.vector_store,
             docstore=node_store_component.doc_store,
             index_store=node_store_component.index_store,
-        )
+        )       
+        # parser = LangchainNodeParser(MarkdownTextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=SENTENCE_CHUNK_OVERLAP))
+        # nodes = parser.get_nodes_from_documents(nodes)
         node_parser = SafeSemanticSplitter.from_defaults(
             embed_model=embedding_component.embedding_model,
             include_metadata=True,
@@ -87,7 +90,8 @@ class IngestService:
             embed_model=embedding_component.embedding_model,
             transformations=[
                 node_parser,
-                embedding_component.embedding_model
+                embedding_component.embedding_model,
+                # SummaryExtractor(llm=self.llm_service.llm)
             ],
             settings=settings(),
         )

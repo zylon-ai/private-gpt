@@ -31,27 +31,32 @@ from private_gpt.server.chunks.chunks_service import Chunk
 from private_gpt.settings.settings import Settings
 
 from private_gpt.paths import models_path
-
-
-DEFAULT_CONDENSE_PROMPT_TEMPLATE = """
-  Given the following conversation between a user and an AI assistant and a follow up question from user,
-  rephrase the follow up question to be a standalone question based on the given context.
-
-  Chat History:
-  {chat_history}
-  Follow Up Input: {question}
-  Standalone question:"""
-
 class Completion(BaseModel):
     response: str
     sources: list[Chunk] | None = None
-
-
 class CompletionGen(BaseModel):
     response: TokenGen
     sources: list[Chunk] | None = None
 
 reranker_path = models_path / 'reranker'
+
+
+CONDENSE_PROMPT_TEMPLATE = """
+     Given the following conversation between a user and an AI assistant, along with a follow-up question from the user, rephrase the follow-up question into a standalone query. The new query should:
+
+    1. Capture the core intent of the user's follow-up question
+    2. Incorporate relevant context from the conversation history
+    3. Be self-contained and understandable without requiring knowledge of the previous conversation
+    4. Be concise and focused
+
+    Conversation History:
+    {chat_history}
+
+    Follow-up Question: {question}
+
+    Standalone Query:"""
+
+
 @dataclass
 class ChatEngineInput:
     system_message: ChatMessage | None = None
@@ -152,6 +157,7 @@ class ChatService:
                 retriever=custom_query_engine,
                 llm=self.llm_component.llm,  # Takes no effect at the moment
                 node_postprocessors=node_postprocessors,
+                condense_prompt=CONDENSE_PROMPT_TEMPLATE,
             )
         else:
             return SimpleChatEngine.from_defaults(
@@ -209,26 +215,22 @@ class ChatService:
         )
         system_prompt = (
             """
-            You are a helpful assistant named QuickGPT by Quickfox Consulting.
+            You are a helpful AI assistant named QuickGPT, created by Quickfox Consulting. Your primary function is to provide comprehensive answers based solely on the information contained in the given context documents. Please adhere to the following guidelines:
 
-            Engage in a two-way conversation, ensuring that your responses are strictly and exclusively based on the relevant context documents provided without adding extra information from your prior knowledge.
-
-            Do not use any prior knowledge or external sources or make assumptions, inferences, or draw upon any prior knowledge beyond what is explicitly stated in the relevant context documents. 
-            If the answer to a query is not present in the relevant context documents, respond with "I do not have enough information in the provided context to answer this question."
-
-            Your responses must be relevant, informative, and easy to understand. 
-            Aim to deliver high-quality answers that are respectful and helpful, using clear and concise language.
-            Consider previous queries only if the latest query is directly related to them. Address only the most recent query unless it explicitly builds upon a previous one.
-
-            Here are the relevant documents for the context:
+            Using the information contained in the context,
+            give a comprehensive answer to the question.
+            Respond only to the question asked, response should be concise and relevant to the question.
+            If the answer cannot be deduced from the given context, do not give an answer.
+            Context documents:
             {context_str}
-            Instruction: Based on the above documents, provide a detailed answer for the user question below.
-            Answer "don't know" if not present in the document.
+            Your task is to provide detailed answers to user questions based exclusively on the above documents. Remember, if the information isn't in the context, simply state that you don't know.
+            </s>
             """
         )
         chat_history = (
             chat_engine_input.chat_history if chat_engine_input.chat_history else None
         )
+
         chat_engine = self._chat_engine(
             system_prompt=system_prompt,
             use_context=use_context,
@@ -236,8 +238,7 @@ class ChatService:
         )
         wrapped_response = chat_engine.chat(
             message=last_message if last_message is not None else "",
-            chat_history=chat_history,
-            
+            # chat_history=chat_history,
         )
         sources = [Chunk.from_node(node) for node in wrapped_response.source_nodes]
         completion = Completion(response=wrapped_response.response, sources=sources)

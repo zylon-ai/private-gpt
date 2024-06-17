@@ -71,6 +71,11 @@ xlsxwriter = "^3.2.0"
 pdf2image = "^1.17.0"
 pymupdf = "^1.24.4"
 pymupdf4llm = "^0.0.5"
+langchain = "^0.2.3"
+langchain-text-splitters = "^0.2.1"
+altair = "^5.3.0"
+asgiref = "^3.8.1"
+build = "^1.2.1"
 
 [tool.poetry.extras]
 ui = ["gradio"]
