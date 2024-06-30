@@ -4,7 +4,6 @@ import argparse
 
 from huggingface_hub import hf_hub_download, snapshot_download
 from transformers import AutoTokenizer
-from sentence_transformers import SentenceTransformer
 
 from private_gpt.paths import models_path, models_cache_path
 from private_gpt.settings.settings import settings
@@ -41,6 +40,7 @@ print("LLM model downloaded!")
 
 # Download Tokenizer
 print(f"Downloading tokenizer {settings().llm.tokenizer}")
+
 AutoTokenizer.from_pretrained(
     pretrained_model_name_or_path=settings().llm.tokenizer,
     cache_dir=models_cache_path,
@@ -48,11 +48,12 @@ AutoTokenizer.from_pretrained(
 print("Tokenizer downloaded!")
 
 # Download Reranker
-# print(f"Downloading reranker {settings().rag.rerank.model}")
+print(f"Downloading reranker {settings().rag.rerank.model}")
+reranker_path = models_path / "reranker"
+snapshot_download(
+    repo_id=settings().rag.rerank.model, 
+    local_dir=reranker_path
+)
+print("Reranker downloaded!")
 
-# reranker_path = r'D:/QuickGPT/privateGPT/models/reranker'
-# rerank_postprocessor = SentenceTransformer(
-#                     settings().rag.rerank.model
-#                 )
-# rerank_postprocessor.save(reranker_path)
 print("Setup done")

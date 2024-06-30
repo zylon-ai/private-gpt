@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, AnyStr, BinaryIO, Sequence, Any, List
 
 from injector import inject, singleton
-from llama_index.core.node_parser import SemanticSplitterNodeParser, SentenceSplitter
+from llama_index.core.node_parser import SemanticSplitterNodeParser, SentenceSplitter, SentenceWindowNodeParser
 from llama_index.core.storage import StorageContext
 from llama_index.core.schema import BaseNode , ObjectType , TextNode
 
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 from langchain.text_splitter import MarkdownTextSplitter
 from llama_index.core.node_parser import LangchainNodeParser
 
-DEFAULT_CHUNK_SIZE = 512
+DEFAULT_CHUNK_SIZE = 384
 SENTENCE_CHUNK_OVERLAP = 50
 
 class SafeSemanticSplitter(SemanticSplitterNodeParser):
@@ -77,6 +77,7 @@ class IngestService:
         # nodes = parser.get_nodes_from_documents(nodes)
         node_parser = SafeSemanticSplitter.from_defaults(
             embed_model=embedding_component.embedding_model,
+            breakpoint_percentile_threshold=95,
             include_metadata=True,
             include_prev_next_rel=True,
         )

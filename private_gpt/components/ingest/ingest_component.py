@@ -333,7 +333,7 @@ class PipelineIngestComponent(BaseIngestComponentWithIndex):
     discarded files will be reported.
     """
 
-    NODE_FLUSH_COUNT = 5000  # Save the index every # nodes.
+    NODE_FLUSH_COUNT = 100  # Save the index every # nodes.
 
     def __init__(
         self,

@@ -8,6 +8,9 @@ from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
 
+import torch
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 @singleton
 class EmbeddingComponent:
@@ -30,6 +33,7 @@ class EmbeddingComponent:
                 self.embedding_model = HuggingFaceEmbedding(
                     model_name=settings.huggingface.embedding_hf_model_name,
                     cache_folder=str(models_cache_path),
+                    device=device
                 )
             case "sagemaker":
                 try:

@@ -203,11 +203,15 @@ class Llama3PromptStyle(AbstractPromptStyle):
 
     def _completion_to_prompt(self, completion: str) -> str:
         system_prompt_str = self.DEFAULT_SYSTEM_PROMPT
-
-        return (
+        output = (
             f"{self.B_SYS} {system_prompt_str.strip()} {self.E_SYS} "
             f"{completion.strip()} {self.E_SYS} "
         )
+        return output.replace("</s>", "")
+        # return (
+        #     f"{self.B_SYS} {system_prompt_str.strip()} {self.E_SYS} "
+        #     f"{completion.strip()} {self.E_SYS} "
+        # )
     
 
 class TagPromptStyle(AbstractPromptStyle):

@@ -18,6 +18,13 @@ query_model = AutoModelForMaskedLM.from_pretrained(
     "naver/efficient-splade-VI-BT-large-query"
 )
 
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Move the models to the selected device
+doc_model.to(device)
+query_model.to(device)
+
 def sparse_doc_vectors(
     texts: List[str],
 ) -> Tuple[List[List[int]], List[List[float]]]:
@@ -27,14 +34,17 @@ def sparse_doc_vectors(
     tokens = doc_tokenizer(
         texts, truncation=True, padding=True, return_tensors="pt"
     )
-    if torch.cuda.is_available():
-        tokens = tokens.to("cuda")
+    
+    tokens = tokens.to(device)
 
     output = doc_model(**tokens)
     logits, attention_mask = output.logits, tokens.attention_mask
     relu_log = torch.log(1 + torch.relu(logits))
     weighted_log = relu_log * attention_mask.unsqueeze(-1)
     tvecs, _ = torch.max(weighted_log, dim=1)
+
+    # Clear CUDA cache
+    torch.cuda.empty_cache()
 
     # extract the vectors that are non-zero and their indices
     indices = []
@@ -56,14 +66,16 @@ def sparse_query_vectors(
     tokens = query_tokenizer(
         texts, truncation=True, padding=True, return_tensors="pt"
     )
-    if torch.cuda.is_available():
-        tokens = tokens.to("cuda")
+    tokens = tokens.to(device)
 
     output = query_model(**tokens)
     logits, attention_mask = output.logits, tokens.attention_mask
     relu_log = torch.log(1 + torch.relu(logits))
     weighted_log = relu_log * attention_mask.unsqueeze(-1)
     tvecs, _ = torch.max(weighted_log, dim=1)
+
+    # Clear CUDA cache
+    torch.cuda.empty_cache()
 
     # extract the vectors that are non-zero and their indices
     indices = []

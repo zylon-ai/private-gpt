@@ -156,9 +156,9 @@ async def prompt_completion(
         
         documents = crud.documents.get_enabled_documents_by_departments(
             db, department_id=department.id)
-        if not documents:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail=f"No documents uploaded for your department.")
+        # if not documents:
+        #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+        #                         detail=f"No documents uploaded for your department.")
         
         docs_list = [document.filename for document in documents]
         docs_ids = []
