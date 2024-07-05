@@ -4,10 +4,10 @@ import typing
 from injector import inject, singleton
 from llama_index.core.indices.vector_store import VectorIndexRetriever, VectorStoreIndex
 from llama_index.core.vector_stores.types import (
+    BasePydanticVectorStore,
     FilterCondition,
     MetadataFilter,
     MetadataFilters,
-    BasePydanticVectorStore,
 )
 
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
