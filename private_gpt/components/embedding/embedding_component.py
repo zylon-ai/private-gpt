@@ -99,10 +99,6 @@ class EmbeddingComponent:
                     azure_endpoint=azopenai_settings.azure_endpoint,
                     api_version=azopenai_settings.api_version,
                 )
-            case "mock":
-                # Not a random number, is the dimensionality used by
-                # the default embedding model
-                self.embedding_model = MockEmbedding(384)
             case "gemini":
                 try:
                     from llama_index.embeddings.gemini import (  # type: ignore
@@ -117,3 +113,7 @@ class EmbeddingComponent:
                     api_key=settings.gemini.api_key,
                     model_name=settings.gemini.embedding_model,
                 )
+            case "mock":
+                # Not a random number, is the dimensionality used by
+                # the default embedding model
+                self.embedding_model = MockEmbedding(384)

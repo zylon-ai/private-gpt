@@ -190,8 +190,6 @@ class LLMComponent:
                     azure_endpoint=azopenai_settings.azure_endpoint,
                     api_version=azopenai_settings.api_version,
                 )
-            case "mock":
-                self.llm = MockLLM()
             case "gemini":
                 try:
                     from llama_index.llms.gemini import (  # type: ignore
@@ -205,3 +203,5 @@ class LLMComponent:
                 self.llm = Gemini(
                     model_name=gemini_settings.model, api_key=gemini_settings.api_key
                 )
+            case "mock":
+                self.llm = MockLLM()
