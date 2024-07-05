@@ -78,7 +78,8 @@ nodestore:
   database: simple
 
 qdrant:
-  path: local_data/private_gpt/qdrant
+  url: ${PGPT_QDRANT_URL:localhost:6333}
+  hybrid_search: ${PGPT_QDRANT_HYBRID_SEARCH:true}
 
 postgres:
   host: localhost
