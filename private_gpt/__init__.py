@@ -1,4 +1,5 @@
 """private-gpt."""
+
 import logging
 import os
 
@@ -21,3 +22,6 @@ os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 # Disable chromaDB telemetry
 # It is already disabled, see PR#1144
 # os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
+# adding tiktoken cache path within repo to be able to run in offline environment.
+os.environ["TIKTOKEN_CACHE_DIR"] = "tiktoken_cache"

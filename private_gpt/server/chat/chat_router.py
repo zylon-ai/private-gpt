@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request
-from llama_index.llms import ChatMessage, MessageRole
+from llama_index.core.llms import ChatMessage, MessageRole
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
@@ -54,6 +54,13 @@ class ChatBody(BaseModel):
     response_model=None,
     responses={200: {"model": OpenAICompletion}},
     tags=["Contextual Completions"],
+    openapi_extra={
+        "x-fern-streaming": {
+            "stream-condition": "stream",
+            "response": {"$ref": "#/components/schemas/OpenAICompletion"},
+            "response-stream": {"$ref": "#/components/schemas/OpenAICompletion"},
+        }
+    },
 )
 def chat_completion(
     request: Request, body: ChatBody

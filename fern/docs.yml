@@ -30,15 +30,15 @@ navigation:
     layout:
       - section: Welcome
         contents:
-          - page: Welcome
+          - page: Introduction
             path: ./docs/pages/overview/welcome.mdx
-          - page: Quickstart
-            path: ./docs/pages/overview/quickstart.mdx
   # How to install privateGPT, with FAQ and troubleshooting
   - tab: installation
     layout:
       - section: Getting started
         contents:
+          - page: Main Concepts
+            path: ./docs/pages/installation/concepts.mdx
           - page: Installation
             path: ./docs/pages/installation/installation.mdx
   # Manual of privateGPT: how to use it and configure it
@@ -58,10 +58,14 @@ navigation:
         contents:
           - page: Vector Stores
             path: ./docs/pages/manual/vectordb.mdx
+          - page: Node Stores
+            path: ./docs/pages/manual/nodestore.mdx
       - section: Advanced Setup
         contents:
           - page: LLM Backends
             path: ./docs/pages/manual/llms.mdx
+          - page: Reranking
+            path: ./docs/pages/manual/reranker.mdx
       - section: User Interface
         contents:
           - page: User interface (Gradio) Manual

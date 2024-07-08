@@ -7,6 +7,7 @@ RUN pip install pipx
 RUN python3 -m pipx ensurepath
 RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
+ENV PATH=".venv/bin/:$PATH"
 
 # Dependencies to build llama-cpp
 RUN apt update && apt install -y \
@@ -23,8 +24,7 @@ FROM base as dependencies
 WORKDIR /home/worker/app
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry install --with local
-RUN poetry install --with ui
+RUN poetry install --extras "ui embeddings-huggingface llms-llama-cpp vector-stores-qdrant"
 
 FROM base as app
 
@@ -33,7 +33,8 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Prepare a non-root user
-RUN adduser --system worker
+RUN adduser --group worker
+RUN adduser --system --ingroup worker worker
 WORKDIR /home/worker/app
 
 RUN mkdir local_data; chown worker local_data
@@ -42,6 +43,9 @@ COPY --chown=worker --from=dependencies /home/worker/app/.venv/ .venv
 COPY --chown=worker private_gpt/ private_gpt
 COPY --chown=worker fern/ fern
 COPY --chown=worker *.yaml *.md ./
+COPY --chown=worker scripts/ scripts
+
+ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
 
 USER worker
-ENTRYPOINT .venv/bin/python -m private_gpt
+ENTRYPOINT python -m private_gpt

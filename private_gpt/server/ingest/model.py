@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from llama_index import Document
+from llama_index.core.schema import Document
 from pydantic import BaseModel, Field
 
 

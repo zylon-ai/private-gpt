@@ -3,7 +3,7 @@ import uuid
 from collections.abc import Iterator
 from typing import Literal
 
-from llama_index.llms import ChatResponse, CompletionResponse
+from llama_index.core.llms import ChatResponse, CompletionResponse
 from pydantic import BaseModel, Field
 
 from private_gpt.server.chunks.chunks_service import Chunk
@@ -118,5 +118,5 @@ def to_openai_sse_stream(
             yield f"data: {OpenAICompletion.json_from_delta(text=response.delta)}\n\n"
         else:
             yield f"data: {OpenAICompletion.json_from_delta(text=response, sources=sources)}\n\n"
-    yield f"data: {OpenAICompletion.json_from_delta(text=None, finish_reason='stop')}\n\n"
+    yield f"data: {OpenAICompletion.json_from_delta(text='', finish_reason='stop')}\n\n"
     yield "data: [DONE]\n\n"

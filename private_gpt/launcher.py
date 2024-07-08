@@ -1,9 +1,13 @@
 """FastAPI app creation, logger configuration and main API routes."""
+
 import logging
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from injector import Injector
+from llama_index.core.callbacks import CallbackManager
+from llama_index.core.callbacks.global_handlers import create_global_handler
+from llama_index.core.settings import Settings as LlamaIndexSettings
 
 from private_gpt.server.chat.chat_router import chat_router
 from private_gpt.server.chunks.chunks_router import chunks_router
@@ -31,6 +35,10 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(embeddings_router)
     app.include_router(health_router)
 
+    # Add LlamaIndex simple observability
+    global_handler = create_global_handler("simple")
+    LlamaIndexSettings.callback_manager = CallbackManager([global_handler])
+
     settings = root_injector.get(Settings)
     if settings.server.cors.enabled:
         logger.debug("Setting up CORS middleware")
@@ -45,7 +53,12 @@ def create_app(root_injector: Injector) -> FastAPI:
 
     if settings.ui.enabled:
         logger.debug("Importing the UI module")
-        from private_gpt.ui.ui import PrivateGptUi
+        try:
+            from private_gpt.ui.ui import PrivateGptUi
+        except ImportError as e:
+            raise ImportError(
+                "UI dependencies not found, install with `poetry install --extras ui`"
+            ) from e
 
         ui = root_injector.get(PrivateGptUi)
         ui.mount_in_app(app, settings.ui.path)
