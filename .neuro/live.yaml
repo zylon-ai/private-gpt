@@ -69,7 +69,7 @@ jobs:
       VLLM_TOKENIZER: meta-llama/Meta-Llama-3-8B-Instruct
 
   vllm:
-    image: vllm/vllm-openai:v0.4.0
+    image: vllm/vllm-openai:v0.5.1
     name: vllm
     preset: H100x1
     detach: true
