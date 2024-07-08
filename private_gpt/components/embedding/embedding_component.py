@@ -99,6 +99,20 @@ class EmbeddingComponent:
                     azure_endpoint=azopenai_settings.azure_endpoint,
                     api_version=azopenai_settings.api_version,
                 )
+            case "gemini":
+                try:
+                    from llama_index.embeddings.gemini import (  # type: ignore
+                        GeminiEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Gemini dependencies not found, install with `poetry install --extras embeddings-gemini`"
+                    ) from e
+
+                self.embedding_model = GeminiEmbedding(
+                    api_key=settings.gemini.api_key,
+                    model_name=settings.gemini.embedding_model,
+                )
             case "mock":
                 # Not a random number, is the dimensionality used by
                 # the default embedding model
