@@ -53,6 +53,13 @@ rag:
     model: cross-encoder/ms-marco-MiniLM-L-2-v2
     top_n: 1
 
+clickhouse:
+    host: localhost
+    port: 8443
+    username: admin
+    password: clickhouse
+    database: embeddings
+
 llamacpp:
   llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF
   llm_hf_model_file: mistral-7b-instruct-v0.2.Q4_K_M.gguf

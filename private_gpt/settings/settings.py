@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -125,7 +125,7 @@ class LLMSettings(BaseModel):
 
 
 class VectorstoreSettings(BaseModel):
-    database: Literal["chroma", "qdrant", "postgres"]
+    database: Literal["chroma", "qdrant", "postgres", "clickhouse"]
 
 
 class NodeStoreSettings(BaseModel):
@@ -356,6 +356,77 @@ class RagSettings(BaseModel):
     rerank: RerankSettings
 
 
+class ClickHouseSettings(BaseModel):
+    host: str = Field(
+        "localhost",
+        description="The server hosting the ClickHouse database",
+    )
+    port: int = Field(
+        8443,
+        description="The port on which the ClickHouse database is accessible",
+    )
+    username: str = Field(
+        "default",
+        description="The username to use to connect to the ClickHouse database",
+    )
+    password: str = Field(
+        "",
+        description="The password to use to connect to the ClickHouse database",
+    )
+    database: str = Field(
+        "__default__",
+        description="The default database to use for connections",
+    )
+    secure: bool | str = Field(
+        False,
+        description="Use https/TLS for secure connection to the server",
+    )
+    interface: str | None = Field(
+        None,
+        description="Must be either 'http' or 'https'. Determines the protocol to use for the connection",
+    )
+    settings: dict[str, Any] | None = Field(
+        None,
+        description="Specific ClickHouse server settings to be used with the session",
+    )
+    connect_timeout: int | None = Field(
+        None,
+        description="Timeout in seconds for establishing a connection",
+    )
+    send_receive_timeout: int | None = Field(
+        None,
+        description="Read timeout in seconds for http connection",
+    )
+    verify: bool | None = Field(
+        None,
+        description="Verify the server certificate in secure/https mode",
+    )
+    ca_cert: str | None = Field(
+        None,
+        description="Path to Certificate Authority root certificate (.pem format)",
+    )
+    client_cert: str | None = Field(
+        None,
+        description="Path to TLS Client certificate (.pem format)",
+    )
+    client_cert_key: str | None = Field(
+        None,
+        description="Path to the private key for the TLS Client certificate",
+    )
+    http_proxy: str | None = Field(
+        None,
+        description="HTTP proxy address",
+    )
+    https_proxy: str | None = Field(
+        None,
+        description="HTTPS proxy address",
+    )
+    server_host_name: str | None = Field(
+        None,
+        description="Server host name to be checked against the TLS certificate",
+    )
+
+
 class PostgresSettings(BaseModel):
     host: str = Field(
         "localhost",
@@ -455,6 +526,7 @@ class Settings(BaseModel):
     rag: RagSettings
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
+    clickhouse: ClickHouseSettings | None = None
 
 
 """
