@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Dict, Any, Union
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -15,7 +15,7 @@ class CorsSettings(BaseModel):
 
     enabled: bool = Field(
         description="Flag indicating if CORS headers are set or not."
-                    "If set to True, the CORS headers will be set to allow all origins, methods and headers.",
+        "If set to True, the CORS headers will be set to allow all origins, methods and headers.",
         default=False,
     )
     allow_credentials: bool = Field(
@@ -54,8 +54,8 @@ class AuthSettings(BaseModel):
     )
     secret: str = Field(
         description="The secret to be used for authentication. "
-                    "It can be any non-blank string. For HTTP basic authentication, "
-                    "this value should be the whole 'Authorization' header that is expected"
+        "It can be any non-blank string. For HTTP basic authentication, "
+        "this value should be the whole 'Authorization' header that is expected"
     )
 
 
@@ -76,7 +76,7 @@ class ServerSettings(BaseModel):
 class DataSettings(BaseModel):
     local_data_folder: str = Field(
         description="Path to local storage."
-                    "It will be treated as an absolute path if it starts with /"
+        "It will be treated as an absolute path if it starts with /"
     )
 
 
@@ -95,10 +95,10 @@ class LLMSettings(BaseModel):
     tokenizer: str = Field(
         None,
         description="The model id of a predefined tokenizer hosted inside a model repo on "
-                    "huggingface.co. Valid model ids can be located at the root-level, like "
-                    "`bert-base-uncased`, or namespaced under a user or organization name, "
-                    "like `HuggingFaceH4/zephyr-7b-beta`. If not set, will load a tokenizer matching "
-                    "gpt-3.5-turbo LLM.",
+        "huggingface.co. Valid model ids can be located at the root-level, like "
+        "`bert-base-uncased`, or namespaced under a user or organization name, "
+        "like `HuggingFaceH4/zephyr-7b-beta`. If not set, will load a tokenizer matching "
+        "gpt-3.5-turbo LLM.",
     )
     temperature: float = Field(
         0.1,
@@ -356,51 +356,51 @@ class ClickHouseSettings(BaseModel):
         "__default__",
         description="The default database to use for connections",
     )
-    secure: Union[bool, str] = Field(
+    secure: bool | str = Field(
         False,
         description="Use https/TLS for secure connection to the server",
     )
-    interface: Optional[str] = Field(
+    interface: str | None = Field(
         None,
         description="Must be either 'http' or 'https'. Determines the protocol to use for the connection",
     )
-    settings: Optional[Dict[str, Any]] = Field(
+    settings: dict[str, Any] | None = Field(
         None,
         description="Specific ClickHouse server settings to be used with the session",
     )
-    connect_timeout: Optional[int] = Field(
+    connect_timeout: int | None = Field(
         None,
         description="Timeout in seconds for establishing a connection",
     )
-    send_receive_timeout: Optional[int] = Field(
+    send_receive_timeout: int | None = Field(
         None,
         description="Read timeout in seconds for http connection",
     )
-    verify: Optional[bool] = Field(
+    verify: bool | None = Field(
         None,
         description="Verify the server certificate in secure/https mode",
     )
-    ca_cert: Optional[str] = Field(
+    ca_cert: str | None = Field(
         None,
         description="Path to Certificate Authority root certificate (.pem format)",
     )
-    client_cert: Optional[str] = Field(
+    client_cert: str | None = Field(
         None,
         description="Path to TLS Client certificate (.pem format)",
     )
-    client_cert_key: Optional[str] = Field(
+    client_cert_key: str | None = Field(
         None,
         description="Path to the private key for the TLS Client certificate",
     )
-    http_proxy: Optional[str] = Field(
+    http_proxy: str | None = Field(
         None,
         description="HTTP proxy address",
     )
-    https_proxy: Optional[str] = Field(
+    https_proxy: str | None = Field(
         None,
         description="HTTPS proxy address",
     )
-    server_host_name: Optional[str] = Field(
+    server_host_name: str | None = Field(
         None,
         description="Server host name to be checked against the TLS certificate",
     )
