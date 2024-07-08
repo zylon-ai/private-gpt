@@ -123,7 +123,9 @@ class VectorStoreComponent:
                 )
             case "clickhouse":
                 try:
-                    from clickhouse_connect import get_client
+                    from clickhouse_connect import (  # type: ignore
+                        get_client,
+                    )
                     from llama_index.vector_stores.clickhouse import (  # type: ignore
                         ClickHouseVectorStore,
                     )
