@@ -113,3 +113,8 @@ azopenai:
   api_version: "2023-05-15"
   embedding_model: text-embedding-ada-002
   llm_model: gpt-35-turbo
+
+gemini:
+  api_key: ${GOOGLE_API_KEY:}
+  model: models/gemini-pro
+  embedding_model: models/embedding-001

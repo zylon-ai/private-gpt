@@ -82,7 +82,14 @@ class DataSettings(BaseModel):
 
 class LLMSettings(BaseModel):
     mode: Literal[
-        "llamacpp", "openai", "openailike", "azopenai", "sagemaker", "mock", "ollama"
+        "llamacpp",
+        "openai",
+        "openailike",
+        "azopenai",
+        "sagemaker",
+        "mock",
+        "ollama",
+        "gemini",
     ]
     max_new_tokens: int = Field(
         256,
@@ -157,7 +164,9 @@ class HuggingFaceSettings(BaseModel):
 
 
 class EmbeddingSettings(BaseModel):
-    mode: Literal["huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock"]
+    mode: Literal[
+        "huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock", "gemini"
+    ]
     ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",
         description=(
@@ -217,6 +226,18 @@ class OpenAISettings(BaseModel):
     embedding_model: str = Field(
         "text-embedding-ada-002",
         description="OpenAI embedding Model to use. Example: 'text-embedding-3-large'.",
+    )
+
+
+class GeminiSettings(BaseModel):
+    api_key: str
+    model: str = Field(
+        "models/gemini-pro",
+        description="Google Model to use. Example: 'models/gemini-pro'.",
+    )
+    embedding_model: str = Field(
+        "models/embedding-001",
+        description="Google Embedding Model to use. Example: 'models/embedding-001'.",
     )
 
 
@@ -426,6 +447,7 @@ class Settings(BaseModel):
     huggingface: HuggingFaceSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
+    gemini: GeminiSettings
     ollama: OllamaSettings
     azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
