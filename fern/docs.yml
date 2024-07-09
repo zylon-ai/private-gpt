@@ -96,7 +96,7 @@ navbar-links:
     text: Contact us
     url: "mailto:hello@zylon.ai"
   - type: github
-    value: "https://github.com/imartinez/privateGPT"
+    value: "https://github.com/zylon-ai/private-gpt"
   - type: primary
     text: Join the Discord
     url: https://discord.com/invite/bK6mRVpErU
