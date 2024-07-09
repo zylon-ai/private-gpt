@@ -93,11 +93,10 @@ navigation:
 # `type:primary` is always displayed at the most right side of the navbar
 navbar-links:
   - type: secondary
-    text: GitHub
-    url: "https://github.com/imartinez/privateGPT"
-  - type: secondary
     text: Contact us
     url: "mailto:hello@zylon.ai"
+  - type: github
+    value: "https://github.com/imartinez/privateGPT"
   - type: primary
     text: Join the Discord
     url: https://discord.com/invite/bK6mRVpErU
