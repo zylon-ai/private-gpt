@@ -1,6 +1,6 @@
 # 🔒 PrivateGPT 📑
 
-[![Tests](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml/badge.svg)](https://github.com/imartinez/privateGPT/actions/workflows/tests.yml?query=branch%3Amain)
+[![Tests](https://github.com/zylon-ai/private-gpt/actions/workflows/tests.yml/badge.svg)](https://github.com/zylon-ai/private-gpt/actions/workflows/tests.yml?query=branch%3Amain)
 [![Website](https://img.shields.io/website?up_message=check%20it&down_message=down&url=https%3A%2F%2Fdocs.privategpt.dev%2F&label=Documentation)](https://docs.privategpt.dev/)
 
 [![Discord](https://img.shields.io/discord/1164200432894234644?logo=discord&label=PrivateGPT)](https://discord.gg/bK6mRVpErU)
@@ -9,7 +9,7 @@
 
 > Install & usage docs: https://docs.privategpt.dev/
 > 
-> Join the community: [Twitter](https://twitter.com/PrivateGPT_AI) & [Discord](https://discord.gg/bK6mRVpErU)
+> Join the community: [Twitter](https://twitter.com/ZylonPrivateGPT) & [Discord](https://discord.gg/bK6mRVpErU)
 
 ![Gradio UI](/fern/docs/assets/ui.png?raw=true)
 
@@ -62,7 +62,7 @@ thus a simpler and more educational implementation to understand the basic conce
 to build a fully local -and therefore, private- chatGPT-like tool.
 
 If you want to keep experimenting with it, we have saved it in the
-[primordial branch](https://github.com/imartinez/privateGPT/tree/primordial) of the project.
+[primordial branch](https://github.com/zylon-ai/private-gpt/tree/primordial) of the project.
 
 > It is strongly recommended to do a clean clone and install of this new version of
 PrivateGPT if you come from the previous, primordial version.
@@ -73,7 +73,7 @@ completions, document ingestion, RAG pipelines and other low-level building bloc
 We want to make it easier for any developer to build AI applications and experiences, as well as provide
 a suitable extensive architecture for the community to keep contributing.
 
-Stay tuned to our [releases](https://github.com/imartinez/privateGPT/releases) to check out all the new features and changes included.
+Stay tuned to our [releases](https://github.com/zylon-ai/private-gpt/releases) to check out all the new features and changes included.
 
 ## 📄 Documentation
 Full documentation on installation, dependencies, configuration, running the server, deployment options,
@@ -132,19 +132,19 @@ Here are a couple of examples:
 
 #### BibTeX
 ```bibtex
-@software{Martinez_Toro_PrivateGPT_2023,
-author = {Martínez Toro, Iván and Gallego Vico, Daniel and Orgaz, Pablo},
+@software{Zylon_PrivateGPT_2023,
+author = {Zylon by PrivateGPT},
 license = {Apache-2.0},
 month = may,
 title = {{PrivateGPT}},
-url = {https://github.com/imartinez/privateGPT},
+url = {https://github.com/zylon-ai/private-gpt},
 year = {2023}
 }
 ```
 
 #### APA
 ```
-Martínez Toro, I., Gallego Vico, D., & Orgaz, P. (2023). PrivateGPT [Computer software]. https://github.com/imartinez/privateGPT
+Zylon by PrivateGPT (2023). PrivateGPT [Computer software]. https://github.com/zylon-ai/private-gpt
 ```
 
 ## 🤗 Partners & Supporters
