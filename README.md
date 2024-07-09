@@ -132,19 +132,19 @@ Here are a couple of examples:
 
 #### BibTeX
 ```bibtex
-@software{Martinez_Toro_PrivateGPT_2023,
-author = {Martínez Toro, Iván and Gallego Vico, Daniel and Orgaz, Pablo},
+@software{Zylon_PrivateGPT_2023,
+author = {Zylon by PrivateGPT},
 license = {Apache-2.0},
 month = may,
 title = {{PrivateGPT}},
-url = {https://github.com/imartinez/privateGPT},
+url = {https://github.com/zylon-ai/private-gpt},
 year = {2023}
 }
 ```
 
 #### APA
 ```
-Martínez Toro, I., Gallego Vico, D., & Orgaz, P. (2023). PrivateGPT [Computer software]. https://github.com/imartinez/privateGPT
+Zylon by PrivateGPT (2023). PrivateGPT [Computer software]. https://github.com/zylon-ai/private-gpt
 ```
 
 ## 🤗 Partners & Supporters
