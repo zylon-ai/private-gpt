@@ -85,7 +85,10 @@ nodestore:
   database: simple
 
 milvus:
-
+  uri: "./milvus_llamaindex.db"
+  token: ""
+  collection_name: "milvus_db"
+  overwrite: True
 
 qdrant:
   path: local_data/private_gpt/qdrant
