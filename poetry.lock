@@ -6777,10 +6777,11 @@ storage-nodestore-postgres = ["asyncpg", "llama-index-storage-docstore-postgres"
 ui = ["gradio"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
 vector-stores-clickhouse = ["clickhouse-connect", "llama-index-vector-stores-clickhouse"]
+vector-stores-milvus = ["llama-index-vector-stores-milvus"]
 vector-stores-postgres = ["llama-index-vector-stores-postgres"]
 vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "5a2ffe28c38fe59d64fcbf2094b804da8e3f784dc42e1926eb7bd8bcd9dc6056"
+content-hash = "bc7f878950cc85b67fe6146e014f21658969035e52da5702cb780ed634477fe4"

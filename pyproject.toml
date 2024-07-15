@@ -78,6 +78,7 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 vector-stores-clickhouse = ["llama-index-vector-stores-clickhouse", "clickhouse_connect"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
 vector-stores-postgres = ["llama-index-vector-stores-postgres"]
+vector-stores-milvus = ["llama-index-vector-stores-milvus"]
 storage-nodestore-postgres = ["llama-index-storage-docstore-postgres","llama-index-storage-index-store-postgres","psycopg2-binary","asyncpg"]
 rerank-sentence-transformers = ["torch", "sentence-transformers"]
 

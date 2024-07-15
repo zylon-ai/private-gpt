@@ -79,10 +79,13 @@ huggingface:
   access_token: ${HUGGINGFACE_TOKEN:}
 
 vectorstore:
-  database: qdrant
+  database: milvus
 
 nodestore:
   database: simple
+
+milvus:
+
 
 qdrant:
   path: local_data/private_gpt/qdrant

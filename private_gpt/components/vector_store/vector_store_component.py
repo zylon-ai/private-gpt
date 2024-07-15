@@ -121,6 +121,39 @@ class VectorStoreComponent:
                         collection_name="make_this_parameterizable_per_api_call",
                     ),  # TODO
                 )
+
+            case "milvus":
+                try:
+                    from llama_index.vector_stores.milvus import MilvusVectorStore
+                except ImportError as e:
+                    raise ImportError(
+                        "Milvus dependencies not found, install with `poetry install --extras vector-stores-milvus`"
+                    ) from e
+
+                if settings.milvus is None:
+                    logger.info(
+                        "Milvus config not found. Using default settings.\n"
+                        "Trying to connect to Milvus at ./milvus_llamaindex.db "
+                        "with collection 'make_this_parameterizable_per_api_call'."
+                    )
+                    from private_gpt.settings.settings import MilvusSettings
+                    default_milvus_settings = MilvusSettings()
+                    self.vector_store = typing.cast(
+                        BasePydanticVectorStore,
+                        MilvusVectorStore(
+                            dim=self.settings.embedding.embed_dim,
+                            **default_milvus_settings.model_dump(exclude_none=True)
+                        )
+                    )
+                else:
+                    self.vector_store = typing.cast(
+                        BasePydanticVectorStore,
+                        MilvusVectorStore(
+                            dim=self.settings.embedding.embed_dim,
+                            **settings.milvus.model_dump(exclude_none=True)
+                        )
+                    )
+
             case "clickhouse":
                 try:
                     from clickhouse_connect import (  # type: ignore

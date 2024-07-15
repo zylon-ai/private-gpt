@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any, Literal, Optional, List, Dict
 
 from pydantic import BaseModel, Field
 
@@ -125,7 +125,7 @@ class LLMSettings(BaseModel):
 
 
 class VectorstoreSettings(BaseModel):
-    database: Literal["chroma", "qdrant", "postgres", "clickhouse"]
+    database: Literal["chroma", "qdrant", "postgres", "clickhouse", "milvus"]
 
 
 class NodeStoreSettings(BaseModel):
@@ -508,6 +508,29 @@ class QdrantSettings(BaseModel):
     )
 
 
+class MilvusSettings(BaseModel):
+    uri: str = Field(
+        "./milvus_llamaindex.db",
+        description="The URI of the Milvus instance. For example: './milvus_llamaindex.db' for Milvus Lite."
+    )
+    token: str = Field(
+        "",
+        description=(
+            "A valid access token to access the specified Milvus instance. "
+            "This can be used as a recommended alternative to setting user and password separately. "
+            "For example: 'root:Milvus', which is the default credential of the root user."
+        )
+    )
+    collection_name: str = Field(
+        "make_this_parameterizable_per_api_call",
+        description="The name of the collection in Milvus. Default is 'make_this_parameterizable_per_api_call'."
+    )
+    overwrite: bool = Field(
+        True,
+        description="Overwrite the previous collection schema if it exists."
+    )
+
+
 class Settings(BaseModel):
     server: ServerSettings
     data: DataSettings
@@ -527,6 +550,7 @@ class Settings(BaseModel):
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
     clickhouse: ClickHouseSettings | None = None
+    milvus: MilvusSettings | None = None
 
 
 """
