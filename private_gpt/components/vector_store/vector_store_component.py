@@ -124,7 +124,9 @@ class VectorStoreComponent:
 
             case "milvus":
                 try:
-                    from llama_index.vector_stores.milvus import MilvusVectorStore # type: ignore
+                    from llama_index.vector_stores.milvus import (  # type: ignore
+                        MilvusVectorStore,
+                    )
                 except ImportError as e:
                     raise ImportError(
                         "Milvus dependencies not found, install with `poetry install --extras vector-stores-milvus`"
