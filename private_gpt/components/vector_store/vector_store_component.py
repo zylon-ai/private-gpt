@@ -124,7 +124,7 @@ class VectorStoreComponent:
 
             case "milvus":
                 try:
-                    from llama_index.vector_stores.milvus import MilvusVectorStore
+                    from llama_index.vector_stores.milvus import MilvusVectorStore # type: ignore
                 except ImportError as e:
                     raise ImportError(
                         "Milvus dependencies not found, install with `poetry install --extras vector-stores-milvus`"
@@ -140,10 +140,8 @@ class VectorStoreComponent:
                     self.vector_store = typing.cast(
                         BasePydanticVectorStore,
                         MilvusVectorStore(
-                            dim=self.settings.embedding.embed_dim,
-                            uri="./milvus_llamaindex.db",
-                            token="",
-                            collection_name="milvus_db",
+                            dim=settings.embedding.embed_dim,
+                            collection_name="make_this_parameterizable_per_api_call",
                             overwrite=True,
                         ),
                     )
@@ -152,11 +150,11 @@ class VectorStoreComponent:
                     self.vector_store = typing.cast(
                         BasePydanticVectorStore,
                         MilvusVectorStore(
-                            dim=self.settings.embedding.embed_dim,
-                            uri=self.settings.embedding.uri,
-                            token=self.settings.embedding.token,
-                            collection_name=self.settings.milvus.collection_name,
-                            overwrite=self.settings.milvus.overwrite,
+                            dim=settings.embedding.embed_dim,
+                            uri=settings.milvus.uri,
+                            token=settings.milvus.token,
+                            collection_name=settings.milvus.collection_name,
+                            overwrite=settings.milvus.overwrite,
                         ),
                     )
 
