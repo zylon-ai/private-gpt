@@ -136,22 +136,27 @@ class VectorStoreComponent:
                         "Trying to connect to Milvus at ./milvus_llamaindex.db "
                         "with collection 'make_this_parameterizable_per_api_call'."
                     )
-                    from private_gpt.settings.settings import MilvusSettings
 
-                    default_milvus_settings = MilvusSettings()
                     self.vector_store = typing.cast(
                         BasePydanticVectorStore,
                         MilvusVectorStore(
                             dim=self.settings.embedding.embed_dim,
-                            **default_milvus_settings.model_dump(exclude_none=True),
+                            uri="./milvus_llamaindex.db",
+                            token="",
+                            collection_name="milvus_db",
+                            overwrite=True,
                         ),
                     )
+
                 else:
                     self.vector_store = typing.cast(
                         BasePydanticVectorStore,
                         MilvusVectorStore(
                             dim=self.settings.embedding.embed_dim,
-                            **settings.milvus.model_dump(exclude_none=True),
+                            uri=self.settings.embedding.uri,
+                            token=self.settings.embedding.token,
+                            collection_name=self.settings.milvus.collection_name,
+                            overwrite=self.settings.milvus.overwrite,
                         ),
                     )
 
