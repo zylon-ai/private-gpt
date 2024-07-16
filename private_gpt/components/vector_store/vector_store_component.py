@@ -137,21 +137,22 @@ class VectorStoreComponent:
                         "with collection 'make_this_parameterizable_per_api_call'."
                     )
                     from private_gpt.settings.settings import MilvusSettings
+
                     default_milvus_settings = MilvusSettings()
                     self.vector_store = typing.cast(
                         BasePydanticVectorStore,
                         MilvusVectorStore(
                             dim=self.settings.embedding.embed_dim,
-                            **default_milvus_settings.model_dump(exclude_none=True)
-                        )
+                            **default_milvus_settings.model_dump(exclude_none=True),
+                        ),
                     )
                 else:
                     self.vector_store = typing.cast(
                         BasePydanticVectorStore,
                         MilvusVectorStore(
                             dim=self.settings.embedding.embed_dim,
-                            **settings.milvus.model_dump(exclude_none=True)
-                        )
+                            **settings.milvus.model_dump(exclude_none=True),
+                        ),
                     )
 
             case "clickhouse":

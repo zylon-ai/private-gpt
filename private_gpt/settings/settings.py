@@ -1,4 +1,4 @@
-from typing import Any, Literal, Optional, List, Dict
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -511,7 +511,7 @@ class QdrantSettings(BaseModel):
 class MilvusSettings(BaseModel):
     uri: str = Field(
         "./milvus_llamaindex.db",
-        description="The URI of the Milvus instance. For example: './milvus_llamaindex.db' for Milvus Lite."
+        description="The URI of the Milvus instance. For example: './milvus_llamaindex.db' for Milvus Lite.",
     )
     token: str = Field(
         "",
@@ -519,15 +519,14 @@ class MilvusSettings(BaseModel):
             "A valid access token to access the specified Milvus instance. "
             "This can be used as a recommended alternative to setting user and password separately. "
             "For example: 'root:Milvus', which is the default credential of the root user."
-        )
+        ),
     )
     collection_name: str = Field(
         "make_this_parameterizable_per_api_call",
-        description="The name of the collection in Milvus. Default is 'make_this_parameterizable_per_api_call'."
+        description="The name of the collection in Milvus. Default is 'make_this_parameterizable_per_api_call'.",
     )
     overwrite: bool = Field(
-        True,
-        description="Overwrite the previous collection schema if it exists."
+        True, description="Overwrite the previous collection schema if it exists."
     )
 
 

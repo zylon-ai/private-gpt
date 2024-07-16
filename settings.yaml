@@ -79,7 +79,7 @@ huggingface:
   access_token: ${HUGGINGFACE_TOKEN:}
 
 vectorstore:
-  database: milvus
+  database: qdrant
 
 nodestore:
   database: simple
