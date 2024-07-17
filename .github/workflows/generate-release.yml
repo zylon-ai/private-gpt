@@ -43,6 +43,11 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{version}}-${{ matrix.type }}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}.{{minor}}-${{ matrix.type }}
+            type=semver,pattern={{major}}
+            type=semver,pattern={{major}}-${{ matrix.type }}
+            type=sha
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
