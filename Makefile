@@ -12,20 +12,23 @@ test-coverage:
 	PYTHONPATH=. poetry run pytest tests --cov private_gpt --cov-report term --cov-report=html --cov-report xml --junit-xml=tests-results.xml
 
 black:
-	poetry run black . --check
+	PYTHONPATH=. poetry run black . --check
 
 ruff:
-	poetry run ruff check private_gpt tests
+	PYTHONPATH=. poetry run ruff check private_gpt tests
 
 format:
-	poetry run black .
-	poetry run ruff check private_gpt tests --fix
+	PYTHONPATH=. poetry run black .
+
+lint:
+	PYTHONPATH=. poetry run ruff check private_gpt tests --fix
 
 mypy:
-	poetry run mypy private_gpt
+	PYTHONPATH=. poetry run mypy private_gpt
 
 check:
 	make format
+	make lint
 	make mypy
 
 ########################################################################################################################
