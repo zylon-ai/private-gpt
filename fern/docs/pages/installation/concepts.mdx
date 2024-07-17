@@ -17,9 +17,11 @@ There is an extra component that can be enabled or disabled: the UI. It is a Gra
 ### Setups and Dependencies
 Your setup will be the combination of the different options available. You'll find recommended setups in the [installation](./installation) section.
 PrivateGPT uses poetry to manage its dependencies. You can install the dependencies for the different setups by running `poetry install --extras "<extra1> <extra2>..."`.
-Extras are the different options available for each component. For example, to install the dependencies for a a local setup with UI and qdrant as vector database, Ollama as LLM and HuggingFace as local embeddings, you would run
+Extras are the different options available for each component. For example, to install the dependencies for a a local setup with UI and qdrant as vector database, Ollama as LLM and local embeddings, you would run
 
-`poetry install --extras "ui vector-stores-qdrant llms-ollama embeddings-huggingface"`.
+```bash
+poetry install --extras "ui vector-stores-qdrant llms-ollama embeddings-ollama".
+```
 
 Refer to the [installation](./installation) section for more details.
 
