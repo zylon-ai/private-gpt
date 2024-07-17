@@ -22,7 +22,7 @@ model download script, ingestion script, documents folder watch, etc. Please ref
 ### Setups and Dependencies
 Your setup will be the combination of the different options available. You'll find recommended setups in the [installation](./installation) section.
 PrivateGPT uses poetry to manage its dependencies. You can install the dependencies for the different setups by running `poetry install --extras "<extra1> <extra2>..."`.
-Extras are the different options available for each component. For example, to install the dependencies for a a local setup with UI and qdrant as vector database, Ollama as LLM and local embeddings, you would run
+Extras are the different options available for each component. For example, to install the dependencies for a a local setup with UI and qdrant as vector database, Ollama as LLM and local embeddings, you would run:
 
 ```bash
 poetry install --extras "ui vector-stores-qdrant llms-ollama embeddings-ollama"

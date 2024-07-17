@@ -1,44 +1,31 @@
 # Downloading Gated and Private Models
-
 Many models are gated or private, requiring special access to use them. Follow these steps to gain access and set up your environment for using these models.
-
 ## Accessing Gated Models
-
 1. **Request Access:**
    Follow the instructions provided [here](https://huggingface.co/docs/hub/en/models-gated) to request access to the gated model.
-
 2. **Generate a Token:**
    Once you have access, generate a token by following the instructions [here](https://huggingface.co/docs/hub/en/security-tokens).
-
 3. **Set the Token:**
    Add the generated token to your `settings.yaml` file:
-
    ```yaml
    huggingface:
      access_token: <your-token>
    ```
-
    Alternatively, set the `HF_TOKEN` environment variable:
-
    ```bash
    export HF_TOKEN=<your-token>
    ```
 
 # Tokenizer Setup
-
 PrivateGPT uses the `AutoTokenizer` library to tokenize input text accurately. It connects to HuggingFace's API to download the appropriate tokenizer for the specified model.
 
 ## Configuring the Tokenizer
-
 1. **Specify the Model:**
    In your `settings.yaml` file, specify the model you want to use:
-
    ```yaml
    llm:
      tokenizer: mistralai/Mistral-7B-Instruct-v0.2
    ```
-
 2. **Set Access Token for Gated Models:**
    If you are using a gated model, ensure the `access_token` is set as mentioned in the previous section.
-
 This configuration ensures that PrivateGPT can download and use the correct tokenizer for the model you are working with.
