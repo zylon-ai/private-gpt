@@ -68,8 +68,10 @@ navigation:
             path: ./docs/pages/manual/reranker.mdx
       - section: User Interface
         contents:
-          - page: User interface (Gradio) Manual
-            path: ./docs/pages/manual/ui.mdx
+          - page: Gradio Manual
+            path: ./docs/pages/ui/gradio.mdx
+          - page: Alternatives
+            path: ./docs/pages/ui/alternatives.mdx
   # Small code snippet or example of usage to help users
   - tab: recipes
     layout:
