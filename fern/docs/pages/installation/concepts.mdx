@@ -8,9 +8,9 @@ It supports a variety of LLM providers, embeddings providers, and vector stores,
 
 ## Setup configurations available
 You get to decide the setup for these 3 main components:
-- LLM: the large language model provider used for inference. It can be local, or remote, or even OpenAI.
-- Embeddings: the embeddings provider used to encode the input, the documents and the users' queries. Same as the LLM, it can be local, or remote, or even OpenAI.
-- Vector store: the store used to index and retrieve the documents.
+- **LLM**: the large language model provider used for inference. It can be local, or remote, or even OpenAI.
+- **Embeddings**: the embeddings provider used to encode the input, the documents and the users' queries. Same as the LLM, it can be local, or remote, or even OpenAI.
+- **Vector store**: the store used to index and retrieve the documents.
 
 There is an extra component that can be enabled or disabled: the UI. It is a Gradio UI that allows to interact with the API in a more user-friendly way.
 
@@ -25,7 +25,7 @@ PrivateGPT uses poetry to manage its dependencies. You can install the dependenc
 Extras are the different options available for each component. For example, to install the dependencies for a a local setup with UI and qdrant as vector database, Ollama as LLM and local embeddings, you would run
 
 ```bash
-poetry install --extras "ui vector-stores-qdrant llms-ollama embeddings-ollama".
+poetry install --extras "ui vector-stores-qdrant llms-ollama embeddings-ollama"
 ```
 
 Refer to the [installation](./installation) section for more details.
