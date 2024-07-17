@@ -41,47 +41,59 @@ brew install make
 choco install make
 ```
 
-## Install and run your desired setup
+## Install and Run Your Desired Setup
 
-PrivateGPT allows to customize the setup -from fully local to cloud based- by deciding the modules to use.
-Here are the different options available:
-
-- LLM: "ollama", "llama-cpp", "sagemaker", "openai", "openailike", "azopenai", "gemini"
-- Embeddings: "ollama", "huggingface", "openai", "sagemaker", "azopenai", "gemini"
-- Vector stores: "qdrant", "chroma", "postgres", "clickhouse"
-- UI: whether or not to enable UI (Gradio) or just go with the API
-
-<Callout intent = "warning">
-A working **Gradio UI client** is provided to test the API, together with a set of useful tools such as bulk
-model download script, ingestion script, documents folder watch, etc.
-</Callout>
-
-In order to only install the required dependencies, PrivateGPT offers different `extras` that can be combined during the installation process:
+PrivateGPT allows customization of the setup, from fully local to cloud-based, by deciding the modules to use. To install only the required dependencies, PrivateGPT offers different `extras` that can be combined during the installation process:
 
 ```bash
 poetry install --extras "<extra1> <extra2>..."
 ```
+Where `<extra>` can be any of the following options described below.
 
-Where `<extra>` can be any of the following:
+### Available Modules
 
-- ui: adds support for UI using Gradio
-- llms-ollama: adds support for Ollama LLM, the easiest way to get a local LLM running, requires Ollama running locally
-- llms-llama-cpp: adds support for local LLM using LlamaCPP - expect a messy installation process on some platforms
-- llms-sagemaker: adds support for Amazon Sagemaker LLM, requires Sagemaker inference endpoints
-- llms-openai: adds support for OpenAI LLM, requires OpenAI API key
-- llms-openai-like: adds support for 3rd party LLM providers that are compatible with OpenAI's API
-- llms-azopenai: adds support for Azure OpenAI LLM, requires Azure OpenAI inference endpoints
-- llms-gemini: adds support for Gemini LLM, requires Gemini API key
-- embeddings-ollama: adds support for Ollama Embeddings, requires Ollama running locally
-- embeddings-huggingface: adds support for local Embeddings using HuggingFace
-- embeddings-sagemaker: adds support for Amazon Sagemaker Embeddings, requires Sagemaker inference endpoints
-- embeddings-openai = adds support for OpenAI Embeddings, requires OpenAI API key
-- embeddings-azopenai = adds support for Azure OpenAI Embeddings, requires Azure OpenAI inference endpoints
-- embeddings-gemini: adds support for Gemini Embeddings, requires Gemini API key
-- vector-stores-qdrant: adds support for Qdrant vector store
-- vector-stores-chroma: adds support for Chroma DB vector store
-- vector-stores-postgres: adds support for Postgres vector store
-- vector-stores-clickhouse: adds support for Clickhouse vector store
+You need to choose one option per category (LLM, Embeddings, Vector Stores, UI). Below are the tables listing the available options for each category.
+
+#### LLM
+
+| **Option**   | **Description**                                                        | **Extra**           |
+|--------------|------------------------------------------------------------------------|---------------------|
+| **ollama**       | Adds support for Ollama LLM, requires Ollama running locally           | llms-ollama         |
+| llama-cpp    | Adds support for local LLM using LlamaCPP                              | llms-llama-cpp      |
+| sagemaker    | Adds support for Amazon Sagemaker LLM, requires Sagemaker endpoints    | llms-sagemaker      |
+| openai       | Adds support for OpenAI LLM, requires OpenAI API key                   | llms-openai         |
+| openailike   | Adds support for 3rd party LLM providers compatible with OpenAI's API  | llms-openai-like    |
+| azopenai     | Adds support for Azure OpenAI LLM, requires Azure endpoints            | llms-azopenai       |
+| gemini       | Adds support for Gemini LLM, requires Gemini API key                   | llms-gemini         |
+
+#### Embeddings
+
+| **Option**       | **Description**                                                                | **Extra**               |
+|------------------|--------------------------------------------------------------------------------|-------------------------|
+| **ollama**           | Adds support for Ollama Embeddings, requires Ollama running locally            | embeddings-ollama       |
+| huggingface      | Adds support for local Embeddings using HuggingFace                             | embeddings-huggingface  |
+| openai           | Adds support for OpenAI Embeddings, requires OpenAI API key                     | embeddings-openai       |
+| sagemaker        | Adds support for Amazon Sagemaker Embeddings, requires Sagemaker endpoints      | embeddings-sagemaker    |
+| azopenai         | Adds support for Azure OpenAI Embeddings, requires Azure endpoints              | embeddings-azopenai     |
+| gemini           | Adds support for Gemini Embeddings, requires Gemini API key                     | embeddings-gemini       |
+
+#### Vector Stores
+
+| **Option**       | **Description**                         | **Extra**               |
+|------------------|-----------------------------------------|-------------------------|
+| **qdrant**       | Adds support for Qdrant vector store    | vector-stores-qdrant    |
+| chroma           | Adds support for Chroma DB vector store | vector-stores-chroma    |
+| postgres         | Adds support for Postgres vector store  | vector-stores-postgres  |
+| clickhouse       | Adds support for Clickhouse vector store| vector-stores-clickhouse|
+
+#### UI
+
+| **Option**   | **Description**                          | **Extra** |
+|--------------|------------------------------------------|-----------|
+| Gradio       | Adds support for UI using Gradio         | ui        |
+
+> **Disclaimer**
+> The Gradio UI is not intended for production use. It is designed to facilitate quick testing of PrivateGPT. Please note that it may have unresolved issues.
 
 ## Recommended Setups
 
