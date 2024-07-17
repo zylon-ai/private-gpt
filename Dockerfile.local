@@ -28,8 +28,7 @@ COPY pyproject.toml poetry.lock ./
 
 RUN poetry config installer.max-workers 10
 RUN poetry install --with local
-RUN poetry install --with ui
-RUN poetry install --extras chroma
+RUN poetry install --extras "ui embeddings-huggingface llms-llama-cpp vector-stores-qdrant"
 
 FROM base as app
 
@@ -38,7 +37,8 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Prepare a non-root user
-RUN adduser worker
+RUN adduser --group worker
+RUN adduser --system --ingroup worker worker
 WORKDIR /home/worker/app
 
 RUN mkdir -p local_data; chown -R worker local_data

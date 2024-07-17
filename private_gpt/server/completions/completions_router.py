@@ -42,6 +42,13 @@ class CompletionsBody(BaseModel):
     summary="Completion",
     responses={200: {"model": OpenAICompletion}},
     tags=["Contextual Completions"],
+    openapi_extra={
+        "x-fern-streaming": {
+            "stream-condition": "stream",
+            "response": {"$ref": "#/components/schemas/OpenAICompletion"},
+            "response-stream": {"$ref": "#/components/schemas/OpenAICompletion"},
+        }
+    },
 )
 def prompt_completion(
     request: Request, body: CompletionsBody

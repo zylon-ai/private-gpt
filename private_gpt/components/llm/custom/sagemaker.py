@@ -7,25 +7,19 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import boto3  # type: ignore
-from llama_index.bridge.pydantic import Field
-from llama_index.llms import (
+from llama_index.core.base.llms.generic_utils import (
+    completion_response_to_chat_response,
+    stream_completion_response_to_chat_response,
+)
+from llama_index.core.bridge.pydantic import Field
+from llama_index.core.llms import (
     CompletionResponse,
     CustomLLM,
     LLMMetadata,
 )
-from llama_index.llms.base import (
+from llama_index.core.llms.callbacks import (
     llm_chat_callback,
     llm_completion_callback,
-)
-from llama_index.llms.generic_utils import (
-    completion_response_to_chat_response,
-    stream_completion_response_to_chat_response,
-)
-from llama_index.llms.llama_utils import (
-    completion_to_prompt as generic_completion_to_prompt,
-)
-from llama_index.llms.llama_utils import (
-    messages_to_prompt as generic_messages_to_prompt,
 )
 
 if TYPE_CHECKING:
@@ -161,8 +155,8 @@ class SagemakerLLM(CustomLLM):
         model_kwargs = model_kwargs or {}
         model_kwargs.update({"n_ctx": context_window, "verbose": verbose})
 
-        messages_to_prompt = messages_to_prompt or generic_messages_to_prompt
-        completion_to_prompt = completion_to_prompt or generic_completion_to_prompt
+        messages_to_prompt = messages_to_prompt or {}
+        completion_to_prompt = completion_to_prompt or {}
 
         generate_kwargs = generate_kwargs or {}
         generate_kwargs.update(
@@ -224,7 +218,7 @@ class SagemakerLLM(CustomLLM):
 
         response_body = resp["Body"]
         response_str = response_body.read().decode("utf-8")
-        response_dict = eval(response_str)
+        response_dict = json.loads(response_str)
 
         return CompletionResponse(
             text=response_dict[0]["generated_text"][len(prompt) :], raw=resp
@@ -249,12 +243,19 @@ class SagemakerLLM(CustomLLM):
             event_stream = resp["Body"]
             start_json = b"{"
             stop_token = "<|endoftext|>"
+            first_token = True
 
             for line in LineIterator(event_stream):
                 if line != b"" and start_json in line:
                     data = json.loads(line[line.find(start_json) :].decode("utf-8"))
-                    if data["token"]["text"] != stop_token:
+                    special = data["token"]["special"]
+                    stop = data["token"]["text"] == stop_token
+                    if not special and not stop:
                         delta = data["token"]["text"]
+                        # trim the leading space for the first token if present
+                        if first_token:
+                            delta = delta.lstrip()
+                            first_token = False
                         text += delta
                         yield CompletionResponse(delta=delta, text=text, raw=data)
 
