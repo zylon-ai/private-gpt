@@ -32,7 +32,7 @@ navigation:
         contents:
           - page: Introduction
             path: ./docs/pages/overview/welcome.mdx
-  # How to install privateGPT, with FAQ and troubleshooting
+  # How to install PrivateGPT, with FAQ and troubleshooting
   - tab: installation
     layout:
       - section: Getting started
@@ -41,7 +41,7 @@ navigation:
             path: ./docs/pages/installation/concepts.mdx
           - page: Installation
             path: ./docs/pages/installation/installation.mdx
-  # Manual of privateGPT: how to use it and configure it
+  # Manual of PrivateGPT: how to use it and configure it
   - tab: manual
     layout:
       - section: General configuration
@@ -78,7 +78,7 @@ navigation:
           # TODO: add recipes
           - page: List of LLMs
             path: ./docs/pages/recipes/list-llm.mdx
-  # More advanced usage of privateGPT, by API
+  # More advanced usage of PrivateGPT, by API
   - tab: api-reference
     layout:
       - section: Overview
