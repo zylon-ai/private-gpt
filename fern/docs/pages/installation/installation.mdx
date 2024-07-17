@@ -30,9 +30,9 @@ pyenv local 3.11
 PrivateGPT allows to customize the setup -from fully local to cloud based- by deciding the modules to use.
 Here are the different options available:
 
-- LLM: "llama-cpp", "ollama", "sagemaker", "openai", "openailike", "azopenai"
-- Embeddings: "huggingface", "openai", "sagemaker", "azopenai"
-- Vector stores: "qdrant", "chroma", "postgres"
+- LLM: "ollama", "llama-cpp", "sagemaker", "openai", "openailike", "azopenai", "gemini"
+- Embeddings: "ollama", "huggingface", "openai", "sagemaker", "azopenai", "gemini"
+- Vector stores: "qdrant", "chroma", "postgres", "clickhouse"
 - UI: whether or not to enable UI (Gradio) or just go with the API
 
 In order to only install the required dependencies, PrivateGPT offers different `extras` that can be combined during the installation process:
@@ -50,14 +50,17 @@ Where `<extra>` can be any of the following:
 - llms-openai: adds support for OpenAI LLM, requires OpenAI API key
 - llms-openai-like: adds support for 3rd party LLM providers that are compatible with OpenAI's API
 - llms-azopenai: adds support for Azure OpenAI LLM, requires Azure OpenAI inference endpoints
+- llms-gemini: adds support for Gemini LLM, requires Gemini API key
 - embeddings-ollama: adds support for Ollama Embeddings, requires Ollama running locally
 - embeddings-huggingface: adds support for local Embeddings using HuggingFace
 - embeddings-sagemaker: adds support for Amazon Sagemaker Embeddings, requires Sagemaker inference endpoints
 - embeddings-openai = adds support for OpenAI Embeddings, requires OpenAI API key
 - embeddings-azopenai = adds support for Azure OpenAI Embeddings, requires Azure OpenAI inference endpoints
+- embeddings-gemini: adds support for Gemini Embeddings, requires Gemini API key
 - vector-stores-qdrant: adds support for Qdrant vector store
 - vector-stores-chroma: adds support for Chroma DB vector store
 - vector-stores-postgres: adds support for Postgres vector store
+- vector-stores-clickhouse: adds support for Clickhouse vector store
 
 ## Recommended Setups
 
