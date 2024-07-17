@@ -510,8 +510,8 @@ class QdrantSettings(BaseModel):
 
 class MilvusSettings(BaseModel):
     uri: str = Field(
-        "./milvus_llamaindex.db",
-        description="The URI of the Milvus instance. For example: './milvus_llamaindex.db' for Milvus Lite.",
+        "local_data/private_gpt/milvus_local.db",
+        description="The URI of the Milvus instance. For example: 'local_data/private_gpt/milvus_local.db' for Milvus Lite.",
     )
     token: str = Field(
         "",
