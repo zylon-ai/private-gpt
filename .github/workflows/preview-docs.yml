@@ -46,7 +46,6 @@ jobs:
         with:
           script: |
             const preview_url = '${{ steps.generate_docs.outputs.preview_url }}';
-            const issue_number = context.issue.number;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
