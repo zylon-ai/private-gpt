@@ -1,0 +1,37 @@
+name: Enhancement
+description: Suggest an enhancement or improvement to the project.
+title: "[FEATURE] "
+labels: ["enhancement"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Please describe the enhancement or improvement you would like to suggest.**
+
+  - type: textarea
+    id: feature_description
+    attributes:
+      label: Feature Description
+      description: Provide a detailed description of the enhancement.
+      placeholder: "Detailed description of the enhancement"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Reason
+      description: Explain the reason for this enhancement.
+      placeholder: "Reason for the enhancement"
+    validations:
+      required: true
+
+  - type: textarea
+    id: value
+    attributes:
+      label: Value of Feature
+      description: Describe the value or benefits this feature will bring.
+      placeholder: "Value or benefits of the feature"
+    validations:
+      required: true
