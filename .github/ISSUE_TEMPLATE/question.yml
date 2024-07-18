@@ -1,0 +1,19 @@
+name: Question
+description: Ask a question about the project.
+title: "[QUESTION] "
+labels: ["question"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Please describe your question in detail.**
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Provide a detailed description of your question.
+      placeholder: "Detailed description of the question"
+    validations:
+      required: true
