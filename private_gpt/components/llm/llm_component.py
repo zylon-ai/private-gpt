@@ -35,10 +35,10 @@ class LLMComponent:
                 )
             except Exception as e:
                 logger.warning(
-                    "Failed to download tokenizer %s. Falling back to "
-                    "default tokenizer.",
-                    settings.llm.tokenizer,
-                    e,
+                    f"Failed to download tokenizer {settings.llm.tokenizer}: {e!s}"
+                    f"Please follow the instructions in the documentation to download it if needed: "
+                    f"https://docs.privategpt.dev/installation/getting-started/troubleshooting#tokenizer-setup."
+                    f"Falling back to default tokenizer."
                 )
 
         logger.info("Initializing the LLM in mode=%s", llm_mode)
