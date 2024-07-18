@@ -31,6 +31,7 @@ llama-index-embeddings-openai = {version ="^0.1.10", optional = true}
 llama-index-embeddings-azure-openai = {version ="^0.1.10", optional = true}
 llama-index-embeddings-gemini = {version ="^0.1.8", optional = true}
 llama-index-vector-stores-qdrant = {version ="^0.2.10", optional = true}
+llama-index-vector-stores-milvus = {version ="^0.1.20", optional = true}
 llama-index-vector-stores-chroma = {version ="^0.1.10", optional = true}
 llama-index-vector-stores-postgres = {version ="^0.1.11", optional = true}
 llama-index-vector-stores-clickhouse = {version ="^0.1.3", optional = true}
@@ -78,6 +79,7 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 vector-stores-clickhouse = ["llama-index-vector-stores-clickhouse", "clickhouse_connect"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
 vector-stores-postgres = ["llama-index-vector-stores-postgres"]
+vector-stores-milvus = ["llama-index-vector-stores-milvus"]
 storage-nodestore-postgres = ["llama-index-storage-docstore-postgres","llama-index-storage-index-store-postgres","psycopg2-binary","asyncpg"]
 rerank-sentence-transformers = ["torch", "sentence-transformers"]
 

@@ -121,6 +121,45 @@ class VectorStoreComponent:
                         collection_name="make_this_parameterizable_per_api_call",
                     ),  # TODO
                 )
+
+            case "milvus":
+                try:
+                    from llama_index.vector_stores.milvus import (  # type: ignore
+                        MilvusVectorStore,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Milvus dependencies not found, install with `poetry install --extras vector-stores-milvus`"
+                    ) from e
+
+                if settings.milvus is None:
+                    logger.info(
+                        "Milvus config not found. Using default settings.\n"
+                        "Trying to connect to Milvus at local_data/private_gpt/milvus/milvus_local.db "
+                        "with collection 'make_this_parameterizable_per_api_call'."
+                    )
+
+                    self.vector_store = typing.cast(
+                        BasePydanticVectorStore,
+                        MilvusVectorStore(
+                            dim=settings.embedding.embed_dim,
+                            collection_name="make_this_parameterizable_per_api_call",
+                            overwrite=True,
+                        ),
+                    )
+
+                else:
+                    self.vector_store = typing.cast(
+                        BasePydanticVectorStore,
+                        MilvusVectorStore(
+                            dim=settings.embedding.embed_dim,
+                            uri=settings.milvus.uri,
+                            token=settings.milvus.token,
+                            collection_name=settings.milvus.collection_name,
+                            overwrite=settings.milvus.overwrite,
+                        ),
+                    )
+
             case "clickhouse":
                 try:
                     from clickhouse_connect import (  # type: ignore
