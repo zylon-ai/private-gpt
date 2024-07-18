@@ -11,13 +11,17 @@ jobs:
   preview-docs:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      pull-requests: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: refs/pull/${{ github.event.pull_request.number }}/merge
 
-      - name: Setup Node.js 
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "18"
@@ -37,14 +41,14 @@ jobs:
           # Set the output for the step
           echo "::set-output name=preview_url::$preview_url"
       - name: Comment PR with URL using github-actions bot
-        uses: actions/github-script@v4
+        uses: actions/github-script@v7
         if: ${{ steps.generate_docs.outputs.preview_url }}
         with:
           script: |
             const preview_url = '${{ steps.generate_docs.outputs.preview_url }}';
-            const issue_number = context.issue.number;
-            github.issues.createComment({
-              ...context.repo,
-              issue_number: issue_number,
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               body: `Published docs preview URL: ${preview_url}`
             })
