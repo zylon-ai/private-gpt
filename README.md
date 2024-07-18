@@ -41,7 +41,7 @@ download script, ingestion script, documents folder watch, etc.
 > 💡 If you are looking for an **enterprise-ready, fully private AI workspace**
 > check out [Zylon's website](https://zylon.ai)  or [request a demo](https://cal.com/zylon/demo).
 > Crafted by the team behind PrivateGPT, Zylon is a best-in-class AI collaborative
-> workspace that can be easily deployed on-prem or in your private cloud.
+> workspace that can be easily deployed on-premise (data center, bare metal) or in your private cloud (AWS, GCP, Azure...).
 
 ## 🎞️ Overview
 DISCLAIMER: This README is not updated as frequently as the [documentation](https://docs.privategpt.dev/).
