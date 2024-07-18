@@ -17,13 +17,13 @@ repos:
   hooks:
   - id: black
     name: Formatting (black)
-    entry: black
+    entry: make format
     language: system
     types: [python]
     stages: [commit]
   - id: ruff
     name: Linter (ruff)
-    entry: ruff
+    entry: make lint
     language: system
     types: [python]
     stages: [commit]
