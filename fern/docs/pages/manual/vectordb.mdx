@@ -50,12 +50,12 @@ poetry install --extras vector-stores-milvus
 The available configuration options are:
 | Field        | Description |
 |--------------|-------------|
-| uri     | Default is set to "local_data/private_gpt/milvus_local.db" as a local file, you can also set up a more performant Milvus server on docker or k8s.|
+| uri     | Default is set to "local_data/private_gpt/milvus/milvus_local.db" as a local file, you can also set up a more performant Milvus server on docker or k8s.|
 | token          | Pair with Milvus server on docker or k8s.|
 | collection_name         | The name of the collection, set to default "milvus_db".|
 | overwrite    | Overwrite the data in collection if it existed, set to default as True. |
 
-To obtain a local setup (disk-based database) without running a Milvus server, configure the uri value in settings.yaml, to store in local_data/private_gpt/milvus_local.db.
+To obtain a local setup (disk-based database) without running a Milvus server, configure the uri value in settings.yaml, to store in local_data/private_gpt/milvus/milvus_local.db.
 
 ### Chroma configuration
 

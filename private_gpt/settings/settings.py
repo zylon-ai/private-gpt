@@ -510,15 +510,14 @@ class QdrantSettings(BaseModel):
 
 class MilvusSettings(BaseModel):
     uri: str = Field(
-        "local_data/private_gpt/milvus_local.db",
-        description="The URI of the Milvus instance. For example: 'local_data/private_gpt/milvus_local.db' for Milvus Lite.",
+        "local_data/private_gpt/milvus/milvus_local.db",
+        description="The URI of the Milvus instance. For example: 'local_data/private_gpt/milvus/milvus_local.db' for Milvus Lite.",
     )
     token: str = Field(
         "",
         description=(
             "A valid access token to access the specified Milvus instance. "
             "This can be used as a recommended alternative to setting user and password separately. "
-            "For example: 'root:Milvus', which is the default credential of the root user."
         ),
     )
     collection_name: str = Field(

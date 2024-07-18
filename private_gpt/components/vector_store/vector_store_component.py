@@ -135,7 +135,7 @@ class VectorStoreComponent:
                 if settings.milvus is None:
                     logger.info(
                         "Milvus config not found. Using default settings.\n"
-                        "Trying to connect to Milvus at ./milvus_llamaindex.db "
+                        "Trying to connect to Milvus at local_data/private_gpt/milvus/milvus_local.db "
                         "with collection 'make_this_parameterizable_per_api_call'."
                     )
 
