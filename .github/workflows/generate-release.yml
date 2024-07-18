@@ -44,19 +44,18 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: HackerHappyHour/tagging-strategy@v3
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            {{ if eq ${{matrix.type}} "external" }}latest{{ end }}
+            {{ if eq ${{matrix.type}} "external" }}type=semver,pattern={{version}}{{ end }}
             type=semver,pattern={{version}}-${{ matrix.type }}
+            {{ if eq ${{matrix.type}} "external" }}type=semver,pattern={{major}}.{{minor}}{{ end }}
             type=semver,pattern={{major}}.{{minor}}-${{ matrix.type }}
+            {{ if eq ${{matrix.type}} "external" }}type=semver,pattern={{major}}{{ end }}
             type=semver,pattern={{major}}-${{ matrix.type }}
             type=sha
-          extra-tags: |
-            type=semver,pattern={{version}}::${{ matrix.type == 'external'}}
-            type=semver,pattern={{major}}.{{minor}}::${{ matrix.type == 'external'}}
-            type=semver,pattern={{major}}::${{ matrix.type == 'external'}}
-
             
 
       - name: Build and push Docker image
