@@ -32,7 +32,7 @@ navigation:
         contents:
           - page: Introduction
             path: ./docs/pages/overview/welcome.mdx
-  # How to install privateGPT, with FAQ and troubleshooting
+  # How to install PrivateGPT, with FAQ and troubleshooting
   - tab: installation
     layout:
       - section: Getting started
@@ -43,7 +43,7 @@ navigation:
             path: ./docs/pages/installation/installation.mdx
           - page: Troubleshooting
             path: ./docs/pages/installation/troubleshooting.mdx
-  # Manual of privateGPT: how to use it and configure it
+  # Manual of PrivateGPT: how to use it and configure it
   - tab: manual
     layout:
       - section: General configuration
@@ -70,8 +70,10 @@ navigation:
             path: ./docs/pages/manual/reranker.mdx
       - section: User Interface
         contents:
-          - page: User interface (Gradio) Manual
-            path: ./docs/pages/manual/ui.mdx
+          - page: Gradio Manual
+            path: ./docs/pages/ui/gradio.mdx
+          - page: Alternatives
+            path: ./docs/pages/ui/alternatives.mdx
   # Small code snippet or example of usage to help users
   - tab: recipes
     layout:
@@ -80,7 +82,7 @@ navigation:
           # TODO: add recipes
           - page: List of LLMs
             path: ./docs/pages/recipes/list-llm.mdx
-  # More advanced usage of privateGPT, by API
+  # More advanced usage of PrivateGPT, by API
   - tab: api-reference
     layout:
       - section: Overview
