@@ -48,13 +48,15 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
+            {{ if eq ${{matrix.type}} "external" }}latest{{ end }}
+            {{ if eq ${{matrix.type}} "external" }}type=semver,pattern={{version}}{{ end }}
             type=semver,pattern={{version}}-${{ matrix.type }}
-            type=semver,pattern={{major}}.{{minor}}
+            {{ if eq ${{matrix.type}} "external" }}type=semver,pattern={{major}}.{{minor}}{{ end }}
             type=semver,pattern={{major}}.{{minor}}-${{ matrix.type }}
-            type=semver,pattern={{major}}
+            {{ if eq ${{matrix.type}} "external" }}type=semver,pattern={{major}}{{ end }}
             type=semver,pattern={{major}}-${{ matrix.type }}
             type=sha
+            
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
