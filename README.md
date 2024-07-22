@@ -39,7 +39,7 @@ client is provided to test the API, together with a set of useful tools such as 
 download script, ingestion script, documents folder watch, etc.
 
 > 💡 If you are looking for an **enterprise-ready, fully private AI workspace**
-> check out [Zylon's website](https://zylon.ai)  or [request a demo](https://cal.com/zylon/demo).
+> check out [Zylon's website](https://zylon.ai)  or [request a demo](https://cal.com/zylon/demo?source=pgpt-readme).
 > Crafted by the team behind PrivateGPT, Zylon is a best-in-class AI collaborative
 > workspace that can be easily deployed on-premise (data center, bare metal...) or in your private cloud (AWS, GCP, Azure...).
 
