@@ -59,6 +59,22 @@ class AuthSettings(BaseModel):
     )
 
 
+class IngestionSettings(BaseModel):
+    """Ingestion configuration.
+
+    The implementation of the ingestion strategy must
+    """
+
+    enabled: bool = Field(
+        description="Flag indicating if local ingestion is enabled or not.",
+        default=False,
+    )
+    allow_ingest_from: list[str] = Field(
+        description="A list of folders that should be permitted to make ingest requests.",
+        default=[],
+    )
+
+
 class ServerSettings(BaseModel):
     env_name: str = Field(
         description="Name of the environment (prod, staging, local...)"
@@ -74,6 +90,10 @@ class ServerSettings(BaseModel):
 
 
 class DataSettings(BaseModel):
+    local_ingestion: IngestionSettings = Field(
+        description="Ingestion configuration",
+        default_factory=lambda: IngestionSettings(allow_ingest_from=["*"]),
+    )
     local_data_folder: str = Field(
         description="Path to local storage."
         "It will be treated as an absolute path if it starts with /"
