@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Literal, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, Form
 from pydantic import BaseModel, Field
 
 from private_gpt.server.ingest.ingest_service import IngestService
@@ -18,6 +18,15 @@ class IngestTextBody(BaseModel):
             "people can telekinetically manipulate one of the four elements—water, "
             "earth, fire or air—through practices known as 'bending', inspired by "
             "Chinese martial arts."
+        ]
+    )
+    metadata: Dict = Field(None, 
+        examples=[
+            {
+                "title": "Avatar: The Last Airbender",
+                "author": "Michael Dante DiMartino, Bryan Konietzko",
+                "year": "2005",
+            }
         ]
     )
 
@@ -38,7 +47,7 @@ def ingest(request: Request, file: UploadFile) -> IngestResponse:
 
 
 @ingest_router.post("/ingest/file", tags=["Ingestion"])
-def ingest_file(request: Request, file: UploadFile) -> IngestResponse:
+def ingest_file(request: Request, file: UploadFile, metadata: str = Form(None)) -> IngestResponse:
     """Ingests and processes a file, storing its chunks to be used as context.
 
     The context obtained from files is later used in
@@ -57,7 +66,9 @@ def ingest_file(request: Request, file: UploadFile) -> IngestResponse:
     service = request.state.injector.get(IngestService)
     if file.filename is None:
         raise HTTPException(400, "No file name provided")
-    ingested_documents = service.ingest_bin_data(file.filename, file.file)
+    
+    metadata_dict = None if metadata is None else eval(metadata)
+    ingested_documents = service.ingest_bin_data(file.filename, file.file, metadata_dict)
     return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
 
 
@@ -77,7 +88,7 @@ def ingest_text(request: Request, body: IngestTextBody) -> IngestResponse:
     service = request.state.injector.get(IngestService)
     if len(body.file_name) == 0:
         raise HTTPException(400, "No file name provided")
-    ingested_documents = service.ingest_text(body.file_name, body.text)
+    ingested_documents = service.ingest_text(body.file_name, body.text, body.metadata)
     return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
 
 
