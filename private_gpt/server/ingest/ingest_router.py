@@ -49,6 +49,10 @@ def ingest(request: Request, file: UploadFile) -> IngestResponse:
 @ingest_router.post("/ingest/file", tags=["Ingestion"])
 def ingest_file(request: Request, file: UploadFile, metadata: str = Form(None)) -> IngestResponse:
     """Ingests and processes a file, storing its chunks to be used as context.
+    
+    metadata: Optional metadata to be associated with the file. 
+    You do not have to specify this field if not needed.
+    e.g. {"title": "Avatar: The Last Airbender", "author": "Michael Dante DiMartino, Bryan Konietzko", "year": "2005"}
 
     The context obtained from files is later used in
     `/chat/completions`, `/completions`, and `/chunks` APIs.
@@ -84,6 +88,7 @@ def ingest_text(request: Request, body: IngestTextBody) -> IngestResponse:
     extracted Metadata (which is later used to improve context retrieval). That ID
     can be used to filter the context used to create responses in
     `/chat/completions`, `/completions`, and `/chunks` APIs.
+
     """
     service = request.state.injector.get(IngestService)
     if len(body.file_name) == 0:
