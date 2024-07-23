@@ -48,7 +48,12 @@ class IngestService:
             settings=settings(),
         )
 
-    def _ingest_data(self, file_name: str, file_data: AnyStr, file_metadata : dict | None = None) -> list[IngestedDoc]:
+    def _ingest_data(
+        self,
+        file_name: str,
+        file_data: AnyStr,
+        file_metadata: dict[str, str] | None = None,
+    ) -> list[IngestedDoc]:
         logger.debug("Got file data of size=%s to ingest", len(file_data))
         # llama-index mainly supports reading from files, so
         # we have to create a tmp file to read for it to work
@@ -65,18 +70,28 @@ class IngestService:
                 tmp.close()
                 path_to_tmp.unlink()
 
-    def ingest_file(self, file_name: str, file_data: Path, file_metadata : dict | None = None) -> list[IngestedDoc]:
+    def ingest_file(
+        self,
+        file_name: str,
+        file_data: Path,
+        file_metadata: dict[str, str] | None = None,
+    ) -> list[IngestedDoc]:
         logger.info("Ingesting file_name=%s", file_name)
         documents = self.ingest_component.ingest(file_name, file_data, file_metadata)
         logger.info("Finished ingestion file_name=%s", file_name)
         return [IngestedDoc.from_document(document) for document in documents]
 
-    def ingest_text(self, file_name: str, text: str, metadata : dict | None = None) -> list[IngestedDoc]:
+    def ingest_text(
+        self, file_name: str, text: str, metadata: dict[str, str] | None = None
+    ) -> list[IngestedDoc]:
         logger.debug("Ingesting text data with file_name=%s", file_name)
         return self._ingest_data(file_name, text, metadata)
 
     def ingest_bin_data(
-        self, file_name: str, raw_file_data: BinaryIO, file_metadata : dict | None = None
+        self,
+        file_name: str,
+        raw_file_data: BinaryIO,
+        file_metadata: dict[str, str] | None = None,
     ) -> list[IngestedDoc]:
         logger.debug("Ingesting binary data with file_name=%s", file_name)
         file_data = raw_file_data.read()

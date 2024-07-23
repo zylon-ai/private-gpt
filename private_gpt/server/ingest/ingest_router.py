@@ -1,6 +1,6 @@
-from typing import Literal, Dict
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, Form
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from private_gpt.server.ingest.ingest_service import IngestService
@@ -20,14 +20,15 @@ class IngestTextBody(BaseModel):
             "Chinese martial arts."
         ]
     )
-    metadata: Dict = Field(None, 
+    metadata: dict[str, str] = Field(
+        None,
         examples=[
             {
                 "title": "Avatar: The Last Airbender",
                 "author": "Michael Dante DiMartino, Bryan Konietzko",
                 "year": "2005",
             }
-        ]
+        ],
     )
 
 
@@ -47,12 +48,14 @@ def ingest(request: Request, file: UploadFile) -> IngestResponse:
 
 
 @ingest_router.post("/ingest/file", tags=["Ingestion"])
-def ingest_file(request: Request, file: UploadFile, metadata: str = Form(None)) -> IngestResponse:
+def ingest_file(
+    request: Request, file: UploadFile, metadata: str = Form(None)
+) -> IngestResponse:
     """Ingests and processes a file, storing its chunks to be used as context.
-    
-    metadata: Optional metadata to be associated with the file. 
+
+    metadata: Optional metadata to be associated with the file.
     You do not have to specify this field if not needed.
-    e.g. {"title": "Avatar: The Last Airbender", "author": "Michael Dante DiMartino, Bryan Konietzko", "year": "2005"}
+    e.g. {"title": "Avatar: The Last Airbender", "year": "2005"}
 
     The context obtained from files is later used in
     `/chat/completions`, `/completions`, and `/chunks` APIs.
@@ -70,9 +73,11 @@ def ingest_file(request: Request, file: UploadFile, metadata: str = Form(None)) 
     service = request.state.injector.get(IngestService)
     if file.filename is None:
         raise HTTPException(400, "No file name provided")
-    
+
     metadata_dict = None if metadata is None else eval(metadata)
-    ingested_documents = service.ingest_bin_data(file.filename, file.file, metadata_dict)
+    ingested_documents = service.ingest_bin_data(
+        file.filename, file.file, metadata_dict
+    )
     return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
 
 

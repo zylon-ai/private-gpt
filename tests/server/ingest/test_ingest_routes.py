@@ -48,16 +48,20 @@ def test_ingest_plain_text(test_client: TestClient) -> None:
 
 def test_ingest_text_with_metadata(test_client: TestClient):
     response = test_client.post(
-        "/v1/ingest/text", json={"file_name": "file_name", "text": "text", "metadata": {"foo": "bar"}}
+        "/v1/ingest/text",
+        json={"file_name": "file_name", "text": "text", "metadata": {"foo": "bar"}},
     )
     assert response.status_code == 200
     ingest_result = IngestResponse.model_validate(response.json())
     assert len(ingest_result.data) == 1
-   
-    assert ingest_result.data[0].doc_metadata == {"file_name" : "file_name", "foo": "bar"}
+
+    assert ingest_result.data[0].doc_metadata == {
+        "file_name": "file_name",
+        "foo": "bar",
+    }
 
 
-def test_ingest_accepts_txt_files(ingest_helper: IngestHelper) -> None:
+def test_ingest_accepts_txt_files_with_metadata(ingest_helper: IngestHelper) -> None:
     path = Path(__file__).parents[0] / "test.txt"
     ingest_result = ingest_helper.ingest_file_with_metadata(path, {"foo": "bar"})
     assert len(ingest_result.data) == 1
