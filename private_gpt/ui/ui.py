@@ -444,6 +444,7 @@ class PrivateGptUi:
                             "sagemaker": config_settings.sagemaker.llm_endpoint_name,
                             "mock": llm_mode,
                             "ollama": config_settings.ollama.llm_model,
+                            "gemini": config_settings.gemini.model,
                         }
 
                         if llm_mode not in model_mapping:

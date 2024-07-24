@@ -55,8 +55,17 @@ class EmbeddingComponent:
                         "OpenAI dependencies not found, install with `poetry install --extras embeddings-openai`"
                     ) from e
 
-                openai_settings = settings.openai.api_key
-                self.embedding_model = OpenAIEmbedding(api_key=openai_settings)
+                api_base = (
+                    settings.openai.embedding_api_base or settings.openai.api_base
+                )
+                api_key = settings.openai.embedding_api_key or settings.openai.api_key
+                model = settings.openai.embedding_model
+
+                self.embedding_model = OpenAIEmbedding(
+                    api_base=api_base,
+                    api_key=api_key,
+                    model=model,
+                )
             case "ollama":
                 try:
                     from llama_index.embeddings.ollama import (  # type: ignore
@@ -89,6 +98,20 @@ class EmbeddingComponent:
                     api_key=azopenai_settings.api_key,
                     azure_endpoint=azopenai_settings.azure_endpoint,
                     api_version=azopenai_settings.api_version,
+                )
+            case "gemini":
+                try:
+                    from llama_index.embeddings.gemini import (  # type: ignore
+                        GeminiEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Gemini dependencies not found, install with `poetry install --extras embeddings-gemini`"
+                    ) from e
+
+                self.embedding_model = GeminiEmbedding(
+                    api_key=settings.gemini.api_key,
+                    model_name=settings.gemini.embedding_model,
                 )
             case "mock":
                 # Not a random number, is the dimensionality used by

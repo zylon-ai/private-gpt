@@ -4,10 +4,10 @@ import typing
 from injector import inject, singleton
 from llama_index.core.indices.vector_store import VectorIndexRetriever, VectorStoreIndex
 from llama_index.core.vector_stores.types import (
+    BasePydanticVectorStore,
     FilterCondition,
     MetadataFilter,
     MetadataFilters,
-    VectorStore,
 )
 
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
@@ -32,7 +32,7 @@ def _doc_id_metadata_filter(
 @singleton
 class VectorStoreComponent:
     settings: Settings
-    vector_store: VectorStore
+    vector_store: BasePydanticVectorStore
 
     @inject
     def __init__(self, settings: Settings) -> None:
@@ -54,7 +54,7 @@ class VectorStoreComponent:
                     )
 
                 self.vector_store = typing.cast(
-                    VectorStore,
+                    BasePydanticVectorStore,
                     PGVectorStore.from_params(
                         **settings.postgres.model_dump(exclude_none=True),
                         table_name="embeddings",
@@ -87,7 +87,7 @@ class VectorStoreComponent:
                 )  # TODO
 
                 self.vector_store = typing.cast(
-                    VectorStore,
+                    BasePydanticVectorStore,
                     BatchedChromaVectorStore(
                         chroma_client=chroma_client, chroma_collection=chroma_collection
                     ),
@@ -115,11 +115,77 @@ class VectorStoreComponent:
                         **settings.qdrant.model_dump(exclude_none=True)
                     )
                 self.vector_store = typing.cast(
-                    VectorStore,
+                    BasePydanticVectorStore,
                     QdrantVectorStore(
                         client=client,
                         collection_name="make_this_parameterizable_per_api_call",
                     ),  # TODO
+                )
+
+            case "milvus":
+                try:
+                    from llama_index.vector_stores.milvus import (  # type: ignore
+                        MilvusVectorStore,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Milvus dependencies not found, install with `poetry install --extras vector-stores-milvus`"
+                    ) from e
+
+                if settings.milvus is None:
+                    logger.info(
+                        "Milvus config not found. Using default settings.\n"
+                        "Trying to connect to Milvus at local_data/private_gpt/milvus/milvus_local.db "
+                        "with collection 'make_this_parameterizable_per_api_call'."
+                    )
+
+                    self.vector_store = typing.cast(
+                        BasePydanticVectorStore,
+                        MilvusVectorStore(
+                            dim=settings.embedding.embed_dim,
+                            collection_name="make_this_parameterizable_per_api_call",
+                            overwrite=True,
+                        ),
+                    )
+
+                else:
+                    self.vector_store = typing.cast(
+                        BasePydanticVectorStore,
+                        MilvusVectorStore(
+                            dim=settings.embedding.embed_dim,
+                            uri=settings.milvus.uri,
+                            token=settings.milvus.token,
+                            collection_name=settings.milvus.collection_name,
+                            overwrite=settings.milvus.overwrite,
+                        ),
+                    )
+
+            case "clickhouse":
+                try:
+                    from clickhouse_connect import (  # type: ignore
+                        get_client,
+                    )
+                    from llama_index.vector_stores.clickhouse import (  # type: ignore
+                        ClickHouseVectorStore,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "ClickHouse dependencies not found, install with `poetry install --extras vector-stores-clickhouse`"
+                    ) from e
+
+                if settings.clickhouse is None:
+                    raise ValueError(
+                        "ClickHouse settings not found. Please provide settings."
+                    )
+
+                clickhouse_client = get_client(
+                    host=settings.clickhouse.host,
+                    port=settings.clickhouse.port,
+                    username=settings.clickhouse.username,
+                    password=settings.clickhouse.password,
+                )
+                self.vector_store = ClickHouseVectorStore(
+                    clickhouse_client=clickhouse_client
                 )
             case _:
                 # Should be unreachable

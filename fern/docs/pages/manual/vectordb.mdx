@@ -1,7 +1,7 @@
 ## Vectorstores
-PrivateGPT supports [Qdrant](https://qdrant.tech/), [Chroma](https://www.trychroma.com/) and [PGVector](https://github.com/pgvector/pgvector) as vectorstore providers. Qdrant being the default.
+PrivateGPT supports [Qdrant](https://qdrant.tech/), [Milvus](https://milvus.io/), [Chroma](https://www.trychroma.com/), [PGVector](https://github.com/pgvector/pgvector) and [ClickHouse](https://github.com/ClickHouse/ClickHouse) as vectorstore providers. Qdrant being the default.
 
-In order to select one or the other, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant`, `chroma` or `postgres`.
+In order to select one or the other, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant`, `milvus`, `chroma`, `postgres` and `clickhouse`.
 
 ```yaml
 vectorstore:
@@ -38,6 +38,24 @@ To obtain a local setup (disk-based database) without running a Qdrant server, c
 qdrant:
   path: local_data/private_gpt/qdrant
 ```
+
+### Milvus configuration
+
+To enable Milvus, set the `vectorstore.database` property in the `settings.yaml` file to `milvus` and install the `milvus` extra.
+
+```bash
+poetry install --extras vector-stores-milvus
+```
+
+The available configuration options are:
+| Field        | Description |
+|--------------|-------------|
+| uri     | Default is set to "local_data/private_gpt/milvus/milvus_local.db" as a local file; you can also set up a more performant Milvus server on docker or k8s e.g.http://localhost:19530, as your uri; To use Zilliz Cloud, adjust the uri and token to Endpoint and Api key in Zilliz Cloud.|
+| token          | Pair with Milvus server on docker or k8s or zilliz cloud api key.|
+| collection_name         | The name of the collection, set to default "milvus_db".|
+| overwrite    | Overwrite the data in collection if it existed, set to default as True. |
+
+To obtain a local setup (disk-based database) without running a Milvus server, configure the uri value in settings.yaml, to store in local_data/private_gpt/milvus/milvus_local.db.
 
 ### Chroma configuration
 
@@ -101,3 +119,69 @@ Indexes:
 postgres=# 
 ```
 The dimensions of the embeddings columns will be set based on the `embedding.embed_dim` value.  If the embedding model changes this table may need to be dropped and recreated to avoid a dimension mismatch.
+
+### ClickHouse
+
+To utilize ClickHouse as the vector store, a [ClickHouse](https://github.com/ClickHouse/ClickHouse) database must be employed.
+
+To enable ClickHouse, set the `vectorstore.database` property in the `settings.yaml` file to `clickhouse` and install the `vector-stores-clickhouse` extra.
+
+```bash
+poetry install --extras vector-stores-clickhouse
+```
+
+ClickHouse settings can be configured by setting values to the `clickhouse` property in the `settings.yaml` file.
+
+The available configuration options are:
+| Field                | Description                                                    |
+|----------------------|----------------------------------------------------------------|
+| **host**             | The server hosting the ClickHouse database. Default is `localhost` |
+| **port**             | The port on which the ClickHouse database is accessible. Default is `8123` |
+| **username**         | The username for database access. Default is `default` |
+| **password**         | The password for database access. (Optional) |
+| **database**         | The specific database to connect to. Default is `__default__` |
+| **secure**           | Use https/TLS for secure connection to the server. Default is `false` |
+| **interface**        | The protocol used for the connection, either 'http' or 'https'. (Optional) |
+| **settings**         | Specific ClickHouse server settings to be used with the session. (Optional) |
+| **connect_timeout**  | Timeout in seconds for establishing a connection. (Optional) |
+| **send_receive_timeout** | Read timeout in seconds for http connection. (Optional) |
+| **verify**           | Verify the server certificate in secure/https mode. (Optional) |
+| **ca_cert**          | Path to Certificate Authority root certificate (.pem format). (Optional) |
+| **client_cert**      | Path to TLS Client certificate (.pem format). (Optional) |
+| **client_cert_key**  | Path to the private key for the TLS Client certificate. (Optional) |
+| **http_proxy**       | HTTP proxy address. (Optional) |
+| **https_proxy**      | HTTPS proxy address. (Optional) |
+| **server_host_name** | Server host name to be checked against the TLS certificate. (Optional) |
+
+For example:
+```yaml
+vectorstore:
+  database: clickhouse
+
+clickhouse:
+  host: localhost
+  port: 8443
+  username: admin
+  password: <PASSWORD>
+  database: embeddings
+  secure: false
+```
+
+The following table will be created in the database:
+```
+clickhouse-client
+:) \d embeddings.llama_index
+                                   Table "llama_index"
+  № |  name     | type                                         | default_type | default_expression | comment | codec_expression | ttl_expression
+----|-----------|----------------------------------------------|--------------|--------------------|---------|------------------|---------------
+  1 | id        | String                                       |              |                    |         |                  |
+  2 | doc_id    | String                                       |              |                    |         |                  |
+  3 | text      | String                                       |              |                    |         |                  |
+  4 | vector    | Array(Float32)                               |              |                    |         |                  |
+  5 | node_info | Tuple(start Nullable(UInt64), end Nullable(UInt64)) |       |                    |         |                  |
+  6 | metadata  | String                                       |              |                    |         |                  |
+
+clickhouse-client
+```
+
+The dimensions of the embeddings columns will be set based on the `embedding.embed_dim` value. If the embedding model changes, this table may need to be dropped and recreated to avoid a dimension mismatch.

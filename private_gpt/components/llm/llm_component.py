@@ -35,10 +35,10 @@ class LLMComponent:
                 )
             except Exception as e:
                 logger.warning(
-                    "Failed to download tokenizer %s. Falling back to "
-                    "default tokenizer.",
-                    settings.llm.tokenizer,
-                    e,
+                    f"Failed to download tokenizer {settings.llm.tokenizer}: {e!s}"
+                    f"Please follow the instructions in the documentation to download it if needed: "
+                    f"https://docs.privategpt.dev/installation/getting-started/troubleshooting#tokenizer-setup."
+                    f"Falling back to default tokenizer."
                 )
 
         logger.info("Initializing the LLM in mode=%s", llm_mode)
@@ -123,6 +123,9 @@ class LLMComponent:
                     max_new_tokens=settings.llm.max_new_tokens,
                     messages_to_prompt=prompt_style.messages_to_prompt,
                     completion_to_prompt=prompt_style.completion_to_prompt,
+                    tokenizer=settings.llm.tokenizer,
+                    timeout=openai_settings.request_timeout,
+                    reuse_client=False,
                 )
             case "ollama":
                 try:
@@ -186,6 +189,19 @@ class LLMComponent:
                     api_key=azopenai_settings.api_key,
                     azure_endpoint=azopenai_settings.azure_endpoint,
                     api_version=azopenai_settings.api_version,
+                )
+            case "gemini":
+                try:
+                    from llama_index.llms.gemini import (  # type: ignore
+                        Gemini,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Google Gemini dependencies not found, install with `poetry install --extras llms-gemini`"
+                    ) from e
+                gemini_settings = settings.gemini
+                self.llm = Gemini(
+                    model_name=gemini_settings.model, api_key=gemini_settings.api_key
                 )
             case "mock":
                 self.llm = MockLLM()
