@@ -37,7 +37,8 @@ def create_app(root_injector: Injector) -> FastAPI:
 
     # Add LlamaIndex simple observability
     global_handler = create_global_handler("simple")
-    LlamaIndexSettings.callback_manager = CallbackManager([global_handler])
+    if global_handler is not None:
+        LlamaIndexSettings.callback_manager = CallbackManager([global_handler])
 
     settings = root_injector.get(Settings)
     if settings.server.cors.enabled:
