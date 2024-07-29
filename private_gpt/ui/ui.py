@@ -1,6 +1,4 @@
 """This file should be imported if and only if you want to run the UI locally."""
-
-import itertools
 import logging
 import time
 from collections.abc import Iterable
@@ -113,21 +111,20 @@ class PrivateGptUi:
             yield full_response
 
         def build_history() -> list[ChatMessage]:
-            history_messages: list[ChatMessage] = list(
-                itertools.chain(
-                    *[
-                        [
-                            ChatMessage(content=interaction[0], role=MessageRole.USER),
-                            ChatMessage(
-                                # Remove from history content the Sources information
-                                content=interaction[1].split(SOURCES_SEPARATOR)[0],
-                                role=MessageRole.ASSISTANT,
-                            ),
-                        ]
-                        for interaction in history
-                    ]
+            history_messages: list[ChatMessage] = []
+
+            for interaction in history:
+                history_messages.append(
+                    ChatMessage(content=interaction[0], role=MessageRole.USER)
                 )
-            )
+                if len(interaction) > 1 and interaction[1] is not None:
+                    history_messages.append(
+                        ChatMessage(
+                            # Remove from history content the Sources information
+                            content=interaction[1].split(SOURCES_SEPARATOR)[0],
+                            role=MessageRole.ASSISTANT,
+                        )
+                    )
 
             # max 20 messages to try to avoid context overflow
             return history_messages[:20]
