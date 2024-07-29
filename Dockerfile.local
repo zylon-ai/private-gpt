@@ -35,8 +35,17 @@ ENV PYTHONPATH="$PYTHONPATH:/home/worker/app/private_gpt/"
 EXPOSE 8080
 
 # Prepare a non-root user
+# More info about how to configure UIDs and GIDs in Docker:
+# https://github.com/systemd/systemd/blob/main/docs/UIDS-GIDS.md
+
+# Define the User ID (UID) for the non-root user
+# UID 100 is chosen to avoid conflicts with existing system users
 ARG UID=100
+
+# Define the Group ID (GID) for the non-root user
+# GID 65534 is often used for the 'nogroup' or 'nobody' group
 ARG GID=65534
+
 RUN adduser --system --gid ${GID} --uid ${UID} --home /home/worker worker
 WORKDIR /home/worker/app
 
