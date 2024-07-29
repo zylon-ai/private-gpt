@@ -29,7 +29,7 @@ AVATAR_BOT = THIS_DIRECTORY_RELATIVE / "avatar-bot.ico"
 
 UI_TAB_TITLE = "My Private GPT"
 
-SOURCES_SEPARATOR = "\n\n Sources: \n"
+SOURCES_SEPARATOR = "<hr>Sources: \n"
 
 MODES = ["Query Files", "Search Files", "LLM Chat (no context from files)"]
 
@@ -107,6 +107,7 @@ class PrivateGptUi:
                             + f"{index}. {source.file} (page {source.page}) \n\n"
                         )
                         used_files.add(f"{source.file}-{source.page}")
+                sources_text += "<hr>\n\n"
                 full_response += sources_text
             yield full_response
 
