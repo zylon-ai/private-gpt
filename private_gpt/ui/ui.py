@@ -486,7 +486,7 @@ class PrivateGptUi:
         blocks = self.get_ui_blocks()
         blocks.queue()
         logger.info("Mounting the gradio UI, at path=%s", path)
-        gr.mount_gradio_app(app, blocks, path=path)
+        gr.mount_gradio_app(app, blocks, path=path, favicon_path=AVATAR_BOT)
 
 
 if __name__ == "__main__":
