@@ -1,4 +1,5 @@
-from typing import Literal
+import json
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
@@ -20,7 +21,7 @@ class IngestTextBody(BaseModel):
             "Chinese martial arts."
         ]
     )
-    metadata: dict[str, str] = Field(
+    metadata: dict[str, Any] = Field(
         None,
         examples=[
             {
@@ -55,6 +56,7 @@ def ingest_file(
 
     metadata: Optional metadata to be associated with the file.
     You do not have to specify this field if not needed.
+    The metadata needs to be in JSON format.
     e.g. {"title": "Avatar: The Last Airbender", "year": "2005"}
 
     The context obtained from files is later used in
@@ -74,7 +76,7 @@ def ingest_file(
     if file.filename is None:
         raise HTTPException(400, "No file name provided")
 
-    metadata_dict = None if metadata is None else eval(metadata)
+    metadata_dict = None if metadata is None else json.loads(metadata)
     ingested_documents = service.ingest_bin_data(
         file.filename, file.file, metadata_dict
     )

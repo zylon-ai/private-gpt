@@ -44,7 +44,7 @@ class BaseIngestComponent(abc.ABC):
         self,
         file_name: str,
         file_data: Path,
-        file_metadata: dict[str, str] | None = None,
+        file_metadata: dict[str, Any] | None = None,
     ) -> list[Document]:
         pass
 
@@ -126,7 +126,7 @@ class SimpleIngestComponent(BaseIngestComponentWithIndex):
         self,
         file_name: str,
         file_data: Path,
-        file_metadata: dict[str, str] | None = None,
+        file_metadata: dict[str, Any] | None = None,
     ) -> list[Document]:
         logger.info("Ingesting file_name=%s", file_name)
         documents = IngestionHelper.transform_file_into_documents(
@@ -191,7 +191,7 @@ class BatchIngestComponent(BaseIngestComponentWithIndex):
         self,
         file_name: str,
         file_data: Path,
-        file_metadata: dict[str, str] | None = None,
+        file_metadata: dict[str, Any] | None = None,
     ) -> list[Document]:
         logger.info("Ingesting file_name=%s", file_name)
         documents = IngestionHelper.transform_file_into_documents(
@@ -281,7 +281,7 @@ class ParallelizedIngestComponent(BaseIngestComponentWithIndex):
         self,
         file_name: str,
         file_data: Path,
-        file_metadata: dict[str, str] | None = None,
+        file_metadata: dict[str, Any] | None = None,
     ) -> list[Document]:
         logger.info("Ingesting file_name=%s", file_name)
         # Running in a single (1) process to release the current
@@ -489,7 +489,7 @@ class PipelineIngestComponent(BaseIngestComponentWithIndex):
         self,
         file_name: str,
         file_data: Path,
-        file_metadata: dict[str, str] | None = None,
+        file_metadata: dict[str, Any] | None = None,
     ) -> list[Document]:
         documents = IngestionHelper.transform_file_into_documents(
             file_name, file_data, file_metadata

@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -19,7 +20,9 @@ class IngestHelper:
         ingest_result = IngestResponse.model_validate(response.json())
         return ingest_result
 
-    def ingest_file_with_metadata(self, path: Path, metadata: dict) -> IngestResponse:
+    def ingest_file_with_metadata(
+        self, path: Path, metadata: dict[str, Any]
+    ) -> IngestResponse:
         files = {
             "file": (path.name, path.open("rb")),
             "metadata": (None, json.dumps(metadata)),
