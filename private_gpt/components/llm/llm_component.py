@@ -146,9 +146,9 @@ class LLMComponent:
                     "repeat_penalty": ollama_settings.repeat_penalty,  # ollama llama-cpp
                 }
 
-                # calculate llm model. If not provided tag, it will be use latest model
+                # calculate llm model. If not provided tag, it will be use latest
                 model_name = (
-                    ollama_settings.llm_model + ':latest'
+                    ollama_settings.llm_model + ":latest"
                     if ":" not in ollama_settings.llm_model
                     else ollama_settings.llm_model
                 )
@@ -164,11 +164,12 @@ class LLMComponent:
 
                 if ollama_settings.autopull_models:
                     try:
-                        installed_models = [model['name'] for model in llm.client.list().get("models", {})]
+                        installed_models = [
+                            model["name"]
+                            for model in llm.client.list().get("models", {})
+                        ]
                         if model_name not in installed_models:
-                            logger.info(
-                                f"Pulling model {model_name}. Please wait..."
-                            )
+                            logger.info(f"Pulling model {model_name}. Please wait...")
                             llm.client.pull(model_name)
                             logger.info(f"Model {model_name} pulled successfully")
                     except Exception as e:
