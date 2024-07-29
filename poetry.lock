@@ -2017,13 +2017,13 @@ test = ["Cython (>=0.29.24,<0.30.0)"]
 
 [[package]]
 name = "httpx"
-version = "0.25.2"
+version = "0.27.0"
 description = "The next generation HTTP client."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "httpx-0.25.2-py3-none-any.whl", hash = "sha256:a05d3d052d9b2dfce0e3896636467f8a5342fb2b902c819428e1ac65413ca118"},
-    {file = "httpx-0.25.2.tar.gz", hash = "sha256:8b8fcaa0c8ea7b05edd69a094e63a2094c4efcb48129fb757361bc423c0ad9e8"},
+    {file = "httpx-0.27.0-py3-none-any.whl", hash = "sha256:71d5465162c13681bff01ad59b2cc68dd838ea1f10e51574bac27103f00c91a5"},
+    {file = "httpx-0.27.0.tar.gz", hash = "sha256:a0cb88a46f32dc874e04ee956e4c2764aba2aa228f650b06788ba6bda2962ab5"},
 ]
 
 [package.dependencies]
@@ -2620,17 +2620,18 @@ llama-index-core = ">=0.10.1,<0.11.0"
 
 [[package]]
 name = "llama-index-llms-ollama"
-version = "0.1.5"
+version = "0.2.2"
 description = "llama-index llms ollama integration"
 optional = true
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "llama_index_llms_ollama-0.1.5-py3-none-any.whl", hash = "sha256:8e237978765458c9b175d2e25fc25162df8dc70a538b1b9ef9ea18617f8cdf5a"},
-    {file = "llama_index_llms_ollama-0.1.5.tar.gz", hash = "sha256:75697d96c860d87e80cce90c9ea425cbd236918458e0feaaee03597068ba9844"},
+    {file = "llama_index_llms_ollama-0.2.2-py3-none-any.whl", hash = "sha256:c224d7c17d641045bc9b6a6681dab434c1c421af0bacb5825eea444fefd8ed78"},
+    {file = "llama_index_llms_ollama-0.2.2.tar.gz", hash = "sha256:0c7f192cb8b768707bd5154b97e2a41284732d62070eb76190dee125e95245ea"},
 ]
 
 [package.dependencies]
 llama-index-core = ">=0.10.1,<0.11.0"
+ollama = ">=0.3.0"
 
 [[package]]
 name = "llama-index-llms-openai"
@@ -3627,6 +3628,20 @@ files = [
 rsa = ["cryptography (>=3.0.0)"]
 signals = ["blinker (>=1.4.0)"]
 signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
+
+[[package]]
+name = "ollama"
+version = "0.3.0"
+description = "The official Python client for Ollama."
+optional = true
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "ollama-0.3.0-py3-none-any.whl", hash = "sha256:cd7010c4e2a37d7f08f36cd35c4592b14f1ec0d1bf3df10342cd47963d81ad7a"},
+    {file = "ollama-0.3.0.tar.gz", hash = "sha256:6ff493a2945ba76cdd6b7912a1cd79a45cfd9ba9120d14adeb63b2b5a7f353da"},
+]
+
+[package.dependencies]
+httpx = ">=0.27.0,<0.28.0"
 
 [[package]]
 name = "onnxruntime"
@@ -6861,4 +6876,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "5e916cce1a7805965795dbaee0e2d24612e54305af4b1936d6bc1fa469b8012f"
+content-hash = "570af23ceef0f40e5e497a7e7b46a3ddfda37b9f9dd17f71669e5cb3aac1cd55"
