@@ -8,20 +8,27 @@ It supports a variety of LLM providers, embeddings providers, and vector stores,
 
 ## Setup configurations available
 You get to decide the setup for these 3 main components:
-- LLM: the large language model provider used for inference. It can be local, or remote, or even OpenAI.
-- Embeddings: the embeddings provider used to encode the input, the documents and the users' queries. Same as the LLM, it can be local, or remote, or even OpenAI.
-- Vector store: the store used to index and retrieve the documents.
+- **LLM**: the large language model provider used for inference. It can be local, or remote, or even OpenAI.
+- **Embeddings**: the embeddings provider used to encode the input, the documents and the users' queries. Same as the LLM, it can be local, or remote, or even OpenAI.
+- **Vector store**: the store used to index and retrieve the documents.
 
 There is an extra component that can be enabled or disabled: the UI. It is a Gradio UI that allows to interact with the API in a more user-friendly way.
 
+<Callout intent = "warning">
+A working **Gradio UI client** is provided to test the API, together with a set of useful tools such as bulk
+model download script, ingestion script, documents folder watch, etc. Please refer to the [UI alternatives](/manual/user-interface/alternatives) page for more UI alternatives.
+</Callout>
+
 ### Setups and Dependencies
-Your setup will be the combination of the different options available. You'll find recommended setups in the [installation](/installation) section.
+Your setup will be the combination of the different options available. You'll find recommended setups in the [installation](./installation) section.
 PrivateGPT uses poetry to manage its dependencies. You can install the dependencies for the different setups by running `poetry install --extras "<extra1> <extra2>..."`.
-Extras are the different options available for each component. For example, to install the dependencies for a a local setup with UI and qdrant as vector database, Ollama as LLM and HuggingFace as local embeddings, you would run
+Extras are the different options available for each component. For example, to install the dependencies for a a local setup with UI and qdrant as vector database, Ollama as LLM and local embeddings, you would run:
 
-`poetry install --extras "ui vector-stores-qdrant llms-ollama embeddings-huggingface"`.
+```bash
+poetry install --extras "ui vector-stores-qdrant llms-ollama embeddings-ollama"
+```
 
-Refer to the [installation](/installation) section for more details.
+Refer to the [installation](./installation) section for more details.
 
 ### Setups and Configuration
 PrivateGPT uses yaml to define its configuration in files named `settings-<profile>.yaml`.
@@ -37,17 +44,6 @@ will load the configuration from `settings.yaml` and `settings-ollama.yaml`.
 
 ## About Fully Local Setups
 In order to run PrivateGPT in a fully local setup, you will need to run the LLM, Embeddings and Vector Store locally.
-### Vector stores
-The vector stores supported (Qdrant, ChromaDB and Postgres) run locally by default.
-### Embeddings
-For local Embeddings there are two options:
-* (Recommended) You can use the 'ollama' option in PrivateGPT, which will connect to your local Ollama instance. Ollama simplifies a lot the installation of local LLMs.
-* You can use the 'embeddings-huggingface' option in PrivateGPT, which will use HuggingFace.
-
-In order for HuggingFace LLM to work (the second option), you need to download the embeddings model to the `models` folder. You can do so by running the `setup` script:
-```bash
-poetry run python scripts/setup
-```
 
 ### LLM
 For local LLM there are two options:
@@ -58,3 +54,14 @@ In order for LlamaCPP powered LLM to work (the second option), you need to downl
 ```bash
 poetry run python scripts/setup
 ```
+### Embeddings
+For local Embeddings there are two options:
+* (Recommended) You can use the 'ollama' option in PrivateGPT, which will connect to your local Ollama instance. Ollama simplifies a lot the installation of local LLMs.
+* You can use the 'embeddings-huggingface' option in PrivateGPT, which will use HuggingFace.
+
+In order for HuggingFace LLM to work (the second option), you need to download the embeddings model to the `models` folder. You can do so by running the `setup` script:
+```bash
+poetry run python scripts/setup
+```
+### Vector stores
+The vector stores supported (Qdrant, Milvus, ChromaDB and Postgres) run locally by default.

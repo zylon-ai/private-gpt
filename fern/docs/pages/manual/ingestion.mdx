@@ -93,7 +93,7 @@ time PGPT_PROFILES=mock python ./scripts/ingest_folder.py ~/my-dir/to-ingest/
 
 ## Supported file formats
 
-privateGPT by default supports all the file formats that contains clear text (for example, `.txt` files, `.html`, etc.).
+PrivateGPT by default supports all the file formats that contains clear text (for example, `.txt` files, `.html`, etc.).
 However, these text based file formats as only considered as text files, and are not pre-processed in any other way.
 
 It also supports the following file formats:
@@ -115,11 +115,15 @@ It also supports the following file formats:
 * `.ipynb`
 * `.json`
 
-**Please note the following nuance**: while `privateGPT` supports these file formats, it **might** require additional
+<Callout intent = "info">
+While `PrivateGPT` supports these file formats, it **might** require additional
 dependencies to be installed in your python's virtual environment.
-For example, if you try to ingest `.epub` files, `privateGPT` might fail to do it, and will instead display an
+For example, if you try to ingest `.epub` files, `PrivateGPT` might fail to do it, and will instead display an
 explanatory error asking you to download the necessary dependencies to install this file format.
+</Callout>
 
-
+<Callout intent = "info">
 **Other file formats might work**, but they will be considered as plain text
 files (in other words, they will be ingested as `.txt` files).
+</Callout>
+

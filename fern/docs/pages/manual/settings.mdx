@@ -3,8 +3,8 @@
 The configuration of your private GPT server is done thanks to `settings` files (more precisely `settings.yaml`).
 These text files are written using the [YAML](https://en.wikipedia.org/wiki/YAML) syntax.
 
-While privateGPT is distributing safe and universal configuration files, you might want to quickly customize your
-privateGPT, and this can be done using the `settings` files.
+While PrivateGPT is distributing safe and universal configuration files, you might want to quickly customize your
+PrivateGPT, and this can be done using the `settings` files.
 
 This project is defining the concept of **profiles** (or configuration profiles).
 This mechanism, using your environment variables, is giving you the ability to easily switch between
@@ -30,15 +30,20 @@ For example, on **linux and macOS**, this gives:
 export PGPT_PROFILES=my_profile_name_here
 ```
 
-Windows Powershell(s) have a different syntax, one of them being:
+Windows Command Prompt (cmd) has a different syntax:
 ```shell
 set PGPT_PROFILES=my_profile_name_here
+```
+
+Windows Powershell has a different syntax:
+```shell
+$env:PGPT_PROFILES="my_profile_name_here"
 ```
 If the above is not working, you might want to try other ways to set an env variable in your window's terminal.
 
 ---
 
-Once you've set this environment variable to the desired profile, you can simply launch your privateGPT,
+Once you've set this environment variable to the desired profile, you can simply launch your PrivateGPT,
 and it will run using your profile on top of the default configuration.
 
 ## Reference

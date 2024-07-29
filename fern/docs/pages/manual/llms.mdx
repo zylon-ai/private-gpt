@@ -193,3 +193,42 @@ or
 
 When the server is started it will print a log *Application startup complete*.
 Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
+
+### Using IPEX-LLM
+
+For a fully private setup on Intel GPUs (such as a local PC with an iGPU, or discrete GPUs like Arc, Flex, and Max), you can use [IPEX-LLM](https://github.com/intel-analytics/ipex-llm).
+
+To deploy Ollama and pull models using IPEX-LLM, please refer to [this guide](https://ipex-llm.readthedocs.io/en/latest/doc/LLM/Quickstart/ollama_quickstart.html). Then, follow the same steps outlined in the [Using Ollama](#using-ollama) section to create a `settings-ollama.yaml` profile and run the private-GPT server.
+
+### Using Gemini
+
+If you cannot run a local model (because you don't have a GPU, for example) or for testing purposes, you may
+decide to run PrivateGPT using Gemini as the LLM and Embeddings model. In addition, you will benefit from
+multimodal inputs, such as text and images, in a very large contextual window.
+
+In order to do so, create a profile `settings-gemini.yaml` with the following contents:
+
+```yaml
+llm:
+  mode: gemini
+
+embedding:
+  mode: gemini
+
+gemini:
+  api_key: <your_gemini_api_key>                # You could skip this configuration and use the GEMINI_API_KEY env var instead
+  model: <gemini_model_to_use>                  # Optional model to use. Default is models/gemini-pro"
+  embedding_model: <gemini_embeddings_to_use>   # Optional model to use. Default is "models/embedding-001"
+```
+
+And run PrivateGPT loading that profile you just created:
+
+`PGPT_PROFILES=gemini make run`
+
+or
+
+`PGPT_PROFILES=gemini poetry run python -m private_gpt`
+
+When the server is started it will print a log *Application startup complete*.
+Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
+

@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -82,7 +82,14 @@ class DataSettings(BaseModel):
 
 class LLMSettings(BaseModel):
     mode: Literal[
-        "llamacpp", "openai", "openailike", "azopenai", "sagemaker", "mock", "ollama"
+        "llamacpp",
+        "openai",
+        "openailike",
+        "azopenai",
+        "sagemaker",
+        "mock",
+        "ollama",
+        "gemini",
     ]
     max_new_tokens: int = Field(
         256,
@@ -121,7 +128,7 @@ class LLMSettings(BaseModel):
 
 
 class VectorstoreSettings(BaseModel):
-    database: Literal["chroma", "qdrant", "postgres"]
+    database: Literal["chroma", "qdrant", "postgres", "clickhouse", "milvus"]
 
 
 class NodeStoreSettings(BaseModel):
@@ -160,7 +167,9 @@ class HuggingFaceSettings(BaseModel):
 
 
 class EmbeddingSettings(BaseModel):
-    mode: Literal["huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock"]
+    mode: Literal[
+        "huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock", "gemini"
+    ]
     ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",
         description=(
@@ -223,6 +232,18 @@ class OpenAISettings(BaseModel):
     )
 
 
+class GeminiSettings(BaseModel):
+    api_key: str
+    model: str = Field(
+        "models/gemini-pro",
+        description="Google Model to use. Example: 'models/gemini-pro'.",
+    )
+    embedding_model: str = Field(
+        "models/embedding-001",
+        description="Google Embedding Model to use. Example: 'models/embedding-001'.",
+    )
+
+
 class OllamaSettings(BaseModel):
     api_base: str = Field(
         "http://localhost:11434",
@@ -271,6 +292,10 @@ class OllamaSettings(BaseModel):
     request_timeout: float = Field(
         120.0,
         description="Time elapsed until ollama times out the request. Default is 120s. Format is float. ",
+    )
+    autopull_models: bool = Field(
+        False,
+        description="If set to True, the Ollama will automatically pull the models from the API base.",
     )
 
 
@@ -336,6 +361,77 @@ class RagSettings(BaseModel):
         description="If set, any documents retrieved from the RAG must meet a certain match score. Acceptable values are between 0 and 1.",
     )
     rerank: RerankSettings
+
+
+class ClickHouseSettings(BaseModel):
+    host: str = Field(
+        "localhost",
+        description="The server hosting the ClickHouse database",
+    )
+    port: int = Field(
+        8443,
+        description="The port on which the ClickHouse database is accessible",
+    )
+    username: str = Field(
+        "default",
+        description="The username to use to connect to the ClickHouse database",
+    )
+    password: str = Field(
+        "",
+        description="The password to use to connect to the ClickHouse database",
+    )
+    database: str = Field(
+        "__default__",
+        description="The default database to use for connections",
+    )
+    secure: bool | str = Field(
+        False,
+        description="Use https/TLS for secure connection to the server",
+    )
+    interface: str | None = Field(
+        None,
+        description="Must be either 'http' or 'https'. Determines the protocol to use for the connection",
+    )
+    settings: dict[str, Any] | None = Field(
+        None,
+        description="Specific ClickHouse server settings to be used with the session",
+    )
+    connect_timeout: int | None = Field(
+        None,
+        description="Timeout in seconds for establishing a connection",
+    )
+    send_receive_timeout: int | None = Field(
+        None,
+        description="Read timeout in seconds for http connection",
+    )
+    verify: bool | None = Field(
+        None,
+        description="Verify the server certificate in secure/https mode",
+    )
+    ca_cert: str | None = Field(
+        None,
+        description="Path to Certificate Authority root certificate (.pem format)",
+    )
+    client_cert: str | None = Field(
+        None,
+        description="Path to TLS Client certificate (.pem format)",
+    )
+    client_cert_key: str | None = Field(
+        None,
+        description="Path to the private key for the TLS Client certificate",
+    )
+    http_proxy: str | None = Field(
+        None,
+        description="HTTP proxy address",
+    )
+    https_proxy: str | None = Field(
+        None,
+        description="HTTPS proxy address",
+    )
+    server_host_name: str | None = Field(
+        None,
+        description="Server host name to be checked against the TLS certificate",
+    )
 
 
 class PostgresSettings(BaseModel):
@@ -419,6 +515,27 @@ class QdrantSettings(BaseModel):
     )
 
 
+class MilvusSettings(BaseModel):
+    uri: str = Field(
+        "local_data/private_gpt/milvus/milvus_local.db",
+        description="The URI of the Milvus instance. For example: 'local_data/private_gpt/milvus/milvus_local.db' for Milvus Lite.",
+    )
+    token: str = Field(
+        "",
+        description=(
+            "A valid access token to access the specified Milvus instance. "
+            "This can be used as a recommended alternative to setting user and password separately. "
+        ),
+    )
+    collection_name: str = Field(
+        "make_this_parameterizable_per_api_call",
+        description="The name of the collection in Milvus. Default is 'make_this_parameterizable_per_api_call'.",
+    )
+    overwrite: bool = Field(
+        True, description="Overwrite the previous collection schema if it exists."
+    )
+
+
 class Settings(BaseModel):
     server: ServerSettings
     data: DataSettings
@@ -429,6 +546,7 @@ class Settings(BaseModel):
     huggingface: HuggingFaceSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
+    gemini: GeminiSettings
     ollama: OllamaSettings
     azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
@@ -436,6 +554,8 @@ class Settings(BaseModel):
     rag: RagSettings
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
+    clickhouse: ClickHouseSettings | None = None
+    milvus: MilvusSettings | None = None
 
 
 """

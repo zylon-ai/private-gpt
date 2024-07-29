@@ -22,20 +22,27 @@ llama-index-readers-file = "^0.1.27"
 llama-index-llms-llama-cpp = {version = "^0.1.4", optional = true}
 llama-index-llms-openai = {version = "^0.1.25", optional = true}
 llama-index-llms-openai-like = {version ="^0.1.3", optional = true}
-llama-index-llms-ollama = {version ="^0.1.5", optional = true}
+llama-index-llms-ollama = {version ="^0.2.2", optional = true}
 llama-index-llms-azure-openai = {version ="^0.1.8", optional = true}
+llama-index-llms-gemini = {version ="^0.1.11", optional = true}
 llama-index-embeddings-ollama = {version ="^0.1.2", optional = true}
 llama-index-embeddings-huggingface = {version ="^0.2.2", optional = true}
 llama-index-embeddings-openai = {version ="^0.1.10", optional = true}
 llama-index-embeddings-azure-openai = {version ="^0.1.10", optional = true}
+llama-index-embeddings-gemini = {version ="^0.1.8", optional = true}
 llama-index-vector-stores-qdrant = {version ="^0.2.10", optional = true}
+llama-index-vector-stores-milvus = {version ="^0.1.20", optional = true}
 llama-index-vector-stores-chroma = {version ="^0.1.10", optional = true}
 llama-index-vector-stores-postgres = {version ="^0.1.11", optional = true}
+llama-index-vector-stores-clickhouse = {version ="^0.1.3", optional = true}
 llama-index-storage-docstore-postgres = {version ="^0.1.3", optional = true}
 llama-index-storage-index-store-postgres = {version ="^0.1.4", optional = true}
 # Postgres
 psycopg2-binary = {version ="^2.9.9", optional = true}
 asyncpg = {version="^0.29.0", optional = true}
+
+# ClickHouse
+clickhouse-connect = {version = "^0.7.15", optional = true}
 
 # Optional Sagemaker dependency
 boto3 = {version ="^1.34.139", optional = true}
@@ -49,23 +56,35 @@ sentence-transformers = {version ="^3.0.1", optional = true}
 
 # Optional UI
 gradio = {version ="^4.37.2", optional = true}
+# Fix: https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/16289#issuecomment-2255106490
+ffmpy = {git = "https://github.com/EuDs63/ffmpy.git", rev = "333a19ee4d21f32537c0508aa1942ef1aa7afe24", optional = true}
+
+# Optional Google Gemini dependency
+google-generativeai = {version ="^0.5.4", optional = true}
+
+# Optional Ollama client
+ollama = {version ="^0.3.0", optional = true}
 
 [tool.poetry.extras]
-ui = ["gradio"]
+ui = ["gradio", "ffmpy"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
 llms-openai = ["llama-index-llms-openai"]
 llms-openai-like = ["llama-index-llms-openai-like"]
-llms-ollama = ["llama-index-llms-ollama"]
+llms-ollama = ["llama-index-llms-ollama", "ollama"]
 llms-sagemaker = ["boto3"]
 llms-azopenai = ["llama-index-llms-azure-openai"]
-embeddings-ollama = ["llama-index-embeddings-ollama"]
+llms-gemini = ["llama-index-llms-gemini", "google-generativeai"]
+embeddings-ollama = ["llama-index-embeddings-ollama", "ollama"]
 embeddings-huggingface = ["llama-index-embeddings-huggingface"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
+embeddings-gemini = ["llama-index-embeddings-gemini"]
 vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
+vector-stores-clickhouse = ["llama-index-vector-stores-clickhouse", "clickhouse_connect"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
 vector-stores-postgres = ["llama-index-vector-stores-postgres"]
+vector-stores-milvus = ["llama-index-vector-stores-milvus"]
 storage-nodestore-postgres = ["llama-index-storage-docstore-postgres","llama-index-storage-index-store-postgres","psycopg2-binary","asyncpg"]
 rerank-sentence-transformers = ["torch", "sentence-transformers"]
 
