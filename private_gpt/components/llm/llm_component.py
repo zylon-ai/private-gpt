@@ -163,17 +163,14 @@ class LLMComponent:
                 )
 
                 if ollama_settings.autopull_models:
-                    try:
-                        installed_models = [
-                            model["name"]
-                            for model in llm.client.list().get("models", {})
-                        ]
-                        if model_name not in installed_models:
-                            logger.info(f"Pulling model {model_name}. Please wait...")
-                            llm.client.pull(model_name)
-                            logger.info(f"Model {model_name} pulled successfully")
-                    except Exception as e:
-                        logger.error(f"Failed to pull model {model_name}: {e!s}")
+                    from private_gpt.utils.ollama import check_connection, pull_model
+
+                    if not check_connection(llm.client):
+                        raise ValueError(
+                            f"Failed to connect to Ollama, "
+                            f"check if Ollama server is running on {ollama_settings.api_base}"
+                        )
+                    pull_model(llm.client, model_name)
 
                 if (
                     ollama_settings.keep_alive

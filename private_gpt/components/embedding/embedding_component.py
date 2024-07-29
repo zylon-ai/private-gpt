@@ -92,21 +92,24 @@ class EmbeddingComponent:
                 )
 
                 if ollama_settings.autopull_models:
-                    try:
+                    if ollama_settings.autopull_models:
+                        from private_gpt.utils.ollama import (
+                            check_connection,
+                            pull_model,
+                        )
+
                         # TODO: Reuse llama-index client when llama-index is updated
                         client = Client(
                             host=ollama_settings.embedding_api_base,
                             timeout=ollama_settings.request_timeout,
                         )
-                        installed_models = [
-                            model["name"] for model in client.list().get("models", {})
-                        ]
-                        if model_name not in installed_models:
-                            logger.info(f"Pulling model {model_name}. Please wait...")
-                            client.pull(model_name)
-                            logger.info(f"Model {model_name} pulled successfully")
-                    except Exception as e:
-                        logger.error(f"Failed to pull model {model_name}: {e!s}")
+
+                        if not check_connection(client):
+                            raise ValueError(
+                                f"Failed to connect to Ollama, "
+                                f"check if Ollama server is running on {ollama_settings.api_base}"
+                            )
+                        pull_model(client, model_name)
 
             case "azopenai":
                 try:
