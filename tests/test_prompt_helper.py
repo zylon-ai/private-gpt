@@ -5,6 +5,7 @@ from private_gpt.components.llm.prompt_helper import (
     ChatMLPromptStyle,
     DefaultPromptStyle,
     Llama2PromptStyle,
+    Llama3PromptStyle,
     MistralPromptStyle,
     TagPromptStyle,
     get_prompt_style,
@@ -136,6 +137,60 @@ def test_llama2_prompt_style_with_system_prompt():
         "<</SYS>>\n"
         "\n"
         " Hello, how are you doing? [/INST]"
+    )
+
+    assert prompt_style.messages_to_prompt(messages) == expected_prompt
+
+
+def test_llama3_prompt_style_format():
+    prompt_style = Llama3PromptStyle()
+    messages = [
+        ChatMessage(content="You are a helpful assistant", role=MessageRole.SYSTEM),
+        ChatMessage(content="Hello, how are you doing?", role=MessageRole.USER),
+    ]
+
+    expected_prompt = (
+        "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+        "You are a helpful assistant<|eot_id|>"
+        "<|start_header_id|>user<|end_header_id|>\n\n"
+        "Hello, how are you doing?<|eot_id|>"
+        "<|start_header_id|>assistant<|end_header_id|>\n\n"
+    )
+
+    assert prompt_style.messages_to_prompt(messages) == expected_prompt
+
+
+def test_llama3_prompt_style_with_default_system():
+    prompt_style = Llama3PromptStyle()
+    messages = [
+        ChatMessage(content="Hello!", role=MessageRole.USER),
+    ]
+    expected = (
+        "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+        f"{prompt_style.DEFAULT_SYSTEM_PROMPT}<|eot_id|>"
+        "<|start_header_id|>user<|end_header_id|>\n\nHello!<|eot_id|>"
+        "<|start_header_id|>assistant<|end_header_id|>\n\n"
+    )
+    assert prompt_style._messages_to_prompt(messages) == expected
+
+
+def test_llama3_prompt_style_with_assistant_response():
+    prompt_style = Llama3PromptStyle()
+    messages = [
+        ChatMessage(content="You are a helpful assistant", role=MessageRole.SYSTEM),
+        ChatMessage(content="What is the capital of France?", role=MessageRole.USER),
+        ChatMessage(
+            content="The capital of France is Paris.", role=MessageRole.ASSISTANT
+        ),
+    ]
+
+    expected_prompt = (
+        "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+        "You are a helpful assistant<|eot_id|>"
+        "<|start_header_id|>user<|end_header_id|>\n\n"
+        "What is the capital of France?<|eot_id|>"
+        "<|start_header_id|>assistant<|end_header_id|>\n\n"
+        "The capital of France is Paris.<|eot_id|>"
     )
 
     assert prompt_style.messages_to_prompt(messages) == expected_prompt
