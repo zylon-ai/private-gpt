@@ -117,6 +117,7 @@ ollama:
   embedding_api_base: http://localhost:11434  # change if your embedding model runs on another ollama
   keep_alive: 5m
   request_timeout: 120.0
+  autopull_models: true
 
 azopenai:
   api_key: ${AZ_OPENAI_API_KEY:}

@@ -290,6 +290,10 @@ class OllamaSettings(BaseModel):
         120.0,
         description="Time elapsed until ollama times out the request. Default is 120s. Format is float. ",
     )
+    autopull_models: bool = Field(
+        False,
+        description="If set to True, the Ollama will automatically pull the models from the API base.",
+    )
 
 
 class AzureOpenAISettings(BaseModel):

@@ -146,14 +146,31 @@ class LLMComponent:
                     "repeat_penalty": ollama_settings.repeat_penalty,  # ollama llama-cpp
                 }
 
-                self.llm = Ollama(
-                    model=ollama_settings.llm_model,
+                # calculate llm model. If not provided tag, it will be use latest
+                model_name = (
+                    ollama_settings.llm_model + ":latest"
+                    if ":" not in ollama_settings.llm_model
+                    else ollama_settings.llm_model
+                )
+
+                llm = Ollama(
+                    model=model_name,
                     base_url=ollama_settings.api_base,
                     temperature=settings.llm.temperature,
                     context_window=settings.llm.context_window,
                     additional_kwargs=settings_kwargs,
                     request_timeout=ollama_settings.request_timeout,
                 )
+
+                if ollama_settings.autopull_models:
+                    from private_gpt.utils.ollama import check_connection, pull_model
+
+                    if not check_connection(llm.client):
+                        raise ValueError(
+                            f"Failed to connect to Ollama, "
+                            f"check if Ollama server is running on {ollama_settings.api_base}"
+                        )
+                    pull_model(llm.client, model_name)
 
                 if (
                     ollama_settings.keep_alive
@@ -171,6 +188,8 @@ class LLMComponent:
                     Ollama.stream_chat = add_keep_alive(Ollama.stream_chat)
                     Ollama.complete = add_keep_alive(Ollama.complete)
                     Ollama.stream_complete = add_keep_alive(Ollama.stream_complete)
+
+                self.llm = llm
 
             case "azopenai":
                 try:
