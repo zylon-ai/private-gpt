@@ -68,6 +68,7 @@ class EmbeddingComponent:
                 )
             case "ollama":
                 try:
+                    from ollama import Client, AsyncClient # type: ignore
                     from llama_index.embeddings.ollama import (  # type: ignore
                         OllamaEmbedding,
                     )
@@ -77,10 +78,36 @@ class EmbeddingComponent:
                     ) from e
 
                 ollama_settings = settings.ollama
+
+                # calculate embedding model. If not provided tag, it will be use latest model
+                model_name = (
+                    ollama_settings.embedding_model + ':latest'
+                    if ":" not in ollama_settings.embedding_model
+                    else ollama_settings.embedding_model
+                )
+
                 self.embedding_model = OllamaEmbedding(
-                    model_name=ollama_settings.embedding_model,
+                    model_name=model_name,
                     base_url=ollama_settings.embedding_api_base,
                 )
+
+                if ollama_settings.autopull_models:
+                    try:
+                        # TODO: Reuse llama-index client when llama-index is updated
+                        client = Client(
+                            host=ollama_settings.embedding_api_base,
+                            timeout=ollama_settings.request_timeout,
+                        )
+                        installed_models = [model['name'] for model in client.list().get("models", {})]
+                        if model_name not in installed_models:
+                            logger.info(
+                                f"Pulling model {model_name}. Please wait..."
+                            )
+                            client.pull(model_name)
+                            logger.info(f"Model {model_name} pulled successfully")
+                    except Exception as e:
+                        logger.error(f"Failed to pull model {model_name}: {e!s}")
+
             case "azopenai":
                 try:
                     from llama_index.embeddings.azure_openai import (  # type: ignore
