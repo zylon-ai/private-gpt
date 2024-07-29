@@ -1253,13 +1253,18 @@ standard = ["fastapi", "uvicorn[standard] (>=0.15.0)"]
 
 [[package]]
 name = "ffmpy"
-version = "0.3.1"
+version = "0.3.2"
 description = "A simple Python wrapper for ffmpeg"
 optional = true
 python-versions = "*"
-files = [
-    {file = "ffmpy-0.3.1.tar.gz", hash = "sha256:a173b8f42c7c669ff722df7fb31e1e870067713697f745224fa6e621b82f0004"},
-]
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/EuDs63/ffmpy.git"
+reference = "HEAD"
+resolved_reference = "333a19ee4d21f32537c0508aa1942ef1aa7afe24"
 
 [[package]]
 name = "filelock"
@@ -6866,7 +6871,7 @@ llms-openai-like = ["llama-index-llms-openai-like"]
 llms-sagemaker = ["boto3"]
 rerank-sentence-transformers = ["sentence-transformers", "torch"]
 storage-nodestore-postgres = ["asyncpg", "llama-index-storage-docstore-postgres", "llama-index-storage-index-store-postgres", "psycopg2-binary"]
-ui = ["gradio"]
+ui = ["ffmpy", "gradio"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
 vector-stores-clickhouse = ["clickhouse-connect", "llama-index-vector-stores-clickhouse"]
 vector-stores-milvus = ["llama-index-vector-stores-milvus"]
@@ -6876,4 +6881,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "77b51b8858f22cdbc13736d141a39cc84e30cd570ab802f2597969927fe9530d"
+content-hash = "dce5b88d92bcfa047bf1e4c9fe2dbb9c63eb864d6bbca2340801ac0a2f02a8d4"
