@@ -4,7 +4,7 @@ server:
 llm:
   mode: openailike
   max_new_tokens: 512
-  tokenizer: mistralai/Mistral-7B-Instruct-v0.2
+  tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
   temperature: 0.1
 
 embedding:
