@@ -487,7 +487,7 @@ class PrivateGptUi:
                 avatar_byte = AVATAR_BOT.read_bytes()
                 f_base64 = f"data:image/png;base64,{base64.b64encode(avatar_byte).decode('utf-8')}"
                 gr.HTML(
-                    f"<div class='footer'><a class='footer-zylon-link' href='https://zylon.ai/'>Developed by Zylon <img class='footer-zylon-ico' src='{f_base64}' alt=Zylon></a></div>"
+                    f"<div class='footer'><a class='footer-zylon-link' href='https://zylon.ai/'>Maintained by Zylon <img class='footer-zylon-ico' src='{f_base64}' alt=Zylon></a></div>"
                 )
 
         return blocks
