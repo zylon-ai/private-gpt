@@ -60,16 +60,19 @@ gradio = {version ="^4.37.2", optional = true}
 # Optional Google Gemini dependency
 google-generativeai = {version ="^0.5.4", optional = true}
 
+# Optional Ollama client
+ollama = {version ="^0.3.0", optional = true}
+
 [tool.poetry.extras]
 ui = ["gradio"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
 llms-openai = ["llama-index-llms-openai"]
 llms-openai-like = ["llama-index-llms-openai-like"]
-llms-ollama = ["llama-index-llms-ollama"]
+llms-ollama = ["llama-index-llms-ollama", "ollama"]
 llms-sagemaker = ["boto3"]
 llms-azopenai = ["llama-index-llms-azure-openai"]
 llms-gemini = ["llama-index-llms-gemini", "google-generativeai"]
-embeddings-ollama = ["llama-index-embeddings-ollama"]
+embeddings-ollama = ["llama-index-embeddings-ollama", "ollama"]
 embeddings-huggingface = ["llama-index-embeddings-huggingface"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]

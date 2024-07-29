@@ -6854,13 +6854,13 @@ cffi = ["cffi (>=1.11)"]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
 embeddings-gemini = ["llama-index-embeddings-gemini"]
 embeddings-huggingface = ["llama-index-embeddings-huggingface"]
-embeddings-ollama = ["llama-index-embeddings-ollama"]
+embeddings-ollama = ["llama-index-embeddings-ollama", "ollama"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
 llms-azopenai = ["llama-index-llms-azure-openai"]
 llms-gemini = ["google-generativeai", "llama-index-llms-gemini"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
-llms-ollama = ["llama-index-llms-ollama"]
+llms-ollama = ["llama-index-llms-ollama", "ollama"]
 llms-openai = ["llama-index-llms-openai"]
 llms-openai-like = ["llama-index-llms-openai-like"]
 llms-sagemaker = ["boto3"]
@@ -6876,4 +6876,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "570af23ceef0f40e5e497a7e7b46a3ddfda37b9f9dd17f71669e5cb3aac1cd55"
+content-hash = "77b51b8858f22cdbc13736d141a39cc84e30cd570ab802f2597969927fe9530d"
