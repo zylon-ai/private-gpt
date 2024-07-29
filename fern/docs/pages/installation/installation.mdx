@@ -130,16 +130,20 @@ Go to [ollama.ai](https://ollama.ai/) and follow the instructions to install Oll
 
 After the installation, make sure the Ollama desktop app is closed.
 
-Install the models to be used, the default settings-ollama.yaml is configured to user `mistral 7b` LLM (~4GB) and `nomic-embed-text` Embeddings (~275MB). Therefore:
+Now, start Ollama service (it will start a local inference server, serving both the LLM and the Embeddings):
+```bash
+ollama serve
+```
+
+Install the models to be used, the default settings-ollama.yaml is configured to user mistral 7b LLM (~4GB) and nomic-embed-text Embeddings (~275MB)
+
+By default, PGPT will automatically pull models as needed. This behavior can be changed by modifying the `ollama.autopull_models` property.
+
+In any case, if you want to manually pull models, run the following commands:
 
 ```bash
 ollama pull mistral
 ollama pull nomic-embed-text
-```
-
-Now, start Ollama service (it will start a local inference server, serving both the LLM and the Embeddings):
-```bash
-ollama serve
 ```
 
 Once done, on a different terminal, you can install PrivateGPT with the following command:
