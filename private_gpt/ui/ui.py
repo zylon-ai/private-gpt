@@ -238,19 +238,48 @@ class PrivateGptUi:
                 p = ""
         return p
 
+    @staticmethod
+    def _get_default_mode_explanation(mode: str) -> str:
+        match mode:
+            case "Query Files":
+                return (
+                    "Query specific files you've ingested. "
+                    "Ideal for retrieving targeted information from particular documents."
+                )
+            case "Search Files":
+                return (
+                    "Search for relevant information across all ingested files. "
+                    "Useful for broad information retrieval."
+                )
+            case "LLM Chat (no context from files)":
+                return (
+                    "Generate responses without using context from ingested files. "
+                    "Suitable for general inquiries."
+                )
+            case "Summarization":
+                return (
+                    "Generate summaries from provided ingested files. "
+                    "This may take significant time depending on the length and complexity of the input."
+                )
+            case _:
+                return ""
+
     def _set_system_prompt(self, system_prompt_input: str) -> None:
         logger.info(f"Setting system prompt to: {system_prompt_input}")
         self._system_prompt = system_prompt_input
 
+    def _set_explanatation_mode(self, explanation_mode: str) -> None:
+        self._explanation_mode = explanation_mode
+
     def _set_current_mode(self, mode: str) -> Any:
         self.mode = mode
         self._set_system_prompt(self._get_default_system_prompt(mode))
-        # Update placeholder and allow interaction if default system prompt is set
-        if self._system_prompt:
-            return gr.update(placeholder=self._system_prompt, interactive=True)
-        # Update placeholder and disable interaction if no default system prompt is set
-        else:
-            return gr.update(placeholder=self._system_prompt, interactive=False)
+        self._set_explanatation_mode(self._get_default_mode_explanation(mode))
+        interactive = self._system_prompt is not None
+        return [
+            gr.update(placeholder=self._system_prompt, interactive=interactive),
+            gr.update(value=self._explanation_mode),
+        ]
 
     def _list_ingested_files(self) -> list[list[str]]:
         files = set()
@@ -363,10 +392,17 @@ class PrivateGptUi:
 
             with gr.Row(equal_height=False):
                 with gr.Column(scale=3):
+                    default_mode = MODES[0]
                     mode = gr.Radio(
                         MODES,
                         label="Mode",
-                        value="Query Files",
+                        value=default_mode,
+                    )
+                    explanation_mode = gr.Textbox(
+                        placeholder=self._get_default_mode_explanation(default_mode),
+                        show_label=False,
+                        max_lines=3,
+                        interactive=False,
                     )
                     upload_button = gr.components.UploadButton(
                         "Upload File(s)",
@@ -450,9 +486,11 @@ class PrivateGptUi:
                         interactive=True,
                         render=False,
                     )
-                    # When mode changes, set default system prompt
+                    # When mode changes, set default system prompt, and other stuffs
                     mode.change(
-                        self._set_current_mode, inputs=mode, outputs=system_prompt_input
+                        self._set_current_mode,
+                        inputs=mode,
+                        outputs=[system_prompt_input, explanation_mode],
                     )
                     # On blur, set system prompt to use in queries
                     system_prompt_input.blur(
