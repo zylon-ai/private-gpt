@@ -63,7 +63,7 @@ class SummarizeService:
             if doc_id in context_filter.docs_ids
         ]
 
-    def summarize(
+    def _summarize(
         self,
         use_context: bool = False,
         stream: bool = False,
@@ -133,3 +133,37 @@ class SummarizeService:
             return response.response_gen
         else:
             raise TypeError(f"The result is not of a supported type: {type(response)}")
+
+    def summarize(
+        self,
+        use_context: bool = False,
+        text: str | None = None,
+        instructions: str | None = None,
+        context_filter: ContextFilter | None = None,
+        prompt: str | None = None,
+    ) -> str:
+        return self._summarize(
+            use_context=use_context,
+            stream=False,
+            text=text,
+            instructions=instructions,
+            context_filter=context_filter,
+            prompt=prompt,
+        )  # type: ignore
+
+    def stream_summarize(
+        self,
+        use_context: bool = False,
+        text: str | None = None,
+        instructions: str | None = None,
+        context_filter: ContextFilter | None = None,
+        prompt: str | None = None,
+    ) -> TokenGen:
+        return self._summarize(
+            use_context=use_context,
+            stream=True,
+            text=text,
+            instructions=instructions,
+            context_filter=context_filter,
+            prompt=prompt,
+        )  # type: ignore

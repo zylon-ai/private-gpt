@@ -59,23 +59,28 @@ def summarize(
     """
     service: SummarizeService = request.state.injector.get(SummarizeService)
 
-    completion = service.summarize(
-        text=body.text,
-        instructions=body.instructions,
-        use_context=body.use_context,
-        context_filter=body.context_filter,
-        prompt=body.prompt,
-        stream=body.stream,
-    )
-
-    if isinstance(completion, str):
-        return SummarizeResponse(
-            summary=completion,
+    if body.stream:
+        completion_gen = service.stream_summarize(
+            text=body.text,
+            instructions=body.instructions,
+            use_context=body.use_context,
+            context_filter=body.context_filter,
+            prompt=body.prompt,
         )
-    else:
         return StreamingResponse(
             to_openai_sse_stream(
-                response_generator=completion,
+                response_generator=completion_gen,
             ),
             media_type="text/event-stream",
+        )
+    else:
+        completion = service.summarize(
+            text=body.text,
+            instructions=body.instructions,
+            use_context=body.use_context,
+            context_filter=body.context_filter,
+            prompt=body.prompt,
+        )
+        return SummarizeResponse(
+            summary=completion,
         )
