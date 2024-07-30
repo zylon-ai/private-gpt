@@ -28,7 +28,7 @@ COPY pyproject.toml poetry.lock ./
 
 RUN poetry config installer.max-workers 10
 RUN poetry install --with local
-RUN poetry install --extras "ui embeddings-huggingface llms-llama-cpp vector-stores-qdrant"
+RUN poetry install --extras "ui embeddings-huggingface llms-llama-cpp vector-stores-qdrant chroma"
 
 FROM base as app
 
