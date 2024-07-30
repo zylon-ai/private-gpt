@@ -80,7 +80,7 @@ huggingface:
   access_token: ${HF_TOKEN:}
 
 vectorstore:
-  database: qdrant
+  database: chroma
 
 nodestore:
   database: simple
