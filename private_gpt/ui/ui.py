@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from gradio.themes.utils.colors import slate  # type: ignore
 from injector import inject, singleton
 from llama_index.core.llms import ChatMessage, ChatResponse, MessageRole
+from llama_index.core.types import TokenGen
 from pydantic import BaseModel
 
 from private_gpt.constants import PROJECT_ROOT_PATH
@@ -19,6 +20,7 @@ from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chat.chat_service import ChatService, CompletionGen
 from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
 from private_gpt.server.ingest.ingest_service import IngestService
+from private_gpt.server.recipes.summarize.summarize_service import SummarizeService
 from private_gpt.settings.settings import settings
 from private_gpt.ui.images import logo_svg
 
@@ -32,7 +34,12 @@ UI_TAB_TITLE = "My Private GPT"
 
 SOURCES_SEPARATOR = "<hr>Sources: \n"
 
-MODES = ["Query Files", "Search Files", "LLM Chat (no context from files)"]
+MODES = [
+    "Query Files",
+    "Search Files",
+    "LLM Chat (no context from files)",
+    "Summarization",
+]
 
 
 class Source(BaseModel):
@@ -70,10 +77,12 @@ class PrivateGptUi:
         ingest_service: IngestService,
         chat_service: ChatService,
         chunks_service: ChunksService,
+        summarizeService: SummarizeService,
     ) -> None:
         self._ingest_service = ingest_service
         self._chat_service = chat_service
         self._chunks_service = chunks_service
+        self._summarize_service = summarizeService
 
         # Cache the UI blocks
         self._ui_block = None
@@ -111,6 +120,12 @@ class PrivateGptUi:
                 sources_text += "<hr>\n\n"
                 full_response += sources_text
             yield full_response
+
+        def yield_tokens(token_gen: TokenGen) -> Iterable[str]:
+            full_response: str = ""
+            for token in token_gen:
+                full_response += str(token)
+                yield full_response
 
         def build_history() -> list[ChatMessage]:
             history_messages: list[ChatMessage] = []
@@ -183,6 +198,25 @@ class PrivateGptUi:
                     f"{source.text}"
                     for index, source in enumerate(sources, start=1)
                 )
+            case "Summarization":
+                # Summarize the given message, optionally using selected files
+                context_filter = None
+                if self._selected_filename:
+                    docs_ids = []
+                    for ingested_document in self._ingest_service.list_ingested():
+                        if (
+                            ingested_document.doc_metadata["file_name"]
+                            == self._selected_filename
+                        ):
+                            docs_ids.append(ingested_document.doc_id)
+                    context_filter = ContextFilter(docs_ids=docs_ids)
+
+                summary_stream = self._summarize_service.stream_summarize(
+                    use_context=True,
+                    context_filter=context_filter,
+                    instructions=message,
+                )
+                yield from yield_tokens(summary_stream)
 
     # On initialization and on mode change, this function set the system prompt
     # to the default prompt based on the mode (and user settings).
@@ -196,6 +230,9 @@ class PrivateGptUi:
             # For chat mode, obtain default system prompt from settings
             case "LLM Chat (no context from files)":
                 p = settings().ui.default_chat_system_prompt
+            # For summarization mode, obtain default system prompt from settings
+            case "Summarization":
+                p = settings().ui.default_summarization_system_prompt
             # For any other mode, clear the system prompt
             case _:
                 p = ""

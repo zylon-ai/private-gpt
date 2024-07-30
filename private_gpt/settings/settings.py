@@ -328,6 +328,10 @@ class UISettings(BaseModel):
     default_query_system_prompt: str = Field(
         None, description="The default system prompt to use for the query mode."
     )
+    default_summarization_system_prompt: str = Field(
+        None,
+        description="The default system prompt to use for the summarization mode.",
+    )
     delete_file_button_enabled: bool = Field(
         True, description="If the button to delete a file is enabled or not."
     )

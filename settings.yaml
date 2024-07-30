@@ -31,6 +31,13 @@ ui:
     You can only answer questions about the provided context. 
     If you know the answer but it is not based in the provided context, don't provide 
     the answer, just state the answer is not in the context provided.
+  default_summarization_system_prompt: >
+    Provide a comprehensive summary of the provided context information. 
+    The summary should cover all the key points and main ideas presented in
+    the original text, while also condensing the information into a concise 
+    and easy-to-understand format. Please ensure that the summary includes
+    relevant details and examples that support the main ideas, while avoiding 
+    any unnecessary information or repetition.
   delete_file_button_enabled: true
   delete_all_files_button_enabled: true
 
