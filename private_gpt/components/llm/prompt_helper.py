@@ -169,7 +169,7 @@ class Llama3PromptStyle(AbstractPromptStyle):
     """
 
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
-        prompt = self.BOS
+        prompt = ""
         has_system_message = False
 
         for i, message in enumerate(messages):
@@ -189,8 +189,7 @@ class Llama3PromptStyle(AbstractPromptStyle):
         # Add default system prompt if no system message was provided
         if not has_system_message:
             prompt = (
-                f"{self.BOS}{self.B_SYS}\n\n{self.DEFAULT_SYSTEM_PROMPT}{self.E_SYS}"
-                + prompt[len(self.BOS) :]
+                f"{self.B_SYS}\n\n{self.DEFAULT_SYSTEM_PROMPT}{self.E_SYS}" + prompt
             )
 
         # TODO: Implement tool handling logic
@@ -199,7 +198,7 @@ class Llama3PromptStyle(AbstractPromptStyle):
 
     def _completion_to_prompt(self, completion: str) -> str:
         return (
-            f"{self.BOS}{self.B_SYS}\n\n{self.DEFAULT_SYSTEM_PROMPT}{self.E_SYS}"
+            f"{self.B_SYS}\n\n{self.DEFAULT_SYSTEM_PROMPT}{self.E_SYS}"
             f"{self.B_INST}user{self.E_INST}\n\n{completion.strip()}{self.EOT}"
             f"{self.ASSISTANT_INST}\n\n"
         )

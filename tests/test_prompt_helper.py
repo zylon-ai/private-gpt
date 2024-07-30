@@ -150,7 +150,7 @@ def test_llama3_prompt_style_format():
     ]
 
     expected_prompt = (
-        "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+        "<|start_header_id|>system<|end_header_id|>\n\n"
         "You are a helpful assistant<|eot_id|>"
         "<|start_header_id|>user<|end_header_id|>\n\n"
         "Hello, how are you doing?<|eot_id|>"
@@ -166,7 +166,7 @@ def test_llama3_prompt_style_with_default_system():
         ChatMessage(content="Hello!", role=MessageRole.USER),
     ]
     expected = (
-        "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+        "<|start_header_id|>system<|end_header_id|>\n\n"
         f"{prompt_style.DEFAULT_SYSTEM_PROMPT}<|eot_id|>"
         "<|start_header_id|>user<|end_header_id|>\n\nHello!<|eot_id|>"
         "<|start_header_id|>assistant<|end_header_id|>\n\n"
@@ -185,7 +185,7 @@ def test_llama3_prompt_style_with_assistant_response():
     ]
 
     expected_prompt = (
-        "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+        "<|start_header_id|>system<|end_header_id|>\n\n"
         "You are a helpful assistant<|eot_id|>"
         "<|start_header_id|>user<|end_header_id|>\n\n"
         "What is the capital of France?<|eot_id|>"
