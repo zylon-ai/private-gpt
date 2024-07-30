@@ -75,11 +75,11 @@ navigation:
           - page: Alternatives
             path: ./docs/pages/ui/alternatives.mdx
   # Small code snippet or example of usage to help users
-  - tab: recipes
+  - tab: tested-combinations
     layout:
       - section: Choice of LLM
         contents:
-          # TODO: add recipes
+          # TODO: add combinations
           - page: List of LLMs
             path: ./docs/pages/recipes/list-llm.mdx
   # More advanced usage of PrivateGPT, by API
