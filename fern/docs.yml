@@ -74,6 +74,16 @@ navigation:
             path: ./docs/pages/ui/gradio.mdx
           - page: Alternatives
             path: ./docs/pages/ui/alternatives.mdx
+  - tab: recipes
+    layout:
+      - section: Getting started
+        contents:
+          - page: Quickstart
+            path: ./docs/pages/recipes/quickstart.mdx
+      - section: General use cases
+        contents:
+          - page: Summarize
+            path: ./docs/pages/recipes/summarize.mdx
   # Small code snippet or example of usage to help users
   - tab: tested-combinations
     layout:
