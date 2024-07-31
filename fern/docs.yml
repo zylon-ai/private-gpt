@@ -91,7 +91,7 @@ navigation:
         contents:
           # TODO: add combinations
           - page: List of LLMs
-            path: ./docs/pages/recipes/list-llm.mdx
+            path: ./docs/pages/tested-combinations/list-llm.mdx
   # More advanced usage of PrivateGPT, by API
   - tab: api-reference
     layout:
