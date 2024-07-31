@@ -5,12 +5,15 @@ services:
     volumes:
       - ./local_data/:/home/worker/app/local_data
     ports:
-      - 8001:8080
+      - 8001:8001
     environment:
-      PORT: 8080
+      PORT: 8001
       PGPT_PROFILES: docker
       PGPT_MODE: ollama
+      PGPT_EMBED_MODE: ollama
   ollama:
     image: ollama/ollama:latest
+    ports:
+      - 11434:11434
     volumes:
       - ./models:/root/.ollama
