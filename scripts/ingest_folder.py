@@ -26,7 +26,8 @@ class LocalIngestWorker:
 
     def _validate_folder(self, folder_path: Path) -> None:
         if not self.is_local_ingestion_enabled:
-            raise ValueError("Local ingestion is disabled")
+            raise ValueError("Local ingestion is disabled."
+                             "You can enable it in settings `ingestion.enabled`")
 
         # Allow all folders if wildcard is present
         if "*" in self.allowed_local_folders:
