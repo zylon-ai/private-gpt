@@ -84,14 +84,6 @@ navigation:
         contents:
           - page: Summarize
             path: ./docs/pages/recipes/summarize.mdx
-  # Small code snippet or example of usage to help users
-  - tab: tested-combinations
-    layout:
-      - section: Choice of LLM
-        contents:
-          # TODO: add combinations
-          - page: List of LLMs
-            path: ./docs/pages/tested-combinations/list-llm.mdx
   # More advanced usage of PrivateGPT, by API
   - tab: api-reference
     layout:
