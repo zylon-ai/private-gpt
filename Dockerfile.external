@@ -2,7 +2,8 @@ FROM python:3.11.6-slim-bookworm as base
 
 # Install poetry
 RUN pip install pipx
-RUN pipx install poetry
+RUN python3 -m pipx ensurepath
+RUN pipx install poetry==1.8.3
 ENV PATH="/root/.local/bin:$PATH"
 ENV PATH=".venv/bin/:$PATH"
 

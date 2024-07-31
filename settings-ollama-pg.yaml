@@ -14,7 +14,7 @@ embedding:
   embed_dim: 768
 
 ollama:
-  llm_model: mistral
+  llm_model: llama3.1
   embedding_model: nomic-embed-text
   api_base: http://localhost:11434
 

@@ -28,6 +28,11 @@ pyenv local 3.11
 Install [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) for dependency management:
 Follow the instructions on the official Poetry website to install it.
 
+<Callout intent="warning">
+A bug exists in Poetry versions 1.7.0 and earlier. We strongly recommend upgrading to a tested version.
+To upgrade Poetry to latest tested version, run `poetry self update 1.8.3` after installing it.
+</Callout>
+
 ### 4. Optional: Install `make`
 To run various scripts, you need to install `make`. Follow the instructions for your operating system:
 #### macOS
@@ -135,14 +140,14 @@ Now, start Ollama service (it will start a local inference server, serving both 
 ollama serve
 ```
 
-Install the models to be used, the default settings-ollama.yaml is configured to user mistral 7b LLM (~4GB) and nomic-embed-text Embeddings (~275MB)
+Install the models to be used, the default settings-ollama.yaml is configured to user llama3.1 8b LLM (~4GB) and nomic-embed-text Embeddings (~275MB)
 
 By default, PGPT will automatically pull models as needed. This behavior can be changed by modifying the `ollama.autopull_models` property.
 
 In any case, if you want to manually pull models, run the following commands:
 
 ```bash
-ollama pull mistral
+ollama pull llama3.1
 ollama pull nomic-embed-text
 ```
 
