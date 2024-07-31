@@ -317,7 +317,7 @@ class PrivateGptUi:
             "hr { margin-top: 1em; margin-bottom: 1em; border: 0; border-top: 1px solid #FFF; }"
             ".avatar-image { background-color: antiquewhite; border-radius: 2px; }"
             ".footer { text-align: center; margin-top: 20px; font-size: 14px; display: flex; align-items: center; justify-content: center; }"
-            ".footer-zylon-link { display:flex; margin-left: 5px; text-decoration: auto; color: #fff; }"
+            ".footer-zylon-link { display:flex; margin-left: 5px; text-decoration: auto; color: var(--body-text-color); }"
             ".footer-zylon-link:hover { color: #C7BAFF; }"
             ".footer-zylon-ico { height: 20px; margin-left: 5px; background-color: antiquewhite; border-radius: 2px; }",
         ) as blocks:
