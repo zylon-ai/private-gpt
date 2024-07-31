@@ -353,6 +353,10 @@ class UISettings(BaseModel):
     default_query_system_prompt: str = Field(
         None, description="The default system prompt to use for the query mode."
     )
+    default_summarization_system_prompt: str = Field(
+        None,
+        description="The default system prompt to use for the summarization mode.",
+    )
     delete_file_button_enabled: bool = Field(
         True, description="If the button to delete a file is enabled or not."
     )
@@ -386,6 +390,13 @@ class RagSettings(BaseModel):
         description="If set, any documents retrieved from the RAG must meet a certain match score. Acceptable values are between 0 and 1.",
     )
     rerank: RerankSettings
+
+
+class SummarizeSettings(BaseModel):
+    use_async: bool = Field(
+        True,
+        description="If set to True, the summarization will be done asynchronously.",
+    )
 
 
 class ClickHouseSettings(BaseModel):
@@ -577,6 +588,7 @@ class Settings(BaseModel):
     vectorstore: VectorstoreSettings
     nodestore: NodeStoreSettings
     rag: RagSettings
+    summarize: SummarizeSettings
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
     clickhouse: ClickHouseSettings | None = None

@@ -3,6 +3,7 @@ import base64
 import logging
 import time
 from collections.abc import Iterable
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,7 @@ from fastapi import FastAPI
 from gradio.themes.utils.colors import slate  # type: ignore
 from injector import inject, singleton
 from llama_index.core.llms import ChatMessage, ChatResponse, MessageRole
+from llama_index.core.types import TokenGen
 from pydantic import BaseModel
 
 from private_gpt.constants import PROJECT_ROOT_PATH
@@ -19,6 +21,7 @@ from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chat.chat_service import ChatService, CompletionGen
 from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
 from private_gpt.server.ingest.ingest_service import IngestService
+from private_gpt.server.recipes.summarize.summarize_service import SummarizeService
 from private_gpt.settings.settings import settings
 from private_gpt.ui.images import logo_svg
 
@@ -32,7 +35,20 @@ UI_TAB_TITLE = "My Private GPT"
 
 SOURCES_SEPARATOR = "<hr>Sources: \n"
 
-MODES = ["Query Files", "Search Files", "LLM Chat (no context from files)"]
+
+class Modes(str, Enum):
+    RAG_MODE = "RAG"
+    SEARCH_MODE = "Search"
+    BASIC_CHAT_MODE = "Basic"
+    SUMMARIZE_MODE = "Summarize"
+
+
+MODES: list[Modes] = [
+    Modes.RAG_MODE,
+    Modes.SEARCH_MODE,
+    Modes.BASIC_CHAT_MODE,
+    Modes.SUMMARIZE_MODE,
+]
 
 
 class Source(BaseModel):
@@ -70,10 +86,12 @@ class PrivateGptUi:
         ingest_service: IngestService,
         chat_service: ChatService,
         chunks_service: ChunksService,
+        summarizeService: SummarizeService,
     ) -> None:
         self._ingest_service = ingest_service
         self._chat_service = chat_service
         self._chunks_service = chunks_service
+        self._summarize_service = summarizeService
 
         # Cache the UI blocks
         self._ui_block = None
@@ -84,7 +102,9 @@ class PrivateGptUi:
         self.mode = MODES[0]
         self._system_prompt = self._get_default_system_prompt(self.mode)
 
-    def _chat(self, message: str, history: list[list[str]], mode: str, *_: Any) -> Any:
+    def _chat(
+        self, message: str, history: list[list[str]], mode: Modes, *_: Any
+    ) -> Any:
         def yield_deltas(completion_gen: CompletionGen) -> Iterable[str]:
             full_response: str = ""
             stream = completion_gen.response
@@ -111,6 +131,12 @@ class PrivateGptUi:
                 sources_text += "<hr>\n\n"
                 full_response += sources_text
             yield full_response
+
+        def yield_tokens(token_gen: TokenGen) -> Iterable[str]:
+            full_response: str = ""
+            for token in token_gen:
+                full_response += str(token)
+                yield full_response
 
         def build_history() -> list[ChatMessage]:
             history_messages: list[ChatMessage] = []
@@ -143,8 +169,7 @@ class PrivateGptUi:
                 ),
             )
         match mode:
-            case "Query Files":
-
+            case Modes.RAG_MODE:
                 # Use only the selected file for the query
                 context_filter = None
                 if self._selected_filename is not None:
@@ -163,14 +188,14 @@ class PrivateGptUi:
                     context_filter=context_filter,
                 )
                 yield from yield_deltas(query_stream)
-            case "LLM Chat (no context from files)":
+            case Modes.BASIC_CHAT_MODE:
                 llm_stream = self._chat_service.stream_chat(
                     messages=all_messages,
                     use_context=False,
                 )
                 yield from yield_deltas(llm_stream)
 
-            case "Search Files":
+            case Modes.SEARCH_MODE:
                 response = self._chunks_service.retrieve_relevant(
                     text=message, limit=4, prev_next_chunks=0
                 )
@@ -183,37 +208,76 @@ class PrivateGptUi:
                     f"{source.text}"
                     for index, source in enumerate(sources, start=1)
                 )
+            case Modes.SUMMARIZE_MODE:
+                # Summarize the given message, optionally using selected files
+                context_filter = None
+                if self._selected_filename:
+                    docs_ids = []
+                    for ingested_document in self._ingest_service.list_ingested():
+                        if (
+                            ingested_document.doc_metadata["file_name"]
+                            == self._selected_filename
+                        ):
+                            docs_ids.append(ingested_document.doc_id)
+                    context_filter = ContextFilter(docs_ids=docs_ids)
+
+                summary_stream = self._summarize_service.stream_summarize(
+                    use_context=True,
+                    context_filter=context_filter,
+                    instructions=message,
+                )
+                yield from yield_tokens(summary_stream)
 
     # On initialization and on mode change, this function set the system prompt
     # to the default prompt based on the mode (and user settings).
     @staticmethod
-    def _get_default_system_prompt(mode: str) -> str:
+    def _get_default_system_prompt(mode: Modes) -> str:
         p = ""
         match mode:
             # For query chat mode, obtain default system prompt from settings
-            case "Query Files":
+            case Modes.RAG_MODE:
                 p = settings().ui.default_query_system_prompt
             # For chat mode, obtain default system prompt from settings
-            case "LLM Chat (no context from files)":
+            case Modes.BASIC_CHAT_MODE:
                 p = settings().ui.default_chat_system_prompt
+            # For summarization mode, obtain default system prompt from settings
+            case Modes.SUMMARIZE_MODE:
+                p = settings().ui.default_summarization_system_prompt
             # For any other mode, clear the system prompt
             case _:
                 p = ""
         return p
 
+    @staticmethod
+    def _get_default_mode_explanation(mode: Modes) -> str:
+        match mode:
+            case Modes.RAG_MODE:
+                return "Get contextualized answers from selected files."
+            case Modes.SEARCH_MODE:
+                return "Find relevant chunks of text in selected files."
+            case Modes.BASIC_CHAT_MODE:
+                return "Chat with the LLM using its training data. Files are ignored."
+            case Modes.SUMMARIZE_MODE:
+                return "Generate a summary of the selected files. Prompt to customize the result."
+            case _:
+                return ""
+
     def _set_system_prompt(self, system_prompt_input: str) -> None:
         logger.info(f"Setting system prompt to: {system_prompt_input}")
         self._system_prompt = system_prompt_input
 
-    def _set_current_mode(self, mode: str) -> Any:
+    def _set_explanatation_mode(self, explanation_mode: str) -> None:
+        self._explanation_mode = explanation_mode
+
+    def _set_current_mode(self, mode: Modes) -> Any:
         self.mode = mode
         self._set_system_prompt(self._get_default_system_prompt(mode))
-        # Update placeholder and allow interaction if default system prompt is set
-        if self._system_prompt:
-            return gr.update(placeholder=self._system_prompt, interactive=True)
-        # Update placeholder and disable interaction if no default system prompt is set
-        else:
-            return gr.update(placeholder=self._system_prompt, interactive=False)
+        self._set_explanatation_mode(self._get_default_mode_explanation(mode))
+        interactive = self._system_prompt is not None
+        return [
+            gr.update(placeholder=self._system_prompt, interactive=interactive),
+            gr.update(value=self._explanation_mode),
+        ]
 
     def _list_ingested_files(self) -> list[list[str]]:
         files = set()
@@ -326,10 +390,17 @@ class PrivateGptUi:
 
             with gr.Row(equal_height=False):
                 with gr.Column(scale=3):
+                    default_mode = MODES[0]
                     mode = gr.Radio(
-                        MODES,
+                        [mode.value for mode in MODES],
                         label="Mode",
-                        value="Query Files",
+                        value=default_mode,
+                    )
+                    explanation_mode = gr.Textbox(
+                        placeholder=self._get_default_mode_explanation(default_mode),
+                        show_label=False,
+                        max_lines=3,
+                        interactive=False,
                     )
                     upload_button = gr.components.UploadButton(
                         "Upload File(s)",
@@ -413,9 +484,11 @@ class PrivateGptUi:
                         interactive=True,
                         render=False,
                     )
-                    # When mode changes, set default system prompt
+                    # When mode changes, set default system prompt, and other stuffs
                     mode.change(
-                        self._set_current_mode, inputs=mode, outputs=system_prompt_input
+                        self._set_current_mode,
+                        inputs=mode,
+                        outputs=[system_prompt_input, explanation_mode],
                     )
                     # On blur, set system prompt to use in queries
                     system_prompt_input.blur(
