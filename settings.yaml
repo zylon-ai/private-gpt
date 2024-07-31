@@ -17,6 +17,9 @@ server:
     secret: "Basic c2VjcmV0OmtleQ=="
 
 data:
+  local_ingestion:
+    enabled: ${LOCAL_INGESTION_ENABLED:false}
+    allow_ingest_from: ["*"]
   local_data_folder: local_data/private_gpt
 
 ui:
@@ -43,12 +46,12 @@ ui:
 
 llm:
   mode: llamacpp
-  prompt_style: "mistral"
+  prompt_style: "llama3"
   # Should be matching the selected model
   max_new_tokens: 512
   context_window: 3900
   # Select your tokenizer. Llama-index tokenizer is the default.
-  # tokenizer: mistralai/Mistral-7B-Instruct-v0.2
+  # tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
   temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
 
 rag:
@@ -72,8 +75,8 @@ clickhouse:
     database: embeddings
 
 llamacpp:
-  llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF
-  llm_hf_model_file: mistral-7b-instruct-v0.2.Q4_K_M.gguf
+  llm_hf_repo_id: lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF
+  llm_hf_model_file: Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
   tfs_z: 1.0            # Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting
   top_k: 40             # Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)
   top_p: 1.0            # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
@@ -83,10 +86,10 @@ embedding:
   # Should be matching the value above in most cases
   mode: huggingface
   ingest_mode: simple
-  embed_dim: 384 # 384 is for BAAI/bge-small-en-v1.5
+  embed_dim: 768 # 768 is for nomic-ai/nomic-embed-text-v1.5
 
 huggingface:
-  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+  embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
   access_token: ${HF_TOKEN:}
 
 vectorstore:
@@ -121,7 +124,7 @@ openai:
   embedding_api_key: ${OPENAI_API_KEY:}
 
 ollama:
-  llm_model: llama2
+  llm_model: llama3.1
   embedding_model: nomic-embed-text
   api_base: http://localhost:11434
   embedding_api_base: http://localhost:11434  # change if your embedding model runs on another ollama

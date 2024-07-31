@@ -6,21 +6,21 @@ llm:
   mode: ${PGPT_MODE:mock}
 
 embedding:
-  mode: ${PGPT_MODE:sagemaker}
+  mode: ${PGPT_EMBED_MODE:mock}
 
 llamacpp:
-  llm_hf_repo_id: ${PGPT_HF_REPO_ID:TheBloke/Mistral-7B-Instruct-v0.1-GGUF}
-  llm_hf_model_file: ${PGPT_HF_MODEL_FILE:mistral-7b-instruct-v0.1.Q4_K_M.gguf}
+  llm_hf_repo_id: ${PGPT_HF_REPO_ID:lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF}
+  llm_hf_model_file: ${PGPT_HF_MODEL_FILE:Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf}
 
 huggingface:
-  embedding_hf_model_name: ${PGPT_EMBEDDING_HF_MODEL_NAME:BAAI/bge-small-en-v1.5}
+  embedding_hf_model_name: ${PGPT_EMBEDDING_HF_MODEL_NAME:nomic-ai/nomic-embed-text-v1.5}
 
 sagemaker:
   llm_endpoint_name: ${PGPT_SAGEMAKER_LLM_ENDPOINT_NAME:}
   embedding_endpoint_name: ${PGPT_SAGEMAKER_EMBEDDING_ENDPOINT_NAME:}
 
 ollama:
-  llm_model: ${PGPT_OLLAMA_LLM_MODEL:mistral}
+  llm_model: ${PGPT_OLLAMA_LLM_MODEL:llama3.1}
   embedding_model: ${PGPT_OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
   api_base: ${PGPT_OLLAMA_API_BASE:http://ollama:11434}
   embedding_api_base: ${PGPT_OLLAMA_EMBEDDING_API_BASE:http://ollama:11434}
@@ -30,6 +30,7 @@ ollama:
   repeat_last_n: ${PGPT_OLLAMA_REPEAT_LAST_N:64}
   repeat_penalty: ${PGPT_OLLAMA_REPEAT_PENALTY:1.2}
   request_timeout: ${PGPT_OLLAMA_REQUEST_TIMEOUT:600.0}
+  autopull_models: ${PGPT_OLLAMA_AUTOPULL_MODELS:true}
 
 ui:
   enabled: true

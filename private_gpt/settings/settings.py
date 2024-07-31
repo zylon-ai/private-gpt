@@ -59,6 +59,27 @@ class AuthSettings(BaseModel):
     )
 
 
+class IngestionSettings(BaseModel):
+    """Ingestion configuration.
+
+    This configuration is used to control the ingestion of data into the system
+    using non-server methods. This is useful for local development and testing;
+    or to ingest in bulk from a folder.
+
+    Please note that this configuration is not secure and should be used in
+    a controlled environment only (setting right permissions, etc.).
+    """
+
+    enabled: bool = Field(
+        description="Flag indicating if local ingestion is enabled or not.",
+        default=False,
+    )
+    allow_ingest_from: list[str] = Field(
+        description="A list of folders that should be permitted to make ingest requests.",
+        default=[],
+    )
+
+
 class ServerSettings(BaseModel):
     env_name: str = Field(
         description="Name of the environment (prod, staging, local...)"
@@ -74,6 +95,10 @@ class ServerSettings(BaseModel):
 
 
 class DataSettings(BaseModel):
+    local_ingestion: IngestionSettings = Field(
+        description="Ingestion configuration",
+        default_factory=lambda: IngestionSettings(allow_ingest_from=["*"]),
+    )
     local_data_folder: str = Field(
         description="Path to local storage."
         "It will be treated as an absolute path if it starts with /"
