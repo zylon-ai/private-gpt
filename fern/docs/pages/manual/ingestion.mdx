@@ -8,6 +8,14 @@ The ingestion of documents can be done in different ways:
 
 ## Bulk Local Ingestion
 
+You will need to activate `data.local_ingestion.enabled` in your setting file to use this feature. Additionally,
+it is probably a good idea to set `data.local_ingestion.allow_ingest_from` to specify which folders are allowed to be ingested.
+
+<Callout intent = "warning">
+Be careful enabling this feature in a production environment, as it can be a security risk, as it allows users to
+ingest any local file with permissions.
+</Callout>
+
 When you are running PrivateGPT in a fully local setup, you can ingest a complete folder for convenience (containing
 pdf, text files, etc.)
 and optionally watch changes on it with the command:
