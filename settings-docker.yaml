@@ -13,7 +13,7 @@ llamacpp:
   llm_hf_model_file: ${PGPT_HF_MODEL_FILE:Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf}
 
 huggingface:
-  embedding_hf_model_name: ${PGPT_EMBEDDING_HF_MODEL_NAME:BAAI/bge-small-en-v1.5}
+  embedding_hf_model_name: ${PGPT_EMBEDDING_HF_MODEL_NAME:nomic-ai/nomic-embed-text-v1.5}
 
 sagemaker:
   llm_endpoint_name: ${PGPT_SAGEMAKER_LLM_ENDPOINT_NAME:}

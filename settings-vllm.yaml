@@ -12,7 +12,7 @@ embedding:
   ingest_mode: simple
 
 huggingface:
-  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+  embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
 
 openai:
   api_base: http://localhost:8000/v1

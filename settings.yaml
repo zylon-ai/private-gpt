@@ -76,10 +76,10 @@ embedding:
   # Should be matching the value above in most cases
   mode: huggingface
   ingest_mode: simple
-  embed_dim: 384 # 384 is for BAAI/bge-small-en-v1.5
+  embed_dim: 768 # 768 is for nomic-ai/nomic-embed-text-v1.5
 
 huggingface:
-  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+  embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
   access_token: ${HF_TOKEN:}
 
 vectorstore:
