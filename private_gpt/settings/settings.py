@@ -367,6 +367,13 @@ class RagSettings(BaseModel):
     rerank: RerankSettings
 
 
+class SummarizeSettings(BaseModel):
+    use_async: bool = Field(
+        True,
+        description="If set to True, the summarization will be done asynchronously.",
+    )
+
+
 class ClickHouseSettings(BaseModel):
     host: str = Field(
         "localhost",
@@ -556,6 +563,7 @@ class Settings(BaseModel):
     vectorstore: VectorstoreSettings
     nodestore: NodeStoreSettings
     rag: RagSettings
+    summarize: SummarizeSettings
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
     clickhouse: ClickHouseSettings | None = None

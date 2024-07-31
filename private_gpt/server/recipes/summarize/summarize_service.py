@@ -19,6 +19,7 @@ from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
+from private_gpt.settings.settings import Settings
 
 DEFAULT_SUMMARIZE_PROMPT = (
     "Provide a comprehensive summary of the provided context information. "
@@ -35,11 +36,13 @@ class SummarizeService:
     @inject
     def __init__(
         self,
+        settings: Settings,
         llm_component: LLMComponent,
         node_store_component: NodeStoreComponent,
         vector_store_component: VectorStoreComponent,
         embedding_component: EmbeddingComponent,
     ) -> None:
+        self.settings = settings
         self.llm_component = llm_component
         self.node_store_component = node_store_component
         self.vector_store_component = vector_store_component
@@ -119,7 +122,7 @@ class SummarizeService:
             llm=self.llm_component.llm,
             response_mode=ResponseMode.TREE_SUMMARIZE,
             streaming=stream,
-            use_async=False,
+            use_async=self.settings.summarize.use_async,
         )
 
         prompt = prompt or DEFAULT_SUMMARIZE_PROMPT

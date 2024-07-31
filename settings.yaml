@@ -61,6 +61,9 @@ rag:
     model: cross-encoder/ms-marco-MiniLM-L-2-v2
     top_n: 1
 
+summarize:
+  use_async: true
+
 clickhouse:
     host: localhost
     port: 8443
