@@ -62,7 +62,12 @@ class AuthSettings(BaseModel):
 class IngestionSettings(BaseModel):
     """Ingestion configuration.
 
-    The implementation of the ingestion strategy must
+    This configuration is used to control the ingestion of data into the system
+    using non-server methods. This is useful for local development and testing;
+    or to ingest in bulk from a folder.
+
+    Please note that this configuration is not secure and should be used in
+    a controlled environment only (setting right permissions, etc.).
     """
 
     enabled: bool = Field(
