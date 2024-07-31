@@ -258,10 +258,7 @@ class PrivateGptUi:
             case Modes.BASIC_CHAT_MODE:
                 return "Chat with the LLM using its training data. Files are ignored."
             case Modes.SUMMARIZE_MODE:
-                return (
-                    "Generate a summary of the selected files. Prompt to customize the result. "
-                    "This may take significant time depending on the length and complexity of the input."
-                )
+                return "Generate a summary of the selected files. Prompt to customize the result."
             case _:
                 return ""
 
