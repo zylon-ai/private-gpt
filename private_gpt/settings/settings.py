@@ -189,6 +189,10 @@ class HuggingFaceSettings(BaseModel):
         None,
         description="Huggingface access token, required to download some models",
     )
+    trust_remote_code: bool = Field(
+        False,
+        description="If set to True, the code from the remote model will be trusted and executed.",
+    )
 
 
 class EmbeddingSettings(BaseModel):

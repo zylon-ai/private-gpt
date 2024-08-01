@@ -1152,6 +1152,17 @@ files = [
 ]
 
 [[package]]
+name = "einops"
+version = "0.8.0"
+description = "A new flavour of deep learning operations"
+optional = true
+python-versions = ">=3.8"
+files = [
+    {file = "einops-0.8.0-py3-none-any.whl", hash = "sha256:9572fb63046264a862693b0a87088af3bdc8c068fde03de63453cbbde245465f"},
+    {file = "einops-0.8.0.tar.gz", hash = "sha256:63486517fed345712a8385c100cb279108d9d47e6ae59099b07657e983deae85"},
+]
+
+[[package]]
 name = "email-validator"
 version = "2.2.0"
 description = "A robust email address syntax and deliverability validation library."
@@ -6659,7 +6670,7 @@ cffi = ["cffi (>=1.11)"]
 [extras]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
 embeddings-gemini = ["llama-index-embeddings-gemini"]
-embeddings-huggingface = ["llama-index-embeddings-huggingface"]
+embeddings-huggingface = ["einops", "llama-index-embeddings-huggingface"]
 embeddings-ollama = ["llama-index-embeddings-ollama", "ollama"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
@@ -6682,4 +6693,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "dce5b88d92bcfa047bf1e4c9fe2dbb9c63eb864d6bbca2340801ac0a2f02a8d4"
+content-hash = "25abbb45bc462dbf056b83c0925b505ad1232484a18e50f07c5e7f517dd84e6f"
