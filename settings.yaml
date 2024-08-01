@@ -17,6 +17,9 @@ server:
     secret: "Basic c2VjcmV0OmtleQ=="
 
 data:
+  local_ingestion:
+    enabled: ${LOCAL_INGESTION_ENABLED:false}
+    allow_ingest_from: ["*"]
   local_data_folder: local_data/private_gpt
 
 ui:
@@ -31,16 +34,24 @@ ui:
     You can only answer questions about the provided context. 
     If you know the answer but it is not based in the provided context, don't provide 
     the answer, just state the answer is not in the context provided.
+  default_summarization_system_prompt: >
+    Provide a comprehensive summary of the provided context information. 
+    The summary should cover all the key points and main ideas presented in
+    the original text, while also condensing the information into a concise 
+    and easy-to-understand format. Please ensure that the summary includes
+    relevant details and examples that support the main ideas, while avoiding 
+    any unnecessary information or repetition.
   delete_file_button_enabled: true
   delete_all_files_button_enabled: true
 
 llm:
   mode: llamacpp
-  prompt_style: "mistral"
+  prompt_style: "llama3"
   # Should be matching the selected model
   max_new_tokens: 512
   context_window: 3900
-  tokenizer: mistralai/Mistral-7B-Instruct-v0.2
+  # Select your tokenizer. Llama-index tokenizer is the default.
+  # tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
   temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
 
 rag:
@@ -53,9 +64,19 @@ rag:
     model: cross-encoder/ms-marco-MiniLM-L-2-v2
     top_n: 1
 
+summarize:
+  use_async: true
+
+clickhouse:
+    host: localhost
+    port: 8443
+    username: admin
+    password: clickhouse
+    database: embeddings
+
 llamacpp:
-  llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF
-  llm_hf_model_file: mistral-7b-instruct-v0.2.Q4_K_M.gguf
+  llm_hf_repo_id: lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF
+  llm_hf_model_file: Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
   tfs_z: 1.0            # Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting
   top_k: 40             # Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)
   top_p: 1.0            # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
@@ -65,17 +86,25 @@ embedding:
   # Should be matching the value above in most cases
   mode: huggingface
   ingest_mode: simple
-  embed_dim: 384 # 384 is for BAAI/bge-small-en-v1.5
+  embed_dim: 768 # 768 is for nomic-ai/nomic-embed-text-v1.5
 
 huggingface:
-  embedding_hf_model_name: BAAI/bge-small-en-v1.5
-  access_token: ${HUGGINGFACE_TOKEN:}
+  embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
+  access_token: ${HF_TOKEN:}
+  # Warning: Enabling this option will allow the model to download and execute code from the internet.
+  # Nomic AI requires this option to be enabled to use the model, be aware if you are using a different model.
+  trust_remote_code: true
 
 vectorstore:
   database: qdrant
 
 nodestore:
   database: simple
+
+milvus:
+  uri: local_data/private_gpt/milvus/milvus_local.db
+  collection_name: milvus_db
+  overwrite: false
 
 qdrant:
   path: local_data/private_gpt/qdrant
@@ -98,12 +127,13 @@ openai:
   embedding_api_key: ${OPENAI_API_KEY:}
 
 ollama:
-  llm_model: llama2
+  llm_model: llama3.1
   embedding_model: nomic-embed-text
   api_base: http://localhost:11434
   embedding_api_base: http://localhost:11434  # change if your embedding model runs on another ollama
   keep_alive: 5m
   request_timeout: 120.0
+  autopull_models: true
 
 azopenai:
   api_key: ${AZ_OPENAI_API_KEY:}
@@ -113,3 +143,8 @@ azopenai:
   api_version: "2023-05-15"
   embedding_model: text-embedding-ada-002
   llm_model: gpt-35-turbo
+
+gemini:
+  api_key: ${GOOGLE_API_KEY:}
+  model: models/gemini-pro
+  embedding_model: models/embedding-001
