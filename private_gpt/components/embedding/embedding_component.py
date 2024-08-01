@@ -31,6 +31,7 @@ class EmbeddingComponent:
                 self.embedding_model = HuggingFaceEmbedding(
                     model_name=settings.huggingface.embedding_hf_model_name,
                     cache_folder=str(models_cache_path),
+                    trust_remote_code=settings.huggingface.trust_remote_code,
                 )
             case "sagemaker":
                 try:
