@@ -65,6 +65,9 @@ google-generativeai = {version ="^0.5.4", optional = true}
 # Optional Ollama client
 ollama = {version ="^0.3.0", optional = true}
 
+# Optional HF Transformers
+einops = {version = "^0.8.0", optional = true}
+
 [tool.poetry.extras]
 ui = ["gradio", "ffmpy"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
@@ -75,7 +78,7 @@ llms-sagemaker = ["boto3"]
 llms-azopenai = ["llama-index-llms-azure-openai"]
 llms-gemini = ["llama-index-llms-gemini", "google-generativeai"]
 embeddings-ollama = ["llama-index-embeddings-ollama", "ollama"]
-embeddings-huggingface = ["llama-index-embeddings-huggingface"]
+embeddings-huggingface = ["llama-index-embeddings-huggingface", "einops"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
