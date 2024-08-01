@@ -2,20 +2,20 @@
 
 [![Tests](https://github.com/zylon-ai/private-gpt/actions/workflows/tests.yml/badge.svg)](https://github.com/zylon-ai/private-gpt/actions/workflows/tests.yml?query=branch%3Amain)
 [![Website](https://img.shields.io/website?up_message=check%20it&down_message=down&url=https%3A%2F%2Fdocs.privategpt.dev%2F&label=Documentation)](https://docs.privategpt.dev/)
-
 [![Discord](https://img.shields.io/discord/1164200432894234644?logo=discord&label=PrivateGPT)](https://discord.gg/bK6mRVpErU)
 [![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/ZylonPrivateGPT)](https://twitter.com/ZylonPrivateGPT)
-
-
-> Install & usage docs: https://docs.privategpt.dev/
-> 
-> Join the community: [Twitter](https://twitter.com/ZylonPrivateGPT) & [Discord](https://discord.gg/bK6mRVpErU)
 
 ![Gradio UI](/fern/docs/assets/ui.png?raw=true)
 
 PrivateGPT is a production-ready AI project that allows you to ask questions about your documents using the power
 of Large Language Models (LLMs), even in scenarios without an Internet connection. 100% private, no data leaves your
 execution environment at any point.
+
+>[!TIP]
+> If you are looking for an **enterprise-ready, fully private AI workspace**
+> check out [Zylon's website](https://zylon.ai)  or [request a demo](https://cal.com/zylon/demo?source=pgpt-readme).
+> Crafted by the team behind PrivateGPT, Zylon is a best-in-class AI collaborative
+> workspace that can be easily deployed on-premise (data center, bare metal...) or in your private cloud (AWS, GCP, Azure...).
 
 The project provides an API offering all the primitives required to build private, context-aware AI applications.
 It follows and extends the [OpenAI API standard](https://openai.com/blog/openai-api),
@@ -38,14 +38,10 @@ In addition to this, a working [Gradio UI](https://www.gradio.app/)
 client is provided to test the API, together with a set of useful tools such as bulk model
 download script, ingestion script, documents folder watch, etc.
 
-> 💡 If you are looking for an **enterprise-ready, fully private AI workspace**
-> check out [Zylon's website](https://zylon.ai)  or [request a demo](https://cal.com/zylon/demo?source=pgpt-readme).
-> Crafted by the team behind PrivateGPT, Zylon is a best-in-class AI collaborative
-> workspace that can be easily deployed on-premise (data center, bare metal...) or in your private cloud (AWS, GCP, Azure...).
-
 ## 🎞️ Overview
-DISCLAIMER: This README is not updated as frequently as the [documentation](https://docs.privategpt.dev/).
-Please check it out for the latest updates!
+>[!WARNING]
+>  This README is not updated as frequently as the [documentation](https://docs.privategpt.dev/).
+>  Please check it out for the latest updates!
 
 ### Motivation behind PrivateGPT
 Generative AI is a game changer for our society, but adoption in companies of all sizes and data-sensitive
