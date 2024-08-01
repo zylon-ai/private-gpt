@@ -11,8 +11,8 @@ PrivateGPT is a production-ready AI project that allows you to ask questions abo
 of Large Language Models (LLMs), even in scenarios without an Internet connection. 100% private, no data leaves your
 execution environment at any point.
 
->[!IMPORTANT]
-> 💡 If you are looking for an **enterprise-ready, fully private AI workspace**
+>[!TIP]
+> If you are looking for an **enterprise-ready, fully private AI workspace**
 > check out [Zylon's website](https://zylon.ai)  or [request a demo](https://cal.com/zylon/demo?source=pgpt-readme).
 > Crafted by the team behind PrivateGPT, Zylon is a best-in-class AI collaborative
 > workspace that can be easily deployed on-premise (data center, bare metal...) or in your private cloud (AWS, GCP, Azure...).
