@@ -53,8 +53,6 @@ jobs:
             type=semver,pattern={{version}}-${{ matrix.type }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.type == env.DEFAULT_TYPE }}
             type=semver,pattern={{major}}.{{minor}}-${{ matrix.type }}
-            type=semver,pattern={{major}},enable=${{ matrix.type == env.DEFAULT_TYPE }}
-            type=semver,pattern={{major}}-${{ matrix.type }}
             type=raw,value=latest,enable=${{ matrix.type == env.DEFAULT_TYPE }}
             type=sha
           flavor: |
