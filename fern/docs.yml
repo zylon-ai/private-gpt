@@ -74,14 +74,16 @@ navigation:
             path: ./docs/pages/ui/gradio.mdx
           - page: Alternatives
             path: ./docs/pages/ui/alternatives.mdx
-  # Small code snippet or example of usage to help users
   - tab: recipes
     layout:
-      - section: Choice of LLM
+      - section: Getting started
         contents:
-          # TODO: add recipes
-          - page: List of LLMs
-            path: ./docs/pages/recipes/list-llm.mdx
+          - page: Quickstart
+            path: ./docs/pages/recipes/quickstart.mdx
+      - section: General use cases
+        contents:
+          - page: Summarize
+            path: ./docs/pages/recipes/summarize.mdx
   # More advanced usage of PrivateGPT, by API
   - tab: api-reference
     layout:

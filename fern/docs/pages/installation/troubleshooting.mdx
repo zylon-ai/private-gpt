@@ -24,8 +24,26 @@ PrivateGPT uses the `AutoTokenizer` library to tokenize input text accurately. I
    In your `settings.yaml` file, specify the model you want to use:
    ```yaml
    llm:
-     tokenizer: mistralai/Mistral-7B-Instruct-v0.2
+     tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
    ```
 2. **Set Access Token for Gated Models:**
    If you are using a gated model, ensure the `access_token` is set as mentioned in the previous section.
 This configuration ensures that PrivateGPT can download and use the correct tokenizer for the model you are working with.
+
+# Embedding dimensions mismatch
+If you encounter an error message like `Embedding dimensions mismatch`, it is likely due to the embedding model and
+current vector dimension mismatch. To resolve this issue, ensure that the model and the input data have the same vector dimensions.
+
+By default, PrivateGPT uses `nomic-embed-text` embeddings, which have a vector dimension of 768.
+If you are using a different embedding model, ensure that the vector dimensions match the model's output.
+
+<Callout intent = "warning">
+In versions below to 0.6.0, the default embedding model was `BAAI/bge-small-en-v1.5` in `huggingface` setup.
+If you plan to reuse the old generated embeddings, you need to update the `settings.yaml` file to use the correct embedding model:
+```yaml
+huggingface:
+  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+embedding:
+  embed_dim: 384
+```
+</Callout>

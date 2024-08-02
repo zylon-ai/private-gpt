@@ -4,7 +4,7 @@ server:
 llm:
   mode: openailike
   max_new_tokens: 512
-  tokenizer: mistralai/Mistral-7B-Instruct-v0.2
+  tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
   temperature: 0.1
 
 embedding:
@@ -12,7 +12,7 @@ embedding:
   ingest_mode: simple
 
 huggingface:
-  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+  embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
 
 openai:
   api_base: http://localhost:8000/v1

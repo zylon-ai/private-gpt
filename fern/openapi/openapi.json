@@ -339,6 +339,48 @@
         }
       }
     },
+    "/v1/summarize": {
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Summarize",
+        "description": "Given a text, the model will return a summary.\n\nOptionally include `instructions` to influence the way the summary is generated.\n\nIf `use_context`\nis set to `true`, the model will also use the content coming from the ingested\ndocuments in the summary. The documents being used can\nbe filtered by their metadata using the `context_filter`.\nIngested documents metadata can be found using `/ingest/list` endpoint.\nIf you want all ingested documents to be used, remove `context_filter` altogether.\n\nIf `prompt` is set, it will be used as the prompt for the summarization,\notherwise the default prompt will be used.\n\nWhen using `'stream': true`, the API will return data chunks following [OpenAI's\nstreaming model](https://platform.openai.com/docs/api-reference/chat/streaming):\n```\n{\"id\":\"12345\",\"object\":\"completion.chunk\",\"created\":1694268190,\n\"model\":\"private-gpt\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello\"},\n\"finish_reason\":null}]}\n```",
+        "operationId": "summarize_v1_summarize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummarizeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummarizeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/embeddings": {
       "post": {
         "tags": [
@@ -500,6 +542,10 @@
       "Chunk": {
         "properties": {
           "object": {
+            "type": "string",
+            "enum": [
+              "context.chunk"
+            ],
             "const": "context.chunk",
             "title": "Object"
           },
@@ -612,10 +658,18 @@
       "ChunksResponse": {
         "properties": {
           "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ],
             "const": "list",
             "title": "Object"
           },
           "model": {
+            "type": "string",
+            "enum": [
+              "private-gpt"
+            ],
             "const": "private-gpt",
             "title": "Model"
           },
@@ -728,6 +782,10 @@
             "title": "Index"
           },
           "object": {
+            "type": "string",
+            "enum": [
+              "embedding"
+            ],
             "const": "embedding",
             "title": "Object"
           },
@@ -779,10 +837,18 @@
       "EmbeddingsResponse": {
         "properties": {
           "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ],
             "const": "list",
             "title": "Object"
           },
           "model": {
+            "type": "string",
+            "enum": [
+              "private-gpt"
+            ],
             "const": "private-gpt",
             "title": "Model"
           },
@@ -818,6 +884,10 @@
       "HealthResponse": {
         "properties": {
           "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ],
             "const": "ok",
             "title": "Status",
             "default": "ok"
@@ -829,10 +899,18 @@
       "IngestResponse": {
         "properties": {
           "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ],
             "const": "list",
             "title": "Object"
           },
           "model": {
+            "type": "string",
+            "enum": [
+              "private-gpt"
+            ],
             "const": "private-gpt",
             "title": "Model"
           },
@@ -879,6 +957,10 @@
       "IngestedDoc": {
         "properties": {
           "object": {
+            "type": "string",
+            "enum": [
+              "ingest.document"
+            ],
             "const": "ingest.document",
             "title": "Object"
           },
@@ -1001,6 +1083,10 @@
             ]
           },
           "model": {
+            "type": "string",
+            "enum": [
+              "private-gpt"
+            ],
             "const": "private-gpt",
             "title": "Model"
           },
@@ -1073,6 +1159,78 @@
         ],
         "title": "OpenAIMessage",
         "description": "Inference result, with the source of the message.\n\nRole could be the assistant or system\n(providing a default response, not AI generated)."
+      },
+      "SummarizeBody": {
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "use_context": {
+            "type": "boolean",
+            "title": "Use Context",
+            "default": false
+          },
+          "context_filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "stream": {
+            "type": "boolean",
+            "title": "Stream",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "SummarizeBody"
+      },
+      "SummarizeResponse": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "title": "SummarizeResponse"
       },
       "ValidationError": {
         "properties": {
