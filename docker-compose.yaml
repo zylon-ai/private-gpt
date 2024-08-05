@@ -10,7 +10,7 @@ services:
     image: ${PGPT_IMAGE:-zylonai/private-gpt}${PGPT_TAG:-0.6.1}-external
     build:
       context: .
-      dockerfile: Dockerfile.external
+      dockerfile: Dockerfile.ollama
     volumes:
       - ./local_data/:/home/worker/app/local_data
     ports:
@@ -33,7 +33,7 @@ services:
     image: ${PGPT_IMAGE:-zylonai/private-gpt}${PGPT_TAG:-0.6.1}-local
     build:
       context: .
-      dockerfile: Dockerfile.local
+      dockerfile: Dockerfile.llamacpp
     volumes:
       - ./local_data/:/home/worker/app/local_data
       - ./models/:/home/worker/app/models
