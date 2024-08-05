@@ -289,7 +289,8 @@ class PrivateGptUi:
                 "file_name", "[FILE NAME MISSING]"
             )
             files.add(file_name)
-        return [[row] for row in files]
+            sorted_files = sorted(files)          # Sort the files alphabetically
+        return [[row] for row in sorted_files]    # Use sorted files
 
     def _upload_file(self, files: list[str]) -> None:
         logger.debug("Loading count=%s files", len(files))
