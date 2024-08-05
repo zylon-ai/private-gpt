@@ -1,0 +1,85 @@
+This guide provides a quick start for running different profiles of PrivateGPT using Docker Compose.
+The profiles cater to various environments, including Ollama setups (CPU, CUDA, MacOS) and fully Local setup.
+
+If you want to run PrivateGPT locally without Docker, refer to the [Local Installation Guide](/installation).
+
+#### Prerequisites
+- **Docker and Docker Compose:** Ensure both are installed on your system.
+[Installation Guide for Docker](https://docs.docker.com/get-docker/), [Installation Guide for Docker Compose](https://docs.docker.com/compose/install/).
+- **Clone PrivateGPT Repository:** Clone the PrivateGPT repository to your machine and navigate to the directory:
+  ```sh
+  git clone https://github.com/zylon-ai/private-gpt.git
+  cd private-gpt
+  ```
+
+---
+
+## Ollama Setups (Recommended)
+
+Ollama setups are recommended for their ease of use and optimized configurations. Ollama offers different profiles depending on your hardware capabilities and operating system.
+
+### 1. Default/Ollama CPU
+
+**Description:**
+This profile runs the Ollama service using CPU resources. It is the standard configuration for running Ollama-based Private-GPT services without GPU acceleration.
+
+**Run:**
+To start the services, use either of the following commands:
+```sh
+docker-compose up
+```
+or
+```sh
+docker-compose --profile ollama up
+```
+
+### 2. Ollama Nvidia CUDA
+
+**Description:**
+This profile leverages GPU acceleration with CUDA support, suitable for computationally intensive tasks that benefit from GPU resources.
+
+**Requirements:**
+- Ensure that your system has compatible GPU hardware and the necessary NVIDIA drivers installed. The installation process is detailed [here](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html).
+
+**Run:**
+To start the services with CUDA support, use:
+```sh
+docker-compose --profile ollama-cuda up
+```
+
+### 3. Ollama Host
+
+**Description:**
+This profile is designed for running PrivateGPT using Ollama installed on the host machine. This setup is particularly useful for MacOS users, as Docker does not yet support Metal GPU.
+
+**Requirements:**
+- Install Ollama on your machine by following the instructions at [ollama.ai](https://ollama.ai/).
+- Start the Ollama service with the command:
+```sh
+OLLAMA_HOST=0.0.0.0 ollama serve
+```
+
+**Run:**
+To start the services with the host configuration, use:
+```sh
+docker-compose --profile ollama-host up
+```
+
+---
+
+## Fully Local Setups
+
+### LlamaCPP + HuggingFace Embeddings
+
+**Description:**
+This profile runs the Private-GPT services locally using `llama-cpp` and Hugging Face models.
+
+**Requirements:**
+- **Hugging Face Token (HF_TOKEN):** Required for accessing Hugging Face models. Obtain your token following [this guide](/installation/getting-started/troubleshooting#downloading-gated-and-private-models).
+
+**Run:**
+Start the services with your Hugging Face token:
+```sh
+HF_TOKEN=<your_hf_token> docker-compose up --profile local
+```
+Replace `<your_hf_token>` with your actual Hugging Face token.
