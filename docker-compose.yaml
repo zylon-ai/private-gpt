@@ -7,7 +7,7 @@ services:
   # Private-GPT service for the Ollama CPU and GPU modes
   # This service builds from an external Dockerfile and runs the Ollama mode.
   private-gpt-ollama:
-    image: ${PGPT_IMAGE:-zylonai/private-gpt}${PGPT_TAG:-0.6.1}-external
+    image: ${PGPT_IMAGE:-zylonai/private-gpt}${PGPT_TAG:-0.6.1}-ollama
     build:
       context: .
       dockerfile: Dockerfile.ollama
@@ -30,11 +30,11 @@ services:
 
   # Private-GPT service for the local mode
   # This service builds from a local Dockerfile and runs the application in local mode.
-  private-gpt-local:
-    image: ${PGPT_IMAGE:-zylonai/private-gpt}${PGPT_TAG:-0.6.1}-local
+  private-gpt-llamacpp-cpu:
+    image: ${PGPT_IMAGE:-zylonai/private-gpt}${PGPT_TAG:-0.6.1}-llamacpp-cpu
     build:
       context: .
-      dockerfile: Dockerfile.llamacpp
+      dockerfile: Dockerfile.llamacpp-cpu
     volumes:
       - ./local_data/:/home/worker/app/local_data
       - ./models/:/home/worker/app/models
@@ -46,7 +46,7 @@ services:
       PGPT_PROFILES: local
       HF_TOKEN: ${HF_TOKEN}
     profiles:
-      - llamacpp
+      - llamacpp-cpu
 
   #-----------------------------------
   #---- Ollama services --------------
