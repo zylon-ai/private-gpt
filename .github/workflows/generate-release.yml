@@ -9,7 +9,7 @@ env:
   REGISTRY: docker.io
   IMAGE_NAME: ${{ github.repository }}
   platforms: linux/amd64,linux/arm64
-  DEFAULT_TYPE: "external"
+  DEFAULT_TYPE: "ollama"
 
 jobs:
   build-and-push-image:
@@ -17,7 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        type: [ local, external ]
+        type: [ llamacpp-cpu, ollama ]
 
     permissions:
       contents: read

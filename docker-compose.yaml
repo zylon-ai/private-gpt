@@ -7,9 +7,10 @@ services:
   # Private-GPT service for the Ollama CPU and GPU modes
   # This service builds from an external Dockerfile and runs the Ollama mode.
   private-gpt-ollama:
+    image: ${PGPT_IMAGE:-zylonai/private-gpt}${PGPT_TAG:-0.6.1}-ollama
     build:
       context: .
-      dockerfile: Dockerfile.external
+      dockerfile: Dockerfile.ollama
     volumes:
       - ./local_data/:/home/worker/app/local_data
     ports:
@@ -20,18 +21,20 @@ services:
       PGPT_MODE: ollama
       PGPT_EMBED_MODE: ollama
       PGPT_OLLAMA_API_BASE: http://ollama:11434
+      HF_TOKEN: ${HF_TOKEN:-}
     profiles:
       - ""
-      - ollama
+      - ollama-cpu
       - ollama-cuda
-      - ollama-host
+      - ollama-api
 
   # Private-GPT service for the local mode
   # This service builds from a local Dockerfile and runs the application in local mode.
-  private-gpt-local:
+  private-gpt-llamacpp-cpu:
+    image: ${PGPT_IMAGE:-zylonai/private-gpt}${PGPT_TAG:-0.6.1}-llamacpp-cpu
     build:
       context: .
-      dockerfile: Dockerfile.local
+      dockerfile: Dockerfile.llamacpp-cpu
     volumes:
       - ./local_data/:/home/worker/app/local_data
       - ./models/:/home/worker/app/models
@@ -43,7 +46,7 @@ services:
       PGPT_PROFILES: local
       HF_TOKEN: ${HF_TOKEN}
     profiles:
-      - local
+      - llamacpp-cpu
 
   #-----------------------------------
   #---- Ollama services --------------
@@ -70,9 +73,9 @@ services:
       - "host.docker.internal:host-gateway"
     profiles:
       - ""
-      - ollama
+      - ollama-cpu
       - ollama-cuda
-      - ollama-host
+      - ollama-api
 
   # Ollama service for the CPU mode
   ollama-cpu:
