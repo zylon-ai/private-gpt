@@ -30,7 +30,7 @@ docker-compose up
 ```
 or with a specific profile:
 ```sh
-docker-compose --profile ollama up
+docker-compose --profile ollama-cpu up
 ```
 
 #### 2. Ollama Nvidia CUDA
@@ -47,7 +47,7 @@ To start the services with CUDA support using pre-built images, run:
 docker-compose --profile ollama-cuda up
 ```
 
-#### 3. Ollama Host
+#### 3. Ollama External API
 
 **Description:**
 This profile is designed for running PrivateGPT using Ollama installed on the host machine. This setup is particularly useful for MacOS users, as Docker does not yet support Metal GPU.
@@ -62,7 +62,7 @@ OLLAMA_HOST=0.0.0.0 ollama serve
 ```
 To start the services with the host configuration using pre-built images, run:
 ```sh
-docker-compose --profile ollama-host up
+docker-compose --profile ollama-api up
 ```
 
 ### Fully Local Setups
@@ -78,7 +78,7 @@ A **Hugging Face Token (HF_TOKEN)** is required for accessing Hugging Face model
 **Run:**
 Start the services with your Hugging Face token using pre-built images:
 ```sh
-HF_TOKEN=<your_hf_token> docker-compose up --profile local
+HF_TOKEN=<your_hf_token> docker-compose up --profile llamacpp
 ```
 Replace `<your_hf_token>` with your actual Hugging Face token.
 

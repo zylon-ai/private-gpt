@@ -21,11 +21,12 @@ services:
       PGPT_MODE: ollama
       PGPT_EMBED_MODE: ollama
       PGPT_OLLAMA_API_BASE: http://ollama:11434
+      HF_TOKEN: ${HF_TOKEN:-}
     profiles:
       - ""
-      - ollama
+      - ollama-cpu
       - ollama-cuda
-      - ollama-host
+      - ollama-api
 
   # Private-GPT service for the local mode
   # This service builds from a local Dockerfile and runs the application in local mode.
@@ -45,7 +46,7 @@ services:
       PGPT_PROFILES: local
       HF_TOKEN: ${HF_TOKEN}
     profiles:
-      - local
+      - llamacpp
 
   #-----------------------------------
   #---- Ollama services --------------
@@ -72,9 +73,9 @@ services:
       - "host.docker.internal:host-gateway"
     profiles:
       - ""
-      - ollama
+      - ollama-cpu
       - ollama-cuda
-      - ollama-host
+      - ollama-api
 
   # Ollama service for the CPU mode
   ollama-cpu:
