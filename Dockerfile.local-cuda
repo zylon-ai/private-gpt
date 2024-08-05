@@ -1,0 +1,84 @@
+FROM nvidia/cuda:12.5.1-cudnn-devel-ubuntu22.04 as base
+
+# For tzdata
+ENV DEBIAN_FRONTEND="noninteractive" TZ="Etc/UTC"
+
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y git build-essential \
+    python3 python3-pip python3.11-venv gcc wget \
+    ocl-icd-opencl-dev opencl-headers clinfo \
+    libclblast-dev libopenblas-dev \
+    && mkdir -p /etc/OpenCL/vendors && echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
+    && python3 --version
+
+# Install poetry
+RUN pip install pipx
+RUN python3 -m pipx ensurepath
+RUN pipx install poetry==1.8.3
+ENV PATH="/root/.local/bin:$PATH"
+ENV PATH=".venv/bin/:$PATH"
+
+# Dependencies to build llama-cpp
+RUN apt update && apt install -y \
+  libopenblas-dev\
+  ninja-build\
+  build-essential\
+  pkg-config\
+  wget
+
+# https://python-poetry.org/docs/configuration/#virtualenvsin-project
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true
+
+FROM base as dependencies
+WORKDIR /home/worker/app
+COPY pyproject.toml poetry.lock ./
+
+ARG POETRY_EXTRAS="ui embeddings-huggingface llms-llama-cpp vector-stores-qdrant"
+RUN poetry install --no-root --extras "${POETRY_EXTRAS}"
+
+# Enable GPU support
+ENV CUDA_DOCKER_ARCH=all
+ENV GGML_CUDA=1
+ENV TOKENIZERS_PARALLELISM=true
+RUN CMAKE_ARGS="-DGGML_CUDA=on" \
+    poetry run pip install \
+        --force-reinstall \
+        --no-cache-dir \
+        --verbose \
+        llama-cpp-python==0.2.84 \
+        numpy==1.26.0
+
+FROM base as app
+
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8080
+ENV APP_ENV=prod
+ENV PYTHONPATH="$PYTHONPATH:/home/worker/app/private_gpt/"
+EXPOSE 8080
+
+# Prepare a non-root user
+# More info about how to configure UIDs and GIDs in Docker:
+# https://github.com/systemd/systemd/blob/main/docs/UIDS-GIDS.md
+
+# Define the User ID (UID) for the non-root user
+# UID 100 is chosen to avoid conflicts with existing system users
+ARG UID=1000
+
+# Define the Group ID (GID) for the non-root user
+# GID 65534 is often used for the 'nogroup' or 'nobody' group
+ARG GID=65534
+
+RUN adduser --system --gid ${GID} --uid ${UID} --home /home/worker worker
+WORKDIR /home/worker/app
+
+RUN chown worker /home/worker/app
+RUN mkdir local_data && chown worker local_data
+RUN mkdir models && chown worker models
+COPY --chown=worker --from=dependencies /home/worker/app/.venv/ .venv
+COPY --chown=worker private_gpt/ private_gpt
+COPY --chown=worker *.yaml ./
+COPY --chown=worker scripts/ scripts
+
+USER worker
+ENTRYPOINT python -m private_gpt
