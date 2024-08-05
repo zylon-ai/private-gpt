@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/zylon-ai/private-gpt/compare/v0.6.0...v0.7.0) (2024-08-05)
+
+
+### Features
+
+* **deploy:** improve Docker-Compose and quickstart on Docker ([#2037](https://github.com/zylon-ai/private-gpt/issues/2037)) ([9784f2d](https://github.com/zylon-ai/private-gpt/commit/9784f2d0c5217ae47861fcd142e55e550eed2537))
+
+
+### Bug Fixes
+
+* **deploy:** generate docker release when new version is released ([#2038](https://github.com/zylon-ai/private-gpt/issues/2038)) ([10fbf61](https://github.com/zylon-ai/private-gpt/commit/10fbf614dfacb82e50b03e9f3fff260c1b6e56aa))
+
 ## [0.6.0](https://github.com/zylon-ai/private-gpt/compare/v0.5.0...v0.6.0) (2024-08-02)
 
 
