@@ -59,6 +59,7 @@ class Source(BaseModel):
 
     class Config:
         frozen = True
+        USE_HYPERLINKS_FOR_SOURCES: bool = True
 
     @staticmethod
     def curate_sources(sources: list[Chunk]) -> list["Source"]:
@@ -128,10 +129,10 @@ class PrivateGptUi:
                 used_files = set()
                 for index, source in enumerate(cur_sources, start=1):
                     if f"{source.file}-{source.page}" not in used_files:
-                        sources_text = (
-                            sources_text
-                            + f"{index}. {source.to_hyperlink()} \n\n"
-                        )
+                        if settings().USE_HYPERLINKS_FOR_SOURCES:
+                            sources_text += f"{index}. {source.to_hyperlink()} \n\n"
+                        else:
+                            sources_text += f"{index}. {source.to_text()} \n\n"
                         used_files.add(f"{source.file}-{source.page}")
                 sources_text += "<hr>\n\n"
                 full_response += sources_text
