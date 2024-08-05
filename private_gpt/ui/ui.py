@@ -55,6 +55,7 @@ class Source(BaseModel):
     file: str
     page: str
     text: str
+    pdf_prefix: str = "C:/UsedFilesFolder/"
 
     class Config:
         frozen = True
@@ -76,7 +77,11 @@ class Source(BaseModel):
             )  # Unique sources only
 
         return curated_sources
-
+        
+    def to_hyperlink(self) -> str:
+        encoded_file = self.file.replace(" ", "%20")
+        file_path = f"{self.pdf_prefix}{encoded_file}#page={self.page}"
+        return f'<a href="file:///{file_path}" target="_blank">{self.file} (page {self.page})</a>'
 
 @singleton
 class PrivateGptUi:
@@ -125,7 +130,7 @@ class PrivateGptUi:
                     if f"{source.file}-{source.page}" not in used_files:
                         sources_text = (
                             sources_text
-                            + f"{index}. {source.file} (page {source.page}) \n\n"
+                            + f"{index}. {source.to_hyperlink()} \n\n"
                         )
                         used_files.add(f"{source.file}-{source.page}")
                 sources_text += "<hr>\n\n"
