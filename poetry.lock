@@ -713,7 +713,7 @@ httpx = ">=0.27.0"
 importlib-resources = "*"
 kubernetes = ">=28.1.0"
 mmh3 = ">=4.0.1"
-numpy = ">=1.22.5,<2.0.0"
+numpy = ">=1.22.5"
 onnxruntime = ">=1.14.1"
 opentelemetry-api = ">=1.2.0"
 opentelemetry-exporter-otlp-proto-grpc = ">=1.2.0"
@@ -1639,7 +1639,7 @@ importlib-resources = ">=1.3,<7.0"
 jinja2 = "<4.0"
 markupsafe = ">=2.0,<3.0"
 matplotlib = ">=3.0,<4.0"
-numpy = ">=1.0,<3.0"
+numpy = ">=1.0"
 orjson = ">=3.0,<4.0"
 packaging = "*"
 pandas = ">=1.0,<3.0"
@@ -2413,7 +2413,7 @@ httpx = "*"
 nest-asyncio = ">=1.5.8,<2.0.0"
 networkx = ">=3.0"
 nltk = ">=3.8.1,<4.0.0"
-numpy = "<2.0.0"
+numpy = ">=1.20"
 openai = ">=1.1.0"
 pandas = "*"
 pillow = ">=9.0.0"
@@ -3626,7 +3626,7 @@ files = [
 [package.dependencies]
 coloredlogs = "*"
 flatbuffers = "*"
-numpy = ">=1.21.6,<2.0"
+numpy = ">=1.21.6"
 packaging = "*"
 protobuf = "*"
 sympy = "*"
@@ -5250,7 +5250,7 @@ files = [
 ]
 
 [package.dependencies]
-numpy = ">=1.23.5,<2.3"
+numpy = ">=1.23.5"
 
 [package.extras]
 dev = ["cython-lint (>=0.12.2)", "doit (>=0.36.0)", "mypy (==1.10.0)", "pycodestyle", "pydevtool", "rich-click", "ruff (>=0.0.292)", "types-psutil", "typing_extensions"]
