@@ -73,13 +73,13 @@ class IngestionHelper:
     ) -> list[Document]:
         documents = IngestionHelper._load_file_to_documents(file_name, file_data)
         for document in documents:
-            document.metadata["file_name"] = file_name
+            document.metadata["file_name"] = str(file_data)
         IngestionHelper._exclude_metadata(documents)
         return documents
 
     @staticmethod
     def _load_file_to_documents(file_name: str, file_data: Path) -> list[Document]:
-        logger.debug("Transforming file_name=%s into documents", file_name)
+        logger.debug("Transforming file=%s into documents", str(file_data))
         extension = Path(file_name).suffix
         reader_cls = FILE_READER_CLS.get(extension)
         if reader_cls is None:

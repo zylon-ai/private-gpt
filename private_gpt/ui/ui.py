@@ -410,7 +410,7 @@ class PrivateGptUi:
                     )
                     ingested_dataset = gr.List(
                         self._list_ingested_files,
-                        headers=["File name"],
+                        headers=["Files"],
                         label="Ingested Files",
                         height=235,
                         interactive=False,
