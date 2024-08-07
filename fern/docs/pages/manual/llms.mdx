@@ -117,7 +117,7 @@ azopenai:
   azure_endpoint: <your_azopenai_endpoint> # You could skip this configuration and use the AZ_OPENAI_ENDPOINT env var instead
   api_version: <api_version> # The API version to use. Default is "2023_05_15"
   embedding_deployment_name: <your_embedding_deployment_name> # You could skip this configuration and use the AZ_OPENAI_EMBEDDING_DEPLOYMENT_NAME env var instead
-  embedding_model: <openai_embeddings_to_use> # Optional model to use. Default is "text-embedding-ada-002" 
+  embedding_model: <openai_embeddings_to_use> # Optional model to use. Default is "text-embedding-ada-002"
   llm_deployment_name: <your_model_deployment_name> # You could skip this configuration and use the AZ_OPENAI_LLM_DEPLOYMENT_NAME env var instead
   llm_model: <openai_model_to_use> # Optional model to use. Default is "gpt-35-turbo"
 ```
@@ -231,4 +231,3 @@ or
 
 When the server is started it will print a log *Application startup complete*.
 Navigate to http://localhost:8001 to use the Gradio UI or to http://localhost:8001/docs (API section) to try the API.
-

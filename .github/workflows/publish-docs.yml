@@ -1,8 +1,8 @@
 name: publish docs
 
-on: 
-  push: 
-    branches: 
+on:
+  push:
+    branches:
       - main
     paths:
       - "fern/**"

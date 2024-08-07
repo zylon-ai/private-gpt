@@ -116,7 +116,7 @@ postgres=# \d private_gpt.data_embeddings
 Indexes:
     "data_embeddings_pkey" PRIMARY KEY, btree (id)
 
-postgres=# 
+postgres=#
 ```
 The dimensions of the embeddings columns will be set based on the `embedding.embed_dim` value.  If the embedding model changes this table may need to be dropped and recreated to avoid a dimension mismatch.
 

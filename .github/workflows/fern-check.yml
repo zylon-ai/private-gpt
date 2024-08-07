@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "fern/**"
-      
+
 jobs:
   fern-check:
     runs-on: ubuntu-latest

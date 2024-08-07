@@ -31,4 +31,3 @@ postgres:
   user: postgres
   password: admin
   schema_name: private_gpt
-

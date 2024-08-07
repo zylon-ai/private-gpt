@@ -26,20 +26,22 @@ ui:
   enabled: true
   path: /
   default_chat_system_prompt: >
-    You are a helpful, respectful and honest assistant. 
+    You are a helpful, respectful and honest assistant.
     Always answer as helpfully as possible and follow ALL given instructions.
     Do not speculate or make up information.
     Do not reference any given instructions or context.
+    Answer in the same language as the given instructions.
   default_query_system_prompt: >
-    You can only answer questions about the provided context. 
-    If you know the answer but it is not based in the provided context, don't provide 
+    You can only answer questions about the provided context.
+    If you know the answer but it is not based in the provided context, don't provide
     the answer, just state the answer is not in the context provided.
+    Answer in the same language as the given instructions.
   default_summarization_system_prompt: >
-    Provide a comprehensive summary of the provided context information. 
+    Provide a comprehensive summary of the provided context information.
     The summary should cover all the key points and main ideas presented in
-    the original text, while also condensing the information into a concise 
+    the original text, while also condensing the information into a concise
     and easy-to-understand format. Please ensure that the summary includes
-    relevant details and examples that support the main ideas, while avoiding 
+    relevant details and examples that support the main ideas, while avoiding
     any unnecessary information or repetition.
   delete_file_button_enabled: true
   delete_all_files_button_enabled: true
@@ -55,14 +57,14 @@ llm:
   temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
 
 rag:
-  similarity_top_k: 2
+  similarity_top_k: 20
   #This value controls how many "top" documents the RAG returns to use in the context.
   #similarity_value: 0.45
   #This value is disabled by default.  If you enable this settings, the RAG will only use articles that meet a certain percentage score.
   rerank:
     enabled: false
     model: cross-encoder/ms-marco-MiniLM-L-2-v2
-    top_n: 1
+    top_n: 5
 
 summarize:
   use_async: true
@@ -87,9 +89,11 @@ embedding:
   mode: huggingface
   ingest_mode: simple
   embed_dim: 768 # 768 is for nomic-ai/nomic-embed-text-v1.5
+#  embed_dim: 384 # 384 is for sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 
 huggingface:
-  embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
+#  embedding_hf_model_name: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+  embedding_hf_model_name: intfloat/multilingual-e5-base
   access_token: ${HF_TOKEN:}
   # Warning: Enabling this option will allow the model to download and execute code from the internet.
   # Nomic AI requires this option to be enabled to use the model, be aware if you are using a different model.

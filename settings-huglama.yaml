@@ -1,0 +1,18 @@
+server:
+  env_name: ${APP_ENV:huglama}
+
+llm:
+  mode: ollama
+  max_new_tokens: 10000
+  context_window: 100000
+  temperature: 0.1
+
+embedding:
+  mode: huggingface
+  ingest_mode: parallel
+
+vectorstore:
+  database: qdrant
+
+qdrant:
+  path: local_data/private_gpt/qdrant

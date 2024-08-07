@@ -110,10 +110,10 @@ typing checks, just run `make check` before committing to make sure your code is
 Remember to test your code! You'll find a tests folder with helpers, and you can run
 tests using `make test` command.
 
-Don't know what to contribute? Here is the public 
-[Project Board](https://github.com/users/imartinez/projects/3) with several ideas. 
+Don't know what to contribute? Here is the public
+[Project Board](https://github.com/users/imartinez/projects/3) with several ideas.
 
-Head over to Discord 
+Head over to Discord
 #contributors channel and ask for write permissions on that GitHub project.
 
 ## 💬 Community
@@ -122,7 +122,7 @@ Join the conversation around PrivateGPT on our:
 - [Discord](https://discord.gg/bK6mRVpErU)
 
 ## 📖 Citation
-If you use PrivateGPT in a paper, check out the [Citation file](CITATION.cff) for the correct citation.  
+If you use PrivateGPT in a paper, check out the [Citation file](CITATION.cff) for the correct citation.
 You can also use the "Cite this repository" button in this repo to get the citation in different formats.
 
 Here are a couple of examples:
@@ -150,7 +150,7 @@ PrivateGPT is actively supported by the teams behind:
 * [Fern](https://buildwithfern.com/), providing Documentation and SDKs
 * [LlamaIndex](https://www.llamaindex.ai/), providing the base RAG framework and abstractions
 
-This project has been strongly influenced and supported by other amazing projects like 
+This project has been strongly influenced and supported by other amazing projects like
 [LangChain](https://github.com/hwchase17/langchain),
 [GPT4All](https://github.com/nomic-ai/gpt4all),
 [LlamaCpp](https://github.com/ggerganov/llama.cpp),

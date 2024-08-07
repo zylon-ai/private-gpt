@@ -27,4 +27,3 @@ runs:
     - name: Install Dependencies
       run: poetry install --extras "ui vector-stores-qdrant" --no-root
       shell: bash
-
