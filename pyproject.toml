@@ -68,10 +68,6 @@ ollama = {version ="^0.3.0", optional = true}
 # Optional HF Transformers
 einops = {version = "^0.8.0", optional = true}
 
-# Set matplotlib version to 3.9.0
-# Issue: https://github.com/matplotlib/matplotlib/issues/28551
-matplotlib = {version = "3.9.0", optional = true}
-
 [tool.poetry.extras]
 ui = ["gradio", "ffmpy"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
