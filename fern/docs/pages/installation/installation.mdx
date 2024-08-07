@@ -307,11 +307,12 @@ If you have all required dependencies properly configured running the
 following powershell command should succeed.
 
 ```powershell
-$env:CMAKE_ARGS='-DLLAMA_CUBLAS=on'; poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python
+$env:CMAKE_ARGS='-DLLAMA_CUBLAS=on'; poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python numpy==1.26.0
 ```
 
 If your installation was correct, you should see a message similar to the following next
-time you start the server `BLAS = 1`.
+time you start the server `BLAS = 1`. If there is some issue, please refer to the
+[troubleshooting](/installation/getting-started/troubleshooting#building-llama-cpp-with-nvidia-gpu-support) section.
 
 ```console
 llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, context: 762.87 MB)
@@ -339,11 +340,12 @@ Some tips:
 After that running the following command in the repository will install llama.cpp with GPU support:
 
 ```bash
-CMAKE_ARGS='-DLLAMA_CUBLAS=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python
+CMAKE_ARGS='-DLLAMA_CUBLAS=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python numpy==1.26.0
 ```
 
 If your installation was correct, you should see a message similar to the following next
-time you start the server `BLAS = 1`.
+time you start the server `BLAS = 1`. If there is some issue, please refer to the
+[troubleshooting](/installation/getting-started/troubleshooting#building-llama-cpp-with-nvidia-gpu-support) section.
 
 ```
 llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, context: 762.87 MB)

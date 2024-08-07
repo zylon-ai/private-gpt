@@ -10,6 +10,9 @@ tabs:
   overview:
     display-name: Overview
     icon: "fa-solid fa-home"
+  quickstart:
+    display-name: Quickstart
+    icon: "fa-solid fa-rocket"
   installation:
     display-name: Installation
     icon: "fa-solid fa-download"
@@ -32,6 +35,12 @@ navigation:
         contents:
           - page: Introduction
             path: ./docs/pages/overview/welcome.mdx
+  - tab: quickstart
+    layout:
+      - section: Getting started
+        contents:
+          - page: Quickstart
+            path: ./docs/pages/quickstart/quickstart.mdx
   # How to install PrivateGPT, with FAQ and troubleshooting
   - tab: installation
     layout:

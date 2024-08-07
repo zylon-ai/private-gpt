@@ -519,6 +519,7 @@ class PrivateGptUi:
                             "llamacpp": config_settings.llamacpp.llm_hf_model_file,
                             "openai": config_settings.openai.model,
                             "openailike": config_settings.openai.model,
+                            "azopenai": config_settings.azopenai.llm_model,
                             "sagemaker": config_settings.sagemaker.llm_endpoint_name,
                             "mock": llm_mode,
                             "ollama": config_settings.ollama.llm_model,
