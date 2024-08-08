@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "private-gpt"
-version = "0.6.0"
+version = "0.6.2"
 description = "Private GPT"
 authors = ["Zylon <hi@zylon.ai>"]
 
