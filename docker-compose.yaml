@@ -48,6 +48,26 @@ services:
     profiles:
       - llamacpp-cpu
 
+  # Private-GPT service for the local mode (with CUDA support)
+  # This service builds from a local Dockerfile and runs the application in local mode.
+  private-gpt-llamacpp-cuda:
+    image: ${PGPT_IMAGE:-zylonai/private-gpt}${PGPT_TAG:-0.6.1}-llamacpp-cuda
+    build:
+      context: .
+      dockerfile: Dockerfile.llamacpp-cuda
+    volumes:
+      - ./local_data/:/home/worker/app/local_data
+      - ./models/:/home/worker/app/models
+    entrypoint: sh -c ".venv/bin/python scripts/setup && .venv/bin/python -m private_gpt"
+    ports:
+      - "8001:8001"
+    environment:
+      PORT: 8001
+      PGPT_PROFILES: local
+      HF_TOKEN: ${HF_TOKEN}
+    profiles:
+      - llamacpp-cuda
+
   #-----------------------------------
   #---- Ollama services --------------
   #-----------------------------------
