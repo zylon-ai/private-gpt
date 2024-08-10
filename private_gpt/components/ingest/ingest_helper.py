@@ -10,7 +10,23 @@ logger = logging.getLogger(__name__)
 
 
 # Inspired by the `llama_index.core.readers.file.base` module
-def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
+def _try_loading_included_file_formats(
+    llmsherpa_api_url: str = None,
+) -> dict[str, type[BaseReader]]:
+    simple_pdf_extractor = None
+    if llmsherpa_api_url is not None:
+        try:
+            from llama_index.readers.smart_pdf_loader import SmartPDFLoader
+
+            # llmsherpa_api_url = "http://localhost:5010/api/parseDocument?renderFormat=all&useNewIndentParser=yes"
+            simple_pdf_extractor = SmartPDFLoader(
+                llmsherpa_api_url=llmsherpa_api_url,
+            )
+        except ImportError as e:
+            raise ImportError(
+                "`llama-index-readers-smart-pdf-loader` package not found"
+            ) from e
+
     try:
         from llama_index.readers.file.docs import (  # type: ignore
             DocxReader,
@@ -31,31 +47,36 @@ def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
         raise ImportError("`llama-index-readers-file` package not found") from e
 
     default_file_reader_cls: dict[str, type[BaseReader]] = {
-        ".hwp": HWPReader,
-        ".pdf": PDFReader,
-        ".docx": DocxReader,
-        ".pptx": PptxReader,
-        ".ppt": PptxReader,
-        ".pptm": PptxReader,
-        ".jpg": ImageReader,
-        ".png": ImageReader,
-        ".jpeg": ImageReader,
-        ".mp3": VideoAudioReader,
-        ".mp4": VideoAudioReader,
-        ".csv": PandasCSVReader,
-        ".epub": EpubReader,
-        ".md": MarkdownReader,
-        ".mbox": MboxReader,
-        ".ipynb": IPYNBReader,
+        ".hwp": HWPReader(),
+        # ".pdf": simple_pdf_extractor if simple_pdf_extractor else PDFReader,
+        ".pdf": PDFReader(),
+        ".docx": simple_pdf_extractor if simple_pdf_extractor else DocxReader(),
+        ".pptx": PptxReader(),
+        ".ppt": PptxReader(),
+        ".pptm": PptxReader(),
+        ".jpg": ImageReader(),
+        ".png": ImageReader(),
+        ".jpeg": ImageReader(),
+        # ".mp3": VideoAudioReader(),
+        # ".mp4": VideoAudioReader(),
+        ".csv": simple_pdf_extractor if simple_pdf_extractor else PandasCSVReader(),
+        ".xls": simple_pdf_extractor if simple_pdf_extractor else None,
+        ".xlsx": simple_pdf_extractor if simple_pdf_extractor else None,
+        ".epub": EpubReader(),
+        ".md": MarkdownReader(),
+        ".mbox": MboxReader(),
+        ".ipynb": IPYNBReader(),
     }
     return default_file_reader_cls
 
 
 # Patching the default file reader to support other file types
-FILE_READER_CLS = _try_loading_included_file_formats()
+FILE_READER_CLS = _try_loading_included_file_formats(
+    "http://localhost:5010/api/parseDocument?renderFormat=all&useNewIndentParser=yes"
+)
 FILE_READER_CLS.update(
     {
-        ".json": JSONReader,
+        ".json": JSONReader(),
     }
 )
 
@@ -91,8 +112,10 @@ class IngestionHelper:
             string_reader = StringIterableReader()
             return string_reader.load_data([file_data.read_text()])
 
-        logger.debug("Specific reader found for extension=%s", extension)
-        return reader_cls().load_data(file_data)
+        logger.debug(
+            f"Specific reader found for extension=%s, {reader_cls=}", extension
+        )
+        return reader_cls.load_data(file_data.as_posix())
 
     @staticmethod
     def _exclude_metadata(documents: list[Document]) -> None:

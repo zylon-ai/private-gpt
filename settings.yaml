@@ -18,7 +18,7 @@ server:
 
 data:
   local_ingestion:
-    enabled: ${LOCAL_INGESTION_ENABLED:false}
+    enabled: ${LOCAL_INGESTION_ENABLED:true}
     allow_ingest_from: ["*"]
   local_data_folder: local_data/private_gpt
 
@@ -50,16 +50,16 @@ llm:
   mode: llamacpp
   prompt_style: "llama3"
   # Should be matching the selected model
-  max_new_tokens: 512
-  context_window: 3900
+  max_new_tokens: 10000
+  context_window: 100000
   # Select your tokenizer. Llama-index tokenizer is the default.
-  # tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
+#  tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
   temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
 
 rag:
-  similarity_top_k: 20
+  similarity_top_k: 30
   #This value controls how many "top" documents the RAG returns to use in the context.
-  #similarity_value: 0.45
+  similarity_value: 0.45
   #This value is disabled by default.  If you enable this settings, the RAG will only use articles that meet a certain percentage score.
   rerank:
     enabled: false

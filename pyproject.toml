@@ -67,6 +67,9 @@ ollama = {version ="^0.3.0", optional = true}
 
 # Optional HF Transformers
 einops = {version = "^0.8.0", optional = true}
+llama-index-readers-smart-pdf-loader = "^0.1.4"
+python-pptx = "^1.0.2"
+pillow = "^10.4.0"
 
 [tool.poetry.extras]
 ui = ["gradio", "ffmpy"]

@@ -1,18 +1,30 @@
 server:
   env_name: ${APP_ENV:huglama}
 
+data:
+  local_data_folder: local_data/private_gpt
+  local_ingestion:
+    enabled: ${LOCAL_INGESTION_ENABLED:true}
+    allow_ingest_from: ["local_data/input_raw"]
+
 llm:
   mode: ollama
   max_new_tokens: 10000
-  context_window: 100000
+  context_window: 12800
   temperature: 0.1
 
 embedding:
   mode: huggingface
-  ingest_mode: parallel
+  ingest_mode: simple
+#  count_workers: 2
 
 vectorstore:
-  database: qdrant
+  database: postgres
 
-qdrant:
-  path: local_data/private_gpt/qdrant
+postgres:
+  host: localhost
+  port: 5432
+  database: vector_db
+  user: user
+  password: pass31415
+  schema_name: private_gpt
