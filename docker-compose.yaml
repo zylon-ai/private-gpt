@@ -7,7 +7,7 @@ services:
   # Private-GPT service for the Ollama CPU and GPU modes
   # This service builds from an external Dockerfile and runs the Ollama mode.
   private-gpt-ollama:
-    image: ${PGPT_IMAGE:-zylonai/private-gpt}${PGPT_TAG:-0.6.2}-ollama  # x-release-please-version
+    image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-ollama  # x-release-please-version
     build:
       context: .
       dockerfile: Dockerfile.ollama
@@ -31,7 +31,7 @@ services:
   # Private-GPT service for the local mode
   # This service builds from a local Dockerfile and runs the application in local mode.
   private-gpt-llamacpp-cpu:
-    image: ${PGPT_IMAGE:-zylonai/private-gpt}${PGPT_TAG:-0.6.2}-llamacpp-cpu # x-release-please-version
+    image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-llamacpp-cpu # x-release-please-version
     build:
       context: .
       dockerfile: Dockerfile.llamacpp-cpu
@@ -57,7 +57,6 @@ services:
   ollama:
     image: traefik:v2.10
     ports:
-      - "11435:11434"
       - "8081:8080"
     command:
       - "--providers.file.filename=/etc/router.yml"
@@ -84,7 +83,7 @@ services:
       - ./models:/root/.ollama
     profiles:
       - ""
-      - ollama
+      - ollama-cpu
 
   # Ollama service for the CUDA mode
   ollama-cuda:
