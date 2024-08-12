@@ -47,5 +47,11 @@ COPY --chown=worker private_gpt/ private_gpt
 COPY --chown=worker *.yaml .
 COPY --chown=worker scripts/ scripts
 
+# Copy the entrypoint script and set correct permissions
+COPY ./.docker/entrypoint.sh /entrypoint.sh
+RUN chown worker /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
 USER worker
-ENTRYPOINT python -m private_gpt
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python", "-m", "private_gpt"]
