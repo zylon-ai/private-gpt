@@ -8,20 +8,16 @@ from llama_index.core.schema import Document
 
 logger = logging.getLogger(__name__)
 
+LLMSHERPA_API_URL = (
+    "http://localhost:5010/api/parseDocument?renderFormat=all&useNewIndentParser=yes"
+)
+
 
 # Inspired by the `llama_index.core.readers.file.base` module
-def _try_loading_included_file_formats(
-    llmsherpa_api_url: str = None,
-) -> dict[str, type[BaseReader]]:
-    simple_pdf_extractor = None
-    if llmsherpa_api_url is not None:
+def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
+    if LLMSHERPA_API_URL is not None:
         try:
             from llama_index.readers.smart_pdf_loader import SmartPDFLoader
-
-            # llmsherpa_api_url = "http://localhost:5010/api/parseDocument?renderFormat=all&useNewIndentParser=yes"
-            simple_pdf_extractor = SmartPDFLoader(
-                llmsherpa_api_url=llmsherpa_api_url,
-            )
         except ImportError as e:
             raise ImportError(
                 "`llama-index-readers-smart-pdf-loader` package not found"
@@ -47,33 +43,31 @@ def _try_loading_included_file_formats(
         raise ImportError("`llama-index-readers-file` package not found") from e
 
     default_file_reader_cls: dict[str, type[BaseReader]] = {
-        ".hwp": HWPReader(),
+        ".hwp": HWPReader,
         # ".pdf": simple_pdf_extractor if simple_pdf_extractor else PDFReader,
-        ".pdf": PDFReader(),
-        ".docx": simple_pdf_extractor if simple_pdf_extractor else DocxReader(),
-        ".pptx": PptxReader(),
-        ".ppt": PptxReader(),
-        ".pptm": PptxReader(),
-        ".jpg": ImageReader(),
-        ".png": ImageReader(),
-        ".jpeg": ImageReader(),
-        # ".mp3": VideoAudioReader(),
-        # ".mp4": VideoAudioReader(),
-        ".csv": simple_pdf_extractor if simple_pdf_extractor else PandasCSVReader(),
-        ".xls": simple_pdf_extractor if simple_pdf_extractor else None,
-        ".xlsx": simple_pdf_extractor if simple_pdf_extractor else None,
-        ".epub": EpubReader(),
-        ".md": MarkdownReader(),
-        ".mbox": MboxReader(),
-        ".ipynb": IPYNBReader(),
+        ".pdf": PDFReader,
+        ".docx": SmartPDFLoader if LLMSHERPA_API_URL else DocxReader,
+        ".pptx": PptxReader,
+        ".ppt": PptxReader,
+        ".pptm": PptxReader,
+        ".jpg": ImageReader,
+        ".png": ImageReader,
+        ".jpeg": ImageReader,
+        # ".mp3": VideoAudioReader,
+        # ".mp4": VideoAudioReader,
+        ".csv": SmartPDFLoader if LLMSHERPA_API_URL else PandasCSVReader,
+        ".xls": SmartPDFLoader if LLMSHERPA_API_URL else None,
+        ".xlsx": SmartPDFLoader if LLMSHERPA_API_URL else None,
+        ".epub": EpubReader,
+        ".md": MarkdownReader,
+        ".mbox": MboxReader,
+        ".ipynb": IPYNBReader,
     }
     return default_file_reader_cls
 
 
 # Patching the default file reader to support other file types
-FILE_READER_CLS = _try_loading_included_file_formats(
-    "http://localhost:5010/api/parseDocument?renderFormat=all&useNewIndentParser=yes"
-)
+FILE_READER_CLS = _try_loading_included_file_formats()
 FILE_READER_CLS.update(
     {
         ".json": JSONReader(),
@@ -109,13 +103,21 @@ class IngestionHelper:
                 extension,
             )
             # Read as a plain text
-            string_reader = StringIterableReader()
-            return string_reader.load_data([file_data.read_text()])
+            try:
+                string_reader = StringIterableReader()
+                return string_reader.load_data([file_data.read_text()])
+            except Exception as e:
+                logger.error(f"Error reading file as plain text: {e}")
 
         logger.debug(
             f"Specific reader found for extension=%s, {reader_cls=}", extension
         )
-        return reader_cls.load_data(file_data.as_posix())
+        if reader_cls.__name__ == "SmartPDFLoader":
+            return reader_cls(llmsherpa_api_url=LLMSHERPA_API_URL).load_data(
+                file_data.as_posix()
+            )
+        else:
+            return reader_cls().load_data(file_data)
 
     @staticmethod
     def _exclude_metadata(documents: list[Document]) -> None:

@@ -2,7 +2,7 @@ server:
   env_name: ${APP_ENV:huglama}
 
 data:
-  local_data_folder: local_data/private_gpt
+#  local_data_folder: local_data/private_gpt
   local_ingestion:
     enabled: ${LOCAL_INGESTION_ENABLED:true}
     allow_ingest_from: ["local_data/input_raw"]
