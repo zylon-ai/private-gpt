@@ -12,7 +12,7 @@ services:
       context: .
       dockerfile: Dockerfile.ollama
     volumes:
-      - ./local_data/:/home/worker/app/local_data
+      - ./local_data:/home/worker/app/local_data
     ports:
       - "8001:8001"
     environment:
@@ -27,6 +27,8 @@ services:
       - ollama-cpu
       - ollama-cuda
       - ollama-api
+    depends_on:
+      - ollama
 
   # Private-GPT service for the local mode
   # This service builds from a local Dockerfile and runs the application in local mode.
