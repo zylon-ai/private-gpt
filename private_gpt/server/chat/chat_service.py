@@ -243,8 +243,16 @@ class ChatService:
         )
         wrapped_response = chat_engine.chat(
             message=last_message if last_message is not None else "",
-            # chat_history=chat_history,
+            chat_history=chat_history,
         )
+        print("---------------------------------------------------------")
+        for node in wrapped_response.source_nodes:
+            print("*********************************************")
+            print(node)
+            print("*********************************************")
+            print(Chunk.from_node(node))
+        print("---------------------------------------------------------")
+
         sources = [Chunk.from_node(node) for node in wrapped_response.source_nodes]
         completion = Completion(response=wrapped_response.response, sources=sources)
         return completion

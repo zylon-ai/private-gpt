@@ -20,7 +20,8 @@ from private_gpt.settings.settings import settings
 
 
 from llama_index.core.extractors import (
-    SummaryExtractor
+    SummaryExtractor,
+    KeywordExtractor
 )
 if TYPE_CHECKING:
     from llama_index.core.storage.docstore.types import RefDocInfo
@@ -73,7 +74,12 @@ class IngestService:
             docstore=node_store_component.doc_store,
             index_store=node_store_component.index_store,
         )       
-        # parser = LangchainNodeParser(MarkdownTextSplitter(chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=SENTENCE_CHUNK_OVERLAP))
+        # node_parser = LangchainNodeParser(
+        #     MarkdownTextSplitter(
+        #         chunk_size=DEFAULT_CHUNK_SIZE, 
+        #         chunk_overlap=SENTENCE_CHUNK_OVERLAP,
+        #         separators=["\n## ", "\n### ", "\n#### ", "\n##### ", "\n###### ", "\n", " ", ""]
+        #     ))
         # nodes = parser.get_nodes_from_documents(nodes)
         node_parser = SafeSemanticSplitter.from_defaults(
             embed_model=embedding_component.embedding_model,
@@ -82,7 +88,7 @@ class IngestService:
             include_prev_next_rel=True,
         )
         # node_parser =  SentenceWindowNodeParser.from_defaults(
-        #     window_size=3,
+        #     window_size=5,
         #     window_metadata_key="window",
         #     original_text_metadata_key="original_text",
         # )
