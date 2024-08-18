@@ -18,7 +18,7 @@ from llama_index.core.types import TokenGen
 from pydantic import BaseModel
 
 from llama_index.core import get_response_synthesizer
-from llama_index.core.query_engine import RetrieverQueryEngine
+from llama_index.core.query_engine import RetrieverQueryEngine, CitationQueryEngine
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
@@ -65,7 +65,6 @@ class ChatEngineInput:
 
     @classmethod
     def from_messages(cls, messages: list[ChatMessage]) -> "ChatEngineInput":
-        # Detect if there is a system message, extract the last message and chat history
         system_message = (
             messages[0]
             if len(messages) > 0 and messages[0].role == MessageRole.SYSTEM
@@ -76,8 +75,6 @@ class ChatEngineInput:
             if len(messages) > 0 and messages[-1].role == MessageRole.USER
             else None
         )
-        # Remove from messages list the system message and last message,
-        # if they exist. The rest is the chat history.
         if system_message:
             messages.pop(0)
         if last_message:
@@ -142,19 +139,31 @@ class ChatService:
             if settings.rag.rerank.enabled:
                 rerank_postprocessor = rankGPT_rerank.RankGPTRerank(
                     llm=self.llm_component.llm, 
-                    top_n=settings.rag.rerank.top_n
+                    top_n=settings.rag.rerank.top_n,
+                    verbose=True
                 )
                 # rerank_postprocessor = SentenceTransformerRerank(
                 #     model=settings.rag.rerank.model, top_n=settings.rag.rerank.top_n
                 # )
                 node_postprocessors.append(rerank_postprocessor)
             
-            response_synthesizer = get_response_synthesizer(response_mode="no_text", llm=self.llm_component.llm)
+            response_synthesizer = get_response_synthesizer(
+                response_mode="tree_summarize", 
+                llm=self.llm_component.llm
+            )
             
             custom_query_engine = RetrieverQueryEngine(
                 retriever=vector_index_retriever,
                 response_synthesizer=response_synthesizer
             )
+            # custom_query_engine = CitationQueryEngine.from_args(
+            #     index=self.index,
+            #     similarity_top_k=3,
+            #     # here we can control how granular citation sources are, the default is 512
+            #     citation_chunk_size=512,
+            #     response_synthesizer=response_synthesizer,
+            #     llm = self.llm_component.llm
+            # )
             
             return ContextChatEngine.from_defaults(
                 system_prompt=system_prompt,
@@ -217,21 +226,27 @@ class ChatService:
             if chat_engine_input.last_message
             else None
         )
-        system_prompt = (
-            """
-            You are a helpful AI assistant named QuickGPT, created by Quickfox Consulting. 
-            Your primary function is to provide comprehensive answers based solely on the information contained in the given context documents. 
+        system_prompt = """
+            You are a helpful AI assistant named QuickGPT, created by Quickfox Consulting. Your primary function is to provide comprehensive answers based solely on the information contained in the given context documents.
+
             Please adhere to the following guidelines:
-            Using the information contained in the context,
-            give a comprehensive answer to the question.
-            Respond only to the question asked, response should be concise and relevant to the question.
-            If the answer cannot be deduced from the given context, do not give an answer. Also provide the source from where the answer is deduced.
+
+            1. Answer questions truthfully based only on the provided context documents.
+            2. For each document, check whether it is related to the question. Only use relevant documents to answer.
+            3. Ignore documents that are not related to the question.
+            4. If the answer exists in several documents, summarize the information from all relevant sources.
+            5. Do not make up information or use external knowledge. Only answer based on the provided documents.
+            6. Always use references in the form [NUMBER] when citing information from a document, e.g., [3] for the third document.
+            7. The reference should only include the document number in square brackets.
+            8. Provide comprehensive answers, but ensure they are concise and directly relevant to the question asked.
+            9. If the documents cannot answer the question or you are unsure, state: "The answer cannot be found in the provided context."
+            10. If more specific information is needed to answer the question, you may ask the user to provide a more specific query.
+
             Context documents:
             {context_str}
-            Your task is to provide detailed answers to user questions based exclusively on the above documents. 
-            Remember, if the information isn't in the context, simply state that you don't know or ask user to ask more specific question.
+
+            Your task is to provide detailed answers to user questions based exclusively on the above documents. Remember, if the information isn't in the context, simply state that you don't know or cannot find the answer in the provided information.
             """
-        )
         chat_history = (
             chat_engine_input.chat_history if chat_engine_input.chat_history else None
         )
@@ -250,7 +265,7 @@ class ChatService:
             print("*********************************************")
             print(node)
             print("*********************************************")
-            print(Chunk.from_node(node))
+            # print(Chunk.from_node(node))
         print("---------------------------------------------------------")
 
         sources = [Chunk.from_node(node) for node in wrapped_response.source_nodes]

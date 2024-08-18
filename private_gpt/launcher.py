@@ -19,6 +19,7 @@ from private_gpt.server.ingest.ingest_router import ingest_router
 from private_gpt.components.ocr_components.table_ocr_api import pdf_router
 from private_gpt.server.completions.completions_router import completions_router
 from private_gpt.server.embeddings.embeddings_router import embeddings_router
+from private_gpt.server.recipes.summarize.summarize_router import summarize_router
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(chunks_router)
     app.include_router(ingest_router)
     app.include_router(embeddings_router)
+    app.include_router(summarize_router)
     app.include_router(health_router)
     app.include_router(api_router)
     app.include_router(pdf_router)

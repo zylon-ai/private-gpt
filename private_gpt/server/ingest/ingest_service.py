@@ -18,11 +18,6 @@ from private_gpt.components.vector_store.vector_store_component import (
 from private_gpt.server.ingest.model import IngestedDoc
 from private_gpt.settings.settings import settings
 
-
-from llama_index.core.extractors import (
-    SummaryExtractor,
-    KeywordExtractor
-)
 if TYPE_CHECKING:
     from llama_index.core.storage.docstore.types import RefDocInfo
 
