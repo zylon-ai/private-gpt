@@ -1250,7 +1250,7 @@ standard = ["fastapi", "uvicorn[standard] (>=0.15.0)"]
 name = "ffmpy"
 version = "0.3.2"
 description = "A simple Python wrapper for ffmpeg"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "ffmpy-0.3.2.tar.gz", hash = "sha256:475ebfff1044661b8d969349dbcd2db9bf56d3ee78c0627e324769b49a27a78f"},
