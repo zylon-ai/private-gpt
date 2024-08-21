@@ -1248,12 +1248,13 @@ standard = ["fastapi", "uvicorn[standard] (>=0.15.0)"]
 
 [[package]]
 name = "ffmpy"
-version = "0.3.2"
-description = "A simple Python wrapper for ffmpeg"
+version = "0.4.0"
+description = "A simple Python wrapper for FFmpeg"
 optional = true
-python-versions = "*"
+python-versions = "<4.0.0,>=3.8.1"
 files = [
-    {file = "ffmpy-0.3.2.tar.gz", hash = "sha256:475ebfff1044661b8d969349dbcd2db9bf56d3ee78c0627e324769b49a27a78f"},
+    {file = "ffmpy-0.4.0-py3-none-any.whl", hash = "sha256:39c0f20c5b465e7f8d29a5191f3a7d7675a8c546d9d985de8921151cd9b59e14"},
+    {file = "ffmpy-0.4.0.tar.gz", hash = "sha256:131b57794e802ad555f579007497f7a3d0cab0583d37496c685b8acae4837b1d"},
 ]
 
 [[package]]
@@ -6690,4 +6691,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "c2f18983bfea8396e46c1a324c7a549cf52b3f3ec779676b13e664e0357b531c"
+content-hash = "2eaa56bf185723ad028f5221675f1ee070bc70ba7d606ebe28dcfe276a3c9dca"
