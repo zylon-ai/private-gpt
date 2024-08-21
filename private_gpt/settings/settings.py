@@ -104,7 +104,6 @@ class DataSettings(BaseModel):
         "It will be treated as an absolute path if it starts with /"
     )
 
-
 class LLMSettings(BaseModel):
     mode: Literal[
         "llamacpp",
@@ -115,6 +114,7 @@ class LLMSettings(BaseModel):
         "mock",
         "ollama",
         "gemini",
+        "mistral",
     ]
     max_new_tokens: int = Field(
         256,
@@ -197,7 +197,7 @@ class HuggingFaceSettings(BaseModel):
 
 class EmbeddingSettings(BaseModel):
     mode: Literal[
-        "huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock", "gemini"
+        "huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock", "gemini", "mistral"
     ]
     ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",
@@ -271,6 +271,15 @@ class GeminiSettings(BaseModel):
         "models/embedding-001",
         description="Google Embedding Model to use. Example: 'models/embedding-001'.",
     )
+
+
+class MistralSettings(BaseModel):
+    api_key: str
+    endpoint: str
+    model: str
+    prompt_style: str
+    embedding_model: str
+    request_timeout: int
 
 
 class OllamaSettings(BaseModel):

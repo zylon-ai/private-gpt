@@ -1,0 +1,16 @@
+server:
+  env_name: ${APP_ENV:mistral}
+
+llm:
+  mode: mistral
+
+embedding:
+  mode: mistral
+
+mistral:
+  endpoint: https://api.mistral.ai/v1
+  api_key:
+  model: mistral-large
+  prompt_style: mistral
+  embedding_model: mistral-embed
+  request_timeout: 1000

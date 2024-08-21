@@ -30,6 +30,7 @@ llama-index-embeddings-huggingface = {version ="^0.2.2", optional = true}
 llama-index-embeddings-openai = {version ="^0.1.10", optional = true}
 llama-index-embeddings-azure-openai = {version ="^0.1.10", optional = true}
 llama-index-embeddings-gemini = {version ="^0.1.8", optional = true}
+llama-index-embeddings-mistralai = {version ="^0.1.6", optional = true}
 llama-index-vector-stores-qdrant = {version ="^0.2.10", optional = true}
 llama-index-vector-stores-milvus = {version ="^0.1.20", optional = true}
 llama-index-vector-stores-chroma = {version ="^0.1.10", optional = true}
@@ -83,6 +84,7 @@ embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
 embeddings-gemini = ["llama-index-embeddings-gemini"]
+embeddings-mistral = ["llama-index-embeddings-mistralai"]
 vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 vector-stores-clickhouse = ["llama-index-vector-stores-clickhouse", "clickhouse_connect"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]

@@ -523,6 +523,7 @@ class PrivateGptUi:
                             "mock": llm_mode,
                             "ollama": config_settings.ollama.llm_model,
                             "gemini": config_settings.gemini.model,
+                            "mistral": config_settings.gemini.model,
                         }
 
                         if llm_mode not in model_mapping:

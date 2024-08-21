@@ -222,5 +222,31 @@ class LLMComponent:
                 self.llm = Gemini(
                     model_name=gemini_settings.model, api_key=gemini_settings.api_key
                 )
+            case "mistral":
+                try:
+                    from llama_index.llms.openai_like import OpenAILike  # type: ignore
+                except ImportError as e:
+                    raise ImportError(
+                        "OpenAILike dependencies not found, install with `poetry install --extras llms-openai-like`"
+                    ) from e
+                
+                prompt_style = get_prompt_style("mistral")
+                mistral_settings = settings.mistral
+                self.llm = OpenAILike(
+                    api_base=mistral_settings.endpoint,
+                    api_key=mistral_settings.api_key,
+                    model=mistral_settings.model,
+                    is_chat_model=True,
+                    max_tokens=settings.llm.max_new_tokens,
+                    api_version="",
+                    temperature=settings.llm.temperature,
+                    context_window=settings.llm.context_window,
+                    max_new_tokens=settings.llm.max_new_tokens,
+                    messages_to_prompt=prompt_style.messages_to_prompt,
+                    completion_to_prompt=prompt_style.completion_to_prompt,
+                    tokenizer=settings.llm.tokenizer,
+                    timeout=mistral_settings.request_timeout,
+                    reuse_client=False,
+                )
             case "mock":
                 self.llm = MockLLM()
