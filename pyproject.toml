@@ -56,8 +56,7 @@ sentence-transformers = {version ="^3.0.1", optional = true}
 
 # Optional UI
 gradio = {version ="^4.37.2", optional = true}
-# Fix: https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/16289#issuecomment-2255106490
-ffmpy = {git = "https://github.com/EuDs63/ffmpy.git", rev = "333a19ee4d21f32537c0508aa1942ef1aa7afe24", optional = true}
+ffmpy = "0.4.0"
 
 # Optional Google Gemini dependency
 google-generativeai = {version ="^0.5.4", optional = true}
