@@ -12,3 +12,5 @@ os.makedirs(UNCHECKED_DIR, exist_ok=True)  # Actual upload path for uploaded fil
 
 OCR_UPLOAD = os.path.join(script_dir, 'uploads')
 os.makedirs(OCR_UPLOAD, exist_ok=True)  # Temporary upload path for scanned pdf file
+
+ALL_DEPARTMENT = 1

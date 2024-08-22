@@ -13,7 +13,7 @@ from .documents import (
     Document, DocumentCreate, DocumentsBase, DocumentUpdate, DocumentList, 
     DepartmentList, DocumentEnable, DocumentDepartmentUpdate, DocumentCheckerUpdate, 
     DocumentMakerCreate, DocumentDepartmentList, DocumentView, DocumentVerify, 
-    DocumentFilter
+    DocumentFilter, DocumentCategoryUpdate, DocCatUpdate
 )
 from .department import (
     Department, DepartmentCreate, DepartmentUpdate, DepartmentAdminCreate, DepartmentDelete
@@ -22,4 +22,7 @@ from .audit import AuditBase, AuditCreate, AuditUpdate, Audit, GetAudit, AuditFi
 from .chat import (
     ChatHistory, ChatHistoryBase, ChatHistoryCreate, ChatHistoryUpdate, ChatDelete,
     ChatItem, ChatItemBase, ChatItemCreate, ChatItemUpdate, CreateChatHistory, Chat
+)
+from .category import (
+    Category, CategoryCreate, CategoryUpdate, CategoryList, CategoryDelete
 )

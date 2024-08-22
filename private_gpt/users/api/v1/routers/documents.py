@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any, List
 from sqlalchemy.orm import Session
 from fastapi_pagination import Page, paginate
-from fastapi import APIRouter, Depends, HTTPException, status, Security, Request, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, Security, Request
 
 from private_gpt.users.api import deps
 from private_gpt.constants import UNCHECKED_DIR
@@ -22,13 +22,15 @@ from private_gpt.components.ocr_components.table_ocr_api import process_ocr
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix='/documents', tags=['Documents'])
 
-
 ENABLE_MAKER_CHECKER = settings.ENABLE_MAKER_CHECKER
 
 def get_username(db, id):
     user = crud.user.get_by_id(db=db, id=id)
     return user.username
 
+def get_id(db, username):
+    name = crud.user.get_by_name(db=db, name=username)
+    return name
 
 @router.get("")
 def list_files(
@@ -46,12 +48,12 @@ def list_files(
     try:
         role = current_user.user_role.role.name if current_user.user_role else None
         if (role == "SUPER_ADMIN") or (role == "OPERATOR"):
-            docs = crud.documents.get_multi_documents(
-                db)
+            docs = crud.documents.get_multi_documents(db)
         else:
             docs = crud.documents.get_documents_by_departments(
-                db, department_id=current_user.department_id)
-        
+                                                            db, 
+                                                            department_id=current_user.department_id
+                                                        )
         documents = [
             schemas.DocumentView(
                 id=doc.id,
@@ -64,7 +66,11 @@ def list_files(
                     for dep in doc.departments
                 ],
                 action_type=doc.action_type,
-                status=doc.status
+                status=doc.status,
+                categories=[
+                    schemas.CategoryList(id=cat.id, name=cat.name)
+                    for cat in doc.categories  
+                ]
             )
             for doc in docs
         ]
@@ -98,7 +104,6 @@ def list_pending_files(
         docs = crud.documents.get_files_to_verify(
             db
         )
-        
         documents = [
             schemas.DocumentVerify(
                 id=doc.id,
@@ -109,7 +114,11 @@ def list_pending_files(
                     schemas.DepartmentList(id=dep.id, name=dep.name)
                     for dep in doc.departments
                 ],
-                status=doc.status
+                status=doc.status,
+                categories=[
+                    schemas.CategoryList(id=cat.id, name=cat.name)
+                    for cat in doc.categories  
+                ]
             )
             for doc in docs
         ]
@@ -122,7 +131,8 @@ def list_pending_files(
             detail="Internal Server Error",
         )
 
-@router.get('{department_id}', response_model=Page[schemas.DocumentList])
+
+@router.get('{department_id}', response_model=Page[schemas.DocumentView])
 def list_files_by_department(
     request: Request,
     department_id: int,
@@ -138,7 +148,27 @@ def list_files_by_department(
     try:
         docs = crud.documents.get_documents_by_departments(
             db, department_id=department_id)
-        return paginate(docs)
+        documents = [
+            schemas.DocumentView(
+                id=doc.id,
+                filename=doc.filename,
+                uploaded_by=get_username(db, doc.uploaded_by),
+                uploaded_at=doc.uploaded_at,
+                is_enabled=doc.is_enabled,
+                departments=[
+                    schemas.DepartmentList(id=dep.id, name=dep.name)
+                    for dep in doc.departments
+                ],
+                action_type=doc.action_type,
+                status=doc.status,
+                categories=[
+                    schemas.CategoryList(id=cat.id, name=cat.name)
+                    for cat in doc.categories  
+                ]
+            )
+            for doc in docs
+        ]
+        return paginate(documents)
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error listing the file(s).")
@@ -148,7 +178,7 @@ def list_files_by_department(
         )
 
 
-@router.get('/files', response_model=Page[schemas.DocumentList])
+@router.get('/files', response_model=Page[schemas.DocumentView])
 def list_files_by_department(
     request: Request,
     db: Session = Depends(deps.get_db),
@@ -164,7 +194,27 @@ def list_files_by_department(
         department_id = current_user.department_id
         docs = crud.documents.get_documents_by_departments(
             db, department_id=department_id)
-        return paginate(docs)
+        documents = [
+            schemas.DocumentView(
+                id=doc.id,
+                filename=doc.filename,
+                uploaded_by=get_username(db, doc.uploaded_by),
+                uploaded_at=doc.uploaded_at,
+                is_enabled=doc.is_enabled,
+                departments=[
+                    schemas.DepartmentList(id=dep.id, name=dep.name)
+                    for dep in doc.departments
+                ],
+                action_type=doc.action_type,
+                status=doc.status,
+                categories=[
+                    schemas.CategoryList(id=cat.id, name=cat.name)
+                    for cat in doc.categories  
+                ]
+            )
+            for doc in docs
+        ]
+        return paginate(documents)
     except Exception as e:
         print(traceback.format_exc())
         logger.error(f"There was an error listing the file(s).")
@@ -217,6 +267,7 @@ def update_document(
         )
     
 
+
 @router.post('/department_update', response_model=schemas.DocumentList)
 def update_department(
     request: Request,
@@ -260,6 +311,64 @@ def update_department(
             detail="Internal Server Error.",
         )
 
+@router.post('/category_update', response_model=schemas.DocumentList)
+def update_category(
+    request: Request,
+    document_in: schemas.DocumentCategoryUpdate,
+    db: Session = Depends(deps.get_db),
+    log_audit: models.Audit = Depends(deps.get_audit_logger),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]],
+    )
+):
+    """
+    Update the category list for the document
+    """
+    try:
+        # Fetch the document by filename
+        document = crud.documents.get_by_filename(
+            db, file_name=document_in.filename)
+        
+        # Check if the document exists
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document with this filename doesn't exist!",
+            )
+        
+        # Get the current categories associated with the document
+        old_categories = [cat.id for cat in document.categories]
+        
+        # Update the categories
+        category_ids = [int(number) for number in document_in.categories]
+        document.categories = []
+        for category_id in category_ids:
+            category = db.query(models.Category).get(category_id)
+            if category:
+                document.categories.append(category)
+        
+        db.commit()
+        
+        log_audit(
+            model='Document',
+            action='update',
+            details={
+                'detail': f'{document_in.filename} categories updated to {category_ids} from {old_categories}'
+            },
+            user_id=current_user.id
+        )
+        
+        return document
+    except Exception as e:
+        print(traceback.format_exc())
+        logger.error(f"There was an error updating the categories for the document: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error: Unable to update categories.",
+        )
+
+
 @router.post('/upload', response_model=schemas.Document)
 async def upload_documents(
     request: Request,
@@ -277,6 +386,7 @@ async def upload_documents(
     try:
         file = departments.file
         original_filename = file.filename
+        category = departments.category
         if original_filename is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -293,7 +403,7 @@ async def upload_documents(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal Server Error: Unable to ingest file.",
             )
-        document = await create_documents(db, original_filename, current_user, departments, log_audit)
+        document = await create_documents(db, original_filename, category, current_user, departments, log_audit)
         logger.info(
             f"{original_filename} is uploaded by {current_user.username} in {departments.departments_ids}")
         
@@ -429,12 +539,6 @@ async def verify_documents(
         )
 
 
-
-def get_id(db, username):
-    name = crud.user.get_by_name(db=db, name=username)
-    return name
-
-
 @router.get('/filter', response_model=List[schemas.DocumentView])
 async def get_documents(
     document_filter: schemas.DocumentFilter = Depends(),
@@ -443,7 +547,8 @@ async def get_documents(
         deps.get_current_user,
         scopes=[
                 Role.SUPER_ADMIN["name"],
-                Role.OPERATOR["name"]
+                Role.OPERATOR["name"],
+                Role.ADMIN["name"],
             ],
     )
 )-> Any:
@@ -456,9 +561,9 @@ async def get_documents(
             uploaded_by=id, 
             action_type=document_filter.action_type, 
             status=document_filter.status,
-            order_by=document_filter.order_by
+            order_by=document_filter.order_by,
+            category_id=document_filter.category_id
         )
-
         documents = [
                 schemas.DocumentView(
                     id=doc.id,
@@ -471,7 +576,11 @@ async def get_documents(
                         for dep in doc.departments
                     ],
                     action_type=doc.action_type,
-                    status=doc.status
+                    status=doc.status,
+                    categories=[
+                        schemas.CategoryList(id=cat.id, name=cat.name)
+                        for cat in doc.categories  
+                    ]
                 )
                 for doc in docs
             ]
@@ -480,3 +589,60 @@ async def get_documents(
         print(traceback.print_exc())
         raise HTTPException(status_code=500, detail="Internal server error")
     
+
+
+@router.post('/document_update', response_model=schemas.DocumentList)
+def update_document_associations(
+    request: Request,
+    document_in: schemas.DocCatUpdate,
+    db: Session = Depends(deps.get_db),
+    log_audit: models.Audit = Depends(deps.get_audit_logger),
+    current_user: models.User = Security(
+        deps.get_current_user,
+        scopes=[Role.SUPER_ADMIN["name"], Role.OPERATOR["name"]],
+    )
+):
+    """
+    Update the department and category lists for the document
+    """
+    try:
+        document = crud.documents.get_by_filename(db, file_name=document_in.filename)
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document with this filename doesn't exist!",
+            )
+        old_departments = [dept.id for dept in document.departments]
+        document.departments = []
+        for department_id in document_in.departments:
+            department = db.query(models.Department).get(department_id)
+            if department:
+                document.departments.append(department)
+        old_categories = [cat.id for cat in document.categories]
+        document.categories = []
+        for category_id in document_in.categories:
+            category = db.query(models.Category).get(category_id)
+            if category:
+                document.categories.append(category)
+
+        db.commit()
+
+        log_audit(
+            model='Document',
+            action='update',
+            details={
+                'detail': f'{document_in.filename} updated. '
+                          f'Departments: {old_departments} -> {document_in.departments}, '
+                          f'Categories: {old_categories} -> {document_in.categories}'
+            },
+            user_id=current_user.id
+        )
+        return document
+
+    except Exception as e:
+        print(traceback.format_exc())
+        logger.error(f"Error updating document associations: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error: Unable to update document associations.",
+        )

@@ -1,13 +1,11 @@
-from sqlalchemy.sql.expression import desc, asc
-from typing import Optional, List, Union, Dict, Any
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
 import uuid
+from typing import Optional, List
+from sqlalchemy.orm import Session
+from sqlalchemy.sql.expression import desc, asc
+
 from private_gpt.users.crud.base import CRUDBase
 from private_gpt.users.models.chat import ChatHistory, ChatItem
 from private_gpt.users.schemas.chat import ChatHistoryCreate, ChatHistoryCreate, ChatItemCreate, ChatItemUpdate
-from fastapi_pagination import Page, paginate
 
 
 class CRUDChat(CRUDBase[ChatHistory, ChatHistoryCreate, ChatHistoryCreate]):

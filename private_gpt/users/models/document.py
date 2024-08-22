@@ -1,4 +1,3 @@
-from typing import Optional
 from fastapi_filter.contrib.sqlalchemy import Filter
 from datetime import datetime
 from private_gpt.users.models.department import Department
@@ -8,6 +7,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 
 from private_gpt.users.db.base_class import Base
 from private_gpt.users.models.document_department import document_department_association
+from private_gpt.users.models.category import document_category_association
 from sqlalchemy import Enum
 from enum import Enum as PythonEnum
 
@@ -71,6 +71,13 @@ class Document(Base):
         back_populates="documents"
     )
 
+    # cateogry
+    categories = relationship(
+        "Category",
+        secondary=document_category_association,
+        back_populates="documents"
+    )
+    
 
 
 

@@ -184,13 +184,14 @@ def delete_file(
 async def create_documents(
     db: Session, 
     file_name: str = None, 
+    category: int = None,
     current_user: models.User = None,
     departments: schemas.DocumentDepartmentList = Depends(),
     log_audit: models.Audit = None,
 ):
     """
     Create documents in the `Document` table and update the \n
-    `Document Department Association` table with the departments ids for the documents.
+    Document Department Association` table with the departments ids for the documents.
     """
     department_ids = departments.departments_ids
     file_ingested = crud.documents.get_by_filename(
@@ -213,17 +214,20 @@ async def create_documents(
     department_ids = [int(number) for number in department_ids.split(",")]
     for department_id in department_ids:
         db.execute(models.document_department_association.insert().values(document_id=document.id, department_id=department_id))
-
+    if category:  
+        db.execute(models.document_category_association.insert().values(document_id=document.id, category_id=category))
+    
     log_audit(
-            model='Document', 
-            action='create',
-            details={
-                'filename': f"{file_name}", 
-                'user': f"{current_user.username}",
-                'departments': f"{department_ids}"
-            }, 
-            user_id=current_user.id
-        )
+        model='Document', 
+        action='create',
+        details={
+            'filename': f"{file_name}", 
+            'user': f"{current_user.username}",
+            'departments': f"{department_ids}",
+            'categories': f"{category}"
+        }, 
+        user_id=current_user.id
+    )
     return document
 
 

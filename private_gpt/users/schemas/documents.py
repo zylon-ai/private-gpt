@@ -5,7 +5,7 @@ from typing import List
 from fastapi import Form, UploadFile, File
 
 from fastapi_filter.contrib.sqlalchemy import Filter
-
+from .category import CategoryList
 
 class DocumentsBase(BaseModel):
     filename: str
@@ -66,8 +66,8 @@ class DocumentCheckerUpdate(BaseModel):
 class DocumentDepartmentList(BaseModel):
     departments_ids: str = Form(...)
     doc_type_id: int = Form(...)
+    category: int = Form(...)
     file: UploadFile = File(...)
-
 
 
 class DocumentView(BaseModel):
@@ -79,6 +79,7 @@ class DocumentView(BaseModel):
     departments: List[DepartmentList] = []
     action_type: str
     status: str
+    categories: List[CategoryList] = []
 
     class Config:
         orm_mode = True
@@ -91,6 +92,7 @@ class DocumentVerify(BaseModel):
     uploaded_at: datetime
     departments: List[DepartmentList] = []
     status: str
+    categories: List[CategoryList] = []
 
     class Config:
         orm_mode = True
@@ -103,4 +105,14 @@ class DocumentFilter(BaseModel):
     action_type: Optional[str] = None
     status: Optional[str] = None
     order_by: Optional[str] = None
+    category_id: Optional[str] = None
 
+
+class DocumentCategoryUpdate(BaseModel):
+    filename: str
+    categories: List[int]
+    
+class DocCatUpdate(BaseModel):
+    filename: str
+    departments: Optional[List[int]] = None
+    categories: Optional[List[int]] = None
