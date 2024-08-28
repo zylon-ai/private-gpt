@@ -272,15 +272,6 @@ class GeminiSettings(BaseModel):
     )
 
 
-class MistralAISettings(BaseModel):
-    api_key: str
-    endpoint: str
-    model: str
-    prompt_style: str
-    embedding_model: str
-    request_timeout: int
-
-
 class OllamaSettings(BaseModel):
     api_base: str = Field(
         "http://localhost:11434",
