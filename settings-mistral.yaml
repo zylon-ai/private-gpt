@@ -1,11 +1,11 @@
 server:
-  env_name: ${APP_ENV:mistral}
+  env_name: ${APP_ENV:mistralai}
 
 llm:
-  mode: mistral
+  mode: openailike
 
 embedding:
-  mode: mistral
+  mode: mistralai
 
 mistral:
   endpoint: https://api.mistral.ai/v1
