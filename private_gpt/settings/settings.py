@@ -273,7 +273,7 @@ class GeminiSettings(BaseModel):
     )
 
 
-class MistralSettings(BaseModel):
+class MistralAISettings(BaseModel):
     api_key: str
     endpoint: str
     model: str
