@@ -114,7 +114,7 @@ class LLMSettings(BaseModel):
         "mock",
         "ollama",
         "gemini",
-        "mistral",
+        "mistralai",
     ]
     max_new_tokens: int = Field(
         256,
@@ -137,7 +137,7 @@ class LLMSettings(BaseModel):
         description="The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual.",
     )
     prompt_style: Literal[
-        "default", "llama2", "llama3", "tag", "mistral", "chatml"
+        "default", "llama2", "llama3", "tag", "mistralai", "chatml"
     ] = Field(
         "llama2",
         description=(
@@ -197,7 +197,7 @@ class HuggingFaceSettings(BaseModel):
 
 class EmbeddingSettings(BaseModel):
     mode: Literal[
-        "huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock", "gemini", "mistral"
+        "huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock", "gemini", "mistralai"
     ]
     ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",
