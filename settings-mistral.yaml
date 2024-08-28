@@ -8,7 +8,7 @@ embedding:
   mode: mistralai
 
 mistral:
-  endpoint: https://api.mistral.ai/v1
+  api_base: https://api.mistral.ai/v1
   api_key:
   model: mistral-large
   prompt_style: mistral
