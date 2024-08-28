@@ -144,7 +144,7 @@ class EmbeddingComponent:
                     api_key=settings.gemini.api_key,
                     model_name=settings.gemini.embedding_model,
                 )
-            case "mistral":
+            case "mistralai":
                 try:
                     from llama_index.embeddings.mistralai import (  # type: ignore
                         MistralAIEmbedding,
@@ -154,8 +154,8 @@ class EmbeddingComponent:
                         "Mistral dependencies not found, install with `poetry install --extras embeddings-mistral`"
                     ) from e
 
-                api_key = settings.mistral.api_key
-                model = settings.mistral.embedding_model
+                api_key = settings.mistralai.api_key
+                model = settings.mistralai.embedding_model
 
                 self.embedding_model = MistralAIEmbedding(
                     api_key=api_key,
