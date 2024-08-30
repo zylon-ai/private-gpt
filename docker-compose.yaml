@@ -1,13 +1,11 @@
+version: '3.9'
+
 services:
 
-  #-----------------------------------
-  #---- Private-GPT services ---------
-  #-----------------------------------
-
   # Private-GPT service for the Ollama CPU and GPU modes
-  # This service builds from an external Dockerfile and runs the Ollama mode.
   private-gpt-ollama:
-    image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-ollama  # x-release-please-version
+    user: root
+    image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-ollama
     build:
       context: .
       dockerfile: Dockerfile.ollama
@@ -27,11 +25,14 @@ services:
       - ollama-cpu
       - ollama-cuda
       - ollama-api
+    depends_on:
+      - ollama
+    networks:
+      - ollama-net
 
   # Private-GPT service for the local mode
-  # This service builds from a local Dockerfile and runs the application in local mode.
   private-gpt-llamacpp-cpu:
-    image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-llamacpp-cpu # x-release-please-version
+    image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-llamacpp-cpu
     build:
       context: .
       dockerfile: Dockerfile.llamacpp-cpu
@@ -47,45 +48,34 @@ services:
       HF_TOKEN: ${HF_TOKEN}
     profiles:
       - llamacpp-cpu
-
-  #-----------------------------------
-  #---- Ollama services --------------
-  #-----------------------------------
+    networks:
+      - ollama-net
 
   # Traefik reverse proxy for the Ollama service
-  # This will route requests to the Ollama service based on the profile.
-  ollama:
+  traefik:
     image: traefik:v2.10
     ports:
       - "8081:8080"
+      - "11434:11434"  # Exposing port 11434 for Ollama
     command:
-      - "--providers.file.filename=/etc/router.yml"
-      - "--log.level=ERROR"
-      - "--api.insecure=true"
       - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:11434"
+      - "--api.insecure=true"
+      - "--log.level=ERROR"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./.docker/router.yml:/etc/router.yml:ro
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    profiles:
-      - ""
-      - ollama-cpu
-      - ollama-cuda
-      - ollama-api
+    networks:
+      - ollama-net
 
-  # Ollama service for the CPU mode
-  ollama-cpu:
+  # Ollama service
+  ollama:
     image: ollama/ollama:latest
     volumes:
       - ./models:/root/.ollama
-    profiles:
-      - ""
-      - ollama-cpu
+    networks:
+      - ollama-net
 
-  # Ollama service for the CUDA mode
+  # Ollama service for CUDA mode
   ollama-cuda:
     image: ollama/ollama:latest
     volumes:
@@ -99,3 +89,9 @@ services:
               capabilities: [gpu]
     profiles:
       - ollama-cuda
+    networks:
+      - ollama-net
+
+networks:
+  ollama-net:
+    driver: bridge
