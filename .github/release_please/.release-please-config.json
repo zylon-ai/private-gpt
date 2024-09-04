@@ -1,0 +1,19 @@
+{
+    "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+    "release-type": "simple",
+    "version-file": "version.txt",
+    "extra-files": [
+      {
+        "type": "toml",
+        "path": "pyproject.toml",
+        "jsonpath": "$.tool.poetry.version"
+      },
+      {
+        "type": "generic",
+        "path": "docker-compose.yaml"
+      }
+    ],
+    "packages": {
+      ".": {}
+    }
+  }

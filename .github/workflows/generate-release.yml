@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: zylonai/private-gpt
   platforms: linux/amd64,linux/arm64
   DEFAULT_TYPE: "ollama"
 
