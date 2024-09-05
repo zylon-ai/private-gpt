@@ -70,6 +70,10 @@ einops = {version = "^0.8.0", optional = true}
 llama-index-readers-smart-pdf-loader = "^0.1.4"
 python-pptx = "^1.0.2"
 pillow = "^10.4.0"
+jupyter = "^1.1.1"
+pypdf2 = "^3.0.1"
+pytesseract = "^0.3.13"
+pdf2image = "^1.17.0"
 
 [tool.poetry.extras]
 ui = ["gradio", "ffmpy"]

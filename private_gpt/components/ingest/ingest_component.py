@@ -136,7 +136,10 @@ class SimpleIngestComponent(BaseIngestComponentWithIndex):
         return saved_documents
 
     def _save_docs(self, documents: list[Document]) -> list[Document]:
-        logger.debug("Transforming count=%s documents into nodes", len(documents))
+        logger.debug(
+            "Transforming count=%s documents into nodes",
+            len(documents) if isinstance(documents, list) else 1,
+        )
         with self._index_thread_lock:
             for document in documents:
                 self._index.insert(document, show_progress=True)

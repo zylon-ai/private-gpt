@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env pythfon3
 
 import argparse
 import logging
