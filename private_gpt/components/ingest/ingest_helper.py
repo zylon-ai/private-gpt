@@ -139,10 +139,11 @@ class IngestionHelper:
                     text = pytesseract.image_to_string(image, lang="rus")
                     doc = StringIterableReader().load_data(
                         [text],
-                    )[0]
-                    doc.metadata["page_label"] = i
+                    )
+                    # )[0]
+                    # doc.metadata["page_label"] = str(i + 1)
 
-                    documents.extend(doc)
+                    documents.extend([doc])
             except Exception as e:
                 logger.error(f"Error extracting images from PDF: {e}")
                 raise ValueError(f"No text extracted from PDF={file_name}")
