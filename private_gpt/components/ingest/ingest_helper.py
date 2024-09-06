@@ -8,6 +8,8 @@ from llama_index.core.readers.base import BaseReader
 from llama_index.core.readers.json import JSONReader
 from llama_index.core.schema import Document
 
+from scripts.readers import CustomImagePagePdfReader
+
 logger = logging.getLogger(__name__)
 
 LLMSHERPA_API_URL = (
@@ -129,24 +131,14 @@ class IngestionHelper:
                 "No text extracted from PDF, trying to extract images from PDF"
             )
             try:
-                import pdf2image
-                import pytesseract
-
-                images = pdf2image.convert_from_path(file_data)
-                documents = []
-
-                for i, image in tqdm.tqdm(enumerate(images)):
-                    text = pytesseract.image_to_string(image, lang="rus")
-                    doc = StringIterableReader().load_data(
-                        [text],
-                    )
-                    # )[0]
-                    # doc.metadata["page_label"] = str(i + 1)
-
-                    documents.extend(doc)
+                pdf_reader = CustomImagePagePdfReader(lang="rus")
+                documents = pdf_reader.load_data(file_data.as_posix())
             except Exception as e:
                 logger.error(f"Error extracting images from PDF: {e}")
-                raise ValueError(f"No text extracted from PDF={file_name}")
+                raise ValueError(f"No text extracted from PDF: {file_name}")
+
+        if len(documents) == 0:
+            logger.warning(f"No documents extracted from file: {file_name}")
 
         return documents
 
@@ -158,7 +150,6 @@ class IngestionHelper:
             # We don't want the Embeddings search to receive this metadata
             document.excluded_embed_metadata_keys = ["doc_id"]
             # We don't want the LLM to receive these metadata in the context
-            # ToDo currently remove file_name
             document.excluded_llm_metadata_keys = [
                 # "file_name",
                 "doc_id",

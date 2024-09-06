@@ -1,4 +1,5 @@
 """This file should be imported if and only if you want to run the UI locally."""
+
 import base64
 import logging
 import time
@@ -69,7 +70,8 @@ class Source(BaseModel):
             file_name = doc_metadata.get("file_name", "-") if doc_metadata else "-"
             page_label = doc_metadata.get("page_label", "-") if doc_metadata else "-"
 
-            source = Source(file=file_name, page=page_label, text=chunk.text)
+            logger.debug("Source: %s %s", file_name, page_label)
+            source = Source(file=file_name, page=str(page_label), text=chunk.text)
             curated_sources.append(source)
             curated_sources = list(
                 dict.fromkeys(curated_sources).keys()
