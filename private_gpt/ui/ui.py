@@ -170,12 +170,6 @@ class PrivateGptUi:
                     role=MessageRole.SYSTEM,
                 ),
             )
-        def draw_methods(service_type):
-            service = getattr(self, f'_{service_type}_service')
-            return {
-                True: getattr(service, f'stream_{service_type}'),
-                False: getattr(service, f'{service_type}')
-            }
         match mode:
             case Modes.RAG_MODE:
                 # Use only the selected file for the query
@@ -190,18 +184,17 @@ class PrivateGptUi:
                             docs_ids.append(ingested_document.doc_id)
                     context_filter = ContextFilter(docs_ids=docs_ids)
 
-                methods = draw_methods('chat')
-                query_stream = methods.get(self._response_style, self._chat_service.stream_chat)(
-                    messages=all_messages,
-                    use_context=True,
-                    context_filter=context_filter
+                query_stream = self._chat_service.stream_chat(
+                    all_messages, use_context=False
+                ) if self._response_style else self._chat_service.chat(
+                    all_messages, use_context=False
                 )
                 yield from (yield_deltas(query_stream) if self._response_style else [query_stream.response])
             case Modes.BASIC_CHAT_MODE:
-                methods = draw_methods('chat')
-                llm_stream = methods.get(self._response_style, self._chat_service.stream_chat)(
-                    messages=all_messages,
-                    use_context=False
+                llm_stream = self._chat_service.stream_chat(
+                    all_messages, use_context=False
+                ) if self._response_style else self._chat_service.chat(
+                    all_messages, use_context=False
                 )
                 yield from (yield_deltas(llm_stream) if self._response_style else [llm_stream.response])
 
@@ -238,11 +231,10 @@ class PrivateGptUi:
                 )
                 yield from yield_tokens(summary_stream)
                 '''
-                methods = draw_methods('summarize')
-                summary_stream = methods.get(self._response_style, self._summarize_service.stream_summarize)(
-                    use_context=True,
-                    context_filter=context_filter,
-                    instructions=message
+                summary_stream = self._summarize_service.summarize_stream(
+                    all_messages, use_context=False
+                ) if self._response_style else self._summarize_service.summarize(
+                    all_messages, use_context=False
                 )
                 yield from yield_tokens(summary_stream) if response_style else summary_stream
                 '''
