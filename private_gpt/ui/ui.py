@@ -98,11 +98,12 @@ class PrivateGptUi:
 
         self._selected_filename = None
 
-        self._default_mode = settings().ui.default_mode
         # Initialize system prompt based on default mode
-        self.mode = self._default_mode
-        self._system_prompt = self._get_default_system_prompt(self.mode)
-
+        default_mode_map = {mode.value: mode for mode in Modes}
+        self._default_mode = default_mode_map.get(
+            settings().ui.default_mode, Modes.RAG_MODE
+        )
+        self._system_prompt = self._get_default_system_prompt(self._default_mode)
 
     def _chat(
         self, message: str, history: list[list[str]], mode: Modes, *_: Any
