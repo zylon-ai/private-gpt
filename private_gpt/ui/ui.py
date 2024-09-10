@@ -98,9 +98,11 @@ class PrivateGptUi:
 
         self._selected_filename = None
 
+        self._default_mode = settings().ui.default_mode
         # Initialize system prompt based on default mode
-        self.mode = MODES[0]
+        self.mode = self._default_mode
         self._system_prompt = self._get_default_system_prompt(self.mode)
+
 
     def _chat(
         self, message: str, history: list[list[str]], mode: Modes, *_: Any
@@ -390,7 +392,7 @@ class PrivateGptUi:
 
             with gr.Row(equal_height=False):
                 with gr.Column(scale=3):
-                    default_mode = MODES[0]
+                    default_mode = self._default_mode
                     mode = gr.Radio(
                         [mode.value for mode in MODES],
                         label="Mode",

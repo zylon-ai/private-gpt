@@ -350,6 +350,10 @@ class AzureOpenAISettings(BaseModel):
 class UISettings(BaseModel):
     enabled: bool
     path: str
+    default_mode: str = Field(
+        "RAG",
+        description="The default mode.",
+    )
     default_chat_system_prompt: str = Field(
         None,
         description="The default system prompt to use for the chat mode.",
