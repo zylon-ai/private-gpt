@@ -184,19 +184,28 @@ class PrivateGptUi:
                             docs_ids.append(ingested_document.doc_id)
                     context_filter = ContextFilter(docs_ids=docs_ids)
 
-                query_stream = self._chat_service.stream_chat(
-                    all_messages, use_context=False
-                ) if self._response_style else self._chat_service.chat(
-                    all_messages, use_context=False
-                )
-                yield from (yield_deltas(query_stream) if self._response_style else [query_stream.response])
+                if self._response_style:
+                    query_stream = self._chat_service.stream_chat(
+                        all_messages, use_context=False
+                    )
+                    yield from yield_deltas(query_stream)
+                else:
+                    query_response = self._chat_service.chat(
+                        all_messages, use_context=False
+                    ).response
+                    yield from [query_response]
+
             case Modes.BASIC_CHAT_MODE:
-                llm_stream = self._chat_service.stream_chat(
-                    all_messages, use_context=False
-                ) if self._response_style else self._chat_service.chat(
-                    all_messages, use_context=False
-                )
-                yield from (yield_deltas(llm_stream) if self._response_style else [llm_stream.response])
+                if self._response_style:
+                    llm_stream = self._chat_service.stream_chat(
+                        all_messages, use_context=False
+                    )
+                    yield from yield_deltas(llm_stream)
+                else:
+                    llm_response = self._chat_service.chat(
+                        all_messages, use_context=False
+                    ).response
+                    yield from [llm_response]
 
             case Modes.SEARCH_MODE:
                 response = self._chunks_service.retrieve_relevant(
@@ -224,20 +233,20 @@ class PrivateGptUi:
                             docs_ids.append(ingested_document.doc_id)
                     context_filter = ContextFilter(docs_ids=docs_ids)
 
-                summary_stream = self._summarize_service.stream_summarize(
-                    use_context=True,
-                    context_filter=context_filter,
-                    instructions=message,
-                )
-                yield from yield_tokens(summary_stream)
-                '''
-                summary_stream = self._summarize_service.summarize_stream(
-                    all_messages, use_context=False
-                ) if self._response_style else self._summarize_service.summarize(
-                    all_messages, use_context=False
-                )
-                yield from yield_tokens(summary_stream) if response_style else summary_stream
-                '''
+                if self._response_style:
+                    summary_stream = self._summarize_service.stream_summarize(
+                        use_context=True,
+                        context_filter=context_filter,
+                        instructions=message,
+                    )
+                    yield from yield_tokens(summary_stream)
+                else:
+                    summary_response = self._summarize_service.summarize(
+                        use_context=True,
+                        context_filter=context_filter,
+                        instructions=message,
+                    )
+                    yield from summary_response
 
     # On initialization and on mode change, this function set the system prompt
     # to the default prompt based on the mode (and user settings).
@@ -290,7 +299,7 @@ class PrivateGptUi:
             gr.update(value=self._explanation_mode),
         ]
 
-    def _set_response_style(self, response_style: str) -> None:
+    def _set_response_style(self, response_style: bool) -> None:
         self._response_style = response_style
 
     def _list_ingested_files(self) -> list[list[str]]:
