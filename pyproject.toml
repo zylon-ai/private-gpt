@@ -66,6 +66,7 @@ ollama = {version ="^0.3.0", optional = true}
 
 # Optional HF Transformers
 einops = {version = "^0.8.0", optional = true}
+retry-async = "^0.1.4"
 
 [tool.poetry.extras]
 ui = ["gradio", "ffmpy"]
