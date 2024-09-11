@@ -50,14 +50,12 @@ ARG GID=65534
 RUN adduser --system --gid ${GID} --uid ${UID} --home /home/worker worker
 WORKDIR /home/worker/app
 
-RUN mkdir -p /home/worker/app/local_data/private_gpt && \
-    mkdir -p /home/worker/app/models && \
-    chown -R worker /home/worker/app && \
-    chown -R worker /home/worker/app/local_data && \
-    chown -R worker /home/worker/app/models
+RUN chown worker /home/worker/app
+RUN mkdir local_data && chown worker local_data
+RUN mkdir models && chown worker models
 COPY --chown=worker --from=dependencies /home/worker/app/.venv/ .venv
 COPY --chown=worker private_gpt/ private_gpt
-COPY --chown=worker *.yaml .
+COPY --chown=worker *.yaml ./
 COPY --chown=worker scripts/ scripts
 
 USER worker
