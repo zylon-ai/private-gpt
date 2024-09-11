@@ -21,7 +21,13 @@ _MAX_RETRIES = 5
 _JITTER = (3.0, 10.0)
 
 
-@retry(is_async=False, exceptions=(ConnectError, ResponseError), tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
+@retry(
+    is_async=False,
+    exceptions=(ConnectError, ResponseError),
+    tries=_MAX_RETRIES,
+    jitter=_JITTER,
+    logger=logger,
+)
 def check_connection(client: Client) -> bool:
     try:
         client.list()
