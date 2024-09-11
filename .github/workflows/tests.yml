@@ -14,7 +14,7 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/workflows/actions/install_dependencies
 
   checks:
@@ -28,7 +28,7 @@ jobs:
           - ruff
           - mypy
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/workflows/actions/install_dependencies
       - name: run ${{ matrix.quality-command }}
         run: make ${{ matrix.quality-command }}
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     name: test
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/workflows/actions/install_dependencies
       - name: run test
         run: make test-coverage

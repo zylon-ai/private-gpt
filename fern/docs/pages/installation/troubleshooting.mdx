@@ -47,3 +47,18 @@ embedding:
   embed_dim: 384
 ```
 </Callout>
+
+# Building Llama-cpp with NVIDIA GPU support
+
+## Out-of-memory error
+
+If you encounter an out-of-memory error while running `llama-cpp` with CUDA, you can try the following steps to resolve the issue:
+1. **Set the next environment:**
+    ```bash
+    TOKENIZERS_PARALLELISM=true
+    ```
+2. **Run PrivateGPT:**
+    ```bash
+    poetry run python -m privategpt
+    ```
+Give thanks to [MarioRossiGithub](https://github.com/MarioRossiGithub) for providing the following solution.

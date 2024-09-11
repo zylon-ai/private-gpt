@@ -104,6 +104,7 @@ class DataSettings(BaseModel):
         "It will be treated as an absolute path if it starts with /"
     )
 
+
 class LLMSettings(BaseModel):
     mode: Literal[
         "llamacpp",
@@ -196,7 +197,14 @@ class HuggingFaceSettings(BaseModel):
 
 class EmbeddingSettings(BaseModel):
     mode: Literal[
-        "huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock", "gemini", "mistralai"
+        "huggingface",
+        "openai",
+        "azopenai",
+        "sagemaker",
+        "ollama",
+        "mock",
+        "gemini",
+        "mistralai",
     ]
     ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",

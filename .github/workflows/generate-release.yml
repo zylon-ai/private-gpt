@@ -1,0 +1,83 @@
+name: generate-release
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: zylonai/private-gpt
+  platforms: linux/amd64,linux/arm64
+  DEFAULT_TYPE: "ollama"
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        type: [ llamacpp-cpu, ollama ]
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: false
+          swap-storage: true
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}},enable=${{ matrix.type == env.DEFAULT_TYPE }}
+            type=semver,pattern={{version}}-${{ matrix.type }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.type == env.DEFAULT_TYPE }}
+            type=semver,pattern={{major}}.{{minor}}-${{ matrix.type }}
+            type=raw,value=latest,enable=${{ matrix.type == env.DEFAULT_TYPE }}
+            type=sha
+          flavor: |
+            latest=false
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.${{ matrix.type }}
+          platforms: ${{ env.platforms }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Version output
+        id: version
+        run: echo "version=${{ steps.meta.outputs.version }}" >> "$GITHUB_OUTPUT"
