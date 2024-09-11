@@ -46,7 +46,7 @@ services:
     environment:
       PORT: 8001
       PGPT_PROFILES: local
-      HF_TOKEN: ${HF_TOKEN}
+      HF_TOKEN: ${HF_TOKEN:-}
     profiles:
       - llamacpp-cpu
 
@@ -59,7 +59,7 @@ services:
   ollama:
     image: traefik:v2.10
     ports:
-      - "8081:8080"
+      - "11434:11434"
     command:
       - "--providers.file.filename=/etc/router.yml"
       - "--log.level=ERROR"
