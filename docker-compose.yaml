@@ -8,6 +8,7 @@ services:
   # This service builds from an external Dockerfile and runs the Ollama mode.
   private-gpt-ollama:
     image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-ollama  # x-release-please-version
+    user: root
     build:
       context: .
       dockerfile: Dockerfile.ollama
@@ -34,6 +35,7 @@ services:
   # This service builds from a local Dockerfile and runs the application in local mode.
   private-gpt-llamacpp-cpu:
     image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-llamacpp-cpu # x-release-please-version
+    user: root
     build:
       context: .
       dockerfile: Dockerfile.llamacpp-cpu
