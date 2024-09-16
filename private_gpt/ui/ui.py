@@ -426,12 +426,10 @@ class PrivateGptUi:
                         interactive=False,
                     )
                     response_style = gr.Checkbox(
-                        label="Response Style: Streaming",
-                        value=self._response_style
+                        label="Response Style: Streaming", value=self._response_style
                     )
                     response_style.input(
-                        self._set_response_style,
-                        inputs=response_style
+                        self._set_response_style, inputs=response_style
                     )
                     upload_button = gr.components.UploadButton(
                         "Upload File(s)",
