@@ -1061,6 +1061,17 @@ marshmallow = ">=3.18.0,<4.0.0"
 typing-inspect = ">=0.4.0,<1"
 
 [[package]]
+name = "decorator"
+version = "5.1.1"
+description = "Decorators for Humans"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "decorator-5.1.1-py3-none-any.whl", hash = "sha256:b8c3f85900b9dc423225913c5aace94729fe1fa9763b38939a95226f02d37186"},
+    {file = "decorator-5.1.1.tar.gz", hash = "sha256:637996211036b6385ef91435e4fae22989472f9d571faba8927ba8253acbc330"},
+]
+
+[[package]]
 name = "deprecated"
 version = "1.2.14"
 description = "Python @deprecated decorator to deprecate old python classes, functions or methods."
@@ -5016,6 +5027,20 @@ requests = ">=2.0.0"
 rsa = ["oauthlib[signedtoken] (>=3.0.0)"]
 
 [[package]]
+name = "retry-async"
+version = "0.1.4"
+description = ""
+optional = false
+python-versions = ">=3.10,<4.0"
+files = [
+    {file = "retry_async-0.1.4-py3-none-any.whl", hash = "sha256:21b383c7bc52013478337b894f476c9f106485cfeeb5d449abe5f745be2da219"},
+    {file = "retry_async-0.1.4.tar.gz", hash = "sha256:8414d69b20920a1d700de34b68c0f972fa36a0158450a6f6abc5b45a241ac6b6"},
+]
+
+[package.dependencies]
+decorator = ">=5.1.1,<6.0.0"
+
+[[package]]
 name = "rich"
 version = "13.7.1"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
@@ -6737,4 +6762,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "119ebc4623e38c745677ca78dee1133087cce3b04ac210bc7a774e6c5cce26c6"
+content-hash = "3fa6ef447847895b1a16b8b0422dd9e4fda1aaaadef3af71971eb412da89bf67"
