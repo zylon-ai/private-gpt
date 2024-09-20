@@ -377,7 +377,7 @@ class PrivateGptUi:
             ".contain { display: flex !important; flex-direction: column !important; }"
             "#component-0, #component-3, #component-10, #component-8  { height: 100% !important; }"
             "#chatbot { flex-grow: 1 !important; overflow: auto !important;}"
-            "#col { height: calc(100vh - 112px - 16px) !important; }"
+            "#col { min-height: calc(100vh - 112px - 16px) !important; }"
             "hr { margin-top: 1em; margin-bottom: 1em; border: 0; border-top: 1px solid #FFF; }"
             ".avatar-image { background-color: antiquewhite; border-radius: 2px; }"
             ".footer { text-align: center; margin-top: 20px; font-size: 14px; display: flex; align-items: center; justify-content: center; }"
