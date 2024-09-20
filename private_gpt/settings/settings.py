@@ -115,6 +115,7 @@ class LLMSettings(BaseModel):
         "mock",
         "ollama",
         "gemini",
+        "fireworks"
     ]
     max_new_tokens: int = Field(
         256,

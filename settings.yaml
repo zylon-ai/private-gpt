@@ -3,7 +3,7 @@
 # Syntax in `private_pgt/settings/settings.py`
 server:
   env_name: ${APP_ENV:prod}
-  port: ${PORT:8001}
+  port: ${PORT:8002}
   cors:
     enabled: true
     allow_origins: ["*"]
