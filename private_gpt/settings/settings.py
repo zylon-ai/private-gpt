@@ -260,6 +260,21 @@ class OpenAISettings(BaseModel):
         description="OpenAI embedding Model to use. Example: 'text-embedding-3-large'.",
     )
 
+class FireWorksSettings(BaseModel):
+    api_key: str
+    model: str = Field(
+        "accounts/fireworks/models/llama-v3p1-70b-instruct",
+        description="FireWorks Model to use. Example: 'accounts/fireworks/models/llama-v3p1-70b-instruct'.",
+    )
+    # embedding_api_base: str = Field(
+    #     None,
+    #     description="Base URL of OpenAI API. Example: 'https://api.openai.com/v1'.",
+    # )
+    embedding_api_key: str
+    # embedding_model: str = Field(
+    #     "text-embedding-ada-002",
+    #     description="OpenAI embedding Model to use. Example: 'text-embedding-3-large'.",
+    # )
 
 class GeminiSettings(BaseModel):
     api_key: str
@@ -586,6 +601,7 @@ class Settings(BaseModel):
     huggingface: HuggingFaceSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
+    fireworks: FireWorksSettings
     gemini: GeminiSettings
     ollama: OllamaSettings
     azopenai: AzureOpenAISettings
