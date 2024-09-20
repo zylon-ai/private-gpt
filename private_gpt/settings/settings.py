@@ -115,7 +115,7 @@ class LLMSettings(BaseModel):
         "mock",
         "ollama",
         "gemini",
-        "fireworks"
+        "fireworks",
     ]
     max_new_tokens: int = Field(
         256,
@@ -198,7 +198,7 @@ class HuggingFaceSettings(BaseModel):
 
 class EmbeddingSettings(BaseModel):
     mode: Literal[
-        "huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock", "gemini"
+        "huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock", "gemini","fireworks"
     ]
     ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",

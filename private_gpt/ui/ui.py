@@ -518,6 +518,7 @@ class PrivateGptUi:
                         model_mapping = {
                             "llamacpp": config_settings.llamacpp.llm_hf_model_file,
                             "openai": config_settings.openai.model,
+                            "fireworks": config_settings.fireworks.model,
                             "openailike": config_settings.openai.model,
                             "azopenai": config_settings.azopenai.llm_model,
                             "sagemaker": config_settings.sagemaker.llm_endpoint_name,

@@ -80,7 +80,6 @@ class EmbeddingComponent:
                 self.embedding_model = FireworksEmbedding(
                     api_key=api_key,
                 )
-                
             case "ollama":
                 try:
                     from llama_index.embeddings.ollama import (  # type: ignore
