@@ -69,22 +69,40 @@ jobs:
       VLLM_TOKENIZER: meta-llama/Meta-Llama-3-8B-Instruct
 
   vllm:
-    image: vllm/vllm-openai:v0.5.1
+    image: vllm/vllm-openai:v0.6.1.post2
     name: vllm
-    preset: H100x1
+    preset: gpu-medium
     detach: true
     http_port: "8000"
     volumes:
       - ${{ volumes.cache.ref_rw }}
     env:
       HF_TOKEN: secret:HF_TOKEN
-    cmd: --model meta-llama/Meta-Llama-3-8B-Instruct --tokenizer meta-llama/Meta-Llama-3-8B-Instruct --dtype=half
+    cmd: >
+      --model meta-llama/Meta-Llama-3.1-8B-Instruct
+      --tokenizer meta-llama/Meta-Llama-3.1-8B-Instruct
+      --dtype=half
+      --max-model-len=50000
+      --tensor-parallel-size=2
+    # cmd: >
+    #   --model meta-llama/Meta-Llama-3.1-8B-Instruct
+    #   --tokenizer meta-llama/Meta-Llama-3.1-8B-Instruct
+    #   --dtype=half
+    # cmd: >
+    #   --model TechxGenus/Meta-Llama-3-70B-AWQ
+    #   --tokenizer TechxGenus/Meta-Llama-3-70B-AWQ
+    #   -q=awq
+    # cmd: >
+    #   --model mgoin/Meta-Llama-3-70B-Instruct-Marlin
+    #   --tokenizer mgoin/Meta-Llama-3-70B-Instruct-Marlin
+    #   --dtype=half
+    #   -q=marlin
 
   ollama:
     image: ollama/ollama:0.1.35
     volumes:
       - ${{ volumes.ollama_models.ref_rw }}
-    preset: H100x1
+    preset: gpu-small
     detach: true
     env:
       MODEL: "nomic-embed-text"
