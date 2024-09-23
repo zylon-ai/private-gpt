@@ -92,7 +92,12 @@ class IngestionHelper:
             return string_reader.load_data([file_data.read_text()])
 
         logger.debug("Specific reader found for extension=%s", extension)
-        return reader_cls().load_data(file_data)
+        documents = reader_cls().load_data(file_data)
+
+        for i in range(len(documents)):
+            documents[i].text = documents[i].text.replace("\u0000", "")
+
+        return documents
 
     @staticmethod
     def _exclude_metadata(documents: list[Document]) -> None:
