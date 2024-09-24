@@ -204,7 +204,7 @@ exclude = ["tests"]
 [tool.mypy-llama-index]
 ignore_missing_imports = true
 
-[tool.llama-index-embeddings-fireworks]
+[tool.mypy-llama_index.embeddings.fireworks]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
