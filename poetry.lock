@@ -1061,6 +1061,17 @@ marshmallow = ">=3.18.0,<4.0.0"
 typing-inspect = ">=0.4.0,<1"
 
 [[package]]
+name = "decorator"
+version = "5.1.1"
+description = "Decorators for Humans"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "decorator-5.1.1-py3-none-any.whl", hash = "sha256:b8c3f85900b9dc423225913c5aace94729fe1fa9763b38939a95226f02d37186"},
+    {file = "decorator-5.1.1.tar.gz", hash = "sha256:637996211036b6385ef91435e4fae22989472f9d571faba8927ba8253acbc330"},
+]
+
+[[package]]
 name = "deprecated"
 version = "1.2.14"
 description = "Python @deprecated decorator to deprecate old python classes, functions or methods."
@@ -1250,7 +1261,7 @@ standard = ["fastapi", "uvicorn[standard] (>=0.15.0)"]
 name = "ffmpy"
 version = "0.4.0"
 description = "A simple Python wrapper for FFmpeg"
-optional = true
+optional = false
 python-versions = "<4.0.0,>=3.8.1"
 files = [
     {file = "ffmpy-0.4.0-py3-none-any.whl", hash = "sha256:39c0f20c5b465e7f8d29a5191f3a7d7675a8c546d9d985de8921151cd9b59e14"},
@@ -2228,6 +2239,17 @@ files = [
 ]
 
 [[package]]
+name = "jsonpath-python"
+version = "1.0.6"
+description = "A more powerful JSONPath implementation in modern python"
+optional = true
+python-versions = ">=3.6"
+files = [
+    {file = "jsonpath-python-1.0.6.tar.gz", hash = "sha256:dd5be4a72d8a2995c3f583cf82bf3cd1a9544cfdabf2d22595b67aff07349666"},
+    {file = "jsonpath_python-1.0.6-py3-none-any.whl", hash = "sha256:1e3b78df579f5efc23565293612decee04214609208a2335884b3ee3f786b575"},
+]
+
+[[package]]
 name = "kiwisolver"
 version = "1.4.5"
 description = "A fast implementation of the Cassowary constraint solver"
@@ -2469,6 +2491,21 @@ files = [
 huggingface-hub = {version = ">=0.19.0", extras = ["inference"]}
 llama-index-core = ">=0.10.1,<0.11.0"
 sentence-transformers = ">=2.6.1"
+
+[[package]]
+name = "llama-index-embeddings-mistralai"
+version = "0.1.6"
+description = "llama-index embeddings mistralai integration"
+optional = true
+python-versions = "<4.0,>=3.9"
+files = [
+    {file = "llama_index_embeddings_mistralai-0.1.6-py3-none-any.whl", hash = "sha256:d69d6fc0be8a1772aaf890bc036f2d575af46070b375a2649803c0eb9736ea1b"},
+    {file = "llama_index_embeddings_mistralai-0.1.6.tar.gz", hash = "sha256:7c9cbf974b1e7d14ded34d3eb749a0d1a379fb151ab75115cc1ffdd08a96a045"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.1,<0.11.0"
+mistralai = ">=1.0.0"
 
 [[package]]
 name = "llama-index-embeddings-ollama"
@@ -2990,6 +3027,27 @@ files = [
     {file = "minijinja-2.0.1-cp38-abi3-win_amd64.whl", hash = "sha256:dca5d7689905dce340e36e47348b505c788daf297253b85a1aff506ea63ad1b8"},
     {file = "minijinja-2.0.1.tar.gz", hash = "sha256:e774beffebfb8a1ad17e638ef70917cf5e94593f79acb8a8fff7d983169f3a4e"},
 ]
+
+[[package]]
+name = "mistralai"
+version = "1.0.3"
+description = "Python Client SDK for the Mistral AI API."
+optional = true
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "mistralai-1.0.3-py3-none-any.whl", hash = "sha256:64af7c9192e64dc66b2da6d1c4d54a1324a881c21665a2f93d6b35d9de9f87c8"},
+    {file = "mistralai-1.0.3.tar.gz", hash = "sha256:84f1a217666c76fec9d477ae266399b813c3ac32a4a348d2ecd5fe1c039b0667"},
+]
+
+[package.dependencies]
+httpx = ">=0.27.0,<0.28.0"
+jsonpath-python = ">=1.0.6,<2.0.0"
+pydantic = ">=2.8.2,<2.9.0"
+python-dateutil = ">=2.9.0.post0,<3.0.0"
+typing-inspect = ">=0.9.0,<0.10.0"
+
+[package.extras]
+gcp = ["google-auth (==2.27.0)", "requests (>=2.32.3,<3.0.0)"]
 
 [[package]]
 name = "mmh3"
@@ -3850,8 +3908,6 @@ files = [
     {file = "orjson-3.10.6-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:960db0e31c4e52fa0fc3ecbaea5b2d3b58f379e32a95ae6b0ebeaa25b93dfd34"},
     {file = "orjson-3.10.6-cp312-none-win32.whl", hash = "sha256:a6ea7afb5b30b2317e0bee03c8d34c8181bc5a36f2afd4d0952f378972c4efd5"},
     {file = "orjson-3.10.6-cp312-none-win_amd64.whl", hash = "sha256:874ce88264b7e655dde4aeaacdc8fd772a7962faadfb41abe63e2a4861abc3dc"},
-    {file = "orjson-3.10.6-cp313-none-win32.whl", hash = "sha256:efdf2c5cde290ae6b83095f03119bdc00303d7a03b42b16c54517baa3c4ca3d0"},
-    {file = "orjson-3.10.6-cp313-none-win_amd64.whl", hash = "sha256:8e190fe7888e2e4392f52cafb9626113ba135ef53aacc65cd13109eb9746c43e"},
     {file = "orjson-3.10.6-cp38-cp38-macosx_10_15_x86_64.macosx_11_0_arm64.macosx_10_15_universal2.whl", hash = "sha256:66680eae4c4e7fc193d91cfc1353ad6d01b4801ae9b5314f17e11ba55e934183"},
     {file = "orjson-3.10.6-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:caff75b425db5ef8e8f23af93c80f072f97b4fb3afd4af44482905c9f588da28"},
     {file = "orjson-3.10.6-cp38-cp38-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:3722fddb821b6036fd2a3c814f6bd9b57a89dc6337b9924ecd614ebce3271394"},
@@ -4969,6 +5025,20 @@ requests = ">=2.0.0"
 
 [package.extras]
 rsa = ["oauthlib[signedtoken] (>=3.0.0)"]
+
+[[package]]
+name = "retry-async"
+version = "0.1.4"
+description = ""
+optional = false
+python-versions = ">=3.10,<4.0"
+files = [
+    {file = "retry_async-0.1.4-py3-none-any.whl", hash = "sha256:21b383c7bc52013478337b894f476c9f106485cfeeb5d449abe5f745be2da219"},
+    {file = "retry_async-0.1.4.tar.gz", hash = "sha256:8414d69b20920a1d700de34b68c0f972fa36a0158450a6f6abc5b45a241ac6b6"},
+]
+
+[package.dependencies]
+decorator = ">=5.1.1,<6.0.0"
 
 [[package]]
 name = "rich"
@@ -6669,6 +6739,7 @@ cffi = ["cffi (>=1.11)"]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
 embeddings-gemini = ["llama-index-embeddings-gemini"]
 embeddings-huggingface = ["einops", "llama-index-embeddings-huggingface"]
+embeddings-mistral = ["llama-index-embeddings-mistralai"]
 embeddings-ollama = ["llama-index-embeddings-ollama", "ollama"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
@@ -6691,4 +6762,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "2eaa56bf185723ad028f5221675f1ee070bc70ba7d606ebe28dcfe276a3c9dca"
+content-hash = "3fa6ef447847895b1a16b8b0422dd9e4fda1aaaadef3af71971eb412da89bf67"

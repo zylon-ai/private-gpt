@@ -25,6 +25,8 @@ data:
 ui:
   enabled: true
   path: /
+  # "RAG", "Search", "Basic", or "Summarize"
+  default_mode: "RAG"
   default_chat_system_prompt: >
     You are a helpful, respectful and honest assistant.
     Always answer as helpfully as possible and follow ALL given instructions.

@@ -3,10 +3,13 @@ from collections import deque
 from collections.abc import Iterator, Mapping
 from typing import Any
 
+from httpx import ConnectError
 from tqdm import tqdm  # type: ignore
 
+from private_gpt.utils.retry import retry
+
 try:
-    from ollama import Client  # type: ignore
+    from ollama import Client, ResponseError  # type: ignore
 except ImportError as e:
     raise ImportError(
         "Ollama dependencies not found, install with `poetry install --extras llms-ollama or embeddings-ollama`"
@@ -14,13 +17,25 @@ except ImportError as e:
 
 logger = logging.getLogger(__name__)
 
+_MAX_RETRIES = 5
+_JITTER = (3.0, 10.0)
 
+
+@retry(
+    is_async=False,
+    exceptions=(ConnectError, ResponseError),
+    tries=_MAX_RETRIES,
+    jitter=_JITTER,
+    logger=logger,
+)
 def check_connection(client: Client) -> bool:
     try:
         client.list()
         return True
+    except (ConnectError, ResponseError) as e:
+        raise e
     except Exception as e:
-        logger.error(f"Failed to connect to Ollama: {e!s}")
+        logger.error(f"Failed to connect to Ollama: {type(e).__name__}: {e!s}")
         return False
 
 
