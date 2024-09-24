@@ -269,6 +269,7 @@ class OpenAISettings(BaseModel):
         description="OpenAI embedding Model to use. Example: 'text-embedding-3-large'.",
     )
 
+
 class FireWorksSettings(BaseModel):
     api_key: str
     model: str = Field(
@@ -284,6 +285,7 @@ class FireWorksSettings(BaseModel):
         "nomic-ai/nomic-embed-text-v1.5",
         description="FIREWORKS embedding Model to use. Example: 'nomic-ai/nomic-embed-text-v1.5'.",
     )
+
 
 class GeminiSettings(BaseModel):
     api_key: str

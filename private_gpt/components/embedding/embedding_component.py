@@ -75,7 +75,9 @@ class EmbeddingComponent:
                         "FireworksEmbedding dependencies not found, install with `poetry install --extras embeddings-fireworks`"
                     ) from e
 
-                api_key = settings.fireworks.embedding_api_key or settings.fireworks.api_key
+                api_key = (
+                    settings.fireworks.embedding_api_key or settings.fireworks.api_key
+                )
                 model = settings.openai.embedding_model
                 self.embedding_model = FireworksEmbedding(
                     api_key=api_key,
