@@ -2239,6 +2239,17 @@ files = [
 ]
 
 [[package]]
+name = "jsonpath-python"
+version = "1.0.6"
+description = "A more powerful JSONPath implementation in modern python"
+optional = true
+python-versions = ">=3.6"
+files = [
+    {file = "jsonpath-python-1.0.6.tar.gz", hash = "sha256:dd5be4a72d8a2995c3f583cf82bf3cd1a9544cfdabf2d22595b67aff07349666"},
+    {file = "jsonpath_python-1.0.6-py3-none-any.whl", hash = "sha256:1e3b78df579f5efc23565293612decee04214609208a2335884b3ee3f786b575"},
+]
+
+[[package]]
 name = "kiwisolver"
 version = "1.4.5"
 description = "A fast implementation of the Cassowary constraint solver"
@@ -2480,6 +2491,21 @@ files = [
 huggingface-hub = {version = ">=0.19.0", extras = ["inference"]}
 llama-index-core = ">=0.10.1,<0.11.0"
 sentence-transformers = ">=2.6.1"
+
+[[package]]
+name = "llama-index-embeddings-mistralai"
+version = "0.1.6"
+description = "llama-index embeddings mistralai integration"
+optional = true
+python-versions = "<4.0,>=3.9"
+files = [
+    {file = "llama_index_embeddings_mistralai-0.1.6-py3-none-any.whl", hash = "sha256:d69d6fc0be8a1772aaf890bc036f2d575af46070b375a2649803c0eb9736ea1b"},
+    {file = "llama_index_embeddings_mistralai-0.1.6.tar.gz", hash = "sha256:7c9cbf974b1e7d14ded34d3eb749a0d1a379fb151ab75115cc1ffdd08a96a045"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.1,<0.11.0"
+mistralai = ">=1.0.0"
 
 [[package]]
 name = "llama-index-embeddings-ollama"
@@ -3001,6 +3027,27 @@ files = [
     {file = "minijinja-2.0.1-cp38-abi3-win_amd64.whl", hash = "sha256:dca5d7689905dce340e36e47348b505c788daf297253b85a1aff506ea63ad1b8"},
     {file = "minijinja-2.0.1.tar.gz", hash = "sha256:e774beffebfb8a1ad17e638ef70917cf5e94593f79acb8a8fff7d983169f3a4e"},
 ]
+
+[[package]]
+name = "mistralai"
+version = "1.0.3"
+description = "Python Client SDK for the Mistral AI API."
+optional = true
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "mistralai-1.0.3-py3-none-any.whl", hash = "sha256:64af7c9192e64dc66b2da6d1c4d54a1324a881c21665a2f93d6b35d9de9f87c8"},
+    {file = "mistralai-1.0.3.tar.gz", hash = "sha256:84f1a217666c76fec9d477ae266399b813c3ac32a4a348d2ecd5fe1c039b0667"},
+]
+
+[package.dependencies]
+httpx = ">=0.27.0,<0.28.0"
+jsonpath-python = ">=1.0.6,<2.0.0"
+pydantic = ">=2.8.2,<2.9.0"
+python-dateutil = ">=2.9.0.post0,<3.0.0"
+typing-inspect = ">=0.9.0,<0.10.0"
+
+[package.extras]
+gcp = ["google-auth (==2.27.0)", "requests (>=2.32.3,<3.0.0)"]
 
 [[package]]
 name = "mmh3"
@@ -6692,6 +6739,7 @@ cffi = ["cffi (>=1.11)"]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
 embeddings-gemini = ["llama-index-embeddings-gemini"]
 embeddings-huggingface = ["einops", "llama-index-embeddings-huggingface"]
+embeddings-mistral = ["llama-index-embeddings-mistralai"]
 embeddings-ollama = ["llama-index-embeddings-ollama", "ollama"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
@@ -6714,4 +6762,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "45264d80672084e35ca0ea11b368a29001a3b9003822bddc67fb18489a8fe519"
+content-hash = "3fa6ef447847895b1a16b8b0422dd9e4fda1aaaadef3af71971eb412da89bf67"

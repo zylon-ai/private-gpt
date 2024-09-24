@@ -197,7 +197,14 @@ class HuggingFaceSettings(BaseModel):
 
 class EmbeddingSettings(BaseModel):
     mode: Literal[
-        "huggingface", "openai", "azopenai", "sagemaker", "ollama", "mock", "gemini"
+        "huggingface",
+        "openai",
+        "azopenai",
+        "sagemaker",
+        "ollama",
+        "mock",
+        "gemini",
+        "mistralai",
     ]
     ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",
