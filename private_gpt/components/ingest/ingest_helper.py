@@ -94,6 +94,7 @@ class IngestionHelper:
         logger.debug("Specific reader found for extension=%s", extension)
         documents = reader_cls().load_data(file_data)
 
+        # Sanitize NUL bytes in text which can't be stored in Postgres
         for i in range(len(documents)):
             documents[i].text = documents[i].text.replace("\u0000", "")
 
