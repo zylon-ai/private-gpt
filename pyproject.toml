@@ -16,27 +16,27 @@ transformers = "^4.42.3"
 docx2txt = "^0.8"
 cryptography = "^3.1"
 # LlamaIndex core libs
-llama-index-core = "^0.10.52"
-llama-index-readers-file = "^0.1.27"
+llama-index-core = ">=0.11.2,<0.12.0"
+llama-index-readers-file = "*"
 # Optional LlamaIndex integration libs
-llama-index-llms-llama-cpp = {version = "^0.1.4", optional = true}
-llama-index-llms-openai = {version = "^0.1.25", optional = true}
-llama-index-llms-openai-like = {version ="^0.1.3", optional = true}
-llama-index-llms-ollama = {version ="^0.2.2", optional = true}
-llama-index-llms-azure-openai = {version ="^0.1.8", optional = true}
-llama-index-llms-gemini = {version ="^0.1.11", optional = true}
-llama-index-embeddings-ollama = {version ="^0.1.2", optional = true}
-llama-index-embeddings-huggingface = {version ="^0.2.2", optional = true}
-llama-index-embeddings-openai = {version ="^0.1.10", optional = true}
-llama-index-embeddings-azure-openai = {version ="^0.1.10", optional = true}
-llama-index-embeddings-gemini = {version ="^0.1.8", optional = true}
-llama-index-vector-stores-qdrant = {version ="^0.2.10", optional = true}
-llama-index-vector-stores-milvus = {version ="^0.1.20", optional = true}
-llama-index-vector-stores-chroma = {version ="^0.1.10", optional = true}
-llama-index-vector-stores-postgres = {version ="^0.1.11", optional = true}
-llama-index-vector-stores-clickhouse = {version ="^0.1.3", optional = true}
-llama-index-storage-docstore-postgres = {version ="^0.1.3", optional = true}
-llama-index-storage-index-store-postgres = {version ="^0.1.4", optional = true}
+llama-index-llms-llama-cpp = {version = "*", optional = true}
+llama-index-llms-openai = {version ="*", optional = true}
+llama-index-llms-openai-like = {version ="*", optional = true}
+llama-index-llms-ollama = {version ="*", optional = true}
+llama-index-llms-azure-openai = {version ="*", optional = true}
+llama-index-llms-gemini = {version ="*", optional = true}
+llama-index-embeddings-ollama = {version ="*", optional = true}
+llama-index-embeddings-huggingface = {version ="*", optional = true}
+llama-index-embeddings-openai = {version ="*", optional = true}
+llama-index-embeddings-azure-openai = {version ="*", optional = true}
+llama-index-embeddings-gemini = {version ="*", optional = true}
+llama-index-vector-stores-qdrant = {version ="*", optional = true}
+llama-index-vector-stores-milvus = {version ="*", optional = true}
+llama-index-vector-stores-chroma = {version ="*", optional = true}
+llama-index-vector-stores-postgres = {version ="*", optional = true}
+llama-index-vector-stores-clickhouse = {version ="*", optional = true}
+llama-index-storage-docstore-postgres = {version ="*", optional = true}
+llama-index-storage-index-store-postgres = {version ="*", optional = true}
 # Postgres
 psycopg2-binary = {version ="^2.9.9", optional = true}
 asyncpg = {version="^0.29.0", optional = true}
@@ -47,22 +47,13 @@ clickhouse-connect = {version = "^0.7.15", optional = true}
 # Optional Sagemaker dependency
 boto3 = {version ="^1.34.139", optional = true}
 
-# Optional Qdrant client
-qdrant-client = {version ="^1.9.0", optional = true}
-
 # Optional Reranker dependencies
 torch = {version ="^2.3.1", optional = true}
 sentence-transformers = {version ="^3.0.1", optional = true}
 
 # Optional UI
 gradio = {version ="^4.37.2", optional = true}
-ffmpy = "0.4.0"
-
-# Optional Google Gemini dependency
-google-generativeai = {version ="^0.5.4", optional = true}
-
-# Optional Ollama client
-ollama = {version ="^0.3.0", optional = true}
+ffmpy = {version ="^0.4.0", optional = true}
 
 # Optional HF Transformers
 einops = {version = "^0.8.0", optional = true}
@@ -73,11 +64,11 @@ ui = ["gradio", "ffmpy"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
 llms-openai = ["llama-index-llms-openai"]
 llms-openai-like = ["llama-index-llms-openai-like"]
-llms-ollama = ["llama-index-llms-ollama", "ollama"]
+llms-ollama = ["llama-index-llms-ollama"]
 llms-sagemaker = ["boto3"]
 llms-azopenai = ["llama-index-llms-azure-openai"]
-llms-gemini = ["llama-index-llms-gemini", "google-generativeai"]
-embeddings-ollama = ["llama-index-embeddings-ollama", "ollama"]
+llms-gemini = ["llama-index-llms-gemini"]
+embeddings-ollama = ["llama-index-embeddings-ollama"]
 embeddings-huggingface = ["llama-index-embeddings-huggingface", "einops"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
