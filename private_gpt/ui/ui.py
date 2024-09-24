@@ -56,10 +56,7 @@ class Styles(str, Enum):
     NON_STREAMING = "Non-Streaming"
 
 
-STYLES: list[Styles] = [
-    Styles.STREAMING,
-    Styles.NON_STREAMING
-]
+STYLES: list[Styles] = [Styles.STREAMING, Styles.NON_STREAMING]
 
 
 class Source(BaseModel):
