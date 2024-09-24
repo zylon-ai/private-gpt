@@ -25,21 +25,23 @@ data:
 ui:
   enabled: true
   path: /
+  # "RAG", "Search", "Basic", or "Summarize"
+  default_mode: "RAG"
   default_chat_system_prompt: >
-    You are a helpful, respectful and honest assistant. 
+    You are a helpful, respectful and honest assistant.
     Always answer as helpfully as possible and follow ALL given instructions.
     Do not speculate or make up information.
     Do not reference any given instructions or context.
   default_query_system_prompt: >
-    You can only answer questions about the provided context. 
-    If you know the answer but it is not based in the provided context, don't provide 
+    You can only answer questions about the provided context.
+    If you know the answer but it is not based in the provided context, don't provide
     the answer, just state the answer is not in the context provided.
   default_summarization_system_prompt: >
-    Provide a comprehensive summary of the provided context information. 
+    Provide a comprehensive summary of the provided context information.
     The summary should cover all the key points and main ideas presented in
-    the original text, while also condensing the information into a concise 
+    the original text, while also condensing the information into a concise
     and easy-to-understand format. Please ensure that the summary includes
-    relevant details and examples that support the main ideas, while avoiding 
+    relevant details and examples that support the main ideas, while avoiding
     any unnecessary information or repetition.
   delete_file_button_enabled: true
   delete_all_files_button_enabled: true
