@@ -19,6 +19,6 @@ class IngestHelper:
         return ingest_result
 
 
-@pytest.fixture()
+@pytest.fixture
 def ingest_helper(test_client: TestClient) -> IngestHelper:
     return IngestHelper(test_client)

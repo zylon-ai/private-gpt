@@ -5,7 +5,7 @@ from private_gpt.launcher import create_app
 from tests.fixtures.mock_injector import MockInjector
 
 
-@pytest.fixture()
+@pytest.fixture
 def test_client(request: pytest.FixtureRequest, injector: MockInjector) -> TestClient:
     if request is not None and hasattr(request, "param"):
         injector.bind_settings(request.param or {})
