@@ -8,11 +8,12 @@ services:
   # This service builds from an external Dockerfile and runs the Ollama mode.
   private-gpt-ollama:
     image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-ollama  # x-release-please-version
+    user: root
     build:
       context: .
       dockerfile: Dockerfile.ollama
     volumes:
-      - ./local_data/:/home/worker/app/local_data
+      - ./local_data:/home/worker/app/local_data
     ports:
       - "8001:8001"
     environment:
@@ -27,11 +28,14 @@ services:
       - ollama-cpu
       - ollama-cuda
       - ollama-api
+    depends_on:
+      - ollama
 
   # Private-GPT service for the local mode
   # This service builds from a local Dockerfile and runs the application in local mode.
   private-gpt-llamacpp-cpu:
     image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-llamacpp-cpu # x-release-please-version
+    user: root
     build:
       context: .
       dockerfile: Dockerfile.llamacpp-cpu
@@ -44,7 +48,7 @@ services:
     environment:
       PORT: 8001
       PGPT_PROFILES: local
-      HF_TOKEN: ${HF_TOKEN}
+      HF_TOKEN: ${HF_TOKEN:-}
     profiles:
       - llamacpp-cpu
 
@@ -57,7 +61,7 @@ services:
   ollama:
     image: traefik:v2.10
     ports:
-      - "8081:8080"
+      - "11434:11434"
     command:
       - "--providers.file.filename=/etc/router.yml"
       - "--log.level=ERROR"
