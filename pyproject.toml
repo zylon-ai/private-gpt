@@ -203,9 +203,6 @@ exclude = ["tests"]
 [tool.mypy-llama-index]
 ignore_missing_imports = true
 
-[tool.mypy-llama_index.embeddings.fireworks]
-ignore_missing_imports = true
-
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

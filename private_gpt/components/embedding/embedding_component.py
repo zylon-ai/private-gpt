@@ -69,7 +69,9 @@ class EmbeddingComponent:
                 )
             case "fireworks":
                 try:
-                    from llama_index.embeddings.fireworks import FireworksEmbedding
+                    from llama_index.embeddings.fireworks import ( # type: ignore
+                     FireworksEmbedding,
+                    )
                 except ImportError as e:
                     raise ImportError(
                         "FireworksEmbedding dependencies not found, install with `poetry install --extras embeddings-fireworks`"
