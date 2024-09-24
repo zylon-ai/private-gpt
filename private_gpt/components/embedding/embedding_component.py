@@ -69,8 +69,8 @@ class EmbeddingComponent:
                 )
             case "fireworks":
                 try:
-                    from llama_index.embeddings.fireworks import ( # type: ignore
-                     FireworksEmbedding,
+                    from llama_index.embeddings.fireworks import (  # type: ignore
+                        FireworksEmbedding,
                     )
                 except ImportError as e:
                     raise ImportError(
