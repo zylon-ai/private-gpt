@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-@pytest.fixture()
+@pytest.fixture
 def file_path() -> str:
     return "test.txt"
 

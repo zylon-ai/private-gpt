@@ -120,7 +120,6 @@ class LLMComponent:
                     api_version="",
                     temperature=settings.llm.temperature,
                     context_window=settings.llm.context_window,
-                    max_new_tokens=settings.llm.max_new_tokens,
                     messages_to_prompt=prompt_style.messages_to_prompt,
                     completion_to_prompt=prompt_style.completion_to_prompt,
                     tokenizer=settings.llm.tokenizer,
@@ -184,10 +183,10 @@ class LLMComponent:
 
                         return wrapper
 
-                    Ollama.chat = add_keep_alive(Ollama.chat)
-                    Ollama.stream_chat = add_keep_alive(Ollama.stream_chat)
-                    Ollama.complete = add_keep_alive(Ollama.complete)
-                    Ollama.stream_complete = add_keep_alive(Ollama.stream_complete)
+                    Ollama.chat = add_keep_alive(Ollama.chat)  # type: ignore
+                    Ollama.stream_chat = add_keep_alive(Ollama.stream_chat)  # type: ignore
+                    Ollama.complete = add_keep_alive(Ollama.complete)  # type: ignore
+                    Ollama.stream_complete = add_keep_alive(Ollama.stream_complete)  # type: ignore
 
                 self.llm = llm
 

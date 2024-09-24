@@ -40,7 +40,8 @@ class AbstractPromptStyle(abc.ABC):
         logger.debug("Got for messages='%s' the prompt='%s'", messages, prompt)
         return prompt
 
-    def completion_to_prompt(self, completion: str) -> str:
+    def completion_to_prompt(self, prompt: str) -> str:
+        completion = prompt  # Fix: Llama-index parameter has to be named as prompt
         prompt = self._completion_to_prompt(completion)
         logger.debug("Got for completion='%s' the prompt='%s'", completion, prompt)
         return prompt
