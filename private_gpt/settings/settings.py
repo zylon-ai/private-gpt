@@ -275,15 +275,15 @@ class FireWorksSettings(BaseModel):
         "accounts/fireworks/models/llama-v3p1-70b-instruct",
         description="FireWorks Model to use. Example: 'accounts/fireworks/models/llama-v3p1-70b-instruct'.",
     )
-    # embedding_api_base: str = Field(
-    #     None,
-    #     description="Base URL of OpenAI API. Example: 'https://api.openai.com/v1'.",
-    # )
+    embedding_api_base: str = Field(
+        None,
+        description="Base URL of FIREWORKS API. Example: 'https://api.fireworks.ai/inference/v1'.",
+    )
     embedding_api_key: str
-    # embedding_model: str = Field(
-    #     "text-embedding-ada-002",
-    #     description="OpenAI embedding Model to use. Example: 'text-embedding-3-large'.",
-    # )
+    embedding_model: str = Field(
+        "nomic-ai/nomic-embed-text-v1.5",
+        description="FIREWORKS embedding Model to use. Example: 'nomic-ai/nomic-embed-text-v1.5'.",
+    )
 
 class GeminiSettings(BaseModel):
     api_key: str

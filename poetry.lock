@@ -1304,6 +1304,20 @@ lint = ["flake8 (==4.0.1)", "flake8-bugbear (==21.9.2)", "mypy (==0.910)", "pre-
 tests = ["dj-database-url", "dj-email-url", "django-cache-url", "pytest"]
 
 [[package]]
+name = "eval-type-backport"
+version = "0.2.0"
+description = "Like `typing._eval_type`, but lets older Python versions use newer typing features."
+optional = true
+python-versions = ">=3.8"
+files = [
+    {file = "eval_type_backport-0.2.0-py3-none-any.whl", hash = "sha256:ac2f73d30d40c5a30a80b8739a789d6bb5e49fdffa66d7912667e2015d9c9933"},
+    {file = "eval_type_backport-0.2.0.tar.gz", hash = "sha256:68796cfbc7371ebf923f03bdf7bef415f3ec098aeced24e054b253a0e78f7b37"},
+]
+
+[package.extras]
+tests = ["pytest"]
+
+[[package]]
 name = "fastapi"
 version = "0.111.1"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
@@ -3247,32 +3261,33 @@ description = "An experimental Python binding of the Rust MiniJinja template eng
 optional = true
 python-versions = ">=3.8"
 files = [
-    {file = "minijinja-2.0.1-cp38-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:063b291cb31f5c33eb77bb4cb457f67f14426ca1418232b8ae9f267155d330cc"},
-    {file = "minijinja-2.0.1-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4a4e9d639dd89ce7fef86e82147082ab3c248a36950fa3fbe793685ba322c1b7"},
-    {file = "minijinja-2.0.1-cp38-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:a20373af4ee5430356c196c7fe5f19e3261a4fa16c944542b4de7a2349bac7a6"},
-    {file = "minijinja-2.0.1-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ade637bf4826258811a785ccc4e5d41cd2bdf4ec317b1ed3daa4dbbdd020f37d"},
-    {file = "minijinja-2.0.1-cp38-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:d5ec956d777e0fee8e214af48363334c04f098e986038a9e8cb92a0564f81943"},
-    {file = "minijinja-2.0.1-cp38-abi3-win32.whl", hash = "sha256:039f4d1a1a73f90917cff1ed7c617eb56e2b2f91bbbdc551adaa448e1673e5c2"},
-    {file = "minijinja-2.0.1-cp38-abi3-win_amd64.whl", hash = "sha256:dca5d7689905dce340e36e47348b505c788daf297253b85a1aff506ea63ad1b8"},
-    {file = "minijinja-2.0.1.tar.gz", hash = "sha256:e774beffebfb8a1ad17e638ef70917cf5e94593f79acb8a8fff7d983169f3a4e"},
+    {file = "minijinja-2.2.0-cp38-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:e4154fcf72e81be01c2733b770e6cb3e584851cb2fa73c58e347b04967d3d7c0"},
+    {file = "minijinja-2.2.0-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4b05e0070c08b550fa9a09ff9c051f47424674332dd56cc54b997dd602887907"},
+    {file = "minijinja-2.2.0-cp38-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:360ea4a93fdf1fe327f3e70eed20ecb29f324ca28fae177de0605dcc29869300"},
+    {file = "minijinja-2.2.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c9cad5ccb021ef25b6a271158f4d6636474edb08cd1dd49355aac6b68a48aebb"},
+    {file = "minijinja-2.2.0-cp38-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:7a85c67c519b413fc4892854782927e1244a24cbbb3a3cb0ac5e57d9fdb1868c"},
+    {file = "minijinja-2.2.0-cp38-abi3-win32.whl", hash = "sha256:e431a2467dd6e1bcb7c511e9fbad012b02c6e5453acdd9fbd4c4af0d34a3d1c5"},
+    {file = "minijinja-2.2.0-cp38-abi3-win_amd64.whl", hash = "sha256:d4df7e4a09be4249c8243207fa89e6f4d22b853c2b565a99f48e478a30713822"},
+    {file = "minijinja-2.2.0.tar.gz", hash = "sha256:4411052c7a60f8d56468cc6d17d45d72be3d5e89e9578a04f8336cc56601523c"},
 ]
 
 [[package]]
 name = "mistralai"
-version = "1.0.3"
+version = "1.1.0"
 description = "Python Client SDK for the Mistral AI API."
 optional = true
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "mistralai-1.0.3-py3-none-any.whl", hash = "sha256:64af7c9192e64dc66b2da6d1c4d54a1324a881c21665a2f93d6b35d9de9f87c8"},
-    {file = "mistralai-1.0.3.tar.gz", hash = "sha256:84f1a217666c76fec9d477ae266399b813c3ac32a4a348d2ecd5fe1c039b0667"},
+    {file = "mistralai-1.1.0-py3-none-any.whl", hash = "sha256:eea0938975195f331d0ded12d14e3c982f09f1b68210200ed4ff0c6b9b22d0fb"},
+    {file = "mistralai-1.1.0.tar.gz", hash = "sha256:9d1fe778e0e8c6ddab714e6a64c6096bd39cfe119ff38ceb5019d8e089df08ba"},
 ]
 
 [package.dependencies]
+eval-type-backport = ">=0.2.0,<0.3.0"
 httpx = ">=0.27.0,<0.28.0"
 jsonpath-python = ">=1.0.6,<2.0.0"
-pydantic = ">=2.8.2,<2.9.0"
-python-dateutil = ">=2.9.0.post0,<3.0.0"
+pydantic = ">=2.9.0,<3.0.0"
+python-dateutil = "2.8.2"
 typing-inspect = ">=0.9.0,<0.10.0"
 
 [package.extras]
@@ -5005,13 +5020,13 @@ testing = ["fields", "hunter", "process-tests", "pytest-xdist", "six", "virtuale
 
 [[package]]
 name = "python-dateutil"
-version = "2.9.0.post0"
+version = "2.8.2"
 description = "Extensions to the standard Python datetime module"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 files = [
-    {file = "python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3"},
-    {file = "python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"},
+    {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},
+    {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
 ]
 
 [package.dependencies]
@@ -7081,4 +7096,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "3fa6ef447847895b1a16b8b0422dd9e4fda1aaaadef3af71971eb412da89bf67"
+content-hash = "df2024950dd0e9c55ae48020af1a71510cf878d696d2aa076e65cd7ee30b08fe"
