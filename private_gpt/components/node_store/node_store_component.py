@@ -38,10 +38,10 @@ class NodeStoreComponent:
 
             case "postgres":
                 try:
-                    from llama_index.storage.docstore.postgres import ( # type: ignore
+                    from llama_index.storage.docstore.postgres import (  # type: ignore
                         PostgresDocumentStore,
                     )
-                    from llama_index.storage.index_store.postgres import ( # type: ignore
+                    from llama_index.storage.index_store.postgres import (  # type: ignore
                         PostgresIndexStore,
                     )
                 except ImportError:
