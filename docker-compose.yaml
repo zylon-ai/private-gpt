@@ -61,7 +61,7 @@ services:
   ollama:
     image: traefik:v2.10
     ports:
-      - "11434:11434"
+      - "8080:8080"
     command:
       - "--providers.file.filename=/etc/router.yml"
       - "--log.level=ERROR"
@@ -83,6 +83,8 @@ services:
   # Ollama service for the CPU mode
   ollama-cpu:
     image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
     volumes:
       - ./models:/root/.ollama
     profiles:
@@ -92,6 +94,8 @@ services:
   # Ollama service for the CUDA mode
   ollama-cuda:
     image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
     volumes:
       - ./models:/root/.ollama
     deploy:

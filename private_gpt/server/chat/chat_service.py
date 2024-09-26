@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from injector import inject, singleton
 from llama_index.core.chat_engine import ContextChatEngine, SimpleChatEngine
@@ -25,6 +26,9 @@ from private_gpt.components.vector_store.vector_store_component import (
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.server.chunks.chunks_service import Chunk
 from private_gpt.settings.settings import Settings
+
+if TYPE_CHECKING:
+    from llama_index.core.postprocessor.types import BaseNodePostprocessor
 
 
 class Completion(BaseModel):
@@ -114,12 +118,15 @@ class ChatService:
                 context_filter=context_filter,
                 similarity_top_k=self.settings.rag.similarity_top_k,
             )
-            node_postprocessors = [
+            node_postprocessors: list[BaseNodePostprocessor] = [
                 MetadataReplacementPostProcessor(target_metadata_key="window"),
-                SimilarityPostprocessor(
-                    similarity_cutoff=settings.rag.similarity_value
-                ),
             ]
+            if settings.rag.similarity_value:
+                node_postprocessors.append(
+                    SimilarityPostprocessor(
+                        similarity_cutoff=settings.rag.similarity_value
+                    )
+                )
 
             if settings.rag.rerank.enabled:
                 rerank_postprocessor = SentenceTransformerRerank(

@@ -37,6 +37,6 @@ class MockInjector:
         return self.test_injector.get(interface)
 
 
-@pytest.fixture()
+@pytest.fixture
 def injector() -> MockInjector:
     return MockInjector()

@@ -7,63 +7,54 @@ authors = ["Zylon <hi@zylon.ai>"]
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 # PrivateGPT
-fastapi = { extras = ["all"], version = "^0.111.0" }
-python-multipart = "^0.0.9"
-injector = "^0.21.0"
-pyyaml = "^6.0.1"
+fastapi = { extras = ["all"], version = "^0.115.0" }
+python-multipart = "^0.0.10"
+injector = "^0.22.0"
+pyyaml = "^6.0.2"
 watchdog = "^4.0.1"
-transformers = "^4.42.3"
+transformers = "^4.44.2"
 docx2txt = "^0.8"
 cryptography = "^3.1"
 # LlamaIndex core libs
-llama-index-core = "^0.10.52"
-llama-index-readers-file = "^0.1.27"
+llama-index-core = ">=0.11.2,<0.12.0"
+llama-index-readers-file = "*"
 # Optional LlamaIndex integration libs
-llama-index-llms-llama-cpp = {version = "^0.1.4", optional = true}
-llama-index-llms-openai = {version = "^0.1.25", optional = true}
-llama-index-llms-openai-like = {version ="^0.1.3", optional = true}
-llama-index-llms-ollama = {version ="^0.2.2", optional = true}
-llama-index-llms-azure-openai = {version ="^0.1.8", optional = true}
-llama-index-llms-gemini = {version ="^0.1.11", optional = true}
-llama-index-embeddings-ollama = {version ="^0.1.2", optional = true}
-llama-index-embeddings-huggingface = {version ="^0.2.2", optional = true}
-llama-index-embeddings-openai = {version ="^0.1.10", optional = true}
-llama-index-embeddings-azure-openai = {version ="^0.1.10", optional = true}
-llama-index-embeddings-gemini = {version ="^0.1.8", optional = true}
-llama-index-embeddings-mistralai = {version ="^0.1.6", optional = true}
-llama-index-vector-stores-qdrant = {version ="^0.2.10", optional = true}
-llama-index-vector-stores-milvus = {version ="^0.1.20", optional = true}
-llama-index-vector-stores-chroma = {version ="^0.1.10", optional = true}
-llama-index-vector-stores-postgres = {version ="^0.1.11", optional = true}
-llama-index-vector-stores-clickhouse = {version ="^0.1.3", optional = true}
-llama-index-storage-docstore-postgres = {version ="^0.1.3", optional = true}
-llama-index-storage-index-store-postgres = {version ="^0.1.4", optional = true}
+llama-index-llms-llama-cpp = {version = "*", optional = true}
+llama-index-llms-openai = {version ="*", optional = true}
+llama-index-llms-openai-like = {version ="*", optional = true}
+llama-index-llms-ollama = {version ="*", optional = true}
+llama-index-llms-azure-openai = {version ="*", optional = true}
+llama-index-llms-gemini = {version ="*", optional = true}
+llama-index-embeddings-ollama = {version ="*", optional = true}
+llama-index-embeddings-huggingface = {version ="*", optional = true}
+llama-index-embeddings-openai = {version ="*", optional = true}
+llama-index-embeddings-azure-openai = {version ="*", optional = true}
+llama-index-embeddings-gemini = {version ="*", optional = true}
+llama-index-embeddings-mistralai = {version ="*", optional = true}
+llama-index-vector-stores-qdrant = {version ="*", optional = true}
+llama-index-vector-stores-milvus = {version ="*", optional = true}
+llama-index-vector-stores-chroma = {version ="*", optional = true}
+llama-index-vector-stores-postgres = {version ="*", optional = true}
+llama-index-vector-stores-clickhouse = {version ="*", optional = true}
+llama-index-storage-docstore-postgres = {version ="*", optional = true}
+llama-index-storage-index-store-postgres = {version ="*", optional = true}
 # Postgres
 psycopg2-binary = {version ="^2.9.9", optional = true}
 asyncpg = {version="^0.29.0", optional = true}
 
 # ClickHouse
-clickhouse-connect = {version = "^0.7.15", optional = true}
+clickhouse-connect = {version = "^0.7.19", optional = true}
 
 # Optional Sagemaker dependency
-boto3 = {version ="^1.34.139", optional = true}
-
-# Optional Qdrant client
-qdrant-client = {version ="^1.9.0", optional = true}
+boto3 = {version ="^1.35.26", optional = true}
 
 # Optional Reranker dependencies
-torch = {version ="^2.3.1", optional = true}
-sentence-transformers = {version ="^3.0.1", optional = true}
+torch = {version ="^2.4.1", optional = true}
+sentence-transformers = {version ="^3.1.1", optional = true}
 
 # Optional UI
-gradio = {version ="^4.37.2", optional = true}
-ffmpy = "0.4.0"
-
-# Optional Google Gemini dependency
-google-generativeai = {version ="^0.5.4", optional = true}
-
-# Optional Ollama client
-ollama = {version ="^0.3.0", optional = true}
+gradio = {version ="^4.44.0", optional = true}
+ffmpy = {version ="^0.4.0", optional = true}
 
 # Optional HF Transformers
 einops = {version = "^0.8.0", optional = true}
@@ -74,11 +65,11 @@ ui = ["gradio", "ffmpy"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
 llms-openai = ["llama-index-llms-openai"]
 llms-openai-like = ["llama-index-llms-openai-like"]
-llms-ollama = ["llama-index-llms-ollama", "ollama"]
+llms-ollama = ["llama-index-llms-ollama"]
 llms-sagemaker = ["boto3"]
 llms-azopenai = ["llama-index-llms-azure-openai"]
-llms-gemini = ["llama-index-llms-gemini", "google-generativeai"]
-embeddings-ollama = ["llama-index-embeddings-ollama", "ollama"]
+llms-gemini = ["llama-index-llms-gemini"]
+embeddings-ollama = ["llama-index-embeddings-ollama"]
 embeddings-huggingface = ["llama-index-embeddings-huggingface", "einops"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
@@ -94,14 +85,14 @@ storage-nodestore-postgres = ["llama-index-storage-docstore-postgres","llama-ind
 rerank-sentence-transformers = ["torch", "sentence-transformers"]
 
 [tool.poetry.group.dev.dependencies]
-black = "^22"
-mypy = "^1.2"
-pre-commit = "^2"
-pytest = "^7"
-pytest-cov = "^3"
+black = "^24"
+mypy = "^1.11"
+pre-commit = "^3"
+pytest = "^8"
+pytest-cov = "^5"
 ruff = "^0"
-pytest-asyncio = "^0.21.1"
-types-pyyaml = "^6.0.12.12"
+pytest-asyncio = "^0.24.0"
+types-pyyaml = "^6.0.12.20240917"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -1,4 +1,5 @@
 """This file should be imported if and only if you want to run the UI locally."""
+
 import base64
 import logging
 import time
