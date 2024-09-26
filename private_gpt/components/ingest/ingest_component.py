@@ -403,7 +403,7 @@ class PipelineIngestComponent(BaseIngestComponentWithIndex):
                 self.transformations,
                 show_progress=self.show_progress,
             )
-            self.node_q.put(("process", file_name, documents, nodes))
+            self.node_q.put(("process", file_name, documents, list(nodes)))
         finally:
             self.doc_semaphore.release()
             self.doc_q.task_done()  # unblock Q joins

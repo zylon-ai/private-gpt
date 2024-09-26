@@ -38,10 +38,10 @@ class NodeStoreComponent:
 
             case "postgres":
                 try:
-                    from llama_index.core.storage.docstore.postgres_docstore import (
+                    from llama_index.storage.docstore.postgres import (  # type: ignore
                         PostgresDocumentStore,
                     )
-                    from llama_index.core.storage.index_store.postgres_index_store import (
+                    from llama_index.storage.index_store.postgres import (  # type: ignore
                         PostgresIndexStore,
                     )
                 except ImportError:
@@ -55,6 +55,7 @@ class NodeStoreComponent:
                 self.index_store = PostgresIndexStore.from_params(
                     **settings.postgres.model_dump(exclude_none=True)
                 )
+
                 self.doc_store = PostgresDocumentStore.from_params(
                     **settings.postgres.model_dump(exclude_none=True)
                 )
