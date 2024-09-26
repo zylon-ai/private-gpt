@@ -54,7 +54,7 @@ llm:
   context_window: 3900
   # Select your tokenizer. Llama-index tokenizer is the default.
   # tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
-  temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
+  temperature: 0.1 # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
 
 rag:
   similarity_top_k: 2
@@ -70,19 +70,19 @@ summarize:
   use_async: true
 
 clickhouse:
-    host: localhost
-    port: 8443
-    username: admin
-    password: clickhouse
-    database: embeddings
+  host: localhost
+  port: 8443
+  username: admin
+  password: clickhouse
+  database: embeddings
 
 llamacpp:
   llm_hf_repo_id: lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF
   llm_hf_model_file: Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
-  tfs_z: 1.0            # Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting
-  top_k: 40             # Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)
-  top_p: 1.0            # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
-  repeat_penalty: 1.1   # Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)
+  tfs_z: 1.0 # Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting
+  top_k: 40 # Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)
+  top_p: 1.0 # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
+  repeat_penalty: 1.1 # Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)
 
 embedding:
   # Should be matching the value above in most cases
@@ -128,11 +128,16 @@ openai:
   model: gpt-3.5-turbo
   embedding_api_key: ${OPENAI_API_KEY:}
 
+fireworks:
+  api_key: ${FIREWORKS_API_KEY:}
+  model: "accounts/fireworks/models/llama-v3p1-70b-instruct"
+  embedding_api_key: ${FIREWORKS_API_KEY:}
+
 ollama:
   llm_model: llama3.1
   embedding_model: nomic-embed-text
   api_base: http://localhost:11434
-  embedding_api_base: http://localhost:11434  # change if your embedding model runs on another ollama
+  embedding_api_base: http://localhost:11434 # change if your embedding model runs on another ollama
   keep_alive: 5m
   request_timeout: 120.0
   autopull_models: true

@@ -102,6 +102,19 @@ class LLMComponent:
                     api_key=openai_settings.api_key,
                     model=openai_settings.model,
                 )
+            case "fireworks":
+                try:
+                    from llama_index.llms.fireworks import Fireworks  # type: ignore
+                except ImportError as e:
+                    raise ImportError(
+                        "fireworks dependencies not found, install with `poetry install --extras llms-fireworks`"
+                    ) from e
+
+                fireworks_settings = settings.fireworks
+                self.llm = Fireworks(
+                    model=fireworks_settings.model,
+                    api_key=fireworks_settings.api_key,
+                )
             case "openailike":
                 try:
                     from llama_index.llms.openai_like import OpenAILike  # type: ignore

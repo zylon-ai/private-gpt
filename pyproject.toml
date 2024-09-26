@@ -38,6 +38,8 @@ llama-index-vector-stores-postgres = {version ="*", optional = true}
 llama-index-vector-stores-clickhouse = {version ="*", optional = true}
 llama-index-storage-docstore-postgres = {version ="*", optional = true}
 llama-index-storage-index-store-postgres = {version ="*", optional = true}
+llama-index-llms-fireworks = {version = "*", optional = true}
+llama-index-embeddings-fireworks = {version = "*", optional = true}
 # Postgres
 psycopg2-binary = {version ="^2.9.9", optional = true}
 asyncpg = {version="^0.29.0", optional = true}
@@ -83,6 +85,8 @@ vector-stores-postgres = ["llama-index-vector-stores-postgres"]
 vector-stores-milvus = ["llama-index-vector-stores-milvus"]
 storage-nodestore-postgres = ["llama-index-storage-docstore-postgres","llama-index-storage-index-store-postgres","psycopg2-binary","asyncpg"]
 rerank-sentence-transformers = ["torch", "sentence-transformers"]
+llms-fireworks = ["llama-index-llms-fireworks"]
+embeddings-fireworks = ["llama-index-embeddings-fireworks"]
 
 [tool.poetry.group.dev.dependencies]
 black = "^24"

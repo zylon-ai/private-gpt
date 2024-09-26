@@ -2686,6 +2686,21 @@ llama-index-embeddings-openai = ">=0.2.3,<0.3.0"
 llama-index-llms-azure-openai = ">=0.2.0,<0.3.0"
 
 [[package]]
+name = "llama-index-embeddings-fireworks"
+version = "0.2.0"
+description = "llama-index embeddings fireworks integration"
+optional = true
+python-versions = "<3.12,>=3.8.1"
+files = [
+    {file = "llama_index_embeddings_fireworks-0.2.0-py3-none-any.whl", hash = "sha256:44958479691f55005bd3bbf773316c556e5b1428c6ec174a4f443016e79e48ea"},
+    {file = "llama_index_embeddings_fireworks-0.2.0.tar.gz", hash = "sha256:0085a8fd5b4d4f71f797cfef11a85c4c3fbe763a3680edeae8f410184fa2d266"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.11.0,<0.12.0"
+llama-index-llms-openai = ">=0.2.0,<0.3.0"
+
+[[package]]
 name = "llama-index-embeddings-gemini"
 version = "0.2.0"
 description = "llama-index embeddings gemini integration"
@@ -2777,6 +2792,21 @@ azure-identity = ">=1.15.0,<2.0.0"
 httpx = "*"
 llama-index-core = ">=0.11.0,<0.12.0"
 llama-index-llms-openai = ">=0.2.1,<0.3.0"
+
+[[package]]
+name = "llama-index-llms-fireworks"
+version = "0.2.0"
+description = "llama-index llms fireworks integration"
+optional = true
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index_llms_fireworks-0.2.0-py3-none-any.whl", hash = "sha256:65a604f8cf622f7ce695c458d375cd7dac6e27f4596ba90e5464b2594b0688a0"},
+    {file = "llama_index_llms_fireworks-0.2.0.tar.gz", hash = "sha256:cfdd07b6bc01890e55a4dfc3af2e62fe82e5a08b362d52314d024728ebcf7c5b"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.11.0,<0.12.0"
+llama-index-llms-openai = ">=0.2.0,<0.3.0"
 
 [[package]]
 name = "llama-index-llms-gemini"
@@ -6242,11 +6272,6 @@ files = [
     {file = "triton-3.0.0-1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:34e509deb77f1c067d8640725ef00c5cbfcb2052a1a3cb6a6d343841f92624eb"},
     {file = "triton-3.0.0-1-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:bcbf3b1c48af6a28011a5c40a5b3b9b5330530c3827716b5fbf6d7adcc1e53e9"},
     {file = "triton-3.0.0-1-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:6e5727202f7078c56f91ff13ad0c1abab14a0e7f2c87e91b12b6f64f3e8ae609"},
-    {file = "triton-3.0.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:39b052da883351fdf6be3d93cedae6db3b8e3988d3b09ed221bccecfa9612230"},
-    {file = "triton-3.0.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cd34f19a8582af96e6291d4afce25dac08cb2a5d218c599163761e8e0827208e"},
-    {file = "triton-3.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0d5e10de8c011adeb7c878c6ce0dd6073b14367749e34467f1cff2bde1b78253"},
-    {file = "triton-3.0.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e8903767951bf86ec960b4fe4e21bc970055afc65e9d57e916d79ae3c93665e3"},
-    {file = "triton-3.0.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:41004fb1ae9a53fcb3e970745feb87f0e3c94c6ce1ba86e95fa3b8537894bef7"},
 ]
 
 [package.dependencies]
@@ -7082,6 +7107,7 @@ cffi = ["cffi (>=1.11)"]
 
 [extras]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
+embeddings-fireworks = ["llama-index-embeddings-fireworks"]
 embeddings-gemini = ["llama-index-embeddings-gemini"]
 embeddings-huggingface = ["einops", "llama-index-embeddings-huggingface"]
 embeddings-mistral = ["llama-index-embeddings-mistralai"]
@@ -7089,6 +7115,7 @@ embeddings-ollama = ["llama-index-embeddings-ollama"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
 llms-azopenai = ["llama-index-llms-azure-openai"]
+llms-fireworks = ["llama-index-llms-fireworks"]
 llms-gemini = ["llama-index-llms-gemini"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
 llms-ollama = ["llama-index-llms-ollama"]
@@ -7107,4 +7134,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "16e3be4521aa64c936ee8fb841655f15090b71cf8faaeed7e73a4bcdf3fbdea2"
+content-hash = "f41ee2165df33fd6815114a9d6b01508e1e8726dd7a8baf99825514586f250f0"

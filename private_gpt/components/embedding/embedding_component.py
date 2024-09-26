@@ -67,6 +67,24 @@ class EmbeddingComponent:
                     api_key=api_key,
                     model=model,
                 )
+            case "fireworks":
+                try:
+                    from llama_index.embeddings.fireworks import (  # type: ignore
+                        FireworksEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "FireworksEmbedding dependencies not found, install with `poetry install --extras embeddings-fireworks`"
+                    ) from e
+
+                api_key = (
+                    settings.fireworks.embedding_api_key or settings.fireworks.api_key
+                )
+                model = settings.openai.embedding_model
+                self.embedding_model = FireworksEmbedding(
+                    api_key=api_key,
+                    model=model,
+                )
             case "ollama":
                 try:
                     from llama_index.embeddings.ollama import (  # type: ignore
