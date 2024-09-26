@@ -286,8 +286,9 @@ class ChatMLPromptStyle(AbstractPromptStyle):
 
 
 def get_prompt_style(
-    prompt_style: Literal["default", "llama2", "llama3", "tag", "mistral", "chatml"]
-    | None
+    prompt_style: (
+        Literal["default", "llama2", "llama3", "tag", "mistral", "chatml"] | None
+    )
 ) -> AbstractPromptStyle:
     """Get the prompt style to use from the given string.
 

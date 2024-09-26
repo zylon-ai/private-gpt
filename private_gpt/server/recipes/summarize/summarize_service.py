@@ -90,9 +90,9 @@ class SummarizeService:
         # Add context documents to summarize
         if use_context:
             # 1. Recover all ref docs
-            ref_docs: dict[
-                str, RefDocInfo
-            ] | None = self.storage_context.docstore.get_all_ref_doc_info()
+            ref_docs: dict[str, RefDocInfo] | None = (
+                self.storage_context.docstore.get_all_ref_doc_info()
+            )
             if ref_docs is None:
                 raise ValueError("No documents have been ingested yet.")
 
