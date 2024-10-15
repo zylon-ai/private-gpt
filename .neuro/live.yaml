@@ -119,5 +119,5 @@ jobs:
       POSTGRES_DB: postgres
       PGDATA: ${{ volumes.pgdata.mount }}/pgdata
     volumes:
-      # - ${{ volumes.pgdata.ref_rw }}
-      - ${{ volumes.pgdata_onprem.ref_rw }}
+       - ${{ volumes.pgdata.ref_rw }}
+#      - ${{ volumes.pgdata_onprem.ref_rw }}

@@ -1,16 +1,20 @@
 # 🔒 PrivateGPT 📑
 
+## Pre-requisites
+* Apolo cli. [Instructions](https://docs.apolo.us/index/cli/installing)
+* HuggingFace access to the model you want to deploy. [For example LLAMA](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct)
+
 ## Run on apolo / neu.ro platform
 Note: this setup is mostly for POC purposes. For production-ready setup, you'll need to replace some of it's components with production-ready Apps.
 
-1. `git clone` this repo && `cd` into root of it. We assume you've installed CLIs for the platform and authorized to the cluster.
-1. Build image for web app with `neuro-flow build privategpt`
-2. Create block storage for PGVector with `neuro disk create --name pgdata 10G --timeout-unused 100d`
-3. Create secret with HuggingFace token to pull models `neuro secret add HF_TOKEN <token>` (see https://huggingface.co/settings/tokens)
-4. `neuro-flow run pgvector` -- start vector store
-5. `neuro-flow run ollama` -- start embeddings server
-6. `neuro-flow run vllm` -- start LLM inference server. Note: if you want to change LLM hosted there, change it in bash command and in `env.VLLM_MODEL` of `pgpt` job.
-7. `neuro-flow run pgpt` -- start PrivateGPT web server.
+1. `$ git clone` this repo && `$ cd` into root of it.
+1. Build image for web app with `$ apolo-flow build privategpt`
+2. Create block storage for PGVector with `$ apolo disk create --name pgdata 10G --timeout-unused 100d`
+3. Create secret with HuggingFace token to pull models `$ apolo secret add HF_TOKEN <token>` (see https://huggingface.co/settings/tokens)
+4. `$ apolo-flow run pgvector` -- start vector store
+5. `$ apolo-flow run ollama` -- start embeddings server
+6. `$ apolo-flow run vllm` -- start LLM inference server. Note: if you want to change LLM hosted there, change it in bash command and in `env.VLLM_MODEL` of `pgpt` job.
+7. `$ apolo-flow run pgpt` -- start PrivateGPT web server.
 
 ### Running PrivateGPT as stand-alone job
 <details>
@@ -42,7 +46,7 @@ Embeddings config section:
 - `OLLAMA_EMBEDDING_MODEL` (str, optional) -- embeddings model to use. Must be already loaded into Ollama instance
 
 Having above values, run job with
-`neuro run --volume storage:.apps/pgpt/data:/home/worker/app/local_data --http-port=8080 ghcr.io/neuro-inc/private-gpt`
+`$ apolo run --volume storage:.apps/pgpt/data:/home/worker/app/local_data --http-port=8080 ghcr.io/neuro-inc/private-gpt`
 
 Other platform-related configurations like `--life-span`, etc. also work here.
 
