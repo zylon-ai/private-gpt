@@ -1,0 +1,33 @@
+server:
+  env_name: ${APP_ENV:prod}
+  port: ${PORT:8080}
+
+llm:
+  mode: openailike
+  tokenizer: ${VLLM_TOKENIZER:-}
+  max_new_tokens: ${VLLM_MAX_NEW_TOKENS:5000}
+  context_window: ${VLLM_CONTEXT_WINDOW:4096}
+  temperature: ${VLLM_TEMPERATURE:0.1}
+
+openai:
+  api_base: ${VLLM_API_BASE:https://api.openai.com/v1/}
+  api_key: ${VLLM_API_KEY:EMPTY}
+  model: ${VLLM_MODEL:-}
+  embedding_api_base: ${EMBEDDING_API_BASE:https://api.openai.com/v1/}
+  embedding_api_key: ${EMBEDDING_API_KEY:EMPTY}
+  embeddings_model: ${EMBEDDING_MODEL:text-embedding-ada-002}
+
+embedding:
+  mode: ${EMBEDDING_PROVIDER:openai}
+  ingest_mode: ${EMBEDDING_MODE:parallel}
+  embed_dim: ${EMBEDDING_DIM:768}
+
+ollama:
+  # Note: if you change embedding model, you'll need to use a dedicated DB for ingext storage
+  embedding_model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+  embedding_api_base: ${OLLAMA_API_BASE:http://localhost:11434}
+  request_timeout: 300.0
+
+ui:
+  enabled: true
+  path: /

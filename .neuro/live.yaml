@@ -71,7 +71,7 @@ jobs:
   vllm:
     image: vllm/vllm-openai:v0.6.1.post2
     name: vllm
-    preset: gpu-medium
+    preset: a100x1
     detach: true
     http_port: "8000"
     volumes:
@@ -82,8 +82,6 @@ jobs:
       --model meta-llama/Meta-Llama-3.1-8B-Instruct
       --tokenizer meta-llama/Meta-Llama-3.1-8B-Instruct
       --dtype=half
-      --max-model-len=50000
-      --tensor-parallel-size=2
     # cmd: >
     #   --model meta-llama/Meta-Llama-3.1-8B-Instruct
     #   --tokenizer meta-llama/Meta-Llama-3.1-8B-Instruct
@@ -102,7 +100,7 @@ jobs:
     image: ollama/ollama:0.1.35
     volumes:
       - ${{ volumes.ollama_models.ref_rw }}
-    preset: gpu-small
+    preset: a100x1
     detach: true
     env:
       MODEL: "nomic-embed-text"
@@ -119,5 +117,5 @@ jobs:
       POSTGRES_DB: postgres
       PGDATA: ${{ volumes.pgdata.mount }}/pgdata
     volumes:
-       - ${{ volumes.pgdata.ref_rw }}
-#      - ${{ volumes.pgdata_onprem.ref_rw }}
+      - ${{ volumes.pgdata.ref_rw }}
+      # - ${{ volumes.pgdata_onprem.ref_rw }}
