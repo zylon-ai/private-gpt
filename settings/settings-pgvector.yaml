@@ -1,0 +1,13 @@
+nodestore:
+  database: postgres
+
+vectorstore:
+  database: postgres
+
+postgres:
+  host: ${POSTGRES_HOST:localhost}
+  port: ${POSTGRES_PORT:5432}
+  database: ${POSTGRES_DB:postgres}
+  user: ${POSTGRES_USER:postgres}
+  password: ${POSTGRES_PASSWORD:postgres}
+  schema_name: ${POSTGRES_SHEMA:postgres}
