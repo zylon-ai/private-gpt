@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - apolo
   pull_request:
 
 concurrency:
