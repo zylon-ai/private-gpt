@@ -29,7 +29,8 @@ services:
       - ollama-cuda
       - ollama-api
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
 
   # Private-GPT service for the local mode
   # This service builds from a local Dockerfile and runs the application in local mode.
@@ -60,6 +61,12 @@ services:
   # This will route requests to the Ollama service based on the profile.
   ollama:
     image: traefik:v2.10
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -q --spider http://ollama:11434 || exit 1"]
+      interval: 10s
+      retries: 3
+      start_period: 5s
+      timeout: 5s
     ports:
       - "8080:8080"
     command:
