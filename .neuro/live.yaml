@@ -67,6 +67,7 @@ jobs:
       POSTGRES_HOST: ${{ inspect_job('pgvector').internal_hostname_named }}
       VLLM_MODEL: meta-llama/Meta-Llama-3-8B-Instruct
       VLLM_TOKENIZER: meta-llama/Meta-Llama-3-8B-Instruct
+      HUGGINGFACE_TOKEN: secret:HF_TOKEN
 
   vllm:
     image: vllm/vllm-openai:v0.6.1.post2
