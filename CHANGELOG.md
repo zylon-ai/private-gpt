@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.7.0](https://github.com/zylon-ai/private-gpt/compare/v0.6.2...v0.7.0) (2024-10-17)
+
+
+### Features
+
+* add retry connection to ollama ([#2084](https://github.com/zylon-ai/private-gpt/issues/2084)) ([77461b9](https://github.com/zylon-ai/private-gpt/commit/77461b96cf2e18b88b592fff441206a49826db97))
+* Adding MistralAI mode ([#2065](https://github.com/zylon-ai/private-gpt/issues/2065)) ([f9182b3](https://github.com/zylon-ai/private-gpt/commit/f9182b3a86d88af7c699b41b3a5f21401117acfc))
+* update llama-index + dependencies ([#2092](https://github.com/zylon-ai/private-gpt/issues/2092)) ([5851b02](https://github.com/zylon-ai/private-gpt/commit/5851b02378313f3dba315e0251cfd421af79dae6))
+
+
+### Bug Fixes
+
+* 503 when private gpt gets ollama service ([#2104](https://github.com/zylon-ai/private-gpt/issues/2104)) ([940bdd4](https://github.com/zylon-ai/private-gpt/commit/940bdd49af14d9c1e7fd4af54f12648b5fc1f9c0))
+* Add default mode option to settings ([#2078](https://github.com/zylon-ai/private-gpt/issues/2078)) ([fa3c306](https://github.com/zylon-ai/private-gpt/commit/fa3c30661d2ab04634361e20e7819365e3dd351a))
+* docker permissions ([#2059](https://github.com/zylon-ai/private-gpt/issues/2059)) ([8c12c68](https://github.com/zylon-ai/private-gpt/commit/8c12c6830b37851cccb3fea75faa820fce49284a))
+* naming image and ollama-cpu ([#2056](https://github.com/zylon-ai/private-gpt/issues/2056)) ([89477ea](https://github.com/zylon-ai/private-gpt/commit/89477ea9d3a83181b0222b732a81c71db9edf142))
+* Rectify ffmpy poetry config; update version from 0.3.2 to 0.4.0 ([#2062](https://github.com/zylon-ai/private-gpt/issues/2062)) ([7603b36](https://github.com/zylon-ai/private-gpt/commit/7603b3627d91aed1cce2e1ae407fec11ca1ad132))
+* Sanitize null bytes before ingestion ([#2090](https://github.com/zylon-ai/private-gpt/issues/2090)) ([5fbb402](https://github.com/zylon-ai/private-gpt/commit/5fbb402477c41e09f56a3e5adc32f316341772bf))
+
 ## [0.6.2](https://github.com/zylon-ai/private-gpt/compare/v0.6.1...v0.6.2) (2024-08-08)
 
 
