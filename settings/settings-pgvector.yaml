@@ -10,4 +10,4 @@ postgres:
   database: ${POSTGRES_DB:postgres}
   user: ${POSTGRES_USER:postgres}
   password: ${POSTGRES_PASSWORD:postgres}
-  schema_name: ${POSTGRES_SHEMA:postgres}
+  schema_name: ${POSTGRES_SCHEMA:postgres}
