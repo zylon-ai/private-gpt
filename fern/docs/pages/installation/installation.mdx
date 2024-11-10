@@ -1,63 +1,107 @@
-It is important that you review the Main Concepts before you start the installation process.
+It is important that you review the [Main Concepts](../concepts) section to understand the different components of PrivateGPT and how they interact with each other.
 
 ## Base requirements to run PrivateGPT
 
-* Clone PrivateGPT repository, and navigate to it:
-
+### 1. Clone the PrivateGPT Repository
+Clone the repository and navigate to it:
 ```bash
-  git clone https://github.com/imartinez/privateGPT
-  cd privateGPT
+git clone https://github.com/zylon-ai/private-gpt
+cd private-gpt
 ```
 
-* Install Python `3.11` (*if you do not have it already*). Ideally through a python version manager like `pyenv`.
-  Earlier python versions are not supported.
-    * osx/linux: [pyenv](https://github.com/pyenv/pyenv)
-    * windows: [pyenv-win](https://github.com/pyenv-win/pyenv-win)
-
+### 2. Install Python 3.11
+If you do not have Python 3.11 installed, install it using a Python version manager like `pyenv`. Earlier Python versions are not supported.
+#### macOS/Linux
+Install and set Python 3.11 using [pyenv](https://github.com/pyenv/pyenv):
+```bash
+pyenv install 3.11
+pyenv local 3.11
+```
+#### Windows
+Install and set Python 3.11 using [pyenv-win](https://github.com/pyenv-win/pyenv-win):
 ```bash
 pyenv install 3.11
 pyenv local 3.11
 ```
 
-* Install [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) for dependency management:
+### 3. Install `Poetry`
+Install [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) for dependency management:
+Follow the instructions on the official Poetry website to install it.
 
-* Install `make` to be able to run the different scripts:
-    * osx: (Using homebrew): `brew install make`
-    * windows: (Using chocolatey) `choco install make`
+<Callout intent="warning">
+A bug exists in Poetry versions 1.7.0 and earlier. We strongly recommend upgrading to a tested version.
+To upgrade Poetry to latest tested version, run `poetry self update 1.8.3` after installing it.
+</Callout>
 
-## Install and run your desired setup
+### 4. Optional: Install `make`
+To run various scripts, you need to install `make`. Follow the instructions for your operating system:
+#### macOS
+(Using Homebrew):
+```bash
+brew install make
+```
+#### Windows
+(Using Chocolatey):
+```bash
+choco install make
+```
 
-PrivateGPT allows to customize the setup -from fully local to cloud based- by deciding the modules to use.
-Here are the different options available:
+## Install and Run Your Desired Setup
 
-- LLM: "llama-cpp", "ollama", "sagemaker", "openai", "openailike", "azopenai"
-- Embeddings: "huggingface", "openai", "sagemaker", "azopenai"
-- Vector stores: "qdrant", "chroma", "postgres"
-- UI: whether or not to enable UI (Gradio) or just go with the API
-
-In order to only install the required dependencies, PrivateGPT offers different `extras` that can be combined during the installation process:
+PrivateGPT allows customization of the setup, from fully local to cloud-based, by deciding the modules to use. To install only the required dependencies, PrivateGPT offers different `extras` that can be combined during the installation process:
 
 ```bash
 poetry install --extras "<extra1> <extra2>..."
 ```
+Where `<extra>` can be any of the following options described below.
 
-Where `<extra>` can be any of the following:
+### Available Modules
 
-- ui: adds support for UI using Gradio
-- llms-ollama: adds support for Ollama LLM, the easiest way to get a local LLM running, requires Ollama running locally
-- llms-llama-cpp: adds support for local LLM using LlamaCPP - expect a messy installation process on some platforms
-- llms-sagemaker: adds support for Amazon Sagemaker LLM, requires Sagemaker inference endpoints
-- llms-openai: adds support for OpenAI LLM, requires OpenAI API key
-- llms-openai-like: adds support for 3rd party LLM providers that are compatible with OpenAI's API
-- llms-azopenai: adds support for Azure OpenAI LLM, requires Azure OpenAI inference endpoints
-- embeddings-ollama: adds support for Ollama Embeddings, requires Ollama running locally
-- embeddings-huggingface: adds support for local Embeddings using HuggingFace
-- embeddings-sagemaker: adds support for Amazon Sagemaker Embeddings, requires Sagemaker inference endpoints
-- embeddings-openai = adds support for OpenAI Embeddings, requires OpenAI API key
-- embeddings-azopenai = adds support for Azure OpenAI Embeddings, requires Azure OpenAI inference endpoints
-- vector-stores-qdrant: adds support for Qdrant vector store
-- vector-stores-chroma: adds support for Chroma DB vector store
-- vector-stores-postgres: adds support for Postgres vector store
+You need to choose one option per category (LLM, Embeddings, Vector Stores, UI). Below are the tables listing the available options for each category.
+
+#### LLM
+
+| **Option**   | **Description**                                                        | **Extra**           |
+|--------------|------------------------------------------------------------------------|---------------------|
+| **ollama**   | Adds support for Ollama LLM, requires Ollama running locally           | llms-ollama         |
+| llama-cpp    | Adds support for local LLM using LlamaCPP                              | llms-llama-cpp      |
+| sagemaker    | Adds support for Amazon Sagemaker LLM, requires Sagemaker endpoints    | llms-sagemaker      |
+| openai       | Adds support for OpenAI LLM, requires OpenAI API key                   | llms-openai         |
+| openailike   | Adds support for 3rd party LLM providers compatible with OpenAI's API  | llms-openai-like    |
+| azopenai     | Adds support for Azure OpenAI LLM, requires Azure endpoints            | llms-azopenai       |
+| gemini       | Adds support for Gemini LLM, requires Gemini API key                   | llms-gemini         |
+
+#### Embeddings
+
+| **Option**       | **Description**                                                                | **Extra**               |
+|------------------|--------------------------------------------------------------------------------|-------------------------|
+| **ollama**       | Adds support for Ollama Embeddings, requires Ollama running locally            | embeddings-ollama       |
+| huggingface      | Adds support for local Embeddings using HuggingFace                            | embeddings-huggingface  |
+| openai           | Adds support for OpenAI Embeddings, requires OpenAI API key                    | embeddings-openai       |
+| sagemaker        | Adds support for Amazon Sagemaker Embeddings, requires Sagemaker endpoints     | embeddings-sagemaker    |
+| azopenai         | Adds support for Azure OpenAI Embeddings, requires Azure endpoints             | embeddings-azopenai     |
+| gemini           | Adds support for Gemini Embeddings, requires Gemini API key                    | embeddings-gemini       |
+
+#### Vector Stores
+
+| **Option**       | **Description**                         | **Extra**               |
+|------------------|-----------------------------------------|-------------------------|
+| **qdrant**       | Adds support for Qdrant vector store    | vector-stores-qdrant    |
+| milvus           | Adds support for Milvus vector store    | vector-stores-milvus    |
+| chroma           | Adds support for Chroma DB vector store | vector-stores-chroma    |
+| postgres         | Adds support for Postgres vector store  | vector-stores-postgres  |
+| clickhouse       | Adds support for Clickhouse vector store| vector-stores-clickhouse|
+
+#### UI
+
+| **Option**   | **Description**                          | **Extra** |
+|--------------|------------------------------------------|-----------|
+| Gradio       | Adds support for UI using Gradio         | ui        |
+
+<Callout intent = "warning">
+A working **Gradio UI client** is provided to test the API, together with a set of useful tools such as bulk
+model download script, ingestion script, documents folder watch, etc. Please refer to the [UI alternatives](/manual/user-interface/alternatives) page for more UI alternatives.
+</Callout>
 
 ## Recommended Setups
 
@@ -81,6 +125,8 @@ set PGPT_PROFILES=ollama
 make run
 ```
 
+Refer to the [troubleshooting](./troubleshooting) section for specific issues you might encounter.
+
 ### Local, Ollama-powered setup - RECOMMENDED
 
 **The easiest way to run PrivateGPT fully locally** is to depend on Ollama for the LLM. Ollama provides local LLM and Embeddings super easy to install and use, abstracting the complexity of GPU support. It's the recommended setup for local development.
@@ -89,16 +135,20 @@ Go to [ollama.ai](https://ollama.ai/) and follow the instructions to install Oll
 
 After the installation, make sure the Ollama desktop app is closed.
 
-Install the models to be used, the default settings-ollama.yaml is configured to user `mistral 7b` LLM (~4GB) and `nomic-embed-text` Embeddings (~275MB). Therefore:
-
-```bash
-ollama pull mistral
-ollama pull nomic-embed-text
-```
-
 Now, start Ollama service (it will start a local inference server, serving both the LLM and the Embeddings):
 ```bash
 ollama serve
+```
+
+Install the models to be used, the default settings-ollama.yaml is configured to user llama3.1 8b LLM (~4GB) and nomic-embed-text Embeddings (~275MB)
+
+By default, PGPT will automatically pull models as needed. This behavior can be changed by modifying the `ollama.autopull_models` property.
+
+In any case, if you want to manually pull models, run the following commands:
+
+```bash
+ollama pull llama3.1
+ollama pull nomic-embed-text
 ```
 
 Once done, on a different terminal, you can install PrivateGPT with the following command:
@@ -257,11 +307,12 @@ If you have all required dependencies properly configured running the
 following powershell command should succeed.
 
 ```powershell
-$env:CMAKE_ARGS='-DLLAMA_CUBLAS=on'; poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python
+$env:CMAKE_ARGS='-DLLAMA_CUBLAS=on'; poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python numpy==1.26.0
 ```
 
 If your installation was correct, you should see a message similar to the following next
-time you start the server `BLAS = 1`.
+time you start the server `BLAS = 1`. If there is some issue, please refer to the
+[troubleshooting](/installation/getting-started/troubleshooting#building-llama-cpp-with-nvidia-gpu-support) section.
 
 ```console
 llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, context: 762.87 MB)
@@ -289,11 +340,12 @@ Some tips:
 After that running the following command in the repository will install llama.cpp with GPU support:
 
 ```bash
-CMAKE_ARGS='-DLLAMA_CUBLAS=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python
+CMAKE_ARGS='-DLLAMA_CUBLAS=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python numpy==1.26.0
 ```
 
 If your installation was correct, you should see a message similar to the following next
-time you start the server `BLAS = 1`.
+time you start the server `BLAS = 1`. If there is some issue, please refer to the
+[troubleshooting](/installation/getting-started/troubleshooting#building-llama-cpp-with-nvidia-gpu-support) section.
 
 ```
 llama_new_context_with_model: total VRAM used: 4857.93 MB (model: 4095.05 MB, context: 762.87 MB)

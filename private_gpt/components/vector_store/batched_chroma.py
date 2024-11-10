@@ -1,14 +1,17 @@
-from collections.abc import Generator
-from typing import Any
+from collections.abc import Generator, Sequence
+from typing import TYPE_CHECKING, Any
 
 from llama_index.core.schema import BaseNode, MetadataMode
 from llama_index.core.vector_stores.utils import node_to_metadata_dict
 from llama_index.vector_stores.chroma import ChromaVectorStore  # type: ignore
 
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
 
 def chunk_list(
-    lst: list[BaseNode], max_chunk_size: int
-) -> Generator[list[BaseNode], None, None]:
+    lst: Sequence[BaseNode], max_chunk_size: int
+) -> Generator[Sequence[BaseNode], None, None]:
     """Yield successive max_chunk_size-sized chunks from lst.
 
     Args:
@@ -60,7 +63,7 @@ class BatchedChromaVectorStore(ChromaVectorStore):  # type: ignore
         )
         self.chroma_client = chroma_client
 
-    def add(self, nodes: list[BaseNode], **add_kwargs: Any) -> list[str]:
+    def add(self, nodes: Sequence[BaseNode], **add_kwargs: Any) -> list[str]:
         """Add nodes to index, batching the insertion to avoid issues.
 
         Args:
@@ -78,8 +81,8 @@ class BatchedChromaVectorStore(ChromaVectorStore):  # type: ignore
 
         all_ids = []
         for node_chunk in node_chunks:
-            embeddings = []
-            metadatas = []
+            embeddings: list[Sequence[float]] = []
+            metadatas: list[Mapping[str, Any]] = []
             ids = []
             documents = []
             for node in node_chunk:

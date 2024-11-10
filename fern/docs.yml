@@ -10,6 +10,9 @@ tabs:
   overview:
     display-name: Overview
     icon: "fa-solid fa-home"
+  quickstart:
+    display-name: Quickstart
+    icon: "fa-solid fa-rocket"
   installation:
     display-name: Installation
     icon: "fa-solid fa-download"
@@ -32,7 +35,13 @@ navigation:
         contents:
           - page: Introduction
             path: ./docs/pages/overview/welcome.mdx
-  # How to install privateGPT, with FAQ and troubleshooting
+  - tab: quickstart
+    layout:
+      - section: Getting started
+        contents:
+          - page: Quickstart
+            path: ./docs/pages/quickstart/quickstart.mdx
+  # How to install PrivateGPT, with FAQ and troubleshooting
   - tab: installation
     layout:
       - section: Getting started
@@ -41,7 +50,9 @@ navigation:
             path: ./docs/pages/installation/concepts.mdx
           - page: Installation
             path: ./docs/pages/installation/installation.mdx
-  # Manual of privateGPT: how to use it and configure it
+          - page: Troubleshooting
+            path: ./docs/pages/installation/troubleshooting.mdx
+  # Manual of PrivateGPT: how to use it and configure it
   - tab: manual
     layout:
       - section: General configuration
@@ -68,17 +79,21 @@ navigation:
             path: ./docs/pages/manual/reranker.mdx
       - section: User Interface
         contents:
-          - page: User interface (Gradio) Manual
-            path: ./docs/pages/manual/ui.mdx
-  # Small code snippet or example of usage to help users
+          - page: Gradio Manual
+            path: ./docs/pages/ui/gradio.mdx
+          - page: Alternatives
+            path: ./docs/pages/ui/alternatives.mdx
   - tab: recipes
     layout:
-      - section: Choice of LLM
+      - section: Getting started
         contents:
-          # TODO: add recipes
-          - page: List of LLMs
-            path: ./docs/pages/recipes/list-llm.mdx
-  # More advanced usage of privateGPT, by API
+          - page: Quickstart
+            path: ./docs/pages/recipes/quickstart.mdx
+      - section: General use cases
+        contents:
+          - page: Summarize
+            path: ./docs/pages/recipes/summarize.mdx
+  # More advanced usage of PrivateGPT, by API
   - tab: api-reference
     layout:
       - section: Overview
@@ -93,11 +108,10 @@ navigation:
 # `type:primary` is always displayed at the most right side of the navbar
 navbar-links:
   - type: secondary
-    text: GitHub
-    url: "https://github.com/imartinez/privateGPT"
-  - type: secondary
     text: Contact us
     url: "mailto:hello@zylon.ai"
+  - type: github
+    value: "https://github.com/zylon-ai/private-gpt"
   - type: primary
     text: Join the Discord
     url: https://discord.com/invite/bK6mRVpErU

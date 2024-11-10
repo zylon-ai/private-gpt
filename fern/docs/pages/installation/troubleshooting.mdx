@@ -1,0 +1,64 @@
+# Downloading Gated and Private Models
+Many models are gated or private, requiring special access to use them. Follow these steps to gain access and set up your environment for using these models.
+## Accessing Gated Models
+1. **Request Access:**
+   Follow the instructions provided [here](https://huggingface.co/docs/hub/en/models-gated) to request access to the gated model.
+2. **Generate a Token:**
+   Once you have access, generate a token by following the instructions [here](https://huggingface.co/docs/hub/en/security-tokens).
+3. **Set the Token:**
+   Add the generated token to your `settings.yaml` file:
+   ```yaml
+   huggingface:
+     access_token: <your-token>
+   ```
+   Alternatively, set the `HF_TOKEN` environment variable:
+   ```bash
+   export HF_TOKEN=<your-token>
+   ```
+
+# Tokenizer Setup
+PrivateGPT uses the `AutoTokenizer` library to tokenize input text accurately. It connects to HuggingFace's API to download the appropriate tokenizer for the specified model.
+
+## Configuring the Tokenizer
+1. **Specify the Model:**
+   In your `settings.yaml` file, specify the model you want to use:
+   ```yaml
+   llm:
+     tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
+   ```
+2. **Set Access Token for Gated Models:**
+   If you are using a gated model, ensure the `access_token` is set as mentioned in the previous section.
+This configuration ensures that PrivateGPT can download and use the correct tokenizer for the model you are working with.
+
+# Embedding dimensions mismatch
+If you encounter an error message like `Embedding dimensions mismatch`, it is likely due to the embedding model and
+current vector dimension mismatch. To resolve this issue, ensure that the model and the input data have the same vector dimensions.
+
+By default, PrivateGPT uses `nomic-embed-text` embeddings, which have a vector dimension of 768.
+If you are using a different embedding model, ensure that the vector dimensions match the model's output.
+
+<Callout intent = "warning">
+In versions below to 0.6.0, the default embedding model was `BAAI/bge-small-en-v1.5` in `huggingface` setup.
+If you plan to reuse the old generated embeddings, you need to update the `settings.yaml` file to use the correct embedding model:
+```yaml
+huggingface:
+  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+embedding:
+  embed_dim: 384
+```
+</Callout>
+
+# Building Llama-cpp with NVIDIA GPU support
+
+## Out-of-memory error
+
+If you encounter an out-of-memory error while running `llama-cpp` with CUDA, you can try the following steps to resolve the issue:
+1. **Set the next environment:**
+    ```bash
+    TOKENIZERS_PARALLELISM=true
+    ```
+2. **Run PrivateGPT:**
+    ```bash
+    poetry run python -m privategpt
+    ```
+Give thanks to [MarioRossiGithub](https://github.com/MarioRossiGithub) for providing the following solution.

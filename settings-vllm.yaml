@@ -3,15 +3,19 @@ server:
 
 llm:
   mode: openailike
+  max_new_tokens: 512
+  tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
+  temperature: 0.1
 
 embedding:
   mode: huggingface
   ingest_mode: simple
 
 huggingface:
-  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+  embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
 
 openai:
   api_base: http://localhost:8000/v1
   api_key: EMPTY
   model: facebook/opt-125m
+  request_timeout: 600.0

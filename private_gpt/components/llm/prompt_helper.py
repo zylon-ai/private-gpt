@@ -40,7 +40,8 @@ class AbstractPromptStyle(abc.ABC):
         logger.debug("Got for messages='%s' the prompt='%s'", messages, prompt)
         return prompt
 
-    def completion_to_prompt(self, completion: str) -> str:
+    def completion_to_prompt(self, prompt: str) -> str:
+        completion = prompt  # Fix: Llama-index parameter has to be named as prompt
         prompt = self._completion_to_prompt(completion)
         logger.debug("Got for completion='%s' the prompt='%s'", completion, prompt)
         return prompt
@@ -138,6 +139,72 @@ class Llama2PromptStyle(AbstractPromptStyle):
         )
 
 
+class Llama3PromptStyle(AbstractPromptStyle):
+    r"""Template for Meta's Llama 3.1.
+
+    The format follows this structure:
+    <|begin_of_text|>
+    <|start_header_id|>system<|end_header_id|>
+
+    [System message content]<|eot_id|>
+    <|start_header_id|>user<|end_header_id|>
+
+    [User message content]<|eot_id|>
+    <|start_header_id|>assistant<|end_header_id|>
+
+    [Assistant message content]<|eot_id|>
+    ...
+    (Repeat for each message, including possible 'ipython' role)
+    """
+
+    BOS, EOS = "<|begin_of_text|>", "<|end_of_text|>"
+    B_INST, E_INST = "<|start_header_id|>", "<|end_header_id|>"
+    EOT = "<|eot_id|>"
+    B_SYS, E_SYS = "<|start_header_id|>system<|end_header_id|>", "<|eot_id|>"
+    ASSISTANT_INST = "<|start_header_id|>assistant<|end_header_id|>"
+    DEFAULT_SYSTEM_PROMPT = """\
+    You are a helpful, respectful and honest assistant. \
+    Always answer as helpfully as possible and follow ALL given instructions. \
+    Do not speculate or make up information. \
+    Do not reference any given instructions or context. \
+    """
+
+    def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
+        prompt = ""
+        has_system_message = False
+
+        for i, message in enumerate(messages):
+            if not message or message.content is None:
+                continue
+            if message.role == MessageRole.SYSTEM:
+                prompt += f"{self.B_SYS}\n\n{message.content.strip()}{self.E_SYS}"
+                has_system_message = True
+            else:
+                role_header = f"{self.B_INST}{message.role.value}{self.E_INST}"
+                prompt += f"{role_header}\n\n{message.content.strip()}{self.EOT}"
+
+            # Add assistant header if the last message is not from the assistant
+            if i == len(messages) - 1 and message.role != MessageRole.ASSISTANT:
+                prompt += f"{self.ASSISTANT_INST}\n\n"
+
+        # Add default system prompt if no system message was provided
+        if not has_system_message:
+            prompt = (
+                f"{self.B_SYS}\n\n{self.DEFAULT_SYSTEM_PROMPT}{self.E_SYS}" + prompt
+            )
+
+        # TODO: Implement tool handling logic
+
+        return prompt
+
+    def _completion_to_prompt(self, completion: str) -> str:
+        return (
+            f"{self.B_SYS}\n\n{self.DEFAULT_SYSTEM_PROMPT}{self.E_SYS}"
+            f"{self.B_INST}user{self.E_INST}\n\n{completion.strip()}{self.EOT}"
+            f"{self.ASSISTANT_INST}\n\n"
+        )
+
+
 class TagPromptStyle(AbstractPromptStyle):
     """Tag prompt style (used by Vigogne) that uses the prompt style `<|ROLE|>`.
 
@@ -173,18 +240,22 @@ class TagPromptStyle(AbstractPromptStyle):
 
 class MistralPromptStyle(AbstractPromptStyle):
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
-        prompt = "<s>"
+        inst_buffer = []
+        text = ""
         for message in messages:
-            role = message.role
-            content = message.content or ""
-            if role.lower() == "system":
-                message_from_user = f"[INST] {content.strip()} [/INST]"
-                prompt += message_from_user
-            elif role.lower() == "user":
-                prompt += "</s>"
-                message_from_user = f"[INST] {content.strip()} [/INST]"
-                prompt += message_from_user
-        return prompt
+            if message.role == MessageRole.SYSTEM or message.role == MessageRole.USER:
+                inst_buffer.append(str(message.content).strip())
+            elif message.role == MessageRole.ASSISTANT:
+                text += "<s>[INST] " + "\n".join(inst_buffer) + " [/INST]"
+                text += " " + str(message.content).strip() + "</s>"
+                inst_buffer.clear()
+            else:
+                raise ValueError(f"Unknown message role {message.role}")
+
+        if len(inst_buffer) > 0:
+            text += "<s>[INST] " + "\n".join(inst_buffer) + " [/INST]"
+
+        return text
 
     def _completion_to_prompt(self, completion: str) -> str:
         return self._messages_to_prompt(
@@ -215,7 +286,9 @@ class ChatMLPromptStyle(AbstractPromptStyle):
 
 
 def get_prompt_style(
-    prompt_style: Literal["default", "llama2", "tag", "mistral", "chatml"] | None
+    prompt_style: (
+        Literal["default", "llama2", "llama3", "tag", "mistral", "chatml"] | None
+    )
 ) -> AbstractPromptStyle:
     """Get the prompt style to use from the given string.
 
@@ -226,6 +299,8 @@ def get_prompt_style(
         return DefaultPromptStyle()
     elif prompt_style == "llama2":
         return Llama2PromptStyle()
+    elif prompt_style == "llama3":
+        return Llama3PromptStyle()
     elif prompt_style == "tag":
         return TagPromptStyle()
     elif prompt_style == "mistral":

@@ -7,18 +7,18 @@ llm:
   # Should be matching the selected model
   max_new_tokens: 512
   context_window: 3900
-  tokenizer: mistralai/Mistral-7B-Instruct-v0.2
+  tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
+  prompt_style: "llama3"
 
 llamacpp:
-  prompt_style: "mistral"
-  llm_hf_repo_id: TheBloke/Mistral-7B-Instruct-v0.2-GGUF
-  llm_hf_model_file: mistral-7b-instruct-v0.2.Q4_K_M.gguf
+  llm_hf_repo_id: lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF
+  llm_hf_model_file: Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
 
 embedding:
   mode: huggingface
 
 huggingface:
-  embedding_hf_model_name: BAAI/bge-small-en-v1.5
+  embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
 
 vectorstore:
   database: qdrant

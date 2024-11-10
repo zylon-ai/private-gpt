@@ -1,78 +1,98 @@
 [tool.poetry]
 name = "private-gpt"
-version = "0.5.0"
+version = "0.7.0"
 description = "Private GPT"
 authors = ["Zylon <hi@zylon.ai>"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 # PrivateGPT
-fastapi = { extras = ["all"], version = "^0.110.0" }
-python-multipart = "^0.0.9"
-injector = "^0.21.0"
-pyyaml = "^6.0.1"
-watchdog = "^4.0.0"
-transformers = "^4.38.2"
+fastapi = { extras = ["all"], version = "^0.115.0" }
+python-multipart = "^0.0.10"
+injector = "^0.22.0"
+pyyaml = "^6.0.2"
+watchdog = "^4.0.1"
+transformers = "^4.44.2"
+docx2txt = "^0.8"
+cryptography = "^3.1"
 # LlamaIndex core libs
-llama-index-core = "^0.10.14"
-llama-index-readers-file = "^0.1.6"
+llama-index-core = ">=0.11.2,<0.12.0"
+llama-index-readers-file = "*"
 # Optional LlamaIndex integration libs
-llama-index-llms-llama-cpp = {version = "^0.1.3", optional = true}
-llama-index-llms-openai = {version = "^0.1.6", optional = true}
-llama-index-llms-openai-like = {version ="^0.1.3", optional = true}
-llama-index-llms-ollama = {version ="^0.1.2", optional = true}
-llama-index-llms-azure-openai = {version ="^0.1.5", optional = true}
-llama-index-embeddings-ollama = {version ="^0.1.2", optional = true}
-llama-index-embeddings-huggingface = {version ="^0.1.4", optional = true}
-llama-index-embeddings-openai = {version ="^0.1.6", optional = true}
-llama-index-embeddings-azure-openai = {version ="^0.1.6", optional = true}
-llama-index-vector-stores-qdrant = {version ="^0.1.3", optional = true}
-llama-index-vector-stores-chroma = {version ="^0.1.4", optional = true}
-llama-index-vector-stores-postgres = {version ="^0.1.2", optional = true}
-llama-index-storage-docstore-postgres = {version ="^0.1.2", optional = true}
-llama-index-storage-index-store-postgres = {version ="^0.1.2", optional = true}
+llama-index-llms-llama-cpp = {version = "*", optional = true}
+llama-index-llms-openai = {version ="*", optional = true}
+llama-index-llms-openai-like = {version ="*", optional = true}
+llama-index-llms-ollama = {version ="*", optional = true}
+llama-index-llms-azure-openai = {version ="*", optional = true}
+llama-index-llms-gemini = {version ="*", optional = true}
+llama-index-embeddings-ollama = {version ="*", optional = true}
+llama-index-embeddings-huggingface = {version ="*", optional = true}
+llama-index-embeddings-openai = {version ="*", optional = true}
+llama-index-embeddings-azure-openai = {version ="*", optional = true}
+llama-index-embeddings-gemini = {version ="*", optional = true}
+llama-index-embeddings-mistralai = {version ="*", optional = true}
+llama-index-vector-stores-qdrant = {version ="*", optional = true}
+llama-index-vector-stores-milvus = {version ="*", optional = true}
+llama-index-vector-stores-chroma = {version ="*", optional = true}
+llama-index-vector-stores-postgres = {version ="*", optional = true}
+llama-index-vector-stores-clickhouse = {version ="*", optional = true}
+llama-index-storage-docstore-postgres = {version ="*", optional = true}
+llama-index-storage-index-store-postgres = {version ="*", optional = true}
 # Postgres
 psycopg2-binary = {version ="^2.9.9", optional = true}
 asyncpg = {version="^0.29.0", optional = true}
 
+# ClickHouse
+clickhouse-connect = {version = "^0.7.19", optional = true}
+
 # Optional Sagemaker dependency
-boto3 = {version ="^1.34.51", optional = true}
+boto3 = {version ="^1.35.26", optional = true}
 
 # Optional Reranker dependencies
-torch = {version ="^2.1.2", optional = true}
-sentence-transformers = {version ="^2.6.1", optional = true}
+torch = {version ="^2.4.1", optional = true}
+sentence-transformers = {version ="^3.1.1", optional = true}
 
 # Optional UI
-gradio = {version ="^4.19.2", optional = true}
+gradio = {version ="^4.44.0", optional = true}
+ffmpy = {version ="^0.4.0", optional = true}
+
+# Optional HF Transformers
+einops = {version = "^0.8.0", optional = true}
+retry-async = "^0.1.4"
 
 [tool.poetry.extras]
-ui = ["gradio"]
+ui = ["gradio", "ffmpy"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
 llms-openai = ["llama-index-llms-openai"]
 llms-openai-like = ["llama-index-llms-openai-like"]
 llms-ollama = ["llama-index-llms-ollama"]
 llms-sagemaker = ["boto3"]
 llms-azopenai = ["llama-index-llms-azure-openai"]
+llms-gemini = ["llama-index-llms-gemini"]
 embeddings-ollama = ["llama-index-embeddings-ollama"]
-embeddings-huggingface = ["llama-index-embeddings-huggingface"]
+embeddings-huggingface = ["llama-index-embeddings-huggingface", "einops"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
+embeddings-gemini = ["llama-index-embeddings-gemini"]
+embeddings-mistral = ["llama-index-embeddings-mistralai"]
 vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
+vector-stores-clickhouse = ["llama-index-vector-stores-clickhouse", "clickhouse_connect"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
 vector-stores-postgres = ["llama-index-vector-stores-postgres"]
+vector-stores-milvus = ["llama-index-vector-stores-milvus"]
 storage-nodestore-postgres = ["llama-index-storage-docstore-postgres","llama-index-storage-index-store-postgres","psycopg2-binary","asyncpg"]
 rerank-sentence-transformers = ["torch", "sentence-transformers"]
 
 [tool.poetry.group.dev.dependencies]
-black = "^22"
-mypy = "^1.2"
-pre-commit = "^2"
-pytest = "^7"
-pytest-cov = "^3"
+black = "^24"
+mypy = "^1.11"
+pre-commit = "^3"
+pytest = "^8"
+pytest-cov = "^5"
 ruff = "^0"
-pytest-asyncio = "^0.21.1"
-types-pyyaml = "^6.0.12.12"
+pytest-asyncio = "^0.24.0"
+types-pyyaml = "^6.0.12.20240917"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -100,7 +120,7 @@ target-version = ['py311']
 target-version = 'py311'
 
 # See all rules at https://beta.ruff.rs/docs/rules/
-select = [
+lint.select = [
     "E", # pycodestyle
     "W", # pycodestyle
     "F", # Pyflakes
@@ -117,7 +137,7 @@ select = [
     "RUF", # Ruff-specific rules
 ]
 
-ignore = [
+lint.ignore = [
     "E501", # "Line too long"
     # -> line length already regulated by black
     "PT011", # "pytest.raises() should specify expected exception"
@@ -135,24 +155,24 @@ ignore = [
     # -> "Missing docstring in public function too restrictive"
 ]
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 # Automatically disable rules that are incompatible with Google docstring convention
 convention = "google"
 
-[tool.ruff.pycodestyle]
+[tool.ruff.lint.pycodestyle]
 max-doc-length = 88
 
-[tool.ruff.flake8-tidy-imports]
+[tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
-[tool.ruff.flake8-type-checking]
+[tool.ruff.lint.flake8-type-checking]
 strict = true
 runtime-evaluated-base-classes = ["pydantic.BaseModel"]
 # Pydantic needs to be able to evaluate types at runtime
 # see https://pypi.org/project/flake8-type-checking/ for flake8-type-checking documentation
 # see https://beta.ruff.rs/docs/settings/#flake8-type-checking-runtime-evaluated-base-classes for ruff documentation
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # Allow missing docstrings for tests
 "tests/**/*.py" = ["D1"]
 
