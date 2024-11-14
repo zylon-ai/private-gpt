@@ -159,7 +159,7 @@ class PrivateGptUi:
                     )
 
             # max 20 messages to try to avoid context overflow
-            return history_messages[:20]
+            return history_messages[-20:]
 
         new_message = ChatMessage(content=message, role=MessageRole.USER)
         all_messages = [*build_history(), new_message]
