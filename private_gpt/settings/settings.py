@@ -115,6 +115,7 @@ class LLMSettings(BaseModel):
         "mock",
         "ollama",
         "gemini",
+        "fireworks",
     ]
     max_new_tokens: int = Field(
         256,
@@ -205,6 +206,7 @@ class EmbeddingSettings(BaseModel):
         "mock",
         "gemini",
         "mistralai",
+        "fireworks",
     ]
     ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",
@@ -265,6 +267,23 @@ class OpenAISettings(BaseModel):
     embedding_model: str = Field(
         "text-embedding-ada-002",
         description="OpenAI embedding Model to use. Example: 'text-embedding-3-large'.",
+    )
+
+
+class FireWorksSettings(BaseModel):
+    api_key: str
+    model: str = Field(
+        "accounts/fireworks/models/llama-v3p1-70b-instruct",
+        description="FireWorks Model to use. Example: 'accounts/fireworks/models/llama-v3p1-70b-instruct'.",
+    )
+    embedding_api_base: str = Field(
+        None,
+        description="Base URL of FIREWORKS API. Example: 'https://api.fireworks.ai/inference/v1'.",
+    )
+    embedding_api_key: str
+    embedding_model: str = Field(
+        "nomic-ai/nomic-embed-text-v1.5",
+        description="FIREWORKS embedding Model to use. Example: 'nomic-ai/nomic-embed-text-v1.5'.",
     )
 
 
@@ -597,6 +616,7 @@ class Settings(BaseModel):
     huggingface: HuggingFaceSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
+    fireworks: FireWorksSettings
     gemini: GeminiSettings
     ollama: OllamaSettings
     azopenai: AzureOpenAISettings

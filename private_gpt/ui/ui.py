@@ -381,7 +381,7 @@ class PrivateGptUi:
             ".contain { display: flex !important; flex-direction: column !important; }"
             "#component-0, #component-3, #component-10, #component-8  { height: 100% !important; }"
             "#chatbot { flex-grow: 1 !important; overflow: auto !important;}"
-            "#col { height: calc(100vh - 112px - 16px) !important; }"
+            "#col { min-height: calc(100vh - 112px - 16px) !important; }"
             "hr { margin-top: 1em; margin-bottom: 1em; border: 0; border-top: 1px solid #FFF; }"
             ".avatar-image { background-color: antiquewhite; border-radius: 2px; }"
             ".footer { text-align: center; margin-top: 20px; font-size: 14px; display: flex; align-items: center; justify-content: center; }"
@@ -522,6 +522,7 @@ class PrivateGptUi:
                         model_mapping = {
                             "llamacpp": config_settings.llamacpp.llm_hf_model_file,
                             "openai": config_settings.openai.model,
+                            "fireworks": config_settings.fireworks.model,
                             "openailike": config_settings.openai.model,
                             "azopenai": config_settings.azopenai.llm_model,
                             "sagemaker": config_settings.sagemaker.llm_endpoint_name,

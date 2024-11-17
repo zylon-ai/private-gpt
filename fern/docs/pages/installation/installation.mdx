@@ -3,45 +3,63 @@ It is important that you review the [Main Concepts](../concepts) section to unde
 ## Base requirements to run PrivateGPT
 
 ### 1. Clone the PrivateGPT Repository
+
 Clone the repository and navigate to it:
+
 ```bash
 git clone https://github.com/zylon-ai/private-gpt
 cd private-gpt
 ```
 
 ### 2. Install Python 3.11
+
 If you do not have Python 3.11 installed, install it using a Python version manager like `pyenv`. Earlier Python versions are not supported.
+
 #### macOS/Linux
+
 Install and set Python 3.11 using [pyenv](https://github.com/pyenv/pyenv):
+
 ```bash
 pyenv install 3.11
 pyenv local 3.11
 ```
+
 #### Windows
+
 Install and set Python 3.11 using [pyenv-win](https://github.com/pyenv-win/pyenv-win):
+
 ```bash
 pyenv install 3.11
 pyenv local 3.11
 ```
 
 ### 3. Install `Poetry`
+
 Install [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) for dependency management:
 Follow the instructions on the official Poetry website to install it.
 
 <Callout intent="warning">
-A bug exists in Poetry versions 1.7.0 and earlier. We strongly recommend upgrading to a tested version.
-To upgrade Poetry to latest tested version, run `poetry self update 1.8.3` after installing it.
+  A bug exists in Poetry versions 1.7.0 and earlier. We strongly recommend
+  upgrading to a tested version. To upgrade Poetry to latest tested version, run
+  `poetry self update 1.8.3` after installing it.
 </Callout>
 
 ### 4. Optional: Install `make`
+
 To run various scripts, you need to install `make`. Follow the instructions for your operating system:
+
 #### macOS
+
 (Using Homebrew):
+
 ```bash
 brew install make
 ```
+
 #### Windows
+
 (Using Chocolatey):
+
 ```bash
 choco install make
 ```
@@ -53,6 +71,7 @@ PrivateGPT allows customization of the setup, from fully local to cloud-based, b
 ```bash
 poetry install --extras "<extra1> <extra2>..."
 ```
+
 Where `<extra>` can be any of the following options described below.
 
 ### Available Modules
@@ -61,46 +80,49 @@ You need to choose one option per category (LLM, Embeddings, Vector Stores, UI).
 
 #### LLM
 
-| **Option**   | **Description**                                                        | **Extra**           |
-|--------------|------------------------------------------------------------------------|---------------------|
-| **ollama**   | Adds support for Ollama LLM, requires Ollama running locally           | llms-ollama         |
-| llama-cpp    | Adds support for local LLM using LlamaCPP                              | llms-llama-cpp      |
-| sagemaker    | Adds support for Amazon Sagemaker LLM, requires Sagemaker endpoints    | llms-sagemaker      |
-| openai       | Adds support for OpenAI LLM, requires OpenAI API key                   | llms-openai         |
-| openailike   | Adds support for 3rd party LLM providers compatible with OpenAI's API  | llms-openai-like    |
-| azopenai     | Adds support for Azure OpenAI LLM, requires Azure endpoints            | llms-azopenai       |
-| gemini       | Adds support for Gemini LLM, requires Gemini API key                   | llms-gemini         |
+| **Option** | **Description**                                                       | **Extra**        |
+| ---------- | --------------------------------------------------------------------- | ---------------- |
+| **ollama** | Adds support for Ollama LLM, requires Ollama running locally          | llms-ollama      |
+| llama-cpp  | Adds support for local LLM using LlamaCPP                             | llms-llama-cpp   |
+| sagemaker  | Adds support for Amazon Sagemaker LLM, requires Sagemaker endpoints   | llms-sagemaker   |
+| openai     | Adds support for OpenAI LLM, requires OpenAI API key                  | llms-openai      |
+| openailike | Adds support for 3rd party LLM providers compatible with OpenAI's API | llms-openai-like |
+| azopenai   | Adds support for Azure OpenAI LLM, requires Azure endpoints           | llms-azopenai    |
+| gemini     | Adds support for Gemini LLM, requires Gemini API key                  | llms-gemini      |
 
 #### Embeddings
 
-| **Option**       | **Description**                                                                | **Extra**               |
-|------------------|--------------------------------------------------------------------------------|-------------------------|
-| **ollama**       | Adds support for Ollama Embeddings, requires Ollama running locally            | embeddings-ollama       |
-| huggingface      | Adds support for local Embeddings using HuggingFace                            | embeddings-huggingface  |
-| openai           | Adds support for OpenAI Embeddings, requires OpenAI API key                    | embeddings-openai       |
-| sagemaker        | Adds support for Amazon Sagemaker Embeddings, requires Sagemaker endpoints     | embeddings-sagemaker    |
-| azopenai         | Adds support for Azure OpenAI Embeddings, requires Azure endpoints             | embeddings-azopenai     |
-| gemini           | Adds support for Gemini Embeddings, requires Gemini API key                    | embeddings-gemini       |
+| **Option**  | **Description**                                                            | **Extra**              |
+| ----------- | -------------------------------------------------------------------------- | ---------------------- |
+| **ollama**  | Adds support for Ollama Embeddings, requires Ollama running locally        | embeddings-ollama      |
+| huggingface | Adds support for local Embeddings using HuggingFace                        | embeddings-huggingface |
+| openai      | Adds support for OpenAI Embeddings, requires OpenAI API key                | embeddings-openai      |
+| sagemaker   | Adds support for Amazon Sagemaker Embeddings, requires Sagemaker endpoints | embeddings-sagemaker   |
+| azopenai    | Adds support for Azure OpenAI Embeddings, requires Azure endpoints         | embeddings-azopenai    |
+| gemini      | Adds support for Gemini Embeddings, requires Gemini API key                | embeddings-gemini      |
 
 #### Vector Stores
 
-| **Option**       | **Description**                         | **Extra**               |
-|------------------|-----------------------------------------|-------------------------|
-| **qdrant**       | Adds support for Qdrant vector store    | vector-stores-qdrant    |
-| milvus           | Adds support for Milvus vector store    | vector-stores-milvus    |
-| chroma           | Adds support for Chroma DB vector store | vector-stores-chroma    |
-| postgres         | Adds support for Postgres vector store  | vector-stores-postgres  |
-| clickhouse       | Adds support for Clickhouse vector store| vector-stores-clickhouse|
+| **Option** | **Description**                          | **Extra**                |
+| ---------- | ---------------------------------------- | ------------------------ |
+| **qdrant** | Adds support for Qdrant vector store     | vector-stores-qdrant     |
+| milvus     | Adds support for Milvus vector store     | vector-stores-milvus     |
+| chroma     | Adds support for Chroma DB vector store  | vector-stores-chroma     |
+| postgres   | Adds support for Postgres vector store   | vector-stores-postgres   |
+| clickhouse | Adds support for Clickhouse vector store | vector-stores-clickhouse |
 
 #### UI
 
-| **Option**   | **Description**                          | **Extra** |
-|--------------|------------------------------------------|-----------|
-| Gradio       | Adds support for UI using Gradio         | ui        |
+| **Option** | **Description**                  | **Extra** |
+| ---------- | -------------------------------- | --------- |
+| Gradio     | Adds support for UI using Gradio | ui        |
 
-<Callout intent = "warning">
-A working **Gradio UI client** is provided to test the API, together with a set of useful tools such as bulk
-model download script, ingestion script, documents folder watch, etc. Please refer to the [UI alternatives](/manual/user-interface/alternatives) page for more UI alternatives.
+<Callout intent="warning">
+  A working **Gradio UI client** is provided to test the API, together with a
+  set of useful tools such as bulk model download script, ingestion script,
+  documents folder watch, etc. Please refer to the [UI
+  alternatives](/manual/user-interface/alternatives) page for more UI
+  alternatives.
 </Callout>
 
 ## Recommended Setups
@@ -109,7 +131,7 @@ There are just some examples of recommended setups. You can mix and match the di
 You'll find more information in the Manual section of the documentation.
 
 > **Important for Windows**: In the examples below or how to run PrivateGPT with `make run`, `PGPT_PROFILES` env var is being set inline following Unix command line syntax (works on MacOS and Linux).
-If you are using Windows, you'll need to set the env var in a different way, for example:
+> If you are using Windows, you'll need to set the env var in a different way, for example:
 
 ```powershell
 # Powershell
@@ -136,6 +158,7 @@ Go to [ollama.ai](https://ollama.ai/) and follow the instructions to install Oll
 After the installation, make sure the Ollama desktop app is closed.
 
 Now, start Ollama service (it will start a local inference server, serving both the LLM and the Embeddings):
+
 ```bash
 ollama serve
 ```
@@ -152,6 +175,7 @@ ollama pull nomic-embed-text
 ```
 
 Once done, on a different terminal, you can install PrivateGPT with the following command:
+
 ```bash
 poetry install --extras "ui llms-ollama embeddings-ollama vector-stores-qdrant"
 ```
@@ -175,6 +199,7 @@ You need to have access to sagemaker inference endpoints for the LLM and / or th
 Edit the `settings-sagemaker.yaml` file to include the correct Sagemaker endpoints.
 
 Then, install PrivateGPT with the following command:
+
 ```bash
 poetry install --extras "ui llms-sagemaker embeddings-sagemaker vector-stores-qdrant"
 ```
@@ -198,6 +223,7 @@ You need an OPENAI API key to run this setup.
 Edit the `settings-openai.yaml` file to include the correct API KEY. Never commit it! It's a secret! As an alternative to editing `settings-openai.yaml`, you can just set the env var OPENAI_API_KEY.
 
 Then, install PrivateGPT with the following command:
+
 ```bash
 poetry install --extras "ui llms-openai embeddings-openai vector-stores-qdrant"
 ```
@@ -221,6 +247,7 @@ You need to have access to Azure OpenAI inference endpoints for the LLM and / or
 Edit the `settings-azopenai.yaml` file to include the correct Azure OpenAI endpoints.
 
 Then, install PrivateGPT with the following command:
+
 ```bash
 poetry install --extras "ui llms-azopenai embeddings-azopenai vector-stores-qdrant"
 ```
@@ -235,6 +262,30 @@ PrivateGPT will use the already existing `settings-azopenai.yaml` settings file,
 
 The UI will be available at http://localhost:8001
 
+### Non-Private, FIREWORKS-powered test setup
+
+If you want to test PrivateGPT with FIREWORKS's LLM and Embeddings -taking into account your data is going to FIREWORKS!- you can run the following command:
+
+You need an FIREWORKS API key to run this setup.
+
+Edit the `settings-fireworks.yaml` file to include the correct API KEY. Never commit it! It's a secret! As an alternative to editing `settings-fireworks.yaml`, you can just set the env var FIREWORKS_API_KEY.
+
+Then, install PrivateGPT with the following command:
+
+```bash
+poetry install --extras "ui llms-fireworks embeddings-fireworks vector-stores-qdrant embeddings-openai"
+```
+
+Once installed, you can run PrivateGPT.
+
+```bash
+PGPT_PROFILES=fireworks make run
+```
+
+PrivateGPT will use the already existing `settings-fireworks.yaml` settings file, which is already configured to use FIREWORKS LLM and Embeddings endpoints, and Qdrant.
+
+The UI will be available at http://localhost:8001
+
 ### Local, Llama-CPP powered setup
 
 If you want to run PrivateGPT fully locally without relying on Ollama, you can run the following command:
@@ -244,6 +295,7 @@ poetry install --extras "ui llms-llama-cpp embeddings-huggingface vector-stores-
 ```
 
 In order for local LLM and embeddings to work, you need to download the models to the `models` folder. You can do so by running the `setup` script:
+
 ```bash
 poetry run python scripts/setup
 ```
@@ -277,6 +329,7 @@ To do that, you need to install `llama.cpp` python's binding `llama-cpp-python` 
 that activate `METAL`: you have to pass `-DLLAMA_METAL=on` to the CMake command tha `pip` runs for you (see below).
 
 In other words, one should simply run:
+
 ```bash
 CMAKE_ARGS="-DLLAMA_METAL=on" pip install --force-reinstall --no-cache-dir llama-cpp-python
 ```
@@ -285,9 +338,10 @@ The above command will force the re-installation of `llama-cpp-python` with `MET
 `llama.cpp` locally with your `METAL` libraries (shipped by default with your macOS).
 
 More information is available in the documentation of the libraries themselves:
-* [llama-cpp-python](https://github.com/abetlen/llama-cpp-python#installation-with-hardware-acceleration)
-* [llama-cpp-python's documentation](https://llama-cpp-python.readthedocs.io/en/latest/#installation-with-hardware-acceleration)
-* [llama.cpp](https://github.com/ggerganov/llama.cpp#build)
+
+- [llama-cpp-python](https://github.com/abetlen/llama-cpp-python#installation-with-hardware-acceleration)
+- [llama-cpp-python's documentation](https://llama-cpp-python.readthedocs.io/en/latest/#installation-with-hardware-acceleration)
+- [llama.cpp](https://github.com/ggerganov/llama.cpp#build)
 
 ##### Llama-CPP Windows NVIDIA GPU support
 
@@ -297,11 +351,11 @@ dependencies.
 
 Some tips to get it working with an NVIDIA card and CUDA (Tested on Windows 10 with CUDA 11.5 RTX 3070):
 
-* Install latest VS2022 (and build tools) https://visualstudio.microsoft.com/vs/community/
-* Install CUDA toolkit https://developer.nvidia.com/cuda-downloads
-* Verify your installation is correct by running `nvcc --version` and `nvidia-smi`, ensure your CUDA version is up to
+- Install latest VS2022 (and build tools) https://visualstudio.microsoft.com/vs/community/
+- Install CUDA toolkit https://developer.nvidia.com/cuda-downloads
+- Verify your installation is correct by running `nvcc --version` and `nvidia-smi`, ensure your CUDA version is up to
   date and your GPU is detected.
-* [Optional] Install CMake to troubleshoot building issues by compiling llama.cpp directly https://cmake.org/download/
+- [Optional] Install CMake to troubleshoot building issues by compiling llama.cpp directly https://cmake.org/download/
 
 If you have all required dependencies properly configured running the
 following powershell command should succeed.
@@ -332,9 +386,9 @@ dependencies.
 
 Some tips:
 
-* Make sure you have an up-to-date C++ compiler
-* Install CUDA toolkit https://developer.nvidia.com/cuda-downloads
-* Verify your installation is correct by running `nvcc --version` and `nvidia-smi`, ensure your CUDA version is up to
+- Make sure you have an up-to-date C++ compiler
+- Install CUDA toolkit https://developer.nvidia.com/cuda-downloads
+- Verify your installation is correct by running `nvcc --version` and `nvidia-smi`, ensure your CUDA version is up to
   date and your GPU is detected.
 
 After that running the following command in the repository will install llama.cpp with GPU support:
@@ -356,13 +410,17 @@ AVX = 1 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI = 0 | FMA = 1 | 
 
 Linux GPU support is done through ROCm.
 Some tips:
-* Install ROCm from [quick-start install guide](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/tutorial/quick-start.html)
-* [Install PyTorch for ROCm](https://rocm.docs.amd.com/projects/radeon/en/latest/docs/install/install-pytorch.html)
+
+- Install ROCm from [quick-start install guide](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/tutorial/quick-start.html)
+- [Install PyTorch for ROCm](https://rocm.docs.amd.com/projects/radeon/en/latest/docs/install/install-pytorch.html)
+
 ```bash
 wget https://repo.radeon.com/rocm/manylinux/rocm-rel-6.0/torch-2.1.1%2Brocm6.0-cp311-cp311-linux_x86_64.whl
 poetry run pip install --force-reinstall --no-cache-dir torch-2.1.1+rocm6.0-cp311-cp311-linux_x86_64.whl
 ```
-* Install bitsandbytes for ROCm
+
+- Install bitsandbytes for ROCm
+
 ```bash
 PYTORCH_ROCM_ARCH=gfx900,gfx906,gfx908,gfx90a,gfx1030,gfx1100,gfx1101,gfx940,gfx941,gfx942
 BITSANDBYTES_VERSION=62353b0200b8557026c176e74ac48b84b953a854
@@ -374,6 +432,7 @@ pip install . --extra-index-url https://download.pytorch.org/whl/nightly
 ```
 
 After that running the following command in the repository will install llama.cpp with GPU support:
+
 ```bash
 LLAMA_CPP_PYTHON_VERSION=0.2.56
 DAMDGPU_TARGETS=gfx900;gfx906;gfx908;gfx90a;gfx1030;gfx1100;gfx1101;gfx940;gfx941;gfx942
@@ -391,15 +450,15 @@ AVX = 1 | AVX_VNNI = 0 | AVX2 = 1 | AVX512 = 0 | AVX512_VBMI = 0 | AVX512_VNNI =
 Execution of LLMs locally still has a lot of sharp edges, specially when running on non Linux platforms.
 You might encounter several issues:
 
-* Performance: RAM or VRAM usage is very high, your computer might experience slowdowns or even crashes.
-* GPU Virtualization on Windows and OSX: Simply not possible with docker desktop, you have to run the server directly on
+- Performance: RAM or VRAM usage is very high, your computer might experience slowdowns or even crashes.
+- GPU Virtualization on Windows and OSX: Simply not possible with docker desktop, you have to run the server directly on
   the host.
-* Building errors: Some of PrivateGPT dependencies need to build native code, and they might fail on some platforms.
+- Building errors: Some of PrivateGPT dependencies need to build native code, and they might fail on some platforms.
   Most likely you are missing some dev tools in your machine (updated C++ compiler, CUDA is not on PATH, etc.).
   If you encounter any of these issues, please open an issue and we'll try to help.
 
 One of the first reflex to adopt is: get more information.
-If, during your installation, something does not go as planned, retry in *verbose* mode, and see what goes wrong.
+If, during your installation, something does not go as planned, retry in _verbose_ mode, and see what goes wrong.
 
 For example, when installing packages with `pip install`, you can add the option `-vvv` to show the details of the installation.
 
@@ -414,8 +473,8 @@ To install a C++ compiler on Windows 10/11, follow these steps:
 
 1. Install Visual Studio 2022.
 2. Make sure the following components are selected:
-    * Universal Windows Platform development
-    * C++ CMake tools for Windows
+   - Universal Windows Platform development
+   - C++ CMake tools for Windows
 3. Download the MinGW installer from the [MinGW website](https://sourceforge.net/projects/mingw/).
 4. Run the installer and select the `gcc` component.
 
