@@ -1,0 +1,44 @@
+If You're New
+Welcome to PrivateGPT! If you're new to working with AI or handling code projects, this section is designed to help you get started with PrivateGPT by walking you through some fundamental concepts and initial setup steps. Our aim is to make your journey into AI as straightforward and enjoyable as possible.
+
+
+What is PrivateGPT?
+PrivateGPT is a tool that lets you create a private AI assistant. Unlike other AI services that require an internet connection, PrivateGPT works entirely offline, ensuring that your data remains confidential and secure within your own environment.
+
+
+Why Use PrivateGPT?
+Whether you're developing for healthcare, legal, or any other data-sensitive domain, PrivateGPT offers you complete control over your data. This is crucial for industries where privacy is a top priority.
+
+
+Getting Started
+System Requirements:
+Ensure you have a basic setup that includes Python 3.8 or newer.
+A simple text editor, like VSCode or Atom, to write and edit your code.
+Installation:
+Clone the repository:
+bash
+git clone https://github.com/zylon-ai/private-gpt.git
+cd private-gpt
+Install the required dependencies:
+bash
+pip install -r requirements.txt
+Running Your First Script:
+Start with a basic script to see PrivateGPT in action. Create a file named test.py and paste the following code:
+python
+from private_gpt.api import GPT
+gpt = GPT()
+response = gpt.ask("Hello, world!")
+print(response)
+Run the script:
+bash
+python test.py
+Exploring Further:
+Check out the Gradio UI client to interact with PrivateGPT through a web interface.
+Try modifying the input to gpt.ask("Your question here") to see different responses based on your questions.
+Need Help?
+Don't hesitate to ask for help if you're stuck or need more clarification on how to use PrivateGPT for your specific use case. Check out our documentation for detailed guidance, or reach out on our community forums.
+
+
+Next Steps
+Familiarize yourself with the codebase by exploring different modules and trying out more complex queries.
+Consider contributing to the project by addressing existing issues or suggesting new features. Your feedback and contributions are valuable to us!
