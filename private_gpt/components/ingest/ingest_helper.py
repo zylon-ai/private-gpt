@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Any
 
 from llama_index.core.readers import StringIterableReader
 from llama_index.core.readers.base import BaseReader
@@ -69,11 +70,13 @@ class IngestionHelper:
 
     @staticmethod
     def transform_file_into_documents(
-        file_name: str, file_data: Path
+        file_name: str, file_data: Path, file_metadata: dict[str, Any] | None = None
     ) -> list[Document]:
         documents = IngestionHelper._load_file_to_documents(file_name, file_data)
         for document in documents:
+            document.metadata.update(file_metadata or {})
             document.metadata["file_name"] = file_name
+
         IngestionHelper._exclude_metadata(documents)
         return documents
 

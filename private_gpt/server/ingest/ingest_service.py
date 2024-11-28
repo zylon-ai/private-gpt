@@ -48,7 +48,12 @@ class IngestService:
             settings=settings(),
         )
 
-    def _ingest_data(self, file_name: str, file_data: AnyStr) -> list[IngestedDoc]:
+    def _ingest_data(
+        self,
+        file_name: str,
+        file_data: AnyStr,
+        file_metadata: dict[str, str] | None = None,
+    ) -> list[IngestedDoc]:
         logger.debug("Got file data of size=%s to ingest", len(file_data))
         # llama-index mainly supports reading from files, so
         # we have to create a tmp file to read for it to work
@@ -60,27 +65,37 @@ class IngestService:
                     path_to_tmp.write_bytes(file_data)
                 else:
                     path_to_tmp.write_text(str(file_data))
-                return self.ingest_file(file_name, path_to_tmp)
+                return self.ingest_file(file_name, path_to_tmp, file_metadata)
             finally:
                 tmp.close()
                 path_to_tmp.unlink()
 
-    def ingest_file(self, file_name: str, file_data: Path) -> list[IngestedDoc]:
+    def ingest_file(
+        self,
+        file_name: str,
+        file_data: Path,
+        file_metadata: dict[str, str] | None = None,
+    ) -> list[IngestedDoc]:
         logger.info("Ingesting file_name=%s", file_name)
-        documents = self.ingest_component.ingest(file_name, file_data)
+        documents = self.ingest_component.ingest(file_name, file_data, file_metadata)
         logger.info("Finished ingestion file_name=%s", file_name)
         return [IngestedDoc.from_document(document) for document in documents]
 
-    def ingest_text(self, file_name: str, text: str) -> list[IngestedDoc]:
+    def ingest_text(
+        self, file_name: str, text: str, metadata: dict[str, str] | None = None
+    ) -> list[IngestedDoc]:
         logger.debug("Ingesting text data with file_name=%s", file_name)
-        return self._ingest_data(file_name, text)
+        return self._ingest_data(file_name, text, metadata)
 
     def ingest_bin_data(
-        self, file_name: str, raw_file_data: BinaryIO
+        self,
+        file_name: str,
+        raw_file_data: BinaryIO,
+        file_metadata: dict[str, str] | None = None,
     ) -> list[IngestedDoc]:
         logger.debug("Ingesting binary data with file_name=%s", file_name)
         file_data = raw_file_data.read()
-        return self._ingest_data(file_name, file_data)
+        return self._ingest_data(file_name, file_data, file_metadata)
 
     def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[IngestedDoc]:
         logger.info("Ingesting file_names=%s", [f[0] for f in files])
