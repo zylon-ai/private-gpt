@@ -57,6 +57,11 @@ llm:
   temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
 
 rag:
+  default_context_template: |
+    Context information is below.
+    --------------------
+    {context_str}
+    --------------------
   similarity_top_k: 2
   #This value controls how many "top" documents the RAG returns to use in the context.
   #similarity_value: 0.45
@@ -70,11 +75,11 @@ summarize:
   use_async: true
 
 clickhouse:
-    host: localhost
-    port: 8443
-    username: admin
-    password: clickhouse
-    database: embeddings
+  host: localhost
+  port: 8443
+  username: admin
+  password: clickhouse
+  database: embeddings
 
 llamacpp:
   llm_hf_repo_id: lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF
@@ -150,3 +155,4 @@ gemini:
   api_key: ${GOOGLE_API_KEY:}
   model: models/gemini-pro
   embedding_model: models/embedding-001
+

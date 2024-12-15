@@ -104,6 +104,7 @@ class ChatService:
             embed_model=embedding_component.embedding_model,
             show_progress=True,
         )
+        self.default_context_template = settings.rag.default_context_template
 
     def _chat_engine(
         self,
@@ -113,6 +114,10 @@ class ChatService:
     ) -> BaseChatEngine:
         settings = self.settings
         if use_context:
+            if self.default_context_template is not None:
+                context_template = self.default_context_template
+            else:
+                context_template = None
             vector_index_retriever = self.vector_store_component.get_retriever(
                 index=self.index,
                 context_filter=context_filter,
@@ -139,6 +144,7 @@ class ChatService:
                 retriever=vector_index_retriever,
                 llm=self.llm_component.llm,  # Takes no effect at the moment
                 node_postprocessors=node_postprocessors,
+                context_template=context_template,
             )
         else:
             return SimpleChatEngine.from_defaults(

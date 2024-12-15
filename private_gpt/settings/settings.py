@@ -396,6 +396,13 @@ class RerankSettings(BaseModel):
 
 
 class RagSettings(BaseModel):
+    default_context_template: str | None = Field(
+        None,
+        description=(
+            "The default context template to use for the chat engine when using RAG. "
+            "If none is given - use the default system prompt (from the llama_index). "
+        ),
+    )
     similarity_top_k: int = Field(
         2,
         description="This value controls the number of documents returned by the RAG pipeline or considered for reranking if enabled.",
