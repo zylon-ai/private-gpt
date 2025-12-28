@@ -195,3 +195,10 @@ testpaths = ["tests"]
 addopts = [
     "--import-mode=importlib",
 ]
+
+[tool.codespell]
+# Ref: https://github.com/codespell-project/codespell#using-a-config-file
+skip = '.git*,*.pdf,*.lock'
+check-hidden = true
+# ignore-regex = ''
+# ignore-words-list = ''
