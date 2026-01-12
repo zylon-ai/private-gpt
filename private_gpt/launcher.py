@@ -1,13 +1,17 @@
 """FastAPI app creation, logger configuration and main API routes."""
 
 import logging
+import time
+from collections import defaultdict
+from typing import Callable
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from injector import Injector
 from llama_index.core.callbacks import CallbackManager
 from llama_index.core.callbacks.global_handlers import create_global_handler
 from llama_index.core.settings import Settings as LlamaIndexSettings
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from private_gpt.server.chat.chat_router import chat_router
 from private_gpt.server.chunks.chunks_router import chunks_router
@@ -21,6 +25,43 @@ from private_gpt.settings.settings import Settings
 logger = logging.getLogger(__name__)
 
 
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Simple in-memory rate limiting middleware to prevent DoS attacks.
+
+    Limits requests per IP address to prevent API abuse.
+    """
+
+    def __init__(self, app: FastAPI, requests_per_minute: int = 60) -> None:
+        super().__init__(app)
+        self.requests_per_minute = requests_per_minute
+        self.requests: dict[str, list[float]] = defaultdict(list)
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        # Get client IP
+        client_ip = request.client.host if request.client else "unknown"
+
+        # Clean old requests (older than 1 minute)
+        current_time = time.time()
+        cutoff_time = current_time - 60
+        self.requests[client_ip] = [
+            req_time for req_time in self.requests[client_ip]
+            if req_time > cutoff_time
+        ]
+
+        # Check rate limit
+        if len(self.requests[client_ip]) >= self.requests_per_minute:
+            return Response(
+                content="Rate limit exceeded. Please try again later.",
+                status_code=429,
+                headers={"Retry-After": "60"}
+            )
+
+        # Record this request
+        self.requests[client_ip].append(current_time)
+
+        return await call_next(request)
+
+
 def create_app(root_injector: Injector) -> FastAPI:
 
     # Start the API
@@ -28,6 +69,9 @@ def create_app(root_injector: Injector) -> FastAPI:
         request.state.injector = root_injector
 
     app = FastAPI(dependencies=[Depends(bind_injector_to_request)])
+
+    # Add rate limiting middleware to prevent DoS attacks
+    app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
 
     app.include_router(completions_router)
     app.include_router(chat_router)
