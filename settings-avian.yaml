@@ -1,0 +1,20 @@
+server:
+  env_name: ${APP_ENV:avian}
+
+llm:
+  mode: avian
+  max_new_tokens: 512
+  context_window: 131072
+  temperature: 0.1
+
+embedding:
+  mode: huggingface
+  ingest_mode: simple
+
+huggingface:
+  embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
+
+avian:
+  api_base: https://api.avian.io/v1
+  api_key: ${AVIAN_API_KEY:}
+  model: deepseek/deepseek-v3.2

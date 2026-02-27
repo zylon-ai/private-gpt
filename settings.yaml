@@ -150,3 +150,10 @@ gemini:
   api_key: ${GOOGLE_API_KEY:}
   model: models/gemini-pro
   embedding_model: models/embedding-001
+
+avian:
+  api_base: https://api.avian.io/v1
+  api_key: ${AVIAN_API_KEY:}
+  model: deepseek/deepseek-v3.2
+  embedding_model: text-embedding-ada-002
+  request_timeout: 120.0

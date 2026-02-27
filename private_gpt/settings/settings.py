@@ -115,6 +115,7 @@ class LLMSettings(BaseModel):
         "mock",
         "ollama",
         "gemini",
+        "avian",
     ]
     max_new_tokens: int = Field(
         256,
@@ -205,6 +206,7 @@ class EmbeddingSettings(BaseModel):
         "mock",
         "gemini",
         "mistralai",
+        "avian",
     ]
     ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",
@@ -277,6 +279,29 @@ class GeminiSettings(BaseModel):
     embedding_model: str = Field(
         "models/embedding-001",
         description="Google Embedding Model to use. Example: 'models/embedding-001'.",
+    )
+
+
+class AvianSettings(BaseModel):
+    api_base: str = Field(
+        "https://api.avian.io/v1",
+        description="Base URL of Avian API.",
+    )
+    api_key: str = Field(
+        description="Avian API key. Get one at https://avian.io.",
+    )
+    model: str = Field(
+        "deepseek/deepseek-v3.2",
+        description="Avian model to use. Options: 'deepseek/deepseek-v3.2', "
+        "'moonshotai/kimi-k2.5', 'z-ai/glm-5', 'minimax/minimax-m2.5'.",
+    )
+    embedding_model: str = Field(
+        "text-embedding-ada-002",
+        description="Avian embedding model to use.",
+    )
+    request_timeout: float = Field(
+        120.0,
+        description="Time elapsed until Avian server times out the request. Default is 120s.",
     )
 
 
@@ -598,6 +623,7 @@ class Settings(BaseModel):
     sagemaker: SagemakerSettings
     openai: OpenAISettings
     gemini: GeminiSettings
+    avian: AvianSettings
     ollama: OllamaSettings
     azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
