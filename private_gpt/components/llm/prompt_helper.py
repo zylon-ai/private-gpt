@@ -170,36 +170,53 @@ class Llama3PromptStyle(AbstractPromptStyle):
     """
 
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
-        prompt = ""
+        prompt = self.BOS  # Start with BOS token
         has_system_message = False
 
         for i, message in enumerate(messages):
             if not message or message.content is None:
                 continue
+
             if message.role == MessageRole.SYSTEM:
-                prompt += f"{self.B_SYS}\n\n{message.content.strip()}{self.E_SYS}"
+                prompt += f"{self.B_SYS}\n\n{message.content.strip()}{self.EOT}"  # Use EOT for system message
                 has_system_message = True
+            elif message.role == MessageRole.USER:
+                prompt += f"{self.B_INST}user{self.E_INST}\n\n{message.content.strip()}{self.EOT}"
+            elif message.role == MessageRole.ASSISTANT:
+                # Check if this is a tool call
+                if message.additional_kwargs and message.additional_kwargs.get("type") == "tool_call":
+                    tool_call_content = message.content
+                    prompt += f"{self.B_INST}tool_code{self.E_INST}\n\n{tool_call_content}{self.EOT}"
+                else:
+                    prompt += f"{self.ASSISTANT_INST}\n\n{message.content.strip()}{self.EOT}"
+            elif message.role == MessageRole.TOOL:
+                # Assuming additional_kwargs['type'] == 'tool_result'
+                # and message.content contains the result of the tool call
+                tool_result_content = message.content
+                prompt += f"{self.B_INST}tool_output{self.E_INST}\n\n{tool_result_content}{self.EOT}"
             else:
+                # Fallback for unknown roles (though ideally all roles should be handled)
                 role_header = f"{self.B_INST}{message.role.value}{self.E_INST}"
                 prompt += f"{role_header}\n\n{message.content.strip()}{self.EOT}"
 
-            # Add assistant header if the last message is not from the assistant
-            if i == len(messages) - 1 and message.role != MessageRole.ASSISTANT:
-                prompt += f"{self.ASSISTANT_INST}\n\n"
-
-        # Add default system prompt if no system message was provided
+        # Add default system prompt if no system message was provided at the beginning
         if not has_system_message:
-            prompt = (
-                f"{self.B_SYS}\n\n{self.DEFAULT_SYSTEM_PROMPT}{self.E_SYS}" + prompt
-            )
+            default_system_prompt_str = f"{self.B_SYS}\n\n{self.DEFAULT_SYSTEM_PROMPT.strip()}{self.EOT}"
+            prompt = self.BOS + default_system_prompt_str + prompt[len(self.BOS):] # Insert after BOS
 
-        # TODO: Implement tool handling logic
+        # Add assistant header if the model should generate a response
+        # This is typically when the last message is not from the assistant,
+        # or when the last message is a tool result.
+        if messages and (messages[-1].role != MessageRole.ASSISTANT or
+                         (messages[-1].role == MessageRole.TOOL)): # If last message was tool result
+            prompt += f"{self.ASSISTANT_INST}\n\n"
 
         return prompt
 
     def _completion_to_prompt(self, completion: str) -> str:
+        # Ensure BOS is at the start, followed by system prompt, then user message, then assistant prompt
         return (
-            f"{self.B_SYS}\n\n{self.DEFAULT_SYSTEM_PROMPT}{self.E_SYS}"
+            f"{self.BOS}{self.B_SYS}\n\n{self.DEFAULT_SYSTEM_PROMPT.strip()}{self.EOT}"
             f"{self.B_INST}user{self.E_INST}\n\n{completion.strip()}{self.EOT}"
             f"{self.ASSISTANT_INST}\n\n"
         )
@@ -213,49 +230,88 @@ class TagPromptStyle(AbstractPromptStyle):
     <|system|>: your system prompt here.
     <|user|>: user message here
     (possibly with context and question)
-    <|assistant|>: assistant (model) response here.
+    <|assistant|>: assistant (model) response here.</s>
     ```
-
-    FIXME: should we add surrounding `<s>` and `</s>` tags, like in llama2?
     """
 
+    BOS, EOS = "<s>", "</s>"
+
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
-        """Format message to prompt with `<|ROLE|>: MSG` style."""
-        prompt = ""
+        """Format message to prompt with `<|ROLE|>: MSG` style, including BOS/EOS."""
+        prompt_parts = []
         for message in messages:
-            role = message.role
-            content = message.content or ""
-            message_from_user = f"<|{role.lower()}|>: {content.strip()}"
-            message_from_user += "\n"
-            prompt += message_from_user
-        # we are missing the last <|assistant|> tag that will trigger a completion
+            role_str = str(message.role).lower()
+            content_str = str(message.content).strip() if message.content else ""
+
+            formatted_message = f"<|{role_str}|>: {content_str}"
+            if message.role == MessageRole.ASSISTANT:
+                formatted_message += self.EOS  # EOS after assistant's message
+            prompt_parts.append(formatted_message)
+
+        if not messages:
+            # If there are no messages, start with BOS and prompt for assistant.
+            # This assumes the typical case where the user would initiate.
+            # _completion_to_prompt handles the user-initiated start.
+            # If system is to start, a system message should be in `messages`.
+            # So, if messages is empty, it implies we want to prompt for an assistant response
+            # to an implicit (or empty) user turn.
+            return f"{self.BOS}<|assistant|>: "
+
+        # Join messages with newline, start with BOS
+        prompt = self.BOS + "\n".join(prompt_parts)
+
+        # Always end with a prompt for the assistant to speak, ensure it's on a new line
+        if not prompt.endswith("\n"):
+            prompt += "\n"
         prompt += "<|assistant|>: "
         return prompt
 
     def _completion_to_prompt(self, completion: str) -> str:
-        return self._messages_to_prompt(
-            [ChatMessage(content=completion, role=MessageRole.USER)]
-        )
+        # A completion is a user message.
+        # Format: <s><|user|>: {completion_content}\n<|assistant|>:
+        content_str = str(completion).strip()
+        return f"{self.BOS}<|user|>: {content_str}\n<|assistant|>: "
 
 
 class MistralPromptStyle(AbstractPromptStyle):
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
-        inst_buffer = []
-        text = ""
-        for message in messages:
-            if message.role == MessageRole.SYSTEM or message.role == MessageRole.USER:
-                inst_buffer.append(str(message.content).strip())
+        prompt = ""
+        current_instruction_parts = []
+
+        for i, message in enumerate(messages):
+            content = str(message.content).strip() if message.content else ""
+            # Skip empty non-assistant messages. Assistant messages can be empty (e.g. for function calling).
+            if not content and message.role != MessageRole.ASSISTANT:
+                logger.debug("MistralPromptStyle: Skipping empty non-assistant message.")
+                continue
+
+            if message.role == MessageRole.USER or message.role == MessageRole.SYSTEM:
+                current_instruction_parts.append(content)
             elif message.role == MessageRole.ASSISTANT:
-                text += "<s>[INST] " + "\n".join(inst_buffer) + " [/INST]"
-                text += " " + str(message.content).strip() + "</s>"
-                inst_buffer.clear()
+                if not current_instruction_parts and i == 0:
+                    # First message is assistant, skip.
+                    logger.warning(
+                        "MistralPromptStyle: First message is from assistant, skipping."
+                    )
+                    continue
+                if current_instruction_parts:
+                    # Only add <s> if prompt is empty, otherwise, assistant responses follow user turns.
+                    bos_token = "<s>" if not prompt else ""
+                    prompt += bos_token + "[INST] " + "\n".join(current_instruction_parts) + " [/INST]"
+                    current_instruction_parts = []
+                # Assistant content can be empty, e.g. for tool calls that will be handled later
+                prompt += " " + content + "</s>"
             else:
-                raise ValueError(f"Unknown message role {message.role}")
+                logger.warning(
+                    f"MistralPromptStyle: Unknown message role {message.role} encountered. Skipping."
+                )
 
-        if len(inst_buffer) > 0:
-            text += "<s>[INST] " + "\n".join(inst_buffer) + " [/INST]"
+        # If there are pending instructions (i.e., last message was user/system)
+        if current_instruction_parts:
+            bos_token = "<s>" if not prompt else ""
+            prompt += bos_token + "[INST] " + "\n".join(current_instruction_parts) + " [/INST]"
 
-        return text
+        return prompt
 
     def _completion_to_prompt(self, completion: str) -> str:
         return self._messages_to_prompt(
@@ -265,17 +321,27 @@ class MistralPromptStyle(AbstractPromptStyle):
 
 class ChatMLPromptStyle(AbstractPromptStyle):
     def _messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str:
-        prompt = "<|im_start|>system\n"
+        prompt = ""
         for message in messages:
-            role = message.role
-            content = message.content or ""
-            if role.lower() == "system":
-                message_from_user = f"{content.strip()}"
-                prompt += message_from_user
-            elif role.lower() == "user":
-                prompt += "<|im_end|>\n<|im_start|>user\n"
-                message_from_user = f"{content.strip()}<|im_end|>\n"
-                prompt += message_from_user
+            role = str(message.role).lower()  # Ensure role is a string and lowercase
+            content = str(message.content).strip() if message.content else ""
+
+            # According to the ChatML documentation, messages are formatted as:
+            # <|im_start|>role_name
+            # content
+            # <|im_end|>
+            # There should be a newline after role_name and before <|im_end|>.
+            # And a newline after <|im_end|> to separate messages.
+
+            # Skip empty messages if content is crucial.
+            # For ChatML, even an empty content string is typically included.
+            # if not content and role not in ("assistant"): # Allow assistant to have empty content for prompting
+            #    logger.debug(f"ChatMLPromptStyle: Skipping empty message from {role}")
+            #    continue
+
+            prompt += f"<|im_start|>{role}\n{content}<|im_end|>\n"
+
+        # Add the final prompt for the assistant to speak
         prompt += "<|im_start|>assistant\n"
         return prompt
 
