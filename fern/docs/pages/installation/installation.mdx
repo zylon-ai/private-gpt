@@ -307,7 +307,7 @@ If you have all required dependencies properly configured running the
 following powershell command should succeed.
 
 ```powershell
-$env:CMAKE_ARGS='-DLLAMA_CUBLAS=on'; poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python numpy==1.26.0
+$env:CMAKE_ARGS='-DGGML_CUDA=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python==0.2.90 numpy==1.26.4 markupsafe==2.1.5
 ```
 
 If your installation was correct, you should see a message similar to the following next
@@ -340,7 +340,7 @@ Some tips:
 After that running the following command in the repository will install llama.cpp with GPU support:
 
 ```bash
-CMAKE_ARGS='-DLLAMA_CUBLAS=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python numpy==1.26.0
+CMAKE_ARGS='-DGGML_CUDA=on' poetry run pip install --force-reinstall --no-cache-dir llama-cpp-python==0.2.90 numpy==1.26.4 markupsafe==2.1.5
 ```
 
 If your installation was correct, you should see a message similar to the following next
