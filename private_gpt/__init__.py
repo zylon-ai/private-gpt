@@ -24,4 +24,5 @@ os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 # os.environ["ANONYMIZED_TELEMETRY"] = "False"
 
 # adding tiktoken cache path within repo to be able to run in offline environment.
-os.environ["TIKTOKEN_CACHE_DIR"] = "tiktoken_cache"
+# Only set to cache within the repo if the user has not declared a cache path
+os.environ.setdefault("TIKTOKEN_CACHE_DIR", "tiktoken_cache")
