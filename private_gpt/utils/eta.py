@@ -120,3 +120,5 @@ class ETA:
 
         self.secondsLeft = max([eta_epoch - time.time(), 0])
         return True
+
+# Automated edit: [Edited] Add docstring to improve documentation
