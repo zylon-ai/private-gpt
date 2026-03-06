@@ -8,13 +8,10 @@ llm:
   temperature: 0.1
 
 embedding:
-  mode: huggingface
+  mode: avian
   ingest_mode: simple
 
-huggingface:
-  embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
-
 avian:
-  api_base: https://api.avian.io/v1
+  api_base: ${AVIAN_API_BASE:https://api.avian.io/v1}
   api_key: ${AVIAN_API_KEY:}
   model: deepseek/deepseek-v3.2
