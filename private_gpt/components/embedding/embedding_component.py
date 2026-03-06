@@ -161,6 +161,22 @@ class EmbeddingComponent:
                     api_key=api_key,
                     model=model,
                 )
+            case "avian":
+                try:
+                    from llama_index.embeddings.openai import (  # type: ignore
+                        OpenAIEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Avian dependencies not found, install with `poetry install --extras embeddings-avian`"
+                    ) from e
+
+                avian_settings = settings.avian
+                self.embedding_model = OpenAIEmbedding(
+                    api_base=avian_settings.api_base,
+                    api_key=avian_settings.api_key,
+                    model=avian_settings.embedding_model,
+                )
             case "mock":
                 # Not a random number, is the dimensionality used by
                 # the default embedding model

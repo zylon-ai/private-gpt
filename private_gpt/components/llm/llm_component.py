@@ -221,5 +221,20 @@ class LLMComponent:
                 self.llm = Gemini(
                     model_name=gemini_settings.model, api_key=gemini_settings.api_key
                 )
+            case "avian":
+                try:
+                    from llama_index.llms.openai import OpenAI  # type: ignore
+                except ImportError as e:
+                    raise ImportError(
+                        "Avian dependencies not found, install with `poetry install --extras llms-avian`"
+                    ) from e
+
+                avian_settings = settings.avian
+                self.llm = OpenAI(
+                    api_base=avian_settings.api_base,
+                    api_key=avian_settings.api_key,
+                    model=avian_settings.model,
+                    timeout=avian_settings.request_timeout,
+                )
             case "mock":
                 self.llm = MockLLM()
