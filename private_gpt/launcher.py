@@ -9,6 +9,7 @@ from llama_index.core.callbacks import CallbackManager
 from llama_index.core.callbacks.global_handlers import create_global_handler
 from llama_index.core.settings import Settings as LlamaIndexSettings
 
+from private_gpt.server.auth.auth_router import auth_router
 from private_gpt.server.chat.chat_router import chat_router
 from private_gpt.server.chunks.chunks_router import chunks_router
 from private_gpt.server.completions.completions_router import completions_router
@@ -29,6 +30,7 @@ def create_app(root_injector: Injector) -> FastAPI:
 
     app = FastAPI(dependencies=[Depends(bind_injector_to_request)])
 
+    app.include_router(auth_router)
     app.include_router(completions_router)
     app.include_router(chat_router)
     app.include_router(chunks_router)

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from private_gpt.server.ingest.ingest_service import IngestService
@@ -20,6 +20,11 @@ class IngestTextBody(BaseModel):
             "Chinese martial arts."
         ]
     )
+    collection_name: str | None = Field(
+        default=None,
+        description="Optional collection name to tag the ingested text with.",
+        examples=["engineering"],
+    )
 
 
 class IngestResponse(BaseModel):
@@ -29,16 +34,27 @@ class IngestResponse(BaseModel):
 
 
 @ingest_router.post("/ingest", tags=["Ingestion"], deprecated=True)
-def ingest(request: Request, file: UploadFile) -> IngestResponse:
+def ingest(
+    request: Request,
+    file: UploadFile,
+    collection_name: str | None = Query(default=None),
+) -> IngestResponse:
     """Ingests and processes a file.
 
     Deprecated. Use ingest/file instead.
     """
-    return ingest_file(request, file)
+    return ingest_file(request, file, collection_name=collection_name)
 
 
 @ingest_router.post("/ingest/file", tags=["Ingestion"])
-def ingest_file(request: Request, file: UploadFile) -> IngestResponse:
+def ingest_file(
+    request: Request,
+    file: UploadFile,
+    collection_name: str | None = Query(
+        default=None,
+        description="Tag ingested documents with this collection name.",
+    ),
+) -> IngestResponse:
     """Ingests and processes a file, storing its chunks to be used as context.
 
     The context obtained from files is later used in
@@ -57,7 +73,9 @@ def ingest_file(request: Request, file: UploadFile) -> IngestResponse:
     service = request.state.injector.get(IngestService)
     if file.filename is None:
         raise HTTPException(400, "No file name provided")
-    ingested_documents = service.ingest_bin_data(file.filename, file.file)
+    ingested_documents = service.ingest_bin_data(
+        file.filename, file.file, collection_name=collection_name
+    )
     return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
 
 
@@ -77,20 +95,37 @@ def ingest_text(request: Request, body: IngestTextBody) -> IngestResponse:
     service = request.state.injector.get(IngestService)
     if len(body.file_name) == 0:
         raise HTTPException(400, "No file name provided")
-    ingested_documents = service.ingest_text(body.file_name, body.text)
+    ingested_documents = service.ingest_text(
+        body.file_name, body.text, collection_name=body.collection_name
+    )
     return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
 
 
 @ingest_router.get("/ingest/list", tags=["Ingestion"])
-def list_ingested(request: Request) -> IngestResponse:
+def list_ingested(
+    request: Request,
+    collection_name: str | None = Query(
+        default=None,
+        description="Filter results to documents in this collection.",
+    ),
+) -> IngestResponse:
     """Lists already ingested Documents including their Document ID and metadata.
 
     Those IDs can be used to filter the context used to create responses
     in `/chat/completions`, `/completions`, and `/chunks` APIs.
+
+    Use the optional `collection_name` query parameter to filter by collection.
     """
     service = request.state.injector.get(IngestService)
-    ingested_documents = service.list_ingested()
-    return IngestResponse(object="list", model="private-gpt", data=ingested_documents)
+    all_docs = service.list_ingested()
+    if collection_name is not None:
+        all_docs = [
+            doc
+            for doc in all_docs
+            if doc.doc_metadata
+            and doc.doc_metadata.get("collection_name") == collection_name
+        ]
+    return IngestResponse(object="list", model="private-gpt", data=all_docs)
 
 
 @ingest_router.delete("/ingest/{doc_id}", tags=["Ingestion"])
