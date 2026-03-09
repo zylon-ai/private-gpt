@@ -45,6 +45,7 @@ class BaseIngestComponent(abc.ABC):
         file_name: str,
         file_data: Path,
         collection_name: str | None = None,
+        context_text: str | None = None,
     ) -> list[Document]:
         pass
 
@@ -53,6 +54,7 @@ class BaseIngestComponent(abc.ABC):
         self,
         files: list[tuple[str, Path]],
         collection_name: str | None = None,
+        context_text: str | None = None,
     ) -> list[Document]:
         pass
 
@@ -131,6 +133,7 @@ class SimpleIngestComponent(BaseIngestComponentWithIndex):
         file_name: str,
         file_data: Path,
         collection_name: str | None = None,
+        context_text: str | None = None,
     ) -> list[Document]:
         logger.info("Ingesting file_name=%s", file_name)
         documents = IngestionHelper.transform_file_into_documents(
@@ -139,6 +142,8 @@ class SimpleIngestComponent(BaseIngestComponentWithIndex):
         logger.info(
             "Transformed file=%s into count=%s documents", file_name, len(documents)
         )
+        if context_text:
+            IngestionHelper.apply_embedding_context(documents, context_text)
         logger.debug("Saving the documents in the index and doc store")
         return self._save_docs(documents)
 
@@ -146,12 +151,15 @@ class SimpleIngestComponent(BaseIngestComponentWithIndex):
         self,
         files: list[tuple[str, Path]],
         collection_name: str | None = None,
+        context_text: str | None = None,
     ) -> list[Document]:
         saved_documents = []
         for file_name, file_data in files:
             documents = IngestionHelper.transform_file_into_documents(
                 file_name, file_data, collection_name=collection_name
             )
+            if context_text:
+                IngestionHelper.apply_embedding_context(documents, context_text)
             saved_documents.extend(self._save_docs(documents))
         return saved_documents
 
@@ -200,6 +208,7 @@ class BatchIngestComponent(BaseIngestComponentWithIndex):
         file_name: str,
         file_data: Path,
         collection_name: str | None = None,
+        context_text: str | None = None,
     ) -> list[Document]:
         logger.info("Ingesting file_name=%s", file_name)
         documents = IngestionHelper.transform_file_into_documents(
@@ -208,6 +217,8 @@ class BatchIngestComponent(BaseIngestComponentWithIndex):
         logger.info(
             "Transformed file=%s into count=%s documents", file_name, len(documents)
         )
+        if context_text:
+            IngestionHelper.apply_embedding_context(documents, context_text)
         logger.debug("Saving the documents in the index and doc store")
         return self._save_docs(documents)
 
@@ -215,6 +226,7 @@ class BatchIngestComponent(BaseIngestComponentWithIndex):
         self,
         files: list[tuple[str, Path]],
         collection_name: str | None = None,
+        context_text: str | None = None,
     ) -> list[Document]:
         # Inject collection_name into each (file_name, file_data) tuple for starmap
         args = [(fn, fd, collection_name) for fn, fd in files]
@@ -230,6 +242,8 @@ class BatchIngestComponent(BaseIngestComponentWithIndex):
             len(files),
             len(documents),
         )
+        if context_text:
+            IngestionHelper.apply_embedding_context(documents, context_text)
         return self._save_docs(documents)
 
     def _save_docs(self, documents: list[Document]) -> list[Document]:
@@ -295,6 +309,7 @@ class ParallelizedIngestComponent(BaseIngestComponentWithIndex):
         file_name: str,
         file_data: Path,
         collection_name: str | None = None,
+        context_text: str | None = None,
     ) -> list[Document]:
         logger.info("Ingesting file_name=%s", file_name)
         # Running in a single (1) process to release the current
@@ -306,6 +321,8 @@ class ParallelizedIngestComponent(BaseIngestComponentWithIndex):
         logger.info(
             "Transformed file=%s into count=%s documents", file_name, len(documents)
         )
+        if context_text:
+            IngestionHelper.apply_embedding_context(documents, context_text)
         logger.debug("Saving the documents in the index and doc store")
         return self._save_docs(documents)
 
@@ -313,10 +330,11 @@ class ParallelizedIngestComponent(BaseIngestComponentWithIndex):
         self,
         files: list[tuple[str, Path]],
         collection_name: str | None = None,
+        context_text: str | None = None,
     ) -> list[Document]:
         # Lightweight threads, used to parallelize the
         # underlying IO calls made in the ingestion
-        args = [(fn, fd, collection_name) for fn, fd in files]
+        args = [(fn, fd, collection_name, context_text) for fn, fd in files]
         documents = list(
             itertools.chain.from_iterable(
                 self._ingest_work_pool.starmap(self.ingest, args)
@@ -507,10 +525,13 @@ class PipelineIngestComponent(BaseIngestComponentWithIndex):
         file_name: str,
         file_data: Path,
         collection_name: str | None = None,
+        context_text: str | None = None,
     ) -> list[Document]:
         documents = IngestionHelper.transform_file_into_documents(
             file_name, file_data, collection_name=collection_name
         )
+        if context_text:
+            IngestionHelper.apply_embedding_context(documents, context_text)
         self.doc_q.put(("process", file_name, documents))
         self._flush()
         return documents
@@ -519,6 +540,7 @@ class PipelineIngestComponent(BaseIngestComponentWithIndex):
         self,
         files: list[tuple[str, Path]],
         collection_name: str | None = None,
+        context_text: str | None = None,
     ) -> list[Document]:
         docs = []
         for file_name, file_data in eta(files):
@@ -526,6 +548,8 @@ class PipelineIngestComponent(BaseIngestComponentWithIndex):
                 documents = IngestionHelper.transform_file_into_documents(
                     file_name, file_data, collection_name=collection_name
                 )
+                if context_text:
+                    IngestionHelper.apply_embedding_context(documents, context_text)
                 self.doc_q.put(("process", file_name, documents))
                 docs.extend(documents)
             except Exception:

@@ -105,6 +105,30 @@ class IngestionHelper:
         return documents
 
     @staticmethod
+    def apply_embedding_context(
+        documents: list[Document], context_text: str
+    ) -> None:
+        """Inject a context descriptor into documents for richer embeddings.
+
+        The context text is stored under the ``_embedding_context`` metadata
+        key.  It is included when the embedding is computed (so the model can
+        bridge abbreviations like "L1" to plain terms like "cooler length")
+        but is explicitly excluded from the LLM context window (the LLM
+        always receives the raw chunk text).
+
+        This method is safe to call on documents that have already had their
+        metadata exclusion lists set by :meth:`_exclude_metadata`.
+        """
+        for document in documents:
+            document.metadata["_embedding_context"] = context_text
+            # Must NOT be in excluded_embed_metadata_keys so it is embedded
+            if "_embedding_context" in document.excluded_embed_metadata_keys:
+                document.excluded_embed_metadata_keys.remove("_embedding_context")
+            # Must be in excluded_llm_metadata_keys so the LLM never sees it
+            if "_embedding_context" not in document.excluded_llm_metadata_keys:
+                document.excluded_llm_metadata_keys.append("_embedding_context")
+
+    @staticmethod
     def _exclude_metadata(documents: list[Document]) -> None:
         logger.debug("Excluding metadata from count=%s documents", len(documents))
         for document in documents:
