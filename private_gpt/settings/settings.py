@@ -354,6 +354,33 @@ class AzureOpenAISettings(BaseModel):
     )
 
 
+class UserAuthSettings(BaseModel):
+    """User/group access control system.
+
+    When enabled, users must log in to access the UI and API.
+    Each user belongs to groups, and each group has access to named document
+    collections. Admins have access to all collections.
+    """
+
+    enabled: bool = Field(
+        default=False,
+        description="Enable the user/group authentication and collection system.",
+    )
+    default_admin_password: str = Field(
+        default="changeme",
+        description="Password for the initial 'admin' user created on first run. "
+        "Change this immediately after setup.",
+    )
+    token_expiry_hours: int = Field(
+        default=8,
+        description="Number of hours before a session token expires.",
+    )
+    default_collection_name: str = Field(
+        default="default",
+        description="Name of the default document collection.",
+    )
+
+
 class UISettings(BaseModel):
     enabled: bool
     path: str
@@ -591,6 +618,10 @@ class Settings(BaseModel):
     server: ServerSettings
     data: DataSettings
     ui: UISettings
+    user_auth: UserAuthSettings = Field(
+        default_factory=UserAuthSettings,
+        description="User/group access control configuration.",
+    )
     llm: LLMSettings
     embedding: EmbeddingSettings
     llamacpp: LlamaCPPSettings

@@ -69,11 +69,15 @@ class IngestionHelper:
 
     @staticmethod
     def transform_file_into_documents(
-        file_name: str, file_data: Path
+        file_name: str,
+        file_data: Path,
+        collection_name: str | None = None,
     ) -> list[Document]:
         documents = IngestionHelper._load_file_to_documents(file_name, file_data)
         for document in documents:
             document.metadata["file_name"] = file_name
+            if collection_name:
+                document.metadata["collection_name"] = collection_name
         IngestionHelper._exclude_metadata(documents)
         return documents
 
@@ -108,4 +112,10 @@ class IngestionHelper:
             # We don't want the Embeddings search to receive this metadata
             document.excluded_embed_metadata_keys = ["doc_id"]
             # We don't want the LLM to receive these metadata in the context
-            document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
+            document.excluded_llm_metadata_keys = [
+                "file_name",
+                "doc_id",
+                "page_label",
+                "collection_name",
+            ]
+            document.excluded_embed_metadata_keys.append("collection_name")

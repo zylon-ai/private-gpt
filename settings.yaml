@@ -16,6 +16,14 @@ server:
     # If the auth is enabled, this value must be set in the "Authorization" header of the request.
     secret: "Basic c2VjcmV0OmtleQ=="
 
+user_auth:
+  enabled: false
+  # Password for the default 'admin' account created on first run.
+  # Set via ADMIN_PASSWORD env var or change it in the admin panel after setup.
+  default_admin_password: ${ADMIN_PASSWORD:changeme}
+  token_expiry_hours: 8
+  default_collection_name: default
+
 data:
   local_ingestion:
     enabled: ${LOCAL_INGESTION_ENABLED:false}
