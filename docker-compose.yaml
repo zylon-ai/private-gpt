@@ -1,6 +1,29 @@
 services:
 
   #-----------------------------------
+  #---- PostgreSQL (pgvector) --------
+  #-----------------------------------
+
+  # PostgreSQL with pgvector extension — used for both vector store and document store.
+  # Connect with any SQL client (e.g. HeidiSQL) using the credentials below.
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  #-----------------------------------
   #---- Private-GPT services ---------
   #-----------------------------------
 
@@ -23,6 +46,10 @@ services:
       PGPT_EMBED_MODE: ollama
       PGPT_OLLAMA_API_BASE: http://ollama:11434
       HF_TOKEN: ${HF_TOKEN:-}
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     profiles:
       - ""
       - ollama-cpu
@@ -30,6 +57,8 @@ services:
       - ollama-api
     depends_on:
       ollama:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
 
   # Private-GPT service for the local mode
@@ -50,8 +79,15 @@ services:
       PORT: 8001
       PGPT_PROFILES: local
       HF_TOKEN: ${HF_TOKEN:-}
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     profiles:
       - llamacpp-cpu
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   #-----------------------------------
   #---- Ollama services --------------
@@ -114,3 +150,6 @@ services:
               capabilities: [gpu]
     profiles:
       - ollama-cuda
+
+volumes:
+  postgres_data:
