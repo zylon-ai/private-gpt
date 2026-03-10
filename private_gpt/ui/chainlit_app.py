@@ -20,7 +20,7 @@ from private_gpt.server.chat.chat_service import ChatService, CompletionGen
 from private_gpt.server.chunks.chunks_service import Chunk, ChunksService
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.server.recipes.summarize.summarize_service import SummarizeService
-from private_gpt.settings.settings import settings
+from private_gpt.settings.settings import unsafe_typed_settings as settings
 
 logger = logging.getLogger(__name__)
 
