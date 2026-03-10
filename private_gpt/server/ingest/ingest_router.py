@@ -128,6 +128,114 @@ def list_ingested(
     return IngestResponse(object="list", model="private-gpt", data=all_docs)
 
 
+class IngestContextBody(BaseModel):
+    context_text: str = Field(
+        description=(
+            "Free-text description of the documents in this collection. "
+            "Explain abbreviations, technical codes, and where to find specific "
+            "information. For example: 'L1 is the cooler length. L2 is the fan "
+            "diameter. TDP is the thermal design power in watts.' "
+            "This text is injected into every chunk embedding at ingestion time, "
+            "so queries using plain language can match technical abbreviations."
+        ),
+        examples=["L1 is the cooler length. L2 is the fan diameter. TDP means thermal design power in watts."],
+    )
+    collection_name: str | None = Field(
+        default=None,
+        description=(
+            "Collection this context applies to. Use null/omit for a global "
+            "context that applies to documents ingested without a collection."
+        ),
+        examples=["datasheets"],
+    )
+
+
+class IngestContextResponse(BaseModel):
+    collection_name: str | None
+    context_text: str
+
+
+@ingest_router.post("/ingest/context", tags=["Ingestion"])
+def set_ingest_context(
+    request: Request, body: IngestContextBody
+) -> IngestContextResponse:
+    """Set an embedding context descriptor for a collection.
+
+    The context text is stored on disk and automatically injected (as
+    embedding-only metadata) into every document chunk when files are
+    ingested into the matching collection. This creates semantic connections
+    between abbreviations / technical codes and their plain-language
+    equivalents so that plain-language queries can retrieve technically
+    phrased content.
+
+    **Example use-case:** A datasheet uses "L1" for the cooler length.
+    Set a context like *"L1 is the cooler length."* and then ingest the
+    datasheet. After that, a query for *"cooler length"* will retrieve the
+    chunk containing the L1 value.
+
+    The context applies to future ingestions only. Re-ingest existing
+    documents to apply an updated context to them.
+
+    A `collection_name` of `null` (or omitting the field) creates a
+    **global** context that acts as a fallback for documents ingested
+    without any collection name.
+    """
+    service = request.state.injector.get(IngestService)
+    service.context_manager.save(body.context_text, body.collection_name)
+    return IngestContextResponse(
+        collection_name=body.collection_name,
+        context_text=body.context_text,
+    )
+
+
+@ingest_router.get("/ingest/context", tags=["Ingestion"])
+def get_ingest_context(
+    request: Request,
+    collection_name: str | None = Query(
+        default=None,
+        description="Collection whose context to retrieve. Omit for the global context.",
+    ),
+) -> IngestContextResponse:
+    """Retrieve the current embedding context descriptor for a collection.
+
+    Returns the context text that will be injected into chunks when
+    documents are ingested into the specified collection.
+    """
+    service = request.state.injector.get(IngestService)
+    context_text = service.context_manager.load_exact(collection_name)
+    if context_text is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No context found for collection={collection_name!r}",
+        )
+    return IngestContextResponse(
+        collection_name=collection_name,
+        context_text=context_text,
+    )
+
+
+@ingest_router.delete("/ingest/context", tags=["Ingestion"])
+def delete_ingest_context(
+    request: Request,
+    collection_name: str | None = Query(
+        default=None,
+        description="Collection whose context to delete. Omit for the global context.",
+    ),
+) -> None:
+    """Delete the embedding context descriptor for a collection.
+
+    After deletion, documents ingested into this collection will no longer
+    have contextual metadata injected into their embeddings.
+    """
+    service = request.state.injector.get(IngestService)
+    deleted = service.context_manager.delete(collection_name)
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No context found for collection={collection_name!r}",
+        )
+
+
 @ingest_router.delete("/ingest/{doc_id}", tags=["Ingestion"])
 def delete_ingested(request: Request, doc_id: str) -> None:
     """Delete the specified ingested Document.

@@ -14,6 +14,8 @@ from private_gpt.components.node_store.node_store_component import NodeStoreComp
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
+from private_gpt.paths import local_data_path
+from private_gpt.server.ingest.context_manager import ContextManager
 from private_gpt.server.ingest.model import IngestedDoc
 from private_gpt.settings.settings import settings
 
@@ -47,6 +49,7 @@ class IngestService:
             transformations=[node_parser, embedding_component.embedding_model],
             settings=settings(),
         )
+        self.context_manager = ContextManager(local_data_path)
 
     def _ingest_data(
         self,
@@ -77,8 +80,12 @@ class IngestService:
         collection_name: str | None = None,
     ) -> list[IngestedDoc]:
         logger.info("Ingesting file_name=%s", file_name)
+        context_text = self.context_manager.load(collection_name)
         documents = self.ingest_component.ingest(
-            file_name, file_data, collection_name=collection_name
+            file_name,
+            file_data,
+            collection_name=collection_name,
+            context_text=context_text,
         )
         logger.info("Finished ingestion file_name=%s", file_name)
         return [IngestedDoc.from_document(document) for document in documents]
@@ -108,8 +115,11 @@ class IngestService:
         collection_name: str | None = None,
     ) -> list[IngestedDoc]:
         logger.info("Ingesting file_names=%s", [f[0] for f in files])
+        context_text = self.context_manager.load(collection_name)
         documents = self.ingest_component.bulk_ingest(
-            files, collection_name=collection_name
+            files,
+            collection_name=collection_name,
+            context_text=context_text,
         )
         logger.info("Finished ingestion file_name=%s", [f[0] for f in files])
         return [IngestedDoc.from_document(document) for document in documents]
