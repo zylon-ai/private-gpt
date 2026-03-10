@@ -3,6 +3,11 @@
 Replaces the Gradio UI with a more customizable Chainlit interface.
 Supports all chat modes (RAG, Search, Basic, Summarize), file management,
 optional authentication, and streaming responses.
+
+Navigation is exposed as dedicated Chat Profiles in the Chainlit sidebar:
+  • Chat  – normal RAG / Search / Basic / Summarize conversation
+  • Files – upload, list, select and delete ingested documents
+  • Admin – user, group and collection management (admin-only)
 """
 
 import asyncio
@@ -64,6 +69,48 @@ if settings.user_auth.enabled:
         return None
 
 
+# ── Chat Profiles (sidebar navigation) ────────────────────────────────────────
+
+@cl.set_chat_profiles
+async def chat_profiles(current_user: Optional[cl.User] = None) -> list[cl.ChatProfile]:
+    """Expose Files and Admin as dedicated sidebar menu entries."""
+    # When user_auth is disabled everyone is treated as admin for the UI.
+    is_admin = (
+        current_user.metadata.get("is_admin", False)
+        if current_user and current_user.metadata
+        else not settings.user_auth.enabled
+    )
+
+    profiles: list[cl.ChatProfile] = [
+        cl.ChatProfile(
+            name="Chat",
+            markdown_description=(
+                "**Chat** — Use RAG, Search, Basic or Summarize modes "
+                "to interact with your documents."
+            ),
+        ),
+        cl.ChatProfile(
+            name="Files",
+            markdown_description=(
+                "**Files** — Upload, browse, select or delete ingested documents."
+            ),
+        ),
+    ]
+
+    if is_admin:
+        profiles.append(
+            cl.ChatProfile(
+                name="Admin",
+                markdown_description=(
+                    "**Admin** — Manage users, groups and collections "
+                    "(administrator access required)."
+                ),
+            )
+        )
+
+    return profiles
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _build_chat_settings(mode: str) -> cl.ChatSettings:
@@ -119,94 +166,24 @@ async def _stream_sync_gen(sync_gen, msg: cl.Message) -> None:
             await msg.stream_token(item.delta)
 
 
-# ── Session lifecycle ──────────────────────────────────────────────────────────
+# ── File manager helper ────────────────────────────────────────────────────────
 
-@cl.on_chat_start
-async def on_chat_start() -> None:
-    user = cl.context.session.user
-    username = user.identifier if user else "anonymous"
-    is_admin = (
-        user.metadata.get("is_admin", False) if user and user.metadata else False
-    )
-    accessible_collections = (
-        user.metadata.get("accessible_collections", []) if user and user.metadata else []
-    )
-
-    default_mode = settings.ui.default_mode or "RAG"
-
-    cl.user_session.set("username", username)
-    cl.user_session.set("is_admin", is_admin)
-    cl.user_session.set("accessible_collections", accessible_collections)
-    cl.user_session.set("mode", default_mode)
-    cl.user_session.set("system_prompt", _DEFAULT_SYSTEM_PROMPTS.get(default_mode, ""))
-    cl.user_session.set("selected_file", None)
-    cl.user_session.set("chat_history", [])
-
-    await _build_chat_settings(default_mode).send()
-
-    actions = [
-        cl.Action(
-            name="list_files",
-            value="list",
-            label="📁 Manage Files",
-            description="Show, select, or delete ingested files",
-            payload={"value": "list"},
-        ),
-    ]
-    if is_admin:
-        actions.append(
-            cl.Action(
-                name="admin_panel",
-                value="admin",
-                label="⚙ Admin Panel",
-                description="Manage users, groups, and collections",
-                payload={"value": "admin"},
-            )
-        )
-
-    mode_desc = _MODE_DESCRIPTIONS.get(default_mode, "")
-    await cl.Message(
-        content=(
-            f"**Welcome to PrivateGPT!**\n\n"
-            f"**Mode:** {default_mode} — {mode_desc}\n\n"
-            f"Use the ⚙ **Settings** panel to change mode and system prompt.\n"
-            f"Attach files to your message to upload and ingest them."
-        ),
-        actions=actions,
-    ).send()
-
-
-@cl.on_settings_update
-async def on_settings_update(updated: dict) -> None:  # type: ignore[type-arg]
-    new_mode = updated.get("mode", "RAG")
-    new_prompt = updated.get("system_prompt", _DEFAULT_SYSTEM_PROMPTS.get(new_mode, ""))
-    cl.user_session.set("mode", new_mode)
-    cl.user_session.set("system_prompt", new_prompt)
-    cl.user_session.set("chat_history", [])  # Reset history on mode change
-    mode_desc = _MODE_DESCRIPTIONS.get(new_mode, "")
-    await cl.Message(
-        content=f"Mode changed to **{new_mode}** — {mode_desc}"
-    ).send()
-
-
-# ── File management actions ────────────────────────────────────────────────────
-
-@cl.action_callback("list_files")
-async def on_list_files(action: cl.Action) -> None:
+async def _show_file_manager() -> None:
+    """Display the file management panel with per-file select / delete actions."""
     ingest_svc = global_injector.get(IngestService)
     docs = ingest_svc.list_ingested()
 
     if not docs:
         await cl.Message(
             content=(
-                "No files ingested yet.\n\n"
+                "**No files ingested yet.**\n\n"
                 "Attach files to your message using the 📎 button to upload them."
             )
         ).send()
         return
 
     # Deduplicate by file name
-    seen_files: dict[str, str] = {}  # file_name -> doc_id (first occurrence)
+    seen_files: dict[str, str] = {}
     for doc in docs:
         fname = (
             doc.doc_metadata.get("file_name", doc.doc_id) if doc.doc_metadata else doc.doc_id
@@ -215,10 +192,10 @@ async def on_list_files(action: cl.Action) -> None:
             seen_files[fname] = doc.doc_id
 
     selected = cl.user_session.get("selected_file")
-    lines = []
+    lines = ["**Ingested Files:**\n"]
     actions = []
-    for fname, doc_id in seen_files.items():
-        marker = " ✓ (selected)" if fname == selected else ""
+    for fname, _doc_id in seen_files.items():
+        marker = " ✓ *(selected)*" if fname == selected else ""
         lines.append(f"• **{fname}**{marker}")
         actions.append(
             cl.Action(
@@ -250,9 +227,120 @@ async def on_list_files(action: cl.Action) -> None:
             )
         )
 
-    content = "**Ingested Files:**\n" + "\n".join(lines)
-    await cl.Message(content=content, actions=actions).send()
+    await cl.Message(content="\n".join(lines), actions=actions).send()
 
+
+# ── Admin panel helper ─────────────────────────────────────────────────────────
+
+async def _show_admin_panel() -> None:
+    """Display the admin panel with user/group/collection management info."""
+    await cl.Message(
+        content=(
+            "## ⚙ Admin Panel\n\n"
+            "Manage users, groups, and collections via the REST API or the "
+            "interactive Swagger UI at `/docs`.\n\n"
+            "### User Management\n"
+            "| Endpoint | Method | Description |\n"
+            "|----------|--------|-------------|\n"
+            "| `/v1/admin/users` | GET | List all users |\n"
+            "| `/v1/admin/users` | POST | Create a new user |\n"
+            "| `/v1/admin/users/{username}` | DELETE | Delete a user |\n"
+            "| `/v1/admin/users/{username}/groups/{group}` | POST | Add user to group |\n"
+            "| `/v1/admin/users/{username}/groups/{group}` | DELETE | Remove user from group |\n\n"
+            "### Group Management\n"
+            "| Endpoint | Method | Description |\n"
+            "|----------|--------|-------------|\n"
+            "| `/v1/admin/groups` | GET | List all groups |\n"
+            "| `/v1/admin/groups` | POST | Create a group |\n"
+            "| `/v1/admin/groups/{group}` | DELETE | Delete a group |\n"
+            "| `/v1/admin/groups/{group}/collections/{col}` | POST | Assign collection to group |\n"
+            "| `/v1/admin/groups/{group}/collections/{col}` | DELETE | Remove collection from group |\n\n"
+            "### Collection Management\n"
+            "| Endpoint | Method | Description |\n"
+            "|----------|--------|-------------|\n"
+            "| `/v1/admin/collections` | GET | List all collections |\n"
+            "| `/v1/admin/collections` | POST | Create a collection |\n"
+            "| `/v1/admin/collections/{col}` | DELETE | Delete a collection |\n\n"
+            "Open **[/docs](/docs)** for the full interactive API explorer."
+        )
+    ).send()
+
+
+# ── Session lifecycle ──────────────────────────────────────────────────────────
+
+@cl.on_chat_start
+async def on_chat_start() -> None:
+    user = cl.context.session.user
+    username = user.identifier if user else "anonymous"
+    is_admin = (
+        user.metadata.get("is_admin", False) if user and user.metadata else False
+    )
+    accessible_collections = (
+        user.metadata.get("accessible_collections", []) if user and user.metadata else []
+    )
+
+    # Determine active profile (set by set_chat_profiles selector)
+    chat_profile: str = cl.user_session.get("chat_profile") or "Chat"
+
+    default_mode = settings.ui.default_mode or "RAG"
+
+    cl.user_session.set("username", username)
+    cl.user_session.set("is_admin", is_admin)
+    cl.user_session.set("accessible_collections", accessible_collections)
+    cl.user_session.set("mode", default_mode)
+    cl.user_session.set("system_prompt", _DEFAULT_SYSTEM_PROMPTS.get(default_mode, ""))
+    cl.user_session.set("selected_file", None)
+    cl.user_session.set("chat_history", [])
+
+    if chat_profile == "Files":
+        await cl.Message(
+            content=(
+                "## 📁 File Manager\n\n"
+                "Here you can browse, select, and delete your ingested documents.\n"
+                "Attach files to your message using the 📎 button to upload new ones.\n\n"
+                "Loading your files…"
+            )
+        ).send()
+        await _show_file_manager()
+
+    elif chat_profile == "Admin":
+        if not is_admin and settings.user_auth.enabled:
+            await cl.Message(
+                content="⛔ **Access denied.** Administrator privileges are required."
+            ).send()
+        else:
+            await _show_admin_panel()
+
+    else:
+        # Default "Chat" profile
+        await _build_chat_settings(default_mode).send()
+
+        mode_desc = _MODE_DESCRIPTIONS.get(default_mode, "")
+        await cl.Message(
+            content=(
+                f"**Welcome to PrivateGPT!**\n\n"
+                f"**Mode:** {default_mode} — {mode_desc}\n\n"
+                f"Use the ⚙ **Settings** panel to change mode and system prompt.\n"
+                f"Switch to the **Files** tab in the sidebar to manage documents.\n"
+                f"Attach files to your message to upload and ingest them."
+            )
+        ).send()
+
+
+@cl.on_settings_update
+async def on_settings_update(updated: dict) -> None:  # type: ignore[type-arg]
+    new_mode = updated.get("mode", "RAG")
+    new_prompt = updated.get("system_prompt", _DEFAULT_SYSTEM_PROMPTS.get(new_mode, ""))
+    cl.user_session.set("mode", new_mode)
+    cl.user_session.set("system_prompt", new_prompt)
+    cl.user_session.set("chat_history", [])  # Reset history on mode change
+    mode_desc = _MODE_DESCRIPTIONS.get(new_mode, "")
+    await cl.Message(
+        content=f"Mode changed to **{new_mode}** — {mode_desc}"
+    ).send()
+
+
+# ── File management action callbacks ──────────────────────────────────────────
 
 @cl.action_callback("select_file")
 async def on_select_file(action: cl.Action) -> None:
@@ -292,24 +380,6 @@ async def on_delete_file(action: cl.Action) -> None:
     ).send()
 
 
-@cl.action_callback("admin_panel")
-async def on_admin_panel(action: cl.Action) -> None:
-    await cl.Message(
-        content=(
-            "**Admin Panel**\n\n"
-            "Manage users, groups, and collections via the REST API:\n\n"
-            "| Endpoint | Method | Description |\n"
-            "|----------|--------|-------------|\n"
-            "| `/v1/auth/users` | POST/DELETE | Create or delete users |\n"
-            "| `/v1/auth/groups` | POST/DELETE | Create or delete groups |\n"
-            "| `/v1/auth/collections` | POST/DELETE | Create or delete collections |\n"
-            "| `/v1/auth/users/{user}/groups` | PUT | Assign user to group |\n"
-            "| `/v1/auth/groups/{group}/collections` | PUT | Assign group to collection |\n\n"
-            "Or use the interactive API docs at `/docs`."
-        )
-    ).send()
-
-
 # ── File upload handling ───────────────────────────────────────────────────────
 
 async def _handle_file_uploads(elements: list) -> list[str]:  # type: ignore[type-arg]
@@ -335,7 +405,10 @@ async def _handle_file_uploads(elements: list) -> list[str]:  # type: ignore[typ
 
     if ingested_names:
         await cl.Message(
-            content=f"Ingested {len(ingested_names)} file(s): {', '.join(ingested_names)}\n\nUse **Manage Files** to select a file for RAG or Summarize."
+            content=(
+                f"Ingested {len(ingested_names)} file(s): {', '.join(ingested_names)}\n\n"
+                "Switch to the **Files** tab in the sidebar to manage your documents."
+            )
         ).send()
 
     return ingested_names
@@ -345,12 +418,33 @@ async def _handle_file_uploads(elements: list) -> list[str]:  # type: ignore[typ
 
 @cl.on_message
 async def on_message(message: cl.Message) -> None:
-    # Handle file attachments first
+    chat_profile: str = cl.user_session.get("chat_profile") or "Chat"
+
+    # Handle file attachments first (available in all profiles)
     if message.elements:
         await _handle_file_uploads(message.elements)
         if not message.content.strip():
             return
 
+    # ── Files profile ──────────────────────────────────────────────────────────
+    if chat_profile == "Files":
+        content = message.content.strip().lower()
+        # Any message in Files profile refreshes the file list
+        await _show_file_manager()
+        return
+
+    # ── Admin profile ──────────────────────────────────────────────────────────
+    if chat_profile == "Admin":
+        is_admin = cl.user_session.get("is_admin", False)
+        if not is_admin and settings.user_auth.enabled:
+            await cl.Message(
+                content="⛔ **Access denied.** Administrator privileges are required."
+            ).send()
+        else:
+            await _show_admin_panel()
+        return
+
+    # ── Chat profile (default) ─────────────────────────────────────────────────
     mode: str = cl.user_session.get("mode", "RAG")
     system_prompt: str = cl.user_session.get("system_prompt", "")
     selected_file: Optional[str] = cl.user_session.get("selected_file")
@@ -512,7 +606,8 @@ async def _handle_summarize(
         await cl.Message(
             content=(
                 "Please select a file first.\n\n"
-                "Click **Manage Files** to choose a document to summarize."
+                "Switch to the **Files** tab in the sidebar, choose a document, "
+                "then come back here to summarize it."
             )
         ).send()
         return ""
