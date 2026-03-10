@@ -10,14 +10,14 @@ server:
     allow_methods: ["*"]
     allow_headers: ["*"]
   auth:
-    enabled: false
+    enabled: true
     # python -c 'import base64; print("Basic " + base64.b64encode("secret:key".encode()).decode())'
     # 'secret' is the username and 'key' is the password for basic auth by default
     # If the auth is enabled, this value must be set in the "Authorization" header of the request.
     secret: "Basic c2VjcmV0OmtleQ=="
 
 user_auth:
-  enabled: false
+  enabled: true
   # Password for the default 'admin' account created on first run.
   # Set via ADMIN_PASSWORD env var or change it in the admin panel after setup.
   default_admin_password: ${ADMIN_PASSWORD:changeme}
@@ -122,9 +122,9 @@ qdrant:
 postgres:
   host: ${POSTGRES_HOST:localhost}
   port: ${POSTGRES_PORT:5432}
-  database: ${POSTGRES_DB:postgres}
-  user: ${POSTGRES_USER:postgres}
-  password: ${POSTGRES_PASSWORD:postgres}
+  database: ${POSTGRES_DB:privategpt}
+  user: ${POSTGRES_USER:privategpt}
+  password: ${POSTGRES_PASSWORD:privategpt}
   schema_name: private_gpt
 
 sagemaker:

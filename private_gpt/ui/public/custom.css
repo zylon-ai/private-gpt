@@ -1,0 +1,79 @@
+/*
+ * PrivateGPT – Chainlit custom styles
+ *
+ * Goals:
+ *   1. Widen the chat content area so less horizontal space is wasted.
+ *   2. Keep the layout responsive (does not break on smaller screens).
+ */
+
+/* ── Widen the main chat column ────────────────────────────────────────────── */
+
+/*
+ * Chainlit 1.x centres chat content inside a constrained div.
+ * These selectors target the known structural elements across minor versions.
+ */
+
+/* Root-level content wrapper */
+#cl-root > div > div > main,
+#cl-root > div > div > main > div {
+  max-width: 100% !important;
+}
+
+/* Step / message containers */
+.step,
+[class*="step"],
+.message,
+[class*="messageContainer"],
+[class*="MessagesContainer"],
+[class*="messages-container"] {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* The scrollable messages list */
+[class*="MessagesList"],
+[class*="messagesList"] {
+  max-width: 100% !important;
+}
+
+/* Chat input bar at the bottom */
+[class*="InputBox"],
+[class*="inputBox"],
+[class*="InputContainer"],
+[class*="inputContainer"],
+.input-container,
+form[class*="input"],
+form[class*="Input"] {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Inner content padding – give a comfortable margin instead of a hard max-width */
+[class*="MessageContent"],
+[class*="messageContent"] {
+  max-width: 100% !important;
+}
+
+/* MUI Box wrappers that Chainlit uses for layout */
+.MuiBox-root[class*="main"],
+.MuiContainer-root {
+  max-width: 100% !important;
+}
+
+/* ── Comfortable horizontal padding so text doesn't touch edges ────────────── */
+
+#cl-root .step,
+#cl-root [class*="step"] {
+  padding-left: clamp(1rem, 3vw, 3rem);
+  padding-right: clamp(1rem, 3vw, 3rem);
+}
+
+/* ── Responsive: honour narrow viewports ───────────────────────────────────── */
+
+@media (max-width: 768px) {
+  #cl-root .step,
+  #cl-root [class*="step"] {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}

@@ -8,7 +8,7 @@ authors = ["Zylon <hi@zylon.ai>"]
 python = ">=3.11,<3.12"
 # PrivateGPT
 fastapi = { extras = ["all"], version = "^0.115.0" }
-python-multipart = "^0.0.10"
+python-multipart = ">=0.0.18,<1.0.0"
 injector = "^0.22.0"
 pyyaml = "^6.0.2"
 watchdog = "^4.0.1"
