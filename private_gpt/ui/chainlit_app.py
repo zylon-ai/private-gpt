@@ -150,6 +150,7 @@ async def on_chat_start() -> None:
             value="list",
             label="📁 Manage Files",
             description="Show, select, or delete ingested files",
+            payload={"value": "list"},
         ),
     ]
     if is_admin:
@@ -159,6 +160,7 @@ async def on_chat_start() -> None:
                 value="admin",
                 label="⚙ Admin Panel",
                 description="Manage users, groups, and collections",
+                payload={"value": "admin"},
             )
         )
 
@@ -224,6 +226,7 @@ async def on_list_files(action: cl.Action) -> None:
                 value=fname,
                 label=f"Select: {fname[:35]}",
                 description=f"Use {fname} as context for RAG/Summarize",
+                payload={"value": fname},
             )
         )
         actions.append(
@@ -232,6 +235,7 @@ async def on_list_files(action: cl.Action) -> None:
                 value=fname,
                 label=f"Delete: {fname[:30]}",
                 description=f"Remove {fname} from the index",
+                payload={"value": fname},
             )
         )
 
@@ -242,6 +246,7 @@ async def on_list_files(action: cl.Action) -> None:
                 value="",
                 label="Clear selection",
                 description="Use all documents instead of a specific file",
+                payload={"value": ""},
             )
         )
 
