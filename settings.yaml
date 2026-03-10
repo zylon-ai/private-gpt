@@ -106,10 +106,10 @@ huggingface:
   trust_remote_code: true
 
 vectorstore:
-  database: qdrant
+  database: postgres
 
 nodestore:
-  database: simple
+  database: postgres
 
 milvus:
   uri: local_data/private_gpt/milvus/milvus_local.db
@@ -120,11 +120,11 @@ qdrant:
   path: local_data/private_gpt/qdrant
 
 postgres:
-  host: localhost
-  port: 5432
-  database: postgres
-  user: postgres
-  password: postgres
+  host: ${POSTGRES_HOST:localhost}
+  port: ${POSTGRES_PORT:5432}
+  database: ${POSTGRES_DB:postgres}
+  user: ${POSTGRES_USER:postgres}
+  password: ${POSTGRES_PASSWORD:postgres}
   schema_name: private_gpt
 
 sagemaker:
