@@ -21,7 +21,6 @@ from typing import Any
 
 import gradio as gr  # type: ignore
 from fastapi import FastAPI
-from gradio.themes.utils.colors import slate  # type: ignore
 from injector import inject, singleton
 from llama_index.core.llms import ChatMessage, ChatResponse, MessageRole
 from llama_index.core.types import TokenGen
@@ -131,63 +130,156 @@ class PrivateGptUi:
 
     # ── Auth helpers ──────────────────────────────────────────────────────────
 
-    def _do_login(
-        self, username: str, password: str, state: dict
-    ) -> tuple[dict, str, Any, Any, Any, Any]:
-        """Validate credentials and update session state.
-
-        Returns: (new_state, status_msg, login_col_update, main_col_update,
-                  collection_dd_update, user_badge_update)
-        """
-        if not username or not password:
-            return state, "⚠️ Please enter username and password.", gr.update(), gr.update(), gr.update(), gr.update()
-
-        if not self._user_store.verify_password(username, password):
-            return state, "❌ Invalid username or password.", gr.update(), gr.update(), gr.update(), gr.update()
-
-        token = self._token_service.create_token(username)
-        user = self._user_store.get_user(username)
-        collections = self._user_store.get_user_collections(username)
-
+    def _build_login_outputs(
+        self, username: str, token: str, is_admin: bool, collections: list[str]
+    ) -> tuple:
+        """Build the common set of UI update tuples returned after a successful login."""
         new_state = {
             "username": username,
             "token": token,
-            "is_admin": user.is_admin if user else False,
+            "is_admin": is_admin,
             "accessible_collections": collections,
             "selected_collection": collections[0] if collections else None,
             "selected_filename": None,
             "system_prompt": self._get_default_system_prompt(self._default_mode),
         }
-
-        # Show collection dropdown with accessible collections
         col_choices = collections if collections else []
         col_value = col_choices[0] if col_choices else None
-        col_update = gr.update(
-            choices=col_choices, value=col_value, visible=True
+        admin_vis = is_admin or not self._auth_enabled
+        return (
+            new_state,
+            gr.update(choices=col_choices, value=col_value, visible=True),  # collection_selector
+            gr.update(
+                value=f"👤 **{username}**{'  🔑 Admin' if is_admin else ''}",
+                visible=True,
+            ),  # user_badge
+            gr.update(visible=True),   # logout_button
+            gr.update(visible=admin_vis),  # admin_content
+            gr.update(value="" if admin_vis else "🔒 *Admin access required.*"),  # admin_notice
+            self._admin_list_users() if admin_vis else [],    # user_table
+            self._admin_list_groups() if admin_vis else [],   # group_table
+            self._admin_list_collections() if admin_vis else [],  # collection_table
+            token,  # token_store
         )
 
-        user_badge_update = gr.update(
-            value=f"👤 **{username}**{'  🔑 Admin' if new_state['is_admin'] else ''}",
-            visible=True,
+    def _do_login_all(
+        self, username: str, password: str, state: dict
+    ) -> tuple:
+        """Validate credentials and return all UI updates in a single call.
+
+        Using a single handler avoids the race condition where two separate
+        .click() handlers would read different versions of session_state.
+        """
+        _fail = (
+            state, "⚠️ Please enter username and password.",
+            gr.update(visible=True), gr.update(visible=False),   # login/main cols
+            gr.update(), gr.update(visible=False),                # collection, badge
+            gr.update(visible=False), gr.update(visible=False),   # logout, admin_content
+            gr.update(),                                          # admin_notice
+            gr.update(), gr.update(), gr.update(),                # tables
+            "",                                                   # token_store
         )
+        if not username or not password:
+            return _fail
+
+        if not self._user_store.verify_password(username, password):
+            bad = list(_fail)
+            bad[1] = "❌ Invalid username or password."
+            return tuple(bad)
+
+        token = self._token_service.create_token(username)
+        user = self._user_store.get_user(username)
+        is_admin = user.is_admin if user else False
+        collections = self._user_store.get_user_collections(username)
+
+        (
+            new_state, col_update, badge_update,
+            logout_update, admin_content_update, admin_notice_update,
+            user_tbl, group_tbl, col_tbl, token_val,
+        ) = self._build_login_outputs(username, token, is_admin, collections)
 
         return (
             new_state,
             f"✅ Welcome, {username}!",
-            gr.update(visible=False),   # hide login column
-            gr.update(visible=True),    # show main content column
+            gr.update(visible=False),  # hide login column
+            gr.update(visible=True),   # show main content column
             col_update,
-            user_badge_update,
+            badge_update,
+            logout_update,
+            admin_content_update,
+            admin_notice_update,
+            user_tbl,
+            group_tbl,
+            col_tbl,
+            token_val,
         )
 
-    def _do_logout(self, state: dict) -> tuple[dict, Any, Any, Any, Any]:
-        """Clear session and show login screen."""
+    def _restore_session(self, token: str) -> tuple:
+        """Attempt to restore a session from a stored token (called on page load).
+
+        Returns the same 13-element tuple as _do_login_all so all UI components
+        can be updated correctly when the stored token is still valid.
+        """
+        _show_login = (
+            _empty_session(), "",
+            gr.update(visible=self._auth_enabled),  # login_col
+            gr.update(visible=not self._auth_enabled),  # main_col
+            gr.update(choices=[], value=None, visible=False),  # collection_selector
+            gr.update(value="", visible=False),  # user_badge
+            gr.update(visible=False),  # logout_button
+            gr.update(visible=not self._auth_enabled),  # admin_content
+            gr.update(value="" if not self._auth_enabled else "🔒 *Admin access required.*"),
+            self._admin_list_users() if not self._auth_enabled else [],
+            self._admin_list_groups() if not self._auth_enabled else [],
+            self._admin_list_collections() if not self._auth_enabled else [],
+            "",  # token_store (clear invalid token)
+        )
+
+        if not self._auth_enabled or not token:
+            return _show_login
+
+        username = self._token_service.verify_token(token)
+        if not username:
+            return _show_login
+
+        user = self._user_store.get_user(username)
+        if not user:
+            return _show_login
+
+        collections = self._user_store.get_user_collections(username)
+        (
+            new_state, col_update, badge_update,
+            logout_update, admin_content_update, admin_notice_update,
+            user_tbl, group_tbl, col_tbl, token_val,
+        ) = self._build_login_outputs(username, token, user.is_admin, collections)
+
+        return (
+            new_state,
+            "",  # no login_status message needed
+            gr.update(visible=False),  # hide login column
+            gr.update(visible=True),   # show main column
+            col_update,
+            badge_update,
+            logout_update,
+            admin_content_update,
+            admin_notice_update,
+            user_tbl,
+            group_tbl,
+            col_tbl,
+            token_val,
+        )
+
+    def _do_logout(self, state: dict) -> tuple:
+        """Clear session, show login screen, and clear stored token."""
         return (
             _empty_session(),
             gr.update(visible=True),   # show login column
             gr.update(visible=False),  # hide main content column
-            gr.update(value="", visible=False),  # hide user badge
+            gr.update(value="", visible=False),   # hide user badge
             gr.update(choices=[], value=None, visible=False),  # hide collection dropdown
+            gr.update(visible=False),  # hide logout button
+            gr.update(visible=False),  # hide admin content
+            "",  # token_store — triggers JS to clear localStorage
         )
 
     # ── Document helpers ──────────────────────────────────────────────────────
@@ -574,38 +666,155 @@ class PrivateGptUi:
         except Exception as e:
             return f"❌ Error: {e}", self._admin_list_collections()
 
+    # ── System info ───────────────────────────────────────────────────────────
+
+    def _get_system_info_markdown(self) -> str:
+        """Return a Markdown string describing the current LLM/embedding/vectorstore config."""
+        try:
+            cfg = settings()
+            llm_mode = cfg.llm.mode
+            llm_model: str = {
+                "llamacpp": lambda: cfg.llamacpp.llm_hf_model_file,
+                "openai": lambda: cfg.openai.model,
+                "openailike": lambda: cfg.openai.model,
+                "azopenai": lambda: cfg.azopenai.llm_model,
+                "sagemaker": lambda: cfg.sagemaker.llm_endpoint_name,
+                "ollama": lambda: cfg.ollama.llm_model or "—",
+                "gemini": lambda: cfg.gemini.model,
+                "mock": lambda: llm_mode,
+            }.get(llm_mode, lambda: llm_mode)()
+
+            emb_mode = cfg.embedding.mode
+            emb_model: str = {
+                "huggingface": lambda: cfg.huggingface.embedding_hf_model_name,
+                "openai": lambda: cfg.openai.embedding_model,
+                "azopenai": lambda: cfg.azopenai.embedding_model,
+                "ollama": lambda: cfg.ollama.embedding_model or "—",
+                "gemini": lambda: cfg.gemini.embedding_model,
+                "sagemaker": lambda: cfg.sagemaker.embedding_endpoint_name,
+                "mock": lambda: emb_mode,
+                "mistralai": lambda: emb_mode,
+            }.get(emb_mode, lambda: emb_mode)()
+
+            vs_db = cfg.vectorstore.database
+
+            lines = [
+                "### Language Model",
+                f"| Property | Value |",
+                f"|---|---|",
+                f"| Mode | `{llm_mode}` |",
+                f"| Model | `{llm_model}` |",
+                f"| Temperature | `{cfg.llm.temperature}` |",
+                f"| Max new tokens | `{cfg.llm.max_new_tokens}` |",
+                f"| Context window | `{cfg.llm.context_window}` |",
+                f"| Prompt style | `{cfg.llm.prompt_style}` |",
+                "",
+                "### Embedding Model",
+                f"| Property | Value |",
+                f"|---|---|",
+                f"| Mode | `{emb_mode}` |",
+                f"| Model | `{emb_model}` |",
+                f"| Embed dim | `{cfg.embedding.embed_dim}` |",
+                f"| Ingest mode | `{cfg.embedding.ingest_mode}` |",
+                "",
+                "### Vector Store",
+                f"| Property | Value |",
+                f"|---|---|",
+                f"| Database | `{vs_db}` |",
+                "",
+                "### Auth / Session",
+                f"| Property | Value |",
+                f"|---|---|",
+                f"| Auth enabled | `{cfg.user_auth.enabled}` |",
+                f"| Token expiry | `{cfg.user_auth.token_expiry_hours} hours` |",
+                f"| Default collection | `{cfg.user_auth.default_collection_name}` |",
+            ]
+            return "\n".join(lines)
+        except Exception as exc:
+            return f"⚠️ Could not load system info: {exc}"
+
     # ── UI construction ───────────────────────────────────────────────────────
 
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
 
-        css = (
-            ".logo { display:flex; background-color: #C7BAFF; height: 80px; "
-            "border-radius: 8px; align-content: center; justify-content: center; "
-            "align-items: center; }"
-            ".logo img { height: 25% }"
-            ".contain { display: flex !important; flex-direction: column !important; }"
-            "#component-0, #component-3, #component-10, #component-8 { height: 100% !important; }"
-            "#chatbot { flex-grow: 1 !important; overflow: auto !important; }"
-            "#col { height: calc(100vh - 112px - 16px) !important; }"
-            "hr { margin-top: 1em; margin-bottom: 1em; border: 0; border-top: 1px solid #FFF; }"
-            ".avatar-image { background-color: antiquewhite; border-radius: 2px; }"
-            ".footer { text-align: center; margin-top: 20px; font-size: 14px; "
-            "display: flex; align-items: center; justify-content: center; }"
-            ".footer-zylon-link { display:flex; margin-left: 5px; text-decoration: auto; "
-            "color: var(--body-text-color); }"
-            ".footer-zylon-link:hover { color: #C7BAFF; }"
-            ".footer-zylon-ico { height: 20px; margin-left: 5px; "
-            "background-color: antiquewhite; border-radius: 2px; }"
-        )
+        css = """
+/* ── Layout ──────────────────────────────────────────────────────── */
+.gradio-container { background: #f0f2f5 !important; max-width: 100% !important; }
+.contain { display: flex !important; flex-direction: column !important; }
+#component-0, #component-3, #component-10, #component-8 { height: 100% !important; }
+#chatbot { flex-grow: 1 !important; overflow: auto !important; }
+#col { height: calc(100vh - 96px - 16px) !important; }
+
+/* ── Logo / header ───────────────────────────────────────────────── */
+.logo {
+    display: flex; background: #4f6ef7; height: 56px; border-radius: 6px;
+    align-content: center; justify-content: center; align-items: center;
+    box-shadow: 0 1px 4px rgba(79,110,247,0.3);
+}
+.logo img { height: 45%; }
+
+/* ── Dividers ────────────────────────────────────────────────────── */
+hr { margin: 0.5em 0; border: 0; border-top: 1px solid #e8eaed; }
+
+/* ── Buttons (flat) ──────────────────────────────────────────────── */
+button.primary, .primary button {
+    background: #4f6ef7 !important; border: none !important;
+    border-radius: 6px !important; box-shadow: none !important; color: #fff !important;
+}
+button.primary:hover, .primary button:hover { background: #3d5ce0 !important; }
+button.secondary, .secondary button {
+    background: #fff !important; border: 1px solid #d1d5db !important;
+    border-radius: 6px !important; box-shadow: none !important;
+}
+button.stop, .stop button {
+    background: #fef2f2 !important; border: 1px solid #fca5a5 !important;
+    border-radius: 6px !important; color: #dc2626 !important; box-shadow: none !important;
+}
+
+/* ── Avatar ──────────────────────────────────────────────────────── */
+.avatar-image { background: #f3f4f6; border-radius: 4px; }
+
+/* ── Login card ──────────────────────────────────────────────────── */
+.login-card {
+    max-width: 400px; margin: 48px auto; padding: 28px 32px;
+    background: #fff; border-radius: 10px; border: 1px solid #e8eaed;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+}
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+.footer {
+    text-align: center; margin-top: 12px; font-size: 12px;
+    display: flex; align-items: center; justify-content: center; color: #9ca3af;
+}
+.footer-zylon-link { display: flex; margin-left: 4px; text-decoration: none; color: #9ca3af; }
+.footer-zylon-link:hover { color: #4f6ef7; }
+.footer-zylon-ico { height: 16px; margin-left: 4px; border-radius: 2px; }
+
+/* ── Tabs & panels ───────────────────────────────────────────────── */
+.tabs > .tab-nav { border-bottom: 2px solid #e8eaed !important; }
+.tabs > .tab-nav > button { border-radius: 6px 6px 0 0 !important; font-weight: 500; }
+.tabs > .tab-nav > button.selected { color: #4f6ef7 !important; border-bottom: 2px solid #4f6ef7 !important; }
+"""
 
         with gr.Blocks(
             title=UI_TAB_TITLE,
-            theme=gr.themes.Soft(primary_hue=slate),
+            theme=gr.themes.Base(
+                primary_hue="indigo",
+                neutral_hue="slate",
+                font=gr.themes.GoogleFont("Inter"),
+            ),
             css=css,
         ) as blocks:
             # Per-session state
             session_state = gr.State(_empty_session())
+
+            # Hidden textbox used to persist the auth token in the browser's localStorage.
+            # Its value is written by the login handler and read on page load via JS.
+            token_store = gr.Textbox(visible=False, value="", elem_id="token-store")
+            # Placeholder input for the blocks.load auto-login handler.
+            # The JS fills it with the localStorage value before calling _restore_session.
+            _load_token_input = gr.Textbox(visible=False, value="")
 
             # ── Header ────────────────────────────────────────────────────────
             with gr.Row():
@@ -622,8 +831,8 @@ class PrivateGptUi:
                     )
 
             # ── Login panel (only visible when auth is enabled and user is logged out) ─
-            with gr.Column(visible=self._auth_enabled) as login_col:
-                gr.Markdown("## Sign in to PrivateGPT")
+            with gr.Column(visible=self._auth_enabled, elem_classes=["login-card"]) as login_col:
+                gr.Markdown("## Sign in")
                 login_username = gr.Textbox(label="Username", placeholder="username")
                 login_password = gr.Textbox(
                     label="Password", type="password", placeholder="••••••••"
@@ -637,8 +846,8 @@ class PrivateGptUi:
                     # ── Chat Tab ──────────────────────────────────────────────
                     with gr.Tab("💬 Chat"):
                         with gr.Row(equal_height=False):
-                            # Left sidebar
-                            with gr.Column(scale=3):
+                            # Left sidebar (narrower for more chat space)
+                            with gr.Column(scale=2):
                                 default_mode = self._default_mode
 
                                 # Collection selector (only in auth mode)
@@ -727,8 +936,8 @@ class PrivateGptUi:
                                     }
                                     return model_mapping.get(llm_mode)
 
-                            # Right: chat panel
-                            with gr.Column(scale=7, elem_id="col"):
+                            # Right: chat panel (wider)
+                            with gr.Column(scale=8, elem_id="col"):
                                 model_label = get_model_label()
                                 label_text = (
                                     f"LLM: {settings().llm.mode} | Model: {model_label}"
@@ -862,6 +1071,15 @@ class PrivateGptUi:
                                     )
                                     col_action_status = gr.Markdown("")
 
+                                # System Info sub-tab
+                                with gr.Tab("System Info"):
+                                    system_info_md = gr.Markdown(
+                                        self._get_system_info_markdown()
+                                    )
+                                    refresh_info_btn = gr.Button(
+                                        "Refresh", size="sm", variant="secondary"
+                                    )
+
             # ── Footer ────────────────────────────────────────────────────────
             with gr.Row():
                 avatar_byte = AVATAR_BOT.read_bytes()
@@ -876,68 +1094,70 @@ class PrivateGptUi:
 
             # ── Event bindings ────────────────────────────────────────────────
 
-            # Login
+            # Shared output list for login / restore-session handlers
+            _login_outputs = [
+                session_state, login_status, login_col, main_col,
+                collection_selector, user_badge, logout_button,
+                admin_content, admin_notice,
+                user_table, group_table, collection_table,
+                token_store,
+            ]
+
+            # Login — single combined handler avoids state race condition
             login_button.click(
-                self._do_login,
+                self._do_login_all,
                 inputs=[login_username, login_password, session_state],
-                outputs=[
-                    session_state,
-                    login_status,
-                    login_col,
-                    main_col,
-                    collection_selector,
-                    user_badge,
-                ],
+                outputs=_login_outputs,
             )
             login_password.submit(
-                self._do_login,
+                self._do_login_all,
                 inputs=[login_username, login_password, session_state],
-                outputs=[
-                    session_state,
-                    login_status,
-                    login_col,
-                    main_col,
-                    collection_selector,
-                    user_badge,
-                ],
+                outputs=_login_outputs,
             )
 
-            # After login, show logout button, conditionally show admin content
-            def _post_login_ui(state: dict) -> tuple[Any, Any, Any]:
-                logout_vis = state.get("username") is not None
-                admin_vis = state.get("is_admin", False) or not self._auth_enabled
-                return (
-                    gr.update(visible=logout_vis),
-                    gr.update(visible=admin_vis),
-                    gr.update(value="" if admin_vis else "🔒 *Admin access required.*"),
-                )
-
-            login_button.click(
-                _post_login_ui,
-                inputs=[session_state],
-                outputs=[logout_button, admin_content, admin_notice],
-            )
-            login_password.submit(
-                _post_login_ui,
-                inputs=[session_state],
-                outputs=[logout_button, admin_content, admin_notice],
-            )
-
-            # Logout
+            # Logout — single handler updates all affected components at once
             logout_button.click(
                 self._do_logout,
                 inputs=[session_state],
                 outputs=[
-                    session_state,
-                    login_col,
-                    main_col,
-                    user_badge,
-                    collection_selector,
+                    session_state, login_col, main_col,
+                    user_badge, collection_selector,
+                    logout_button, admin_content,
+                    token_store,
                 ],
             )
-            logout_button.click(
-                lambda: (gr.update(visible=False), gr.update(visible=False)),
-                outputs=[logout_button, admin_content],
+
+            # Persist / clear token in browser localStorage whenever token_store changes
+            token_store.change(
+                fn=None,
+                inputs=[token_store],
+                outputs=[],
+                js=(
+                    "(t) => {"
+                    "  if (t) { localStorage.setItem('pgpt_auth_token', t); }"
+                    "  else { localStorage.removeItem('pgpt_auth_token'); }"
+                    "  return [];"
+                    "}"
+                ),
+            )
+
+            # Auto-login on page load from token stored in localStorage.
+            # The js parameter runs client-side first: it reads localStorage and
+            # returns [token], which Gradio maps to _load_token_input before calling
+            # _restore_session(token) on the server.
+            if self._auth_enabled:
+                blocks.load(
+                    fn=self._restore_session,
+                    inputs=[_load_token_input],
+                    outputs=_login_outputs,
+                    js="() => [localStorage.getItem('pgpt_auth_token') || '']",
+                )
+
+            # Refresh System Info panel
+            refresh_info_btn.click(
+                fn=self._get_system_info_markdown,
+                inputs=[],
+                outputs=[system_info_md],
             )
 
             # Collection selector
