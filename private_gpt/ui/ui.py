@@ -56,9 +56,11 @@ class Source(BaseModel):
     file: str
     page: str
     text: str
+    pdf_prefix: str = "C:/UsedFilesFolder/"
 
     class Config:
         frozen = True
+        USE_HYPERLINKS_FOR_SOURCES: bool = True
 
     @staticmethod
     def curate_sources(sources: list[Chunk]) -> list["Source"]:
@@ -77,7 +79,11 @@ class Source(BaseModel):
             )  # Unique sources only
 
         return curated_sources
-
+        
+    def to_hyperlink(self) -> str:
+        encoded_file = self.file.replace(" ", "%20")
+        file_path = f"{self.pdf_prefix}{encoded_file}#page={self.page}"
+        return f'<a href="file:///{file_path}" target="_blank">{self.file} (page {self.page})</a>'
 
 @singleton
 class PrivateGptUi:
@@ -127,10 +133,10 @@ class PrivateGptUi:
                 used_files = set()
                 for index, source in enumerate(cur_sources, start=1):
                     if f"{source.file}-{source.page}" not in used_files:
-                        sources_text = (
-                            sources_text
-                            + f"{index}. {source.file} (page {source.page}) \n\n"
-                        )
+                        if settings().USE_HYPERLINKS_FOR_SOURCES:
+                            sources_text += f"{index}. {source.to_hyperlink()} \n\n"
+                        else:
+                            sources_text += f"{index}. {source.to_text()} \n\n"
                         used_files.add(f"{source.file}-{source.page}")
                 sources_text += "<hr>\n\n"
                 full_response += sources_text
@@ -293,7 +299,8 @@ class PrivateGptUi:
                 "file_name", "[FILE NAME MISSING]"
             )
             files.add(file_name)
-        return [[row] for row in files]
+            sorted_files = sorted(files)          # Sort the files alphabetically
+        return [[row] for row in sorted_files]    # Use sorted files
 
     def _upload_file(self, files: list[str]) -> None:
         logger.debug("Loading count=%s files", len(files))
