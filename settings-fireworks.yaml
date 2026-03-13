@@ -1,0 +1,13 @@
+server:
+  env_name: ${APP_ENV:fireworks}
+
+llm:
+  mode: fireworks
+
+embedding:
+  mode: fireworks
+
+fireworks:
+  api_key: ${FIREWORKS_API_KEY:}
+  model: "accounts/fireworks/models/llama-v3p1-70b-instruct"
+  #poetry install --extras "ui llms-fireworks embeddings-fireworks vector-stores-qdrant embeddings-openai"

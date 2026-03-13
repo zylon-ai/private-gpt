@@ -1,5 +1,4 @@
 services:
-
   #-----------------------------------
   #---- Private-GPT services ---------
   #-----------------------------------
@@ -7,7 +6,7 @@ services:
   # Private-GPT service for the Ollama CPU and GPU modes
   # This service builds from an external Dockerfile and runs the Ollama mode.
   private-gpt-ollama:
-    image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-ollama  # x-release-please-version
+    image: ${PGPT_IMAGE:-zylonai/private-gpt}:${PGPT_TAG:-0.6.2}-ollama # x-release-please-version
     user: root
     build:
       context: .
@@ -93,7 +92,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ./models:/root/.ollama
+      - ./local_data:/root/.ollama
     profiles:
       - ""
       - ollama-cpu
@@ -114,3 +113,21 @@ services:
               capabilities: [gpu]
     profiles:
       - ollama-cuda
+
+    # fireworks service
+  private-gpt-fireworks:
+    build:
+      context: .
+      dockerfile: Dockerfile.fireworks
+    volumes:
+      - ./local_data/:/home/worker/app/local_data
+    ports:
+      - "3001:8080"
+    environment:
+      PORT: 8080
+      PGPT_PROFILES: fireworks
+      FIREWORKS_API_KEY: ${FIREWORKS_API_KEY}
+    env_file:
+      - .env
+    profiles:
+      - fireworks
