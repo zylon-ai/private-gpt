@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, AnyStr, BinaryIO
 
 from injector import inject, singleton
-from llama_index.core.node_parser import SentenceWindowNodeParser
+from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.storage import StorageContext
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
@@ -39,12 +39,17 @@ class IngestService:
             docstore=node_store_component.doc_store,
             index_store=node_store_component.index_store,
         )
-        node_parser = SentenceWindowNodeParser.from_defaults()
+        # Use very small chunks to avoid nomic-embed-text context length errors
+        # Using simple sentence splitter instead of window parser for better control
+        text_splitter = SentenceSplitter(
+            chunk_size=128,  # Very small to fit within model's context window
+            chunk_overlap=10,
+        )
 
         self.ingest_component = get_ingestion_component(
             self.storage_context,
             embed_model=embedding_component.embedding_model,
-            transformations=[node_parser, embedding_component.embedding_model],
+            transformations=[text_splitter, embedding_component.embedding_model],
             settings=settings(),
         )
 
