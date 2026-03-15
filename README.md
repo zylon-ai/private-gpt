@@ -9,15 +9,14 @@
 
 ![Gradio UI](/fern/docs/assets/ui.png?raw=true)
 
-PrivateGPT is a production-ready AI project that allows you to ask questions about your documents using the power
+PrivateGPT -built by Zylon- is a production-ready AI project that allows you to ask questions about your documents using the power
 of Large Language Models (LLMs), even in scenarios without an Internet connection. 100% private, no data leaves your
 execution environment at any point.
 
 >[!TIP]
-> If you are looking for an **enterprise-ready, fully private AI workspace**
+> If you are looking for an **enterprise-ready, fully private AI platform for regulated industries** like financial services (banks, insurance, investment), defense, critical infrastructure services, government and healthcare,
 > check out [Zylon's website](https://zylon.ai)  or [request a demo](https://cal.com/zylon/demo?source=pgpt-readme).
-> Crafted by the team behind PrivateGPT, Zylon is a best-in-class AI collaborative
-> workspace that can be easily deployed on-premise (data center, bare metal...) or in your private cloud (AWS, GCP, Azure...).
+> **Zylon** is an enterprise AI platform delivering private generative AI and on-premise AI software for regulated industries, enabling secure deployment inside enterprise infrastructure without external cloud dependencies.
 
 The project provides an API offering all the primitives required to build private, context-aware AI applications.
 It follows and extends the [OpenAI API standard](https://openai.com/blog/openai-api),
