@@ -53,7 +53,7 @@ class LLMComponent:
 
                 prompt_style = get_prompt_style(settings.llm.prompt_style)
                 settings_kwargs = {
-                    "tfs_z": settings.llamacpp.tfs_z,  # ollama and llama-cpp
+                    "tfs_z": settings.llamacpp.tfs_z,  # llama-cpp only
                     "top_k": settings.llamacpp.top_k,  # ollama and llama-cpp
                     "top_p": settings.llamacpp.top_p,  # ollama and llama-cpp
                     "repeat_penalty": settings.llamacpp.repeat_penalty,  # ollama llama-cpp
@@ -137,7 +137,6 @@ class LLMComponent:
                 ollama_settings = settings.ollama
 
                 settings_kwargs = {
-                    "tfs_z": ollama_settings.tfs_z,  # ollama and llama-cpp
                     "num_predict": ollama_settings.num_predict,  # ollama only
                     "top_k": ollama_settings.top_k,  # ollama and llama-cpp
                     "top_p": ollama_settings.top_p,  # ollama and llama-cpp

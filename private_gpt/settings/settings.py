@@ -301,10 +301,6 @@ class OllamaSettings(BaseModel):
         "5m",
         description="Time the model will stay loaded in memory after a request. examples: 5m, 5h, '-1' ",
     )
-    tfs_z: float = Field(
-        1.0,
-        description="Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting.",
-    )
     num_predict: int = Field(
         None,
         description="Maximum number of tokens to predict when generating text. (Default: 128, -1 = infinite generation, -2 = fill context)",
