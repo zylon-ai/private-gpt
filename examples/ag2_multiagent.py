@@ -89,9 +89,11 @@ def query_private_documents(query: str, use_context: bool = True) -> str:
             "sources": [],
         }
 
-        # Extract source documents if available
+        # Extract source documents if available (PrivateGPT nests them
+        # inside each choice, not at the top level of the response)
         sources = []
-        for source in data.get("sources", []):
+        choice_sources = data["choices"][0].get("sources", [])
+        for source in choice_sources:
             doc_metadata = source.get("document", {}).get("doc_metadata", {})
             sources.append(
                 {
@@ -154,8 +156,9 @@ writer = AssistantAgent(
 user_proxy = UserProxyAgent(
     name="User",
     human_input_mode="NEVER",
-    max_consecutive_auto_reply=0,
+    max_consecutive_auto_reply=10,
     code_execution_config=False,
+    is_termination_msg=lambda msg: "TERMINATE" in (msg.get("content") or ""),
 )
 
 
