@@ -7081,7 +7081,6 @@ cffi = {version = ">=1.11", markers = "platform_python_implementation == \"PyPy\
 cffi = ["cffi (>=1.11)"]
 
 [extras]
-embeddings-avian = ["llama-index-embeddings-openai"]
 embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
 embeddings-gemini = ["llama-index-embeddings-gemini"]
 embeddings-huggingface = ["einops", "llama-index-embeddings-huggingface"]
@@ -7089,7 +7088,6 @@ embeddings-mistral = ["llama-index-embeddings-mistralai"]
 embeddings-ollama = ["llama-index-embeddings-ollama"]
 embeddings-openai = ["llama-index-embeddings-openai"]
 embeddings-sagemaker = ["boto3"]
-llms-avian = ["llama-index-llms-openai"]
 llms-azopenai = ["llama-index-llms-azure-openai"]
 llms-gemini = ["llama-index-llms-gemini"]
 llms-llama-cpp = ["llama-index-llms-llama-cpp"]
@@ -7109,4 +7107,4 @@ vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "764edba7553dba4423aaf658d5d0439f50ffafc5831cf9f126994419bfe6224a"
+content-hash = "16e3be4521aa64c936ee8fb841655f15090b71cf8faaeed7e73a4bcdf3fbdea2"
