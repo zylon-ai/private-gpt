@@ -1,7 +1,7 @@
 ## Vectorstores
-PrivateGPT supports [Qdrant](https://qdrant.tech/), [Milvus](https://milvus.io/), [Chroma](https://www.trychroma.com/), [PGVector](https://github.com/pgvector/pgvector) and [ClickHouse](https://github.com/ClickHouse/ClickHouse) as vectorstore providers. Qdrant being the default.
+PrivateGPT supports [Qdrant](https://qdrant.tech/), [Milvus](https://milvus.io/), [Chroma](https://www.trychroma.com/), [PGVector](https://github.com/pgvector/pgvector), [ClickHouse](https://github.com/ClickHouse/ClickHouse) and [OceanBase](https://github.com/oceanbase/oceanbase) (via [LlamaIndex OceanBase](https://developers.llamaindex.ai/python/framework-api-reference/storage/vector_store/oceanbase/) and `pyobvector`) as vectorstore providers. Qdrant being the default.
 
-In order to select one or the other, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant`, `milvus`, `chroma`, `postgres` and `clickhouse`.
+In order to select one or the other, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant`, `milvus`, `chroma`, `postgres`, `clickhouse` or `oceanbase`.
 
 ```yaml
 vectorstore:
@@ -185,3 +185,26 @@ clickhouse-client
 ```
 
 The dimensions of the embeddings columns will be set based on the `embedding.embed_dim` value. If the embedding model changes, this table may need to be dropped and recreated to avoid a dimension mismatch.
+
+### OceanBase
+
+To use [OceanBase](https://github.com/oceanbase/oceanbase) vector search, deploy OceanBase (vector features require a supported server version; the bundled client checks compatibility) and install the integration extra:
+
+```bash
+poetry install --extras vector-stores-oceanbase
+```
+
+Set `vectorstore.database` to `oceanbase` and configure the `oceanbase` block in `settings.yaml`:
+
+| Field | Description |
+|-------|-------------|
+| **uri** | SQL port as `host:port` (default `127.0.0.1:2881`). |
+| **user** | MySQL-compatible user, often tenant-qualified (e.g. `root@test`). |
+| **password** | Database password. |
+| **db_name** | Database name. |
+| **table_name** | Table for vectors (default `llama_vector`). |
+| **vidx_metric_type** | `l2` or `inner_product`. |
+| **drop_old** | If `true`, drop the vector table on startup if it exists. |
+| **normalize** | If `true`, normalize vectors before storage (recommended for metric choice per LlamaIndex docs). |
+
+Embedding dimension follows `embedding.embed_dim`. If the embedding model dimension changes, adjust `drop_old` or drop the table manually.

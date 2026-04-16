@@ -12,7 +12,7 @@ from llama_index.core.vector_stores.types import (
 
 from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.paths import local_data_path
-from private_gpt.settings.settings import Settings
+from private_gpt.settings.settings import OceanBaseSettings, Settings
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +187,38 @@ class VectorStoreComponent:
                 self.vector_store = ClickHouseVectorStore(
                     clickhouse_client=clickhouse_client
                 )
+
+            case "oceanbase":
+                try:
+                    from llama_index.vector_stores.oceanbase import (  # type: ignore
+                        OceanBaseVectorStore,
+                    )
+                    from pyobvector import ObVecClient  # type: ignore
+                except ImportError as e:
+                    raise ImportError(
+                        "OceanBase vector dependencies not found, install with "
+                        "`poetry install --extras vector-stores-oceanbase`"
+                    ) from e
+
+                ob_cfg = settings.oceanbase or OceanBaseSettings()
+                client = ObVecClient(
+                    uri=ob_cfg.uri,
+                    user=ob_cfg.user,
+                    password=ob_cfg.password,
+                    db_name=ob_cfg.db_name,
+                )
+                self.vector_store = typing.cast(
+                    BasePydanticVectorStore,
+                    OceanBaseVectorStore(
+                        client=client,
+                        dim=settings.embedding.embed_dim,
+                        table_name=ob_cfg.table_name,
+                        vidx_metric_type=ob_cfg.vidx_metric_type,
+                        drop_old=ob_cfg.drop_old,
+                        normalize=ob_cfg.normalize,
+                    ),
+                )
+
             case _:
                 # Should be unreachable
                 # The settings validator should have caught this

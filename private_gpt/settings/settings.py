@@ -153,7 +153,9 @@ class LLMSettings(BaseModel):
 
 
 class VectorstoreSettings(BaseModel):
-    database: Literal["chroma", "qdrant", "postgres", "clickhouse", "milvus"]
+    database: Literal[
+        "chroma", "qdrant", "postgres", "clickhouse", "milvus", "oceanbase"
+    ]
 
 
 class NodeStoreSettings(BaseModel):
@@ -265,6 +267,22 @@ class OpenAISettings(BaseModel):
     embedding_model: str = Field(
         "text-embedding-ada-002",
         description="OpenAI embedding Model to use. Example: 'text-embedding-3-large'.",
+    )
+    embedding_request_dimensions: int | None = Field(
+        None,
+        description=(
+            "If set, passed as `dimensions` to the OpenAI embeddings API "
+            "(e.g. text-embedding-3). Should match embedding.embed_dim when used."
+        ),
+    )
+    embedding_embed_batch_size: int | None = Field(
+        None,
+        ge=1,
+        le=2048,
+        description=(
+            "If set, passed as `embed_batch_size` to OpenAIEmbedding "
+            "(some OpenAI-compatible endpoints cap batch size, e.g. 10)."
+        ),
     )
 
 
@@ -566,6 +584,43 @@ class QdrantSettings(BaseModel):
     )
 
 
+class OceanBaseSettings(BaseModel):
+    """Connection and table options for OceanBase vector search (pyobvector)."""
+
+    uri: str = Field(
+        default="127.0.0.1:2881",
+        description="OceanBase SQL port, as `host:port` (MySQL protocol).",
+    )
+    user: str = Field(
+        default="root@test",
+        description="Database user (OceanBase tenant format, e.g. root@tenant).",
+    )
+    password: str = Field(
+        default="",
+        description="Password for the OceanBase user.",
+    )
+    db_name: str = Field(
+        default="test",
+        description="Database name to store the vector table.",
+    )
+    table_name: str = Field(
+        default="llama_vector",
+        description="Table name for vectors (must match LlamaIndex OceanBaseVectorStore).",
+    )
+    vidx_metric_type: Literal["l2", "inner_product"] = Field(
+        default="l2",
+        description="Vector index distance metric: `l2` or `inner_product`.",
+    )
+    drop_old: bool = Field(
+        default=False,
+        description="If true, drop the vector table on startup if it exists.",
+    )
+    normalize: bool = Field(
+        default=False,
+        description="Normalize embeddings before storage; recommended when using L2/inner_product.",
+    )
+
+
 class MilvusSettings(BaseModel):
     uri: str = Field(
         "local_data/private_gpt/milvus/milvus_local.db",
@@ -608,6 +663,7 @@ class Settings(BaseModel):
     postgres: PostgresSettings | None = None
     clickhouse: ClickHouseSettings | None = None
     milvus: MilvusSettings | None = None
+    oceanbase: OceanBaseSettings | None = None
 
 
 """

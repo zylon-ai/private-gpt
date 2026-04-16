@@ -34,6 +34,7 @@ llama-index-embeddings-mistralai = {version ="*", optional = true}
 llama-index-vector-stores-qdrant = {version ="*", optional = true}
 llama-index-vector-stores-milvus = {version ="*", optional = true}
 llama-index-vector-stores-chroma = {version ="*", optional = true}
+llama-index-vector-stores-oceanbase = { version = "*", optional = true }
 llama-index-vector-stores-postgres = {version ="*", optional = true}
 llama-index-vector-stores-clickhouse = {version ="*", optional = true}
 llama-index-storage-docstore-postgres = {version ="*", optional = true}
@@ -79,6 +80,7 @@ embeddings-mistral = ["llama-index-embeddings-mistralai"]
 vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
 vector-stores-clickhouse = ["llama-index-vector-stores-clickhouse", "clickhouse_connect"]
 vector-stores-chroma = ["llama-index-vector-stores-chroma"]
+vector-stores-oceanbase = ["llama-index-vector-stores-oceanbase"]
 vector-stores-postgres = ["llama-index-vector-stores-postgres"]
 vector-stores-milvus = ["llama-index-vector-stores-milvus"]
 storage-nodestore-postgres = ["llama-index-storage-docstore-postgres","llama-index-storage-index-store-postgres","psycopg2-binary","asyncpg"]

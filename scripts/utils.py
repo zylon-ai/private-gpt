@@ -4,7 +4,7 @@ import shutil
 from typing import Any, ClassVar
 
 from private_gpt.paths import local_data_path
-from private_gpt.settings.settings import settings
+from private_gpt.settings.settings import OceanBaseSettings, settings
 
 
 def wipe_file(file: str) -> None:
@@ -145,12 +145,50 @@ class Qdrant:
         print("\t- Qdrant collection not found or empty")
 
 
+class OceanBase:
+    def __init__(self) -> None:
+        try:
+            from pyobvector import ObVecClient  # type: ignore
+        except ImportError:
+            raise ImportError(
+                "OceanBase vector dependencies not found, install with "
+                "`poetry install --extras vector-stores-oceanbase`"
+            ) from None
+
+        ob_cfg = settings().oceanbase or OceanBaseSettings()
+        self.client = ObVecClient(
+            uri=ob_cfg.uri,
+            user=ob_cfg.user,
+            password=ob_cfg.password,
+            db_name=ob_cfg.db_name,
+        )
+        self.table_name = ob_cfg.table_name
+
+    def wipe(self, store_type: str) -> None:
+        assert store_type == "vectorstore"
+        self.client.drop_table_if_exist(table_name=self.table_name)
+        print(f"OceanBase table {self.table_name} dropped if it existed.")
+
+    def stats(self, store_type: str) -> None:
+        print(f"Storage for OceanBase {store_type}.")
+        if self.client.check_table_exists(self.table_name):
+            res = self.client.perform_raw_text_sql(
+                f"SELECT COUNT(*) AS c FROM {self.table_name}"
+            )
+            row = res.fetchone()
+            count = row[0] if row else 0
+            print(f"\tTable {self.table_name}: {count:,} rows")
+        else:
+            print(f"\t- OceanBase table {self.table_name} not found")
+
+
 class Command:
     DB_HANDLERS: ClassVar[dict[str, Any]] = {
         "simple": Simple,  # node store
         "chroma": Chroma,  # vector store
         "postgres": Postgres,  # node, index and vector store
         "qdrant": Qdrant,  # vector store
+        "oceanbase": OceanBase,  # vector store
     }
 
     def for_each_store(self, cmd: str):
