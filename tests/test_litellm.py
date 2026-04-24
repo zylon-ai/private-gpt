@@ -98,6 +98,36 @@ class TestLiteLLMChat(unittest.TestCase):
 
 
 @requires_key
+class TestLiteLLMParameterForwarding(unittest.TestCase):
+
+    def setUp(self):
+        _setup_env()
+
+    def test_max_tokens_respected(self):
+        from private_gpt.components.llm.custom.litellm import LiteLLMCustomLLM
+        llm = LiteLLMCustomLLM(model="anthropic/claude-sonnet-4-6", max_new_tokens=5)
+        resp = llm.complete("Write a very long essay about the history of computing.")
+        self.assertTrue(len(resp.text) < 200)
+
+    def test_temperature_forwarded(self):
+        from private_gpt.components.llm.custom.litellm import LiteLLMCustomLLM
+        llm = LiteLLMCustomLLM(model="anthropic/claude-sonnet-4-6", temperature=0.0)
+        resp = llm.complete("What is 2+2? Reply with just the number.")
+        self.assertIn("4", resp.text)
+
+    def test_custom_context_window(self):
+        from private_gpt.components.llm.custom.litellm import LiteLLMCustomLLM
+        llm = LiteLLMCustomLLM(model="anthropic/claude-sonnet-4-6", context_window=8192)
+        self.assertEqual(llm.metadata.context_window, 8192)
+
+    def test_custom_timeout(self):
+        from private_gpt.components.llm.custom.litellm import LiteLLMCustomLLM
+        llm = LiteLLMCustomLLM(model="anthropic/claude-sonnet-4-6", request_timeout=5.0)
+        resp = llm.complete("Say OK.")
+        self.assertIsNotNone(resp.text)
+
+
+@requires_key
 class TestLiteLLMEdgeCases(unittest.TestCase):
 
     def setUp(self):
@@ -116,6 +146,39 @@ class TestLiteLLMEdgeCases(unittest.TestCase):
         self.assertEqual(meta.model_name, "anthropic/claude-sonnet-4-6")
         self.assertGreater(meta.context_window, 0)
         self.assertGreater(meta.num_output, 0)
+
+    def test_empty_prompt_raises(self):
+        from private_gpt.components.llm.custom.litellm import LiteLLMCustomLLM
+        llm = LiteLLMCustomLLM(model="anthropic/claude-sonnet-4-6")
+        with self.assertRaises(Exception):
+            llm.complete("")
+
+    def test_raw_response_has_expected_keys(self):
+        from private_gpt.components.llm.custom.litellm import LiteLLMCustomLLM
+        llm = LiteLLMCustomLLM(model="anthropic/claude-sonnet-4-6")
+        resp = llm.complete("Say OK.")
+        self.assertIn("choices", resp.raw)
+        self.assertIn("model", resp.raw)
+
+    def test_stream_complete_accumulates_text(self):
+        from private_gpt.components.llm.custom.litellm import LiteLLMCustomLLM
+        llm = LiteLLMCustomLLM(model="anthropic/claude-sonnet-4-6")
+        chunks = list(llm.stream_complete("Count from 1 to 3."))
+        if len(chunks) > 1:
+            self.assertTrue(len(chunks[-1].text) >= len(chunks[0].text))
+
+    def test_chat_role_conversion(self):
+        from private_gpt.components.llm.custom.litellm import LiteLLMCustomLLM
+        from llama_index.core.llms import ChatMessage, MessageRole
+        llm = LiteLLMCustomLLM(model="anthropic/claude-sonnet-4-6")
+        messages = [
+            ChatMessage(role=MessageRole.SYSTEM, content="You are a math tutor."),
+            ChatMessage(role=MessageRole.USER, content="What is 3*3?"),
+            ChatMessage(role=MessageRole.ASSISTANT, content="9"),
+            ChatMessage(role=MessageRole.USER, content="And 4*4?"),
+        ]
+        resp = llm.chat(messages)
+        self.assertIn("16", resp.message.content)
 
 
 if __name__ == "__main__":
