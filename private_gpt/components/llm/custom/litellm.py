@@ -1,4 +1,4 @@
-"""LiteLLM provider — routes to 100+ LLM providers via litellm.completion().
+"""LiteLLM provider - routes to 100+ LLM providers via litellm.completion().
 
 Supports OpenAI, Anthropic, AWS Bedrock, Google Vertex AI, Gemini, Cohere,
 Mistral, Groq, Together AI, Ollama, and more.
