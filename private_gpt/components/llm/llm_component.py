@@ -221,5 +221,21 @@ class LLMComponent:
                 self.llm = Gemini(
                     model_name=gemini_settings.model, api_key=gemini_settings.api_key
                 )
+            case "litellm":
+                try:
+                    from private_gpt.components.llm.custom.litellm import LiteLLMCustomLLM
+                except ImportError as e:
+                    raise ImportError(
+                        "LiteLLM dependencies not found, install with `poetry install --extras llms-litellm`"
+                    ) from e
+
+                litellm_settings = settings.litellm
+                self.llm = LiteLLMCustomLLM(
+                    model=litellm_settings.model,
+                    temperature=settings.llm.temperature,
+                    max_new_tokens=settings.llm.max_new_tokens,
+                    context_window=settings.llm.context_window,
+                    request_timeout=litellm_settings.request_timeout,
+                )
             case "mock":
                 self.llm = MockLLM()

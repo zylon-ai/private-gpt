@@ -1,0 +1,11 @@
+server:
+  env_name: ${APP_ENV:litellm}
+
+llm:
+  mode: litellm
+
+embedding:
+  mode: huggingface
+
+litellm:
+  model: ${LITELLM_MODEL:openai/gpt-4o-mini}

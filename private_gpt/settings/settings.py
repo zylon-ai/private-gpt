@@ -115,6 +115,7 @@ class LLMSettings(BaseModel):
         "mock",
         "ollama",
         "gemini",
+        "litellm",
     ]
     max_new_tokens: int = Field(
         256,
@@ -277,6 +278,22 @@ class GeminiSettings(BaseModel):
     embedding_model: str = Field(
         "models/embedding-001",
         description="Google Embedding Model to use. Example: 'models/embedding-001'.",
+    )
+
+
+class LiteLLMSettings(BaseModel):
+    model: str = Field(
+        "openai/gpt-4o-mini",
+        description=(
+            "LiteLLM model name in 'provider/model' format. "
+            "Examples: 'openai/gpt-4o', 'anthropic/claude-sonnet-4-20250514', "
+            "'bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0'. "
+            "See https://docs.litellm.ai/docs/providers for the full list."
+        ),
+    )
+    request_timeout: float = Field(
+        120.0,
+        description="Request timeout in seconds.",
     )
 
 
@@ -598,6 +615,7 @@ class Settings(BaseModel):
     sagemaker: SagemakerSettings
     openai: OpenAISettings
     gemini: GeminiSettings
+    litellm: LiteLLMSettings | None = None
     ollama: OllamaSettings
     azopenai: AzureOpenAISettings
     vectorstore: VectorstoreSettings
