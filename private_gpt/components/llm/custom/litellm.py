@@ -68,7 +68,7 @@ class LiteLLMCustomLLM(CustomLLM):
 
     @llm_completion_callback()
     def complete(self, prompt: str, **kwargs: Any) -> CompletionResponse:
-        import litellm
+        import litellm  # lazy import: litellm is an optional dependency
 
         response = litellm.completion(
             model=self.model,
@@ -76,6 +76,8 @@ class LiteLLMCustomLLM(CustomLLM):
             temperature=self.temperature,
             max_tokens=self.max_new_tokens,
             timeout=self.request_timeout,
+            # drop_params silently drops provider-unsupported kwargs
+            # (e.g. seed/logprobs on Anthropic) to prevent cross-provider errors
             drop_params=True,
         )
         text = response.choices[0].message.content or ""
