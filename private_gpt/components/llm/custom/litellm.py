@@ -85,7 +85,7 @@ class LiteLLMCustomLLM(CustomLLM):
     def stream_complete(self, prompt: str, **kwargs: Any) -> CompletionResponseGen:
         import litellm
 
-        def gen():
+        def gen() -> CompletionResponseGen:
             text = ""
             response = litellm.completion(
                 model=self.model,
@@ -137,7 +137,7 @@ class LiteLLMCustomLLM(CustomLLM):
             {"role": m.role.value, "content": m.content} for m in messages
         ]
 
-        def gen():
+        def gen() -> CompletionResponseGen:
             text = ""
             response = litellm.completion(
                 model=self.model,

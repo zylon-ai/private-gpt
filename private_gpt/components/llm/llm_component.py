@@ -232,6 +232,10 @@ class LLMComponent:
                     ) from e
 
                 litellm_settings = settings.litellm
+                if litellm_settings is None:
+                    raise ValueError(
+                        "LiteLLM settings not found. Add a [litellm] section to your settings YAML."
+                    )
                 self.llm = LiteLLMCustomLLM(
                     model=litellm_settings.model,
                     temperature=settings.llm.temperature,
