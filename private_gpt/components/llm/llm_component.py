@@ -223,7 +223,9 @@ class LLMComponent:
                 )
             case "litellm":
                 try:
-                    from private_gpt.components.llm.custom.litellm import LiteLLMCustomLLM
+                    from private_gpt.components.llm.custom.litellm import (
+                        LiteLLMCustomLLM,
+                    )
                 except ImportError as e:
                     raise ImportError(
                         "LiteLLM dependencies not found, install with `poetry install --extras llms-litellm`"

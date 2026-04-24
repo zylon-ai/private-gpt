@@ -12,10 +12,11 @@ Model names use LiteLLM format: "provider/model-name", e.g.:
 
 See https://docs.litellm.ai/docs/providers for the full list.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 from llama_index.core.base.llms.generic_utils import (
     completion_response_to_chat_response,
@@ -31,12 +32,16 @@ from llama_index.core.llms.callbacks import (
     llm_chat_callback,
     llm_completion_callback,
 )
-from llama_index.core.llms import (
-    ChatMessage,
-    ChatResponse,
-    ChatResponseGen,
-    CompletionResponseGen,
-)
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from llama_index.core.llms import (
+        ChatMessage,
+        ChatResponse,
+        ChatResponseGen,
+        CompletionResponseGen,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +102,9 @@ class LiteLLMCustomLLM(CustomLLM):
                 delta = chunk.choices[0].delta
                 content = getattr(delta, "content", "") or ""
                 text += content
-                yield CompletionResponse(delta=content, text=text, raw=chunk.model_dump())
+                yield CompletionResponse(
+                    delta=content, text=text, raw=chunk.model_dump()
+                )
 
         return gen()
 
@@ -147,6 +154,8 @@ class LiteLLMCustomLLM(CustomLLM):
                 delta = chunk.choices[0].delta
                 content = getattr(delta, "content", "") or ""
                 text += content
-                yield CompletionResponse(delta=content, text=text, raw=chunk.model_dump())
+                yield CompletionResponse(
+                    delta=content, text=text, raw=chunk.model_dump()
+                )
 
         return stream_completion_response_to_chat_response(gen())
