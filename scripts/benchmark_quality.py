@@ -399,9 +399,7 @@ def simulate_context_drift(
 
         total_unchanged = unchanged_count
         drift_score = (
-            (incorrect + missing) / total_unchanged
-            if total_unchanged > 0
-            else 0.0
+            (incorrect + missing) / total_unchanged if total_unchanged > 0 else 0.0
         )
         func_drift_score = (
             (functional_drift + missing) / total_unchanged
@@ -480,12 +478,16 @@ def _classify_ground_truth(
         elif c.chunk_index in modified_indices:
             new_c = new_by_idx.get(c.chunk_index)
             truth.append(
-                ChunkChange(change_type=ChangeType.MODIFIED, old_chunk=c, new_chunk=new_c)
+                ChunkChange(
+                    change_type=ChangeType.MODIFIED, old_chunk=c, new_chunk=new_c
+                )
             )
         else:
             new_c = new_by_idx.get(c.chunk_index)
             truth.append(
-                ChunkChange(change_type=ChangeType.UNCHANGED, old_chunk=c, new_chunk=new_c)
+                ChunkChange(
+                    change_type=ChangeType.UNCHANGED, old_chunk=c, new_chunk=new_c
+                )
             )
 
     for c in new_chunks:
@@ -529,7 +531,9 @@ def measure_diff_accuracy(
         if edit_type == "modify":
             for i in range(count):
                 idx = min(i, num_old - 1)
-                text = modify_single_paragraph(text, idx, seed=scenario_name.__hash__() + i)
+                text = modify_single_paragraph(
+                    text, idx, seed=scenario_name.__hash__() + i
+                )
                 ground_truth_modified.add(idx)
 
         elif edit_type == "insert":
@@ -567,17 +571,32 @@ def measure_diff_accuracy(
             # occurrence — inflating false positives and dropping F1 to  0.83).
             if ct == ChangeType.UNCHANGED:
                 from collections import Counter
+
                 old_counts = Counter(c.content_hash for c in old_chunks)
                 new_counts = Counter(c.content_hash for c in new_chunks)
                 gt_count = sum(
-                    min(old_counts[h], new_counts[h]) for h in old_counts if h in new_counts
+                    min(old_counts[h], new_counts[h])
+                    for h in old_counts
+                    if h in new_counts
                 )
             elif ct == ChangeType.MODIFIED:
-                gt_count = len(ground_truth_modified) if -1 not in ground_truth_modified else max(1, len(ground_truth_modified))
+                gt_count = (
+                    len(ground_truth_modified)
+                    if -1 not in ground_truth_modified
+                    else max(1, len(ground_truth_modified))
+                )
             elif ct == ChangeType.ADDED:
-                gt_count = len(ground_truth_added) if -1 not in ground_truth_added else max(1, len(ground_truth_added))
+                gt_count = (
+                    len(ground_truth_added)
+                    if -1 not in ground_truth_added
+                    else max(1, len(ground_truth_added))
+                )
             elif ct == ChangeType.DELETED:
-                gt_count = len(ground_truth_deleted) if -1 not in ground_truth_deleted else max(1, len(ground_truth_deleted))
+                gt_count = (
+                    len(ground_truth_deleted)
+                    if -1 not in ground_truth_deleted
+                    else max(1, len(ground_truth_deleted))
+                )
             else:
                 gt_count = 0
 
@@ -652,11 +671,17 @@ def measure_hash_stability(chunker: SemanticChunker) -> list[HashStabilityResult
     hash_a = None
     hash_b = None
     for c in chunks_a:
-        if SemanticChunker._compute_hash(c.text) == target_hash or target_paragraph[:50] in c.text:
+        if (
+            SemanticChunker._compute_hash(c.text) == target_hash
+            or target_paragraph[:50] in c.text
+        ):
             hash_a = c.content_hash
             break
     for c in chunks_b:
-        if SemanticChunker._compute_hash(c.text) == target_hash or target_paragraph[:50] in c.text:
+        if (
+            SemanticChunker._compute_hash(c.text) == target_hash
+            or target_paragraph[:50] in c.text
+        ):
             hash_b = c.content_hash
             break
 
@@ -757,7 +782,11 @@ def measure_scalability(
 
         diff_time = t4 - t3
         total_chunks = len(old_chunks) + len(new_chunks)
-        cps = total_chunks / (chunk_time + diff_time) if (chunk_time + diff_time) > 0 else 0
+        cps = (
+            total_chunks / (chunk_time + diff_time)
+            if (chunk_time + diff_time) > 0
+            else 0
+        )
 
         results.append(
             ScalabilityResult(
@@ -772,7 +801,12 @@ def measure_scalability(
 
         logger.info(
             "  Scale %3d paras: %d+%d chunks, chunk=%.4fs, diff=%.4fs, %.0f chunks/s",
-            n, len(old_chunks), len(new_chunks), chunk_time, diff_time, cps,
+            n,
+            len(old_chunks),
+            len(new_chunks),
+            chunk_time,
+            diff_time,
+            cps,
         )
 
     return results
@@ -938,7 +972,9 @@ def export_all(
     with open(output_dir / "quality_accuracy.json", "w", encoding="utf-8") as f:
         json.dump(acc_data, f, indent=2)
 
-    with open(output_dir / "quality_accuracy.csv", "w", newline="", encoding="utf-8") as f:
+    with open(
+        output_dir / "quality_accuracy.csv", "w", newline="", encoding="utf-8"
+    ) as f:
         if acc_data:
             writer = csv.DictWriter(f, fieldnames=acc_data[0].keys())
             writer.writeheader()
@@ -973,7 +1009,9 @@ def export_all(
     with open(output_dir / "quality_scalability.json", "w", encoding="utf-8") as f:
         json.dump(scale_data, f, indent=2)
 
-    with open(output_dir / "quality_scalability.csv", "w", newline="", encoding="utf-8") as f:
+    with open(
+        output_dir / "quality_scalability.csv", "w", newline="", encoding="utf-8"
+    ) as f:
         if scale_data:
             writer = csv.DictWriter(f, fieldnames=scale_data[0].keys())
             writer.writeheader()
@@ -999,7 +1037,9 @@ def export_all(
         with open(output_dir / "quality_stress.json", "w", encoding="utf-8") as f:
             json.dump(stress_data, f, indent=2)
 
-        with open(output_dir / "quality_stress.csv", "w", newline="", encoding="utf-8") as f:
+        with open(
+            output_dir / "quality_stress.csv", "w", newline="", encoding="utf-8"
+        ) as f:
             writer = csv.DictWriter(f, fieldnames=stress_data[0].keys())
             writer.writeheader()
             writer.writerows(stress_data)
@@ -1033,10 +1073,10 @@ class StressTestResult:
     new_chunk_count: int
     unchanged_count: int
     correct_node_ids: int
-    incorrect_node_ids: int   # strict: wrong node_id even if same content
-    functional_errors: int    # harmful: node_id points to different content
+    incorrect_node_ids: int  # strict: wrong node_id even if same content
+    functional_errors: int  # harmful: node_id points to different content
     missing_node_ids: int
-    passed: bool              # functional_errors == 0 and missing == 0
+    passed: bool  # functional_errors == 0 and missing == 0
 
 
 def _run_stress_scenario(
@@ -1050,7 +1090,8 @@ def _run_stress_scenario(
 ) -> StressTestResult:
     """Run one stress-test scenario and measure drift."""
     chunker = SemanticChunker(
-        min_chunk_size=min_chunk_size, max_chunk_size=max_chunk_size,
+        min_chunk_size=min_chunk_size,
+        max_chunk_size=max_chunk_size,
     )
     detector = DiffDetector(similarity_threshold=0.4)
 
@@ -1098,7 +1139,7 @@ def _run_stress_scenario(
                     if orig_hash != chunk.content_hash:
                         functional += 1
 
-    passed = (functional == 0 and missing == 0)
+    passed = functional == 0 and missing == 0
 
     return StressTestResult(
         scenario=scenario,
@@ -1148,20 +1189,23 @@ def run_stress_tests() -> list[StressTestResult]:
     )
     v2_merge = f"{expanded}\n\n{normal_a}\n\n{normal_b}\n\n{normal_c}"
 
-    results.append(_run_stress_scenario(
-        "A. Chunk merge -> split",
-        "Short paragraph expands past min_chunk_size, causing boundary shift",
-        v1_merge, v2_merge,
-        min_chunk_size=100, max_chunk_size=3000,
-    ))
+    results.append(
+        _run_stress_scenario(
+            "A. Chunk merge -> split",
+            "Short paragraph expands past min_chunk_size, causing boundary shift",
+            v1_merge,
+            v2_merge,
+            min_chunk_size=100,
+            max_chunk_size=3000,
+        )
+    )
 
     # ── B. Chunk split via max_chunk_size ────────────────────────────
     # v1: one large paragraph just under max_chunk_size → 1 chunk.
     # v2: paragraph grows past max_chunk_size → splits into 2 chunks.
     # Expectation: MODIFIED + ADDED, no drift for other chunks.
     large_para = (
-        "This is a very long paragraph that approaches the max_chunk_size limit. "
-        * 10
+        "This is a very long paragraph that approaches the max_chunk_size limit. " * 10
     ).strip()
     v1_split = f"{large_para}\n\n{normal_a}\n\n{normal_b}"
     # Make it bigger to exceed max_chunk_size=600
@@ -1173,12 +1217,16 @@ def run_stress_tests() -> list[StressTestResult]:
     )
     v2_split = f"{large_para}{extra}\n\n{normal_a}\n\n{normal_b}"
 
-    results.append(_run_stress_scenario(
-        "B. Chunk split (max_size)",
-        "Paragraph grows past max_chunk_size, splitting into 2 chunks",
-        v1_split, v2_split,
-        min_chunk_size=50, max_chunk_size=600,
-    ))
+    results.append(
+        _run_stress_scenario(
+            "B. Chunk split (max_size)",
+            "Paragraph grows past max_chunk_size, splitting into 2 chunks",
+            v1_split,
+            v2_split,
+            min_chunk_size=50,
+            max_chunk_size=600,
+        )
+    )
 
     # ── C. Boundary destruction ──────────────────────────────────────
     # v1: para A \n\n para B → 2 separate chunks.
@@ -1188,19 +1236,25 @@ def run_stress_tests() -> list[StressTestResult]:
     # Remove boundary between A and B
     v2_boundary = f"{normal_a} {normal_b}\n\n{normal_c}"
 
-    results.append(_run_stress_scenario(
-        "C. Boundary destruction",
-        "Removing \\n\\n merges two paragraphs into one chunk",
-        v1_boundary, v2_boundary,
-    ))
+    results.append(
+        _run_stress_scenario(
+            "C. Boundary destruction",
+            "Removing \\n\\n merges two paragraphs into one chunk",
+            v1_boundary,
+            v2_boundary,
+        )
+    )
 
     # ── C2. Boundary creation ────────────────────────────────────────
     # Reverse: split one merged chunk into two by adding \n\n.
-    results.append(_run_stress_scenario(
-        "C2. Boundary creation",
-        "Adding \\n\\n splits one chunk into two",
-        v2_boundary, v1_boundary,
-    ))
+    results.append(
+        _run_stress_scenario(
+            "C2. Boundary creation",
+            "Adding \\n\\n splits one chunk into two",
+            v2_boundary,
+            v1_boundary,
+        )
+    )
 
     # ── D. Heavy duplicates with inserts ─────────────────────────────
     # 8 identical paragraphs. Insert a new unique paragraph at position 3.
@@ -1213,17 +1267,23 @@ def run_stress_tests() -> list[StressTestResult]:
     )
     v1_dups = "\n\n".join([dup_para] * 8)
     paras_dups = [dup_para] * 8
-    paras_dups.insert(3, (
-        "[UNIQUE] A completely new unique piece of text that does not appear "
-        "anywhere else in the document and can serve as an anchor for the diff."
-    ))
+    paras_dups.insert(
+        3,
+        (
+            "[UNIQUE] A completely new unique piece of text that does not appear "
+            "anywhere else in the document and can serve as an anchor for the diff."
+        ),
+    )
     v2_dups = "\n\n".join(paras_dups)
 
-    results.append(_run_stress_scenario(
-        "D. 8 duplicates + insert",
-        "8 identical paragraphs, insert unique paragraph at position 3",
-        v1_dups, v2_dups,
-    ))
+    results.append(
+        _run_stress_scenario(
+            "D. 8 duplicates + insert",
+            "8 identical paragraphs, insert unique paragraph at position 3",
+            v1_dups,
+            v2_dups,
+        )
+    )
 
     # ── D2. Heavy duplicates with delete ─────────────────────────────
     # 8 identical paragraphs. Delete paragraph at position 2.
@@ -1231,11 +1291,14 @@ def run_stress_tests() -> list[StressTestResult]:
     paras_d2.pop(2)
     v2_dups_del = "\n\n".join(paras_d2)
 
-    results.append(_run_stress_scenario(
-        "D2. 8 duplicates + delete",
-        "8 identical paragraphs, delete one at position 2",
-        v1_dups, v2_dups_del,
-    ))
+    results.append(
+        _run_stress_scenario(
+            "D2. 8 duplicates + delete",
+            "8 identical paragraphs, delete one at position 2",
+            v1_dups,
+            v2_dups_del,
+        )
+    )
 
     # ── D3. 15 duplicates + insert + modify ──────────────────────────
     # Maximum stress: 15 identical chunks, insert at position 5,
@@ -1246,35 +1309,50 @@ def run_stress_tests() -> list[StressTestResult]:
     paras_15[11] = dup_para + " [MODIFIED] Extra sentence appended to paragraph 10."
     v2_15 = "\n\n".join(paras_15)
 
-    results.append(_run_stress_scenario(
-        "D3. 15 dupes + insert + mod",
-        "15 identical paragraphs, insert at 5, modify at 10 (shifted to 11)",
-        v1_15, v2_15,
-    ))
+    results.append(
+        _run_stress_scenario(
+            "D3. 15 dupes + insert + mod",
+            "15 identical paragraphs, insert at 5, modify at 10 (shifted to 11)",
+            v1_15,
+            v2_15,
+        )
+    )
 
     # ── E. Multi-edit cascade ────────────────────────────────────────
     # Delete paragraph 0, insert at 3, modify paragraph 5, all at once.
     paras_e = [
-        normal_a, normal_b, normal_c,
-        SAMPLE_PARAGRAPHS[3], SAMPLE_PARAGRAPHS[4],
-        SAMPLE_PARAGRAPHS[5], SAMPLE_PARAGRAPHS[6],
+        normal_a,
+        normal_b,
+        normal_c,
+        SAMPLE_PARAGRAPHS[3],
+        SAMPLE_PARAGRAPHS[4],
+        SAMPLE_PARAGRAPHS[5],
+        SAMPLE_PARAGRAPHS[6],
         SAMPLE_PARAGRAPHS[7],
     ]
     v1_multi = "\n\n".join(paras_e)
     paras_e2 = list(paras_e)
-    paras_e2.pop(0)       # delete first
-    paras_e2.insert(2, (
-        "[INSERTED CASCADE] New paragraph inserted in the middle of a "
-        "multi-edit batch that stresses the diff algorithm's robustness."
-    ))
-    paras_e2[4] = paras_e2[4] + " [CASCADE MOD] Extra context appended to this paragraph."
+    paras_e2.pop(0)  # delete first
+    paras_e2.insert(
+        2,
+        (
+            "[INSERTED CASCADE] New paragraph inserted in the middle of a "
+            "multi-edit batch that stresses the diff algorithm's robustness."
+        ),
+    )
+    paras_e2[4] = (
+        paras_e2[4] + " [CASCADE MOD] Extra context appended to this paragraph."
+    )
     v2_multi = "\n\n".join(paras_e2)
 
-    results.append(_run_stress_scenario(
-        "E. Multi-edit cascade",
-        "Delete para 0 + insert at 2 + modify at 4 simultaneously",
-        v1_multi, v2_multi,
-    ))
+    results.append(
+        _run_stress_scenario(
+            "E. Multi-edit cascade",
+            "Delete para 0 + insert at 2 + modify at 4 simultaneously",
+            v1_multi,
+            v2_multi,
+        )
+    )
 
     # ── F. Near-threshold similarity ─────────────────────────────────
     # A paragraph that is heavily rewritten ( 40% similar).
@@ -1293,11 +1371,14 @@ def run_stress_tests() -> list[StressTestResult]:
     v1_thresh = f"{normal_a}\n\n{original_para}\n\n{normal_b}\n\n{normal_c}"
     v2_thresh = f"{normal_a}\n\n{rewritten_para}\n\n{normal_b}\n\n{normal_c}"
 
-    results.append(_run_stress_scenario(
-        "F. Near-threshold rewrite",
-        "Heavy rewrite ( 40% similar) of one paragraph among stable chunks",
-        v1_thresh, v2_thresh,
-    ))
+    results.append(
+        _run_stress_scenario(
+            "F. Near-threshold rewrite",
+            "Heavy rewrite ( 40% similar) of one paragraph among stable chunks",
+            v1_thresh,
+            v2_thresh,
+        )
+    )
 
     # ── G. Iterative boundary shifts (20 steps) ─────────────────────
     # Start with small paragraphs that trigger merge behaviour.
@@ -1309,13 +1390,13 @@ def run_stress_tests() -> list[StressTestResult]:
 
     # Mix of short (< 150) and normal (> 150) paragraphs
     paras_g: list[str] = [
-        "Short fragment.",                                #  15 chars -> merge
-        normal_a,                                         #  200 chars -> standalone
-        "Another short sentence here.",                   #  28 chars -> merge
-        normal_b,                                         #  200 chars -> standalone
-        "Tiny.",                                          #   5 chars -> merge
-        normal_c,                                         #  200 chars -> standalone
-        "Final short line of the document.",              #  33 chars -> merge
+        "Short fragment.",  #  15 chars -> merge
+        normal_a,  #  200 chars -> standalone
+        "Another short sentence here.",  #  28 chars -> merge
+        normal_b,  #  200 chars -> standalone
+        "Tiny.",  #   5 chars -> merge
+        normal_c,  #  200 chars -> standalone
+        "Final short line of the document.",  #  33 chars -> merge
     ]
 
     text_g = "\n\n".join(paras_g)
@@ -1358,7 +1439,9 @@ def run_stress_tests() -> list[StressTestResult]:
             )
         else:
             # Modify: rephrase but stay substantial
-            paras_g[idx] = paras_g[idx] + f" [Step {step}] addendum {rng.randint(100,999)}."
+            paras_g[idx] = (
+                paras_g[idx] + f" [Step {step}] addendum {rng.randint(100,999)}."
+            )
 
         text_g = "\n\n".join(paras_g)
         new_chunks_g = chunker_g.chunk_text(text_g, metadata={"file": "boundary.txt"})
@@ -1397,13 +1480,15 @@ def run_stress_tests() -> list[StressTestResult]:
                         if nid_to_hash_g.get(resolved, "") != chunk.content_hash:
                             g_total_functional += 1
 
-                new_stored_g.append(StoredChunkInfo(
-                    chunk_index=chunk.chunk_index,
-                    content_hash=chunk.content_hash,
-                    node_id=resolved,
-                    text_preview=chunk.text[:100],
-                    full_text=chunk.text,
-                ))
+                new_stored_g.append(
+                    StoredChunkInfo(
+                        chunk_index=chunk.chunk_index,
+                        content_hash=chunk.content_hash,
+                        node_id=resolved,
+                        text_preview=chunk.text[:100],
+                        full_text=chunk.text,
+                    )
+                )
 
             elif change.change_type in (ChangeType.ADDED, ChangeType.MODIFIED):
                 if change.new_chunk:
@@ -1411,30 +1496,34 @@ def run_stress_tests() -> list[StressTestResult]:
                     new_nid = f"g_s{step}_{chunk.chunk_index}"
                     nid_to_hash_g[new_nid] = chunk.content_hash
                     hash_to_nids_g.setdefault(chunk.content_hash, set()).add(new_nid)
-                    new_stored_g.append(StoredChunkInfo(
-                        chunk_index=chunk.chunk_index,
-                        content_hash=chunk.content_hash,
-                        node_id=new_nid,
-                        text_preview=chunk.text[:100],
-                        full_text=chunk.text,
-                    ))
+                    new_stored_g.append(
+                        StoredChunkInfo(
+                            chunk_index=chunk.chunk_index,
+                            content_hash=chunk.content_hash,
+                            node_id=new_nid,
+                            text_preview=chunk.text[:100],
+                            full_text=chunk.text,
+                        )
+                    )
 
         new_stored_g.sort(key=lambda s: s.chunk_index)
         stored_g = new_stored_g
 
-    g_passed = (g_total_functional == 0 and g_total_missing == 0)
-    results.append(StressTestResult(
-        scenario="G. Iterative boundary shifts",
-        description="20-step edits on mixed short/long paragraphs (min_chunk_size=150)",
-        old_chunk_count=len(chunks_g),
-        new_chunk_count=len(new_chunks_g) if 'new_chunks_g' in dir() else 0,
-        unchanged_count=g_total_unchanged,
-        correct_node_ids=g_total_correct,
-        incorrect_node_ids=g_total_incorrect,
-        functional_errors=g_total_functional,
-        missing_node_ids=g_total_missing,
-        passed=g_passed,
-    ))
+    g_passed = g_total_functional == 0 and g_total_missing == 0
+    results.append(
+        StressTestResult(
+            scenario="G. Iterative boundary shifts",
+            description="20-step edits on mixed short/long paragraphs (min_chunk_size=150)",
+            old_chunk_count=len(chunks_g),
+            new_chunk_count=len(new_chunks_g) if "new_chunks_g" in dir() else 0,
+            unchanged_count=g_total_unchanged,
+            correct_node_ids=g_total_correct,
+            incorrect_node_ids=g_total_incorrect,
+            functional_errors=g_total_functional,
+            missing_node_ids=g_total_missing,
+            passed=g_passed,
+        )
+    )
 
     return results
 
@@ -1537,7 +1626,14 @@ def main() -> None:
     print_stress_table(stress_results)
 
     # ─── Export ──────────────────────────────────────────────────────
-    export_all(output_dir, drift_results, accuracy_results, stability_results, scalability_results, stress_results)
+    export_all(
+        output_dir,
+        drift_results,
+        accuracy_results,
+        stability_results,
+        scalability_results,
+        stress_results,
+    )
 
     print(f"\nAll quality benchmark results saved to {output_dir}/")
 

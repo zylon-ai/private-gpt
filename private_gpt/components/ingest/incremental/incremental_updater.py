@@ -30,6 +30,10 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 from llama_index.core.data_structs import IndexDict
 from llama_index.core.embeddings.utils import EmbedType
@@ -43,6 +47,9 @@ from llama_index.core.schema import (
     TextNode,
     TransformComponent,
 )
+
+if TYPE_CHECKING:
+    from llama_index.core.schema import BaseNode
 from llama_index.core.storage import StorageContext
 
 from private_gpt.components.ingest.incremental.chunk_hash_store import (
@@ -224,7 +231,7 @@ class IncrementalUpdater:
             logger.debug("Could not read ref_doc_info for duplicate cleanup: %s", exc)
             all_ref_docs = {}
 
-        for ref_doc_id, ref_doc_info in all_ref_docs.items():
+        for ref_doc_id, ref_doc_info in (all_ref_docs or {}).items():
             if ref_doc_info is None:
                 continue
             meta = getattr(ref_doc_info, "metadata", {}) or {}
@@ -233,7 +240,8 @@ class IncrementalUpdater:
 
             logger.info(
                 "Removing prior ingest record for '%s' (doc_id=%s).",
-                file_name, ref_doc_id,
+                file_name,
+                ref_doc_id,
             )
             try:
                 self._index.storage_context.vector_store.delete(ref_doc_id)
@@ -242,7 +250,9 @@ class IncrementalUpdater:
             try:
                 self._index.docstore.delete_ref_doc(ref_doc_id, raise_error=False)
             except Exception as exc:
-                logger.debug("docstore.delete_ref_doc failed for %s: %s", ref_doc_id, exc)
+                logger.debug(
+                    "docstore.delete_ref_doc failed for %s: %s", ref_doc_id, exc
+                )
             cleaned += 1
 
         # ── 2. Qdrant orphan cleanup by file_name payload filter ──────────
@@ -252,13 +262,13 @@ class IncrementalUpdater:
         vs = self._index.storage_context.vector_store
         qdrant_client = getattr(vs, "client", None)
         if qdrant_client is not None:
-            collection = (
-                getattr(vs, "_collection_name", None)
-                or getattr(vs, "collection_name", None)
+            collection = getattr(vs, "_collection_name", None) or getattr(
+                vs, "collection_name", None
             )
             if collection:
                 try:
                     from qdrant_client.models import FieldCondition, Filter, MatchValue
+
                     qdrant_client.delete(
                         collection_name=collection,
                         points_selector=Filter(
@@ -271,16 +281,20 @@ class IncrementalUpdater:
                         ),
                     )
                     logger.info(
-                        "Deleted all Qdrant orphan points for file_name='%s'.", file_name
+                        "Deleted all Qdrant orphan points for file_name='%s'.",
+                        file_name,
                     )
                     cleaned += 1  # count at least one sweep
                 except Exception as exc:
-                    logger.debug("Qdrant orphan cleanup failed for '%s': %s", file_name, exc)
+                    logger.debug(
+                        "Qdrant orphan cleanup failed for '%s': %s", file_name, exc
+                    )
 
         if cleaned:
             logger.info(
                 "Cleanup complete for '%s' (%d docstore record(s) removed).",
-                file_name, cleaned,
+                file_name,
+                cleaned,
             )
             self._save_index()
 
@@ -291,7 +305,9 @@ class IncrementalUpdater:
         without logging anything.
         """
         try:
-            documents = IngestionHelper.transform_file_into_documents(file_name, file_data)
+            documents = IngestionHelper.transform_file_into_documents(
+                file_name, file_data
+            )
             full_text = "\n\n".join(doc.text for doc in documents)
             file_hash = hashlib.sha256(full_text.encode("utf-8")).hexdigest()
             existing = self.hash_store.get_document_by_filename(file_name)
@@ -330,7 +346,7 @@ class IncrementalUpdater:
         existing_record = self.hash_store.get_document_by_filename(file_name)
 
         if existing_record and existing_record.file_hash == file_hash:
-            # File hasn't changed at all – skip entirely
+            # File hasn't changed at all - skip entirely
             logger.info("File %s unchanged (same file hash). Skipping.", file_name)
             stats.time_total_s = time.perf_counter() - total_start
             stats.total_chunks_old = len(existing_record.chunks)
@@ -347,7 +363,7 @@ class IncrementalUpdater:
         stats.total_chunks_new = len(new_chunks)
 
         if existing_record is None:
-            # New file – full ingestion (but through our chunking pipeline).
+            # New file - full ingestion (but through our chunking pipeline).
             # Clean up any prior standard-pipeline records first to prevent
             # duplicate embeddings (same filename, different doc_id scheme).
             self._cleanup_prior_ingest(file_name)
@@ -399,7 +415,7 @@ class IncrementalUpdater:
         chunks_to_embed: list[HashedChunk] = new_chunks  # re-embed everything
 
         new_node_map: dict[int, str] = {}  # chunk_index -> node_id
-        embedded_nodes: list = []
+        embedded_nodes: Sequence[BaseNode] = []
 
         if chunks_to_embed:
             text_nodes = self._create_text_nodes(
@@ -426,12 +442,14 @@ class IncrementalUpdater:
             self._index.storage_context.vector_store.delete(existing_record.doc_id)
             logger.debug(
                 "Wiped all vectors for doc_id=%s (file=%s)",
-                existing_record.doc_id, file_name,
+                existing_record.doc_id,
+                file_name,
             )
         except Exception as exc:
             logger.debug(
                 "vector_store.delete failed for %s (%s), continuing",
-                existing_record.doc_id, exc,
+                existing_record.doc_id,
+                exc,
             )
         try:
             self._index.docstore.delete_ref_doc(
@@ -440,12 +458,13 @@ class IncrementalUpdater:
         except Exception as exc:
             logger.debug(
                 "docstore.delete_ref_doc failed for %s (%s)",
-                existing_record.doc_id, exc,
+                existing_record.doc_id,
+                exc,
             )
 
         if embedded_nodes:
             self._index.insert_nodes(embedded_nodes, show_progress=True)
-            for node, chunk in zip(embedded_nodes, chunks_to_embed):
+            for node, chunk in zip(embedded_nodes, chunks_to_embed, strict=False):
                 new_node_map[chunk.chunk_index] = node.node_id
 
         stats.time_indexing_s = time.perf_counter() - index_start
@@ -530,7 +549,7 @@ class IncrementalUpdater:
 
         # Store chunk hashes for future incremental updates
         stored_chunks = []
-        for node, chunk in zip(embedded_nodes, new_chunks):
+        for node, chunk in zip(embedded_nodes, new_chunks, strict=False):
             stored_chunks.append(
                 StoredChunkInfo(
                     chunk_index=chunk.chunk_index,
@@ -583,18 +602,14 @@ class IncrementalUpdater:
                 "Deleted all vectors for file=%s (doc_id=%s)", file_name, record.doc_id
             )
         except Exception as exc:
-            logger.warning(
-                "vector_store.delete failed for %s (%s)", file_name, exc
-            )
+            logger.warning("vector_store.delete failed for %s (%s)", file_name, exc)
 
         # Remove the ref_doc entry from the docstore so the file no longer
         # appears in list_ingested().
         try:
             self._index.docstore.delete_ref_doc(record.doc_id, raise_error=False)
         except Exception as exc:
-            logger.warning(
-                "docstore.delete_ref_doc failed for %s (%s)", file_name, exc
-            )
+            logger.warning("docstore.delete_ref_doc failed for %s (%s)", file_name, exc)
 
         # Remove from hash store
         self.hash_store.delete_document(record.doc_id)
@@ -617,7 +632,7 @@ class IncrementalUpdater:
         """
         nodes = []
         for chunk in chunks:
-            node = TextNode(
+            node = TextNode(  # type: ignore[call-arg]
                 text=chunk.text,
                 metadata={
                     "file_name": file_name,
@@ -639,7 +654,7 @@ class IncrementalUpdater:
             nodes.append(node)
         return nodes
 
-    def get_stats_for_file(self, file_name: str) -> dict:
+    def get_stats_for_file(self, file_name: str) -> dict[str, Any]:
         """Get information about how a file is stored in the hash registry."""
         record = self.hash_store.get_document_by_filename(file_name)
         if record is None:

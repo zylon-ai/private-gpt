@@ -18,13 +18,15 @@ Three approaches are implemented, as described in the thesis:
    robust against reorderings.
 
 References (from thesis):
-- Myers' algorithm: O(ND) time for D edits (thesis: Diff-detection algorithms)
-- Ratcliff/Obershelp: Gestalt pattern matching (thesis: Diff-detection algorithms)
-- Patience diff: Bram Cohen 2005, anchors on unique items (thesis: Diff-detection algorithms)
+All three are documented in the thesis chapter "Diff-detection algorithms":
+- Myers' algorithm: O(ND) time for D edits
+- Ratcliff/Obershelp: Gestalt pattern matching
+- Patience diff: Bram Cohen 2005, anchors on unique items
 """
 
 import difflib
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 
@@ -67,7 +69,7 @@ class DiffDetector:
     (for detailed analysis of modified chunks).
 
     Parameters:
-        similarity_threshold: Minimum similarity ratio (0.0–1.0) to consider
+        similarity_threshold: Minimum similarity ratio (0.0-1.0) to consider
                               two chunks as "the same chunk, modified" vs
                               "one deleted and one added". Default 0.4.
     """
@@ -97,7 +99,7 @@ class DiffDetector:
             List of ChunkChange objects describing all changes.
         """
         if not old_chunks:
-            # All new – every chunk is ADDED
+            # All new - every chunk is ADDED
             return [
                 ChunkChange(change_type=ChangeType.ADDED, new_chunk=chunk)
                 for chunk in new_chunks
@@ -123,10 +125,10 @@ class DiffDetector:
 
         # Find unchanged chunks (hash matches).  Pair them one-to-one
         # using proximity matching: for each set of duplicates with the
-        # same hash, pair old↔new by minimising |old_index − new_index|.
+        # same hash, pair old<->new by minimising |old_index - new_index|.
         # This prevents context drift when chunks shift position due to
         # inserts/deletes elsewhere in the document.
-        matched_old_ids: set[int] = set()   # chunk_index values already paired
+        matched_old_ids: set[int] = set()  # chunk_index values already paired
         matched_new_ids: set[int] = set()
 
         for hash_val in set(old_hash_map) & set(new_hash_map):
@@ -162,12 +164,8 @@ class DiffDetector:
                 matched_new_ids.add(new_c.chunk_index)
 
         # Remaining unmatched chunks
-        unmatched_old = [
-            c for c in old_chunks if c.chunk_index not in matched_old_ids
-        ]
-        unmatched_new = [
-            c for c in new_chunks if c.chunk_index not in matched_new_ids
-        ]
+        unmatched_old = [c for c in old_chunks if c.chunk_index not in matched_old_ids]
+        unmatched_new = [c for c in new_chunks if c.chunk_index not in matched_new_ids]
 
         # Phase 2: Use sequence matching (Patience-style) to pair modified chunks
         matched_old_indices: set[int] = set()
@@ -322,9 +320,7 @@ def patience_diff(old_lines: list[str], new_lines: list[str]) -> list[tuple[str,
 
     for old_idx, new_idx in lis_anchors:
         # Recursively diff segments between anchors using standard LCS
-        _diff_segment(
-            old_lines, old_pos, old_idx, new_lines, new_pos, new_idx, result
-        )
+        _diff_segment(old_lines, old_pos, old_idx, new_lines, new_pos, new_idx, result)
         result.append((" ", old_lines[old_idx]))
         old_pos = old_idx + 1
         new_pos = new_idx + 1
@@ -370,7 +366,7 @@ def _diff_segment(
 
 def _longest_increasing_subsequence(
     pairs: list[tuple[int, int]],
-    key=lambda x: x[1],
+    key: Callable[[tuple[int, int]], int] = lambda x: x[1],
 ) -> list[tuple[int, int]]:
     """Compute the Longest Increasing Subsequence for anchor pairs.
 

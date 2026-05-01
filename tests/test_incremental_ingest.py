@@ -8,11 +8,7 @@ Tests cover:
 5. Integration: full incremental pipeline simulation
 """
 
-import json
 import tempfile
-from pathlib import Path
-
-import pytest
 
 from private_gpt.components.ingest.incremental.chunk_hash_store import (
     ChunkHashStore,
@@ -28,7 +24,6 @@ from private_gpt.components.ingest.incremental.diff_detector import (
     DiffDetector,
     patience_diff,
 )
-
 
 # ─── SemanticChunker Tests ───────────────────────────────────────────────
 
@@ -48,7 +43,9 @@ class TestSemanticChunker:
 
     def test_hash_stability(self):
         """Same text should always produce the same hash."""
-        text = "This is a test paragraph with sufficient length to be a chunk on its own."
+        text = (
+            "This is a test paragraph with sufficient length to be a chunk on its own."
+        )
         chunks1 = self.chunker.chunk_text(text)
         chunks2 = self.chunker.chunk_text(text)
         assert chunks1[0].content_hash == chunks2[0].content_hash
@@ -99,7 +96,10 @@ class TestSemanticChunker:
         """Chunks exceeding max_chunk_size should be split."""
         # Create a very long text that exceeds max_chunk_size
         long_text = ". ".join(
-            [f"This is sentence number {i} in a very long paragraph" for i in range(100)]
+            [
+                f"This is sentence number {i} in a very long paragraph"
+                for i in range(100)
+            ]
         )
         chunker = SemanticChunker(min_chunk_size=50, max_chunk_size=200)
         chunks = chunker.chunk_text(long_text)
@@ -130,6 +130,7 @@ class TestChunkHashStore:
 
     def teardown_method(self):
         import shutil
+
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_empty_store(self):
@@ -171,9 +172,7 @@ class TestChunkHashStore:
 
     def test_lookup_by_filename(self):
         """Should find documents by filename."""
-        record = DocumentRecord(
-            doc_id="doc1", file_name="report.pdf", file_hash="xyz"
-        )
+        record = DocumentRecord(doc_id="doc1", file_name="report.pdf", file_hash="xyz")
         self.store.upsert_document(record)
 
         found = self.store.get_document_by_filename("report.pdf")
@@ -185,9 +184,7 @@ class TestChunkHashStore:
 
     def test_delete_document(self):
         """Should be able to delete documents."""
-        record = DocumentRecord(
-            doc_id="doc1", file_name="test.txt", file_hash="abc"
-        )
+        record = DocumentRecord(doc_id="doc1", file_name="test.txt", file_hash="abc")
         self.store.upsert_document(record)
         self.store.delete_document("doc1")
 
@@ -211,9 +208,7 @@ class TestChunkHashStore:
 
     def test_version_increment(self):
         """Should track version numbers."""
-        record = DocumentRecord(
-            doc_id="doc1", file_name="test.txt", version=1
-        )
+        record = DocumentRecord(doc_id="doc1", file_name="test.txt", version=1)
         self.store.upsert_document(record)
 
         record.version = 2
@@ -295,10 +290,6 @@ class TestDiffDetector:
         changes = self.detector.detect_changes(old_chunks, new_chunks)
 
         unchanged = [c for c in changes if c.change_type == ChangeType.UNCHANGED]
-        modified = [c for c in changes if c.change_type == ChangeType.MODIFIED]
-        added = [c for c in changes if c.change_type == ChangeType.ADDED]
-        deleted = [c for c in changes if c.change_type == ChangeType.DELETED]
-
         assert len(unchanged) >= 1  # At least the first unchanged chunk
         # The modified and deleted/added counts may vary based on similarity
 
@@ -429,5 +420,5 @@ class TestIncrementalIntegration:
             retrieved = store.get_document("test_doc")
             assert retrieved is not None
             assert len(retrieved.chunks) == len(chunks)
-            for stored, original in zip(retrieved.chunks, chunks):
+            for stored, original in zip(retrieved.chunks, chunks, strict=False):
                 assert stored.content_hash == original.content_hash

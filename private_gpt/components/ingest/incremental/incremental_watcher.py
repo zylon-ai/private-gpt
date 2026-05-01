@@ -18,6 +18,7 @@ References (from thesis):
 - thesis: Problem statement -- --watch mode triggers full re-ingestion
 """
 
+import contextlib
 import logging
 import threading
 import time
@@ -60,7 +61,9 @@ class IncrementalIngestWatcher:
         self.debounce_seconds = debounce_seconds
 
         # Persistent registration: file_path_str -> (on_modified, on_deleted|None)
-        self._registered: dict[str, tuple[Callable[[Path], None], Callable[[Path], None] | None]] = {}
+        self._registered: dict[
+            str, tuple[Callable[[Path], None], Callable[[Path], None] | None]
+        ] = {}
         self._reg_lock = threading.Lock()
 
         # Debounce tracking
@@ -130,10 +133,8 @@ class IncrementalIngestWatcher:
 
         handle = self._watch_handles.pop(key, None)
         if handle is not None and self._observer is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._observer.unschedule(handle)
-            except Exception:
-                pass
 
         logger.info("Unregistered file from watching: %s", resolved)
         return True
@@ -161,7 +162,7 @@ class IncrementalIngestWatcher:
         for key, (on_mod, on_del) in snapshot.items():
             self._schedule_one(Path(key), on_mod, on_del)
 
-        self._observer.start()
+        self._observer.start()  # type: ignore[no-untyped-call]
         logger.info(
             "File watcher started (background) — watching %d file(s).",
             len(snapshot),
@@ -190,7 +191,7 @@ class IncrementalIngestWatcher:
         with self._reg_lock:
             return [Path(k) for k in self._registered]
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, Any]:
         return {
             "is_running": self.is_running,
             "registered_file_count": len(self._registered),

@@ -1,11 +1,11 @@
 """This file should be imported if and only if you want to run the UI locally."""
 
 import base64
+import functools
 import logging
 import shutil
-import time
 import subprocess
-import functools
+import time
 from collections.abc import Iterable
 from enum import Enum
 from pathlib import Path
@@ -422,7 +422,7 @@ class PrivateGptUi:
             self._incremental_svc.stop_watching()
         return (
             self._watcher_status_text(),
-            gr.update(interactive=True),   # start button
+            gr.update(interactive=True),  # start button
             gr.update(interactive=False),  # stop button
             self._watched_files_text(),
         )
@@ -434,7 +434,7 @@ class PrivateGptUi:
         return (
             self._watcher_status_text(),
             gr.update(interactive=False),  # start button
-            gr.update(interactive=True),   # stop button
+            gr.update(interactive=True),  # stop button
             self._watched_files_text(),
         )
 
@@ -544,7 +544,7 @@ class PrivateGptUi:
             # ── Tabs ────────────────────────────────────────────────
             with gr.Tabs():
                 # ═══════════════ Tab 1: Chat & Ingest ═══════════════
-                with gr.Tab("Chat & Ingest"):
+                with gr.Tab("Chat & Ingest"):  # noqa: SIM117 - Gradio layout container
                     with gr.Row(equal_height=False):
                         with gr.Column(scale=3):
                             default_mode = self._default_mode
@@ -671,7 +671,7 @@ class PrivateGptUi:
                                     "Configure via `incremental.enabled` "
                                     "in settings.yaml."
                                     if self._incremental_enabled
-                                    else "ℹ️ **Standard mode** — Files are "
+                                    else "[i] **Standard mode** - Files are "
                                     "fully re-processed on every upload. "
                                     "Configure via `incremental.enabled` "
                                     "in settings.yaml."
@@ -802,182 +802,180 @@ class PrivateGptUi:
                 # settings.yaml. Off by default: the benchmarks are for
                 # development and thesis reproduction, not for end users.
                 if settings().ui.benchmarks_tab_enabled:
-                  with gr.Tab("Benchmarks"):
-                    gr.Markdown(
-                        "## Incremental RAG Benchmarks\n"
-                        "Thesis evaluation benchmarks for the incremental "
-                        "ingestion proof-of-concept. Results are shown as a "
-                        "graph and raw console output.\n\n"
-                        "| Button | What it measures |\n"
-                        "|---|---|\n"
-                        "| 🖥️ Computational Benchmark | **Real** wall-clock "
-                        "embedding time: incremental (changed chunks only) vs "
-                        "full re-embed. Requires `test_documents/` corpus. |\n"
-                        "| 🧠 RAGAS Benchmark | Retrieval quality "
-                        "(Context Recall, Context Precision) for semantic vs "
-                        "fixed-size chunking. Pass `--ollama-url` for LLM "
-                        "faithfulness evaluation. |\n"
-                        "| ⚡ Incremental Speedtest | Chunk-level change "
-                        "detection and diff efficiency. "
-                        "**Note: embed times are estimated** — use "
-                        "Computational Benchmark for real measurements. |\n"
-                        "| 📈 Quality & Stability | Six-panel combined report: "
-                        "incremental pipeline correctness (top row) and "
-                        "full re-ingest baseline comparison (bottom row). |"
-                    )
-
-                    # ── Per-benchmark descriptions ────────────────
-                    _DESC_COMPUTE = (
-                        "### Computational Benchmark — Incremental vs Full Re-embed\n\n"
-                        "Compares **real wall-clock `encode()` time** for incremental "
-                        "(changed chunks only) vs full re-embed (all chunks, fixed-size "
-                        "chunking — the PrivateGPT default).\n\n"
-                        "| Element | Meaning |\n|---|---|\n"
-                        "| X-axis | Change scenario: how much of the document was modified |\n"
-                        "| Y-axis | Embedding time in seconds (only the `encode()` call) |\n"
-                        "| Red bars | Full re-embed baseline (SentenceSplitter 1024 tokens) |\n"
-                        "| Green bars | Incremental — only changed/added chunks re-embedded |\n\n"
-                        "**How to read:** At 0 % change the green bar is near 0 s (nothing "
-                        "to embed). As the change ratio rises both bars grow, but the green "
-                        "bar grows slower. A green bar taller than red means the document is "
-                        "small enough that chunking/diffing overhead outweighs the savings."
-                    )
-                    _DESC_RAGAS = (
-                        "### RAGAS Benchmark — Retrieval Quality: Semantic vs Fixed-Size Chunking\n\n"
-                        "Measures the **chunking strategy** dimension — independent of the "
-                        "incremental update pipeline. Compares **semantic chunking** "
-                        "(paragraph-boundary splits) vs **fixed-size chunking** "
-                        "(LlamaIndex default) using the RAGAS evaluation framework on a "
-                        "Golden Dataset.\n\n"
-                        "| Element | Meaning |\n|---|---|\n"
-                        "| X-axis | RAGAS metric |\n"
-                        "| Bars | One colour per chunking strategy |\n"
-                        "| Context Recall | Fraction of ground-truth information covered by "
-                        "retrieved chunks — higher is fewer gaps |\n"
-                        "| Context Precision | Fraction of retrieved content that is relevant "
-                        "— higher is less noise |\n"
-                        "| Faithfulness | Whether the LLM answer is grounded in the context "
-                        "(requires `--ollama-url`, omitted otherwise) |\n\n"
-                        "**How to read:** Semantic chunking should have the same or "
-                        "higher recall because it keeps related sentences together. "
-                        "Fixed-size 512 tokens often has higher precision (smaller, "
-                        "focused chunks) but lower recall. Fixed-size 1024 tokens is "
-                        "the PrivateGPT default."
-                    )
-                    _DESC_INCR = (
-                        "### Incremental Speedtest — Chunk-Level Change Efficiency\n\n"
-                        "Shows estimated speedup and embedding reuse ratio for different "
-                        "change levels. **Note: embedding times are estimated** "
-                        "(50 ms/chunk default) — use the Computational Benchmark for "
-                        "real wall-clock measurements.\n\n"
-                        "| Element | Meaning |\n|---|---|\n"
-                        "| X-axis | Change scenario |\n"
-                        "| Left Y-axis (line) | Speedup factor: how many times faster than "
-                        "full re-embed |\n"
-                        "| Right Y-axis (bars) | Efficiency %: fraction of chunks reused "
-                        "(not re-embedded) |\n\n"
-                        "**How to read:** At 0 % change efficiency is  100 % and speedup "
-                        "is very high. At 50 % change about half the chunks are reused "
-                        "(speedup  2x). At 90 % change most chunks changed and speedup is "
-                        "low. A speedup of 1x means incremental and full take equal time."
-                    )
-                    _DESC_QUAL = (
-                        "### Quality & Stability — Four-Panel Combined Report\n\n"
-                        "**Top row — Incremental pipeline correctness:**\n\n"
-                        "| Panel | What it shows |\n|---|---|\n"
-                        "| Context Drift (left) | 0.0 = unchanged chunks kept "
-                        "identical node IDs after every edit — no silent corruption |\n"
-                        "| Pipeline Throughput (right) | Chunks/s for chunking + "
-                        "diff detection combined (semantic). Drops at large sizes "
-                        "because diff comparison is O(n²). |\n\n"
-                        "**Bottom row — Full re-ingest baseline** (what happens "
-                        "without the incremental pipeline):\n\n"
-                        "| Panel | What it shows |\n|---|---|\n"
-                        "| Full Re-ingest Waste (left) | Per sequential edit, the "
-                        "fraction of chunks with identical hash that full re-ingest "
-                        "re-embeds anyway. X-axis shows each edit step and its type "
-                        "(mod/del/ins). **Semantic is higher** because stable "
-                        "boundaries leave more unchanged chunks — more waste for "
-                        "full re-ingest, bigger saving for incremental. |\n"
-                        "| Avalanche Effect (right) | For one single-paragraph edit, "
-                        "how many chunks change hash. Fixed-size: 25–100% (boundary "
-                        "shift cascades). Semantic:  7% (only the edited chunk). |\n\n"
-                        "**Note on 100% waste:** Delete operations produce 100% "
-                        "waste for semantic — removing a paragraph leaves every "
-                        "remaining chunk identical, so full re-ingest re-embeds "
-                        "all of them for zero benefit."
-                    )
-
-                    with gr.Row():
-                        btn_compute = gr.Button(
-                            "Computational Benchmark", variant="primary"
-                        )
-                        btn_ragas = gr.Button(
-                            "RAGAS Benchmark", variant="primary"
-                        )
-                        btn_incr = gr.Button(
-                            "Incremental Speedtest", variant="primary"
-                        )
-                        btn_qual = gr.Button(
-                            "Quality & Stability", variant="primary"
+                    with gr.Tab("Benchmarks"):
+                        gr.Markdown(
+                            "## Incremental RAG Benchmarks\n"
+                            "Thesis evaluation benchmarks for the incremental "
+                            "ingestion proof-of-concept. Results are shown as a "
+                            "graph and raw console output.\n\n"
+                            "| Button | What it measures |\n"
+                            "|---|---|\n"
+                            "| 🖥️ Computational Benchmark | **Real** wall-clock "
+                            "embedding time: incremental (changed chunks only) vs "
+                            "full re-embed. Requires `test_documents/` corpus. |\n"
+                            "| 🧠 RAGAS Benchmark | Retrieval quality "
+                            "(Context Recall, Context Precision) for semantic vs "
+                            "fixed-size chunking. Pass `--ollama-url` for LLM "
+                            "faithfulness evaluation. |\n"
+                            "| ⚡ Incremental Speedtest | Chunk-level change "
+                            "detection and diff efficiency. "
+                            "**Note: embed times are estimated** — use "
+                            "Computational Benchmark for real measurements. |\n"
+                            "| 📈 Quality & Stability | Six-panel combined report: "
+                            "incremental pipeline correctness (top row) and "
+                            "full re-ingest baseline comparison (bottom row). |"
                         )
 
-                    benchmark_description = gr.Markdown(
-                        value="*Click a benchmark button above to see its description.*"
-                    )
-                    benchmark_plot = gr.Image(
-                        label="Benchmark Graph",
-                        type="filepath",
-                        interactive=False,
-                    )
-                    benchmark_output = gr.Textbox(
-                        label="Console Output",
-                        lines=20,
-                        max_lines=30,
-                        interactive=False,
-                        show_copy_button=True,
-                    )
+                        # ── Per-benchmark descriptions ────────────────
+                        _DESC_COMPUTE = (
+                            "### Computational Benchmark — Incremental vs Full Re-embed\n\n"
+                            "Compares **real wall-clock `encode()` time** for incremental "
+                            "(changed chunks only) vs full re-embed (all chunks, fixed-size "
+                            "chunking — the PrivateGPT default).\n\n"
+                            "| Element | Meaning |\n|---|---|\n"
+                            "| X-axis | Change scenario: how much of the document was modified |\n"
+                            "| Y-axis | Embedding time in seconds (only the `encode()` call) |\n"
+                            "| Red bars | Full re-embed baseline (SentenceSplitter 1024 tokens) |\n"
+                            "| Green bars | Incremental — only changed/added chunks re-embedded |\n\n"
+                            "**How to read:** At 0 % change the green bar is near 0 s (nothing "
+                            "to embed). As the change ratio rises both bars grow, but the green "
+                            "bar grows slower. A green bar taller than red means the document is "
+                            "small enough that chunking/diffing overhead outweighs the savings."
+                        )
+                        _DESC_RAGAS = (
+                            "### RAGAS Benchmark — Retrieval Quality: Semantic vs Fixed-Size Chunking\n\n"
+                            "Measures the **chunking strategy** dimension — independent of the "
+                            "incremental update pipeline. Compares **semantic chunking** "
+                            "(paragraph-boundary splits) vs **fixed-size chunking** "
+                            "(LlamaIndex default) using the RAGAS evaluation framework on a "
+                            "Golden Dataset.\n\n"
+                            "| Element | Meaning |\n|---|---|\n"
+                            "| X-axis | RAGAS metric |\n"
+                            "| Bars | One colour per chunking strategy |\n"
+                            "| Context Recall | Fraction of ground-truth information covered by "
+                            "retrieved chunks — higher is fewer gaps |\n"
+                            "| Context Precision | Fraction of retrieved content that is relevant "
+                            "— higher is less noise |\n"
+                            "| Faithfulness | Whether the LLM answer is grounded in the context "
+                            "(requires `--ollama-url`, omitted otherwise) |\n\n"
+                            "**How to read:** Semantic chunking should have the same or "
+                            "higher recall because it keeps related sentences together. "
+                            "Fixed-size 512 tokens often has higher precision (smaller, "
+                            "focused chunks) but lower recall. Fixed-size 1024 tokens is "
+                            "the PrivateGPT default."
+                        )
+                        _DESC_INCR = (
+                            "### Incremental Speedtest — Chunk-Level Change Efficiency\n\n"
+                            "Shows estimated speedup and embedding reuse ratio for different "
+                            "change levels. **Note: embedding times are estimated** "
+                            "(50 ms/chunk default) — use the Computational Benchmark for "
+                            "real wall-clock measurements.\n\n"
+                            "| Element | Meaning |\n|---|---|\n"
+                            "| X-axis | Change scenario |\n"
+                            "| Left Y-axis (line) | Speedup factor: how many times faster than "
+                            "full re-embed |\n"
+                            "| Right Y-axis (bars) | Efficiency %: fraction of chunks reused "
+                            "(not re-embedded) |\n\n"
+                            "**How to read:** At 0 % change efficiency is  100 % and speedup "
+                            "is very high. At 50 % change about half the chunks are reused "
+                            "(speedup  2x). At 90 % change most chunks changed and speedup is "
+                            "low. A speedup of 1x means incremental and full take equal time."
+                        )
+                        _DESC_QUAL = (
+                            "### Quality & Stability — Four-Panel Combined Report\n\n"
+                            "**Top row — Incremental pipeline correctness:**\n\n"
+                            "| Panel | What it shows |\n|---|---|\n"
+                            "| Context Drift (left) | 0.0 = unchanged chunks kept "
+                            "identical node IDs after every edit — no silent corruption |\n"
+                            "| Pipeline Throughput (right) | Chunks/s for chunking + "
+                            "diff detection combined (semantic). Drops at large sizes "
+                            "because diff comparison is O(n²). |\n\n"
+                            "**Bottom row — Full re-ingest baseline** (what happens "
+                            "without the incremental pipeline):\n\n"
+                            "| Panel | What it shows |\n|---|---|\n"
+                            "| Full Re-ingest Waste (left) | Per sequential edit, the "
+                            "fraction of chunks with identical hash that full re-ingest "
+                            "re-embeds anyway. X-axis shows each edit step and its type "
+                            "(mod/del/ins). **Semantic is higher** because stable "
+                            "boundaries leave more unchanged chunks — more waste for "
+                            "full re-ingest, bigger saving for incremental. |\n"
+                            "| Avalanche Effect (right) | For one single-paragraph edit, "
+                            "how many chunks change hash. Fixed-size: 25-100% (boundary "
+                            "shift cascades). Semantic:  7% (only the edited chunk). |\n\n"
+                            "**Note on 100% waste:** Delete operations produce 100% "
+                            "waste for semantic — removing a paragraph leaves every "
+                            "remaining chunk identical, so full re-ingest re-embeds "
+                            "all of them for zero benefit."
+                        )
 
-                    # Description appears immediately; plot+output follow when done
-                    btn_compute.click(
-                        fn=lambda: _DESC_COMPUTE,
-                        outputs=benchmark_description,
-                    ).then(
-                        fn=functools.partial(
-                            self._run_benchmark_with_plot,
-                            "benchmark_compute",
-                            ["--runs", "1"],
-                        ),
-                        outputs=[benchmark_plot, benchmark_output],
-                    )
-                    btn_ragas.click(
-                        fn=lambda: _DESC_RAGAS,
-                        outputs=benchmark_description,
-                    ).then(
-                        fn=functools.partial(
-                            self._run_benchmark_with_plot, "benchmark_ragas"
-                        ),
-                        outputs=[benchmark_plot, benchmark_output],
-                    )
-                    btn_incr.click(
-                        fn=lambda: _DESC_INCR,
-                        outputs=benchmark_description,
-                    ).then(
-                        fn=functools.partial(
-                            self._run_benchmark_with_plot,
-                            "benchmark_incremental",
-                        ),
-                        outputs=[benchmark_plot, benchmark_output],
-                    )
-                    btn_qual.click(
-                        fn=lambda: _DESC_QUAL,
-                        outputs=benchmark_description,
-                    ).then(
-                        fn=functools.partial(
-                            self._run_benchmark_with_plot, "benchmark_quality"
-                        ),
-                        outputs=[benchmark_plot, benchmark_output],
-                    )
+                        with gr.Row():
+                            btn_compute = gr.Button(
+                                "Computational Benchmark", variant="primary"
+                            )
+                            btn_ragas = gr.Button("RAGAS Benchmark", variant="primary")
+                            btn_incr = gr.Button(
+                                "Incremental Speedtest", variant="primary"
+                            )
+                            btn_qual = gr.Button(
+                                "Quality & Stability", variant="primary"
+                            )
+
+                        benchmark_description = gr.Markdown(
+                            value="*Click a benchmark button above to see its description.*"
+                        )
+                        benchmark_plot = gr.Image(
+                            label="Benchmark Graph",
+                            type="filepath",
+                            interactive=False,
+                        )
+                        benchmark_output = gr.Textbox(
+                            label="Console Output",
+                            lines=20,
+                            max_lines=30,
+                            interactive=False,
+                            show_copy_button=True,
+                        )
+
+                        # Description appears immediately; plot+output follow when done
+                        btn_compute.click(
+                            fn=lambda: _DESC_COMPUTE,
+                            outputs=benchmark_description,
+                        ).then(
+                            fn=functools.partial(
+                                self._run_benchmark_with_plot,
+                                "benchmark_compute",
+                                ["--runs", "1"],
+                            ),
+                            outputs=[benchmark_plot, benchmark_output],
+                        )
+                        btn_ragas.click(
+                            fn=lambda: _DESC_RAGAS,
+                            outputs=benchmark_description,
+                        ).then(
+                            fn=functools.partial(
+                                self._run_benchmark_with_plot, "benchmark_ragas"
+                            ),
+                            outputs=[benchmark_plot, benchmark_output],
+                        )
+                        btn_incr.click(
+                            fn=lambda: _DESC_INCR,
+                            outputs=benchmark_description,
+                        ).then(
+                            fn=functools.partial(
+                                self._run_benchmark_with_plot,
+                                "benchmark_incremental",
+                            ),
+                            outputs=[benchmark_plot, benchmark_output],
+                        )
+                        btn_qual.click(
+                            fn=lambda: _DESC_QUAL,
+                            outputs=benchmark_description,
+                        ).then(
+                            fn=functools.partial(
+                                self._run_benchmark_with_plot, "benchmark_quality"
+                            ),
+                            outputs=[benchmark_plot, benchmark_output],
+                        )
 
             with gr.Row():
                 avatar_byte = AVATAR_BOT.read_bytes()
@@ -996,15 +994,20 @@ class PrivateGptUi:
         plot_path = None
         try:
             # Ensure matplotlib is imported only when needed
-            import matplotlib.pyplot as plt
-            import tempfile
             import sys
+            import tempfile
+
+            import matplotlib.pyplot as plt
 
             results_dir = Path(tempfile.mkdtemp())
             # Path(__file__) is in private_gpt/ui/ui.py
             # Move up two levels to get to project root, then scripts/
-            script_path = Path(__file__).resolve().parent.parent.parent / "scripts" / f"{script_name}.py"
-            
+            script_path = (
+                Path(__file__).resolve().parent.parent.parent
+                / "scripts"
+                / f"{script_name}.py"
+            )
+
             command = [
                 sys.executable,
                 str(script_path),
@@ -1015,14 +1018,20 @@ class PrivateGptUi:
                 command.extend(script_args)
 
             process = subprocess.run(
-                command, capture_output=True, text=True, check=False,
-                encoding="utf-8", errors="replace",
+                command,
+                capture_output=True,
+                text=True,
+                check=False,
+                encoding="utf-8",
+                errors="replace",
                 env={**__import__("os").environ, "PYTHONIOENCODING": "utf-8"},
             )
             output = process.stdout + process.stderr
 
             if process.returncode != 0:
-                output += f"\n\n⚠️ Benchmark script failed with exit code {process.returncode}"
+                output += (
+                    f"\n\n⚠️ Benchmark script failed with exit code {process.returncode}"
+                )
                 return None, output
 
             if "compute" in script_name:
@@ -1043,11 +1052,23 @@ class PrivateGptUi:
             elif "quality" in script_name:
                 # Run benchmark_quality_full into the same results_dir so both
                 # CSVs land together, then generate a combined six-panel figure.
-                full_script = Path(__file__).resolve().parent.parent.parent / "scripts" / "benchmark_quality_full.py"
+                full_script = (
+                    Path(__file__).resolve().parent.parent.parent
+                    / "scripts"
+                    / "benchmark_quality_full.py"
+                )
                 subprocess.run(
-                    [sys.executable, str(full_script), "--output-dir", str(results_dir)],
-                    capture_output=True, text=True, check=False,
-                    encoding="utf-8", errors="replace",
+                    [
+                        sys.executable,
+                        str(full_script),
+                        "--output-dir",
+                        str(results_dir),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    encoding="utf-8",
+                    errors="replace",
                     env={**__import__("os").environ, "PYTHONIOENCODING": "utf-8"},
                 )
                 plot_path = self._plot_quality_combined(results_dir, plt, tempfile)
@@ -1055,7 +1076,7 @@ class PrivateGptUi:
             return plot_path, output
 
         except ImportError:
-            output += "\n\n⚠️ matplotlib not installed – no graph generated."
+            output += "\n\n[!] matplotlib not installed - no graph generated."
             return None, output
         except Exception as e:
             output += f"\n\n⚠️ Graph generation failed: {e}"
@@ -1079,11 +1100,29 @@ class PrivateGptUi:
         fig, ax = plt.subplots(figsize=(10, 5))
         x = range(len(scenarios))
         w = 0.35
-        ax.bar([i - w / 2 for i in x], t_full, w, label="Full Re-ingest", color="#e74c3c", alpha=0.85)
-        ax.bar([i + w / 2 for i in x], t_incr, w, label="Incremental", color="#2ecc71", alpha=0.85)
+        ax.bar(
+            [i - w / 2 for i in x],
+            t_full,
+            w,
+            label="Full Re-ingest",
+            color="#e74c3c",
+            alpha=0.85,
+        )
+        ax.bar(
+            [i + w / 2 for i in x],
+            t_incr,
+            w,
+            label="Incremental",
+            color="#2ecc71",
+            alpha=0.85,
+        )
         ax.set_xlabel("Scenario", fontsize=12)
         ax.set_ylabel("Embedding Time (seconds)", fontsize=12)
-        ax.set_title("Computational Benchmark: Incremental vs Full Re-ingest", fontsize=14, fontweight="bold")
+        ax.set_title(
+            "Computational Benchmark: Incremental vs Full Re-ingest",
+            fontsize=14,
+            fontweight="bold",
+        )
         ax.set_xticks(list(x))
         ax.set_xticklabels(scenarios, rotation=15, ha="right")
         ax.legend()
@@ -1093,12 +1132,13 @@ class PrivateGptUi:
         tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
         fig.savefig(tmp.name, dpi=150)
         plt.close(fig)
-        return tmp.name
+        return str(tmp.name)
 
     @staticmethod
     def _plot_ragas(csv_path: Path, plt: Any, tempfile: Any) -> str:
         """Grouped bar chart for RAGAS metrics, color-coded by strategy."""
         import csv as csv_mod
+
         import numpy as np
 
         # Read data
@@ -1109,7 +1149,7 @@ class PrivateGptUi:
                 data.append(row)
 
         if not data:
-            return "" # Return empty string if no data
+            return ""  # Return empty string if no data
 
         # Extract unique strategies and prepare scores
         strategies = [row.get("strategy", row.get("Strategy", "")) for row in data]
@@ -1133,11 +1173,9 @@ class PrivateGptUi:
 
         # Drop any metric column where ALL strategies have None (e.g. faithfulness=N/A)
         keep = [
-            i for i, _ in enumerate(all_metric_keys)
-            if any(
-                scores[i] is not None
-                for scores in scores_by_strategy.values()
-            )
+            i
+            for i, _ in enumerate(all_metric_keys)
+            if any(scores[i] is not None for scores in scores_by_strategy.values())
         ]
         metrics = [all_metric_labels[i] for i in keep]
 
@@ -1153,7 +1191,14 @@ class PrivateGptUi:
         x = np.arange(len(metrics))  # X-axis for metrics
 
         # Colors per strategy
-        colors = ["#3498db", "#e67e22", "#9b59b6", "#2ecc71", "#f1c40f", "#e74c3c"] # More colors for more strategies
+        colors = [
+            "#3498db",
+            "#e67e22",
+            "#9b59b6",
+            "#2ecc71",
+            "#f1c40f",
+            "#e74c3c",
+        ]  # More colors for more strategies
 
         num_strategies = len(strategies)
         if num_strategies > 0:
@@ -1162,10 +1207,20 @@ class PrivateGptUi:
                 scores = scores_by_strategy.get(strategy_name, [0] * len(metrics))
                 # Calculate x offsets for grouping
                 offset = (i - num_strategies / 2.0 + 0.5) * w
-                ax.bar(x + offset, scores, w, label=strategy_name, color=colors[i % len(colors)])
+                ax.bar(
+                    x + offset,
+                    scores,
+                    w,
+                    label=strategy_name,
+                    color=colors[i % len(colors)],
+                )
 
         ax.set_ylabel("Score (0-1)", fontsize=12)
-        ax.set_title("RAGAS Evaluation: Chunking Strategy Performance", fontsize=14, fontweight="bold")
+        ax.set_title(
+            "RAGAS Evaluation: Chunking Strategy Performance",
+            fontsize=14,
+            fontweight="bold",
+        )
         ax.set_xticks(x)
         ax.set_xticklabels(metrics, fontsize=11)
         ax.set_ylim(0, 1.0)
@@ -1176,7 +1231,7 @@ class PrivateGptUi:
         tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
         fig.savefig(tmp.name, dpi=150)
         plt.close(fig)
-        return tmp.name
+        return str(tmp.name)
 
     @staticmethod
     def _plot_incremental(csv_path: Path, plt: Any, tempfile: Any) -> str:
@@ -1184,7 +1239,6 @@ class PrivateGptUi:
         import csv as csv_mod
 
         labels, speedups, efficiencies = [], [], []
-        zero_change_excluded = False
         with open(csv_path, encoding="utf-8") as f:
             reader = csv_mod.DictReader(f)
             for row in reader:
@@ -1193,7 +1247,6 @@ class PrivateGptUi:
                 # a speedup in the hundreds; it would flatten the y-axis for
                 # all other scenarios. Drop it and disclose the exclusion.
                 if "(0%)" in label or label.strip().lower() == "no change (0%)":
-                    zero_change_excluded = True
                     continue
                 labels.append(label)
                 sp = row.get("speedup_factor", "1")
@@ -1205,7 +1258,15 @@ class PrivateGptUi:
         color1 = "#2980b9"
         ax1.set_xlabel("Change Scenario", fontsize=12)
         ax1.set_ylabel("Speedup Factor (x)", fontsize=12, color=color1)
-        ax1.plot(labels, speedups, "o-", color=color1, linewidth=2, markersize=8, label="Speedup")
+        ax1.plot(
+            labels,
+            speedups,
+            "o-",
+            color=color1,
+            linewidth=2,
+            markersize=8,
+            label="Speedup",
+        )
         ax1.tick_params(axis="y", labelcolor=color1)
         ax1.set_xticks(range(len(labels)))
         ax1.set_xticklabels(labels, rotation=20, ha="right")
@@ -1213,7 +1274,13 @@ class PrivateGptUi:
         ax2 = ax1.twinx()
         color2 = "#27ae60"
         ax2.set_ylabel("Efficiency (%)", fontsize=12, color=color2)
-        ax2.bar(range(len(labels)), efficiencies, alpha=0.3, color=color2, label="Efficiency %")
+        ax2.bar(
+            range(len(labels)),
+            efficiencies,
+            alpha=0.3,
+            color=color2,
+            label="Efficiency %",
+        )
         ax2.tick_params(axis="y", labelcolor=color2)
         ax2.set_ylim(0, max(max(efficiencies, default=100) * 1.2, 110))
 
@@ -1224,7 +1291,7 @@ class PrivateGptUi:
         tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
         fig.savefig(tmp.name, dpi=150)
         plt.close(fig)
-        return tmp.name
+        return str(tmp.name)
 
     @staticmethod
     def _plot_quality_combined(results_dir: Path, plt: Any, tempfile: Any) -> str:
@@ -1267,7 +1334,7 @@ class PrivateGptUi:
 
         # Inefficiency: store (iteration, ratio) per chunker + label per iteration
         ineff_by_chunker: dict[str, list[tuple[int, float]]] = {}
-        ineff_labels: dict[int, str] = {}   # iteration -> "#N typ"
+        ineff_labels: dict[int, str] = {}  # iteration -> "#N typ"
         ineff_csv = results_dir / "quality_full_inefficiency.csv"
         if ineff_csv.exists():
             with open(ineff_csv, encoding="utf-8") as f:
@@ -1304,39 +1371,55 @@ class PrivateGptUi:
                 if idx < len(lst):
                     lst[idx] = ratio
 
-        # ── Build 2×2 figure ──────────────────────────────────────────
+        # ── Build 2x2 figure ──────────────────────────────────────────
 
         fig, axes = plt.subplots(2, 2, figsize=(14, 10))
         fig.suptitle(
             "Quality & Stability — Incremental Pipeline (top) vs Full Re-ingest Baseline (bottom)",
-            fontsize=13, fontweight="bold",
+            fontsize=13,
+            fontweight="bold",
         )
 
         # ── [0,0]: Context Drift ───────────────────────────────────────
         ax = axes[0, 0]
         if drift_scores:
             if all(s == 0.0 for s in drift_scores):
-                ax.scatter(range(len(drift_labels)), drift_scores,
-                           color="#27ae60", s=60, zorder=5)
+                ax.scatter(
+                    range(len(drift_labels)),
+                    drift_scores,
+                    color="#27ae60",
+                    s=60,
+                    zorder=5,
+                )
                 ax.axhline(0, color="#27ae60", linewidth=1.5, linestyle="--", alpha=0.6)
                 ax.set_ylim(-0.05, 0.5)
                 ax.text(
-                    0.5, 0.55,
+                    0.5,
+                    0.55,
                     "All = 0.0\n(no node ID drift)",
-                    ha="center", va="center", transform=ax.transAxes,
-                    fontsize=9, color="#1a7a4a",
-                    bbox=dict(boxstyle="round,pad=0.4", facecolor="#eafaf1",
-                              edgecolor="#27ae60", alpha=0.9),
+                    ha="center",
+                    va="center",
+                    transform=ax.transAxes,
+                    fontsize=9,
+                    color="#1a7a4a",
+                    bbox={
+                        "boxstyle": "round,pad=0.4",
+                        "facecolor": "#eafaf1",
+                        "edgecolor": "#27ae60",
+                        "alpha": 0.9,
+                    },
                 )
             else:
-                ax.bar(range(len(drift_labels)), drift_scores,
-                       color="#e74c3c", alpha=0.8)
+                ax.bar(
+                    range(len(drift_labels)), drift_scores, color="#e74c3c", alpha=0.8
+                )
                 ax.set_ylim(0, max(max(drift_scores) * 1.5, 0.1))
             ax.set_xticks(range(len(drift_labels)))
             ax.set_xticklabels(drift_labels, rotation=45, ha="right", fontsize=7)
         else:
-            ax.text(0.5, 0.5, "No data", ha="center", va="center",
-                    transform=ax.transAxes)
+            ax.text(
+                0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes
+            )
         ax.set_title("Context Drift per Edit", fontsize=11, fontweight="bold")
         ax.set_xlabel("Cumulative edit (iter type)", fontsize=9)
         ax.set_ylabel("Drift score (0 = stable)", fontsize=9)
@@ -1345,14 +1428,24 @@ class PrivateGptUi:
         # ── [0,1]: Pipeline throughput ─────────────────────────────────
         ax = axes[0, 1]
         if pipeline_x and pipeline_y:
-            ax.plot(pipeline_x, pipeline_y, marker="o", color="#3498db",
-                    linewidth=2, markersize=6)
+            ax.plot(
+                pipeline_x,
+                pipeline_y,
+                marker="o",
+                color="#3498db",
+                linewidth=2,
+                markersize=6,
+            )
             ax.fill_between(pipeline_x, pipeline_y, alpha=0.15, color="#3498db")
         else:
-            ax.text(0.5, 0.5, "No data", ha="center", va="center",
-                    transform=ax.transAxes)
-        ax.set_title("Pipeline Throughput\n(chunking + diff detection, semantic)",
-                     fontsize=11, fontweight="bold")
+            ax.text(
+                0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes
+            )
+        ax.set_title(
+            "Pipeline Throughput\n(chunking + diff detection, semantic)",
+            fontsize=11,
+            fontweight="bold",
+        )
         ax.set_xlabel("Document size (paragraphs)", fontsize=9)
         ax.set_ylabel("Chunks / second", fontsize=9)
         ax.grid(axis="both", alpha=0.3)
@@ -1365,20 +1458,25 @@ class PrivateGptUi:
             for chunker, series in ineff_by_chunker.items():
                 series.sort(key=lambda s: s[0])
                 ax.plot(
-                    range(len(series)), [s[1] * 100 for s in series],
-                    marker="o", linewidth=2,
-                    color=chunker_colors.get(chunker, "#7f8c8d"), label=chunker,
+                    range(len(series)),
+                    [s[1] * 100 for s in series],
+                    marker="o",
+                    linewidth=2,
+                    color=chunker_colors.get(chunker, "#7f8c8d"),
+                    label=chunker,
                 )
             ax.set_xticks(range(len(x_labels)))
             ax.set_xticklabels(x_labels, rotation=45, ha="right", fontsize=7)
             ax.legend(fontsize=9)
             ax.set_ylim(0, 105)
         else:
-            ax.text(0.5, 0.5, "No data", ha="center", va="center",
-                    transform=ax.transAxes)
+            ax.text(
+                0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes
+            )
         ax.set_title(
             "Full Re-ingest Waste per Iteration\n(higher = more savings from incremental)",
-            fontsize=11, fontweight="bold",
+            fontsize=11,
+            fontweight="bold",
         )
         ax.set_xlabel("Edit step (iter type)", fontsize=9)
         ax.set_ylabel("Chunks re-embedded despite\nidentical hash (%)", fontsize=9)
@@ -1388,22 +1486,30 @@ class PrivateGptUi:
         ax = axes[1, 1]
         if scenarios and aval_by_chunker:
             import numpy as np
+
             x = np.arange(len(scenarios))
             num = len(aval_by_chunker)
             w = 0.8 / max(num, 1)
             for i, (chunker, vals) in enumerate(aval_by_chunker.items()):
                 offset = (i - num / 2.0 + 0.5) * w
-                ax.bar(x + offset, [v * 100 for v in vals], w,
-                       color=chunker_colors.get(chunker, "#7f8c8d"), label=chunker)
+                ax.bar(
+                    x + offset,
+                    [v * 100 for v in vals],
+                    w,
+                    color=chunker_colors.get(chunker, "#7f8c8d"),
+                    label=chunker,
+                )
             ax.set_xticks(x)
             ax.set_xticklabels(scenarios, rotation=28, ha="right", fontsize=8)
             ax.legend(fontsize=9)
             ax.set_ylim(0, 105)
         else:
-            ax.text(0.5, 0.5, "No data", ha="center", va="center",
-                    transform=ax.transAxes)
-        ax.set_title("Avalanche Effect\n(single-paragraph edit)",
-                     fontsize=11, fontweight="bold")
+            ax.text(
+                0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes
+            )
+        ax.set_title(
+            "Avalanche Effect\n(single-paragraph edit)", fontsize=11, fontweight="bold"
+        )
         ax.set_xlabel("Edit scenario", fontsize=9)
         ax.set_ylabel("Chunks with changed hash (%)", fontsize=9)
         ax.grid(axis="y", alpha=0.3)
@@ -1412,7 +1518,7 @@ class PrivateGptUi:
         tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
         fig.savefig(tmp.name, dpi=130, bbox_inches="tight")
         plt.close(fig)
-        return tmp.name
+        return str(tmp.name)
 
     def get_ui_blocks(self) -> gr.Blocks:
         if self._ui_block is None:

@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 # ─── Platform info ─────────────────────────────────────────────────────
 
+
 def get_system_info() -> dict:
     """Collect system information for reproducibility."""
     info = {
@@ -54,6 +55,7 @@ def get_system_info() -> dict:
     }
     try:
         import psutil
+
         mem = psutil.virtual_memory()
         info["total_memory_gb"] = round(mem.total / (1024**3), 2)
     except ImportError:
@@ -65,12 +67,14 @@ def get_memory_mb() -> float:
     """Get current process RSS in MB."""
     try:
         import psutil  # type: ignore
+
         return psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024)
     except ImportError:
         # Fallback for Windows without psutil
         try:
             import ctypes
             import ctypes.wintypes
+
             class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
                 _fields_ = [
                     ("cb", ctypes.wintypes.DWORD),
@@ -84,12 +88,11 @@ def get_memory_mb() -> float:
                     ("PagefileUsage", ctypes.c_size_t),
                     ("PeakPagefileUsage", ctypes.c_size_t),
                 ]
+
             pmc = PROCESS_MEMORY_COUNTERS()
             pmc.cb = ctypes.sizeof(PROCESS_MEMORY_COUNTERS)
             handle = ctypes.windll.kernel32.GetCurrentProcess()
-            ctypes.windll.psapi.GetProcessMemoryInfo(
-                handle, ctypes.byref(pmc), pmc.cb
-            )
+            ctypes.windll.psapi.GetProcessMemoryInfo(handle, ctypes.byref(pmc), pmc.cb)
             return pmc.WorkingSetSize / (1024 * 1024)
         except Exception:
             return 0.0
@@ -97,11 +100,16 @@ def get_memory_mb() -> float:
 
 # ─── Test corpus ───────────────────────────────────────────────────────
 
+
 def load_test_documents(test_dir: Path) -> dict[str, str]:
     """Load test documents from the test_documents directory."""
     docs = {}
-    for name in ["base_document.txt", "modified_10pct.txt",
-                  "modified_50pct.txt", "modified_90pct.txt"]:
+    for name in [
+        "base_document.txt",
+        "modified_10pct.txt",
+        "modified_50pct.txt",
+        "modified_90pct.txt",
+    ]:
         path = test_dir / name
         if path.exists():
             docs[name] = path.read_text(encoding="utf-8")
@@ -111,6 +119,7 @@ def load_test_documents(test_dir: Path) -> dict[str, str]:
 
 
 # ─── Benchmark runner ──────────────────────────────────────────────────
+
 
 def benchmark_single_run(
     base_text: str,
@@ -169,12 +178,12 @@ def benchmark_single_run(
     if embed_texts:
         try:
             from sentence_transformers import SentenceTransformer  # type: ignore
-            model = SentenceTransformer(
-                embedding_model_name, trust_remote_code=True
-            )
+
+            model = SentenceTransformer(embedding_model_name, trust_remote_code=True)
             t0 = time.perf_counter()
-            model.encode(embed_texts, show_progress_bar=False,
-                         normalize_embeddings=True)
+            model.encode(
+                embed_texts, show_progress_bar=False, normalize_embeddings=True
+            )
             time_embed_incremental = time.perf_counter() - t0
         except ImportError:
             logger.warning("sentence-transformers not available, skipping embed")
@@ -186,25 +195,27 @@ def benchmark_single_run(
     try:
         from llama_index.core.node_parser import SentenceSplitter  # type: ignore
         from llama_index.core import Document  # type: ignore
+
         splitter = SentenceSplitter(chunk_size=1024, chunk_overlap=20)
         nodes = splitter.get_nodes_from_documents([Document(text=modified_text)])
         all_texts = [n.get_content() for n in nodes]
     except ImportError:
         # Fallback crude method if LlamaIndex is unavailable
-        all_texts = [str(modified_text)[i:i+1024] for i in range(0, len(modified_text), 1024-20)]
+        all_texts = [
+            str(modified_text)[i : i + 1024]
+            for i in range(0, len(modified_text), 1024 - 20)
+        ]
 
     time_embed_full = 0.0
     if all_texts:
         try:
             from sentence_transformers import SentenceTransformer  # type: ignore
-            model = SentenceTransformer(
-                embedding_model_name, trust_remote_code=True
-            )
+
+            model = SentenceTransformer(embedding_model_name, trust_remote_code=True)
             # Timer starts here — only the encode call is measured,
             # identical to how time_embed_incremental is measured above.
             t_baseline_start = time.perf_counter()
-            model.encode(all_texts, show_progress_bar=False,
-                         normalize_embeddings=True)
+            model.encode(all_texts, show_progress_bar=False, normalize_embeddings=True)
             time_embed_full = time.perf_counter() - t_baseline_start
         except ImportError:
             time_embed_full = -1.0
@@ -215,7 +226,8 @@ def benchmark_single_run(
 
     speedup = (
         time_embed_full / time_embed_incremental
-        if time_embed_incremental > 0 else float("inf")
+        if time_embed_incremental > 0
+        else float("inf")
     )
 
     return {
@@ -240,8 +252,8 @@ def benchmark_single_run(
         "memory_delta_mb": round(mem_after - mem_before, 1),
         "embed_speedup": round(speedup, 2),
         "efficiency_pct": round(
-            (1 - chunks_to_embed / len(new_chunks)) * 100
-            if len(new_chunks) > 0 else 0, 1
+            (1 - chunks_to_embed / len(new_chunks)) * 100 if len(new_chunks) > 0 else 0,
+            1,
         ),
     }
 
@@ -270,10 +282,10 @@ def run_all_benchmarks(
     # The first model execution suffers from JIT compilation and memory loading (Cold Start).
     # We perform a dummy run to "warm up" the embedding model so 0% change isn't artificially penalized.
     # By using the full base text, we force LlamaIndex and PyTorch to allocate realistic buffers.
-    logger.info("Initializing and warming up embedding model to prevent cold-start skew...")
-    _ = benchmark_single_run(
-        base, base, "Warmup", embedding_model_name=embedding_model
+    logger.info(
+        "Initializing and warming up embedding model to prevent cold-start skew..."
     )
+    _ = benchmark_single_run(base, base, "Warmup", embedding_model_name=embedding_model)
     logger.info("Warm-up complete. Starting real benchmarks.")
 
     all_results = []
@@ -287,7 +299,9 @@ def run_all_benchmarks(
         for run_i in range(num_runs):
             logger.info("  Run %d/%d", run_i + 1, num_runs)
             result = benchmark_single_run(
-                base_text, mod_text, f"{label} (run {run_i+1})",
+                base_text,
+                mod_text,
+                f"{label} (run {run_i+1})",
                 embedding_model_name=embedding_model,
             )
             run_results.append(result)
@@ -295,7 +309,8 @@ def run_all_benchmarks(
         # Average the numeric fields
         avg = {"label": label}
         numeric_keys = [
-            k for k in run_results[0]
+            k
+            for k in run_results[0]
             if isinstance(run_results[0][k], (int, float)) and k != "embed_speedup"
         ]
         for k in numeric_keys:
@@ -362,20 +377,26 @@ def main() -> None:
         description="Computational benchmark: incremental vs full embedding"
     )
     parser.add_argument(
-        "--output-dir", type=str, default="./benchmark_results",
+        "--output-dir",
+        type=str,
+        default="./benchmark_results",
         help="Directory for output files",
     )
     parser.add_argument(
-        "--test-dir", type=str,
+        "--test-dir",
+        type=str,
         default=str(PROJECT_ROOT / "test_documents"),
         help="Directory containing test documents",
     )
     parser.add_argument(
-        "--runs", type=int, default=3,
+        "--runs",
+        type=int,
+        default=3,
         help="Number of runs to average over",
     )
     parser.add_argument(
-        "--embedding-model", type=str,
+        "--embedding-model",
+        type=str,
         default="nomic-ai/nomic-embed-text-v1.5",
         help="Embedding model to use",
     )

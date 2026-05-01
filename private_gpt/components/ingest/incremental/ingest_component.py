@@ -3,7 +3,7 @@
 This module bridges the standalone IncrementalUpdater with PrivateGPT's
 ingestion pipeline.  It implements ``BaseIngestComponentWithIndex`` so that
 the rest of the application (IngestService, API, UI) can use incremental
-updates transparently – no call-site changes required.
+updates transparently - no call-site changes required.
 
 When ``embedding.ingest_mode`` is set to ``"incremental"`` in the settings
 YAML, ``get_ingestion_component()`` returns an instance of this class.  All
@@ -21,24 +21,21 @@ References (from thesis):
 """
 
 import logging
-import threading
 from pathlib import Path
 from typing import Any
 
 from llama_index.core.base.embeddings.base import BaseEmbedding
-from llama_index.core.data_structs import IndexDict
 from llama_index.core.embeddings.utils import EmbedType
-from llama_index.core.indices.base import BaseIndex
 from llama_index.core.schema import Document, TransformComponent
 from llama_index.core.storage import StorageContext
 
-from private_gpt.components.ingest.ingest_component import (
-    BaseIngestComponentWithIndex,
-)
 from private_gpt.components.ingest.incremental.chunk_hasher import SemanticChunker
 from private_gpt.components.ingest.incremental.diff_detector import DiffDetector
 from private_gpt.components.ingest.incremental.incremental_updater import (
     IncrementalUpdater,
+)
+from private_gpt.components.ingest.ingest_component import (
+    BaseIngestComponentWithIndex,
 )
 from private_gpt.paths import local_data_path
 
@@ -79,9 +76,7 @@ class IncrementalIngestComponent(BaseIngestComponentWithIndex):
         similarity_threshold: float = 0.4,
         **kwargs: Any,
     ) -> None:
-        super().__init__(
-            storage_context, embed_model, transformations, *args, **kwargs
-        )
+        super().__init__(storage_context, embed_model, transformations, *args, **kwargs)
 
         chunker = SemanticChunker(
             min_chunk_size=min_chunk_size,
@@ -147,7 +142,7 @@ class IncrementalIngestComponent(BaseIngestComponentWithIndex):
         """Ingest multiple files incrementally.
 
         Each file is processed sequentially through the incremental
-        pipeline.  This is intentional – the incremental approach saves
+        pipeline.  This is intentional - the incremental approach saves
         time by skipping unchanged chunks rather than by parallelising
         file reads.
         """
@@ -157,9 +152,7 @@ class IncrementalIngestComponent(BaseIngestComponentWithIndex):
                 documents = self.ingest(file_name, file_data)
                 all_documents.extend(documents)
             except Exception:
-                logger.exception(
-                    "Failed incremental ingest for file=%s", file_name
-                )
+                logger.exception("Failed incremental ingest for file=%s", file_name)
         return all_documents
 
     def delete(self, doc_id: str) -> None:
@@ -200,7 +193,8 @@ class IncrementalIngestComponent(BaseIngestComponentWithIndex):
                 logger.warning(
                     "delete_ref_doc failed for doc_id=%s (%s) — "
                     "removing from docstore only",
-                    doc_id, e,
+                    doc_id,
+                    e,
                 )
                 try:
                     # Bypass VectorStoreIndex._delete_from_index_struct which

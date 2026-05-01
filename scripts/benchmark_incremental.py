@@ -177,9 +177,7 @@ def generate_document(num_paragraphs: int = 10, seed: int = 42) -> str:
     return "\n\n".join(paragraphs)
 
 
-def modify_document(
-    text: str, change_ratio: float, seed: int = 123
-) -> str:
+def modify_document(text: str, change_ratio: float, seed: int = 123) -> str:
     """Modify a percentage of paragraphs in the document.
 
     Args:
@@ -193,7 +191,9 @@ def modify_document(
     rng = random.Random(seed)
     paragraphs = text.split("\n\n")
     num_to_change = max(1, int(len(paragraphs) * change_ratio))
-    indices_to_change = rng.sample(range(len(paragraphs)), min(num_to_change, len(paragraphs)))
+    indices_to_change = rng.sample(
+        range(len(paragraphs)), min(num_to_change, len(paragraphs))
+    )
 
     APPEND_TEXT = (
         " This is an appended sentence that modifies the contents of this "
@@ -273,7 +273,9 @@ def benchmark_diff(
     return stats, elapsed
 
 
-def simulate_full_reingest_time(num_chunks: int, time_per_chunk_ms: float = 50.0) -> float:
+def simulate_full_reingest_time(
+    num_chunks: int, time_per_chunk_ms: float = 50.0
+) -> float:
     """Simulate the time a full re-ingest would take.
 
     Based on the thesis measurements: embedding each chunk takes  50ms
@@ -331,18 +333,22 @@ def run_experiment(
     incremental_embed_time = simulate_full_reingest_time(
         chunks_to_embed, time_per_chunk_ms
     )
-    full_reingest_time = simulate_full_reingest_time(
-        len(new_chunks), time_per_chunk_ms
-    )
+    full_reingest_time = simulate_full_reingest_time(len(new_chunks), time_per_chunk_ms)
 
     total_incremental_time = chunk_time_new + diff_time + incremental_embed_time
-    efficiency = (
-        1 - (chunks_to_embed / len(new_chunks)) if len(new_chunks) > 0 else 0
+    efficiency = 1 - (chunks_to_embed / len(new_chunks)) if len(new_chunks) > 0 else 0
+
+    speedup = (
+        full_reingest_time / total_incremental_time
+        if total_incremental_time > 0
+        else float("inf")
     )
 
-    speedup = full_reingest_time / total_incremental_time if total_incremental_time > 0 else float("inf")
-
-    logger.info("  Embeddings: %d computed, %d skipped", chunks_to_embed, diff_stats["unchanged"])
+    logger.info(
+        "  Embeddings: %d computed, %d skipped",
+        chunks_to_embed,
+        diff_stats["unchanged"],
+    )
     logger.info("  Efficiency: %.1f%% reuse", efficiency * 100)
     logger.info("  Incremental time: %.3fs (simulated)", total_incremental_time)
     logger.info("  Full re-ingest time: %.3fs (simulated)", full_reingest_time)

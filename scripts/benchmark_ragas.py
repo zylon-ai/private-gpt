@@ -151,7 +151,9 @@ def chunk_semantic(corpus: str) -> list[str]:
     return [c.text for c in hashed_chunks]
 
 
-def chunk_fixed_size(corpus: str, chunk_size: int = 512, overlap: int = 20) -> list[str]:
+def chunk_fixed_size(
+    corpus: str, chunk_size: int = 512, overlap: int = 20
+) -> list[str]:
     """Chunk using a simple fixed-size splitter (simulates LlamaIndex default).
 
     Uses a character-level sliding window with sentence-boundary awareness.
@@ -233,9 +235,7 @@ class SimpleRetriever:
         """Retrieve top-k most similar chunks for a query."""
         import itertools
 
-        query_emb = self._model.encode(
-            [query], normalize_embeddings=True
-        ).tolist()[0]
+        query_emb = self._model.encode([query], normalize_embeddings=True).tolist()[0]
 
         scored = [
             (cosine_similarity(query_emb, chunk_emb), chunk_text)
@@ -252,6 +252,7 @@ def _check_ollama_available(url: str) -> bool:
     """Return True if the Ollama server at *url* is reachable."""
     import urllib.request
     import urllib.error
+
     try:
         req = urllib.request.urlopen(url.rstrip("/") + "/", timeout=3)
         return req.status == 200
@@ -299,10 +300,14 @@ def generate_answers_with_ollama(
                 body = _json.loads(resp.read())
                 answer = body.get("response", "").strip()
         except Exception as exc:
-            logger.warning("Ollama request %d/%d failed: %s", i + 1, len(questions), exc)
+            logger.warning(
+                "Ollama request %d/%d failed: %s", i + 1, len(questions), exc
+            )
             answer = ""
         answers.append(answer)
-        logger.info("  [%d/%d] Generated answer (%d chars)", i + 1, len(questions), len(answer))
+        logger.info(
+            "  [%d/%d] Generated answer (%d chars)", i + 1, len(questions), len(answer)
+        )
 
     return answers
 
@@ -334,8 +339,10 @@ def evaluate_with_ragas(
             context_precision,
             context_recall,
         )
+
         if not skip_faithfulness:
             from ragas.metrics import faithfulness as _faithfulness  # type: ignore
+
             metrics = [context_recall, context_precision, _faithfulness]
         else:
             metrics = [context_recall, context_precision]
@@ -345,7 +352,10 @@ def evaluate_with_ragas(
             "Install with: pip install ragas datasets"
         )
         return _evaluate_manual(
-            questions, ground_truths, retrieved_contexts, effective_answers,
+            questions,
+            ground_truths,
+            retrieved_contexts,
+            effective_answers,
             skip_faithfulness=skip_faithfulness,
         )
 
@@ -364,14 +374,23 @@ def evaluate_with_ragas(
         out = {
             "context_recall": float(result["context_recall"]),
             "context_precision": float(result["context_precision"]),
-            "faithfulness": float(result["faithfulness"]) if not skip_faithfulness else None,
-            "per_question": result.to_pandas().to_dict("records") if hasattr(result, "to_pandas") else [],
+            "faithfulness": (
+                float(result["faithfulness"]) if not skip_faithfulness else None
+            ),
+            "per_question": (
+                result.to_pandas().to_dict("records")
+                if hasattr(result, "to_pandas")
+                else []
+            ),
         }
         return out
     except Exception as e:
         logger.warning("RAGAS evaluation failed (%s), using manual fallback.", e)
         return _evaluate_manual(
-            questions, ground_truths, retrieved_contexts, effective_answers,
+            questions,
+            ground_truths,
+            retrieved_contexts,
+            effective_answers,
             skip_faithfulness=skip_faithfulness,
         )
 
@@ -394,7 +413,7 @@ def _evaluate_manual(
     import re
 
     def tokenize(text: str) -> set[str]:
-        return set(re.findall(r'\w+', text.lower()))
+        return set(re.findall(r"\w+", text.lower()))
 
     recalls, precisions, relevances = [], [], []
 
@@ -475,7 +494,8 @@ def run_benchmark(
         if ollama_available:
             logger.info(
                 "Ollama reachable at %s (model: %s) — faithfulness will be evaluated.",
-                ollama_url, ollama_model,
+                ollama_url,
+                ollama_model,
             )
         else:
             logger.warning(
@@ -498,8 +518,14 @@ def run_benchmark(
 
     for strategy_name, chunk_fn in [
         ("Semantic Chunking", lambda: chunk_semantic(corpus)),
-        ("Fixed-Size Chunking (512)", lambda: chunk_fixed_size(corpus, chunk_size=512, overlap=20)),
-        ("Fixed-Size Chunking (1024)", lambda: chunk_fixed_size(corpus, chunk_size=1024, overlap=20)),
+        (
+            "Fixed-Size Chunking (512)",
+            lambda: chunk_fixed_size(corpus, chunk_size=512, overlap=20),
+        ),
+        (
+            "Fixed-Size Chunking (1024)",
+            lambda: chunk_fixed_size(corpus, chunk_size=1024, overlap=20),
+        ),
     ]:
         logger.info("=" * 60)
         logger.info("Evaluating: %s", strategy_name)
@@ -565,9 +591,7 @@ def run_benchmark(
 
 def print_comparison_table(results: dict) -> None:
     """Print a formatted comparison table."""
-    any_faithfulness = any(
-        v.get("faithfulness") is not None for v in results.values()
-    )
+    any_faithfulness = any(v.get("faithfulness") is not None for v in results.values())
     print("\n" + "=" * 85)
     print("RAGAS EVALUATION: Semantic vs Fixed-Size Chunking")
     if not any_faithfulness:
@@ -607,15 +631,17 @@ def export_results(results: dict, output_dir: Path) -> None:
     rows = []
     for strategy, data in results.items():
         faith = data.get("faithfulness")
-        rows.append({
-            "strategy": strategy,
-            "num_chunks": data["num_chunks"],
-            "chunk_time_s": data["chunk_time_s"],
-            "index_time_s": data["index_time_s"],
-            "context_recall": data["context_recall"],
-            "context_precision": data["context_precision"],
-            "faithfulness": faith if faith is not None else "N/A",
-        })
+        rows.append(
+            {
+                "strategy": strategy,
+                "num_chunks": data["num_chunks"],
+                "chunk_time_s": data["chunk_time_s"],
+                "index_time_s": data["index_time_s"],
+                "context_recall": data["context_recall"],
+                "context_precision": data["context_precision"],
+                "faithfulness": faith if faith is not None else "N/A",
+            }
+        )
 
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=rows[0].keys())

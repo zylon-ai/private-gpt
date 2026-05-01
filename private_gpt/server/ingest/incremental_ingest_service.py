@@ -20,7 +20,7 @@ import json
 import logging
 import tempfile
 from pathlib import Path
-from typing import BinaryIO
+from typing import Any, BinaryIO
 
 from injector import inject, singleton
 from llama_index.core.storage import StorageContext
@@ -63,7 +63,9 @@ class IncrementalIngestService:
         )
 
         # Ingest a file (incremental if previously seen)
-        stats = service.incremental_ingest_file("report.pdf", Path("/path/to/report.pdf"))
+        stats = service.incremental_ingest_file(
+            "report.pdf", Path("/path/to/report.pdf"),
+        )
 
         # Start continuous watching
         service.start_watcher(Path("/path/to/documents"))
@@ -175,11 +177,11 @@ class IncrementalIngestService:
         """Delete a file and all its chunks from the index."""
         return self.updater.delete_file(file_name)
 
-    def get_file_info(self, file_name: str) -> dict:
+    def get_file_info(self, file_name: str) -> dict[str, Any]:
         """Get information about how a file is stored."""
         return self.updater.get_stats_for_file(file_name)
 
-    def get_update_history(self) -> list[dict]:
+    def get_update_history(self) -> list[dict[str, Any]]:
         """Get the history of all incremental updates in this session."""
         return [
             {
@@ -237,7 +239,9 @@ class IncrementalIngestService:
         def on_modified(path: Path) -> None:
             if not self.updater.has_file_changed(path.name, path):
                 return
-            logger.info("File change detected: %s — triggering incremental update", path.name)
+            logger.info(
+                "File change detected: %s — triggering incremental update", path.name
+            )
             try:
                 stats = self.incremental_ingest_file(path.name, path)
                 logger.info(stats.summary())
@@ -251,7 +255,9 @@ class IncrementalIngestService:
             except Exception as e:
                 logger.error("Failed to delete %s from index: %s", path.name, e)
 
-        self._watcher.add_file_watch(file_path, on_modified=on_modified, on_deleted=on_deleted)
+        self._watcher.add_file_watch(
+            file_path, on_modified=on_modified, on_deleted=on_deleted
+        )
         self._persist_watched_files()
 
     def unwatch_file(self, file_path: Path) -> bool:
@@ -302,9 +308,7 @@ class IncrementalIngestService:
         paths = [str(p) for p in self._watcher.registered_file_paths]
         try:
             self._persist_path.parent.mkdir(parents=True, exist_ok=True)
-            self._persist_path.write_text(
-                json.dumps(paths, indent=2), encoding="utf-8"
-            )
+            self._persist_path.write_text(json.dumps(paths, indent=2), encoding="utf-8")
         except Exception as e:
             logger.warning("Could not persist watched files: %s", e)
 

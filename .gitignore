@@ -32,3 +32,6 @@ __pycache__/
 
 *.pdf
 /benchmark_results
+
+# Local Claude Code settings (per-developer; not shared)
+.claude/

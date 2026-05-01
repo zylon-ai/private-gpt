@@ -206,21 +206,23 @@ class EmbeddingSettings(BaseModel):
         "gemini",
         "mistralai",
     ]
-    ingest_mode: Literal["simple", "batch", "parallel", "pipeline", "incremental"] = Field(
-        "simple",
-        description=(
-            "The ingest mode to use for the embedding engine:\n"
-            "If `simple` - ingest files sequentially and one by one. It is the historic behaviour.\n"
-            "If `batch` - if multiple files, parse all the files in parallel, "
-            "and send them in batch to the embedding model.\n"
-            "In `pipeline` - The Embedding engine is kept as busy as possible\n"
-            "If `parallel` - parse the files in parallel using multiple cores, and embedd them in parallel.\n"
-            "`parallel` is the fastest mode for local setup, as it parallelize IO RW in the index.\n"
-            "If `incremental` - use semantic chunking with hash-based change detection.\n"
-            "Only changed chunks are re-embedded on document updates (PoC).\n"
-            "For modes that leverage parallelization, you can specify the number of "
-            "workers to use with `count_workers`.\n"
-        ),
+    ingest_mode: Literal["simple", "batch", "parallel", "pipeline", "incremental"] = (
+        Field(
+            "simple",
+            description=(
+                "The ingest mode to use for the embedding engine:\n"
+                "If `simple` - ingest files sequentially and one by one. It is the historic behaviour.\n"
+                "If `batch` - if multiple files, parse all the files in parallel, "
+                "and send them in batch to the embedding model.\n"
+                "In `pipeline` - The Embedding engine is kept as busy as possible\n"
+                "If `parallel` - parse the files in parallel using multiple cores, and embedd them in parallel.\n"
+                "`parallel` is the fastest mode for local setup, as it parallelize IO RW in the index.\n"
+                "If `incremental` - use semantic chunking with hash-based change detection.\n"
+                "Only changed chunks are re-embedded on document updates (PoC).\n"
+                "For modes that leverage parallelization, you can specify the number of "
+                "workers to use with `count_workers`.\n"
+            ),
+        )
     )
     count_workers: int = Field(
         2,
@@ -623,7 +625,7 @@ class IncrementalSettings(BaseModel):
     )
     similarity_threshold: float = Field(
         0.4,
-        description="Minimum Ratcliff/Obershelp similarity ratio (0.0–1.0) to "
+        description="Minimum Ratcliff/Obershelp similarity ratio (0.0-1.0) to "
         "consider two chunks as 'same chunk modified' vs 'deleted + added'.",
     )
     debounce_seconds: float = Field(
@@ -660,7 +662,7 @@ class Settings(BaseModel):
     rag: RagSettings
     summarize: SummarizeSettings
     incremental: IncrementalSettings = Field(
-        default_factory=IncrementalSettings,
+        default_factory=lambda: IncrementalSettings(),  # type: ignore[call-arg]
         description="Incremental ingestion settings (PoC)",
     )
     qdrant: QdrantSettings | None = None

@@ -91,7 +91,7 @@ class ChunkHashStore:
         """Load the registry from disk, if it exists."""
         if self._registry_path.exists():
             try:
-                with open(self._registry_path, "r", encoding="utf-8") as f:
+                with open(self._registry_path, encoding="utf-8") as f:
                     data = json.load(f)
                 for doc_id, doc_data in data.items():
                     chunks = [

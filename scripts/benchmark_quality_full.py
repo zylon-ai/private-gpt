@@ -201,7 +201,11 @@ def measure_full_reingest_inefficiency(
             logger.info(
                 "  [%s] Iter %2d [%s]: %d chunks, "
                 "%d preserved hashes, inefficiency=%.1f%%",
-                chunker_label, iteration, edit_type, total, preserved,
+                chunker_label,
+                iteration,
+                edit_type,
+                total,
+                preserved,
                 ineff * 100,
             )
             prev_hashes = set(new_hashes)
@@ -264,9 +268,7 @@ def measure_avalanche_effect(
             old_chunks = chunker.chunk_text(base_text)
             new_chunks = chunker.chunk_text(modified)
             old_hashes = {c.content_hash for c in old_chunks}
-            changed = sum(
-                1 for c in new_chunks if c.content_hash not in old_hashes
-            )
+            changed = sum(1 for c in new_chunks if c.content_hash not in old_hashes)
             ratio = changed / len(new_chunks) if new_chunks else 0.0
             expected = 1.0 / num_paragraphs
 
@@ -285,8 +287,13 @@ def measure_avalanche_effect(
             logger.info(
                 "  [%s] %s: %d/%d chunks changed (ratio=%.2f, "
                 "expected=%.2f, amplification=%.1fx)",
-                chunker_label, scenario_name, changed, len(new_chunks),
-                ratio, expected, ratio / expected if expected > 0 else 0,
+                chunker_label,
+                scenario_name,
+                changed,
+                len(new_chunks),
+                ratio,
+                expected,
+                ratio / expected if expected > 0 else 0,
             )
 
     return results
@@ -383,7 +390,11 @@ def measure_scalability(sizes: list[int] | None = None) -> list[ScalabilityResul
             )
             logger.info(
                 "  [%s] %3d paras: %d chunks in %.4fs (%.0f chunks/s)",
-                chunker_label, n, len(chunks), t, cps,
+                chunker_label,
+                n,
+                len(chunks),
+                t,
+                cps,
             )
     return results
 
@@ -427,7 +438,8 @@ def print_avalanche_table(results: list[AvalancheMeasurement]) -> None:
     for r in results:
         amp = (
             r.avalanche_ratio / r.expected_change_fraction
-            if r.expected_change_fraction > 0 else 0.0
+            if r.expected_change_fraction > 0
+            else 0.0
         )
         print(
             f"{r.scenario:<32} {r.chunker:<22} "
@@ -453,8 +465,10 @@ def print_scalability_table(results: list[ScalabilityResult]) -> None:
     print("\n" + "=" * 100)
     print("CHUNKING SCALABILITY (throughput vs document size)")
     print("=" * 100)
-    print(f"{'Paras':>6} {'Chunker':<22} {'Chunks':>7} "
-          f"{'Time(s)':>9} {'Chunks/s':>10}")
+    print(
+        f"{'Paras':>6} {'Chunker':<22} {'Chunks':>7} "
+        f"{'Time(s)':>9} {'Chunks/s':>10}"
+    )
     print("-" * 100)
     for r in results:
         print(
@@ -556,11 +570,15 @@ def main() -> None:
         help="Directory to store results",
     )
     parser.add_argument(
-        "--iterations", type=int, default=10,
+        "--iterations",
+        type=int,
+        default=10,
         help="Number of sequential edits in the inefficiency benchmark",
     )
     parser.add_argument(
-        "--paragraphs", type=int, default=12,
+        "--paragraphs",
+        type=int,
+        default=12,
         help="Document size (paragraphs) for the inefficiency benchmark",
     )
     args = parser.parse_args()
@@ -568,7 +586,8 @@ def main() -> None:
 
     print("\n>>> BENCHMARK 1: Full re-ingest inefficiency")
     ineff = measure_full_reingest_inefficiency(
-        num_iterations=args.iterations, num_paragraphs=args.paragraphs,
+        num_iterations=args.iterations,
+        num_paragraphs=args.paragraphs,
     )
     print_inefficiency_table(ineff)
 

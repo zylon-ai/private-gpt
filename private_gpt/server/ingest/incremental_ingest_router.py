@@ -11,11 +11,10 @@ Endpoints:
 """
 
 import logging
-from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, Request, UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from private_gpt.server.ingest.incremental_ingest_service import (
     IncrementalIngestService,
@@ -129,9 +128,7 @@ async def get_file_info(request: Request, file_name: str) -> FileInfoResponse:
     summary="Delete a file from the incremental index",
     description="Removes all chunks for the given file from the vector store and hash registry.",
 )
-async def delete_incremental_file(
-    request: Request, file_name: str
-) -> dict[str, Any]:
+async def delete_incremental_file(request: Request, file_name: str) -> dict[str, Any]:
     """Delete a file and all its chunks."""
     service = request.state.injector.get(IncrementalIngestService)
     success = service.delete_file(file_name)

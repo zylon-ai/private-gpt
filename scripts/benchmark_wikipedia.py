@@ -212,9 +212,7 @@ def measure_one(
     t_embed_full = time.perf_counter() - t0
 
     chunks_to_embed = len(embed_texts)
-    speedup = (
-        t_embed_full / t_embed_inc if t_embed_inc > 0 else float("inf")
-    )
+    speedup = t_embed_full / t_embed_inc if t_embed_inc > 0 else float("inf")
 
     return {
         "chunks_old": len(old_chunks),
@@ -222,8 +220,7 @@ def measure_one(
         "chunks_embedded_incremental": chunks_to_embed,
         "chunks_embedded_full": len(new_chunks),
         "efficiency_pct": round(
-            (1 - chunks_to_embed / len(new_chunks)) * 100
-            if new_chunks else 0.0, 1
+            (1 - chunks_to_embed / len(new_chunks)) * 100 if new_chunks else 0.0, 1
         ),
         "time_chunking_s": round(t_chunk, 4),
         "time_diffing_s": round(t_diff, 4),
@@ -332,8 +329,15 @@ def main() -> None:
     color1 = "#2c7bb6"
     color2 = "#d7191c"
 
-    ax1.plot(sizes, speedups, "o-", color=color1, linewidth=2, markersize=8,
-             label="Speedup-factor")
+    ax1.plot(
+        sizes,
+        speedups,
+        "o-",
+        color=color1,
+        linewidth=2,
+        markersize=8,
+        label="Speedup-factor",
+    )
     ax1.set_xlabel("Documentgrootte (aantal paragrafen)")
     ax1.set_ylabel("Versnellingsfactor (x)", color=color1)
     ax1.tick_params(axis="y", labelcolor=color1)
@@ -341,8 +345,15 @@ def main() -> None:
     ax1.grid(True, alpha=0.3)
 
     ax2 = ax1.twinx()
-    ax2.plot(sizes, efficiencies, "s--", color=color2, linewidth=2,
-             markersize=8, label="Efficiëntie (%)")
+    ax2.plot(
+        sizes,
+        efficiencies,
+        "s--",
+        color=color2,
+        linewidth=2,
+        markersize=8,
+        label="Efficiëntie (%)",
+    )
     ax2.set_ylabel("Hergebruikte embeddings (%)", color=color2)
     ax2.tick_params(axis="y", labelcolor=color2)
     ax2.set_ylim(0, 105)

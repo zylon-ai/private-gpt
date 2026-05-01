@@ -11,13 +11,15 @@ so that changes can be detected efficiently.
 References (from thesis):
 - Semantic chunking via breakpoints (Qu et al., 2024)
 - Hash-based change detection (LangChain Sync Vector Stores, 2023)
-- Avalanche effect in fixed-size chunking (thesis: State of the art, Chunking strategies)
+- Avalanche effect in fixed-size chunking
+  (thesis: State of the art - Chunking strategies)
 """
 
 import hashlib
 import logging
 import re
 from dataclasses import dataclass, field
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ class HashedChunk:
     chunk_index: int
     text: str
     content_hash: str
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, HashedChunk):
@@ -78,9 +80,7 @@ class SemanticChunker:
     )
 
     # Sentence boundary for splitting oversized chunks
-    SENTENCE_SPLIT_PATTERN = re.compile(
-        r"(?<=[.!?])\s+(?=[A-Z])"
-    )
+    SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+(?=[A-Z])")
 
     def __init__(
         self,
@@ -90,7 +90,9 @@ class SemanticChunker:
         self.min_chunk_size = min_chunk_size
         self.max_chunk_size = max_chunk_size
 
-    def chunk_text(self, text: str, metadata: dict | None = None) -> list[HashedChunk]:
+    def chunk_text(
+        self, text: str, metadata: dict[str, Any] | None = None
+    ) -> list[HashedChunk]:
         """Split text into semantic chunks and compute hashes.
 
         Args:
@@ -144,13 +146,10 @@ class SemanticChunker:
         buffer = ""
 
         for chunk in chunks:
-            if buffer:
-                candidate = buffer + "\n\n" + chunk
-            else:
-                candidate = chunk
+            candidate = buffer + "\n\n" + chunk if buffer else chunk
 
             if len(candidate) < self.min_chunk_size:
-                # Too small – keep buffering
+                # Too small - keep buffering
                 buffer = candidate
             elif len(candidate) > self.max_chunk_size:
                 # If we have a buffer that's large enough on its own, flush it
