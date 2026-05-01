@@ -509,6 +509,20 @@ def get_ingestion_component(
             transformations=transformations,
             count_workers=settings.embedding.count_workers,
         )
+    elif ingest_mode == "incremental" or settings.incremental.enabled:
+        from private_gpt.components.ingest.incremental.ingest_component import (
+            IncrementalIngestComponent,
+        )
+
+        inc_settings = settings.incremental
+        return IncrementalIngestComponent(
+            storage_context=storage_context,
+            embed_model=embed_model,
+            transformations=transformations,
+            min_chunk_size=inc_settings.min_chunk_size,
+            max_chunk_size=inc_settings.max_chunk_size,
+            similarity_threshold=inc_settings.similarity_threshold,
+        )
     else:
         return SimpleIngestComponent(
             storage_context=storage_context,

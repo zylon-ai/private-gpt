@@ -15,6 +15,9 @@ from private_gpt.server.completions.completions_router import completions_router
 from private_gpt.server.embeddings.embeddings_router import embeddings_router
 from private_gpt.server.health.health_router import health_router
 from private_gpt.server.ingest.ingest_router import ingest_router
+from private_gpt.server.ingest.incremental_ingest_router import (
+    incremental_ingest_router,
+)
 from private_gpt.server.recipes.summarize.summarize_router import summarize_router
 from private_gpt.settings.settings import Settings
 
@@ -33,6 +36,7 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(chat_router)
     app.include_router(chunks_router)
     app.include_router(ingest_router)
+    app.include_router(incremental_ingest_router)
     app.include_router(summarize_router)
     app.include_router(embeddings_router)
     app.include_router(health_router)
@@ -65,5 +69,21 @@ def create_app(root_injector: Injector) -> FastAPI:
 
         ui = root_injector.get(PrivateGptUi)
         ui.mount_in_app(app, settings.ui.path)
+
+    # ── Incremental file watcher lifecycle ──────────────────────────────
+    if settings.incremental.enabled:
+        from private_gpt.server.ingest.incremental_ingest_service import (
+            IncrementalIngestService,
+        )
+
+        @app.on_event("startup")
+        async def _start_incremental_watcher() -> None:
+            svc = root_injector.get(IncrementalIngestService)
+            svc.start_watching_background()
+
+        @app.on_event("shutdown")
+        async def _stop_incremental_watcher() -> None:
+            svc = root_injector.get(IncrementalIngestService)
+            svc.stop_watching()
 
     return app

@@ -1,0 +1,29 @@
+Retrieval-Augmented Generation (RAG) combines large language models with external knowledge sources to generate answers based on up-to-date documents. This approach allows the AI to produce responses grounded in actual data rather than relying solely on its training corpus. Organizations across industries are adopting RAG to build intelligent document assistants.
+
+Local RAG systems process documents entirely on-premises, which offers significant privacy advantages when dealing with sensitive data. Because documents and queries never leave the local environment, all raw information remains under organizational control. This eliminates the risk of data leakage through third-party API calls.
+
+PrivateGPT uses LlamaIndex to split incoming documents into text blocks of approximately 1024 tokens with a default overlap of 20 tokens. These chunks are stored in a NodeStore and the corresponding embeddings in a VectorStore. The chunking strategy directly impacts retrieval quality and system performance.
+
+With fixed-size chunking, a document is linearly cut into equal pieces, often with overlap applied. The downside is the avalanche effect: a subtle modification shifts all subsequent chunks, causing many embeddings to be recomputed unnecessarily. This makes fixed-size chunking inefficient for frequently updated documents.
+
+Semantic chunking splits text based on content coherence. A breakpoint-based chunker selects split points where the semantic distance exceeds a threshold. This prevents the domino effect of fixed-size chunking when small modifications are made, preserving the stability of unchanged passages.
+
+Myers' algorithm is a well-known LCS-based method that computes the shortest possible edit script in O(ND) time. This algorithm can be applied at any level of granularity: lines, sentences, or tokens. It forms the theoretical foundation for many modern diff tools.
+
+Patience diff first identifies sentences or tokens that appear exactly once in both versions as anchor points, links them, and then performs LCS within the intervening segments. This produces more robust results when dealing with reorderings or repeated content.
+
+Hash-based detection computes a hash value for each chunk in advance. During a new indexing run, hash values are compared to skip unchanged chunks. Only chunks with a changed hash are re-embedded and updated in the vector store. This approach reduces computational overhead significantly.
+
+At the vector database level, the principle of upsert is common. Modern vector stores such as Qdrant, Milvus, and FAISS support updating individual vectors: an update as delete followed by insert, or as an explicit upsert operation. This enables fine-grained index maintenance.
+
+HNSW indexes build a layered graph structure with skip-list-like layers. This delivers very fast search operations with high recall. HNSW is designed for dynamic data: new vectors can be incrementally added without rebuilding the entire index structure.
+
+Embedding drift is the phenomenon where small changes in text or model can cause large displacements in the vector space. For incremental document management, embedding stability is essential: one wants unchanged passages to maintain stable embeddings across updates.
+
+Incremental knowledge updates carry technical risks. Inconsistencies can occur due to mismatches in chunking or embeddings. Without a rollback mechanism, a failed update can lead to the need to rebuild the entire index from scratch.
+
+Hybrid RAG architectures combine local and cloud components. Advantages include lower latency and improved privacy: critical data stays on-premises, while computational power from the cloud can be leveraged for more complex queries.
+
+The performance of a local RAG solution is measured with a mix of system and information retrieval metrics. Important system measurements include latency and throughput. Latency is the time the system needs to respond to a query, while throughput measures the number of queries processed per unit of time.
+
+Vector quantization techniques such as Product Quantization (PQ) and Scalar Quantization (SQ) can significantly reduce memory requirements for large-scale vector indexes. These methods trade a small amount of recall accuracy for dramatic improvements in memory efficiency and search speed.

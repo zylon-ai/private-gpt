@@ -107,7 +107,7 @@ class SagemakerLLM(CustomLLM):
     https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
 
     If a specific credential profile should be used, you must pass
-    the name of the profile from the ~/.aws/credentials file that is to be used.
+    the name of the profile from the  /.aws/credentials file that is to be used.
 
     Make sure the credentials / roles used have the required policies to
     access the Sagemaker endpoint.

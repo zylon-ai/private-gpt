@@ -206,7 +206,7 @@ class EmbeddingSettings(BaseModel):
         "gemini",
         "mistralai",
     ]
-    ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
+    ingest_mode: Literal["simple", "batch", "parallel", "pipeline", "incremental"] = Field(
         "simple",
         description=(
             "The ingest mode to use for the embedding engine:\n"
@@ -216,6 +216,8 @@ class EmbeddingSettings(BaseModel):
             "In `pipeline` - The Embedding engine is kept as busy as possible\n"
             "If `parallel` - parse the files in parallel using multiple cores, and embedd them in parallel.\n"
             "`parallel` is the fastest mode for local setup, as it parallelize IO RW in the index.\n"
+            "If `incremental` - use semantic chunking with hash-based change detection.\n"
+            "Only changed chunks are re-embedded on document updates (PoC).\n"
             "For modes that leverage parallelization, you can specify the number of "
             "workers to use with `count_workers`.\n"
         ),
@@ -377,6 +379,16 @@ class UISettings(BaseModel):
     )
     delete_all_files_button_enabled: bool = Field(
         False, description="If the button to delete all files is enabled or not."
+    )
+    benchmarks_tab_enabled: bool = Field(
+        False,
+        description=(
+            "If the 'Benchmarks' tab is shown in the UI. The tab exposes the "
+            "thesis evaluation benchmarks (computational, RAGAS, incremental "
+            "speedtest, quality & stability). Off by default because the "
+            "benchmarks are intended for development and reproducing thesis "
+            "results, not for end users."
+        ),
     )
 
 
@@ -587,6 +599,49 @@ class MilvusSettings(BaseModel):
     )
 
 
+class IncrementalSettings(BaseModel):
+    """Settings for incremental document ingestion (PoC).
+
+    Controls the behaviour of the incremental update pipeline that
+    re-embeds only changed chunks instead of full documents.
+    """
+
+    enabled: bool = Field(
+        False,
+        description="Enable incremental ingestion. When enabled, document updates "
+        "only re-embed changed chunks instead of the full document.",
+    )
+    min_chunk_size: int = Field(
+        100,
+        description="Minimum characters per semantic chunk. Smaller chunks are "
+        "merged with the next paragraph.",
+    )
+    max_chunk_size: int = Field(
+        3000,
+        description="Maximum characters per semantic chunk. Larger chunks are "
+        "split at sentence boundaries.",
+    )
+    similarity_threshold: float = Field(
+        0.4,
+        description="Minimum Ratcliff/Obershelp similarity ratio (0.0–1.0) to "
+        "consider two chunks as 'same chunk modified' vs 'deleted + added'.",
+    )
+    debounce_seconds: float = Field(
+        2.0,
+        description="Minimum interval (seconds) between processing file-watcher "
+        "events for the same file.",
+    )
+    watch_enabled: bool = Field(
+        False,
+        description="Enable automatic file watching with incremental updates.",
+    )
+    watch_path: str | None = Field(
+        None,
+        description="Path to watch for file changes. If None, uses the default "
+        "local ingestion paths.",
+    )
+
+
 class Settings(BaseModel):
     server: ServerSettings
     data: DataSettings
@@ -604,6 +659,10 @@ class Settings(BaseModel):
     nodestore: NodeStoreSettings
     rag: RagSettings
     summarize: SummarizeSettings
+    incremental: IncrementalSettings = Field(
+        default_factory=IncrementalSettings,
+        description="Incremental ingestion settings (PoC)",
+    )
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
     clickhouse: ClickHouseSettings | None = None
