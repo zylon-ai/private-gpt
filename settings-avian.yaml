@@ -2,16 +2,16 @@ server:
   env_name: ${APP_ENV:avian}
 
 llm:
-  mode: openai
+  mode: avian
   max_new_tokens: 512
   context_window: 131072
   temperature: 0.1
 
 embedding:
-  mode: openai
+  mode: avian
   ingest_mode: simple
 
-openai:
+avian:
   api_base: ${AVIAN_API_BASE:https://api.avian.io/v1}
   api_key: ${AVIAN_API_KEY:}
   model: deepseek/deepseek-v3.2
