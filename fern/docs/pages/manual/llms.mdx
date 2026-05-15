@@ -49,6 +49,25 @@ llm:
 If you are getting an out of memory error, you might also try a smaller model or stick to the proposed
 recommended models, instead of custom tuning the parameters.
 
+##### Using manually downloaded local models (no runtime download)
+If you already downloaded models from HuggingFace manually, configure explicit local paths:
+
+```yaml
+llm:
+  tokenizer_path: /path/to/local/tokenizer
+
+llamacpp:
+  llm_local_path: /path/to/local/model.gguf
+
+huggingface:
+  embedding_hf_model_path: /path/to/local/embedding-model-folder
+```
+
+When these are set, PrivateGPT uses local files directly:
+- `llm.tokenizer_path` overrides `llm.tokenizer`
+- `llamacpp.llm_local_path` overrides `llamacpp.llm_hf_model_file`
+- `huggingface.embedding_hf_model_path` overrides `huggingface.embedding_hf_model_name`
+
 ### Using OpenAI
 
 If you cannot run a local model (because you don't have a GPU, for example) or for testing purposes, you may

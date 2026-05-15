@@ -9,7 +9,11 @@ from llama_index.core.utils import set_global_tokenizer
 from transformers import AutoTokenizer  # type: ignore
 
 from private_gpt.components.llm.prompt_helper import get_prompt_style
-from private_gpt.paths import models_cache_path, models_path
+from private_gpt.paths import (
+    absolute_or_from_project_root,
+    models_cache_path,
+    models_path,
+)
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -22,20 +26,32 @@ class LLMComponent:
     @inject
     def __init__(self, settings: Settings) -> None:
         llm_mode = settings.llm.mode
-        if settings.llm.tokenizer and settings.llm.mode != "mock":
+        tokenizer_for_openailike = settings.llm.tokenizer
+        tokenizer = settings.llm.tokenizer_path or settings.llm.tokenizer
+        if tokenizer and settings.llm.mode != "mock":
             # Try to download the tokenizer. If it fails, the LLM will still work
             # using the default one, which is less accurate.
+            tokenizer_source = tokenizer
+            if settings.llm.tokenizer_path:
+                tokenizer_path = absolute_or_from_project_root(settings.llm.tokenizer_path)
+                if not tokenizer_path.exists():
+                    raise ValueError(
+                        "Configured local tokenizer path does not exist: "
+                        f"{tokenizer_path}"
+                    )
+                tokenizer_source = str(tokenizer_path)
+                tokenizer_for_openailike = tokenizer_source
             try:
                 set_global_tokenizer(
                     AutoTokenizer.from_pretrained(
-                        pretrained_model_name_or_path=settings.llm.tokenizer,
+                        pretrained_model_name_or_path=tokenizer_source,
                         cache_dir=str(models_cache_path),
                         token=settings.huggingface.access_token,
                     )
                 )
             except Exception as e:
                 logger.warning(
-                    f"Failed to download tokenizer {settings.llm.tokenizer}: {e!s}"
+                    f"Failed to load tokenizer {tokenizer_source}: {e!s}"
                     f"Please follow the instructions in the documentation to download it if needed: "
                     f"https://docs.privategpt.dev/installation/getting-started/troubleshooting#tokenizer-setup."
                     f"Falling back to default tokenizer."
@@ -60,8 +76,18 @@ class LLMComponent:
                     "n_gpu_layers": -1,
                     "offload_kqv": True,
                 }
+                llm_model_path = models_path / settings.llamacpp.llm_hf_model_file
+                if settings.llamacpp.llm_local_path:
+                    llm_model_path = absolute_or_from_project_root(
+                        settings.llamacpp.llm_local_path
+                    )
+                if not llm_model_path.exists():
+                    raise ValueError(
+                        "Configured llama.cpp model file does not exist: "
+                        f"{llm_model_path}"
+                    )
                 self.llm = LlamaCPP(
-                    model_path=str(models_path / settings.llamacpp.llm_hf_model_file),
+                    model_path=str(llm_model_path),
                     temperature=settings.llm.temperature,
                     max_new_tokens=settings.llm.max_new_tokens,
                     context_window=settings.llm.context_window,
@@ -122,7 +148,7 @@ class LLMComponent:
                     context_window=settings.llm.context_window,
                     messages_to_prompt=prompt_style.messages_to_prompt,
                     completion_to_prompt=prompt_style.completion_to_prompt,
-                    tokenizer=settings.llm.tokenizer,
+                    tokenizer=tokenizer_for_openailike,
                     timeout=openai_settings.request_timeout,
                     reuse_client=False,
                 )

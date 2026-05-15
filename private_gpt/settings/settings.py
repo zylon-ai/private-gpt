@@ -132,6 +132,11 @@ class LLMSettings(BaseModel):
         "like `HuggingFaceH4/zephyr-7b-beta`. If not set, will load a tokenizer matching "
         "gpt-3.5-turbo LLM.",
     )
+    tokenizer_path: str | None = Field(
+        None,
+        description="Optional local path to a downloaded tokenizer directory. "
+        "If set, it overrides `tokenizer`.",
+    )
     temperature: float = Field(
         0.1,
         description="The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual.",
@@ -163,6 +168,11 @@ class NodeStoreSettings(BaseModel):
 class LlamaCPPSettings(BaseModel):
     llm_hf_repo_id: str
     llm_hf_model_file: str
+    llm_local_path: str | None = Field(
+        None,
+        description="Optional local path to a GGUF model file. "
+        "If set, it overrides `llm_hf_model_file` lookup under the `models/` folder.",
+    )
     tfs_z: float = Field(
         1.0,
         description="Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting.",
@@ -184,6 +194,11 @@ class LlamaCPPSettings(BaseModel):
 class HuggingFaceSettings(BaseModel):
     embedding_hf_model_name: str = Field(
         description="Name of the HuggingFace model to use for embeddings"
+    )
+    embedding_hf_model_path: str | None = Field(
+        None,
+        description="Optional local path to a downloaded HuggingFace embedding model "
+        "directory. If set, it overrides `embedding_hf_model_name`.",
     )
     access_token: str = Field(
         None,

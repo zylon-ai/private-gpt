@@ -30,6 +30,29 @@ PrivateGPT uses the `AutoTokenizer` library to tokenize input text accurately. I
    If you are using a gated model, ensure the `access_token` is set as mentioned in the previous section.
 This configuration ensures that PrivateGPT can download and use the correct tokenizer for the model you are working with.
 
+## Using a manually downloaded local tokenizer
+If your environment cannot download from HuggingFace directly, you can point PrivateGPT to a local tokenizer folder:
+```yaml
+llm:
+  tokenizer_path: /absolute/or/relative/path/to/tokenizer-folder
+```
+If `tokenizer_path` is set, it overrides `llm.tokenizer`.
+
+# Using manually downloaded local models
+You can run fully local without downloading at runtime by setting explicit local paths:
+```yaml
+llamacpp:
+  llm_local_path: /absolute/or/relative/path/to/model.gguf
+
+huggingface:
+  embedding_hf_model_path: /absolute/or/relative/path/to/embedding-model-folder
+```
+
+Notes:
+- `llamacpp.llm_local_path` overrides `llamacpp.llm_hf_model_file`.
+- `huggingface.embedding_hf_model_path` overrides `huggingface.embedding_hf_model_name`.
+- Relative paths are resolved from the repository root.
+
 # Embedding dimensions mismatch
 If you encounter an error message like `Embedding dimensions mismatch`, it is likely due to the embedding model and
 current vector dimension mismatch. To resolve this issue, ensure that the model and the input data have the same vector dimensions.

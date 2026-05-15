@@ -8,17 +8,23 @@ llm:
   max_new_tokens: 512
   context_window: 3900
   tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
+  # Optional: local tokenizer path (overrides tokenizer)
+  # tokenizer_path: models/tokenizer
   prompt_style: "llama3"
 
 llamacpp:
   llm_hf_repo_id: lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF
   llm_hf_model_file: Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
+  # Optional: local GGUF path (overrides llm_hf_model_file under models/)
+  # llm_local_path: models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
 
 embedding:
   mode: huggingface
 
 huggingface:
   embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
+  # Optional: local embedding model folder path (overrides embedding_hf_model_name)
+  # embedding_hf_model_path: models/embedding
 
 vectorstore:
   database: qdrant

@@ -3,7 +3,7 @@ import logging
 from injector import inject, singleton
 from llama_index.core.embeddings import BaseEmbedding, MockEmbedding
 
-from private_gpt.paths import models_cache_path
+from private_gpt.paths import absolute_or_from_project_root, models_cache_path
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -28,10 +28,27 @@ class EmbeddingComponent:
                         "Local dependencies not found, install with `poetry install --extras embeddings-huggingface`"
                     ) from e
 
+                hf_settings = settings.huggingface
+                model_name = hf_settings.embedding_hf_model_name
+                if hf_settings.embedding_hf_model_path:
+                    embedding_model_path = absolute_or_from_project_root(
+                        hf_settings.embedding_hf_model_path
+                    )
+                    if not embedding_model_path.exists():
+                        raise ValueError(
+                            "Configured local embedding model path does not exist: "
+                            f"{embedding_model_path}"
+                        )
+                    logger.info(
+                        "Loading HuggingFace embedding model from local path: %s",
+                        embedding_model_path,
+                    )
+                    model_name = str(embedding_model_path)
+
                 self.embedding_model = HuggingFaceEmbedding(
-                    model_name=settings.huggingface.embedding_hf_model_name,
+                    model_name=model_name,
                     cache_folder=str(models_cache_path),
-                    trust_remote_code=settings.huggingface.trust_remote_code,
+                    trust_remote_code=hf_settings.trust_remote_code,
                 )
             case "sagemaker":
                 try:
