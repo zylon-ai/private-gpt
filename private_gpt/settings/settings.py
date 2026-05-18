@@ -115,6 +115,7 @@ class LLMSettings(BaseModel):
         "mock",
         "ollama",
         "gemini",
+        "avian",
     ]
     max_new_tokens: int = Field(
         256,
@@ -205,6 +206,7 @@ class EmbeddingSettings(BaseModel):
         "mock",
         "gemini",
         "mistralai",
+        "avian",
     ]
     ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",
@@ -265,6 +267,33 @@ class OpenAISettings(BaseModel):
     embedding_model: str = Field(
         "text-embedding-ada-002",
         description="OpenAI embedding Model to use. Example: 'text-embedding-3-large'.",
+    )
+
+
+class AvianSettings(BaseModel):
+    api_base: str = Field(
+        "https://api.avian.io/v1",
+        description="Base URL of Avian API. Example: 'https://api.avian.io/v1'.",
+    )
+    api_key: str = Field(
+        None,
+        description="Avian API key for authentication.",
+    )
+    model: str = Field(
+        "deepseek/deepseek-v3.2",
+        description="Avian model to use for LLM.",
+    )
+    embedding_api_base: str = Field(
+        None,
+        description="Base URL for Avian embedding API. Defaults to api_base if not set.",
+    )
+    embedding_api_key: str = Field(
+        None,
+        description="Avian API key for embeddings. Defaults to api_key if not set.",
+    )
+    embedding_model: str = Field(
+        "text-embedding-ada-002",
+        description="Avian embedding model to use.",
     )
 
 
@@ -597,6 +626,7 @@ class Settings(BaseModel):
     huggingface: HuggingFaceSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
+    avian: AvianSettings | None = None
     gemini: GeminiSettings
     ollama: OllamaSettings
     azopenai: AzureOpenAISettings

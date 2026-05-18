@@ -67,6 +67,28 @@ class EmbeddingComponent:
                     api_key=api_key,
                     model=model,
                 )
+            case "avian":
+                try:
+                    from llama_index.embeddings.openai import (  # type: ignore
+                        OpenAIEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "OpenAI dependencies not found, install with `poetry install --extras embeddings-openai`"
+                    ) from e
+
+                avian_settings = settings.avian
+                api_base = (
+                    avian_settings.embedding_api_base or avian_settings.api_base
+                )
+                api_key = avian_settings.embedding_api_key or avian_settings.api_key
+                model = avian_settings.embedding_model
+
+                self.embedding_model = OpenAIEmbedding(
+                    api_base=api_base,
+                    api_key=api_key,
+                    model=model,
+                )
             case "ollama":
                 try:
                     from llama_index.embeddings.ollama import (  # type: ignore

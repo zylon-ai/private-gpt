@@ -102,6 +102,20 @@ class LLMComponent:
                     api_key=openai_settings.api_key,
                     model=openai_settings.model,
                 )
+            case "avian":
+                try:
+                    from llama_index.llms.openai import OpenAI  # type: ignore
+                except ImportError as e:
+                    raise ImportError(
+                        "OpenAI dependencies not found, install with `poetry install --extras llms-openai`"
+                    ) from e
+
+                avian_settings = settings.avian
+                self.llm = OpenAI(
+                    api_base=avian_settings.api_base,
+                    api_key=avian_settings.api_key,
+                    model=avian_settings.model,
+                )
             case "openailike":
                 try:
                     from llama_index.llms.openai_like import OpenAILike  # type: ignore
