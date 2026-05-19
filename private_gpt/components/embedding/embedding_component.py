@@ -78,6 +78,8 @@ class EmbeddingComponent:
                     ) from e
 
                 avian_settings = settings.avian
+                if avian_settings is None:
+                    raise ValueError("Avian settings not found in configuration.")
                 api_base = avian_settings.embedding_api_base or avian_settings.api_base
                 api_key = avian_settings.embedding_api_key or avian_settings.api_key
                 model = avian_settings.embedding_model

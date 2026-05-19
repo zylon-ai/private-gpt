@@ -111,6 +111,8 @@ class LLMComponent:
                     ) from e
 
                 avian_settings = settings.avian
+                if avian_settings is None:
+                    raise ValueError("Avian settings not found in configuration.")
                 self.llm = OpenAI(
                     api_base=avian_settings.api_base,
                     api_key=avian_settings.api_key,
