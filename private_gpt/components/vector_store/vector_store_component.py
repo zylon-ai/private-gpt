@@ -14,7 +14,53 @@ from private_gpt.open_ai.extensions.context_filter import ContextFilter
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import Settings
 
+try:
+    from llama_index.vector_stores.postgres import (  # type: ignore
+        PGVectorStore,
+    )
+except ImportError:
+
+    class PGVectorStore:  # type: ignore[no-redef]
+        """Placeholder when pgvector extras are not installed."""
+
+
 logger = logging.getLogger(__name__)
+
+
+class OpenGaussVectorStore(PGVectorStore):  # type: ignore[misc]
+    """PGVectorStore subclass for openGauss databases.
+
+    openGauss differences from standard PostgreSQL:
+
+    1. ``SELECT version()`` returns ``(openGauss-lite 7.0.0-RC1...)``
+       instead of ``(PostgreSQL 15.0...)``, which causes SQLAlchemy's
+       dialect to throw ``AssertionError``.  The fallback returns a safe
+       default version on each engine's dialect *instance* — no global
+       side effects.
+    2. DataVec (pgvector) is built into the openGauss kernel, so
+       ``CREATE EXTENSION`` is not needed.
+    """
+
+    def _create_extension(self) -> None:
+        """Skip — DataVec is built into the openGauss kernel."""
+        pass
+
+    def _connect(self) -> typing.Any:
+        super()._connect()
+        self._patch_dialect_version(self._engine)
+        self._patch_dialect_version(self._async_engine)
+
+    @staticmethod
+    def _patch_dialect_version(engine: typing.Any) -> None:
+        original = engine.dialect._get_server_version_info
+
+        def _patched_get_version(connection: typing.Any) -> tuple[int, int]:
+            try:
+                return typing.cast(tuple[int, int], original(connection))
+            except AssertionError:
+                return (12, 0)
+
+        engine.dialect._get_server_version_info = _patched_get_version
 
 
 def _doc_id_metadata_filter(
@@ -57,6 +103,35 @@ class VectorStoreComponent:
                     BasePydanticVectorStore,
                     PGVectorStore.from_params(
                         **settings.postgres.model_dump(exclude_none=True),
+                        table_name="embeddings",
+                        embed_dim=settings.embedding.embed_dim,
+                    ),
+                )
+
+            case "openGauss":
+                try:
+                    from llama_index.vector_stores.postgres import (  # type: ignore
+                        PGVectorStore,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "Postgres dependencies not found, install with `poetry install --extras vector-stores-postgres`"
+                    ) from e
+
+                if settings.openGauss is None:
+                    raise ValueError(
+                        "openGauss settings not found. Please provide openGauss.connection_string."
+                    )
+
+                self.vector_store = typing.cast(
+                    BasePydanticVectorStore,
+                    OpenGaussVectorStore.from_params(
+                        connection_string=settings.openGauss.connection_string,
+                        async_connection_string=settings.openGauss.async_connection_string
+                        or settings.openGauss.connection_string.replace(
+                            "+psycopg2://", "+asyncpg://"
+                        ),
+                        schema_name=settings.openGauss.schema_name,
                         table_name="embeddings",
                         embed_dim=settings.embedding.embed_dim,
                     ),

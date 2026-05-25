@@ -1,7 +1,7 @@
 ## Vectorstores
-PrivateGPT supports [Qdrant](https://qdrant.tech/), [Milvus](https://milvus.io/), [Chroma](https://www.trychroma.com/), [PGVector](https://github.com/pgvector/pgvector) and [ClickHouse](https://github.com/ClickHouse/ClickHouse) as vectorstore providers. Qdrant being the default.
+PrivateGPT supports [Qdrant](https://qdrant.tech/), [Milvus](https://milvus.io/), [Chroma](https://www.trychroma.com/), [PGVector](https://github.com/pgvector/pgvector), [openGauss](https://opengauss.org/) and [ClickHouse](https://github.com/ClickHouse/ClickHouse) as vectorstore providers. Qdrant being the default.
 
-In order to select one or the other, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant`, `milvus`, `chroma`, `postgres` and `clickhouse`.
+In order to select one or the other, set the `vectorstore.database` property in the `settings.yaml` file to `qdrant`, `milvus`, `chroma`, `postgres`, `openGauss` or `clickhouse`.
 
 ```yaml
 vectorstore:
@@ -119,6 +119,36 @@ Indexes:
 postgres=# 
 ```
 The dimensions of the embeddings columns will be set based on the `embedding.embed_dim` value.  If the embedding model changes this table may need to be dropped and recreated to avoid a dimension mismatch.
+
+### openGauss
+
+To use the openGauss vector store an [openGauss](https://opengauss.org/) database is required. DataVec (pgvector-compatible) is built
+into the openGauss kernel — no extension installation is needed.
+
+To enable openGauss, set the `vectorstore.database` property in the `settings.yaml` file to `openGauss` and install the `vector-stores-postgres` extra.
+
+```bash
+poetry install --extras vector-stores-postgres
+```
+
+openGauss settings can be configured by setting values to the `openGauss` property in the `settings.yaml` file.
+
+The available configuration options are:
+| Field                         | Description                                               |
+|-------------------------------|-----------------------------------------------------------|
+| **connection_string**         | Full SQLAlchemy connection string. Example: `postgresql+psycopg2://user:pass@host:port/db`. If the password contains special characters (e.g. `@`), they must be URL-encoded (`%40`). |
+| **async_connection_string**   | Async connection string. Defaults to `connection_string` with the driver replaced (`+psycopg2://` → `+asyncpg://`). |
+| **schema_name**               | The database schema to use. Default is `private_gpt`.     |
+
+For example:
+```yaml
+vectorstore:
+  database: openGauss
+
+openGauss:
+  connection_string: "postgresql+psycopg2://gaussdb:password@localhost:5432/postgres"
+  schema_name: private_gpt
+```
 
 ### ClickHouse
 

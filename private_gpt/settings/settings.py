@@ -153,7 +153,9 @@ class LLMSettings(BaseModel):
 
 
 class VectorstoreSettings(BaseModel):
-    database: Literal["chroma", "qdrant", "postgres", "clickhouse", "milvus"]
+    database: Literal[
+        "chroma", "qdrant", "postgres", "openGauss", "clickhouse", "milvus"
+    ]
 
 
 class NodeStoreSettings(BaseModel):
@@ -512,6 +514,25 @@ class PostgresSettings(BaseModel):
     )
 
 
+class OpenGaussSettings(BaseModel):
+    connection_string: str = Field(
+        ...,
+        description=(
+            "Full connection string for openGauss database. "
+            "When provided, bypasses host/port/user/password/database fields. "
+            "Example: postgresql+psycopg2://user:pass@host:port/db"
+        ),
+    )
+    async_connection_string: str | None = Field(
+        None,
+        description="Async connection string for openGauss. Defaults to connection_string if not set.",
+    )
+    schema_name: str = Field(
+        "private_gpt",
+        description="The name of the schema in the openGauss database to use",
+    )
+
+
 class QdrantSettings(BaseModel):
     location: str | None = Field(
         None,
@@ -606,6 +627,7 @@ class Settings(BaseModel):
     summarize: SummarizeSettings
     qdrant: QdrantSettings | None = None
     postgres: PostgresSettings | None = None
+    openGauss: OpenGaussSettings | None = None
     clickhouse: ClickHouseSettings | None = None
     milvus: MilvusSettings | None = None
 
