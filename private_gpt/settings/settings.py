@@ -115,6 +115,7 @@ class LLMSettings(BaseModel):
         "mock",
         "ollama",
         "gemini",
+        "anyapi",
     ]
     max_new_tokens: int = Field(
         256,
@@ -205,6 +206,7 @@ class EmbeddingSettings(BaseModel):
         "mock",
         "gemini",
         "mistralai",
+        "anyapi",
     ]
     ingest_mode: Literal["simple", "batch", "parallel", "pipeline"] = Field(
         "simple",
@@ -265,6 +267,22 @@ class OpenAISettings(BaseModel):
     embedding_model: str = Field(
         "text-embedding-ada-002",
         description="OpenAI embedding Model to use. Example: 'text-embedding-3-large'.",
+    )
+
+
+class AnyAPISettings(BaseModel):
+    api_key: str
+    model: str = Field(
+        "deepseek/deepseek-v4-flash",
+        description="AnyAPI Model to use. Example: 'deepseek/deepseek-v4-flash'.",
+    )
+    request_timeout: float = Field(
+        120.0,
+        description="Time elapsed until the request times out. Default is 120s. Format is float.",
+    )
+    embedding_model: str = Field(
+        "openai/text-embedding-3-small",
+        description="AnyAPI Embedding Model to use. Example: 'openai/text-embedding-3-small'.",
     )
 
 
@@ -597,6 +615,7 @@ class Settings(BaseModel):
     huggingface: HuggingFaceSettings
     sagemaker: SagemakerSettings
     openai: OpenAISettings
+    anyapi: AnyAPISettings
     gemini: GeminiSettings
     ollama: OllamaSettings
     azopenai: AzureOpenAISettings

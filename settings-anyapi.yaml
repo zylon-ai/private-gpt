@@ -1,0 +1,13 @@
+server:
+  env_name: ${APP_ENV:anyapi}
+
+llm:
+  mode: anyapi
+
+embedding:
+  mode: anyapi
+
+anyapi:
+  api_key: ${ANYAPI_API_KEY:}
+  model: deepseek/deepseek-v4-flash
+  embedding_model: openai/text-embedding-3-small

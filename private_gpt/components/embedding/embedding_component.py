@@ -67,6 +67,22 @@ class EmbeddingComponent:
                     api_key=api_key,
                     model=model,
                 )
+            case "anyapi":
+                try:
+                    from llama_index.embeddings.openai import (  # type: ignore
+                        OpenAIEmbedding,
+                    )
+                except ImportError as e:
+                    raise ImportError(
+                        "AnyAPI dependencies not found, install with `poetry install --extras embeddings-anyapi`"
+                    ) from e
+
+                anyapi_settings = settings.anyapi
+                self.embedding_model = OpenAIEmbedding(
+                    api_base="https://api.anyapi.ai/v1",
+                    api_key=anyapi_settings.api_key,
+                    model=anyapi_settings.embedding_model,
+                )
             case "ollama":
                 try:
                     from llama_index.embeddings.ollama import (  # type: ignore
