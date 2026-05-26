@@ -112,7 +112,7 @@ class LLMComponent:
 
                 anyapi_settings = settings.anyapi
                 self.llm = OpenAI(
-                    api_base="https://api.anyapi.ai/v1",
+                    api_base=anyapi_settings.api_base,
                     api_key=anyapi_settings.api_key,
                     model=anyapi_settings.model,
                 )

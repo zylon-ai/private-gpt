@@ -271,14 +271,14 @@ class OpenAISettings(BaseModel):
 
 
 class AnyAPISettings(BaseModel):
+    api_base: str = Field(
+        "https://api.anyapi.ai/v1",
+        description="AnyAPI API base URL.",
+    )
     api_key: str
     model: str = Field(
         "deepseek/deepseek-v4-flash",
         description="AnyAPI Model to use. Example: 'deepseek/deepseek-v4-flash'.",
-    )
-    request_timeout: float = Field(
-        120.0,
-        description="Time elapsed until the request times out. Default is 120s. Format is float.",
     )
     embedding_model: str = Field(
         "openai/text-embedding-3-small",

@@ -79,7 +79,7 @@ class EmbeddingComponent:
 
                 anyapi_settings = settings.anyapi
                 self.embedding_model = OpenAIEmbedding(
-                    api_base="https://api.anyapi.ai/v1",
+                    api_base=anyapi_settings.api_base,
                     api_key=anyapi_settings.api_key,
                     model=anyapi_settings.embedding_model,
                 )
