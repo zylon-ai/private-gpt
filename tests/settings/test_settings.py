@@ -7,6 +7,6 @@ def test_settings_are_loaded_and_merged() -> None:
 
 
 def test_settings_can_be_overriden(injector: MockInjector) -> None:
-    injector.bind_settings({"server": {"env_name": "overriden"}})
+    injector.bind_settings({"server": {"env_name": "overridden"}})
     mocked_settings = injector.get(Settings)
-    assert mocked_settings.server.env_name == "overriden"
+    assert mocked_settings.server.env_name == "overridden"

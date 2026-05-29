@@ -62,7 +62,7 @@ class LineIterator:
     within the buffer via the 'scan_lines' function. It maintains the position of the
     last read position to ensure that previous bytes are not exposed again. It will
     also save any pending lines that doe not end with a '\n' to make sure truncations
-    are concatinated
+    are concatenated
     """
 
     def __init__(self, stream: Any) -> None:

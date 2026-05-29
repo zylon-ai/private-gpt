@@ -145,7 +145,7 @@ class LLMSettings(BaseModel):
                 "If `llama2` - use the llama2 prompt style from the llama_index. Based on `<s>`, `[INST]` and `<<SYS>>`.\n"
                 "If `llama3` - use the llama3 prompt style from the llama_index."
                 "If `tag` - use the `tag` prompt style. It should look like `<|role|>: message`. \n"
-                "If `mistral` - use the `mistral prompt style. It shoudl look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]"
+                "If `mistral` - use the `mistral prompt style. It should look like <s>[INST] {System Prompt} [/INST]</s>[INST] { UserInstructions } [/INST]"
                 "`llama2` is the historic behaviour. `default` might work better with your custom models."
             ),
         )
@@ -214,7 +214,7 @@ class EmbeddingSettings(BaseModel):
             "If `batch` - if multiple files, parse all the files in parallel, "
             "and send them in batch to the embedding model.\n"
             "In `pipeline` - The Embedding engine is kept as busy as possible\n"
-            "If `parallel` - parse the files in parallel using multiple cores, and embedd them in parallel.\n"
+            "If `parallel` - parse the files in parallel using multiple cores, and embed them in parallel.\n"
             "`parallel` is the fastest mode for local setup, as it parallelize IO RW in the index.\n"
             "For modes that leverage parallelization, you can specify the number of "
             "workers to use with `count_workers`.\n"
