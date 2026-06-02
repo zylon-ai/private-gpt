@@ -196,6 +196,8 @@ RUN chmod +x scripts/worker_entrypoint
 COPY --chown=worker version.txt version.txt
 COPY --chown=worker settings.yaml settings.yaml
 
+RUN uv pip install --python /home/worker/app/.venv/bin/python --no-deps .
+
 ENV PATH="/home/worker/app/.venv/bin:/usr/local/bin:${PATH}"
 ENV HF_HOME=local_data
 ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
