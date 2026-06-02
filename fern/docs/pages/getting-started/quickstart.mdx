@@ -18,7 +18,7 @@ PrivateGPT connects to any OpenAI-compatible LLM server and exposes a private, s
         powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
         # Then install PrivateGPT
-        uv tool install `
+        uv tool install --python 3.11 `
           --find-links https://zylon-ai.github.io/private-gpt/packages/ `
           "private-gpt[core]"
         ```
@@ -29,7 +29,7 @@ PrivateGPT connects to any OpenAI-compatible LLM server and exposes a private, s
         curl -LsSf https://astral.sh/uv/install.sh | sh
 
         # Then install PrivateGPT
-        uv tool install \
+        uv tool install --python 3.11 \
           --find-links https://zylon-ai.github.io/private-gpt/packages/ \
           "private-gpt[core]"
         ```
