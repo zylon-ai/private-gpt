@@ -122,12 +122,16 @@ ARG PGPT_DOWNLOAD_PLAYWRIGHT
 
 COPY pyproject.toml uv.lock ./
 
-RUN mkdir -p models/nltk_cache .local-browsers tiktoken_cache encodings
+ENV HF_HOME=local_data
+ENV PLAYWRIGHT_BROWSERS_PATH=/home/worker/app/.local-browsers
+ENV TIKTOKEN_CACHE_DIR=/home/worker/app/tiktoken_cache
+ENV TIKTOKEN_ENCODINGS_BASE=/home/worker/app/encodings
+ENV TIKTOKEN_RS_CACHE_DIR=/home/worker/app/encodings
+
+RUN mkdir -p models/nltk_cache .local-browsers tiktoken_cache encodings local_data
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     set -eu; \
-    export PLAYWRIGHT_BROWSERS_PATH=/home/worker/app/.local-browsers; \
-    export TIKTOKEN_CACHE_DIR=/home/worker/app/tiktoken_cache; \
     has_web_scraping=0; \
     for extra in $EXTRAS; do \
       if [ "$extra" = "tools" ] || [ "$extra" = "tool-web-scraping" ] || [ "$extra" = "core" ]; then \
@@ -155,10 +159,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
       uv pip install --system $locked_packages; \
     fi; \
     if [ "$resolved_download_nltk" = "1" ]; then \
-      python3 -c "import nltk; nltk.download('punkt_tab', download_dir='models/nltk_cache'); nltk.download('stopwords', download_dir='models/nltk_cache')"; \
+      python3 -c "import nltk; download_dir='models/nltk_cache'; packages=('punkt_tab', 'punkt', 'averaged_perceptron_tagger_eng', 'averaged_perceptron_tagger', 'stopwords', 'wordnet'); [nltk.download(package, download_dir=download_dir) for package in packages]"; \
     fi; \
     if [ "$resolved_download_tiktoken_cache" = "1" ]; then \
       python3 -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"; \
+    fi; \
+    if [ "$resolved_download_tiktoken_encodings" = "1" ]; then \
+      python3 -c "import urllib.request; from pathlib import Path; d = Path('encodings'); d.mkdir(exist_ok=True); [urllib.request.urlretrieve(f'https://openaipublic.blob.core.windows.net/encodings/{name}', d / name) for name in ('o200k_base.tiktoken', 'cl100k_base.tiktoken')]"; \
     fi; \
     if [ "$resolved_download_playwright" = "1" ]; then \
       playwright install chromium --with-deps; \
