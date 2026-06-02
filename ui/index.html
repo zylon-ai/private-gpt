@@ -3114,7 +3114,7 @@
             <div class="form-grid">
               <div class="field">
                 <label for="onboardingBaseUrl">PrivateGPT base URL</label>
-                <input id="onboardingBaseUrl" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1:8080" />
+                <input id="onboardingBaseUrl" autocomplete="off" spellcheck="false" placeholder="Current host" />
               </div>
               <div class="auth-grid">
                 <div class="field">
@@ -3214,7 +3214,7 @@
 
   <script>
     const STORAGE_KEY = "privategpt-workbench-state-v1";
-    const DEFAULT_BASE_URL = "http://127.0.0.1:8080";
+    const DEFAULT_BASE_URL = window.location.origin;
 
     const icons = {
       layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/></svg>',
