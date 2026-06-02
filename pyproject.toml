@@ -348,6 +348,7 @@ packages = ["private_gpt"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "settings.yaml" = "settings.yaml"
+"version.txt" = "version.txt"
 "ui" = "ui"
 "scripts" = "scripts"
 

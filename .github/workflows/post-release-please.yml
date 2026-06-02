@@ -36,6 +36,34 @@ jobs:
         run: |
           git config user.email "ci@zylon.ai"
           git config user.name "Zylon CI"
-          git add docs/openapi/openapi.json
+          git add fern/openapi/openapi.json
           git diff --staged --quiet || git commit -m "docs: update OpenAPI spec for ${{ steps.update-openapi.outputs.version }}"
+          git push
+
+  update-uv-lock:
+    runs-on: ubuntu-latest
+    if: github.head_ref == 'release-please--branches--main' || github.ref_name == 'release-please--branches--main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          token: ${{ secrets.PAT || github.token }}
+
+      - name: Install dependencies
+        uses: ./.github/workflows/actions/install_dependencies
+
+      - name: Refresh uv.lock
+        id: update-uv-lock
+        run: |
+          version=$(cat version.txt)
+          uv lock
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push changes
+        run: |
+          git config user.email "ci@zylon.ai"
+          git config user.name "Zylon CI"
+          git add uv.lock
+          git diff --staged --quiet || git commit -m "build: update uv.lock for ${{ steps.update-uv-lock.outputs.version }}"
           git push
