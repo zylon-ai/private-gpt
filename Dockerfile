@@ -168,7 +168,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
       python3 -c "import urllib.request; from pathlib import Path; d = Path('encodings'); d.mkdir(exist_ok=True); [urllib.request.urlretrieve(f'https://openaipublic.blob.core.windows.net/encodings/{name}', d / name) for name in ('o200k_base.tiktoken', 'cl100k_base.tiktoken')]"; \
     fi; \
     if [ "$resolved_download_playwright" = "1" ]; then \
-      playwright install chromium --with-deps; \
+      playwright install chromium; \
     fi
 
 FROM os-deps AS final
