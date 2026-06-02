@@ -1,6 +1,6 @@
 [project]
 name = "private-gpt"
-version = "0.6.2"
+version = "1.0.0-rc1"
 description = "Private GPT"
 authors = [{ name = "Zylon", email = "hi@zylon.ai" }]
 requires-python = ">=3.11,<3.12"
