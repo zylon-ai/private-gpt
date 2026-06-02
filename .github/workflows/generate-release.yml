@@ -11,7 +11,7 @@ env:
   HOMEBREW_TAP_REPOSITORY: zylon-ai/homebrew-tap
   RELEASE_PACKAGE_EXTRA: "core"
   PACKAGE_INDEX_BRANCH: gh-pages
-  PACKAGE_FILES_URL: https://zylon-ai.github.io/private-gpt/packages/
+  PACKAGE_FILES_URL: https://wheels.privategpt.dev/private-gpt/packages/
   platforms: linux/amd64,linux/arm64
 jobs:
   build-and-publish-package:

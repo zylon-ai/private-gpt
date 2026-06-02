@@ -4,6 +4,12 @@ instances:
 
 title: PrivateGPT | Docs
 
+redirects:
+  - source: "/overview/welcome/introduction"
+    destination: "/introduction"
+  - source: "/installation/getting-started/main-concepts"
+    destination: "/introduction"
+
 tabs:
   manual:
     display-name: Manual

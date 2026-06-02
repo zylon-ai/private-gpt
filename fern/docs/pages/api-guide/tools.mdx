@@ -44,7 +44,7 @@ Minimal example:
 }
 ```
 
-For server-side setup of web tools, see [Web Tools](/manual/web-tools).
+For server-side setup of web tools, see [Web Tools](/tools/web-tools).
 
 #### Example: `semantic_search_v1`
 
@@ -98,7 +98,7 @@ Requires `private-gpt[tool-tabular]`, `private-gpt[tools]`, or `private-gpt[core
 
 #### Example: `database_query_v1`
 
-Requires `private-gpt[tool-database]`, `private-gpt[database]`, or a driver-specific extra such as `private-gpt[database-postgres]`. `private-gpt[tools]` and `private-gpt[core]` also work. Also requires `context` with a `sql_database` artifact. See [Database Tools](/manual/database-tools) for install and configuration.
+Requires `private-gpt[tool-database]`, `private-gpt[database]`, or a driver-specific extra such as `private-gpt[database-postgres]`. `private-gpt[tools]` and `private-gpt[core]` also work. Also requires `context` with a `sql_database` artifact. See [Database Tools](/tools/database-tools) for install and configuration.
 
 ```json
 {
@@ -432,7 +432,7 @@ curl -X POST http://localhost:8080/v1/tools/tabular-data-analysis \
 
 Run a natural language query against a connected SQL database:
 
-Requires `private-gpt[tool-database]`, `private-gpt[database]`, or a driver-specific extra such as `private-gpt[database-postgres]`. `private-gpt[tools]` and `private-gpt[core]` also work. See [Database Tools](/manual/database-tools) for install and configuration.
+Requires `private-gpt[tool-database]`, `private-gpt[database]`, or a driver-specific extra such as `private-gpt[database-postgres]`. `private-gpt[tools]` and `private-gpt[core]` also work. See [Database Tools](/tools/database-tools) for install and configuration.
 
 ```bash
 curl -X POST http://localhost:8080/v1/tools/database-query \
