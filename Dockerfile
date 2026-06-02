@@ -159,7 +159,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
       uv pip install --system $locked_packages; \
     fi; \
     if [ "$resolved_download_nltk" = "1" ]; then \
-      python3 -c "import nltk; download_dir='models/nltk_cache'; packages=('punkt_tab', 'punkt', 'averaged_perceptron_tagger_eng', 'averaged_perceptron_tagger', 'stopwords', 'wordnet'); [nltk.download(package, download_dir=download_dir) for package in packages]"; \
+      python3 -c "import nltk, zipfile; from pathlib import Path; download_dir=Path('models/nltk_cache'); packages=('punkt_tab', 'punkt', 'averaged_perceptron_tagger_eng', 'averaged_perceptron_tagger', 'stopwords', 'wordnet'); [nltk.download(package, download_dir=str(download_dir)) for package in packages]; [zipfile.ZipFile(path).extractall(path.parent) for path in download_dir.rglob('*.zip')]"; \
     fi; \
     if [ "$resolved_download_tiktoken_cache" = "1" ]; then \
       python3 -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"; \
