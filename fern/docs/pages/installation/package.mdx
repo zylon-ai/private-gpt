@@ -6,7 +6,7 @@ description: "Install PrivateGPT via Homebrew or uv — the fastest way to get s
 This is the recommended installation method for developers who want to run PrivateGPT against an existing LLM server (Ollama, LM Studio, etc.) without cloning the repository.
 
 <Note>
-  PrivateGPT package files are hosted at `https://zylon-ai.github.io/private-gpt/packages/`. `uv` uses that location to find the PrivateGPT release and continues to resolve public dependencies from PyPI by default.
+  PrivateGPT package files are hosted at `https://wheels.privategpt.dev/private-gpt/packages/`. `uv` uses that location to find the PrivateGPT release and continues to resolve public dependencies from PyPI by default.
 </Note>
 
 ---
@@ -31,7 +31,7 @@ This is the recommended installation method for developers who want to run Priva
     ```bash
     # Install the core package
     uv tool install \
-      --find-links https://zylon-ai.github.io/private-gpt/packages/ \
+      --find-links https://wheels.privategpt.dev/private-gpt/packages/ \
       "private-gpt[core]"
     ```
 
@@ -42,7 +42,7 @@ This is the recommended installation method for developers who want to run Priva
     Upgrade:
     ```bash
     uv tool upgrade \
-      --find-links https://zylon-ai.github.io/private-gpt/packages/ \
+      --find-links https://wheels.privategpt.dev/private-gpt/packages/ \
       private-gpt
     ```
   </Tab>

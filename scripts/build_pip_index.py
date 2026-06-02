@@ -170,7 +170,7 @@ def build_index(package_dir: Path, output_dir: Path, extra: str) -> None:
             "PrivateGPT package index",
             (
                 "<p>Install PrivateGPT with <code>uv tool install --find-links "
-                "https://zylon-ai.github.io/private-gpt/packages/ "
+                "https://wheels.privategpt.dev/private-gpt/packages/ "
                 f"&quot;private-gpt[{html.escape(extra)}]&quot;</code>.</p>"
             ),
         ),
