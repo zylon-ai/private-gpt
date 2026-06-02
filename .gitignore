@@ -3,8 +3,8 @@
 .uv-cache
 .dist
 
-./models/**
-tiktoken_cache
+models/
+tiktoken_cache/
 local_data/
 
 settings-me.yaml
