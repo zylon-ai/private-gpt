@@ -1,0 +1,106 @@
+---
+title: "Claude Code"
+description: "Run Claude Code against your private-gpt server."
+---
+
+[Claude Code](https://claude.ai/code) is Anthropic's official CLI for Claude. When pointed at a `private-gpt` server it routes all requests through your private, self-hosted API instead of `api.anthropic.com`.
+
+## Compatibility
+
+| Feature | Status | Notes |
+|---|:---:|---|
+| Chat & streaming | ✅ | |
+| Tool use / function calling | ✅ | |
+| File tools (read, write, edit) | ✅ | |
+| Multi-agent (sub-agents) | ✅ | |
+| Images | ✅ | |
+| Web search | ✅ | |
+
+---
+
+## Prerequisites
+
+- `claude` binary installed — see [Claude Code docs](https://claude.ai/code)
+- `private-gpt` server running (see [serve](/manual/cli#serve))
+
+---
+
+## Run
+
+`private-gpt run` resolves the server URL and API key from your settings and injects them automatically before launching Claude Code:
+
+```bash
+private-gpt run claude-code
+```
+
+The server is started automatically if it is not already running. Pass `--no-server` to skip that check when the server is managed externally.
+
+**With a specific model:**
+
+```bash
+private-gpt run claude-code --model default
+```
+
+**Resume a previous session:**
+
+```bash
+private-gpt run claude-code -- --resume abc123
+```
+
+**CI / non-interactive:**
+
+```bash
+private-gpt run claude-code --auto-approve --no-server -- -p "explain this file"
+```
+
+---
+
+## Manual setup
+
+If you prefer to manage the environment variables yourself:
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    export ANTHROPIC_BASE_URL="http://localhost:8080"
+    export ANTHROPIC_API_KEY="secret-key"  # server.auth.secret; any value if auth is disabled
+
+    # Optional: pin all Claude tiers to one model
+    export ANTHROPIC_DEFAULT_OPUS_MODEL="default"
+    export ANTHROPIC_DEFAULT_SONNET_MODEL="default"
+    export ANTHROPIC_DEFAULT_HAIKU_MODEL="default"
+
+    claude
+    ```
+
+    Add the exports to `~/.zshrc` or `~/.bashrc` for a persistent setup.
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    $env:ANTHROPIC_BASE_URL = "http://localhost:8080"
+    $env:ANTHROPIC_API_KEY = "secret-key"
+
+    # Optional: pin all Claude tiers to one model
+    $env:ANTHROPIC_DEFAULT_OPUS_MODEL = "default"
+    $env:ANTHROPIC_DEFAULT_SONNET_MODEL = "default"
+    $env:ANTHROPIC_DEFAULT_HAIKU_MODEL = "default"
+
+    claude
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## What gets injected
+
+`private-gpt run claude-code` writes these variables into the environment before exec. Values are derived from your server settings at launch time.
+
+| Variable | Value |
+|---|---|
+| `ANTHROPIC_BASE_URL` | `http://localhost:<port>/<root_path>` |
+| `ANTHROPIC_API_KEY` | `server.auth.secret` if auth is enabled, else `"no-auth"` |
+| `ANTHROPIC_AUTH_TOKEN` | same as `ANTHROPIC_API_KEY` |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | `--model` if provided, else `llm.default_model` from settings |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | `--model` if provided, else `llm.default_model` from settings |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | `--model` if provided, else `llm.default_model` from settings |

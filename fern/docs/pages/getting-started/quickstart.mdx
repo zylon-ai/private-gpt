@@ -1,0 +1,160 @@
+---
+title: "Quickstart"
+description: "Get PrivateGPT running in under 5 minutes."
+---
+
+PrivateGPT connects to any OpenAI-compatible LLM server and exposes a private, self-hosted AI API. This guide gets you from zero to a running server in four steps.
+
+<Note>
+  **Prerequisites:** You need an OpenAI-compatible LLM server running locally. Pick one from the [Providers](/providers/overview) page — [Ollama](/providers/ollama) is the easiest way to start.
+</Note>
+
+<Steps>
+  <Step title="Install PrivateGPT">
+    <Tabs>
+      <Tab title="Windows">
+        ```powershell
+        # Install uv first
+        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+        # Then install PrivateGPT
+        uv tool install `
+          --find-links https://zylon-ai.github.io/private-gpt/packages/ `
+          "private-gpt[core]"
+        ```
+      </Tab>
+      <Tab title="Linux">
+        ```bash
+        # Install uv first
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+
+        # Then install PrivateGPT
+        uv tool install \
+          --find-links https://zylon-ai.github.io/private-gpt/packages/ \
+          "private-gpt[core]"
+        ```
+      </Tab>
+      <Tab title="macOS">
+        ```bash
+        brew tap zylon-ai/tap
+        brew install private-gpt
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Start your LLM server">
+    Start your server. PrivateGPT auto-discovers all available models on startup.
+
+    <Tabs>
+      <Tab title="Ollama">
+        ```bash
+        # Example: pull a model and start the server
+        ollama pull qwen3.5:35b          # LLM (~24 GB)
+        ollama pull mxbai-embed-large   # Embeddings (~670 MB)
+
+        # Start the server (runs on port 11434)
+        ollama serve
+        ```
+        <Warning>
+          Ollama does not expose a tokenizer endpoint. PrivateGPT falls back to approximate token counting, which may affect context-window management. See [Ollama limitations](/providers/ollama#limitations).
+        </Warning>
+      </Tab>
+      <Tab title="LM Studio">
+        1. Download and install [LM Studio](https://lmstudio.ai).
+        2. Load a model (e.g. `Qwen3-35B-A3B`).
+        3. In **Developer → Local Server**, set the chat model to your LLM and the **Embedding model** to something like `mxbai-embed-large`.
+        4. Click **Start Server** (default port: 1234).
+
+        See the [LM Studio provider guide](/providers/lmstudio) for full setup.
+      </Tab>
+      <Tab title="LlamaCPP Server">
+        ```bash
+        # Start the LLM server
+        llama-server \
+          --model qwen3-35b-a3b.gguf \
+          --port 8000
+
+        # Start a second server for embeddings
+        llama-server \
+          --model mxbai-embed-large-v1-f16.gguf \
+          --port 8001 \
+          --embeddings
+        ```
+        See the [LlamaCPP provider guide](/providers/llamacpp) for download and build instructions.
+      </Tab>
+      <Tab title="vLLM">
+        ```bash
+        # Start the LLM server
+        docker run --gpus all \
+          -p 8000:8000 \
+          vllm/vllm-openai:latest \
+          --model Qwen/Qwen3.5-35B-A3B-GPTQ-Int4
+
+        # Start a second server for embeddings
+        docker run --gpus all \
+          -p 8001:8000 \
+          vllm/vllm-openai:latest \
+          --model mixedbread-ai/mxbai-embed-large-v1 \
+          --task embed
+        ```
+        See the [vLLM provider guide](/providers/vllm) for full setup. Requires an NVIDIA GPU.
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    Point PrivateGPT at your servers with `OPENAI_API_BASE` and `OPENAI_EMBEDDING_API_BASE`. Models are discovered automatically — no config file needed.
+
+    <Tabs>
+      <Tab title="macOS / Linux">
+        ```bash
+        OPENAI_API_BASE=http://localhost:<llm-port>/v1 \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:<embedding-port>/v1 \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Windows (PowerShell)">
+        ```powershell
+        $env:OPENAI_API_BASE = "http://localhost:<llm-port>/v1"
+        $env:OPENAI_EMBEDDING_API_BASE = "http://localhost:<embedding-port>/v1"
+        private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Windows (CMD)">
+        ```cmd
+        set OPENAI_API_BASE=http://localhost:<llm-port>/v1
+        set OPENAI_EMBEDDING_API_BASE=http://localhost:<embedding-port>/v1
+        private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    If startup succeeds, PrivateGPT will be available on port `8080`.
+  </Step>
+
+  <Step title="Open the UI">
+    Navigate to [http://localhost:8080/ui](http://localhost:8080/ui) in your browser.
+
+    The API is available at `http://localhost:8080` and follows the Anthropic API spec. See the [API Reference](/api-reference/api-reference) for all endpoints.
+  </Step>
+</Steps>
+
+---
+
+## What's next?
+
+<CardGroup cols={2}>
+  <Card title="Docker install" icon="fa-brands fa-docker" href="/manual/docker">
+    Run PrivateGPT with Docker for a fully isolated, production-ready setup.
+  </Card>
+  <Card title="Local with uv" icon="fa-solid fa-terminal" href="/manual/local">
+    Install from source with `core`, add extras only when needed, and use detailed model configuration.
+  </Card>
+  <Card title="Inference Providers" icon="fa-solid fa-server" href="/providers/overview">
+    Compare Ollama, LM Studio, LlamaCPP, and vLLM — feature matrix and limitations.
+  </Card>
+  <Card title="API Reference" icon="fa-solid fa-code" href="/api-reference/api-reference">
+    Explore all REST endpoints and start building your application.
+  </Card>
+</CardGroup>

@@ -1,0 +1,23 @@
+Extract complete content from this slide using both the image and provided text context. Return raw Markdown only—no code blocks or preamble.
+**Core Rules:**
+- Preserve original language and visible structure (titles, sections, bullets, tables).
+- **Strict Accuracy:** Never invent values, labels, or data. Omit anything unclear rather than guessing.
+- No emojis in output.
+{% if has_word_limit %}- Stay under {{ max_words }} words.{% endif %}
+**Visual Elements Analysis (Critical):**
+For charts, graphs, diagrams, and images, provide a detailed description including:
+1.  **Type & Title:** Identify element type (e.g., line chart, bar graph) and title.
+2.  **Color & Style Nuances:** Explicitly distinguish between lines, bars, or segments by their exact colors (even subtle shades), patterns (solid, dashed, dotted), and thickness. If multiple series exist, describe how they differ visually.
+3.  **Axes & Labels:** Axis names, units, and scale ranges.
+4.  **Data Points:** Describe specific values, trends, peaks, troughs, or relative positions clearly visible.
+5.  **Flow/Relationships:** For diagrams, map connections and directional flow.
+**Markdown Format:**
+- `# Title`, `## Section`, `### Sub-section`
+- `- bullet`, `1. numbered list`
+- Standard table syntax for tables
+- ````code```` for technical content
+- `**bold**` for emphasis
+{% if has_text %}
+**Text Context (Reference Only - May Be Noisy):**
+{{ extracted_text }}
+{% endif %}

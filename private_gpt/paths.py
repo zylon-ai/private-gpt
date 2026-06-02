@@ -16,3 +16,7 @@ docs_path: Path = PROJECT_ROOT_PATH / "docs"
 local_data_path: Path = _absolute_or_from_project_root(
     settings().data.local_data_folder
 )
+
+prompt_templates_path: Path = (
+    Path(__file__).resolve().parent / "components" / "prompts" / "templates"
+)

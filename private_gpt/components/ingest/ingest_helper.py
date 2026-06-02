@@ -1,111 +1,106 @@
 import logging
-from pathlib import Path
+from typing import Any
 
-from llama_index.core.readers import StringIterableReader
-from llama_index.core.readers.base import BaseReader
-from llama_index.core.readers.json import JSONReader
-from llama_index.core.schema import Document
+from llama_index.core.schema import BaseNode
+
+from private_gpt.components.ingest.metadata_helper import MetadataHelper
+from private_gpt.components.ingest.progress.errors import IngestionValidationErrors
+from private_gpt.components.ingest.utils import FileInfo, should_ignore_mime_mismatch
+from private_gpt.settings.settings import settings
+from private_gpt.utils.mime import is_magic_available
 
 logger = logging.getLogger(__name__)
 
 
-# Inspired by the `llama_index.core.readers.file.base` module
-def _try_loading_included_file_formats() -> dict[str, type[BaseReader]]:
-    try:
-        from llama_index.readers.file.docs import (  # type: ignore
-            DocxReader,
-            HWPReader,
-            PDFReader,
-        )
-        from llama_index.readers.file.epub import EpubReader  # type: ignore
-        from llama_index.readers.file.image import ImageReader  # type: ignore
-        from llama_index.readers.file.ipynb import IPYNBReader  # type: ignore
-        from llama_index.readers.file.markdown import MarkdownReader  # type: ignore
-        from llama_index.readers.file.mbox import MboxReader  # type: ignore
-        from llama_index.readers.file.slides import PptxReader  # type: ignore
-        from llama_index.readers.file.tabular import PandasCSVReader  # type: ignore
-        from llama_index.readers.file.video_audio import (  # type: ignore
-            VideoAudioReader,
-        )
-    except ImportError as e:
-        raise ImportError("`llama-index-readers-file` package not found") from e
-
-    default_file_reader_cls: dict[str, type[BaseReader]] = {
-        ".hwp": HWPReader,
-        ".pdf": PDFReader,
-        ".docx": DocxReader,
-        ".pptx": PptxReader,
-        ".ppt": PptxReader,
-        ".pptm": PptxReader,
-        ".jpg": ImageReader,
-        ".png": ImageReader,
-        ".jpeg": ImageReader,
-        ".mp3": VideoAudioReader,
-        ".mp4": VideoAudioReader,
-        ".csv": PandasCSVReader,
-        ".epub": EpubReader,
-        ".md": MarkdownReader,
-        ".mbox": MboxReader,
-        ".ipynb": IPYNBReader,
-    }
-    return default_file_reader_cls
-
-
-# Patching the default file reader to support other file types
-FILE_READER_CLS = _try_loading_included_file_formats()
-FILE_READER_CLS.update(
-    {
-        ".json": JSONReader,
-    }
-)
-
-
 class IngestionHelper:
-    """Helper class to transform a file into a list of documents.
-
-    This class should be used to transform a file into a list of documents.
-    These methods are thread-safe (and multiprocessing-safe).
-    """
-
     @staticmethod
-    def transform_file_into_documents(
-        file_name: str, file_data: Path
-    ) -> list[Document]:
-        documents = IngestionHelper._load_file_to_documents(file_name, file_data)
-        for document in documents:
-            document.metadata["file_name"] = file_name
-        IngestionHelper._exclude_metadata(documents)
-        return documents
+    def validate_file_info(
+        file_info: FileInfo,
+    ) -> tuple[list[str], list[str]]:
+        if not file_info:
+            raise RuntimeError("Failed to extract file info")
 
-    @staticmethod
-    def _load_file_to_documents(file_name: str, file_data: Path) -> list[Document]:
-        logger.debug("Transforming file_name=%s into documents", file_name)
-        extension = Path(file_name).suffix
-        reader_cls = FILE_READER_CLS.get(extension)
-        if reader_cls is None:
-            logger.debug(
-                "No reader found for extension=%s, using default string reader",
-                extension,
+        errors = []
+        warnings = []
+
+        # Check if the file info has size
+        if file_info.file_size is None or file_info.file_size <= 0:
+            errors.append(IngestionValidationErrors.INVALID_FILE_SIZE)
+
+        # Check if the file info has extension
+        if not file_info.extension:
+            errors.append(IngestionValidationErrors.UNKNOWN_FILE_EXTENSION)
+
+        if is_magic_available() and not file_info.actual_mime_type:
+            errors.append(IngestionValidationErrors.UNKNOWN_FILE_EXTENSION)
+
+        if (
+            file_info.guest_mime_type
+            and file_info.actual_mime_type
+            and file_info.guest_mime_type != file_info.actual_mime_type
+            and not should_ignore_mime_mismatch(
+                file_info.guest_mime_type, file_info.actual_mime_type
             )
-            # Read as a plain text
-            string_reader = StringIterableReader()
-            return string_reader.load_data([file_data.read_text()])
+        ):
+            logger.info(
+                "MIME type mismatch: guest_mime_type=%s, actual_mime_type=%s",
+                file_info.guest_mime_type,
+                file_info.actual_mime_type,
+            )
+            errors.append(IngestionValidationErrors.MISMATCHED_MIME_TYPE)
 
-        logger.debug("Specific reader found for extension=%s", extension)
-        documents = reader_cls().load_data(file_data)
+        # Check if the file is too large
+        if (
+            file_info.file_size
+            and file_info.file_size > settings().data.limits.max_file_size
+        ):
+            warnings.append(IngestionValidationErrors.BIG_FILE_SIZE)
 
-        # Sanitize NUL bytes in text which can't be stored in Postgres
-        for i in range(len(documents)):
-            documents[i].text = documents[i].text.replace("\u0000", "")
+        # Check if there is any error
+        if "error" in file_info.config:
+            errors.append(IngestionValidationErrors.MALFORMED_FILE)
 
-        return documents
+        # Check if the file has too many pages
+        try:
+            pages = int(file_info.config.get("pages", 0))
+            if pages > 0 and pages > settings().data.limits.max_file_pages:
+                warnings.append(IngestionValidationErrors.BIG_FILE_PAGES)
+        except (ValueError, TypeError):
+            pass  # pages is not convertible to int, skip validation
+
+        # Check if the file is special
+        # TODO: Disabled for now. Please re-enable
+        # test_validate_file_info_real_pdf_with_forms,
+        # test_validate_file_info_real_pdf_with_annotations
+        # and test_validate_file_info_pdf_with_forms
+
+        # special_file = file_info.config.get("special", False)
+        # if special_file:
+        #     warnings.append(IngestionValidationErrors.SPECIAL_FILE)
+
+        # Check if the file is encrypted.
+        # TODO: Give support to encrypted files
+        is_encrypted = file_info.config.get("is_encrypted", False)
+        if is_encrypted:
+            warnings.append(IngestionValidationErrors.SPECIAL_ENCRYPTED_FILE)
+
+        return list(set(errors)), list(set(warnings))
 
     @staticmethod
-    def _exclude_metadata(documents: list[Document]) -> None:
-        logger.debug("Excluding metadata from count=%s documents", len(documents))
-        for document in documents:
-            document.metadata["doc_id"] = document.doc_id
-            # We don't want the Embeddings search to receive this metadata
-            document.excluded_embed_metadata_keys = ["doc_id"]
+    def exclude_metadata(
+        nodes: list[BaseNode], file_metadata: dict[str, Any] | None = None
+    ) -> None:
+        logger.debug("Excluding metadata from count=%s nodes", len(nodes))
+        for node in nodes:
             # We don't want the LLM to receive these metadata in the context
-            document.excluded_llm_metadata_keys = ["file_name", "doc_id", "page_label"]
+            MetadataHelper.exclude_metadata(node)
+
+            # Add all keys of the file_metadata to excluded_llm_metadata_keys
+            if file_metadata:
+                for key in file_metadata:
+                    MetadataHelper.exclude_key_metadata(
+                        node=node,
+                        key=key,
+                        exclude_llm=True,
+                        exclude_from_embed=False,
+                    )

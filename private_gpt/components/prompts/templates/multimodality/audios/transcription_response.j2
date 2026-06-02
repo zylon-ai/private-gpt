@@ -1,0 +1,29 @@
+{% if audio_type == "music" %}
+{% if transcript %}
+**Audio Content:** {{ transcript }}
+{% else %}
+*[No transcribable content found in the audio - music or instrumental only]*
+{% endif %}
+{% elif audio_type == "ambient" %}
+{% if transcript %}
+**Audio Content:** {{ transcript }}
+{% else %}
+*[No transcribable speech found - ambient sounds only]*
+{% endif %}
+{% else %}
+{% if transcript %}
+{% if speakers %}
+**Transcription:**
+
+{% for speaker in speakers %}
+{{ speaker }}: [See transcript below]
+{% endfor %}
+
+{{ transcript }}
+{% else %}
+{{ transcript }}
+{% endif %}
+{% else %}
+*[The audio does not contain any transcribable content]*
+{% endif %}
+{% endif %}

@@ -21,11 +21,13 @@ class IngestWatcher:
         class Handler(FileSystemEventHandler):
             def on_modified(self, event: FileSystemEvent) -> None:
                 if isinstance(event, FileModifiedEvent):
-                    on_file_changed(Path(event.src_path))
+                    if isinstance(event.src_path, str):
+                        on_file_changed(Path(event.src_path))
 
             def on_created(self, event: FileSystemEvent) -> None:
                 if isinstance(event, FileCreatedEvent):
-                    on_file_changed(Path(event.src_path))
+                    if isinstance(event.src_path, str):
+                        on_file_changed(Path(event.src_path))
 
         event_handler = Handler()
         observer: Any = Observer()

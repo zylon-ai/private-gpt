@@ -1,0 +1,56 @@
+{% set search_tool = namespace.tools.get("semantic_search_tool_name", "knowledge_search") %}
+{% set list_tool = namespace.tools.get("list_files_tool_name") %}
+
+<{{ search_tool }}>
+Returns relevant fragments with attribution, including the artifact_id of the source document.
+This will run a semantic search by default.
+
+**Query construction:**
+- Use specific keywords and natural language matching document style
+- Keep queries focused on a single topic — decompose multi-faceted questions into separate calls
+- Include all relevant context in each query
+
+**Determining scope before searching:**
+When artifact_ids are not yet known and the question may span multiple documents, establish scope first:
+{% if list_tool %}
+- If filenames carry useful metadata (names, dates, categories): call `{{ list_tool }}` to identify relevant files and retrieve their artifact_ids
+- If filenames are opaque or carry no useful signal: issue a broad search first to surface which artifacts contain relevant content, then follow up with scoped searches on those artifacts
+{% else %}
+- Issue a broad search first to surface which artifacts contain relevant content, then follow up with scoped searches on those artifacts
+{% endif %}
+When artifact_ids are already known from prior context, skip the scoping step and search directly.
+
+**Scoping to specific artifacts:**
+Use the `artifacts` parameter when you know which documents are relevant. Avoid passing a large number of artifact_ids at once — if the relevant set is large or unclear, use a broad search first to identify the most pertinent ones.
+
+**Building context progressively:**
+Each search result may reveal new aspects or additional relevant artifacts. Use findings to sharpen subsequent queries — each new query must target a **distinct** aspect or artifact not yet covered. If results are repeating or converging, stop searching and synthesize.
+**Parameters:**
+- `query` (required): Search terms — always provide this, focused on a single topic
+- `artifacts` (optional): List of artifact_ids to restrict scope
+- `metadata_filter` (optional): Additional criteria
+
+**Constraints:**
+- NEVER call this tool without a `query` parameter
+- NEVER repeat or rephrase the same query — vary the core topic, not just the wording.
+- NEVER return the node ID to the user in code blocks. Return as part of the natural language response.
+
+{% if few_shots == "True" %}
+<search_workflow_examples>
+
+**Question spanning multiple documents — filenames carry useful metadata:**
+{% if list_tool %}`{{ list_tool }}`(...) → identify relevant artifact_ids → `{{ search_tool }}`(query="...", artifacts=[id_a]) + `{{ search_tool }}`(query="...", artifacts=[id_b]) → synthesize
+{% else %}`{{ search_tool }}`(query="...") → surface relevant artifact_ids → `{{ search_tool }}`(query="...", artifacts=[id_a]) + `{{ search_tool }}`(query="...", artifacts=[id_b]) → synthesize{% endif %}
+
+**Question spanning multiple documents — filenames are opaque:**
+`{{ search_tool }}`(query="...") → surface relevant artifact_ids from results → `{{ search_tool }}`(query="...", artifacts=[id_a]) + `{{ search_tool }}`(query="...", artifacts=[id_b]) → synthesize
+
+**Single document or already known scope:**
+`{{ search_tool }}`(query="...", artifacts=[known_id]) → follow-up on discovered aspects if needed → synthesize
+
+**Conversational follow-up — context already established:**
+`{{ search_tool }}`(query="...", artifacts=[known_id]) — no scoping step needed unless the question introduces a new scope
+
+</search_workflow_examples>
+{% endif %}
+</{{ search_tool }}>

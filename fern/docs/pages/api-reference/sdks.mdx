@@ -1,38 +1,80 @@
-We use [Fern](www.buildwithfern.com) to offer API clients for Node.js, Python, Go, and Java.
-We recommend using these clients to interact with our endpoints.
-The clients are kept up to date automatically, so we encourage you to use the latest version.
+---
+title: "Client libraries"
+description: "Use the Anthropic SDK or LangChain to talk to PrivateGPT."
+---
 
-## SDKs
+PrivateGPT follows the Claude API model, so any client that speaks that protocol works against it — point it at your local PrivateGPT URL instead of Anthropic's servers.
 
-*Coming soon!*
+---
 
-<Cards>
-  <Card
-    title="TypeScript"
-    icon="fa-brands fa-node"
-    href="https://github.com/zylon-ai/privategpt-ts"
-  />
-  <Card
-    title="Python"
-    icon="fa-brands fa-python"
-    href="https://github.com/zylon-ai/pgpt-python"
-  />
-  <br />
-</Cards>
+## Anthropic SDK
 
-<br />
+<Tabs>
+  <Tab title="Python">
+    ```bash
+    pip install anthropic
+    ```
 
-<Cards>
-  <Card
-    title="Java - WIP"
-    icon="fa-brands fa-java"
-    href="https://github.com/zylon-ai/private-gpt-java"
-  />
-  <Card
-    title="Go - WIP"
-    icon="fa-brands fa-golang"
-    href="https://github.com/zylon-ai/private-gpt-go"
-  />
-</Cards>
+    ```python
+    import anthropic
 
-<br />
+    client = anthropic.Anthropic(
+        base_url="http://localhost:8080",
+        api_key="any",  # required by the client but not validated by default
+    )
+
+    message = client.messages.create(
+        model="qwen3.5:35b",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": "Hello!"}],
+    )
+    print(message.content[0].text)
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```bash
+    npm install @anthropic-ai/sdk
+    ```
+
+    ```typescript
+    import Anthropic from "@anthropic-ai/sdk";
+
+    const client = new Anthropic({
+      baseURL: "http://localhost:8080",
+      apiKey: "any",
+    });
+
+    const message = await client.messages.create({
+      model: "qwen3.5:35b",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: "Hello!" }],
+    });
+    console.log(message.content[0].text);
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## LangChain
+
+<Tabs>
+  <Tab title="Python">
+    ```bash
+    pip install langchain-anthropic
+    ```
+
+    ```python
+    from langchain_anthropic import ChatAnthropic
+
+    llm = ChatAnthropic(
+        model="qwen3.5:35b",
+        anthropic_api_url="http://localhost:8080",
+        anthropic_api_key="any",
+    )
+
+    response = llm.invoke("Hello!")
+    print(response.content)
+    ```
+  </Tab>
+</Tabs>

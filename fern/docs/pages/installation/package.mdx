@@ -1,0 +1,115 @@
+---
+title: "Package Install"
+description: "Install PrivateGPT via Homebrew or uv — the fastest way to get started."
+---
+
+This is the recommended installation method for developers who want to run PrivateGPT against an existing LLM server (Ollama, LM Studio, etc.) without cloning the repository.
+
+<Note>
+  PrivateGPT package files are hosted at `https://zylon-ai.github.io/private-gpt/packages/`. `uv` uses that location to find the PrivateGPT release and continues to resolve public dependencies from PyPI by default.
+</Note>
+
+---
+
+## Install
+
+<Tabs>
+  <Tab title="macOS (Homebrew)">
+    ```bash
+    brew tap zylon-ai/tap
+    brew install private-gpt
+    ```
+
+    Upgrade:
+    ```bash
+    brew upgrade private-gpt
+    ```
+  </Tab>
+  <Tab title="uv (recommended, any platform)">
+    [`uv`](https://docs.astral.sh/uv/) installs PrivateGPT in an isolated environment and puts the `private-gpt` CLI on your path.
+
+    ```bash
+    # Install the core package
+    uv tool install \
+      --find-links https://zylon-ai.github.io/private-gpt/packages/ \
+      "private-gpt[core]"
+    ```
+
+    Install `uv` first with the official standalone installer from `astral.sh/uv`.
+
+    Add explicit extras only when needed, for example `private-gpt[core,queue]`.
+
+    Upgrade:
+    ```bash
+    uv tool upgrade \
+      --find-links https://zylon-ai.github.io/private-gpt/packages/ \
+      private-gpt
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  **Python 3.11 is required.** PrivateGPT does not support Python 3.10 or 3.12+.
+</Note>
+
+## Verify
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    command -v private-gpt
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    Get-Command private-gpt
+    ```
+  </Tab>
+  <Tab title="Windows (CMD)">
+    ```cmd
+    where private-gpt
+    ```
+  </Tab>
+</Tabs>
+
+## Run
+
+After installing, set `OPENAI_API_BASE` to your LLM server and start:
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    OPENAI_API_BASE=http://localhost:11434/v1 private-gpt serve
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    $env:OPENAI_API_BASE = "http://localhost:11434/v1"
+    private-gpt serve
+    ```
+  </Tab>
+  <Tab title="Windows (CMD)">
+    ```cmd
+    set OPENAI_API_BASE=http://localhost:11434/v1
+    private-gpt serve
+    ```
+  </Tab>
+</Tabs>
+
+PrivateGPT starts on port `8080` by default. Change it with `private-gpt serve --port <port>`.
+
+## Key environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENAI_API_BASE` | `https://api.openai.com/v1` | Base URL of your OpenAI-compatible LLM server |
+| `OPENAI_API_KEY` | _(empty)_ | API key, if your server requires one |
+| `OPENAI_EMBEDDING_API_BASE` | same as `OPENAI_API_BASE` | Override for the embeddings endpoint |
+| `PORT` | `8080` | Port the server listens on (also settable via `private-gpt serve --port`) |
+| `PGPT_LLM_AUTO_DISCOVER_MODELS` | `true` | Discover LLM models from `/v1/models` on startup |
+
+## What's next?
+
+- [Choose an LLM server](/providers/overview) — compare Ollama, LM Studio, LlamaCPP, vLLM
+- [Local with uv](/manual/local) — source install, hot reload, and detailed model configuration
+- [API Reference](/api-reference/api-reference) — start building

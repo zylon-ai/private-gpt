@@ -1,0 +1,49 @@
+{% set tool_name = namespace.tools.get("tabular_analysis_tool_name") %}
+{% set list_tool = namespace.tools.get("list_files_tool_name") %}
+{% set search_tool = namespace.tools.get("semantic_search_tool_name", "knowledge_search") %}
+
+<{{ tool_name }}>
+Retrieve CSV tables from the knowledge base and execute Pandas operations on them.
+
+**CSV files only.** Will fail silently or error on PDF, DOCX, XLSX, TXT, or images.{% if list_tool %} Confirm file format via `{{ list_tool }}` before calling.{% endif %}
+
+**Use when:**
+- Aggregations: sum, average, count grouped by a column
+- Rankings: top/bottom N by a metric
+- Statistics: correlation, distribution, variance
+- Filtering: rows matching a condition
+
+**Do not use when:**
+- File is not CSV
+- Only 1 data point exists (can't compute trends or comparisons)
+
+**Query construction:**
+- Name the columns, operation, and any grouping or filter conditions explicitly. Use natural language.
+- If the user query is vague or ambiguous, do not ask for clarification — issue a broad exploratory query first to inspect the CSV structure and content, then follow up with a precise operation based on what you find
+
+**Finding the right artifacts:**
+Before calling this tool, determine whether the relevant data lives in one or multiple files:
+{% if list_tool %}
+- Use `{{ list_tool }}` to list available files and identify which CSVs are relevant
+{% endif %}
+{% if search_tool %}
+- Use `{{ search_tool }}` to surface which artifacts contain the relevant content
+{% endif %}
+Once you know the scope, prefer calling this tool with a single artifact. If the data spans multiple files, identify all relevant artifact_ids first, then decide whether to call this tool once with all of them or make separate calls and combine results.
+
+**Multi-artifact calls — use with care:**
+- Always explicitly name the join key and downstream operation in the query when combining files
+
+**Parameters:**
+- `query` (required): Describe the operation in precise natural language, naming columns, operation, and grouping or filter conditions
+- `artifacts` (optional): List of CSV artifact IDs. **Prefer a single artifact.**
+{% if few_shots == "True" %}
+
+**Examples:**
+- Aggregation → `query="sum of revenue grouped by department for Q4 2024", artifacts=["sales_csv_id"]`
+- Ranking → `query="top 5 products by total units sold in the west region", artifacts=["inventory_csv_id"]`
+- Filter + stat → `query="average order value where customer_tier is 'premium'", artifacts=["orders_csv_id"]`
+- Correlation → `query="correlation between marketing_spend and sales by region", artifacts=["marketing_csv_id"]`
+- Join → `query="join orders and customers on customer_id, then sum order_total grouped by customer_region", artifacts=["orders_csv_id", "customers_csv_id"]`
+{% endif %}
+</{{ tool_name }}>

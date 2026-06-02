@@ -1,517 +1,423 @@
-import abc
-import itertools
+import asyncio
 import logging
-import multiprocessing
-import multiprocessing.pool
-import os
-import threading
+from collections.abc import Callable
 from pathlib import Path
-from queue import Queue
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from llama_index.core.data_structs import IndexDict
-from llama_index.core.embeddings.utils import EmbedType
-from llama_index.core.indices import VectorStoreIndex, load_index_from_storage
+from injector import inject, singleton
 from llama_index.core.indices.base import BaseIndex
-from llama_index.core.ingestion import run_transformations
-from llama_index.core.schema import BaseNode, Document, TransformComponent
-from llama_index.core.storage import StorageContext
+from llama_index.core.schema import BaseNode
+from llama_index.core.vector_stores import FilterCondition, FilterOperator
 
+from private_gpt.artifact_index.artifact_exception import (
+    InvalidFileError,
+)
+from private_gpt.artifact_index.base_artifact_index import (
+    ArtifactIndexStatus,
+    ExtendIndex,
+)
+from private_gpt.celery.notify import NotifyProtocol, ProgressStatus, notify_progress
+from private_gpt.components.embedding.embedding_component import EmbeddingComponent
+from private_gpt.components.ingest.fake_progress import (
+    calculate_parsing_timing,
+    calculate_validation_timing,
+)
 from private_gpt.components.ingest.ingest_helper import IngestionHelper
+from private_gpt.components.ingest.metadata_helper import MetadataChunk, MetadataKeys
+from private_gpt.components.ingest.progress.errors import (
+    IngestionLoadErrors,
+    IngestionParseErrors,
+)
+from private_gpt.components.ingest.progress.models import (
+    ParseProgressStatus,
+    StorageProgressStatus,
+    ValidationProgressStatus,
+)
+from private_gpt.components.ingest.utils import (
+    FileInfo,
+    convert_unsupported_file,
+    convert_unsupported_file_as_fallback,
+    get_file_info,
+    get_file_name,
+    get_filesize,
+)
+from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.node_store.node_store_component import NodeStoreComponent
+from private_gpt.components.readers.reader_component import ReaderComponent
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import Settings
-from private_gpt.utils.eta import eta
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
-class BaseIngestComponent(abc.ABC):
+@singleton
+class IngestComponent:
+    settings: Settings
+    node_store_component: NodeStoreComponent
+    llm_component: LLMComponent
+    embedding_component: EmbeddingComponent
+    reader_component: ReaderComponent
+
+    _generate_fake_percentage: bool
+    _enable_reuse_generated_nodes_before: bool
+
+    @inject
     def __init__(
         self,
-        storage_context: StorageContext,
-        embed_model: EmbedType,
-        transformations: list[TransformComponent],
-        *args: Any,
-        **kwargs: Any,
+        settings: Settings,
+        node_store_component: NodeStoreComponent,
+        llm_component: LLMComponent,
+        embedding_component: EmbeddingComponent,
+        reader_component: ReaderComponent,
     ) -> None:
-        logger.debug("Initializing base ingest component type=%s", type(self).__name__)
-        self.storage_context = storage_context
-        self.embed_model = embed_model
-        self.transformations = transformations
+        self.settings = settings
+        self.node_store_component = node_store_component
+        self.llm_component = llm_component
+        self.embedding_component = embedding_component
+        self.reader_component = reader_component
 
-    @abc.abstractmethod
-    def ingest(self, file_name: str, file_data: Path) -> list[Document]:
-        pass
-
-    @abc.abstractmethod
-    def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[Document]:
-        pass
-
-    @abc.abstractmethod
-    def delete(self, doc_id: str) -> None:
-        pass
-
-
-class BaseIngestComponentWithIndex(BaseIngestComponent, abc.ABC):
-    def __init__(
-        self,
-        storage_context: StorageContext,
-        embed_model: EmbedType,
-        transformations: list[TransformComponent],
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(storage_context, embed_model, transformations, *args, **kwargs)
-
-        self.show_progress = True
-        self._index_thread_lock = (
-            threading.Lock()
-        )  # Thread lock! Not Multiprocessing lock
-        self._index = self._initialize_index()
-
-    def _initialize_index(self) -> BaseIndex[IndexDict]:
-        """Initialize the index from the storage context."""
-        try:
-            # Load the index with store_nodes_override=True to be able to delete them
-            index = load_index_from_storage(
-                storage_context=self.storage_context,
-                store_nodes_override=True,  # Force store nodes in index and document stores
-                show_progress=self.show_progress,
-                embed_model=self.embed_model,
-                transformations=self.transformations,
-            )
-        except ValueError:
-            # There are no index in the storage context, creating a new one
-            logger.info("Creating a new vector store index")
-            index = VectorStoreIndex.from_documents(
-                [],
-                storage_context=self.storage_context,
-                store_nodes_override=True,  # Force store nodes in index and document stores
-                show_progress=self.show_progress,
-                embed_model=self.embed_model,
-                transformations=self.transformations,
-            )
-            index.storage_context.persist(persist_dir=local_data_path)
-        return index
-
-    def _save_index(self) -> None:
-        self._index.storage_context.persist(persist_dir=local_data_path)
-
-    def delete(self, doc_id: str) -> None:
-        with self._index_thread_lock:
-            # Delete the document from the index
-            self._index.delete_ref_doc(doc_id, delete_from_docstore=True)
-
-            # Save the index
-            self._save_index()
-
-
-class SimpleIngestComponent(BaseIngestComponentWithIndex):
-    def __init__(
-        self,
-        storage_context: StorageContext,
-        embed_model: EmbedType,
-        transformations: list[TransformComponent],
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(storage_context, embed_model, transformations, *args, **kwargs)
-
-    def ingest(self, file_name: str, file_data: Path) -> list[Document]:
-        logger.info("Ingesting file_name=%s", file_name)
-        documents = IngestionHelper.transform_file_into_documents(file_name, file_data)
-        logger.info(
-            "Transformed file=%s into count=%s documents", file_name, len(documents)
-        )
-        logger.debug("Saving the documents in the index and doc store")
-        return self._save_docs(documents)
-
-    def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[Document]:
-        saved_documents = []
-        for file_name, file_data in files:
-            documents = IngestionHelper.transform_file_into_documents(
-                file_name, file_data
-            )
-            saved_documents.extend(self._save_docs(documents))
-        return saved_documents
-
-    def _save_docs(self, documents: list[Document]) -> list[Document]:
-        logger.debug("Transforming count=%s documents into nodes", len(documents))
-        with self._index_thread_lock:
-            for document in documents:
-                self._index.insert(document, show_progress=True)
-            logger.debug("Persisting the index and nodes")
-            # persist the index and nodes
-            self._save_index()
-            logger.debug("Persisted the index and nodes")
-        return documents
-
-
-class BatchIngestComponent(BaseIngestComponentWithIndex):
-    """Parallelize the file reading and parsing on multiple CPU core.
-
-    This also makes the embeddings to be computed in batches (on GPU or CPU).
-    """
-
-    def __init__(
-        self,
-        storage_context: StorageContext,
-        embed_model: EmbedType,
-        transformations: list[TransformComponent],
-        count_workers: int,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(storage_context, embed_model, transformations, *args, **kwargs)
-        # Make an efficient use of the CPU and GPU, the embedding
-        # must be in the transformations
-        assert (
-            len(self.transformations) >= 2
-        ), "Embeddings must be in the transformations"
-        assert count_workers > 0, "count_workers must be > 0"
-        self.count_workers = count_workers
-
-        self._file_to_documents_work_pool = multiprocessing.Pool(
-            processes=self.count_workers
+        self._generate_fake_percentage = settings.data.enable_fake_progress
+        self._enable_reuse_generated_nodes_before = (
+            settings.data.enable_reuse_generated_nodes_before
         )
 
-    def ingest(self, file_name: str, file_data: Path) -> list[Document]:
-        logger.info("Ingesting file_name=%s", file_name)
-        documents = IngestionHelper.transform_file_into_documents(file_name, file_data)
-        logger.info(
-            "Transformed file=%s into count=%s documents", file_name, len(documents)
-        )
-        logger.debug("Saving the documents in the index and doc store")
-        return self._save_docs(documents)
+    def load_and_validate_file(
+        self,
+        file_data: Path,
+        file_metadata: dict[str, Any] | None = None,
+        notify: Callable[[ProgressStatus], None] = lambda x: None,
+        warnings: list[str] | None = None,
+    ) -> tuple[FileInfo, list[str], list[str]]:
+        # Generate a jitter using the file size between 0.1 and 5
+        file_size = get_filesize(file_data)
+        interval, jitter = calculate_validation_timing(file_size=file_size)
 
-    def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[Document]:
-        documents = list(
-            itertools.chain.from_iterable(
-                self._file_to_documents_work_pool.starmap(
-                    IngestionHelper.transform_file_into_documents, files
+        with notify_progress(
+            notify=notify,
+            status_class=ValidationProgressStatus,
+            warnings=warnings,
+            generate_fake_percentage=self._generate_fake_percentage,
+            generate_fake_percentage_interval_ms=int(interval * 1000)
+            if interval
+            else None,
+            generate_fake_percentage_jitter=jitter,
+        ) as progress:
+            logger.info("Validating file: %s", file_data)
+            file_info = self._get_file_info(file_data, file_metadata, progress)
+            errors, warnings = self._validate_file(file_info, progress)
+            logger.info("Finished validating file: %s", file_data)
+            return file_info, errors, warnings
+
+    def _get_file_info(
+        self,
+        file_data: Path,
+        file_metadata: dict[str, Any] | None,
+        progress: NotifyProtocol | None = None,
+    ) -> FileInfo:
+        file_name = get_file_name(file_metadata)
+        return get_file_info(file_data, file_name=file_name, progress=progress)
+
+    def _validate_file(
+        self,
+        file_info: FileInfo,
+        progress: NotifyProtocol,
+    ) -> tuple[list[str], list[str]]:
+        errors, warnings = IngestionHelper.validate_file_info(file_info)
+        if errors:
+            logger.info("Validation errors: %s", errors)
+            raise InvalidFileError(errors=errors, warnings=warnings)
+        if warnings:
+            logger.info("Validation warnings: %s", warnings)
+            progress(percentage=100, warnings=warnings)
+        return errors, warnings
+
+    def parse_file_into_nodes(
+        self,
+        artifact: str,
+        collection: str,
+        file_info: FileInfo,
+        file_metadata: dict[str, Any] | None,
+        notify: Callable[[ProgressStatus], None] = lambda x: None,
+        warnings: list[str] | None = None,
+    ) -> list[BaseNode]:
+        # Calculate if another file was ingested before
+        exists, nodes = self.retrieve_ingested_nodes(artifact, collection, file_info)
+        if exists:
+            return nodes or []
+
+        # Transform file into nodes
+        return self.transform_file_into_nodes(
+            artifact=artifact,
+            collection=collection,
+            file_info=file_info,
+            file_metadata=file_metadata,
+            notify=notify,
+            warnings=warnings,
+        )
+
+    def retrieve_ingested_nodes(
+        self,
+        artifact: str,
+        collection: str,
+        file_info: FileInfo,
+    ) -> tuple[bool, list[BaseNode] | None]:
+        """Try to find if exists a node with the same hash in the node store."""
+        if not file_info.hash:
+            return False, None
+
+        filter_dicts = [
+            {
+                "key": MetadataKeys.FILE_HASH.value,
+                "value": file_info.hash,
+                "operator": FilterOperator.EQ,
+            }
+        ]
+
+        # 1. Try to retrieve nodes from same artifact/collection with the same hash
+        nodes = self.node_store_component.filtered_nodes(
+            collection=collection,
+            artifacts=[artifact],
+            filter_dicts=filter_dicts,
+            limit=1,
+            filter_condition=FilterCondition.AND,
+        )
+        if nodes:
+            logger.info("Artifact is already ingested in the node store. Skipping.")
+            return True, []
+
+        # 2. Try to retrieve nodes with same hash but different artifact
+        if self._enable_reuse_generated_nodes_before:
+            nodes = self.node_store_component.filtered_nodes(
+                collection=collection,
+                artifacts=None,
+                filter_dicts=filter_dicts,
+            )
+            if nodes:
+                logger.info(
+                    "Found existing nodes with the same hash and "
+                    "different artifact in the node store."
                 )
-            )
-        )
-        logger.info(
-            "Transformed count=%s files into count=%s documents",
-            len(files),
-            len(documents),
-        )
-        return self._save_docs(documents)
 
-    def _save_docs(self, documents: list[Document]) -> list[Document]:
-        logger.debug("Transforming count=%s documents into nodes", len(documents))
-        nodes = run_transformations(
-            documents,  # type: ignore[arg-type]
-            self.transformations,
-            show_progress=self.show_progress,
-        )
-        # Locking the index to avoid concurrent writes
-        with self._index_thread_lock:
-            logger.info("Inserting count=%s nodes in the index", len(nodes))
-            self._index.insert_nodes(nodes, show_progress=True)
-            for document in documents:
-                self._index.docstore.set_document_hash(
-                    document.get_doc_id(), document.hash
-                )
-            logger.debug("Persisting the index and nodes")
-            # persist the index and nodes
-            self._save_index()
-            logger.debug("Persisted the index and nodes")
-        return documents
+                # Group by artifact and collection
+                grouped_nodes: dict[str, list[BaseNode]] = {}
+                for node in nodes:
+                    n_artifact: str = str(
+                        node.metadata.get(MetadataKeys.ARTIFACT_ID.value, None)
+                    )
+                    n_collection: str = str(
+                        node.metadata.get(MetadataKeys.COLLECTION.value, None)
+                    )
+                    key = f"{n_artifact}_{n_collection}"
+                    if key not in grouped_nodes:
+                        grouped_nodes[key] = []
+                    grouped_nodes[key].append(node)
 
+                # Take only one since all artifacts are the same
+                chosen_nodes = grouped_nodes.popitem()[1]
 
-class ParallelizedIngestComponent(BaseIngestComponentWithIndex):
-    """Parallelize the file ingestion (file reading, embeddings, and index insertion).
+                # Update artifact and collection metadata with the new values
+                for node in chosen_nodes:
+                    node.metadata[MetadataKeys.ARTIFACT_ID.value] = artifact
+                    node.metadata[MetadataKeys.COLLECTION.value] = collection
+                return True, nodes
 
-    This use the CPU and GPU in parallel (both running at the same time), and
-    reduce the memory pressure by not loading all the files in memory at the same time.
-    """
+        # 3. No nodes found
+        return False, None
 
-    def __init__(
+    def transform_file_into_nodes(
         self,
-        storage_context: StorageContext,
-        embed_model: EmbedType,
-        transformations: list[TransformComponent],
-        count_workers: int,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(storage_context, embed_model, transformations, *args, **kwargs)
-        # To make an efficient use of the CPU and GPU, the embeddings
-        # must be in the transformations (to be computed in batches)
-        assert (
-            len(self.transformations) >= 2
-        ), "Embeddings must be in the transformations"
-        assert count_workers > 0, "count_workers must be > 0"
-        self.count_workers = count_workers
-        # We are doing our own multiprocessing
-        # To do not collide with the multiprocessing of huggingface, we disable it
-        os.environ["TOKENIZERS_PARALLELISM"] = "false"
+        artifact: str,
+        collection: str,
+        file_info: FileInfo,
+        file_metadata: dict[str, Any] | None,
+        notify: Callable[[ProgressStatus], None] = lambda x: None,
+        warnings: list[str] | None = None,
+    ) -> list[BaseNode]:
+        """Transform a file into a list of documents.
 
-        self._ingest_work_pool = multiprocessing.pool.ThreadPool(
-            processes=self.count_workers
+        This class should be used to transform a file into a list of documents.
+        These methods are thread-safe (and multiprocessing-safe).
+        """
+        interval, jitter = calculate_parsing_timing(
+            file_size=file_info.file_size,
+            pages=file_info.config.get(MetadataChunk.PAGE.value, 1),
         )
+        with notify_progress(
+            notify=notify,
+            status_class=ParseProgressStatus,
+            warnings=warnings,
+            generate_fake_percentage=self._generate_fake_percentage,
+            generate_fake_percentage_interval_ms=int(interval * 1000)
+            if interval
+            else None,
+            generate_fake_percentage_jitter=jitter,
+        ) as notification:
+            logger.info("Transforming file into documents: %s", file_info.file_name)
 
-        self._file_to_documents_work_pool = multiprocessing.Pool(
-            processes=self.count_workers
-        )
-
-    def ingest(self, file_name: str, file_data: Path) -> list[Document]:
-        logger.info("Ingesting file_name=%s", file_name)
-        # Running in a single (1) process to release the current
-        # thread, and take a dedicated CPU core for computation
-        documents = self._file_to_documents_work_pool.apply(
-            IngestionHelper.transform_file_into_documents, (file_name, file_data)
-        )
-        logger.info(
-            "Transformed file=%s into count=%s documents", file_name, len(documents)
-        )
-        logger.debug("Saving the documents in the index and doc store")
-        return self._save_docs(documents)
-
-    def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[Document]:
-        # Lightweight threads, used for parallelize the
-        # underlying IO calls made in the ingestion
-
-        documents = list(
-            itertools.chain.from_iterable(
-                self._ingest_work_pool.starmap(self.ingest, files)
-            )
-        )
-        return documents
-
-    def _save_docs(self, documents: list[Document]) -> list[Document]:
-        logger.debug("Transforming count=%s documents into nodes", len(documents))
-        nodes = run_transformations(
-            documents,  # type: ignore[arg-type]
-            self.transformations,
-            show_progress=self.show_progress,
-        )
-        # Locking the index to avoid concurrent writes
-        with self._index_thread_lock:
-            logger.info("Inserting count=%s nodes in the index", len(nodes))
-            self._index.insert_nodes(nodes, show_progress=True)
-            for document in documents:
-                self._index.docstore.set_document_hash(
-                    document.get_doc_id(), document.hash
+            nodes: list[BaseNode] = []
+            try:
+                converted_file = convert_unsupported_file(file_info)
+                nodes = self._load_data(
+                    converted_file,
+                    file_metadata,
+                    notification=notification,
+                    warnings=warnings,
                 )
-            logger.debug("Persisting the index and nodes")
-            # persist the index and nodes
-            self._save_index()
-            logger.debug("Persisted the index and nodes")
-        return documents
+            except RuntimeError as e:
+                raise InvalidFileError(
+                    errors=[IngestionParseErrors.PARSING_FAILURE],
+                ) from e
+            except Exception as e:
+                logger.error(f"Error loading file: {e}", exc_info=True)
+                converted_file_fallback = convert_unsupported_file_as_fallback(
+                    file_info
+                )
+                if converted_file_fallback:
+                    notification(
+                        percentage=0,
+                        warnings=[IngestionParseErrors.FALLBACK_TO_PDF_TO_TEXT],
+                    )
+                    nodes = self._load_data(
+                        converted_file_fallback,
+                        file_metadata,
+                        notification=notification,
+                        warnings=warnings,
+                    )
 
-    def __del__(self) -> None:
-        # We need to do the appropriate cleanup of the multiprocessing pools
-        # when the object is deleted. Using root logger to avoid
-        # the logger to be deleted before the pool
-        logging.debug("Closing the ingest work pool")
-        self._ingest_work_pool.close()
-        self._ingest_work_pool.join()
-        self._ingest_work_pool.terminate()
-        logging.debug("Closing the file to documents work pool")
-        self._file_to_documents_work_pool.close()
-        self._file_to_documents_work_pool.join()
-        self._file_to_documents_work_pool.terminate()
+            if not nodes:
+                logger.info("No valid nodes found in the file.")
+                raise InvalidFileError(
+                    errors=[IngestionLoadErrors.NO_VALID_FILES], warnings=warnings
+                )
 
+            max_nodes = self.node_store_component.max_nodes
+            if max_nodes and len(nodes) > max_nodes:
+                logger.info(
+                    "Number of nodes (%d) exceeds the maximum number of nodes (%d)",
+                    len(nodes),
+                    self.node_store_component.max_nodes,
+                )
+                raise InvalidFileError(
+                    errors=[IngestionParseErrors.PARSING_FAILURE], warnings=warnings
+                )
 
-class PipelineIngestComponent(BaseIngestComponentWithIndex):
-    """Pipeline ingestion - keeping the embedding worker pool as busy as possible.
+            for document in nodes:
+                # Store artifact and collection metadata
+                document.metadata[MetadataKeys.ARTIFACT_ID.value] = artifact
+                document.metadata[MetadataKeys.COLLECTION.value] = collection
 
-    This class implements a threaded ingestion pipeline, which comprises two threads
-    and two queues. The primary thread is responsible for reading and parsing files
-    into documents. These documents are then placed into a queue, which is
-    distributed to a pool of worker processes for embedding computation. After
-    embedding, the documents are transferred to another queue where they are
-    accumulated until a threshold is reached. Upon reaching this threshold, the
-    accumulated documents are flushed to the document store, index, and vector
-    store.
+                # Store LLM and Embedding model metadata
+                # to know which models were used to ingest the document
+                llm_model = self.llm_component.alias
+                if llm_model:
+                    document.metadata[MetadataKeys.LLM_MODEL.value] = llm_model
+                embed_model = self.embedding_component.get_alias()
+                if embed_model:
+                    document.metadata[MetadataKeys.EMBED_MODEL.value] = embed_model
+                document.metadata.update(file_metadata or {})
 
-    Exception handling ensures robustness against erroneous files. However, in the
-    pipelined design, one error can lead to the discarding of multiple files. Any
-    discarded files will be reported.
-    """
+                # Store current file hash
+                document.metadata[MetadataKeys.FILE_HASH.value] = file_info.hash
 
-    NODE_FLUSH_COUNT = 5000  # Save the index every # nodes.
-
-    def __init__(
-        self,
-        storage_context: StorageContext,
-        embed_model: EmbedType,
-        transformations: list[TransformComponent],
-        count_workers: int,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(storage_context, embed_model, transformations, *args, **kwargs)
-        self.count_workers = count_workers
-        assert (
-            len(self.transformations) >= 2
-        ), "Embeddings must be in the transformations"
-        assert count_workers > 0, "count_workers must be > 0"
-        self.count_workers = count_workers
-        # We are doing our own multiprocessing
-        # To do not collide with the multiprocessing of huggingface, we disable it
-        os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-        # doc_q stores parsed files as Document chunks.
-        # Using a shallow queue causes the filesystem parser to block
-        # when it reaches capacity. This ensures it doesn't outpace the
-        # computationally intensive embeddings phase, avoiding unnecessary
-        # memory consumption.  The semaphore is used to bound the async worker
-        # embedding computations to cause the doc Q to fill and block.
-        self.doc_semaphore = multiprocessing.Semaphore(
-            self.count_workers
-        )  # limit the doc queue to # items.
-        self.doc_q: Queue[tuple[str, str | None, list[Document] | None]] = Queue(20)
-        # node_q stores documents parsed into nodes (embeddings).
-        # Larger queue size so we don't block the embedding workers during a slow
-        # index update.
-        self.node_q: Queue[
-            tuple[str, str | None, list[Document] | None, list[BaseNode] | None]
-        ] = Queue(40)
-        threading.Thread(target=self._doc_to_node, daemon=True).start()
-        threading.Thread(target=self._write_nodes, daemon=True).start()
-
-    def _doc_to_node(self) -> None:
-        # Parse documents into nodes
-        with multiprocessing.pool.ThreadPool(processes=self.count_workers) as pool:
-            while True:
-                try:
-                    cmd, file_name, documents = self.doc_q.get(
-                        block=True
-                    )  # Documents for a file
-                    if cmd == "process":
-                        # Push CPU/GPU embedding work to the worker pool
-                        # Acquire semaphore to control access to worker pool
-                        self.doc_semaphore.acquire()
-                        pool.apply_async(
-                            self._doc_to_node_worker, (file_name, documents)
-                        )
-                    elif cmd == "quit":
-                        break
-                finally:
-                    if cmd != "process":
-                        self.doc_q.task_done()  # unblock Q joins
-
-    def _doc_to_node_worker(self, file_name: str, documents: list[Document]) -> None:
-        # CPU/GPU intensive work in its own process
-        try:
-            nodes = run_transformations(
-                documents,  # type: ignore[arg-type]
-                self.transformations,
-                show_progress=self.show_progress,
+            IngestionHelper.exclude_metadata(
+                nodes=nodes,
+                file_metadata=file_metadata,
             )
-            self.node_q.put(("process", file_name, documents, list(nodes)))
-        finally:
-            self.doc_semaphore.release()
-            self.doc_q.task_done()  # unblock Q joins
-
-    def _save_docs(
-        self, files: list[str], documents: list[Document], nodes: list[BaseNode]
-    ) -> None:
-        try:
             logger.info(
-                f"Saving {len(files)} files ({len(documents)} documents / {len(nodes)} nodes)"
+                "Finished transforming file into documents: %s", file_info.file_name
             )
-            self._index.insert_nodes(nodes)
-            for document in documents:
-                self._index.docstore.set_document_hash(
-                    document.get_doc_id(), document.hash
+
+        return nodes
+
+    def _load_data(
+        self,
+        file_info: FileInfo,
+        file_metadata: dict[str, Any] | None,
+        notification: NotifyProtocol | None = None,
+        warnings: list[str] | None = None,
+    ) -> list[BaseNode]:
+        return asyncio.run(
+            self._aload_data(
+                file_info=file_info,
+                file_metadata=file_metadata,
+                notification=notification,
+                warnings=warnings,
+            )
+        )
+
+    async def _aload_data(
+        self,
+        file_info: FileInfo,
+        file_metadata: dict[str, Any] | None,
+        notification: NotifyProtocol | None = None,
+        warnings: list[str] | None = None,
+    ) -> list[BaseNode]:
+        loader = self.reader_component.get_reader_by_extension(
+            file_info.extension or ""
+        )
+        nodes: list[BaseNode] = []
+        async for node in loader.lazy_load_data(
+            file_info,
+            extra_info=file_metadata,
+            notification=notification,
+            warnings=warnings,
+        ):
+            nodes.append(node)
+        return nodes
+
+    def load_index(
+        self,
+        artifact: str,
+        collection: str,
+        index: BaseIndex[Any],
+        index_id: str,
+        nodes: list[BaseNode],
+        notify: Callable[[ProgressStatus], None] = lambda x: None,
+        use_async: bool = True,
+        warnings: list[str] | None = None,
+    ) -> None:
+        """Load the index with the given documents."""
+        if not nodes:
+            # No nodes to insert
+            return
+
+        with notify_progress(
+            notify=notify,
+            status_class=StorageProgressStatus,
+            warnings=warnings,
+        ) as notify_publisher:
+            logger.info("Loading index %s with %d nodes", index_id, len(nodes))
+            max_context_window = self.embedding_component.get_config().context_window
+            extended_index = ExtendIndex(
+                source=index,
+                embed_size=self.settings.vectorstore.embed_dim,
+                max_truncate_length=max_context_window * 10,  # 10x context window
+            )
+            # 1. Delete previous nodes, to avoid duplicates
+            self.node_store_component.delete_filtered_nodes(
+                collection=collection,
+                artifacts=[artifact],
+            )
+
+            # 2. Insert nodes
+            inserted_nodes: Sequence[BaseNode] = []
+            if use_async:
+                inserted_nodes = asyncio.run(
+                    extended_index.ainsert(nodes, notify=notify_publisher)
                 )
-            self._save_index()
-        except Exception:
-            # Tell the user so they can investigate these files
-            logger.exception(f"Processing files {files}")
-        finally:
-            # Clearing work, even on exception, maintains a clean state.
-            nodes.clear()
-            documents.clear()
-            files.clear()
+            else:
+                inserted_nodes = extended_index.insert(nodes, notify=notify_publisher)
 
-    def _write_nodes(self) -> None:
-        # Save nodes to index.  I/O intensive.
-        node_stack: list[BaseNode] = []
-        doc_stack: list[Document] = []
-        file_stack: list[str] = []
-        while True:
-            try:
-                cmd, file_name, documents, nodes = self.node_q.get(block=True)
-                if cmd in ("flush", "quit"):
-                    if file_stack:
-                        self._save_docs(file_stack, doc_stack, node_stack)
-                    if cmd == "quit":
-                        break
-                elif cmd == "process":
-                    node_stack.extend(nodes)  # type: ignore[arg-type]
-                    doc_stack.extend(documents)  # type: ignore[arg-type]
-                    file_stack.append(file_name)  # type: ignore[arg-type]
-                    # Constant saving is heavy on I/O - accumulate to a threshold
-                    if len(node_stack) >= self.NODE_FLUSH_COUNT:
-                        self._save_docs(file_stack, doc_stack, node_stack)
-            finally:
-                self.node_q.task_done()
-
-    def _flush(self) -> None:
-        self.doc_q.put(("flush", None, None))
-        self.doc_q.join()
-        self.node_q.put(("flush", None, None, None))
-        self.node_q.join()
-
-    def ingest(self, file_name: str, file_data: Path) -> list[Document]:
-        documents = IngestionHelper.transform_file_into_documents(file_name, file_data)
-        self.doc_q.put(("process", file_name, documents))
-        self._flush()
-        return documents
-
-    def bulk_ingest(self, files: list[tuple[str, Path]]) -> list[Document]:
-        docs = []
-        for file_name, file_data in eta(files):
-            try:
-                documents = IngestionHelper.transform_file_into_documents(
-                    file_name, file_data
+            if not inserted_nodes:
+                raise InvalidFileError(
+                    errors=[IngestionLoadErrors.NO_VALID_NODES], warnings=warnings
                 )
-                self.doc_q.put(("process", file_name, documents))
-                docs.extend(documents)
-            except Exception:
-                logger.exception(f"Skipping {file_data.name}")
-        self._flush()
-        return docs
 
-
-def get_ingestion_component(
-    storage_context: StorageContext,
-    embed_model: EmbedType,
-    transformations: list[TransformComponent],
-    settings: Settings,
-) -> BaseIngestComponent:
-    """Get the ingestion component for the given configuration."""
-    ingest_mode = settings.embedding.ingest_mode
-    if ingest_mode == "batch":
-        return BatchIngestComponent(
-            storage_context=storage_context,
-            embed_model=embed_model,
-            transformations=transformations,
-            count_workers=settings.embedding.count_workers,
-        )
-    elif ingest_mode == "parallel":
-        return ParallelizedIngestComponent(
-            storage_context=storage_context,
-            embed_model=embed_model,
-            transformations=transformations,
-            count_workers=settings.embedding.count_workers,
-        )
-    elif ingest_mode == "pipeline":
-        return PipelineIngestComponent(
-            storage_context=storage_context,
-            embed_model=embed_model,
-            transformations=transformations,
-            count_workers=settings.embedding.count_workers,
-        )
-    else:
-        return SimpleIngestComponent(
-            storage_context=storage_context,
-            embed_model=embed_model,
-            transformations=transformations,
-        )
+            index.summary = ArtifactIndexStatus.POPULATED.value
+            index.set_index_id(index_id)
+            index.storage_context.persist(persist_dir=local_data_path / collection)
+            logger.info("Finished loading index %s with %d nodes", index_id, len(nodes))

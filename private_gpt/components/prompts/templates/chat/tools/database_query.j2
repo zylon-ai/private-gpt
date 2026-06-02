@@ -1,0 +1,15 @@
+{% set tool_name = namespace.tools.get("database_query_tool_name") %}
+
+<{{ tool_name }}>
+Query live databases (PostgreSQL, MySQL) for real-time data. Returns SQL query, row count, and CSV-formatted results. Read-only access.
+
+Use for: Live database data, real-time analytics, production/staging queries, frequently-updating data{% if namespace.tools.get("has_tabular_analysis") %}
+Note: For static CSV files, use {{ namespace.tools.get("tabular_analysis_tool_name") }} instead{% endif %}
+{% if few_shots == "True" %}
+
+Examples:
+- "Production DB Q4 sales by region" → query="total sales by region Q4 2024"
+- "Current warehouse inventory levels" → query="current inventory"{% if namespace.tools.get("has_tabular_analysis") %}
+- "Analyze sales.csv" → Use {{ namespace.tools.get("tabular_analysis_tool_name") }}, not this tool{% endif %}
+{% endif %}
+</{{ tool_name }}>

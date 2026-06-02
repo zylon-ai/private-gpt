@@ -1,0 +1,448 @@
+Evaluate the extracted content against the original source. Only detect wrong numbers, hallucinations (invented information not in source), and missing details that exist in the source.
+
+Do not evaluate writing quality, style, or presentation - only factual alignment with source. Only flag issues if extracted content contradicts, adds to, or omits information from the source material.
+Rate overall_score (how well extraction matches source) on a 0.0 to 1.0 scale.
+
+**Important**: If the image contains a red border or red bounding box, evaluate ONLY the content within that highlighted region. The red border indicates the specific area of focus for extraction.
+
+{% if extraction_type == "picture" %}
+## HOW TO EVALUATE PICTURES:
+1. Verify object counts match exactly (number of people, items, furniture, etc.)
+2. Check colors, materials, and physical descriptions are accurate
+3. Confirm all visible text, signs, or labels are mentioned
+4. Flag any interpretations, emotions, or assumptions not directly visible in source
+5. Ensure spatial relationships and arrangements match
+
+## SCORING CRITERIA:
+- **1.0**: All details accurate, nothing missing or added
+- **0.8-0.9**: 1-2 minor details missing or slightly inaccurate
+- **0.6-0.7**: 3-5 errors (wrong counts, colors, or missing elements)
+- **0.4-0.5**: Many errors (multiple wrong details, significant missing information)
+- **0.2-0.3**: Mostly incorrect (most details wrong or hallucinated)
+- **0.0-0.1**: Completely wrong or almost entirely hallucinated
+
+{% elif extraction_type == "chart" %}
+## HOW TO EVALUATE CHARTS:
+1. Match each color/style in legend to correct series name
+2. For EACH series, verify EVERY data point value against the chart axes
+3. Check that no values are swapped between different series
+4. Verify axis labels, units, titles, and legend entries are correct
+5. Confirm all series from source are included in extraction
+6. For multi-chart sources, evaluate each chart separately
+
+## SCORING CRITERIA:
+- **1.0**: All values, series, and labels perfectly match source
+- **0.8-0.9**: 1-2 data points slightly off (small errors)
+- **0.6-0.7**: 3-5 incorrect values or 1 missing series
+- **0.4-0.5**: Many wrong values (5-10 errors) or multiple missing elements
+- **0.2-0.3**: Most values wrong or series completely confused
+- **0.0-0.1**: All or nearly all data incorrect or series entirely swapped
+
+{% elif extraction_type == "table" %}
+## HOW TO EVALUATE TABLES:
+1. Verify all rows from source are included in extraction
+2. Check all columns from source are included in extraction
+3. Verify every cell value matches source exactly
+4. Confirm headers and column names are accurate
+5. Check merged cells or special formatting is noted if relevant
+
+## SCORING CRITERIA:
+- **1.0**: All rows, columns, and cell values perfectly match
+- **0.8-0.9**: 1-2 cell values wrong or 1 minor element missing
+- **0.6-0.7**: 3-5 wrong values or 1 row/column missing
+- **0.4-0.5**: Many wrong values (5-10) or multiple rows/columns missing
+- **0.2-0.3**: Most values wrong or majority of table missing
+- **0.0-0.1**: Almost entirely incorrect or completely missing
+
+{% elif extraction_type == "diagram" %}
+## HOW TO EVALUATE DIAGRAMS:
+1. Check all elements, boxes, or nodes from source are included
+2. Verify all connections, arrows, or relationships are present and correct
+3. Confirm all labels and text on elements match source exactly
+4. Check arrow directions and connection types (solid, dashed, bidirectional)
+5. Verify any external annotations or legends are included
+
+## SCORING CRITERIA:
+- **1.0**: All elements, connections, and labels perfectly match
+- **0.8-0.9**: 1 element or connection missing, or 1-2 labels wrong
+- **0.6-0.7**: 2-3 elements/connections missing or multiple labels wrong
+- **0.4-0.5**: Many missing elements (3-5) or wrong connections
+- **0.2-0.3**: Most of diagram missing or incorrectly represented
+- **0.0-0.1**: Almost entirely wrong or completely missing
+
+{% elif extraction_type == "form" %}
+## HOW TO EVALUATE FORMS:
+1. Verify all fields from source are included in extraction
+2. Check field types are correct (text field, checkbox, radio, dropdown, etc.)
+3. Verify checkbox and radio button states match (checked/unchecked, selected)
+4. Confirm dropdown selections and default values are accurate
+5. Check field groupings and section organization match source
+
+## SCORING CRITERIA:
+- **1.0**: All fields, types, and states perfectly match
+- **0.8-0.9**: 1 field missing or 1-2 states wrong
+- **0.6-0.7**: 2-3 fields missing/wrong or multiple state errors
+- **0.4-0.5**: Many fields wrong (3-5) or multiple type mismatches
+- **0.2-0.3**: Most fields missing or incorrectly represented
+- **0.0-0.1**: Almost entirely wrong or completely missing
+
+{% elif extraction_type == "text" %}
+## HOW TO EVALUATE TEXT:
+1. Verify all sections, paragraphs, or segments from source are included
+2. Check numbers, names, dates, and specific terms are accurate
+3. Confirm document structure and hierarchy (headings, lists) are preserved
+4. Flag any added interpretations, summaries, or content not in source
+5. Verify all visible text is transcribed accurately
+
+## SCORING CRITERIA:
+- **1.0**: All text, structure, and details perfectly match
+- **0.8-0.9**: 1 minor section missing or 1-2 small errors
+- **0.6-0.7**: 1 major section missing or 3-5 errors
+- **0.4-0.5**: Multiple sections missing or many errors (5-10)
+- **0.2-0.3**: Most content missing or mostly incorrect
+- **0.0-0.1**: Almost entirely wrong or completely missing
+
+{% elif extraction_type == "mixed" %}
+## HOW TO EVALUATE MIXED CONTENT:
+1. Evaluate each content type separately (text, table, chart, diagram)
+2. Verify all elements from source are included in extraction
+3. Check values in tables and charts match exactly using their specific rules
+4. Confirm document flow, organization, and relationships between elements are preserved
+5. Apply appropriate evaluation criteria for each content type present
+
+## SCORING CRITERIA:
+- **1.0**: All content types and elements perfectly extracted
+- **0.8-0.9**: 1 minor element missing or 1-2 small errors across content types
+- **0.6-0.7**: 1 major element missing or 3-5 errors across different types
+- **0.4-0.5**: Multiple elements missing or many errors (5-10) across types
+- **0.2-0.3**: Most elements missing or mostly incorrect across types
+- **0.0-0.1**: Almost entirely wrong or completely missing
+
+{% elif extraction_type == "icon" %}
+## HOW TO EVALUATE ICONS:
+1. Verify the icon type and style are correctly identified
+2. Check colors and visual characteristics are accurate
+3. Confirm any text or labels associated with the icon are mentioned
+4. Verify the icon's purpose or meaning is correctly interpreted if stated
+5. Check size and positioning details if relevant
+
+## SCORING CRITERIA:
+- **1.0**: Icon perfectly described with all details accurate
+- **0.8-0.9**: 1-2 minor details missing or slightly inaccurate
+- **0.6-0.7**: 2-3 errors in description or characteristics
+- **0.4-0.5**: Multiple errors or significant misidentification
+- **0.2-0.3**: Mostly incorrect description
+- **0.0-0.1**: Completely wrong or entirely misidentified
+
+{% else %}
+## SCORING CRITERIA:
+- **1.0**: Perfect extraction, zero errors
+- **0.8-0.9**: 1-2 minor errors or small missing details
+- **0.6-0.7**: 3-5 errors or 1 significant missing element
+- **0.4-0.5**: Many errors (5-10) or multiple missing elements
+- **0.2-0.3**: Most content wrong or severely incomplete
+- **0.0-0.1**: Almost entirely incorrect
+{% endif %}
+
+{% if few_shots %}
+## EXAMPLES:
+
+{% if extraction_type == "picture" %}
+**Picture - Incorrect details:**
+Source: 3 people, white walls, wooden desks, 'Innovation Hub' sign
+Extraction: "5 people, gray walls, metal desks"
+
+{
+    "score": 0.3,
+    "issues_found": ["Wrong count: 3 people in source, not 5", "Wrong color: walls are white in source, not gray", "Wrong material: desks are wooden in source, not metal", "Missing: 'Innovation Hub' sign not mentioned"]
+}
+
+**Picture - Hallucination:**
+Source: Office with people working at laptops
+Extraction: "Office with people working at laptops in collaborative atmosphere discussing project deadlines"
+
+{
+    "score": 0.6,
+    "issues_found": ["Hallucination: 'collaborative atmosphere' not visible in source", "Hallucination: 'discussing project deadlines' not in source"]
+}
+
+**Picture - Clean:**
+Source: Modern office, 3 people, wooden desks, plants
+Extraction: "Modern office space with 3 people at wooden desks, plants visible"
+
+{
+    "score": 1.0,
+    "issues_found": []
+}
+
+{% elif extraction_type == "chart" %}
+**Chart - Multiple value errors:**
+Source chart (2 sub-charts with 2 series each):
+  Chart 1: Lokal (light): (2022, 38) → (2023, 127), Regional (dark): (2022, 32) → (2023, 269)
+  Chart 2: Lokal (light): (2022, 0.4) → (2023, 0.7), Regional (dark): (2022, 0.3) → (2023, 9.1)
+Extraction:
+  Chart 1: Lokal: (2022, 38) → (2023, 127), Regional: (2022, 32) → (2023, 269)
+  Chart 2: Lokal: (2022, 0.1) → (2023, 9.1), Regional: (2022, 0.3) → (2023, 9.9)
+
+{
+    "score": 0.3,
+    "issues_found": [
+        "Chart 2 - Wrong value: Lokal 2022 is 0.4 in source, not 0.1",
+        "Chart 2 - Wrong value: Lokal 2023 is 0.7 in source, not 9.1",
+        "Chart 2 - Wrong value: Regional 2023 is 9.1 in source, not 9.9"
+    ]
+}
+
+**Chart - Single value error:**
+Source chart: Sales: (Jan, 45) → (Jun, 78) → (Dec, 120)
+Extraction: "Sales: (Jan, 45) → (Jun, 85) → (Dec, 120)"
+
+{
+    "score": 0.7,
+    "issues_found": ["Wrong value: June shows 78 in source, not 85"]
+}
+
+**Chart - Series swapped:**
+Source chart: Local: (2023, 127), Regional: (2023, 269)
+Extraction: "Local: (2023, 269), Regional: (2023, 127)"
+
+{
+    "score": 0.0,
+    "issues_found": ["Wrong value: Local 2023 is 127 in source, not 269", "Wrong value: Regional 2023 is 269 in source, not 127"]
+}
+
+**Chart - Missing series:**
+Source chart: 3 lines (Sales, Marketing, Operations)
+Extraction: Only Sales and Marketing
+
+{
+    "score": 0.6,
+    "issues_found": ["Missing: Operations series not extracted"]
+}
+
+**Chart - Clean:**
+Source chart: Revenue: (2022, 100) → (2023, 150)
+Extraction: "Revenue: (2022, 100) → (2023, 150)"
+
+{
+    "score": 1.0,
+    "issues_found": []
+}
+
+{% elif extraction_type == "table" %}
+**Table - Multiple wrong values:**
+Source: Row 1: A | 100 | 200, Row 2: B | 150 | 250
+Extraction: Row 1: A | 110 | 200, Row 2: B | 150 | 280
+
+{
+    "score": 0.6,
+    "issues_found": ["Wrong value: Row 1 col 2 is 100 in source, not 110", "Wrong value: Row 2 col 3 is 250 in source, not 280"]
+}
+
+**Table - Missing rows:**
+Source table: 5 rows
+Extraction: 3 rows
+
+{
+    "score": 0.5,
+    "issues_found": ["Missing: Rows 4 and 5 not extracted"]
+}
+
+**Table - Single wrong value:**
+Source: Widget A | $125,000 | 18.4%
+Extraction: Widget A | $152,000 | 18.4%
+
+{
+    "score": 0.8,
+    "issues_found": ["Wrong value: Widget A sales is $125,000 in source, not $152,000"]
+}
+
+**Table - Clean:**
+Source: 3x3 table
+Extraction: Same 3x3 table with identical values
+
+{
+    "score": 1.0,
+    "issues_found": []
+}
+
+{% elif extraction_type == "diagram" %}
+**Diagram - Missing elements:**
+Source: A → B → C → D (4 boxes)
+Extraction: A → B → C (3 boxes)
+
+{
+    "score": 0.7,
+    "issues_found": ["Missing: Box D not extracted", "Missing: Connection C→D not extracted"]
+}
+
+**Diagram - Wrong connections:**
+Source: Input → Process → Decision → Output A (Yes) / Output B (No)
+Extraction: Input → Process → Output A
+
+{
+    "score": 0.4,
+    "issues_found": ["Missing: Decision element not extracted", "Missing: Output B branch not extracted"]
+}
+
+**Diagram - Wrong labels:**
+Source: 'Initialize', 'Validate', 'Process'
+Extraction: 'Start', 'Check', 'Process'
+
+{
+    "score": 0.6,
+    "issues_found": ["Wrong label: 'Initialize' in source, not 'Start'", "Wrong label: 'Validate' in source, not 'Check'"]
+}
+
+**Diagram - Clean:**
+Source: 5 elements with all connections
+Extraction: All 5 elements with all connections
+
+{
+    "score": 1.0,
+    "issues_found": []
+}
+
+{% elif extraction_type == "form" %}
+**Form - Wrong states:**
+Source: Newsletter ☑ (checked), Department: Sales
+Extraction: Newsletter ☐ (unchecked), Department: Marketing
+
+{
+    "score": 0.4,
+    "issues_found": ["Wrong state: Newsletter is checked in source, not unchecked", "Wrong selection: Department is Sales in source, not Marketing"]
+}
+
+**Form - Missing fields:**
+Source: Name, Email, Phone, Department
+Extraction: Name, Email, Department
+
+{
+    "score": 0.7,
+    "issues_found": ["Missing: Phone field not extracted"]
+}
+
+**Form - Clean:**
+Source: All fields with correct types and states
+Extraction: All fields accurately represented
+
+{
+    "score": 1.0,
+    "issues_found": []
+}
+
+{% elif extraction_type == "text" %}
+**Text - Wrong values:**
+Source: "Phase 1: Planning - Define objectives and timeline"
+Extraction: "Phase 2: Planning - Set goals and schedule"
+
+{
+    "score": 0.4,
+    "issues_found": ["Wrong number: Phase 1 in source, not Phase 2", "Wrong text: 'Define objectives' in source, not 'Set goals'", "Wrong text: 'timeline' in source, not 'schedule'"]
+}
+
+**Text - Missing sections:**
+Source: 3 phases (Planning, Development, Launch)
+Extraction: 2 phases (Planning, Development)
+
+{
+    "score": 0.6,
+    "issues_found": ["Missing: Phase 3 Launch section not extracted"]
+}
+
+**Text - Hallucination:**
+Source: "Review quarterly results"
+Extraction: "Review quarterly results and prepare annual report"
+
+{
+    "score": 0.8,
+    "issues_found": ["Hallucination: 'prepare annual report' not in source"]
+}
+
+**Text - Clean:**
+Source: Structured document with all sections
+Extraction: All sections accurately transcribed
+
+{
+    "score": 1.0,
+    "issues_found": []
+}
+
+{% elif extraction_type == "mixed" %}
+**Mixed - Multiple errors:**
+Source: Title + 3-row table + 5-element diagram
+Extraction: Title + 2-row table + 3-element diagram
+
+{
+    "score": 0.5,
+    "issues_found": ["Missing: 1 table row not extracted", "Missing: 2 diagram elements not extracted"]
+}
+
+**Mixed - Wrong values:**
+Source: Report with Revenue: $2.1M → $2.8M
+Extraction: Report with Revenue: $2.1M → $3.2M
+
+{
+    "score": 0.8,
+    "issues_found": ["Wrong value: Revenue 2023 is $2.8M in source, not $3.2M"]
+}
+
+**Mixed - Clean:**
+Source: Complete document with text, table, and diagram
+Extraction: All elements accurately extracted
+
+{
+    "score": 1.0,
+    "issues_found": []
+}
+
+{% elif extraction_type == "icon" %}
+**Icon - Wrong description:**
+Source: Red circular stop icon with white hand symbol
+Extraction: "Green square go icon with arrow"
+
+{
+    "score": 0.1,
+    "issues_found": ["Wrong color: red in source, not green", "Wrong shape: circular in source, not square", "Wrong symbol: stop hand in source, not go arrow"]
+}
+
+**Icon - Minor error:**
+Source: Blue checkmark icon, 32px
+Extraction: "Blue checkmark icon"
+
+{
+    "score": 0.9,
+    "issues_found": ["Missing: size (32px) not mentioned"]
+}
+
+**Icon - Clean:**
+Source: Yellow warning triangle with exclamation mark
+Extraction: "Yellow warning triangle icon with exclamation mark"
+
+{
+    "score": 1.0,
+    "issues_found": []
+}
+
+{% else %}
+**General - Issues:**
+Source: "Sales up 25% to $2.3M"
+Extraction: "Sales grew to $2.5M due to marketing"
+
+{
+    "score": 0.4,
+    "issues_found": ["Wrong amount: $2.3M in source, not $2.5M", "Missing: 25%", "Hallucination: marketing not in source"]
+}
+
+**General - Clean:**
+Source: "Three areas: finance, ops, HR"
+Extraction: "Three areas: finance, ops, HR"
+
+{
+    "score": 1.0,
+    "issues_found": []
+}
+{% endif %}
+{% endif %}
+
+Return your evaluation as JSON.

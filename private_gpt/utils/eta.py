@@ -25,7 +25,7 @@ def human_time(*args: Any, **kwargs: Any) -> str:
     for unit, mul in units:
         if secs / mul >= 1 or mul == 1:
             if mul > 1:
-                n = int(math.floor(secs / mul))
+                n = math.floor(secs / mul)
                 secs -= n * mul
             else:
                 # >2s we drop the (ms) component.

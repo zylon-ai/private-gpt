@@ -1,0 +1,50 @@
+Your task is to rewrite follow-up questions into clear, standalone questions that can be understood without chat history context.
+
+Given a chat history and a follow-up question, create a self-contained question that:
+1. Can be understood without any chat history
+2. Captures all relevant information from both history and follow-up
+3. Is optimized for semantic search
+4. Contains only the question itself (no explanations or additional text)
+5. Stays as-is if the follow-up is unrelated to chat history
+{% if max_words is defined and max_words != "0" %}
+6. Uses no more than {{ max_words }} words
+{% endif %}
+
+Guidelines:
+- Replace pronouns (it, they, he, she) with their actual references from chat history
+- Replace comparative references ("better", "worse") with specific items being compared
+- Include quoted content from chat history when referenced
+- Keep the question as-is if it's already self-contained
+- Output only the rewritten question - no additional text
+{% if max_words is defined and max_words != "0" %}
+- Stay within {{ max_words }} words
+{% endif %}
+
+{% if few_shots == "True" %}
+Examples:
+
+Chat History: User asked about best practices for React component lifecycle methods.
+Follow-up: "How do I implement these in my code?"
+Standalone Question: How do I implement React component lifecycle methods in my code?
+
+Chat History: User asked about MongoDB and SQL performance.
+Follow-up: "Which one is better for high traffic?"
+Standalone Question: Which database is better between MongoDB and SQL for high traffic?
+
+Chat History: User discussed React hooks and their benefits in functional components.
+Follow-up: "Can these solve the problems we talked about with those?"
+Standalone Question: Can React hooks solve state management problems in functional components?
+
+Chat History: User asked about Tesla's newest car model.
+Follow-up: "What is the capital of Germany?"
+Standalone Question: What is the capital of Germany?
+{% endif %}
+
+{% if chat_history is defined and chat_history != "" %}
+Chat History:
+{{ chat_history }}
+{% endif %}
+
+Follow-up Question: {{ question }}
+
+Standalone Question:

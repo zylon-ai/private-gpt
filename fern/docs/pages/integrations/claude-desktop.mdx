@@ -1,0 +1,75 @@
+---
+title: "Claude Desktop"
+description: "Connect Claude Desktop (Cowork) to your private-gpt server using third-party inference."
+---
+
+<Warning>
+  This page was last updated and tested on **2026-06-02**. The setup is stable, but Claude Desktop updates can change UI labels or configuration keys without notice — if something stops working, check this page for an updated guide.
+</Warning>
+
+[Claude Desktop](https://claude.ai/download) ships with a **Cowork** agent harness — skills, plugins, MCP servers, and multi-agent coordination — that can be pointed at any Anthropic-compatible endpoint, including your `private-gpt` server. This lets you run the full Cowork experience against your self-hosted models without routing data through Anthropic's first-party infrastructure.
+
+For the official Anthropic documentation on third-party inference, see [Claude Desktop third-party inference](https://support.claude.com/en/articles/11514764-claude-desktop-third-party-inference).
+
+## Compatibility
+
+Tested against `private-gpt` on 2026-05-27.
+
+| Feature | Status | Notes |
+|---|:---:|---|
+| Chat & streaming | ✅ | |
+| Web search | ✅ | |
+| File tools (read, write, edit) | ✅ | |
+| Skills | ✅ | |
+| Plugins | ✅ | |
+| MCP servers | ✅ | |
+| Multi-agent (sub-agents) | ✅ | |
+| Native connectors (Gmail, Notion, Slack, …) | ❌ | Not available on third-party gateways — use MCP servers |
+| Code tab config parity | ⚠️ | Some keys may not propagate to Code-tab sessions |
+
+---
+
+## Prerequisites
+
+- Claude Desktop installed and up to date
+- Developer mode enabled: **Help → Troubleshooting → Enable Developer Mode**
+- `private-gpt` server running (see [serve](/manual/cli#serve))
+
+<Note>
+  The **Configure Third-Party Inference** option lives under **Menu → Developer**. If it is missing, update Claude Desktop and restart with developer mode enabled. Users on corporate or Team plans may not see it — it may be plan-gated.
+</Note>
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Open the third-party inference panel">
+    In Claude Desktop: **Menu → Developer → Configure Third-Party Inference**
+  </Step>
+
+  <Step title="Set the gateway values">
+    | Field | Value |
+    |---|---|
+    | Connection | `Gateway` |
+    | Gateway base URL | `http://localhost:<port>/<root_path>` |
+    | Gateway API key | `server.auth.secret` (any value if auth is disabled) |
+    | Gateway auth scheme | `Bearer` |
+
+    `private-gpt` exposes an Anthropic-compatible API, so no adapter or proxy is needed. If `root_path` is empty, omit the trailing path:
+
+    ```
+    http://localhost:8080
+    ```
+  </Step>
+
+  <Step title="Apply and relaunch">
+    Click **Apply locally → Relaunch now**.
+
+    After relaunch, log out of your Anthropic account and choose **Continue with Gateway**.
+  </Step>
+
+  <Step title="Select your model">
+    Use the model picker to enter the model identifier exposed by your `private-gpt` server (e.g. `default`). This name must match a model registered in your server's `settings.yaml`.
+  </Step>
+</Steps>

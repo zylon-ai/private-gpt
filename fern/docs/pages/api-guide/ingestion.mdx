@@ -1,0 +1,86 @@
+---
+title: "Ingestion"
+description: "Ingest, list, retrieve, and delete documents synchronously."
+---
+
+Documents are ingested through `/v1/artifacts/ingest`. Once ingested they are chunked, embedded, and stored in the vector store for retrieval.
+
+---
+
+## Ingest a file
+
+```bash
+curl -X POST http://localhost:8080/v1/artifacts/ingest \
+  -F "file=@/path/to/document.pdf"
+```
+
+Target a specific collection:
+
+```bash
+curl -X POST http://localhost:8080/v1/artifacts/ingest \
+  -F "file=@/path/to/document.pdf" \
+  -F "collection=my-collection"
+```
+
+---
+
+## List ingested documents
+
+```bash
+curl "http://localhost:8080/v1/artifacts/list?collection=my-collection"
+```
+
+---
+
+## Delete a document
+
+```bash
+curl -X POST http://localhost:8080/v1/artifacts/delete \
+  -H "Content-Type: application/json" \
+  -d '{"collection": "my-collection", "artifact": "<artifact-id>"}'
+```
+
+### Wipe all local data
+
+```bash
+make wipe
+```
+
+<Warning>
+  This deletes everything in `local_data/` including the vector store. It cannot be undone.
+</Warning>
+
+---
+
+## Bulk local ingestion
+
+To ingest an entire folder from the command line, enable local ingestion in your settings:
+
+```yaml
+data:
+  local_ingestion:
+    enabled: true
+    allow_ingest_from: ["*"]
+```
+
+Then run:
+
+```bash
+make ingest /path/to/folder
+```
+
+Watch mode (re-ingest on file changes):
+
+```bash
+make ingest /path/to/folder -- --watch
+```
+
+---
+
+## Supported file formats
+
+PrivateGPT handles plain text natively. The following formats are also supported with built-in parsers:
+
+`.pdf` · `.docx` · `.pptx` · `.ppt` · `.pptm` · `.hwp` · `.epub` · `.md` · `.csv` · `.json` · `.ipynb` · `.mbox` · `.jpg` · `.jpeg` · `.png` · `.mp3` · `.mp4`
+
+Any other file type is read as plain text.

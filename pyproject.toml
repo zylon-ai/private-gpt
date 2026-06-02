@@ -1,106 +1,355 @@
-[tool.poetry]
+[project]
 name = "private-gpt"
 version = "0.6.2"
 description = "Private GPT"
-authors = ["Zylon <hi@zylon.ai>"]
+authors = [{ name = "Zylon", email = "hi@zylon.ai" }]
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    # Web framework
+    "fastapi[all]>=0.136.0",
+    "python-multipart>=0.0.26",
+    # DI + config
+    "injector>=0.24.0,<0.25",
+    "pyyaml>=6.0.3,<7",
+    "watchdog>=4.0.1,<5",
+    # Core framework
+    "llama-index-core>=0.14.21,<0.15.0",
+    # Utilities
+    "cachetools>=7.0.0",
+    "partial-json-parser>=0.2.1.1.post7,<0.3",
+    "requests>=2.33.0,<3",
+    "retry-async>=0.1.4,<0.2",
+    "nest-asyncio>=1.6.0",
+    "nltk>=3.9.1,<4",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<3.12"
-# PrivateGPT
-fastapi = { extras = ["all"], version = "^0.115.0" }
-python-multipart = "^0.0.10"
-injector = "^0.22.0"
-pyyaml = "^6.0.2"
-watchdog = "^4.0.1"
-transformers = "^4.44.2"
-docx2txt = "^0.8"
-cryptography = "^3.1"
-# LlamaIndex core libs
-llama-index-core = ">=0.11.2,<0.12.0"
-llama-index-readers-file = "*"
-# Optional LlamaIndex integration libs
-llama-index-llms-llama-cpp = {version = "*", optional = true}
-llama-index-llms-openai = {version ="*", optional = true}
-llama-index-llms-openai-like = {version ="*", optional = true}
-llama-index-llms-ollama = {version ="*", optional = true}
-llama-index-llms-azure-openai = {version ="*", optional = true}
-llama-index-llms-gemini = {version ="*", optional = true}
-llama-index-embeddings-ollama = {version ="*", optional = true}
-llama-index-embeddings-huggingface = {version ="*", optional = true}
-llama-index-embeddings-openai = {version ="*", optional = true}
-llama-index-embeddings-azure-openai = {version ="*", optional = true}
-llama-index-embeddings-gemini = {version ="*", optional = true}
-llama-index-embeddings-mistralai = {version ="*", optional = true}
-llama-index-vector-stores-qdrant = {version ="*", optional = true}
-llama-index-vector-stores-milvus = {version ="*", optional = true}
-llama-index-vector-stores-chroma = {version ="*", optional = true}
-llama-index-vector-stores-postgres = {version ="*", optional = true}
-llama-index-vector-stores-clickhouse = {version ="*", optional = true}
-llama-index-storage-docstore-postgres = {version ="*", optional = true}
-llama-index-storage-index-store-postgres = {version ="*", optional = true}
-# Postgres
-psycopg2-binary = {version ="^2.9.9", optional = true}
-asyncpg = {version="^0.29.0", optional = true}
+[project.scripts]
+private-gpt = "private_gpt.cli.main:main"
 
-# ClickHouse
-clickhouse-connect = {version = "^0.7.19", optional = true}
+[project.optional-dependencies]
 
-# Optional Sagemaker dependency
-boto3 = {version ="^1.35.26", optional = true}
+# ---------------------------------------------------------------------------
+# LLM providers
+# ---------------------------------------------------------------------------
+# sdk-openai: shared base for llm-openai* and embedding-openai*
+sdk-openai = [
+    "openai>=2.0.0,<3",
+    "openai-harmony>=0.0.8",
+]
+llm-openai = [
+    "private-gpt[sdk-openai]",
+    "llama-index-llms-openai",
+]
+llm-openai-compatible = [
+    "private-gpt[sdk-openai]",
+    "llama-index-llms-openai-like",
+]
+llm-mistral = [
+    "mistral-common[image,audio,hf-hub]>=1.11.1,<2",
+    "huggingface_hub",
+]
+llm-anthropic = [
+    "langchain-anthropic>=1.4.3",
+    "anthropic>=0.97.0",
+]
 
-# Optional Reranker dependencies
-torch = {version ="^2.4.1", optional = true}
-sentence-transformers = {version ="^3.1.1", optional = true}
+# ---------------------------------------------------------------------------
+# Tokenizers
+# ---------------------------------------------------------------------------
+tokenizer-local = [
+    "transformers>=5.7.0",
+    "huggingface-hub",
+    "hf-transfer>=0.1.9",
+]
+tokenizer = [
+    "private-gpt[tokenizer-local]",
+]
 
-# Optional UI
-gradio = {version ="^4.44.0", optional = true}
-ffmpy = {version ="^0.4.0", optional = true}
+# ---------------------------------------------------------------------------
+# Embedding providers
+# ---------------------------------------------------------------------------
+embedding-openai = [
+    "private-gpt[sdk-openai]",
+    "llama-index-embeddings-openai",
+]
+embedding-openai-compatible = [
+    "private-gpt[sdk-openai]",
+    "llama-index-embeddings-openai-like",
+]
 
-# Optional HF Transformers
-einops = {version = "^0.8.0", optional = true}
-retry-async = "^0.1.4"
 
-[tool.poetry.extras]
-ui = ["gradio", "ffmpy"]
-llms-llama-cpp = ["llama-index-llms-llama-cpp"]
-llms-openai = ["llama-index-llms-openai"]
-llms-openai-like = ["llama-index-llms-openai-like"]
-llms-ollama = ["llama-index-llms-ollama"]
-llms-sagemaker = ["boto3"]
-llms-azopenai = ["llama-index-llms-azure-openai"]
-llms-gemini = ["llama-index-llms-gemini"]
-embeddings-ollama = ["llama-index-embeddings-ollama"]
-embeddings-huggingface = ["llama-index-embeddings-huggingface", "einops"]
-embeddings-openai = ["llama-index-embeddings-openai"]
-embeddings-sagemaker = ["boto3"]
-embeddings-azopenai = ["llama-index-embeddings-azure-openai"]
-embeddings-gemini = ["llama-index-embeddings-gemini"]
-embeddings-mistral = ["llama-index-embeddings-mistralai"]
-vector-stores-qdrant = ["llama-index-vector-stores-qdrant"]
-vector-stores-clickhouse = ["llama-index-vector-stores-clickhouse", "clickhouse_connect"]
-vector-stores-chroma = ["llama-index-vector-stores-chroma"]
-vector-stores-postgres = ["llama-index-vector-stores-postgres"]
-vector-stores-milvus = ["llama-index-vector-stores-milvus"]
-storage-nodestore-postgres = ["llama-index-storage-docstore-postgres","llama-index-storage-index-store-postgres","psycopg2-binary","asyncpg"]
-rerank-sentence-transformers = ["torch", "sentence-transformers"]
+# ---------------------------------------------------------------------------
+# Model providers
+# ---------------------------------------------------------------------------
+model-openai = [
+    "private-gpt[llm-openai]",
+    "private-gpt[embedding-openai]",
+]
+model-openai-compatible = [
+    "private-gpt[llm-openai-compatible]",
+    "private-gpt[embedding-openai-compatible]",
+]
 
-[tool.poetry.group.dev.dependencies]
-black = "^24"
-mypy = "^1.11"
-pre-commit = "^3"
-pytest = "^8"
-pytest-cov = "^5"
-ruff = "^0"
-pytest-asyncio = "^0.24.0"
-types-pyyaml = "^6.0.12.20240917"
+# ---------------------------------------------------------------------------
+# Ingestion
+# ---------------------------------------------------------------------------
+# ingest-core: shared base for all ingest-* extras
+ingest-core = [
+    "chardet>=5.2.0,<6",
+    "python-magic>=0.4.27,<0.5",
+    "llama-index-readers-file",
+    "llama-index-utils-workflow",
+    "levenshtein>=0.27.3",
+]
+ingest-documents = [
+    "private-gpt[ingest-core]",
+    "langdetect>=1.0.9,<2",
+    "python-pptx>=1.0.2,<2",
+    "openpyxl>=3.1.5,<4",
+    "pptx2md>=1.7.1",
+    "scipy>=1.10.0,<2",
+]
+ingest-markitdown = [
+    "private-gpt[ingest-core]",
+    "markitdown[docx,pdf,pptx,xls,xlsx]>=0.1.5",
+]
+ingest-markup = [
+    "private-gpt[ingest-core]",
+    "mistune>=3.2.1,<4",
+    "beautifulsoup4>=4.14.3,<5",
+    "html2text>=2024.2.26,<2025",
+    "marko>=2.2.0,<3",
+    "markdownify>=0.13.1,<0.14",
+    "lxml-html-clean>=0.4.4",
+]
+ingest = [
+    "private-gpt[ingest-documents,ingest-markup, ingest-markitdown]",
+]
+
+# ---------------------------------------------------------------------------
+# Storage backends
+# ---------------------------------------------------------------------------
+storage-s3 = [
+    "boto3>=1.35.0,<1.43.2",
+    "aiobotocore>=3.6.0,<3.7",
+]
+storage-smb = [
+    "smbprotocol>=1.16.1,<2",
+]
+storage = [
+    "private-gpt[storage-s3,storage-smb]",
+]
+
+# ---------------------------------------------------------------------------
+# Vector stores
+# ---------------------------------------------------------------------------
+vectorstore-qdrant = [
+    "llama-index-vector-stores-qdrant",
+    "qdrant-client>=1.17.1,<2",
+]
+nodestore-postgres = [
+    "private-gpt[database-postgres]",
+    "llama-index-storage-docstore-postgres",
+]
+indexstore-postgres = [
+    "private-gpt[database-postgres]",
+    "llama-index-storage-index-store-postgres",
+]
+
+# ---------------------------------------------------------------------------
+# Redis
+# ---------------------------------------------------------------------------
+# redis-core: shared base for redis
+redis-core = [
+    "redis>=5.0.1,<6",
+]
+redis = [
+    "private-gpt[redis-core]",
+    "redis-semaphore-async>=0.0.4",
+]
+
+# ---------------------------------------------------------------------------
+# Database providers
+# ---------------------------------------------------------------------------
+# database-core: shared base for all database-* extras
+database-core = [
+    "sqlalchemy>=2.0.49,<3",
+    "sqlgpt-parser>=0.0.1a5",
+]
+database-postgres = [
+    "private-gpt[database-core]",
+    "psycopg2-binary>=2.9.12,<3",
+    "asyncpg>=0.31.0,<0.32",
+]
+database-mysql = [
+    "private-gpt[database-core]",
+    "pymysql>=1.1.1,<2",
+]
+database-mssql = [
+    "private-gpt[database-core]",
+    "pyodbc>=5.3.0",
+]
+database-db2 = [
+    "private-gpt[database-core]",
+    "ibm-db>=3.2.9; platform_machine != 'aarch64'",
+    "ibm-db-sa>=0.4.4; platform_machine != 'aarch64'",
+]
+database = [
+    "private-gpt[database-postgres,database-mysql,database-mssql,database-db2]",
+]
+
+# ---------------------------------------------------------------------------
+# Queue / Task processing
+# ---------------------------------------------------------------------------
+queue-celery = [
+    "celery==5.4.0,<6",
+    "flower>=2.0.1,<3",
+]
+queue-rabbitmq = [
+    "pika>=1.3.2,<2",
+]
+queue = [
+    "private-gpt[queue-celery,queue-rabbitmq]",
+]
+
+# ---------------------------------------------------------------------------
+# Data / Tabular
+# ---------------------------------------------------------------------------
+data-pandas = [
+    "pandas>=2.2.3,<3",
+]
+data-pandasai = [
+    "private-gpt[data-pandas]",
+    "pandasai>=3.0.0",
+]
+
+# ---------------------------------------------------------------------------
+# Tool integrations
+# ---------------------------------------------------------------------------
+tool-mcp = [
+    "llama-index-tools-mcp",
+    "mcp>=1.27.0,<2",
+]
+tool-tabular = [
+    "private-gpt[data-pandasai]",
+]
+tool-database = [
+    "private-gpt[database]",
+]
+tool-web-scraping = [
+    "playwright>=1.59.0",
+]
+tools = [
+    "private-gpt[tool-mcp,tool-tabular,tool-database,tool-web-scraping]",
+]
+
+# ---------------------------------------------------------------------------
+# Media processing
+# ---------------------------------------------------------------------------
+# media-core: shared torch base for all media-* extras
+media-core = [
+    "torch>=2.11.0,<3",
+]
+media-image = [
+    "private-gpt[media-core]",
+    "torchvision>=0.26.0,<1",
+    "opencv-python-headless>=4.10.0.84,<4.13.0",
+    "imagehash>=4.3.2",
+]
+media-audio = [
+    "private-gpt[media-core]",
+    "torchaudio>=2.11.0,<3",
+    "pydub>=0.25.1",
+    "noisereduce>=3.0.3",
+]
+media-video = [
+    "private-gpt[media-core]",
+    "ffmpeg>=1.4",
+    "ffprobe>=0.5",
+]
+media = [
+    "private-gpt[media-image,media-audio,media-video]",
+]
+
+# ---------------------------------------------------------------------------
+# Observability
+# ---------------------------------------------------------------------------
+observability-arize-phoenix = [
+    "openinference-instrumentation-llama-index>=4.3.9,<5",
+    "opentelemetry-proto>=1.41.0,<2",
+    "opentelemetry-exporter-otlp>=1.41.0,<2",
+    "opentelemetry-sdk>=1.41.0,<2",
+]
+observability-opik = [
+    "opik>=2.0.21,<3",
+]
+observability = [
+    "private-gpt[observability-arize-phoenix,observability-opik]",
+]
+
+# ---------------------------------------------------------------------------
+# Install flavors
+# ---------------------------------------------------------------------------
+core = [
+    "private-gpt[model-openai,model-openai-compatible,tokenizer,vectorstore-qdrant,ingest,tools]",
+]
+
+# ---------------------------------------------------------------------------
+# Dev tooling
+# ---------------------------------------------------------------------------
+lint = [
+    "black[jupyter]>=22,<23",
+    "pre-commit>=4.5.0,<5",
+    "ruff>=0,<1",
+]
+test = [
+    "pytest>=9,<10",
+    "pytest-asyncio>=1.3.0,<2",
+    "pytest-cov>=7,<8",
+    "pytest-httpx>=0.36.0",
+]
+typecheck = [
+    "mypy==1.13.0",
+    "types-pyyaml>=6.0.12.12,<7",
+    "pika-stubs>=0.1.3,<0.2",
+    "types-retry>=0.9.9.4,<0.10",
+    "celery-types>=0.20.0,<0.21",
+    "types-psycopg2>=2.9.21.20241019,<3",
+    "pandas-stubs>=2.2.3.241009,<3",
+    "types-requests>=2.32.0.20241016,<3",
+    "types-markdown>=3.7.0.20240822,<4",
+    "types-beautifulsoup4>=4.12.0.20241020,<5",
+    "types-openpyxl>=3.1.5.20241126,<4",
+    "types-psutil>=6.1.0.20241221,<7",
+    "types-tqdm>=4.67.0.20250809",
+    "types-cachetools>=6.2.0.20251022,<7",
+    "mypy-boto3-s3>=1.42.37",
+    "types-regex>=2026.1.15.20260116",
+]
+dev = [
+    "private-gpt[lint,test,typecheck]",
+]
+
+[tool.uv]
+default-groups = []
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-# Packages configs
+[tool.hatch.build.targets.sdist]
+exclude = [
+  ".uv-cache",
+  ".dist",
+]
 
-## coverage
+[tool.hatch.build.targets.wheel]
+packages = ["private_gpt"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"settings.yaml" = "settings.yaml"
+"ui" = "ui"
+"scripts" = "scripts"
 
 [tool.coverage.run]
 branch = true
@@ -109,41 +358,33 @@ branch = true
 skip_empty = true
 precision = 2
 
-## black
-
 [tool.black]
 target-version = ['py311']
 
-## ruff
-# Recommended ruff config for now, to be updated as we go along.
 [tool.ruff]
 target-version = 'py311'
 
-# See all rules at https://beta.ruff.rs/docs/rules/
 lint.select = [
-    "E", # pycodestyle
-    "W", # pycodestyle
-    "F", # Pyflakes
-    "B", # flake8-bugbear
-    "C4", # flake8-comprehensions
-    "D", # pydocstyle
-    "I", # isort
-    "SIM", # flake8-simplify
-    "TCH", # flake8-type-checking
-    "TID", # flake8-tidy-imports
-    "Q", # flake8-quotes
-    "UP", # pyupgrade
-    "PT", # flake8-pytest-style
-    "RUF", # Ruff-specific rules
+    "E",
+    "W",
+    "F",
+    "B",
+    "C4",
+    "D",
+    "I",
+    "SIM",
+    "TCH",
+    "TID",
+    "Q",
+    "UP",
+    "PT",
+    "RUF",
 ]
 
 lint.ignore = [
-    "E501", # "Line too long"
-    # -> line length already regulated by black
-    "PT011", # "pytest.raises() should specify expected exception"
-    # -> would imply to update tests every time you update exception message
-    "SIM102", # "Use a single `if` statement instead of nested `if` statements"
-    # -> too restrictive,
+    "E501",
+    "PT011",
+    "SIM102",
     "D100",
     "D101",
     "D102",
@@ -151,12 +392,11 @@ lint.ignore = [
     "D104",
     "D105",
     "D106",
-    "D107"
-    # -> "Missing docstring in public function too restrictive"
+    "D107",
+    "TC006",
 ]
 
 [tool.ruff.lint.pydocstyle]
-# Automatically disable rules that are incompatible with Google docstring convention
 convention = "google"
 
 [tool.ruff.lint.pycodestyle]
@@ -168,15 +408,9 @@ ban-relative-imports = "all"
 [tool.ruff.lint.flake8-type-checking]
 strict = true
 runtime-evaluated-base-classes = ["pydantic.BaseModel"]
-# Pydantic needs to be able to evaluate types at runtime
-# see https://pypi.org/project/flake8-type-checking/ for flake8-type-checking documentation
-# see https://beta.ruff.rs/docs/settings/#flake8-type-checking-runtime-evaluated-base-classes for ruff documentation
 
 [tool.ruff.lint.per-file-ignores]
-# Allow missing docstrings for tests
-"tests/**/*.py" = ["D1"]
-
-## mypy
+"tests/**/*.py" = ["D"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -184,9 +418,17 @@ strict = true
 check_untyped_defs = false
 explicit_package_bases = true
 warn_unused_ignores = false
+cache_dir = ".mypy_cache"
 exclude = ["tests"]
 
 [tool.mypy-llama-index]
+ignore_missing_imports = true
+
+[tool.mypy-pandasai]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["openai", "openai.*", "cv2"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

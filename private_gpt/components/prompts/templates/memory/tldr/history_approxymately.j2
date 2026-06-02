@@ -1,0 +1,50 @@
+Summarize the following chat history in a concise manner.
+
+The output format should be a json array with the format.
+The message summary should be concise and to the point, it's
+ok to remove superfluous messages, or merge them together.
+[
+    {
+        "role": "user" | "assistant",
+        "content": "The summarized content of the message"
+    }
+]
+
+Final list should be a summary of the chat history, keeping same roles and structure, but with concise content.
+Messages must be user and assistant interleaved, keeping the original order.
+
+{% if text is defined and text != "" %}
+This is the partial chat history to summarize:
+{{ text }}
+{% endif %}
+
+{% if max_words is defined and max_words != "0" %}
+Please ensure the final summary per message is no longer than {{ max_words }} words.
+{% endif %}
+
+{% if few_shots == "True" %}
+**Examples:**
+
+1. Affirmation Reduction
+   *Input*:
+   - assistant: "You're absolutely right, that makes perfect sense, sure thing!"
+   *Output*:
+   - assistant: "Ok"
+
+2. Question Simplification
+   *Input*:
+   - user: "I was wondering if you could possibly help me understand how machine learning algorithms work?"
+   *Output*:
+   - user: "How do ML algorithms work?"
+
+3. Trivial Message
+   *Input*:
+   - user: "Can you help with FastAPI?"
+   - assistant: "Sure! FastAPI is a modern web framework..."
+   - user: "Ok"
+   *Output*:
+   - user: "Can you help with FastAPI?"
+   - assistant: "FastAPI is a framework..."
+   - user: "Ok"
+
+{% endif %}

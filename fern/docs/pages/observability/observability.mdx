@@ -1,0 +1,66 @@
+---
+title: "Observability"
+description: "Trace LLM calls and monitor performance with Arize Phoenix or Opik."
+---
+
+PrivateGPT can emit traces for every LLM call, embedding request, and retrieval step. Set `observability.mode` in `settings.yaml` or in a profile such as `settings-local.yaml` to choose a backend.
+
+<Warning>
+  This feature requires to have the `observability` extra enabled in your application. If you are adding storage to an existing application, make sure to run the sync command after enabling the module:
+
+  ```bash
+  uv sync --inexact observability
+  ```
+</Warning>
+
+| Mode | Description |
+|---|---|
+| `none` | No tracing (default) |
+| `simple` | Console logs via LlamaIndex's built-in handler |
+| `arize_phoenix` | Send OpenTelemetry traces to [Arize Phoenix](https://phoenix.arize.com) |
+| `opik` | Send traces to [Opik](https://www.comet.com/site/products/opik/) |
+
+```yaml
+observability:
+  mode: arize_phoenix   # none | simple | arize_phoenix | opik
+```
+
+---
+
+## Arize Phoenix
+
+[Arize Phoenix](https://phoenix.arize.com) is an open-source observability platform for LLM applications. It visualises traces, spans, token counts, latency, and retrieval quality.
+
+For installation instructions see the [Phoenix docs](https://docs.arize.com/phoenix/deployment).
+
+Put this in your settings file or in a profile such as `settings-local.yaml`. If you need to create a new settings file or profile first, see [Settings Files](/manual/settings).
+
+```yaml
+observability:
+  mode: arize_phoenix
+
+phoenix:
+  url: http://localhost:6006
+```
+
+Traces are sent to `<phoenix.url>/v1/traces` via OpenTelemetry OTLP over HTTP.
+
+---
+
+## Opik
+
+[Opik](https://www.comet.com/site/products/opik/) is an LLM observability platform by Comet. It can run fully self-hosted.
+
+For installation instructions see the [Opik docs](https://www.comet.com/docs/opik/self-host/overview).
+
+Put this in your settings file or in a profile such as `settings-local.yaml`. If you need to create a new settings file or profile first, see [Settings Files](/manual/settings).
+
+```yaml
+observability:
+  mode: opik
+
+opik:
+  host: http://localhost:5173/
+  workspace: default
+  project_name: private-gpt
+```

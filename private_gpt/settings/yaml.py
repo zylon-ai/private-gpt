@@ -23,8 +23,14 @@ def load_yaml_with_envvars(
         """Extract the matched value, expand env variable, and replace the match."""
         value = str(node.value).removeprefix("${").removesuffix("}")
         split = value.split(":", 1)
-        env_var = split[0]
-        value = environ.get(env_var)
+        env_vars = split[0].strip()
+        env_value: str | None = None
+        for env_var in env_vars.split(","):
+            env_var = env_var.strip()
+            env_value = environ.get(env_var) or env_value
+            if env_value is not None:
+                break
+        value = env_value
         default = None if len(split) == 1 else split[1]
         if value is None and default is None:
             raise ValueError(

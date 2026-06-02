@@ -1,0 +1,102 @@
+---
+title: "Object Storage"
+description: "Configure local disk or S3-compatible storage for skill files, temporary files, and other application data."
+---
+
+PrivateGPT uses an object storage backend to persist skill bundles, temporary processing files, and other application data. Two providers are supported: **local** (disk) and **S3-compatible** (any S3-compatible service — AWS S3, MinIO, Cloudflare R2, etc.).
+
+<Warning>
+  This feature requires to have the `storage` extra enabled in your application. If you are adding storage to an existing application, make sure to run the sync command after enabling the module:
+
+  ```bash
+  uv sync --inexact storage
+  ```
+</Warning>
+
+---
+
+## Local storage
+
+The default for development. Files are written to disk under a configured path.
+
+Skills use local storage when `skills.storage_provider` is set to `local`:
+
+```yaml
+skills:
+  storage_provider: local
+```
+
+Local storage paths default to `local_data/private_gpt/skills`. No additional configuration is needed.
+
+---
+
+## S3-compatible storage
+
+Set the `s3` block in `settings.yaml` (or via environment variables):
+
+```yaml
+s3:
+  endpoint_url: https://s3.amazonaws.com          # or your MinIO / R2 endpoint
+  public_endpoint_url: https://s3.amazonaws.com   # public-facing URL (can differ from endpoint_url)
+  path_prefix: ""                                 # optional key prefix for all objects
+  access_key_id: <your-access-key>
+  secret_access_key: <your-secret-key>
+  durable_bucket_name: my-app-storage             # persistent data (e.g. skill bundles)
+  temporary_bucket_name: my-app-temporary         # short-lived files (e.g. processing artifacts)
+```
+
+Then set skills to use S3:
+
+```yaml
+skills:
+  storage_provider: s3
+```
+
+### Environment variables
+
+| Variable | Description |
+|---|---|
+| `PGPT_S3_ENDPOINT_URL` | S3 endpoint URL |
+| `PGPT_S3_PUBLIC_ENDPOINT_URL` | Public-facing endpoint (for pre-signed URLs) |
+| `PGPT_S3_PATH_PREFIX` | Key prefix applied to all stored objects |
+| `PGPT_S3_ACCESS_KEY_ID` | Access key ID |
+| `PGPT_S3_SECRET_ACCESS_KEY` | Secret access key |
+| `PGPT_S3_DURABLE_BUCKET_NAME` | Bucket for persistent data (default: `zylon-storage`) |
+| `PGPT_S3_TEMPORARY_BUCKET_NAME` | Bucket for temporary data (default: `zylon-temporary`) |
+
+---
+
+## Bucket layout
+
+PrivateGPT uses two buckets with distinct retention semantics:
+
+| Bucket | Purpose | Retention |
+|---|---|---|
+| **Durable** (`durable_bucket_name`) | Skill bundles, versioned files, application state | Long-lived — do not apply aggressive lifecycle rules |
+| **Temporary** (`temporary_bucket_name`) | Intermediate processing files, upload staging | Short-lived — safe to apply a lifecycle expiry (e.g. 7 days) |
+
+---
+
+## MinIO example
+
+To use MinIO locally as an S3-compatible backend:
+
+```bash
+docker run -p 9000:9000 -p 9001:9001 \
+  -e MINIO_ROOT_USER=minioadmin \
+  -e MINIO_ROOT_PASSWORD=minioadmin \
+  minio/minio server /data --console-address ":9001"
+```
+
+```yaml
+s3:
+  endpoint_url: http://localhost:9000
+  public_endpoint_url: http://localhost:9000
+  access_key_id: minioadmin
+  secret_access_key: minioadmin
+  durable_bucket_name: privategpt-storage
+  temporary_bucket_name: privategpt-temporary
+
+skills:
+  storage_provider: s3
+```

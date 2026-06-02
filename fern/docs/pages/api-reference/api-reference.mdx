@@ -1,14 +1,44 @@
-# API Reference
+---
+title: "API Reference"
+description: "PrivateGPT REST API — endpoints, request shapes, and response formats."
+---
 
-The API is divided in two logical blocks:
+PrivateGPT exposes a REST API that follows the Claude API model. All endpoints are available at `http://localhost:8080` by default.
 
-1. High-level API, abstracting all the complexity of a RAG (Retrieval Augmented Generation) pipeline implementation:
-    - Ingestion of documents: internally managing document parsing, splitting, metadata extraction,
-      embedding generation and storage.
-    - Chat & Completions using context from ingested documents: abstracting the retrieval of context, the prompt
-      engineering and the response generation.
+The interactive reference below is generated from the OpenAPI schema. Use it to explore request bodies, response shapes, and try requests directly.
 
-2. Low-level API, allowing advanced users to implement their own complex pipelines:
-    - Embeddings generation: based on a piece of text.
-    - Contextual chunks retrieval: given a query, returns the most relevant chunks of text from the ingested
-      documents.
+---
+
+## Endpoint groups
+
+| Group | Endpoints | Description |
+|---|---|---|
+| **Messages** | `POST /v1/messages` and variants | Chat, streaming, token counting, validation, async |
+| **Models** | `GET /v1/models` | List and inspect available models |
+| **Artifacts** | `/v1/artifacts/*` | Ingest, list, retrieve, and delete documents |
+| **Embeddings** | `POST /v1/embeddings` | Generate text embeddings |
+| **Tools** | `/v1/tools/*` | Semantic search, web search, web fetch, database query, tabular analysis |
+| **Primitives** | `POST /v1/primitives/search` | Low-level chunk retrieval |
+| **Skills** | `/v1/skills/*` | Create and manage reusable instruction sets |
+
+---
+
+## Authentication
+
+When auth is enabled, pass a bearer token on every request:
+
+```bash
+curl http://localhost:8080/v1/messages \
+  -H "Authorization: Bearer <your-token>" \
+  -H "Content-Type: application/json" \
+  -d '{...}'
+```
+
+Auth is disabled by default. Enable it in `settings.yaml`:
+
+```yaml
+server:
+  auth:
+    enabled: true
+    secret: "Basic <base64-encoded-user:pass>"
+```

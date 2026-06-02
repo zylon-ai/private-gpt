@@ -1,0 +1,104 @@
+---
+title: "Docker"
+description: "Run PrivateGPT with Docker — isolated, reproducible, production-ready."
+---
+
+The published Docker image installs the `core` package by default:
+
+```text
+zylonai/private-gpt:latest
+```
+
+---
+
+## Auto mode
+
+Point PrivateGPT at your LLM server. Models are discovered automatically — no config file needed.
+
+<Steps>
+  <Step title="Start your LLM server">
+    Make sure your LLM server is running. See [Providers](/providers/overview) for setup guides.
+  </Step>
+
+  <Step title="Run the container">
+    <Tabs>
+      <Tab title="macOS / Linux">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=http://host.docker.internal:11434/v1 \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="Windows (PowerShell)">
+        ```powershell
+        docker run -p 8080:8080 `
+          -e OPENAI_API_BASE=http://host.docker.internal:11434/v1 `
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+    </Tabs>
+
+    <Note>
+      `host.docker.internal` resolves to the host machine from inside Docker on macOS and Windows. On Linux, use `--network host` and `http://localhost:11434/v1` instead.
+    </Note>
+
+    ```bash
+    # Linux alternative
+    docker run --network host \
+      -e OPENAI_API_BASE=http://localhost:11434/v1 \
+      zylonai/private-gpt:latest
+    ```
+  </Step>
+
+  <Step title="Open the UI">
+    Navigate to [http://localhost:8080/ui](http://localhost:8080/ui).
+  </Step>
+</Steps>
+
+### Passing an API key
+
+If your LLM server requires authentication:
+
+```bash
+docker run -p 8080:8080 \
+  -e OPENAI_API_BASE=http://host.docker.internal:8000/v1 \
+  -e OPENAI_API_KEY=your-api-key \
+  zylonai/private-gpt:latest
+```
+
+---
+
+## Build locally
+
+If you want to build the image from source (e.g. after code changes):
+
+<Accordion title="Build from source">
+  ```bash
+  git clone https://github.com/zylon-ai/private-gpt
+  cd private-gpt
+  docker build -t private-gpt .
+  ```
+
+  Then replace `zylonai/private-gpt:latest` with `private-gpt` in any `docker run` command above.
+
+  To add optional features when building your own image, pass explicit extras:
+
+  ```bash
+  docker build \
+    --build-arg EXTRAS="core queue observability-opik" \
+    -t private-gpt .
+  ```
+</Accordion>
+
+---
+
+## Persisting data
+
+By default, ingested documents and local data are stored inside the container and lost on restart. Mount a volume to persist them:
+
+```bash
+docker run -p 8080:8080 \
+  -e OPENAI_API_BASE=http://host.docker.internal:11434/v1 \
+  -v ./local_data:/home/worker/app/local_data \
+  zylonai/private-gpt:latest
+```

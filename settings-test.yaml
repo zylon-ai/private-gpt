@@ -9,13 +9,80 @@ data:
   local_data_folder: local_data/tests
 
 qdrant:
-  path: local_data/tests
+  path: local_data/tests/qdrant
+  url: null
+
+stream:
+  broker: memory
+
+docling:
+  mode: api
+  use_ocr: true
+  use_gpu: true
+  # Using a threshold of 0.7 to make sure only to use OCR in scanned documents
+  bitmap_area_threshold: 0.7
+  # Disable table recognition
+  table_mode: fast
+  # Disable Image recognition
+  image_mode: placeholder
+
+chat:
+  format_context_strategy: list
+  maximum_history_length: 100000
+
+vectorstore:
+  database: qdrant
+  embed_dim: 384
+  multitenancy: logical
+  default_collection: testing
+
+observability:
+  mode: none
+
+models:
+  - name: mock
+    type: llm
+    mode: mock
+    context_window: 4096
+    support_reasoning: true
+  - name: mock
+    type: embedding
+    mode: mock
+    context_window: 384
 
 llm:
-  mode: mock
+  default_model: mock
+  auto_discover_models: false
 
 embedding:
-  mode: mock
+  default_model: mock
+  auto_discover_models: false
 
-ui:
+# Make sure we don't use workers for testing. We run as a sync application.
+celery:
+  use_workers: false
+  broker_mode: local
+  backend_mode: local
+  acks_late: true
+
+
+tasks_results_broker:
+  mode: none
+
+sentry:
   enabled: false
+
+node_store:
+  index_store: simple
+  doc_store: simple
+  node_store: qdrant
+
+sandbox:
+  provider: null
+
+skills:
+  database: sqlite
+  storage_provider: local
+  skill_injection_mode: system_prompt
+  maximum_loaded_skills: 1
+

@@ -1,0 +1,43 @@
+---
+title: "Overview"
+description: "PrivateGPT implements the full Claude API, making it compatible with Claude-native tools and any local-inference-compatible client."
+---
+
+PrivateGPT implements the full Claude API, so it natively supports any tool or client that integrates with Claude — including first-party Anthropic apps like Claude Code or the MS Office Claude add-ins. Local inference providers like Ollama usually cannot power those tools because they lack certain API capabilities (structured output, tool use, tokenizer endpoints, etc.).
+
+Apart from those, PrivateGPT is also naturally compatible with all tools that integrate with local inference providers, since it exposes a standard Claude-compatible interface.
+
+---
+
+## Known integrations
+
+The following integrations have documented setup guides for PrivateGPT.
+
+<CardGroup cols={2}>
+  <Card title="Claude Code" icon="fa-solid fa-terminal" href="/integrations/claude-code">
+    Anthropic's official CLI. Route all requests through your private server instead of api.anthropic.com.
+  </Card>
+  <Card title="Claude Desktop" icon="fa-solid fa-desktop" href="/integrations/claude-desktop">
+    Connect Claude Desktop (Cowork) to your private-gpt server using third-party inference.
+  </Card>
+  <Card title="Claude for Microsoft 365" icon="fa-solid fa-file-word" href="/integrations/claude-office">
+    Connect the Claude add-ins for Word, Excel, PowerPoint, and Outlook to your private-gpt server.
+  </Card>
+  <Card title="OpenCode" icon="fa-solid fa-code" href="/integrations/opencode">
+    Open-source AI coding agent. Point it at your private-gpt server via a single config entry.
+  </Card>
+</CardGroup>
+
+---
+
+## Other integrations
+
+Any tool that works with a local OpenAI-compatible provider will work with PrivateGPT. The list below is non-exhaustive.
+
+| Tool | Link |
+|---|---|
+| OpenClaw | [openclaw.ai](https://openclaw.ai) |
+| Hermes Agent | [hermes-agent.dev](https://hermes-agent.dev) |
+| n8n | [n8n.io](https://n8n.io) |
+| VS Code | [code.visualstudio.com](https://code.visualstudio.com) |
+| Cline | [cline.bot](https://cline.bot) |
