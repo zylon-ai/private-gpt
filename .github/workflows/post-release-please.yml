@@ -36,7 +36,7 @@ jobs:
         run: |
           git config user.email "ci@zylon.ai"
           git config user.name "Zylon CI"
-          git add docs/openapi/openapi.json
+          git add fern/openapi/openapi.json
           git diff --staged --quiet || git commit -m "docs: update OpenAPI spec for ${{ steps.update-openapi.outputs.version }}"
           git push
 
