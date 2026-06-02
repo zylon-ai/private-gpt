@@ -169,6 +169,8 @@ The ambition is full Claude API feature coverage where it makes sense for a loca
 
 ## PrivateGPT vs Zylon.ai
 
+<a href="https://www.zylon.ai/" target="_blank"><img src="./fern/docs/assets/zylon_banner.png" width="456" height="149"/></a>
+
 PrivateGPT is maintained by the team behind Zylon.ai.
 
 PrivateGPT is the open-source application API layer.
