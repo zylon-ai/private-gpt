@@ -56,7 +56,7 @@ The guides below cover popular self-hosted options. These are examples — not a
   - Inaccurate context-window management on very long inputs
   - Potential context overflow for models with smaller windows (e.g. 4k, 8k)
 
-  **Mitigation:** Set `context_window` explicitly in a [detailed model profile](/manual/advanced) to a conservative value. This tells PrivateGPT exactly how many tokens it can safely use.
+  **Mitigation:** Set `context_window` explicitly in a [detailed model profile](/configuration/advanced) to a conservative value. This tells PrivateGPT exactly how many tokens it can safely use.
 </Warning>
 
 ### Structured output
@@ -79,7 +79,7 @@ The provider pages use the following models as examples. Any OpenAI-compatible m
 ## Embedding auto-discovery
 
 <Note>
-  Embedding models are auto-discovered from `/v1/models` when `embedding.auto_discover_models` is enabled, which is the default behavior. You only need to define embedding models explicitly in a [detailed model profile](/manual/advanced) if you want to override discovery or your provider does not expose them as expected.
+  Embedding models are auto-discovered from `/v1/models` when `embedding.auto_discover_models` is enabled, which is the default behavior. You only need to define embedding models explicitly in a [detailed model profile](/configuration/advanced) if you want to override discovery or your provider does not expose them as expected.
 </Note>
 
 Example manual embedding model config in `settings-model.yaml`:

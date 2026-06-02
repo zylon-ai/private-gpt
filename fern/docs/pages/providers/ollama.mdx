@@ -10,7 +10,7 @@ description: "Run local LLMs with Ollama — the easiest way to get started with
 <Warning>
   Ollama does **not** expose a tokenizer endpoint (`/tokenize`). PrivateGPT falls back to a character-based estimate (4 chars = 1 token) for token counting. This can cause context-window overflow on long inputs.
 
-  **Recommendation:** Set `context_window` explicitly in a [detailed model profile](/manual/advanced) to match your model's actual limit. By default, Ollama assumes the following context window based on the VRAM:
+  **Recommendation:** Set `context_window` explicitly in a [detailed model profile](/configuration/advanced) to match your model's actual limit. By default, Ollama assumes the following context window based on the VRAM:
 
   < 24 GiB VRAM: 4k context
   24-48 GiB VRAM: 32k context

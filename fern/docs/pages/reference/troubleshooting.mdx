@@ -50,7 +50,7 @@ docker run --network host \
 
 **Cause:** Without a tokenizer endpoint (Ollama), PrivateGPT estimates token count at 4 chars = 1 token, which can be inaccurate.
 
-**Fix:** Set `context_window` explicitly in a [detailed model profile](/manual/advanced) to a value below the model's actual limit:
+**Fix:** Set `context_window` explicitly in a [detailed model profile](/configuration/advanced) to a value below the model's actual limit:
 
 ```yaml
 models:
