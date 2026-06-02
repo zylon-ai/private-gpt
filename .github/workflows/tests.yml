@@ -11,14 +11,37 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run_ci: ${{ steps.filter.outputs.run_ci }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            run_ci:
+              - 'private_gpt/**'
+              - 'tests/**'
+              - 'scripts/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - 'Makefile'
+              - 'Dockerfile'
+              - '.github/workflows/tests.yml'
+
   setup:
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.run_ci == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/workflows/actions/install_dependencies
 
   checks:
-    needs: setup
+    needs: [changes, setup]
+    if: github.event_name != 'pull_request' || needs.changes.outputs.run_ci == 'true'
     runs-on: ubuntu-latest
     name: ${{ matrix.quality-command }}
     strategy:
@@ -34,7 +57,8 @@ jobs:
         run: make ${{ matrix.quality-command }}
 
   test:
-    needs: setup
+    needs: [changes, setup]
+    if: github.event_name != 'pull_request' || needs.changes.outputs.run_ci == 'true'
     runs-on: ubuntu-latest
     name: test
     steps:
@@ -60,8 +84,15 @@ jobs:
   all_checks_passed:
     # Used to easily force requirements checks in GitHub
     needs:
+      - changes
       - checks
       - test
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: echo "All checks passed"
+      - run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ needs.changes.outputs.run_ci }}" != "true" ]; then
+            echo "No source changes detected; skipping CI checks."
+          else
+            echo "All checks passed"
+          fi
