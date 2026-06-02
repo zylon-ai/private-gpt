@@ -145,7 +145,7 @@ storage = [
 # ---------------------------------------------------------------------------
 vectorstore-qdrant = [
     "llama-index-vector-stores-qdrant",
-    "qdrant-client>=1.17.1,<2",
+    "qdrant-client==1.17.1",
 ]
 nodestore-postgres = [
     "private-gpt[database-postgres]",

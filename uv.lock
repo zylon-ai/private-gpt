@@ -3696,7 +3696,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.26" },
     { name = "python-pptx", marker = "extra == 'ingest-documents'", specifier = ">=1.0.2,<2" },
     { name = "pyyaml", specifier = ">=6.0.3,<7" },
-    { name = "qdrant-client", marker = "extra == 'vectorstore-qdrant'", specifier = ">=1.17.1,<2" },
+    { name = "qdrant-client", marker = "extra == 'vectorstore-qdrant'", specifier = "==1.17.1" },
     { name = "redis", marker = "extra == 'redis-core'", specifier = ">=5.0.1,<6" },
     { name = "redis-semaphore-async", marker = "extra == 'redis'", specifier = ">=0.0.4" },
     { name = "requests", specifier = ">=2.33.0,<3" },
