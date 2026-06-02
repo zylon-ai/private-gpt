@@ -1,0 +1,146 @@
+---
+title: "Introduction"
+description: "PrivateGPT is the open-source Claude API-compatible layer for building private AI applications on top of any local or self-hosted model server."
+---
+
+**PrivateGPT turns local inference into a real application backend**. It sits above any OpenAI-compatible model server and provides the higher-level capabilities modern AI products need: messages, model selection, file ingestion, retrieval with citations, tool use, database querying, CSV and tabular analysis, web search and extraction, MCP, skills, code execution, custom tools, token counting, embeddings, and async workflows.
+
+The goal of the project is to bring a Claude-style application API to your own infrastructure, so you can build private AI products without depending on cloud AI APIs.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="fa-solid fa-rocket" href="/quickstart/quickstart">
+    Get PrivateGPT running in under 5 minutes.
+  </Card>
+  <Card title="How it works" icon="fa-solid fa-gears" href="/manual/how-it-works">
+    Startup flow, profiles, and env vars.
+  </Card>
+  <Card title="API Guide" icon="fa-solid fa-book" href="/api-guide/messages">
+    Guided examples over the API.
+  </Card>
+  <Card title="API Reference" icon="fa-solid fa-code" href="/api-reference/api-reference">
+    Explore all REST endpoints in detail.
+  </Card>
+  <Card title="Workbench" icon="fa-solid fa-window-maximize" href="/ui/workbench">
+    Ready to test PrivateGPT UI.
+  </Card>
+  <Card title="Discord" icon="fa-brands fa-discord" href="https://discord.gg/bK6mRVpErU">
+    Join the community.
+  </Card>
+</CardGroup>
+
+---
+
+## Why PrivateGPT?
+
+Running a model locally is only the first step, but it is not enough.
+
+To build useful AI applications you need a set of high-level building blocks. PrivateGPT provides that layer as an open-source API following the Claude API model, covering:
+
+- A standard messages API
+- Files and artifact ingestion
+- Retrieval with citations, agentic RAG
+- Built-in tools, mapping those offered by Claude API
+- Custom tools support
+- MCP connectors
+- Structured access to databases and CSVs
+- Web search and extraction
+- Code execution
+- Token counting, embeddings, and orchestration
+
+PrivateGPT does **not** run models itself. It connects to an external OpenAI-compatible inference server via `OPENAI_API_BASE`. Any server that implements `/v1/chat/completions` and `/v1/models` works — local or remote.
+
+```
+Your app / agent / workflow / UI
+              |
+        PrivateGPT API
+              |
+    Self-hosted LLM Server
+```
+
+PrivateGPT ships with a built-in UI for testing purposes, available at /ui.
+
+---
+
+## PrivateGPT vs Ollama, LM Studio, vLLM, llama.cpp
+
+PrivateGPT does not replace local inference providers. It complements them.
+
+Projects like Ollama, LM Studio, vLLM, and llama.cpp make it possible to run and serve models locally. They answer the question: *how do I run a model?*
+
+PrivateGPT answers the next question: *how do I build a useful AI application on top of that model?*
+
+```
+PrivateGPT                             =  local AI application API layer
+Ollama / LM Studio / vLLM / llama.cpp  =  local inference layer
+```
+
+Use both together: run your model with the inference server you prefer, then use PrivateGPT as the Claude-style backend for your application.
+See [Providers](/providers/overview) for a comparison of common local inference setups.
+
+---
+
+## PrivateGPT vs Onyx, Open WebUI
+
+Onyx and Open WebUI are valuable projects solving a different problem — they are app-first experiences focused on chat and enterprise search.
+
+PrivateGPT is API-first. It is not trying to be a final workspace or ChatGPT-style interface. It gives developers the standardized local backend underneath those products: a Claude API-compatible layer for messages, files, retrieval, citations, tools, data analysis, MCP, skills, and custom tools.
+
+```
+Onyx / Open WebUI  =  self-hosted AI applications
+PrivateGPT         =  API layer for building self-hosted AI applications
+```
+
+The lightweight UI included with PrivateGPT exists to help you test the API and explore capabilities. The API is the actual product.
+
+---
+
+## Claude API compatibility
+
+PrivateGPT follows the Claude API model as the clearest reference for modern AI application APIs. The goal is full feature coverage where it makes sense for a local, open-source application layer.
+
+| Area | Capability | Claude API | PrivateGPT |
+|---|---|:---:|:---:|
+| Models | Model selection | ✅ | ✅ |
+| Messages | Messages API | ✅ | ✅ |
+| Messages | Streaming | ✅ | ✅ |
+| Messages | Batch / async processing | ✅ | ✅ async |
+| Messages | Token counting | ✅ | ✅ |
+| Knowledge | Files / artifacts | ✅ | ✅ |
+| Knowledge | PDF and document ingestion | ✅ | ✅ |
+| Knowledge | Retrieval with citations | ✅ | ✅ |
+| Knowledge | Embeddings | ✅ | ✅ |
+| Tools | Tool use | ✅ | ✅ |
+| Tools | Tools in streaming | ✅ | ✅ |
+| Tools | Built-in web search | ✅ | ✅ |
+| Tools | Web extraction / fetch | ✅ | ✅ |
+| Tools | Custom tools | ✅ | ✅ |
+| Data | Database querying | Via tools | ✅ built-in |
+| Data | CSV / tabular analysis | Via tools / code | ✅ built-in |
+| Agents | MCP in the API | ✅ | ✅ |
+| Agents | Remote MCP servers | ✅ | ✅ |
+| Agents | Skills | ✅ | ✅ basic |
+| Output | Structured outputs | ✅ | ✅ inference-dependent|
+| Models | Vision | ✅ | ✅ model-dependent |
+| Optimization | Prompt caching | ✅ | ❌ |
+| Reasoning | Extended thinking | ✅ | ✅ |
+| Platform | Token-based auth | ✅ | ✅ |
+| Platform | OAuth / organizations | ✅ | ❌ |
+
+✅ Supported · ⚠️ Partial / in progress · ❌ Not supported
+
+Contributions are especially welcome in areas marked ⚠️.
+
+---
+
+## PrivateGPT vs Zylon
+
+PrivateGPT is maintained by the team behind [Zylon](https://zylon.ai).
+
+**PrivateGPT** is the open-source application API layer — messages, ingestion, tools, retrieval, citations, database access, tabular analysis, MCP, skills, and custom tools.
+
+**Zylon** turns that layer into a complete production platform for regulated organizations: integrated inference server, Kubernetes deployment, API gateway, Dev platform, Workspace application for end users, Agents builder, LDAP, SIEM audit logs, SharePoint/Confluence/FTP connectors, and more than 20 production services packaged together.
+
+<Tip>
+  Use **PrivateGPT** if you want the open-source local AI application layer and developer API. Use **Zylon** if you need the full enterprise platform around it.
+  [Learn more at zylon.ai](https://zylon.ai) or [book a demo](https://cal.com/zylon/demo?source=privategptdocs).
+</Tip>

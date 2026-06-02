@@ -1,0 +1,96 @@
+---
+title: "Overview"
+description: "PrivateGPT works with any OpenAI-compatible server. This page covers common local setups."
+---
+
+PrivateGPT connects to **any OpenAI-compatible LLM server** via `OPENAI_API_BASE`. If your server responds to `GET /v1/models` and `POST /v1/chat/completions`, it works — whether that is a local binary, a cloud endpoint, or a self-hosted service.
+
+```bash
+OPENAI_API_BASE=https://your-openai-compatible-server/v1 private-gpt serve
+```
+
+The server handles model inference; PrivateGPT handles the API, retrieval, document processing, and orchestration on top.
+
+---
+
+## Common local setups
+
+The guides below cover popular self-hosted options. These are examples — not an exhaustive list.
+
+<CardGroup cols={2}>
+  <Card title="Ollama" icon="fa-solid fa-box" href="/providers/ollama">
+    Easiest local setup. One command to pull and run any model.
+  </Card>
+  <Card title="LM Studio" icon="fa-solid fa-desktop" href="/providers/lmstudio">
+    GUI-based desktop app. Great for exploring and switching models without a terminal.
+  </Card>
+  <Card title="LlamaCPP Server" icon="fa-solid fa-microchip" href="/providers/llamacpp">
+    Lightweight binary, full tokenizer support. Best for CPU inference and GGUF models.
+  </Card>
+  <Card title="vLLM" icon="fa-solid fa-bolt" href="/providers/vllm">
+    Highest throughput. Structured output support. Best for production and multi-user deployments.
+  </Card>
+</CardGroup>
+
+---
+
+## Feature matrix
+
+| Capability | Ollama | LM Studio | LlamaCPP Server | vLLM |
+|---|:---:|:---:|:---:|:---:|
+| Model discovery (`/v1/models`) | ✅ | ✅ | ✅ | ✅ |
+| Tokenizer endpoint (`/tokenize`) | ❌ | ✅ | ✅ | ✅ |
+| Embeddings endpoint | ✅ | ✅ | ✅ | ✅ |
+| Tool / function calling | ✅ † | ✅ † | ✅ † | ✅ † |
+| Structured output (JSON schema) | ❌ | ❌ | ❌ | ✅ |
+| Streaming | ✅ | ✅ | ✅ | ✅ |
+| Vision / image input | ✅ † | ✅ † | ✅ † | ✅ † |
+| Audio input | ⚠️ Limited | ❌ | ❌ | ❌ |
+
+† Model-dependent — the server supports the protocol, but the loaded model must also support the capability.
+
+### Impact of a missing tokenizer endpoint
+
+<Warning>
+  When the server does not expose `/tokenize` (Ollama), PrivateGPT falls back to a **character-based estimate (4 chars = 1 token)** for counting tokens. This can cause:
+  - Inaccurate context-window management on very long inputs
+  - Potential context overflow for models with smaller windows (e.g. 4k, 8k)
+
+  **Mitigation:** Set `context_window` explicitly in a [detailed model profile](/manual/advanced) to a conservative value. This tells PrivateGPT exactly how many tokens it can safely use.
+</Warning>
+
+### Structured output
+
+Only **vLLM** exposes the structured output (JSON schema enforcement) endpoint used by PrivateGPT for reliable tool calls and schema-constrained responses. With other providers, PrivateGPT falls back to prompt-based JSON extraction, which is less reliable for complex schemas.
+
+---
+
+## Example models
+
+The provider pages use the following models as examples. Any OpenAI-compatible model works.
+
+| Role | Model | Size | Notes |
+|---|---|---|---|
+| LLM | `qwen3.5:35b` (Ollama) / `unsloth/Qwen3.5-35B-A3B-GGUF` (GGUF) / `Qwen/Qwen3.5-35B-A3B-GPTQ-Int4` (vLLM) | ~24 GB (Ollama) / ~18 GB (Q4 GGUF) | Mixture-of-experts; strong reasoning and tool use |
+| Embeddings | `mxbai-embed-large` (Ollama) / `mixedbread-ai/mxbai-embed-large-v1` | ~670 MB | 1024-dim, strong multilingual retrieval |
+
+---
+
+## Embedding auto-discovery
+
+<Note>
+  Embedding models are auto-discovered from `/v1/models` when `embedding.auto_discover_models` is enabled, which is the default behavior. You only need to define embedding models explicitly in a [detailed model profile](/manual/advanced) if you want to override discovery or your provider does not expose them as expected.
+</Note>
+
+Example manual embedding model config in `settings-model.yaml`:
+
+```yaml
+embedding:
+  default_model: mxbai-embed-large
+
+models:
+  - name: mxbai-embed-large
+    type: embedding
+    mode: openai
+    context_window: 512
+```

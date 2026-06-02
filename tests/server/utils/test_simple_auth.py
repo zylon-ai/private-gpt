@@ -43,15 +43,16 @@ def _patch_authenticated_dependency(test_client: TestClient):
 
 
 def test_default_auth_working_when_enabled_401(test_client: TestClient) -> None:
-    response = test_client.get("/v1/ingest/list")
+    response = test_client.get("/v1/artifacts/list?collection=default")
     assert response.status_code == 401
 
 
 def test_default_auth_working_when_enabled_200(test_client: TestClient) -> None:
-    response_fail = test_client.get("/v1/ingest/list")
+    response_fail = test_client.get("/v1/artifacts/list?collection=default")
     assert response_fail.status_code == 401
 
     response_success = test_client.get(
-        "/v1/ingest/list", headers={"Authorization": settings().server.auth.secret}
+        "/v1/artifacts/list?collection=default",
+        headers={"Authorization": settings().server.auth.secret},
     )
     assert response_success.status_code == 200

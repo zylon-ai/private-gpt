@@ -8,7 +8,7 @@ from injector import Provider, ScopeDecorator, singleton
 from private_gpt.di import create_application_injector
 from private_gpt.settings.settings import Settings, unsafe_settings
 from private_gpt.settings.settings_loader import merge_settings
-from private_gpt.utils.typing import T
+from private_gpt.utils.custom_typing import T
 
 
 class MockInjector:

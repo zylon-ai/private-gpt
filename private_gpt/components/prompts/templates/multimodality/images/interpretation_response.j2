@@ -1,0 +1,13 @@
+{% if extraction_type == "picture" %}
+{% if image_description %}
+![{{ content }}]()
+{% else %}
+*[No useful insights found in the images]*
+{% endif %}
+{% else %}
+{% if content %}
+{{ content }}
+{% else %}
+*[The image does not contain any extractable content]*
+{% endif %}
+{% endif %}

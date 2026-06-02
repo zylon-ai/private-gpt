@@ -2,29 +2,162 @@ name: generate-release
 
 on:
   release:
-    types: [ published ]
+    types: [published]
   workflow_dispatch:
 
 env:
   REGISTRY: docker.io
   IMAGE_NAME: zylonai/private-gpt
+  HOMEBREW_TAP_REPOSITORY: zylon-ai/homebrew-tap
+  RELEASE_PACKAGE_EXTRA: "core"
+  PACKAGE_INDEX_BRANCH: gh-pages
+  PACKAGE_FILES_URL: https://zylon-ai.github.io/private-gpt/packages/
   platforms: linux/amd64,linux/arm64
-  DEFAULT_TYPE: "ollama"
-
 jobs:
-  build-and-push-image:
+  build-and-publish-package:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        type: [ llamacpp-cpu, ollama ]
+    permissions:
+      contents: write
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      source_url: ${{ steps.source.outputs.source_url }}
+      source_sha256: ${{ steps.source.outputs.source_sha256 }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install UV and set Python version
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+
+      - name: Resolve release version
+        id: version
+        run: |
+          version="$(python - <<'PY'
+          import tomllib
+          with open("pyproject.toml", "rb") as f:
+              print(tomllib.load(f)["project"]["version"])
+          PY
+          )"
+
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag_version="${GITHUB_REF_NAME#v}"
+            if [ "$tag_version" != "$version" ]; then
+              echo "Release tag version ($tag_version) does not match pyproject version ($version)" >&2
+              exit 1
+            fi
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build package
+        run: uv build
+
+      - name: Upload built distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Upload distributions to GitHub release
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
+
+      - name: Compute source archive metadata
+        id: source
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            source_url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          else
+            source_url="https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+          fi
+
+          curl -fsSL "$source_url" -o source.tar.gz
+          source_sha256="$(sha256sum source.tar.gz | cut -d' ' -f1)"
+
+          echo "source_url=$source_url" >> "$GITHUB_OUTPUT"
+          echo "source_sha256=$source_sha256" >> "$GITHUB_OUTPUT"
+
+  publish-package-index:
+    if: github.event_name == 'release'
+    needs: build-and-publish-package
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download built distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist
+
+      - name: Prepare package index branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir site
+          cd site
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if git ls-remote --exit-code --heads origin "${PACKAGE_INDEX_BRANCH}" >/dev/null 2>&1; then
+            git fetch --depth=1 origin "${PACKAGE_INDEX_BRANCH}"
+            git checkout -b "${PACKAGE_INDEX_BRANCH}" "origin/${PACKAGE_INDEX_BRANCH}"
+          else
+            git checkout --orphan "${PACKAGE_INDEX_BRANCH}"
+          fi
+
+      - name: Update package files
+        run: |
+          mkdir -p site/packages
+          cp dist/* site/packages/
+
+      - name: Build package index
+        run: |
+          python scripts/build_pip_index.py \
+            --package-dir site/packages \
+            --output-dir site \
+            --extra "${{ env.RELEASE_PACKAGE_EXTRA }}"
+
+      - name: Commit and push package index
+        working-directory: site
+        run: |
+          git add .
+
+          if git diff --cached --quiet; then
+            echo "No package index changes detected"
+            exit 0
+          fi
+
+          git commit -m "package index ${{ needs.build-and-publish-package.outputs.version }}"
+          git push origin "${PACKAGE_INDEX_BRANCH}"
+
+  build-and-push-image:
+    needs: build-and-publish-package
+    runs-on: ubuntu-latest
 
     permissions:
       contents: read
       packages: write
-
-    outputs:
-      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -59,11 +192,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}},enable=${{ matrix.type == env.DEFAULT_TYPE }}
-            type=semver,pattern={{version}}-${{ matrix.type }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.type == env.DEFAULT_TYPE }}
-            type=semver,pattern={{major}}.{{minor}}-${{ matrix.type }}
-            type=raw,value=latest,enable=${{ matrix.type == env.DEFAULT_TYPE }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
             type=sha
           flavor: |
             latest=false
@@ -72,12 +203,64 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.${{ matrix.type }}
+          file: Dockerfile
+          build-args: EXTRAS=${{ env.RELEASE_PACKAGE_EXTRA }}
           platforms: ${{ env.platforms }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Version output
-        id: version
-        run: echo "version=${{ steps.meta.outputs.version }}" >> "$GITHUB_OUTPUT"
+  update-homebrew-tap:
+    if: github.event_name == 'release'
+    needs:
+      - build-and-publish-package
+      - publish-package-index
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generate Homebrew formula
+        run: |
+          python scripts/generate_homebrew_formula.py \
+            --version "${{ needs.build-and-publish-package.outputs.version }}" \
+            --source-url "${{ needs.build-and-publish-package.outputs.source_url }}" \
+            --sha256 "${{ needs.build-and-publish-package.outputs.source_sha256 }}" \
+            --extra "${{ env.RELEASE_PACKAGE_EXTRA }}" \
+            --package-files-url "${{ env.PACKAGE_FILES_URL }}" \
+            --output private-gpt.rb
+
+      - name: Checkout tap repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.HOMEBREW_TAP_REPOSITORY }}
+          token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          path: tap
+
+      - name: Update formula
+        run: |
+          mkdir -p tap/Formula
+          mv private-gpt.rb tap/Formula/private-gpt.rb
+
+      - name: Commit and push formula update
+        working-directory: tap
+        run: |
+          if git diff --quiet -- Formula/private-gpt.rb; then
+            echo "No tap changes detected"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/private-gpt.rb
+          git commit -m "private-gpt ${{ needs.build-and-publish-package.outputs.version }}"
+          git push

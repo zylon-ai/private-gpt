@@ -1,12 +1,19 @@
 .venv
 .env
-venv
+.uv-cache
+.dist
+
+./models/**
+tiktoken_cache
+local_data/
 
 settings-me.yaml
 
 .ruff_cache
 .pytest_cache
 .mypy_cache
+.dmypy.json
+control/**
 
 # byte-compiled / optimized / DLL files
 __pycache__/
@@ -29,3 +36,15 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# Celery
+celery_backend.db
+celery_flower.db
+celery.exchange
+celery.pidbox.exchange
+
+# Coverage
+.coverage.*
+
+# Websearch cache
+.cache/

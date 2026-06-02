@@ -4,12 +4,15 @@ import argparse
 import logging
 from pathlib import Path
 
-from private_gpt.di import global_injector
+from private_gpt.di import get_global_injector
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.server.ingest.ingest_watcher import IngestWatcher
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
+
+
+COLLECTION = "collection"
 
 
 class LocalIngestWorker:
@@ -59,7 +62,13 @@ class LocalIngestWorker:
 
     def _ingest_all(self, files_to_ingest: list[Path]) -> None:
         logger.info("Ingesting files=%s", [f.name for f in files_to_ingest])
-        self.ingest_service.bulk_ingest([(str(p.name), p) for p in files_to_ingest])
+        self.ingest_service.bulk_ingest(
+            collection=COLLECTION,
+            files=[
+                (path, path.name, {"file_name": str(path.name)})
+                for path in files_to_ingest
+            ],
+        )
 
     def ingest_on_watch(self, changed_path: Path) -> None:
         logger.info("Detected change in at path=%s, ingesting", changed_path)
@@ -69,7 +78,16 @@ class LocalIngestWorker:
         try:
             if changed_path.exists():
                 logger.info(f"Started ingesting file={changed_path}")
-                self.ingest_service.ingest_file(changed_path.name, changed_path)
+                self.ingest_service.bulk_ingest(
+                    collection=COLLECTION,
+                    files=[
+                        (
+                            changed_path,
+                            changed_path.name,
+                            {"file_name": str(changed_path.name)},
+                        )
+                    ],
+                )
                 logger.info(f"Completed ingesting file={changed_path}")
         except Exception:
             logger.exception(
@@ -116,6 +134,7 @@ if __name__ == "__main__":
     if not root_path.exists():
         raise ValueError(f"Path {args.folder} does not exist")
 
+    global_injector = get_global_injector()
     ingest_service = global_injector.get(IngestService)
     settings = global_injector.get(Settings)
     worker = LocalIngestWorker(ingest_service, settings)

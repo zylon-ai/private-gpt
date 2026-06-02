@@ -1,0 +1,139 @@
+---
+title: "Model Configuration"
+description: "Generate and use settings profiles to configure models in detail, including tokenizer, context window, tool support, reasoning, and sampling."
+---
+
+Use a model profile when you need more detailed control over model behavior than auto-discovery provides.
+
+This workflow lets you configure model-specific settings such as:
+
+- `context_window`
+- `tokenizer`
+- tool support
+- reasoning support
+- image support
+- sampling parameters
+
+Use it when you want PrivateGPT to know the exact limits and capabilities of each model, or when you need to override what your provider exposes automatically.
+
+This workflow is supported from the source-based [Local with uv](/manual/local) install:
+
+1. Generate `settings-model.yaml` from your running LLM server.
+2. Edit the generated profile.
+3. Start PrivateGPT with `PGPT_PROFILES=model`.
+
+---
+
+## Generate a model profile
+
+Generate a profile from the models exposed by your OpenAI-compatible server:
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    OPENAI_API_BASE=http://localhost:11434/v1 \
+      make auto-discover-models
+    # or directly:
+    OPENAI_API_BASE=http://localhost:11434/v1 \
+      uv run python scripts/auto_discover_models.py --out settings-model.yaml
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    $env:OPENAI_API_BASE = "http://localhost:11434/v1"
+    uv run python scripts/auto_discover_models.py --out settings-model.yaml
+    ```
+  </Tab>
+  <Tab title="Windows (CMD)">
+    ```cmd
+    set OPENAI_API_BASE=http://localhost:11434/v1
+    uv run python scripts/auto_discover_models.py --out settings-model.yaml
+    ```
+  </Tab>
+</Tabs>
+
+This creates `settings-model.yaml` with all discovered models as a starting point for detailed configuration.
+
+<Note>
+  Start from [Local with uv](/manual/local) first. Local tokenizer support requires `private-gpt[tokenizer-local]` or `private-gpt[core]`.
+</Note>
+
+---
+
+## Edit model settings
+
+Open `settings-model.yaml` and adjust the fields you care about. This is where you explicitly define how PrivateGPT should treat each model. Example:
+
+```yaml
+llm:
+  default_model: qwen3.5:35b
+
+embedding:
+  default_model: mxbai-embed-large
+
+models:
+  - name: qwen3.5:35b
+    type: llm
+    mode: openai
+    context_window: 32768
+    tokenizer: Qwen/Qwen3.5-35B-A3B
+    support_tools: true
+    support_reasoning: true
+    support_image: 0
+    sampling_params:
+      temperature: 0.6
+      top_p: 0.95
+      top_k: 20
+      min_p: 0.0
+
+  - name: mxbai-embed-large
+    type: embedding
+    mode: openai
+    context_window: 512
+```
+
+<Expandable title="Key fields reference">
+  | Field | Description |
+  |---|---|
+  | `context_window` | Maximum tokens the model can process. Set explicitly to avoid overflow. |
+  | `support_tools` | Enable function and tool calling. Use the specific tool extra you need, or `private-gpt[tools]` as the bundle fallback. `private-gpt[core]` also includes that bundle. |
+  | `tokenizer` | HuggingFace repo ID for exact token counting (for example `Qwen/Qwen3.5-35B-A3B`). Requires `private-gpt[tokenizer-local]` or `private-gpt[core]`. Falls back to a character-based estimate if omitted. |
+  | `support_reasoning` | Enable extended thinking or reasoning mode. |
+  | `support_image` | Number of images per request the model accepts (`0` = disabled). |
+  | `sampling_params.temperature` | Randomness (`0` = deterministic, `1` = more creative). |
+  | `sampling_params.top_p` | Nucleus sampling probability mass. |
+</Expandable>
+
+---
+
+## Run with the profile
+
+Once `settings-model.yaml` exists, start PrivateGPT with `PGPT_PROFILES=model`.
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    OPENAI_API_BASE=http://localhost:11434/v1 \
+      PGPT_PROFILES=model \
+      uv run python -m private_gpt
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    $env:OPENAI_API_BASE = "http://localhost:11434/v1"
+    $env:PGPT_PROFILES = "model"
+    uv run python -m private_gpt
+    ```
+  </Tab>
+  <Tab title="Windows (CMD)">
+    ```cmd
+    set OPENAI_API_BASE=http://localhost:11434/v1
+    set PGPT_PROFILES=model
+    uv run python -m private_gpt
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  `PGPT_PROFILES=model` tells PrivateGPT to load `settings-model.yaml` on top of the base config. Profile files follow the naming convention `settings-{name}.yaml`.
+</Note>

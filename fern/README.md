@@ -1,39 +1,25 @@
-# Documentation of PrivateGPT
+# Fern Docs
 
-The documentation of this project is being rendered thanks to [fern](https://github.com/fern-api/fern).
+This folder contains the Fern configuration and the checked-in documentation pages for the root repository.
 
-Fern is basically transforming your `.md` and `.mdx` files into a static website: your documentation.
+Most page content mirrors the newer docs content from the sibling `private-gpt` checkout, but the published site for this repo is driven from `fern/docs.yml` and `fern/openapi/openapi.json`.
 
-The configuration of your documentation is done in the `./docs.yml` file.
-There, you can configure the navbar, tabs, sections and pages being rendered.
+## Common tasks
 
-The documentation of fern (and the syntax of its configuration `docs.yml`) is 
-available there [docs.buildwithfern.com](https://docs.buildwithfern.com/).
+- Refresh the OpenAPI spec: run `make api-docs` from the repo root.
+- Validate the Fern config locally: run `cd fern && fern check`.
+- Update navigation: edit `fern/docs.yml`.
 
-## How to run fern
+## Adding a page
 
-**You cannot render your documentation locally without fern credentials.**
-
-To see how your documentation looks like, you **have to** use the CICD of this
-repository (by opening a PR, CICD job will be executed, and a preview of 
-your PR's documentation will be deployed in vercel automatically, through fern).
-
-The only thing you can do locally, is to run `fern check`, which check the syntax of
-your `docs.yml` file.
-
-## How to add a new page
-Add in the `docs.yml` a new `page`, with the following syntax:
+Add the page file under `fern/docs/pages/...`, then register it in `fern/docs.yml`:
 
 ```yml
 navigation:
-  # ...
-  - tab: my-existing-tab
+  - tab: manual
     layout:
-      # ...
-      - section: My Existing Section
+      - section: My Section
         contents:
-          # ...
-          - page: My new page display name
-            # The path of the page, relative to `fern/`
-            path: ./docs/pages/my-existing-tab/new-page-content.mdx
+          - page: My page
+            path: ./docs/pages/manual/my-page.mdx
 ```

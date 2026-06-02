@@ -1,0 +1,100 @@
+---
+title: "Claude for Microsoft 365"
+description: "Connect the Claude add-ins for Word, Excel, PowerPoint, and Outlook to your private-gpt server."
+---
+
+<Warning>
+  This page was last updated and tested on **2026-06-02**. Claude Desktop updates can change configuration fields or UI labels without notice — if something stops working, check this page for an updated guide.
+
+  Please verify that your context window is more than 40k tokens to use it. Otherwise, you may encounter errors or degraded performance. If your model supports a smaller context window, consider using a compatible model or adjusting your configuration accordingly.
+</Warning>
+
+The official Claude add-ins for Word, Excel, PowerPoint, and Outlook support third-party LLM gateways. Because `private-gpt` exposes a native Anthropic-compatible API, it works as a drop-in gateway — no adapter or proxy needed.
+
+For the official Anthropic documentation, see [Use Claude for Microsoft 365 with third-party platforms](https://support.claude.com/en/articles/13945233-use-claude-for-microsoft-365-with-third-party-platforms).
+
+## Compatibility
+
+Tested against `private-gpt` on 2026-05-27.
+
+| Feature | Status | Notes |
+|---|:---:|---|
+| Chat with documents, spreadsheets, decks | ✅ | |
+| Read / edit cells, slides, formulas | ✅ | |
+| File uploads | ✅ | |
+| Skills | ✅ | |
+| MCP connectors | ✅ | |
+| Financial connectors (S&P, FactSet) | ✅ | Requires MCP connectors configured to proxy those APIs |
+| Web search | ✅ | Requires MCP connectors configured to proxy search APIs |
+| Working across apps | ❌ | Requires a Claude account |
+
+---
+
+## Prerequisites
+
+- Claude add-ins installed from [Microsoft AppSource](https://appsource.microsoft.com) or deployed by your IT admin
+- Microsoft 365 with Entra ID
+- `private-gpt` server running and reachable from end-user machines (see [serve](/manual/cli#serve))
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Open the add-in">
+    Launch the Claude add-in from the ribbon in Word, Excel, PowerPoint, or Outlook.
+  </Step>
+
+  <Step title="Select Enterprise gateway">
+    On the connection screen choose **Enterprise gateway**.
+  </Step>
+
+  <Step title="Enter gateway details">
+    | Field | Value |
+    |---|---|
+    | Gateway URL | `http://localhost:<port>/<root_path>` |
+    | API token | `server.auth.secret` (any value if auth is disabled) |
+
+    If `root_path` is empty:
+
+    ```
+    http://localhost:8080
+    ```
+
+    The add-in tests the connection automatically. Credentials are stored locally in the browser sandbox and never sent to Anthropic.
+  </Step>
+
+  <Step title="Pick your model">
+    The add-in discovers available models from `GET /v1/models`. Select the model you want to use.
+  </Step>
+</Steps>
+
+---
+
+## CORS
+
+The add-in calls `private-gpt` directly from the browser, so your server must allow the origin. The required origin may change between Claude Desktop versions — using a wildcard is the safest default:
+
+```yaml
+server:
+  cors:
+    enabled: true
+    allow_origins:
+      - "*"
+```
+
+If you prefer to restrict the origin, check the exact value in the network tab of your browser's developer tools when the add-in connects.
+
+---
+
+## Troubleshooting
+
+| Error | Cause & Fix |
+|---|---|
+| Connection refused / network error | Verify the gateway URL is reachable from the user's machine; check firewall or VPN |
+| 401 Unauthorized | Invalid or expired token — confirm `server.auth.secret` is correct |
+| 403 Forbidden | Token valid but server returned forbidden — check auth settings |
+| 404 Not found | Use the base URL without a path suffix (e.g. `http://localhost:8080`, not `/v1/messages`) |
+| No models available | Confirm `GET /v1/models` returns a non-empty list |
+| Streaming fails | Verify your reverse proxy (if any) passes Server-Sent Events through without buffering |
+| CORS error in browser console | Set `server.cors.allow_origins: ["*"]` and restart |

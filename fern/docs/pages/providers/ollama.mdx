@@ -1,0 +1,164 @@
+---
+title: "Ollama"
+description: "Run local LLMs with Ollama — the easiest way to get started with PrivateGPT."
+---
+
+[Ollama](https://ollama.ai) lets you run large language models locally with a single command. It handles model downloading, GPU offloading, and serving an OpenAI-compatible API on port `11434`.
+
+## Limitations with PrivateGPT
+
+<Warning>
+  Ollama does **not** expose a tokenizer endpoint (`/tokenize`). PrivateGPT falls back to a character-based estimate (4 chars = 1 token) for token counting. This can cause context-window overflow on long inputs.
+
+  **Recommendation:** Set `context_window` explicitly in a [detailed model profile](/manual/advanced) to match your model's actual limit. By default, Ollama assumes the following context window based on the VRAM:
+
+  < 24 GiB VRAM: 4k context
+  24-48 GiB VRAM: 32k context
+  >= 48 GiB VRAM: 256k context
+</Warning>
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ✅ |
+| Tool / function calling | ✅ model-dependent |
+| Structured output | ❌ |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Install Ollama">
+    Download and install from [ollama.ai](https://ollama.ai) for your platform (macOS, Linux, Windows).
+
+    Or on macOS:
+    ```bash
+    brew install ollama
+    ```
+  </Step>
+
+  <Step title="Pull a model">
+    ```bash
+    # Example LLM — Qwen3.5 35B (~24 GB)
+    ollama pull qwen3.5:35b
+
+    # Example embeddings model (~670 MB)
+    ollama pull mxbai-embed-large
+    ```
+
+    <Note>
+      Any model from the [Ollama library](https://ollama.com/library) works. For smaller hardware, try `qwen3.5:7b`.
+    </Note>
+  </Step>
+
+  <Step title="Start the Ollama server">
+    ```bash
+    ollama serve
+    ```
+
+    The API is now available at `http://localhost:11434/v1`.
+
+    <Tip>
+      On macOS, the Ollama desktop app starts the server automatically when open. You don't need to run `ollama serve` manually.
+    </Tip>
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=http://localhost:11434/v1 private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=http://host.docker.internal:11434/v1 \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=http://localhost:11434/v1 uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+Because Ollama lacks the tokenizer endpoint, it's especially useful to set `context_window` explicitly:
+
+```yaml
+# settings-model.yaml
+llm:
+  default_model: qwen3.5:35b
+
+embedding:
+  default_model: mxbai-embed-large
+
+models:
+  - name: qwen3.5:35b
+    type: llm
+    mode: openai
+    context_window: 32768        # Set explicitly — Ollama can't report this
+    support_tools: true
+    support_reasoning: true
+    sampling_params:
+      temperature: 0.6
+      top_p: 0.95
+      top_k: 20
+      min_p: 0.0
+
+  - name: mxbai-embed-large
+    type: embedding
+    mode: openai
+    context_window: 512
+```
+
+Generate this automatically with:
+
+```bash
+OPENAI_API_BASE=http://localhost:11434/v1 \
+  uv run python scripts/auto_discover_models.py --out settings-model.yaml
+```
+
+Then edit `context_window` and other values as needed and run:
+
+```bash
+OPENAI_API_BASE=http://localhost:11434/v1 \
+  PGPT_PROFILES=model \
+  uv run python -m private_gpt
+```
+
+---
+
+## Troubleshooting
+
+**Connection refused inside Docker**
+
+Use `host.docker.internal` instead of `localhost`:
+
+```bash
+-e OPENAI_API_BASE=http://host.docker.internal:11434/v1
+```
+
+On Linux with Docker, use `--network host` instead:
+
+```bash
+docker run --network host -e OPENAI_API_BASE=http://localhost:11434/v1 ...
+```
+
+**Model not found**
+
+Verify the model is available:
+```bash
+ollama list
+```

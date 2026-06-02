@@ -1,0 +1,458 @@
+---
+title: "Built-in Tools"
+description: "Built-in server tools, custom tools, and MCP — what they are and how to use them."
+---
+
+PrivateGPT exposes tools in two ways:
+
+1. **Model-driven tool use** — pass tools in the `tools` array of `/v1/messages` and let the model decide when to call them.
+2. **Standalone tool endpoints** (`/v1/tools/*`) — call them directly without going through a chat.
+
+<Note>
+  Built-in tool dependencies are granular. Install the specific extra for the feature you need, or use `private-gpt[tools]` as the bundle fallback. `private-gpt[core]` also includes that bundle.
+</Note>
+
+---
+
+## Tools in messages
+
+Pass tools in `/v1/messages` and the model decides when to call them.
+
+Model-driven tool use follows the same per-tool dependency rules. For the broadest support, use `private-gpt[tools]` or `private-gpt[core]`.
+
+### Built-in server tools
+
+Built-in server tools only require `name` and `type`. Do not provide `inputSchema` for built-in tools. Add `context` only for built-in tools that require it.
+
+| Type identifier | Tool | Notes |
+|---|---|---|
+| `semantic_search_v1` | Search ingested documents | Available in `private-gpt[core]` and installs with ingestion support |
+| `tabular_analysis_v1` | Analyze ingested tabular data | Requires `tool-tabular` or `tools` |
+| `database_query_v1` | Query a SQL database | Requires database extras |
+| `web_search_v1` | Search the web | Requires `tool-web-scraping` or `tools` |
+| `web_fetch_v1` | Fetch and extract text from a URL | Requires `tool-web-scraping` or `tools` |
+
+Minimal example:
+
+```json
+{
+  "tools": [
+    {"name": "search_docs", "type": "semantic_search_v1"},
+    {"name": "search_web", "type": "web_search_v1"},
+    {"name": "fetch_url", "type": "web_fetch_v1"}
+  ]
+}
+```
+
+For server-side setup of web tools, see [Web Tools](/manual/web-tools).
+
+#### Example: `semantic_search_v1`
+
+Requires `context` with an ingested artifact.
+
+```json
+{
+  "model": "qwen3.5:35b",
+  "messages": [
+    {"role": "user", "content": "What are the payment terms in the contract?"}
+  ],
+  "tools": [
+    {
+      "name": "search_docs",
+      "type": "semantic_search_v1",
+      "context": [
+        {
+          "type": "ingested_artifact",
+          "context_filter": {"collection": "contracts"}
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Example: `tabular_analysis_v1`
+
+Requires `private-gpt[tool-tabular]`, `private-gpt[tools]`, or `private-gpt[core]`. Also requires `context` with an ingested artifact.
+
+```json
+{
+  "model": "qwen3.5:35b",
+  "messages": [
+    {"role": "user", "content": "What is the total revenue by region?"}
+  ],
+  "tools": [
+    {
+      "name": "analyze_sales",
+      "type": "tabular_analysis_v1",
+      "context": [
+        {
+          "type": "ingested_artifact",
+          "context_filter": {"collection": "sales-data"}
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Example: `database_query_v1`
+
+Requires `private-gpt[tool-database]`, `private-gpt[database]`, or a driver-specific extra such as `private-gpt[database-postgres]`. `private-gpt[tools]` and `private-gpt[core]` also work. Also requires `context` with a `sql_database` artifact. See [Database Tools](/manual/database-tools) for install and configuration.
+
+```json
+{
+  "model": "qwen3.5:35b",
+  "messages": [
+    {"role": "user", "content": "How many orders were placed last month?"}
+  ],
+  "tools": [
+    {
+      "name": "query_db",
+      "type": "database_query_v1",
+      "context": [
+        {
+          "type": "sql_database",
+          "connection_string": "postgresql://user:pass@localhost:5432/mydb",
+          "description": "Orders database"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Connection strings commonly use these schemes:
+
+- PostgreSQL: `postgresql://...`
+- MySQL: `mysql://...`, `mysql+mysqldb://...`, or `mysql+pymysql://...`
+- SQL Server: `mssql+pyodbc://...`
+- DB2: `db2://...` or `ibm_db_sa://...`
+
+Examples:
+
+```text
+postgresql://user:pass@localhost:5432/mydb
+mysql://user:pass@localhost:3306/mydb
+mssql+pyodbc://user:pass@localhost:1433/mydb?driver=ODBC+Driver+18+for+SQL+Server
+db2://user:pass@localhost:50000/sample
+```
+
+#### Example: `web_search_v1`
+
+Requires `private-gpt[tool-web-scraping]`, `private-gpt[tools]`, or `private-gpt[core]`. No `context` is required.
+
+```json
+{
+  "model": "qwen3.5:35b",
+  "messages": [
+    {"role": "user", "content": "Find recent news about open source LLMs."}
+  ],
+  "tools": [
+    {
+      "name": "search_web",
+      "type": "web_search_v1"
+    }
+  ]
+}
+```
+
+#### Example: `web_fetch_v1`
+
+`web_extract_v1` remains accepted as a legacy alias.
+
+Requires `private-gpt[tool-web-scraping]`, `private-gpt[tools]`, or `private-gpt[core]`. No `context` is required.
+
+```json
+{
+  "model": "qwen3.5:35b",
+  "messages": [
+    {"role": "user", "content": "Fetch and summarize https://example.com/article"}
+  ],
+  "tools": [
+    {
+      "name": "fetch_url",
+      "type": "web_fetch_v1"
+    }
+  ]
+}
+```
+
+### Skills in chat
+
+The built-in skill tool is `name: "skills"` with `type: "skills_v1"`. It expands into `load_skill_v1`, `unload_skill_v1`, and `list_skills_v1`.
+
+These built-in skill tools require a skill filter in `tool_context`.
+
+| Type identifier | Tool |
+|---|---|
+| `skills_v1` | Expand into `load_skill_v1`, `unload_skill_v1`, and `list_skills_v1` |
+| `load_skill_v1` | Mark one available skill as loaded |
+| `unload_skill_v1` | Mark one loaded skill as unloaded |
+| `list_skills_v1` | List skills in the current skill filter |
+
+Example:
+
+```json
+{
+  "model": "qwen3.5:35b",
+  "messages": [
+    {"role": "user", "content": "Show me the available skills for this workspace."}
+  ],
+  "tool_context": [
+    {
+      "type": "skill",
+      "skill_filter": {"collection": "my-org"}
+    }
+  ],
+  "tools": [
+    {"name": "skills", "type": "skills_v1"}
+  ]
+}
+```
+
+Direct `load_skill_v1` example:
+
+```json
+{
+  "model": "qwen3.5:35b",
+  "messages": [
+    {"role": "user", "content": "Load the legal-reviewer skill."}
+  ],
+  "tool_context": [
+    {
+      "type": "skill",
+      "skill_filter": {"collection": "my-org"}
+    }
+  ],
+  "tools": [
+    {"name": "load_skill", "type": "load_skill_v1"}
+  ]
+}
+```
+
+### Code execution in chat
+
+PrivateGPT exposes built-in code-execution tools in two layers:
+
+1. `code_execution_v1` expands into `bash_v1` and `text_editor_v1`.
+2. `text_editor_v1` expands into `view_v1`, `str_replace_v1`, `create_v1`, and `insert_v1`.
+
+These are built-in server tools executed by PrivateGPT.
+
+`code_execution_v1` is a server tool. Anthropic `code_execution_*` tool types translate to this server-side flow in PrivateGPT. That is different from Anthropic `bash_*` and `text_editor_*`, which are client tools passed back to the API caller.
+
+Anthropic reference: [Code execution tool](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/code-execution-tool).
+
+#### Example: `code_execution_v1`
+
+```json
+{
+  "model": "qwen3.5:35b",
+  "messages": [
+    {"role": "user", "content": "Inspect the workspace and tell me which files matter."}
+  ],
+  "tools": [
+    {"name": "code_execution", "type": "code_execution_v1"}
+  ]
+}
+```
+
+#### Example: `bash_v1`
+
+```json
+{
+  "model": "qwen3.5:35b",
+  "messages": [
+    {"role": "user", "content": "Run ls in the workspace."}
+  ],
+  "tools": [
+    {"name": "bash", "type": "bash_v1"}
+  ]
+}
+```
+
+#### Example: `text_editor_v1`
+
+```json
+{
+  "model": "qwen3.5:35b",
+  "messages": [
+    {"role": "user", "content": "Open README.md and inspect it."}
+  ],
+  "tools": [
+    {"name": "text_editor", "type": "text_editor_v1"}
+  ]
+}
+```
+
+#### Direct text editor subtools
+
+| Type identifier | Tool |
+|---|---|
+| `view_v1` | View a file or directory |
+| `str_replace_v1` | Replace one exact string in a file |
+| `create_v1` | Create a new file |
+| `insert_v1` | Insert text after a given line |
+
+### Anthropic-compatible client tools
+
+PrivateGPT also accepts Anthropic-style client tool types. These are passed through to your application with canonical schemas; PrivateGPT does **not** execute them locally.
+
+Supported client tool families:
+
+| Type pattern | Canonical name | Executed by | More info |
+|---|---|---|---|
+| `bash_*` | `bash` | API caller | [Anthropic bash tool](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/bash-tool) |
+| `text_editor_*` | `str_replace_based_edit_tool` | API caller | [Anthropic text editor tool](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/text-editor-tool) |
+| `computer_*` | `computer` | API caller | [Anthropic computer use tool](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/computer-use-tool) |
+| `memory_*` | `memory` | API caller | [Anthropic memory tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool) |
+
+Example:
+
+```json
+{
+  "model": "claude-sonnet-4-20250514",
+  "messages": [
+    {"role": "user", "content": "Open README.md and show me the first 40 lines."}
+  ],
+  "tools": [
+    {"name": "bash", "type": "bash_20250124"},
+    {"name": "str_replace_based_edit_tool", "type": "text_editor_20250124"},
+    {"name": "computer", "type": "computer_20250124"},
+    {"name": "memory", "type": "memory_20250124"}
+  ]
+}
+```
+
+### Custom tools
+
+Define any tool with a JSON Schema. PrivateGPT passes the tool definition to the model; when the model calls it, your application receives a `tool_use` block and must return a `tool_result`:
+
+For the broadest tool-calling support, use `private-gpt[tools]` or `private-gpt[core]`.
+
+```json
+{
+  "tools": [
+    {
+      "name": "get_order_status",
+      "description": "Get the current status of a customer order",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "order_id": {"type": "string", "description": "The order ID"}
+        },
+        "required": ["order_id"]
+      }
+    }
+  ]
+}
+```
+
+When the model wants to call the tool, the response contains:
+
+```json
+{"type": "tool_use", "id": "tu_01abc", "name": "get_order_status", "input": {"order_id": "ORD-123"}}
+```
+
+Send the result back by appending a message with `role: "user"` containing a `tool_result` block:
+
+```json
+{
+  "role": "user",
+  "content": [
+    {
+      "type": "tool_result",
+      "tool_use_id": "tu_01abc",
+      "content": "Order ORD-123 is shipped and arrives Thursday."
+    }
+  ]
+}
+```
+
+---
+
+## Standalone tool endpoints
+
+### Semantic search
+
+Search ingested documents using natural language:
+
+Available in `private-gpt[core]` and installs with ingestion support.
+
+```bash
+curl -X POST http://localhost:8080/v1/tools/semantic-search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the payment terms?",
+    "context_filter": {"collection": "contracts"}
+  }'
+```
+
+### Web search
+
+Search the web and get aggregated results:
+
+Requires `private-gpt[tool-web-scraping]`, `private-gpt[tools]`, or `private-gpt[core]`.
+
+```bash
+curl -X POST http://localhost:8080/v1/tools/web-search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "latest news about open source LLMs"}'
+```
+
+### Web fetch
+
+Fetch and extract text content from a URL:
+
+Requires `private-gpt[tool-web-scraping]`, `private-gpt[tools]`, or `private-gpt[core]`.
+
+```bash
+curl -X POST http://localhost:8080/v1/tools/web-fetch \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com/article"}'
+```
+
+### Tabular data analysis
+
+Run a natural language query against CSV or tabular data ingested into a collection:
+
+Requires `private-gpt[tool-tabular]`, `private-gpt[tools]`, or `private-gpt[core]`.
+
+```bash
+curl -X POST http://localhost:8080/v1/tools/tabular-data-analysis \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What is the total revenue by region?",
+    "context_filter": {"collection": "sales-data"}
+  }'
+```
+
+### Database query
+
+Run a natural language query against a connected SQL database:
+
+Requires `private-gpt[tool-database]`, `private-gpt[database]`, or a driver-specific extra such as `private-gpt[database-postgres]`. `private-gpt[tools]` and `private-gpt[core]` also work. See [Database Tools](/manual/database-tools) for install and configuration.
+
+```bash
+curl -X POST http://localhost:8080/v1/tools/database-query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "How many orders were placed last month?",
+    "artifacts": [
+      {
+        "type": "sql_database",
+        "connection_string": "postgresql://user:pass@localhost/mydb"
+      }
+    ]
+  }'
+```
+
+The `artifacts` entry must contain a `sql_database` object with a valid SQLAlchemy-style connection string, for example:
+
+```text
+postgresql://user:pass@localhost:5432/mydb
+mysql://user:pass@localhost:3306/mydb
+mssql+pyodbc://user:pass@localhost:1433/mydb?driver=ODBC+Driver+18+for+SQL+Server
+db2://user:pass@localhost:50000/sample
+```

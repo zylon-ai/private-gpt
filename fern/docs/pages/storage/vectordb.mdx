@@ -1,0 +1,40 @@
+---
+title: "Vector Store"
+description: "Configure the vector store used for document retrieval."
+---
+
+PrivateGPT uses [Qdrant](https://qdrant.tech/) as the default vector store. By default it runs in local disk mode — no separate Qdrant server needed.
+
+<Warning>
+  Local disk mode is not recommended for production. Use a remote Qdrant server for any persistent or multi-instance deployment.
+</Warning>
+
+```yaml
+qdrant:
+  path: local_data/private_gpt/qdrant
+```
+
+---
+
+## Remote Qdrant
+
+To connect to an existing Qdrant server instead of the local disk instance:
+
+```yaml
+qdrant:
+  url: http://localhost:6333
+  api_key: your-api-key   # only needed for Qdrant Cloud
+```
+
+---
+
+## Embedding dimensions
+
+If you switch embedding models, the vector dimensions change. Re-ingest your documents after changing the model and update `embed_dim` to match:
+
+```yaml
+vectorstore:
+  embed_dim: 1024   # must match the output dimension of your embedding model
+```
+
+Run `make wipe` before re-ingesting to avoid a dimension mismatch error.

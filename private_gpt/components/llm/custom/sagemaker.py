@@ -7,6 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import boto3  # type: ignore
+from aiobotocore.session import get_session
 from llama_index.core.base.llms.generic_utils import (
     completion_response_to_chat_response,
     stream_completion_response_to_chat_response,
@@ -22,18 +23,25 @@ from llama_index.core.llms.callbacks import (
     llm_completion_callback,
 )
 
+from private_gpt.utils.retry import retry
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from llama_index.callbacks import CallbackManager
-    from llama_index.llms import (
+    from llama_index.core.callbacks import CallbackManager
+    from llama_index.core.llms import (
         ChatMessage,
         ChatResponse,
+        ChatResponseAsyncGen,
         ChatResponseGen,
+        CompletionResponseAsyncGen,
         CompletionResponseGen,
     )
 
 logger = logging.getLogger(__name__)
+
+_MAX_RETRIES = 5
+_JITTER = (5.0, 20.0)
 
 
 class LineIterator:
@@ -187,15 +195,7 @@ class SagemakerLLM(CustomLLM):
             "max_new_tokens": self.max_new_tokens,
         }
 
-    @property
-    def metadata(self) -> LLMMetadata:
-        """Get LLM metadata."""
-        return LLMMetadata(
-            context_window=self.context_window,
-            num_output=self.max_new_tokens,
-            model_name="Sagemaker LLama 2",
-        )
-
+    @retry(is_async=False, tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
     @llm_completion_callback()
     def complete(self, prompt: str, **kwargs: Any) -> CompletionResponse:
         self.generate_kwargs.update({"stream": False})
@@ -224,6 +224,16 @@ class SagemakerLLM(CustomLLM):
             text=response_dict[0]["generated_text"][len(prompt) :], raw=resp
         )
 
+    @property
+    def metadata(self) -> LLMMetadata:
+        """Get LLM metadata."""
+        return LLMMetadata(
+            context_window=self.context_window,
+            num_output=self.max_new_tokens,
+            model_name="Sagemaker",
+        )
+
+    @retry(is_async=False, tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
     @llm_completion_callback()
     def stream_complete(self, prompt: str, **kwargs: Any) -> CompletionResponseGen:
         def get_stream():
@@ -261,12 +271,14 @@ class SagemakerLLM(CustomLLM):
 
         return get_stream()
 
+    @retry(is_async=False, tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
     @llm_chat_callback()
     def chat(self, messages: Sequence[ChatMessage], **kwargs: Any) -> ChatResponse:
         prompt = self.messages_to_prompt(messages)
         completion_response = self.complete(prompt, formatted=True, **kwargs)
         return completion_response_to_chat_response(completion_response)
 
+    @retry(is_async=False, tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
     @llm_chat_callback()
     def stream_chat(
         self, messages: Sequence[ChatMessage], **kwargs: Any
@@ -274,3 +286,62 @@ class SagemakerLLM(CustomLLM):
         prompt = self.messages_to_prompt(messages)
         completion_response = self.stream_complete(prompt, formatted=True, **kwargs)
         return stream_completion_response_to_chat_response(completion_response)
+
+    @retry(is_async=True, tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
+    @llm_chat_callback()
+    async def achat(
+        self,
+        messages: Sequence[ChatMessage],
+        **kwargs: Any,
+    ) -> ChatResponse:
+        raise NotImplementedError
+
+    @retry(is_async=True, tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
+    @llm_chat_callback()
+    async def astream_chat(
+        self,
+        messages: Sequence[ChatMessage],
+        **kwargs: Any,
+    ) -> ChatResponseAsyncGen:
+        raise NotImplementedError
+
+    @retry(is_async=True, tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
+    @llm_completion_callback()
+    async def acomplete(
+        self, prompt: str, formatted: bool = False, **kwargs: Any
+    ) -> CompletionResponse:
+        self.generate_kwargs.update({"stream": False})
+
+        is_formatted = kwargs.pop("formatted", False)
+        if not is_formatted:
+            prompt = self.completion_to_prompt(prompt)
+
+        request_params = {
+            "inputs": prompt,
+            "stream": False,
+            "parameters": self.inference_params,
+        }
+
+        session = get_session()
+        async with session.create_client("sagemaker-runtime") as client:
+            resp = await client.invoke_endpoint(
+                EndpointName=self.endpoint_name,
+                Body=json.dumps(request_params),
+                ContentType="application/json",
+            )
+
+            response_body = resp["Body"]
+            response_str_raw = await response_body.read()
+            response_str = response_str_raw.decode("utf-8")
+            response_dict = eval(response_str)
+
+            return CompletionResponse(
+                text=response_dict[0]["generated_text"][len(prompt) :], raw=resp
+            )
+
+    @retry(is_async=True, tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
+    @llm_completion_callback()
+    async def astream_complete(
+        self, prompt: str, formatted: bool = False, **kwargs: Any
+    ) -> CompletionResponseAsyncGen:
+        raise NotImplementedError

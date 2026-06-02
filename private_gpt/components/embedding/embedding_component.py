@@ -1,167 +1,152 @@
 import logging
 
 from injector import inject, singleton
-from llama_index.core.embeddings import BaseEmbedding, MockEmbedding
+from llama_index.core.embeddings import BaseEmbedding
 
-from private_gpt.paths import models_cache_path
-from private_gpt.settings.settings import Settings
+from private_gpt.components.embedding.discovery import get_embedding_models
+from private_gpt.components.embedding.factories.factory import EmbeddingFactoryRegistry
+from private_gpt.components.embedding.registry import EmbeddingRegistry
+from private_gpt.components.model_discovery.service import are_distinct_api_bases
+from private_gpt.settings.settings import EmbeddingModelConfig, Settings
 
 logger = logging.getLogger(__name__)
 
 
 @singleton
 class EmbeddingComponent:
-    embedding_model: BaseEmbedding
-
     @inject
-    def __init__(self, settings: Settings) -> None:
-        embedding_mode = settings.embedding.mode
-        logger.info("Initializing the embedding model in mode=%s", embedding_mode)
-        match embedding_mode:
-            case "huggingface":
-                try:
-                    from llama_index.embeddings.huggingface import (  # type: ignore
-                        HuggingFaceEmbedding,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "Local dependencies not found, install with `poetry install --extras embeddings-huggingface`"
-                    ) from e
+    def __init__(self, settings: Settings, embed_registry: EmbeddingRegistry) -> None:
+        self.registry = embed_registry
+        self.settings = settings
 
-                self.embedding_model = HuggingFaceEmbedding(
-                    model_name=settings.huggingface.embedding_hf_model_name,
-                    cache_folder=str(models_cache_path),
-                    trust_remote_code=settings.huggingface.trust_remote_code,
-                )
-            case "sagemaker":
-                try:
-                    from private_gpt.components.embedding.custom.sagemaker import (
-                        SagemakerEmbedding,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "Sagemaker dependencies not found, install with `poetry install --extras embeddings-sagemaker`"
-                    ) from e
+        self.factory_registry = EmbeddingFactoryRegistry(settings)
+        self.embed_models: dict[str, EmbeddingModelConfig] = {
+            model.name: model
+            for model in self.settings.models
+            if model.type == "embedding" and model.enabled
+        }
+        self._default_model_id = settings.embedding.default_model
 
-                self.embedding_model = SagemakerEmbedding(
-                    endpoint_name=settings.sagemaker.embedding_endpoint_name,
-                )
-            case "openai":
-                try:
-                    from llama_index.embeddings.openai import (  # type: ignore
-                        OpenAIEmbedding,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "OpenAI dependencies not found, install with `poetry install --extras embeddings-openai`"
-                    ) from e
+        self._initialize_models()
 
-                api_base = (
-                    settings.openai.embedding_api_base or settings.openai.api_base
-                )
-                api_key = settings.openai.embedding_api_key or settings.openai.api_key
-                model = settings.openai.embedding_model
+    def _discover_models(self) -> list[EmbeddingModelConfig]:
+        if not self.settings.embedding.auto_discover_models:
+            return []
 
-                self.embedding_model = OpenAIEmbedding(
-                    api_base=api_base,
-                    api_key=api_key,
-                    model=model,
-                )
-            case "ollama":
-                try:
-                    from llama_index.embeddings.ollama import (  # type: ignore
-                        OllamaEmbedding,
-                    )
-                    from ollama import Client  # type: ignore
-                except ImportError as e:
-                    raise ImportError(
-                        "Local dependencies not found, install with `poetry install --extras embeddings-ollama`"
-                    ) from e
+        api_base = (
+            self.settings.openai.embedding_api_base or self.settings.openai.api_base
+        )
+        api_key = self.settings.openai.embedding_api_key or self.settings.openai.api_key
+        return get_embedding_models(
+            api_base,
+            api_key,
+            force_model_kind=are_distinct_api_bases(
+                self.settings.openai.api_base,
+                self.settings.openai.embedding_api_base,
+            ),
+        )
 
-                ollama_settings = settings.ollama
+    def _initialize_models(self) -> None:
+        for model in self._discover_models():
+            if model.name not in self.embed_models:
+                self.embed_models[model.name] = model
 
-                # Calculate embedding model. If not provided tag, it will be use latest
-                model_name = (
-                    ollama_settings.embedding_model + ":latest"
-                    if ":" not in ollama_settings.embedding_model
-                    else ollama_settings.embedding_model
+        if not self.embed_models:
+            logger.warning(
+                "No embedding models are configured, "
+                "or it was impossible to discover any models from the API"
+            )
+
+        for model_id, model_config in self.embed_models.items():
+            try:
+                logger.info(
+                    "Initializing embedding model '%s' with mode='%s'",
+                    model_id,
+                    model_config.mode,
                 )
 
-                self.embedding_model = OllamaEmbedding(
-                    model_name=model_name,
-                    base_url=ollama_settings.embedding_api_base,
+                factory = self.factory_registry.get_factory(model_config.mode)
+                instance = factory.create_embedding(model_config)
+
+                alias = instance.alias
+                aliases = [alias] if alias and alias != model_id else []
+                if model_id == self._default_model_id:
+                    aliases.append(EmbeddingRegistry.default())
+
+                self.registry.register(model_id, instance.embedding, aliases=aliases)
+
+                logger.info("Successfully registered embedding model '%s'", model_id)
+
+            except Exception as e:
+                logger.error("Failed to initialize model '%s': %s", model_id, e)
+                raise
+
+        if not self._default_model_id and self.embed_models:
+            self._default_model_id = next(iter(self.embed_models))
+            logger.warning(
+                "No default embedding model configured. Auto-selecting: '%s'",
+                self._default_model_id,
+            )
+
+        if self._default_model_id:
+            if not self.registry.get(self._default_model_id) and not self.registry.get(
+                EmbeddingRegistry.default()
+            ):
+                raise ValueError(
+                    f"Default model '{self._default_model_id}' not found in registered models"
                 )
 
-                if ollama_settings.autopull_models:
-                    if ollama_settings.autopull_models:
-                        from private_gpt.utils.ollama import (
-                            check_connection,
-                            pull_model,
-                        )
+            logger.info("Set default model to '%s'", self._default_model_id)
 
-                        # TODO: Reuse llama-index client when llama-index is updated
-                        client = Client(
-                            host=ollama_settings.embedding_api_base,
-                            timeout=ollama_settings.request_timeout,
-                        )
+    def get_embed(self, model_id: str | None = None) -> BaseEmbedding:
+        target_model = model_id or self._default_model_id
 
-                        if not check_connection(client):
-                            raise ValueError(
-                                f"Failed to connect to Ollama, "
-                                f"check if Ollama server is running on {ollama_settings.api_base}"
-                            )
-                        pull_model(client, model_name)
+        if not target_model:
+            raise ValueError(
+                "No embedding model specified and no models are configured"
+            )
 
-            case "azopenai":
-                try:
-                    from llama_index.embeddings.azure_openai import (  # type: ignore
-                        AzureOpenAIEmbedding,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "Azure OpenAI dependencies not found, install with `poetry install --extras embeddings-azopenai`"
-                    ) from e
+        embed = self.registry.get(target_model)
+        if not embed:
+            available = self.registry.get_all_aliases()
+            raise ValueError(
+                f"Embedding model '{target_model}' not found. Available: {available}"
+            )
 
-                azopenai_settings = settings.azopenai
-                self.embedding_model = AzureOpenAIEmbedding(
-                    model=azopenai_settings.embedding_model,
-                    deployment_name=azopenai_settings.embedding_deployment_name,
-                    api_key=azopenai_settings.api_key,
-                    azure_endpoint=azopenai_settings.azure_endpoint,
-                    api_version=azopenai_settings.api_version,
-                )
-            case "gemini":
-                try:
-                    from llama_index.embeddings.gemini import (  # type: ignore
-                        GeminiEmbedding,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "Gemini dependencies not found, install with `poetry install --extras embeddings-gemini`"
-                    ) from e
+        return embed
 
-                self.embedding_model = GeminiEmbedding(
-                    api_key=settings.gemini.api_key,
-                    model_name=settings.gemini.embedding_model,
-                )
-            case "mistralai":
-                try:
-                    from llama_index.embeddings.mistralai import (  # type: ignore
-                        MistralAIEmbedding,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "Mistral dependencies not found, install with `poetry install --extras embeddings-mistral`"
-                    ) from e
+    def get_alias(self, model_id: str | None = None) -> str | None:
+        target_model = model_id or self._default_model_id
+        if not target_model:
+            return None
+        aliases = self.registry.get_aliases(target_model)
+        return aliases.pop() if aliases else None
 
-                api_key = settings.openai.api_key
-                model = settings.openai.embedding_model
+    def get_config(self, model_id: str | None = None) -> EmbeddingModelConfig:
+        target_model = model_id or self._default_model_id
 
-                self.embedding_model = MistralAIEmbedding(
-                    api_key=api_key,
-                    model=model,
-                )
-            case "mock":
-                # Not a random number, is the dimensionality used by
-                # the default embedding model
-                self.embedding_model = MockEmbedding(384)
+        if not target_model:
+            raise ValueError(
+                "No embedding model specified and no models are configured"
+            )
+
+        model_config = self.embed_models.get(target_model)
+        if not model_config:
+            available = list(self.embed_models.keys())
+            raise ValueError(
+                f"Embedding model config '{target_model}' not found. Available: {available}"
+            )
+
+        return model_config
+
+    @property
+    def embedding_model(self) -> BaseEmbedding:
+        return self.get_embed()
+
+    @property
+    def alias(self) -> str | None:
+        return self.get_alias()
+
+    @property
+    def config(self) -> EmbeddingModelConfig:
+        return self.get_config()

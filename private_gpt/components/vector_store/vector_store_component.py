@@ -2,6 +2,7 @@ import logging
 import typing
 
 from injector import inject, singleton
+from llama_index.core.callbacks import CallbackManager
 from llama_index.core.indices.vector_store import VectorIndexRetriever, VectorStoreIndex
 from llama_index.core.vector_stores.types import (
     BasePydanticVectorStore,
@@ -10,208 +11,130 @@ from llama_index.core.vector_stores.types import (
     MetadataFilters,
 )
 
-from private_gpt.open_ai.extensions.context_filter import ContextFilter
-from private_gpt.paths import local_data_path
+from private_gpt.components.embedding.embedding_component import EmbeddingComponent
+from private_gpt.components.ingest.metadata_helper import MetadataKeys
+from private_gpt.components.vector_store.factory import (
+    _PROVIDERS,
+    VectorStoreFactory,
+)
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
 
-
-def _doc_id_metadata_filter(
-    context_filter: ContextFilter | None,
-) -> MetadataFilters:
-    filters = MetadataFilters(filters=[], condition=FilterCondition.OR)
-
-    if context_filter is not None and context_filter.docs_ids is not None:
-        for doc_id in context_filter.docs_ids:
-            filters.filters.append(MetadataFilter(key="doc_id", value=doc_id))
-
-    return filters
+DEFAULT_COLLECTION = "zgptvector"
 
 
 @singleton
 class VectorStoreComponent:
-    settings: Settings
-    vector_store: BasePydanticVectorStore
+    _settings: Settings
+    _factory: VectorStoreFactory
+    _embedding_component: EmbeddingComponent
 
     @inject
-    def __init__(self, settings: Settings) -> None:
-        self.settings = settings
-        match settings.vectorstore.database:
-            case "postgres":
-                try:
-                    from llama_index.vector_stores.postgres import (  # type: ignore
-                        PGVectorStore,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "Postgres dependencies not found, install with `poetry install --extras vector-stores-postgres`"
-                    ) from e
+    def __init__(
+        self,
+        settings: Settings,
+        embedding_component: EmbeddingComponent,
+    ) -> None:
+        from private_gpt.components.vector_store.qdrant_factory import (
+            QdrantVectorStoreFactory,
+        )
 
-                if settings.postgres is None:
-                    raise ValueError(
-                        "Postgres settings not found. Please provide settings."
-                    )
+        self._settings = settings
+        all_providers = {"qdrant": QdrantVectorStoreFactory, **_PROVIDERS}
+        provider = all_providers.get(settings.vectorstore.database)
+        if provider is None:
+            available = ", ".join(sorted(all_providers)) or "none"
+            raise ValueError(
+                f"Vector store '{settings.vectorstore.database}' is not supported. "
+                f"Available: {available}"
+            )
 
-                self.vector_store = typing.cast(
-                    BasePydanticVectorStore,
-                    PGVectorStore.from_params(
-                        **settings.postgres.model_dump(exclude_none=True),
-                        table_name="embeddings",
-                        embed_dim=settings.embedding.embed_dim,
-                    ),
+        embed_dim: int = settings.vectorstore.embed_dim
+        embed_models = embedding_component.embed_models
+        if len(embed_models) > 1:
+            logger.warning(
+                "Multiple embedding models are configured, "
+                "but VectorStoreComponent only supports one. "
+                "Using the first one found: %s",
+                next(iter(embed_models)),
+            )
+
+        if embed_models:
+            first_embed_model = next(iter(embed_models.values()))
+            embed_dim = first_embed_model.embed_dim or embed_dim
+
+        self._factory = provider(settings, embed_dim)
+
+    @property
+    def logical_multitenancy(self) -> bool:
+        return self._settings.vectorstore.multitenancy == "logical"
+
+    @property
+    def default_collection(self) -> str:
+        return self._settings.vectorstore.default_collection or DEFAULT_COLLECTION
+
+    def vector_store(self, collection: str) -> BasePydanticVectorStore:
+        return self._factory.vector_store(collection)
+
+    def get_filters(
+        self,
+        artifacts: list[str] | None = None,
+        collection: str | None = None,
+        filter_dicts: list[dict[str, typing.Any]] | None = None,
+    ) -> MetadataFilters:
+        filters = (
+            MetadataFilters.from_dicts(filter_dicts, FilterCondition.OR)
+            if filter_dicts
+            else MetadataFilters(filters=[], condition=FilterCondition.OR)
+        )
+
+        if artifacts:
+            for artifact in artifacts:
+                filters.filters.append(
+                    MetadataFilter(key=MetadataKeys.ARTIFACT_ID.value, value=artifact)
                 )
 
-            case "chroma":
-                try:
-                    import chromadb  # type: ignore
-                    from chromadb.config import (  # type: ignore
-                        Settings as ChromaSettings,
-                    )
+        if self.logical_multitenancy and collection:
+            tenancy_filter = MetadataFilter(
+                key=MetadataKeys.COLLECTION.value, value=collection
+            )
+            composite_filters: list[MetadataFilter | MetadataFilters] = (
+                [tenancy_filter, filters] if filters.filters else [tenancy_filter]
+            )
+            filters = MetadataFilters(
+                filters=composite_filters, condition=FilterCondition.AND
+            )
 
-                    from private_gpt.components.vector_store.batched_chroma import (
-                        BatchedChromaVectorStore,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "ChromaDB dependencies not found, install with `poetry install --extras vector-stores-chroma`"
-                    ) from e
-
-                chroma_settings = ChromaSettings(anonymized_telemetry=False)
-                chroma_client = chromadb.PersistentClient(
-                    path=str((local_data_path / "chroma_db").absolute()),
-                    settings=chroma_settings,
-                )
-                chroma_collection = chroma_client.get_or_create_collection(
-                    "make_this_parameterizable_per_api_call"
-                )  # TODO
-
-                self.vector_store = typing.cast(
-                    BasePydanticVectorStore,
-                    BatchedChromaVectorStore(
-                        chroma_client=chroma_client, chroma_collection=chroma_collection
-                    ),
-                )
-
-            case "qdrant":
-                try:
-                    from llama_index.vector_stores.qdrant import (  # type: ignore
-                        QdrantVectorStore,
-                    )
-                    from qdrant_client import QdrantClient  # type: ignore
-                except ImportError as e:
-                    raise ImportError(
-                        "Qdrant dependencies not found, install with `poetry install --extras vector-stores-qdrant`"
-                    ) from e
-
-                if settings.qdrant is None:
-                    logger.info(
-                        "Qdrant config not found. Using default settings."
-                        "Trying to connect to Qdrant at localhost:6333."
-                    )
-                    client = QdrantClient()
-                else:
-                    client = QdrantClient(
-                        **settings.qdrant.model_dump(exclude_none=True)
-                    )
-                self.vector_store = typing.cast(
-                    BasePydanticVectorStore,
-                    QdrantVectorStore(
-                        client=client,
-                        collection_name="make_this_parameterizable_per_api_call",
-                    ),  # TODO
-                )
-
-            case "milvus":
-                try:
-                    from llama_index.vector_stores.milvus import (  # type: ignore
-                        MilvusVectorStore,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "Milvus dependencies not found, install with `poetry install --extras vector-stores-milvus`"
-                    ) from e
-
-                if settings.milvus is None:
-                    logger.info(
-                        "Milvus config not found. Using default settings.\n"
-                        "Trying to connect to Milvus at local_data/private_gpt/milvus/milvus_local.db "
-                        "with collection 'make_this_parameterizable_per_api_call'."
-                    )
-
-                    self.vector_store = typing.cast(
-                        BasePydanticVectorStore,
-                        MilvusVectorStore(
-                            dim=settings.embedding.embed_dim,
-                            collection_name="make_this_parameterizable_per_api_call",
-                            overwrite=True,
-                        ),
-                    )
-
-                else:
-                    self.vector_store = typing.cast(
-                        BasePydanticVectorStore,
-                        MilvusVectorStore(
-                            dim=settings.embedding.embed_dim,
-                            uri=settings.milvus.uri,
-                            token=settings.milvus.token,
-                            collection_name=settings.milvus.collection_name,
-                            overwrite=settings.milvus.overwrite,
-                        ),
-                    )
-
-            case "clickhouse":
-                try:
-                    from clickhouse_connect import (  # type: ignore
-                        get_client,
-                    )
-                    from llama_index.vector_stores.clickhouse import (  # type: ignore
-                        ClickHouseVectorStore,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "ClickHouse dependencies not found, install with `poetry install --extras vector-stores-clickhouse`"
-                    ) from e
-
-                if settings.clickhouse is None:
-                    raise ValueError(
-                        "ClickHouse settings not found. Please provide settings."
-                    )
-
-                clickhouse_client = get_client(
-                    host=settings.clickhouse.host,
-                    port=settings.clickhouse.port,
-                    username=settings.clickhouse.username,
-                    password=settings.clickhouse.password,
-                )
-                self.vector_store = ClickHouseVectorStore(
-                    clickhouse_client=clickhouse_client
-                )
-            case _:
-                # Should be unreachable
-                # The settings validator should have caught this
-                raise ValueError(
-                    f"Vectorstore database {settings.vectorstore.database} not supported"
-                )
+        return filters
 
     def get_retriever(
         self,
         index: VectorStoreIndex,
-        context_filter: ContextFilter | None = None,
+        artifacts: list[str] | None = None,
+        collection: str | None = None,
+        filter_dicts: list[dict[str, typing.Any]] | None = None,
         similarity_top_k: int = 2,
+        score_threshold: float | None = None,
+        callback_manager: CallbackManager | None = None,
+        **kwargs: typing.Any,
     ) -> VectorIndexRetriever:
-        # This way we support qdrant (using doc_ids) and the rest (using filters)
+        vector_store_kwargs = (
+            {"score_threshold": score_threshold} if score_threshold is not None else {}
+        )
         return VectorIndexRetriever(
             index=index,
             similarity_top_k=similarity_top_k,
-            doc_ids=context_filter.docs_ids if context_filter else None,
-            filters=(
-                _doc_id_metadata_filter(context_filter)
-                if self.settings.vectorstore.database != "qdrant"
-                else None
-            ),
+            filters=self.get_filters(artifacts, collection, filter_dicts),
+            callback_manager=callback_manager,
+            vector_store_kwargs=vector_store_kwargs,
+            **kwargs,
         )
 
     def close(self) -> None:
-        if hasattr(self.vector_store.client, "close"):
-            self.vector_store.client.close()
+        factory = getattr(self, "_factory", None)
+        if factory is not None and hasattr(factory, "close"):
+            factory.close()
+
+    def __del__(self) -> None:
+        self.close()

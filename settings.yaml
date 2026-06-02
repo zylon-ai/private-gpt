@@ -3,9 +3,10 @@
 # Syntax in `private_pgt/settings/settings.py`
 server:
   env_name: ${APP_ENV:prod}
-  port: ${PORT:8001}
+  root_path: ${PGPT_ROOT_PATH:}
+  port: ${PORT:8080}
   cors:
-    enabled: true
+    enabled: ${PGPT_CORS_ENABLED:true}
     allow_origins: ["*"]
     allow_methods: ["*"]
     allow_headers: ["*"]
@@ -15,138 +16,287 @@ server:
     # 'secret' is the username and 'key' is the password for basic auth by default
     # If the auth is enabled, this value must be set in the "Authorization" header of the request.
     secret: "Basic c2VjcmV0OmtleQ=="
+  network:
+    offline_mode: ${PGPT_OFFLINE_MODE,HF_HUB_OFFLINE:false}
+    proxy:
+      enabled: ${PROXY_ENABLED:false}
+      http_proxy: ${HTTP_PROXY,http_proxy:}
+      https_server: ${HTTPS_PROXY,https_proxy:}
+      username: ${PROXY_USERNAME:}
+      password: ${PROXY_PASSWORD:}
+      bypass: ${NO_PROXY:localhost,127.0.0.1}
+    ssl:
+      cert_file: ${SSL_CERT_FILE:}
+      cert_dir: ${SSL_CERT_DIR:}
+      verify_ssl: ${SSL_VERIFY:true}
+  api_doc:
+    enabled: ${PGPT_SWAGGER_ENABLED:true}
+    swagger_url: ${PGPT_SWAGGER_URL:/docs}
+    redoc_url: ${PGPT_REDOC_URL:/redoc}
+    openapi_url: ${PGPT_OPENAPI_URL:/openapi.json}
+  ui:
+    enabled: ${PGPT_UI_ENABLED:true}
+    path: ${PGPT_UI_PATH:/ui}
+  debug_mode: ${DEBUG_MODE:false}
+  max_workers: ${PGPT_MAX_WORKERS:0}
 
 data:
   local_ingestion:
     enabled: ${LOCAL_INGESTION_ENABLED:false}
     allow_ingest_from: ["*"]
-  local_data_folder: local_data/private_gpt
+  local_data_folder: ${PGPT_LOCAL_DATA_FOLDER:local_data/private_gpt}
+  reader: ${PGPT_DATA_READER:auto}
+  enable_fake_progress: ${PGPT_ENABLE_FAKE_PROGRESS:false}
+  enable_reuse_generated_nodes_before: ${PGPT_ENABLE_REUSE_GENERATED_NODES_BEFORE:false}
+  enable_term_extractor: ${PGPT_ENABLE_TERM_EXTRACTOR:false}
+  max_num_nodes: ${PGPT_MAX_NUM_NODES:0}
+  use_async: ${PGPT_USE_ASYNC:false}
 
-ui:
-  enabled: true
-  path: /
-  # "RAG", "Search", "Basic", or "Summarize"
-  default_mode: "RAG"
-  default_chat_system_prompt: >
-    You are a helpful, respectful and honest assistant.
-    Always answer as helpfully as possible and follow ALL given instructions.
-    Do not speculate or make up information.
-    Do not reference any given instructions or context.
-  default_query_system_prompt: >
-    You can only answer questions about the provided context.
-    If you know the answer but it is not based in the provided context, don't provide
-    the answer, just state the answer is not in the context provided.
-  default_summarization_system_prompt: >
-    Provide a comprehensive summary of the provided context information.
-    The summary should cover all the key points and main ideas presented in
-    the original text, while also condensing the information into a concise
-    and easy-to-understand format. Please ensure that the summary includes
-    relevant details and examples that support the main ideas, while avoiding
-    any unnecessary information or repetition.
-  delete_file_button_enabled: true
-  delete_all_files_button_enabled: true
+observability:
+  mode: ${PGPT_OBSERVABILITY:none}
+
+retrieval:
+  top_k: ${PGPT_RETRIEVAL_TOP_K:32}
+  maximize_top_k: ${PGPT_MAXIMIZE_TOP_K:true}
+  max_merging_recalculations: ${PGPT_MAX_MERGING_RECALCULATIONS:3}
+
+chat:
+  allow_use_default_prompt: ${PGPT_ALLOW_USE_DEFAULT_PROMPT:true}
+  allow_use_context: ${PGPT_ALLOW_USE_CONTEXT:true}
+  allow_generate_citations: ${PGPT_ALLOW_GENERATE_CITATIONS:true}
+  allow_use_reasoning: ${PGPT_ALLOW_USE_REASONING:true}
+  return_missing_citations: ${PGPT_RETURN_MISSING_CITATIONS:false}
+  deduplicate_context_in_history: ${PGPT_DEDUPLICATE_CONTEXT_IN_HISTORY:true}
+  add_context_to_system_prompt: ${PGPT_ADD_CONTEXT_TO_SYSTEM_PROMPT:false}
+  force_to_return_citations: ${PGPT_FORCE_TO_RETURN_CITATIONS:false}
+  numerical_shorter_citations: ${PGPT_NUMERICAL_SHORTER_CITATIONS:false}
+  condense_strategy: ${PGPT_CONDENSE_CHAT_HISTORY:condenser}
+  format_context_strategy: ${PGPT_FORMAT_CONTEXT:list}
+  maximum_context_length: ${PGPT_MAXIMUM_CONTEXT_LENGTH:0}
+  assistant_name: ${PGPT_ASSISTANT_NAME:PrivateGPT}
+  assistant_description: ${PGPT_ASSISTANT_DESCRIPTION:}
+  maximum_history_length: ${PGPT_MAXIMUM_HISTORY_LENGTH:0}
+  tldr_timeout: ${PGPT_TLDR_TIMEOUT:300}
+  tldr_minimum_threshold_seconds: ${PGPT_TLDR_MINIMUM_THRESHOLD_SECONDS:1.5}
+  multiplexing_threshold: ${PGPT_MULTIPLEXING_THRESHOLD:10}
+  maximum_concurrent_requests: ${PGPT_MAXIMUM_CONCURRENT_REQUESTS:10}
+  maximum_blob_size: ${PGPT_MAXIMUM_BLOB_SIZE:26214400}
+
+stream:
+  broker: ${PGPT_ASYNC_BROKER:memory}
+  stream_expiration: ${PGPT_ASYNC_STREAM_EXPIRATION:3600}
+  maximum_stream_length: ${PGPT_ASYNC_MAXIMUM_STREAM_LENGTH:10000}
+  stream_prefix: ${PGPT_ASYNC_STREAM_PREFIX:stream}
+  status_prefix: ${PGPT_ASYNC_STATUS_PREFIX:status}
+  minimum_connections: ${PGPT_ASYNC_MINIMUM_CONNECTIONS:50}
 
 llm:
-  mode: llamacpp
-  prompt_style: "llama3"
-  # Should be matching the selected model
-  max_new_tokens: 512
-  context_window: 3900
-  # Select your tokenizer. Llama-index tokenizer is the default.
-  # tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
-  temperature: 0.1      # The temperature of the model. Increasing the temperature will make the model answer more creatively. A value of 0.1 would be more factual. (Default: 0.1)
+  default_model: ${PGPT_LLM_DEFAULT:}
+  auto_discover_models: ${PGPT_LLM_AUTO_DISCOVER_MODELS:true}
 
-rag:
-  similarity_top_k: 2
-  #This value controls how many "top" documents the RAG returns to use in the context.
-  #similarity_value: 0.45
-  #This value is disabled by default.  If you enable this settings, the RAG will only use articles that meet a certain percentage score.
-  rerank:
-    enabled: false
-    model: cross-encoder/ms-marco-MiniLM-L-2-v2
-    top_n: 1
-
-summarize:
-  use_async: true
-
-clickhouse:
-    host: localhost
-    port: 8443
-    username: admin
-    password: clickhouse
-    database: embeddings
-
-llamacpp:
-  llm_hf_repo_id: lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF
-  llm_hf_model_file: Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
-  tfs_z: 1.0            # Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting
-  top_k: 40             # Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)
-  top_p: 1.0            # Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
-  repeat_penalty: 1.1   # Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)
+# We need to have at least one model defined here, even if it's just a placeholder for the default model defined above.
+models: []
 
 embedding:
-  # Should be matching the value above in most cases
-  mode: huggingface
+  default_model: ${PGPT_EMBEDDING_DEFAULT:}
+  auto_discover_models: ${PGPT_EMBEDDING_AUTO_DISCOVER_MODELS:true}
   ingest_mode: simple
-  embed_dim: 768 # 768 is for nomic-ai/nomic-embed-text-v1.5
 
 huggingface:
-  embedding_hf_model_name: nomic-ai/nomic-embed-text-v1.5
-  access_token: ${HF_TOKEN:}
+  username: ${PGPT_HUGGINGFACE_USERNAME:zylon-ai}
+  access_token: ${PGPT_HUGGINGFACE_TOKEN:}
   # Warning: Enabling this option will allow the model to download and execute code from the internet.
   # Nomic AI requires this option to be enabled to use the model, be aware if you are using a different model.
   trust_remote_code: true
 
 vectorstore:
-  database: qdrant
+  database: ${PGPT_VECTORSTORE:qdrant}
+  # Needs to match the selected embeddings model
+  embed_dim: ${PGPT_EMBED_DIM:1024}
+  # Determine multi-tenancy type
+  multitenancy: ${PGPT_MULTITENANCY:logical}
+  # Default collection name when logical multitenancy is enabled
+  default_collection: ${PGPT_DEFAULT_COLLECTION:zgptvector}
 
-nodestore:
-  database: simple
-
-milvus:
-  uri: local_data/private_gpt/milvus/milvus_local.db
-  collection_name: milvus_db
-  overwrite: false
-
-qdrant:
-  path: local_data/private_gpt/qdrant
-
-postgres:
-  host: localhost
-  port: 5432
-  database: postgres
-  user: postgres
-  password: postgres
-  schema_name: private_gpt
-
-sagemaker:
-  llm_endpoint_name: huggingface-pytorch-tgi-inference-2023-09-25-19-53-32-140
-  embedding_endpoint_name: huggingface-pytorch-inference-2023-11-03-07-41-36-479
+node_store:
+  index_store: ${PGPT_INDEX_STORE:simple}
+  doc_store: ${PGPT_DOC_STORE:simple}
 
 openai:
+  api_base: ${OPENAI_API_BASE:https://api.openai.com/v1}
   api_key: ${OPENAI_API_KEY:}
-  model: gpt-3.5-turbo
-  embedding_api_key: ${OPENAI_API_KEY:}
+  embedding_api_base: ${OPENAI_EMBEDDING_API_BASE:}
+  embedding_api_key: ${OPENAI_EMBEDDING_API_KEY:}
+  request_timeout: ${OPENAI_REQUEST_TIMEOUT:600.0}
 
-ollama:
-  llm_model: llama3.1
-  embedding_model: nomic-embed-text
-  api_base: http://localhost:11434
-  embedding_api_base: http://localhost:11434  # change if your embedding model runs on another ollama
-  keep_alive: 5m
-  request_timeout: 120.0
-  autopull_models: true
+triton:
+  api_base: ${PGPT_TRITON_API_BASE:http://localhost:8000}
+  ssl: ${PGPT_TRITON_SSL:false}
+  grpc_keep_alive_time: ${PGPT_TRITON_GRPC_KEEP_ALIVE_TIME:30000}
+  grpc_keep_alive_timeout: ${PGPT_TRITON_GRPC_KEEP_ALIVE_TIMEOUT:20000}
+  grpc_permit_keep_alive_without_calls: ${PGPT_TRITON_GRPC_PERMIT_KEEP_ALIVE_WITHOUT_CALLS:true}
+  grpc_max_pings_without_data: ${PGPT_TRITON_GRPC_MAX_PINGS_WITHOUT_DATA:0}
 
-azopenai:
-  api_key: ${AZ_OPENAI_API_KEY:}
-  azure_endpoint: ${AZ_OPENAI_ENDPOINT:}
-  embedding_deployment_name: ${AZ_OPENAI_EMBEDDING_DEPLOYMENT_NAME:}
-  llm_deployment_name: ${AZ_OPENAI_LLM_DEPLOYMENT_NAME:}
-  api_version: "2023-05-15"
-  embedding_model: text-embedding-ada-002
-  llm_model: gpt-35-turbo
+docling:
+  mode: ${PGPT_DOCLING_MODE:api}
+  api_base: ${PGPT_DOCLING_API_BASE:http://localhost:5001}
+  api_version: ${PGPT_DOCLING_API_VERSION:v1alpha}
+  api_key: ${PGPT_DOCLING_API_KEY:}
+  tenant_id: ${PGPT_DOCLING_TENANT_ID:}
+  num_threads: ${PGPT_DOCLING_NUM_WORKERS:4}
+  use_ocr: ${PGPT_DOCLING_USE_OCR:true}
+  ocr_model: ${PGPT_DOCLING_OCR_MODEL:easyocr}
+  use_gpu: ${PGPT_DOCLING_USE_GPU:false}
+  force_full_page_ocr: ${PGPT_DOCLING_FORCE_FULL_PAGE_OCR:false}
+  bitmap_area_threshold: ${PGPT_DOCLING_BITMAP_AREA_THRESHOLD:0.2}
+  do_cell_matching: ${PGPT_DOCLING_DO_CELL_MATCHING:true}
+  image_mode: ${PGPT_DOCLING_IMAGE_MODE:placeholder}
+  table_mode: ${PGPT_DOCLING_TABLE_MODE:accurate}
+  image_classifier: ${PGPT_DOCLING_IMAGE_CLASSIFIER:none}
+  image_descriptor: ${PGPT_DOCLING_IMAGE_DESCRIPTOR:none}
+  langs: ${PGPT_DOCLING_LANGS:["en-US", "fr-FR", "de-DE", "es-ES"]}
+  use_async: ${PGPT_DOCLING_USE_ASYNC:true}
 
-gemini:
-  api_key: ${GOOGLE_API_KEY:}
-  model: models/gemini-pro
-  embedding_model: models/embedding-001
+celery:
+  use_workers: true
+  acks_late: ${PGPT_CELERY_ACKS_LATE:true}
+  soft_time_limit: ${PGPT_CELERY_SOFT_TIME_LIMIT:}
+  hard_time_limit: ${PGPT_CELERY_HARD_TIME_LIMIT:}
+  visibility_timeout: ${PGPT_CELERY_VISIBILITY_TIMEOUT:21600}
+
+# Broker to which workers will notify the result of tasks
+tasks_results_broker:
+  mode: ${PGPT_TASKS_RESULTS_BROKER_MODE:rabbitmq}
+
+rabbitmq:
+  ssl: ${PGPT_RABBITMQ_SSL:false}
+  host: ${PGPT_RABBITMQ_HOST:localhost:5672}
+  username: ${PGPT_RABBITMQ_USERNAME:guest}
+  password: ${PGPT_RABBITMQ_PASSWORD:guest}
+
+database:
+  host: ${PGPT_DATABASE_HOST:localhost:5432}
+  database: ${PGPT_DATABASE_NAME:backend-main}
+  username: ${PGPT_DATABASE_USERNAME:postgres}
+  password: ${PGPT_DATABASE_PASSWORD:postgres}
+
+redis:
+  host: ${PGPT_REDIS_HOST:localhost:6379}
+  username: ${PGPT_REDIS_USERNAME:}
+  password: ${PGPT_REDIS_PASSWORD:}
+  database: ${PGPT_REDIS_DATABASE:0}
+
+unstructured:
+  url: ${PGPT_UNSTRUCTURED_URL:}
+
+qdrant:
+  url: ${PGPT_QDRANT_URL:}
+  path: ${PGPT_QDRANT_PATH:local_data/qdrant}
+  hybrid_search: ${PGPT_QDRANT_HYBRID_SEARCH:false}
+  distance_metric: ${PGPT_QDRANT_DISTANCE_METRIC:cosine}
+  hnsw_m: ${PGPT_QDRANT_HSNW_M:0}
+  hnsw_payload_m: ${PGPT_QDRANT_HSNW_PAYLOAD_M:16}
+  prefer_grpc: ${PGPT_QDRANT_PREFER_GRPC:true}
+  timeout: ${PGPT_QDRANT_TIMEOUT:120000}
+
+s3:
+  endpoint_url: ${PGPT_S3_ENDPOINT_URL:}
+  public_endpoint_url: ${PGPT_S3_PUBLIC_ENDPOINT_URL:}
+  path_prefix: ${PGPT_S3_PATH_PREFIX:}
+  access_key_id: ${PGPT_S3_ACCESS_KEY_ID:}
+  secret_access_key: ${PGPT_S3_SECRET_ACCESS_KEY:}
+  durable_bucket_name: ${PGPT_S3_DURABLE_BUCKET_NAME:zylon-storage}
+  temporary_bucket_name: ${PGPT_S3_TEMPORARY_BUCKET_NAME:zylon-temporary}
+
+phoenix:
+  url: ${PGPT_PHOENIX_URL:http://localhost:6006}
+
+opik:
+  host: ${PGPT_OPIK_HOST:http://localhost:5173/}
+  project_name: ${PGPT_OPIK_PROJECT_NAME:}
+  api_key: ${PGPT_OPIK_API_KEY:}
+  workspace: ${PGPT_OPIK_WORKSPACE:default}
+  task_threads: ${PGPT_OPIK_TASK_THREADS:16}
+
+sandbox:
+  provider: ${PGPT_SANDBOX_PROVIDER:local}
+  base_url: ${PGPT_SANDBOX_URL:}
+  timeout: ${PGPT_SANDBOX_TIMEOUT:60}
+
+
+code_execution:
+  provider: ${PGPT_CODE_EXECUTION_PROVIDER:local}
+  workspace_path: ${PGPT_CODE_EXECUTION_WORKSPACE_PATH:}
+  timeout: ${PGPT_CODE_EXECUTION_TIMEOUT:60}
+  max_output_bytes: ${PGPT_CODE_EXECUTION_MAX_OUTPUT_BYTES:1048576}
+
+web_fetch:
+  enabled: ${PGPT_WEBFETCH_ENABLED:false}
+  timeout_seconds: ${PGPT_WEBFETCH_TIMEOUT_SECONDS:15}
+
+database_query:
+  timeout_seconds: ${PGPT_DATABASE_QUERY_TIMEOUT_SECONDS:1000}
+  batch_size: ${PGPT_DATABASE_QUERY_BATCH_SIZE:1000}
+  max_mb_result: ${PGPT_DATABASE_QUERY_MAX_MB_RESULT:150}
+
+web_search:
+  enabled: ${PGPT_WEBSEARCH_ENABLED:false}
+  provider: ${PGPT_WEBSEARCH_PROVIDER:mock}
+  processor: ${PGPT_WEBSEARCH_PROCESSOR:best_links}
+  num_links: ${PGPT_WEBSEARCH_NUM_LINKS:20}
+  mode_quality: ${PGPT_WEBSEARCH_MODE_QUALITY:fast}
+  cached: ${PGPT_WEBSEARCH_CACHED:false}
+  context_token: ${PGPT_WEBSEARCH_CONTEXT_TOKEN:0}
+
+  fast_params:
+    max_timeout_seconds: ${PGPT_WEBSEARCH_FAST_MAX_TIMEOUT_SECONDS:100}
+    max_summary_timeout_seconds: ${PGPT_WEBSEARCH_FAST_MAX_SUMMARY_TIMEOUT_SECONDS:40}
+    num_references: ${PGPT_WEBSEARCH_FAST_NUM_REFERENCES:3}
+    num_concurrent_consumers: ${PGPT_WEBSEARCH_FAST_NUM_CONCURRENT_CONSUMERS:6}
+    max_parallel_summary: ${PGPT_WEBSEARCH_FAST_MAX_PARALLEL_SUMMARY:2}
+    index_weight: ${PGPT_WEBSEARCH_FAST_INDEX_WEIGHT:0}
+    token_weight: ${PGPT_WEBSEARCH_FAST_TOKEN_WEIGHT:1}
+    token_exponent_penalty: ${PGPT_WEBSEARCH_FAST_TOKEN_EXPONENT_PENALTY:4}
+  accurate_params:
+    max_timeout_seconds: ${PGPT_WEBSEARCH_ACCURATE_MAX_TIMEOUT_SECONDS:500}
+    max_summary_timeout_seconds: ${PGPT_WEBSEARCH_ACCURATE_MAX_SUMMARY_TIMEOUT_SECONDS:100}
+    num_references: ${PGPT_WEBSEARCH_ACCURATE_NUM_REFERENCES:5}
+    num_concurrent_consumers: ${PGPT_WEBSEARCH_ACCURATE_NUM_CONCURRENT_CONSUMERS:4}
+    max_parallel_summary: ${PGPT_WEBSEARCH_ACCURATE_MAX_PARALLEL_SUMMARY:2}
+    index_weight: ${PGPT_WEBSEARCH_ACCURATE_INDEX_WEIGHT:1}
+    token_weight: ${PGPT_WEBSEARCH_ACCURATE_TOKEN_WEIGHT:1}
+    token_exponent_penalty: ${PGPT_WEBSEARCH_ACCURATE_TOKEN_EXPONENT_PENALTY:4}
+
+brave:
+  api_key: ${PGPT_BRAVE_API_KEY:}
+  rate_limit: ${PGPT_BRAVE_RATE_LIMIT:1}
+
+skills:
+  database: ${SKILLS_DATABASE:sqlite}
+  storage_provider: ${SKILLS_STORAGE_PROVIDER:local}
+  skill_injection_mode: ${SKILL_INJECTION_MODE:system_prompt}
+  maximum_loaded_skills: ${SKILL_MAXIMUM_LOADED_SKILLS:1}
+
+semaphore:
+  mode: ${PGPT_SEMAPHORE_MODE:memory}
+
+transformation:
+  pptx:
+    vision:
+      retry_number: ${PGPT_TRANSFORMATION_PPTX_VISION_RETRY_NUMBER:3}
+      enable_evaluation: ${PGPT_TRANSFORMATION_PPTX_VISION_ENABLE_EVALUATION:true}
+      max_concurrent: ${PGPT_TRANSFORMATION_PPTX_VISION_MAX_CONCURRENT:4}
+      batch_size: ${PGPT_TRANSFORMATION_PPTX_VISION_BATCH_SIZE:8}
+      max_iterations: ${PGPT_TRANSFORMATION_PPTX_VISION_MAX_ITERATIONS:2}
+      enable_semaphore: ${PGPT_TRANSFORMATION_PPTX_ENABLE_SEMAPHORE:false}
+      mode: ${PGPT_TRANSFORMATION_PPTX_VISION_MODE:none}
+
+  docling:
+    vision:
+      retry_number: ${PGPT_TRANSFORMATION_DOCLING_VISION_RETRY_NUMBER:3}
+      enable_evaluation: ${PGPT_TRANSFORMATION_DOCLING_VISION_ENABLE_EVALUATION:true}
+      max_concurrent: ${PGPT_TRANSFORMATION_DOCLING_VISION_MAX_CONCURRENT:4}
+      batch_size: ${PGPT_TRANSFORMATION_DOCLING_VISION_BATCH_SIZE:8}
+      max_iterations: ${PGPT_TRANSFORMATION_DOCLING_VISION_MAX_ITERATIONS:2}
+      enable_semaphore: ${PGPT_TRANSFORMATION_DOCLING_ENABLE_SEMAPHORE:false}
+      mode: ${PGPT_TRANSFORMATION_DOCLING_VISION_MODE:none}

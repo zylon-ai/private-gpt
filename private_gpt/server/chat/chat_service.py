@@ -1,83 +1,141 @@
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+import asyncio
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from injector import inject, singleton
-from llama_index.core.chat_engine import ContextChatEngine, SimpleChatEngine
-from llama_index.core.chat_engine.types import (
-    BaseChatEngine,
-)
-from llama_index.core.indices import VectorStoreIndex
-from llama_index.core.indices.postprocessor import MetadataReplacementPostProcessor
-from llama_index.core.llms import ChatMessage, MessageRole
-from llama_index.core.postprocessor import (
-    SentenceTransformerRerank,
-    SimilarityPostprocessor,
-)
-from llama_index.core.storage import StorageContext
-from llama_index.core.types import TokenGen
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 
+from private_gpt.chat.extensions.citation import ZylonCitation
+from private_gpt.chat.input_models import CountTokensOutput
+from private_gpt.components.chat.models.chat_config_models import (
+    ChatRequest,
+    ResolvedChatRequest,
+)
+from private_gpt.components.chunk.models import SourceType
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
+from private_gpt.components.engines.chat_loop.chat_loop_engine import ChatLoopEngine
+from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+    InterceptorPhase,
+)
+from private_gpt.components.ingest.ingest_component import IngestComponent
+from private_gpt.components.llm.custom.base import ZylonLLM
 from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.llm.models import ReasoningEffort
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
-from private_gpt.open_ai.extensions.context_filter import ContextFilter
-from private_gpt.server.chunks.chunks_service import Chunk
+from private_gpt.events.event_errors import Errors
+from private_gpt.events.event_folding import fold
+from private_gpt.events.models import (
+    ContentBlockType,
+    Event,
+    SourceBlock,
+    ToolResultBlock,
+    Usage,
+)
+from private_gpt.events.models import (
+    TextBlock as OutTextBlock,
+)
+from private_gpt.server.chat.interceptors.chat_interceptor_service import (
+    ChatInterceptorService,
+)
+from private_gpt.server.models.models_service import ModelsService
 from private_gpt.settings.settings import Settings
-
-if TYPE_CHECKING:
-    from llama_index.core.postprocessor.types import BaseNodePostprocessor
+from private_gpt.utils.tokens import estimate_token_count
 
 
 class Completion(BaseModel):
-    response: str
-    sources: list[Chunk] | None = None
+    content: list[ContentBlockType] = Field(
+        default_factory=list, description="Content blocks"
+    )
+    exception: BaseException | None = Field(
+        default=None, description="Exception if any"
+    )
+    stop_reason: str | None = Field(default=None, description="Finish reason")
+    usage: Usage = Field(description="Usage information")
+
+    @property
+    def response(self) -> str | None:
+        """Get the response from the content blocks."""
+        if not self.content:
+            return None
+        text_block = [
+            content for content in self.content if isinstance(content, OutTextBlock)
+        ]
+        return text_block[-1].text if text_block else None
+
+    @property
+    def sources(self) -> list[SourceType] | None:
+        """Get the sources from the content blocks."""
+        if not self.content:
+            return None
+
+        potential_sources = [
+            source
+            for content in self.content
+            if isinstance(content, ToolResultBlock)
+            if isinstance(content.content, list)
+            for source_block in content.content
+            if isinstance(source_block, SourceBlock)
+            for source in source_block.sources
+        ]
+
+        unique_sources: dict[str | None, SourceType] = {
+            source.id: source for source in potential_sources
+        }
+        return list(unique_sources.values()) if unique_sources else None
+
+    @property
+    def citations(self) -> list[ZylonCitation] | None:
+        """Get the citations from the content blocks."""
+        if not self.content:
+            return None
+        return [
+            citation
+            for content in self.content
+            if isinstance(content, OutTextBlock)
+            for citation in content.citations or []
+        ]
+
+    class Config:
+        arbitrary_types_allowed = True
+
+        @staticmethod
+        def json_schema_extra(
+            schema: dict[str, Any], model: type["Completion"]
+        ) -> None:
+            props = schema.get("properties", {})
+            for prop_name in ["response", "sources", "citations"]:
+                if prop_name in props:
+                    del props[prop_name]
 
 
 class CompletionGen(BaseModel):
-    response: TokenGen
-    sources: list[Chunk] | None = None
+    events: AsyncGenerator[Event, None]
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
-@dataclass
-class ChatEngineInput:
-    system_message: ChatMessage | None = None
-    last_message: ChatMessage | None = None
-    chat_history: list[ChatMessage] | None = None
+class ChatValidationResult(BaseModel):
+    """Result of chat request validation."""
 
-    @classmethod
-    def from_messages(cls, messages: list[ChatMessage]) -> "ChatEngineInput":
-        # Detect if there is a system message, extract the last message and chat history
-        system_message = (
-            messages[0]
-            if len(messages) > 0 and messages[0].role == MessageRole.SYSTEM
-            else None
-        )
-        last_message = (
-            messages[-1]
-            if len(messages) > 0 and messages[-1].role == MessageRole.USER
-            else None
-        )
-        # Remove from messages list the system message and last message,
-        # if they exist. The rest is the chat history.
-        if system_message:
-            messages.pop(0)
-        if last_message:
-            messages.pop(-1)
-        chat_history = messages if len(messages) > 0 else None
+    valid: bool = Field(default=False, description="Is the request valid")
+    errors: list[str] | None = Field(
+        default=None, description="List of validation errors if any"
+    )
 
-        return cls(
-            system_message=system_message,
-            last_message=last_message,
-            chat_history=chat_history,
-        )
+    class Config:
+        arbitrary_types_allowed = True
 
 
 @singleton
 class ChatService:
     settings: Settings
+    llm_component: LLMComponent
+    vector_store_component: VectorStoreComponent
+    embedding_component: EmbeddingComponent
 
     @inject
     def __init__(
@@ -87,131 +145,98 @@ class ChatService:
         vector_store_component: VectorStoreComponent,
         embedding_component: EmbeddingComponent,
         node_store_component: NodeStoreComponent,
+        ingest_component: IngestComponent,
+        chat_interceptor_service: ChatInterceptorService,
+        models_service: ModelsService,
     ) -> None:
         self.settings = settings
         self.llm_component = llm_component
-        self.embedding_component = embedding_component
         self.vector_store_component = vector_store_component
-        self.storage_context = StorageContext.from_defaults(
-            vector_store=vector_store_component.vector_store,
-            docstore=node_store_component.doc_store,
-            index_store=node_store_component.index_store,
+        self.node_store_component = node_store_component
+        self.embedding_component = embedding_component
+        self.ingest_component = ingest_component
+        self.chat_interceptor_service = chat_interceptor_service
+        self.models_service = models_service
+
+    def _build_loop_engine(self) -> ChatLoopEngine:
+        # Don't build a singleton since the interceptors
+        # and state can be mutated during the loop execution
+        # for several threads handling different requests in parallel
+        chain = self.chat_interceptor_service.get_chain()
+        return ChatLoopEngine(
+            llm_component=self.llm_component,
+            request_interceptors=chain.request_interceptors,
+            response_interceptors=chain.response_interceptors,
+            max_iterations=40,
         )
-        self.index = VectorStoreIndex.from_vector_store(
-            vector_store_component.vector_store,
-            storage_context=self.storage_context,
-            llm=llm_component.llm,
-            embed_model=embedding_component.embedding_model,
-            show_progress=True,
-        )
 
-    def _chat_engine(
+    async def stream_chat(
         self,
-        system_prompt: str | None = None,
-        use_context: bool = False,
-        context_filter: ContextFilter | None = None,
-    ) -> BaseChatEngine:
-        settings = self.settings
-        if use_context:
-            vector_index_retriever = self.vector_store_component.get_retriever(
-                index=self.index,
-                context_filter=context_filter,
-                similarity_top_k=self.settings.rag.similarity_top_k,
-            )
-            node_postprocessors: list[BaseNodePostprocessor] = [
-                MetadataReplacementPostProcessor(target_metadata_key="window"),
-            ]
-            if settings.rag.similarity_value:
-                node_postprocessors.append(
-                    SimilarityPostprocessor(
-                        similarity_cutoff=settings.rag.similarity_value
-                    )
-                )
-
-            if settings.rag.rerank.enabled:
-                rerank_postprocessor = SentenceTransformerRerank(
-                    model=settings.rag.rerank.model, top_n=settings.rag.rerank.top_n
-                )
-                node_postprocessors.append(rerank_postprocessor)
-
-            return ContextChatEngine.from_defaults(
-                system_prompt=system_prompt,
-                retriever=vector_index_retriever,
-                llm=self.llm_component.llm,  # Takes no effect at the moment
-                node_postprocessors=node_postprocessors,
-            )
-        else:
-            return SimpleChatEngine.from_defaults(
-                system_prompt=system_prompt,
-                llm=self.llm_component.llm,
-            )
-
-    def stream_chat(
-        self,
-        messages: list[ChatMessage],
-        use_context: bool = False,
-        context_filter: ContextFilter | None = None,
+        request: ChatRequest,
     ) -> CompletionGen:
-        chat_engine_input = ChatEngineInput.from_messages(messages)
-        last_message = (
-            chat_engine_input.last_message.content
-            if chat_engine_input.last_message
-            else None
-        )
-        system_prompt = (
-            chat_engine_input.system_message.content
-            if chat_engine_input.system_message
-            else None
-        )
-        chat_history = (
-            chat_engine_input.chat_history if chat_engine_input.chat_history else None
+        loop_engine = await asyncio.to_thread(self._build_loop_engine)
+        event_generator: AsyncGenerator[Event, None] = loop_engine.run(request)
+        return CompletionGen(events=event_generator)
+
+    async def chat(self, request: ChatRequest) -> Completion:
+        completion_gen = await self.stream_chat(request)
+        wrapped_response = await fold(completion_gen.events)
+        usage = Usage.model_validate(wrapped_response.usage or {})
+        return Completion(
+            content=wrapped_response.content,
+            exception=wrapped_response.exception,
+            stop_reason=wrapped_response.stop_reason,
+            usage=usage,
         )
 
-        chat_engine = self._chat_engine(
-            system_prompt=system_prompt,
-            use_context=use_context,
-            context_filter=context_filter,
-        )
-        streaming_response = chat_engine.stream_chat(
-            message=last_message if last_message is not None else "",
-            chat_history=chat_history,
-        )
-        sources = [Chunk.from_node(node) for node in streaming_response.source_nodes]
-        completion_gen = CompletionGen(
-            response=streaming_response.response_gen, sources=sources
-        )
-        return completion_gen
+    async def validate(self, request: ResolvedChatRequest) -> ChatValidationResult:
+        errors: list[str] = []
 
-    def chat(
-        self,
-        messages: list[ChatMessage],
-        use_context: bool = False,
-        context_filter: ContextFilter | None = None,
-    ) -> Completion:
-        chat_engine_input = ChatEngineInput.from_messages(messages)
-        last_message = (
-            chat_engine_input.last_message.content
-            if chat_engine_input.last_message
-            else None
-        )
-        system_prompt = (
-            chat_engine_input.system_message.content
-            if chat_engine_input.system_message
-            else None
-        )
-        chat_history = (
-            chat_engine_input.chat_history if chat_engine_input.chat_history else None
-        )
+        try:
+            loop_engine = await asyncio.to_thread(self._build_loop_engine)
+            await loop_engine.run_interceptor_phase(
+                run=loop_engine.initialize_run(request),
+                phase=InterceptorPhase.VALIDATION,
+                interceptors=loop_engine._request_interceptors,
+            )
+        except ValidationError as e:
+            for err in e.errors():
+                field = " -> ".join(str(loc) for loc in err["loc"])
+                errors.append(f"{field}: {err['msg']}")
+        except ValueError as e:
+            errors.append(str(e))
+        except Errors.Base as e:
+            errors.append(str(e))
+        except Exception as e:
+            wrapped_error = Errors.build(e)
+            errors.append(wrapped_error.error_type)
 
-        chat_engine = self._chat_engine(
-            system_prompt=system_prompt,
-            use_context=use_context,
-            context_filter=context_filter,
+        return ChatValidationResult(valid=len(errors) == 0, errors=errors or None)
+
+    async def count_tokens(self, request: ResolvedChatRequest) -> CountTokensOutput:
+        model_id = request.system.model or None
+        llm = self.llm_component.get_llm(model_id)
+
+        try:
+            tokenizer_fn = self.llm_component.get_tokenizer(model_id)
+        except Exception as e:
+            raise ValueError(f"Model '{model_id}' does not support tokenization") from e
+
+        chat_messages = request.to_messages()
+
+        input_tokens = await estimate_token_count(
+            chat_history=chat_messages,
+            tools=request.tool_config.tools,
+            reasoning_effort=(
+                ReasoningEffort.from_str(request.thinking.type)
+                if request.thinking.enabled and request.thinking.type
+                else ReasoningEffort.NONE
+            ),
+            message_to_input=(
+                llm.message_to_input
+                if isinstance(llm, ZylonLLM)
+                else llm.messages_to_prompt
+            ),
+            tokenizer_fn=tokenizer_fn,
         )
-        wrapped_response = chat_engine.chat(
-            message=last_message if last_message is not None else "",
-            chat_history=chat_history,
-        )
-        sources = [Chunk.from_node(node) for node in wrapped_response.source_nodes]
-        completion = Completion(response=wrapped_response.response, sources=sources)
-        return completion
+        return CountTokensOutput(input_tokens=input_tokens)

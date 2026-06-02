@@ -1,111 +1,178 @@
-# Main Fern configuration file
 instances:
   - url: privategpt.docs.buildwithfern.com
     custom-domain: docs.privategpt.dev
 
 title: PrivateGPT | Docs
 
-# The tabs definition, in the top left corner
 tabs:
-  overview:
-    display-name: Overview
-    icon: "fa-solid fa-home"
-  quickstart:
-    display-name: Quickstart
-    icon: "fa-solid fa-rocket"
-  installation:
-    display-name: Installation
-    icon: "fa-solid fa-download"
   manual:
     display-name: Manual
+    icon: "fa-solid fa-book-open"
+    skip-slug: true
+  api-guide:
+    display-name: API Guide
     icon: "fa-solid fa-book"
-  recipes:
-    display-name: Recipes
-    icon: "fa-solid fa-flask"
+    skip-slug: true
   api-reference:
     display-name: API Reference
-    icon: "fa-solid fa-file-contract"
+    icon: "fa-solid fa-code"
+    skip-slug: true
 
-# Definition of tabs contents, will be displayed on the left side of the page, below all tabs
 navigation:
-  # The default tab
-  - tab: overview
-    layout:
-      - section: Welcome
-        contents:
-          - page: Introduction
-            path: ./docs/pages/overview/welcome.mdx
-  - tab: quickstart
-    layout:
-      - section: Getting started
-        contents:
-          - page: Quickstart
-            path: ./docs/pages/quickstart/quickstart.mdx
-  # How to install PrivateGPT, with FAQ and troubleshooting
-  - tab: installation
-    layout:
-      - section: Getting started
-        contents:
-          - page: Main Concepts
-            path: ./docs/pages/installation/concepts.mdx
-          - page: Installation
-            path: ./docs/pages/installation/installation.mdx
-          - page: Troubleshooting
-            path: ./docs/pages/installation/troubleshooting.mdx
-  # Manual of PrivateGPT: how to use it and configure it
   - tab: manual
     layout:
-      - section: General configuration
+      - section: Getting started
+        skip-slug: true
         contents:
-          - page: Configuration
-            path: ./docs/pages/manual/settings.mdx
-      - section: Document management
+          - page: Introduction
+            path: ./docs/pages/index.mdx
+          - page: Quickstart
+            slug: getting-started/quickstart
+            path: ./docs/pages/getting-started/quickstart.mdx
+          - page: How it works
+            slug: getting-started/how-it-works
+            path: ./docs/pages/getting-started/how-it-works.mdx
+      - section: Installation Options
+        skip-slug: true
+        contents:
+          - page: Package Install
+            slug: installation/package
+            path: ./docs/pages/installation/package.mdx
+          - page: Docker
+            slug: installation/docker
+            path: ./docs/pages/installation/docker.mdx
+          - page: Development
+            slug: installation/local
+            path: ./docs/pages/installation/local.mdx
+      - section: Configuration
+        skip-slug: true
+        contents:
+          - page: CLI
+            slug: configuration/cli
+            path: ./docs/pages/configuration/cli.mdx
+          - page: Settings & Profiles
+            slug: configuration/settings
+            path: ./docs/pages/configuration/settings.mdx
+          - page: Model Configuration
+            slug: configuration/advanced
+            path: ./docs/pages/configuration/advanced.mdx
+      - section: Inference Providers
+        skip-slug: true
+        contents:
+          - page: Overview
+            slug: providers/overview
+            path: ./docs/pages/providers/overview.mdx
+          - page: Ollama
+            slug: providers/ollama
+            path: ./docs/pages/providers/ollama.mdx
+          - page: LM Studio
+            slug: providers/lmstudio
+            path: ./docs/pages/providers/lmstudio.mdx
+          - page: LlamaCPP Server
+            slug: providers/llamacpp
+            path: ./docs/pages/providers/llamacpp.mdx
+          - page: vLLM
+            slug: providers/vllm
+            path: ./docs/pages/providers/vllm.mdx
+      - section: Integrations
+        skip-slug: true
+        contents:
+          - page: Overview
+            slug: integrations/overview
+            path: ./docs/pages/integrations/overview.mdx
+          - page: Claude Code
+            slug: integrations/claude-code
+            path: ./docs/pages/integrations/claude-code.mdx
+          - page: Claude Desktop
+            slug: integrations/claude-desktop
+            path: ./docs/pages/integrations/claude-desktop.mdx
+          - page: Claude for Microsoft 365
+            slug: integrations/claude-office
+            path: ./docs/pages/integrations/claude-office.mdx
+          - page: OpenCode
+            slug: integrations/opencode
+            path: ./docs/pages/integrations/opencode.mdx
+      - section: Built-in Tools
+        skip-slug: true
+        contents:
+          - page: Web Tools
+            slug: tools/web-tools
+            path: ./docs/pages/tools/web-tools.mdx
+          - page: Database Tools
+            slug: tools/database-tools
+            path: ./docs/pages/tools/database-tools.mdx
+      - section: Storage Providers
+        skip-slug: true
+        contents:
+          - page: Vector Store
+            slug: storage/vectordb
+            path: ./docs/pages/storage/vectordb.mdx
+          - page: Object Storage
+            slug: storage/storage
+            path: ./docs/pages/storage/storage.mdx
+      - section: User Interface
+        skip-slug: true
+        contents:
+          - page: Workbench
+            slug: ui/workbench
+            path: ./docs/pages/ui/workbench.mdx
+      - section: Observability
+        skip-slug: true
+        contents:
+          - page: Observability
+            slug: observability/observability
+            path: ./docs/pages/observability/observability.mdx
+      - section: Reference
+        skip-slug: true
+        contents:
+          - page: Troubleshooting
+            slug: reference/troubleshooting
+            path: ./docs/pages/reference/troubleshooting.mdx
+  - tab: api-guide
+    layout:
+      - section: Core API
+        skip-slug: true
+        contents:
+          - page: Messages
+            slug: api-guide/messages
+            path: ./docs/pages/api-guide/messages.mdx
+          - page: Async messages
+            slug: api-guide/messages-async
+            path: ./docs/pages/api-guide/messages-async.mdx
+          - page: Embeddings
+            slug: api-guide/embeddings
+            path: ./docs/pages/api-guide/embeddings.mdx
+      - section: Tools & Skills
+        skip-slug: true
+        contents:
+          - page: Built-in Tools
+            slug: api-guide/tools
+            path: ./docs/pages/api-guide/tools.mdx
+          - page: Skills
+            slug: api-guide/skills
+            path: ./docs/pages/api-guide/skills.mdx
+      - section: Documents
+        skip-slug: true
         contents:
           - page: Ingestion
-            path: ./docs/pages/manual/ingestion.mdx
-          - page: Deletion
-            path: ./docs/pages/manual/ingestion-reset.mdx
-      - section: Storage
-        contents:
-          - page: Vector Stores
-            path: ./docs/pages/manual/vectordb.mdx
-          - page: Node Stores
-            path: ./docs/pages/manual/nodestore.mdx
-      - section: Advanced Setup
-        contents:
-          - page: LLM Backends
-            path: ./docs/pages/manual/llms.mdx
-          - page: Reranking
-            path: ./docs/pages/manual/reranker.mdx
-      - section: User Interface
-        contents:
-          - page: Gradio Manual
-            path: ./docs/pages/ui/gradio.mdx
-          - page: Alternatives
-            path: ./docs/pages/ui/alternatives.mdx
-  - tab: recipes
-    layout:
-      - section: Getting started
-        contents:
-          - page: Quickstart
-            path: ./docs/pages/recipes/quickstart.mdx
-      - section: General use cases
-        contents:
-          - page: Summarize
-            path: ./docs/pages/recipes/summarize.mdx
-  # More advanced usage of PrivateGPT, by API
+            slug: api-guide/ingestion
+            path: ./docs/pages/api-guide/ingestion.mdx
+          - page: Async ingestion
+            slug: api-guide/ingestion-async
+            path: ./docs/pages/api-guide/ingestion-async.mdx
   - tab: api-reference
     layout:
       - section: Overview
+        skip-slug: true
         contents:
-          - page : API Reference overview
+          - page: API Reference
+            slug: api-reference/api-reference
             path: ./docs/pages/api-reference/api-reference.mdx
-          - page: SDKs
+          - page: Client libraries
+            slug: api-reference/sdks
             path: ./docs/pages/api-reference/sdks.mdx
       - api: API Reference
 
-# Definition of the navbar, will be displayed in the top right corner.
-# `type:primary` is always displayed at the most right side of the navbar
 navbar-links:
   - type: secondary
     text: Contact us
@@ -122,8 +189,8 @@ colors:
     light: "#756E98"
 
 logo:
-  dark: ./docs/assets/logo_light.png
-  light: ./docs/assets/logo_dark.png
+  dark: docs/assets/logo_light.png
+  light: docs/assets/logo_dark.png
   height: 50
 
-favicon: ./docs/assets/favicon.ico
+favicon: docs/assets/favicon.ico

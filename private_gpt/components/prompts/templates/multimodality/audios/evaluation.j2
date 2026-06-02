@@ -1,0 +1,54 @@
+Evaluate the transcribed content against the original audio. Only detect wrong words, hallucinations (invented speech not in audio), and missing content that exists in the audio.
+
+Do not evaluate grammar, formatting, or transcription style - only factual alignment with what was actually spoken. Only flag issues if transcription contradicts, adds to, or omits speech from the audio.
+
+Rate overall score (how well transcription matches audio) on a 0.0 to 1.0 scale.
+Rate clarity (audio quality and intelligibility) on a 0.0 to 1.0 scale.
+
+{% if few_shots %}
+Examples:
+
+**1 - Issues:**
+Audio: "Sales increased by 25% to 2.3 million dollars"
+Transcription: "Sales grew to 2.5 million due to our marketing efforts"
+
+{
+    "score": 0.4,
+    "issues_found": ["Wrong amount: 2.5 million vs 2.3 million", "Missing: 25% increase", "Hallucination: 'marketing efforts' not mentioned in audio"],
+    "clarity": 0.8
+}
+
+**2 - Clean:**
+Audio: "We focus on three key areas: finance, operations, and human resources"
+Transcription: "We focus on three key areas: finance, operations, and human resources"
+
+{
+    "score": 1.0,
+    "issues_found": [],
+    "clarity": 0.9
+}
+
+**3 - Missing Speaker Labels:**
+Audio: [Two speakers alternating]
+Speaker A: "What's the timeline?"
+Speaker B: "About two weeks"
+Transcription: "What's the timeline? About two weeks"
+
+{
+    "score": 0.7,
+    "issues_found": ["Missing speaker attribution for dialogue"],
+    "clarity": 0.85
+}
+
+**4 - Unclear Audio:**
+Audio: [Muffled speech with background noise]
+Transcription: "The [inaudible] will be ready by [unclear]"
+
+{
+    "score": 0.5,
+    "issues_found": ["Multiple inaudible segments", "Missing critical information due to poor audio quality"],
+    "clarity": 0.3
+}
+{% endif %}
+
+Return your evaluation as JSON with fields: score, issues_found, clarity.

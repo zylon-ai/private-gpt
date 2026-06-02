@@ -1,0 +1,153 @@
+---
+title: "Local with uv"
+description: "Run PrivateGPT locally from source using uv — recommended for development and contributors."
+---
+
+This guide installs PrivateGPT from the cloned repository using [uv](https://docs.astral.sh/uv/), a fast Python package manager. Use this if you want to modify the source, run tests, or use hot-reload during development.
+
+For the simplest install, use the [package install](/manual/package) instead.
+
+---
+
+## Core install
+
+The default source install uses `core`:
+
+```bash
+uv sync --frozen --extra core
+```
+
+Add feature-specific extras only when you need them, for example `uv sync --frozen --extra core --extra queue`.
+
+---
+
+## Auto mode (zero config)
+
+<Tabs>
+  <Tab title="macOS">
+    <Steps>
+      <Step title="Install uv">
+        ```bash
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        ```
+        Restart your shell or run `source ~/.zshrc` after installing.
+      </Step>
+      <Step title="Clone and install">
+        ```bash
+        git clone https://github.com/zylon-ai/private-gpt
+        cd private-gpt
+        uv sync --frozen --extra core
+        ```
+      </Step>
+      <Step title="Run">
+        ```bash
+        OPENAI_API_BASE=http://localhost:11434/v1 uv run private-gpt serve
+        ```
+        Open [http://localhost:8080/ui](http://localhost:8080/ui) in your browser.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Linux">
+    <Steps>
+      <Step title="Install uv">
+        ```bash
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        ```
+        Restart your shell or run `source ~/.bashrc` after installing.
+      </Step>
+      <Step title="Clone and install">
+        ```bash
+        git clone https://github.com/zylon-ai/private-gpt
+        cd private-gpt
+        uv sync --frozen --extra core
+        ```
+      </Step>
+      <Step title="Run">
+        ```bash
+        OPENAI_API_BASE=http://localhost:11434/v1 uv run private-gpt serve
+        ```
+        Open [http://localhost:8080/ui](http://localhost:8080/ui) in your browser.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    <Steps>
+      <Step title="Install uv">
+        ```powershell
+        powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+        ```
+        Restart your PowerShell session after installing.
+      </Step>
+      <Step title="Clone and install">
+        ```powershell
+        git clone https://github.com/zylon-ai/private-gpt
+        cd private-gpt
+        uv sync --frozen --extra core
+        ```
+      </Step>
+      <Step title="Run">
+        ```powershell
+        $env:OPENAI_API_BASE = "http://localhost:11434/v1"
+        uv run python -m private_gpt
+        ```
+        Open [http://localhost:8080/ui](http://localhost:8080/ui) in your browser.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Windows (CMD)">
+    <Steps>
+      <Step title="Install uv">
+        Download and run the official installer from [astral.sh/uv](https://astral.sh/uv).
+      </Step>
+      <Step title="Clone and install">
+        ```cmd
+        git clone https://github.com/zylon-ai/private-gpt
+        cd private-gpt
+        uv sync --frozen --extra core
+        ```
+      </Step>
+      <Step title="Run">
+        ```cmd
+        set OPENAI_API_BASE=http://localhost:11434/v1
+        uv run python -m private_gpt
+        ```
+        Open [http://localhost:8080/ui](http://localhost:8080/ui) in your browser.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+---
+
+## Detailed model settings (custom profile)
+
+Use [Detailed Model Configuration](/manual/advanced) to generate `settings-model.yaml`, tune model settings in more detail, and run local `uv` with `PGPT_PROFILES=model`.
+
+---
+
+## Development with hot-reload
+
+When working on the source, run with `--reload` to restart automatically on file changes:
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    OPENAI_API_BASE=http://localhost:11434/v1 \
+      PGPT_PROFILES=local \
+      uv run private-gpt serve --reload
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```powershell
+    $env:OPENAI_API_BASE = "http://localhost:11434/v1"
+    $env:PGPT_PROFILES = "local"
+    uv run private-gpt serve --reload
+    ```
+  </Tab>
+</Tabs>
+
+Or use the Makefile shortcut (Unix only):
+
+```bash
+OPENAI_API_BASE=http://localhost:11434/v1 make dev
+```

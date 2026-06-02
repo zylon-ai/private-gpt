@@ -1,0 +1,41 @@
+name: post-release-please
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  update-openapi:
+    runs-on: ubuntu-latest
+    if: github.head_ref == 'release-please--branches--main' || github.ref_name == 'release-please--branches--main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          token: ${{ secrets.PAT || github.token }}
+
+      - name: Install dependencies
+        uses: ./.github/workflows/actions/install_dependencies
+
+      - name: Update OpenAPI spec
+        id: update-openapi
+        run: |
+          version=$(cat version.txt)
+          make api-docs
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push changes
+        run: |
+          git config user.email "ci@zylon.ai"
+          git config user.name "Zylon CI"
+          git add docs/openapi/openapi.json
+          git diff --staged --quiet || git commit -m "docs: update OpenAPI spec for ${{ steps.update-openapi.outputs.version }}"
+          git push

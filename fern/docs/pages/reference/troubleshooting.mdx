@@ -1,0 +1,133 @@
+---
+title: "Troubleshooting"
+description: "Solutions to common issues when running PrivateGPT."
+---
+
+## Models not discovered at startup
+
+**Symptom:** PrivateGPT starts but shows no models, or API calls return a "no models available" error.
+
+**Causes and fixes:**
+
+1. **LLM server not running.** Make sure your LLM server is up before starting PrivateGPT.
+   ```bash
+   curl http://localhost:11434/v1/models   # Ollama
+   curl http://localhost:8000/v1/models    # vLLM / LlamaCPP
+   ```
+
+2. **Wrong `OPENAI_API_BASE`.** Verify the URL matches your server's address and includes `/v1`.
+   ```bash
+   OPENAI_API_BASE=http://localhost:11434/v1 private-gpt serve
+   ```
+
+3. **Auto-discovery disabled.** Check that `PGPT_LLM_AUTO_DISCOVER_MODELS` is not set to `false`.
+
+---
+
+## Connection refused inside Docker
+
+When running PrivateGPT in Docker and pointing at a server on the host machine, `localhost` refers to the container, not the host.
+
+**macOS / Windows:** use `host.docker.internal`:
+```bash
+docker run -p 8080:8080 \
+  -e OPENAI_API_BASE=http://host.docker.internal:11434/v1 \
+  zylonai/private-gpt:latest
+```
+
+**Linux:** use `--network host` instead:
+```bash
+docker run --network host \
+  -e OPENAI_API_BASE=http://localhost:11434/v1 \
+  zylonai/private-gpt:latest
+```
+
+---
+
+## Context window overflow
+
+**Symptom:** Long conversations or large documents produce truncated responses or errors from the LLM server.
+
+**Cause:** Without a tokenizer endpoint (Ollama), PrivateGPT estimates token count at 4 chars = 1 token, which can be inaccurate.
+
+**Fix:** Set `context_window` explicitly in a [detailed model profile](/manual/advanced) to a value below the model's actual limit:
+
+```yaml
+models:
+  - name: qwen3.5:35b
+    type: llm
+    mode: openai
+    context_window: 28000   # conservative — leaves headroom
+```
+
+---
+
+## Embedding dimensions mismatch
+
+**Symptom:** Error message containing `Embedding dimensions mismatch` during ingestion or retrieval.
+
+**Cause:** The vector store was initialized with a different embedding model (different output dimensions) than the one currently configured.
+
+**Fix:** Either:
+- Switch back to the original embedding model, or
+- Wipe the vector store and re-ingest your documents:
+  ```bash
+  make wipe
+  ```
+
+Ensure `embed_dim` in your profile matches the model's output dimension (e.g. `1024` for `mxbai-embed-large`):
+
+```yaml
+vectorstore:
+  embed_dim: 1024
+```
+
+---
+
+## Tokenizer download fails (HuggingFace gated models)
+
+**Symptom:** Startup fails with an authentication error when downloading a tokenizer from HuggingFace.
+
+**Cause:** The model's tokenizer repository is gated and requires a HuggingFace token.
+
+**Fix:**
+1. [Request access](https://huggingface.co/docs/hub/en/models-gated) to the model on HuggingFace.
+2. [Generate an access token](https://huggingface.co/docs/hub/en/security-tokens).
+3. Pass the token via environment variable:
+   ```bash
+   PGPT_HUGGINGFACE_TOKEN=hf_... private-gpt serve
+   ```
+   Or set it in your profile:
+   ```yaml
+   huggingface:
+     access_token: hf_...
+   ```
+
+---
+
+## Port already in use
+
+**Symptom:** `[Errno 48] Address already in use` on startup.
+
+**Fix:** Change the port with the `--port` flag:
+```bash
+private-gpt serve --port 8081
+```
+
+Or for Docker:
+```bash
+docker run -p 8081:8080 -e OPENAI_API_BASE=... zylonai/private-gpt:latest
+```
+
+---
+
+## Profile file not found
+
+**Symptom:** `FileNotFoundError: Settings file not found for profile 'foo'`.
+
+**Cause:** `PGPT_PROFILES=foo` was set but `settings-foo.yaml` does not exist in the settings folder.
+
+**Fix:** Make sure the file exists and is in the correct location. For Docker, it must be mounted:
+```bash
+-v ./settings-foo.yaml:/home/worker/app/settings-foo.yaml
+```

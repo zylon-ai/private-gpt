@@ -1,0 +1,91 @@
+from pathlib import Path
+
+import pytest
+
+from private_gpt.components.code_execution.local import LocalCodeExecutionProvider
+from private_gpt.settings.settings import unsafe_typed_settings
+
+
+def _settings(tmp_path: Path):
+    settings = unsafe_typed_settings.model_copy(deep=True)
+    settings.code_execution.provider = "local"
+    settings.code_execution.workspace_path = str(tmp_path / "workspaces")
+    settings.code_execution.timeout = 5
+    return settings
+
+
+@pytest.mark.asyncio
+async def test_local_code_execution_session_supports_bash_and_restart(
+    tmp_path: Path,
+) -> None:
+    provider = LocalCodeExecutionProvider(_settings(tmp_path))
+    session = provider.create_session("session-1")
+
+    await session.create("hello.txt", "hello")
+    result = await session.execute_bash("cat hello.txt")
+    assert result.success is True
+    assert result.stdout.strip() == "hello"
+
+    await session.execute_bash("pwd", restart=True)
+    missing = await session.view("hello.txt")
+    assert missing.success is False
+    assert missing.error == "File not found: hello.txt"
+
+    await session.close()
+
+
+@pytest.mark.asyncio
+async def test_local_code_execution_session_supports_file_operations(
+    tmp_path: Path,
+) -> None:
+    provider = LocalCodeExecutionProvider(_settings(tmp_path))
+    session = provider.create_session("session-2")
+
+    created = await session.create("notes.txt", "alpha\nbeta\n")
+    assert created.success is True
+
+    view_all = await session.view("notes.txt")
+    assert view_all.output == "1: alpha\n2: beta"
+
+    replaced = await session.str_replace("notes.txt", "beta", "gamma")
+    assert replaced.success is True
+
+    inserted = await session.insert("notes.txt", 1, "between")
+    assert inserted.success is True
+
+    view_range = await session.view("notes.txt", (2, -1))
+    assert view_range.output == "2: between\n3: gamma"
+
+    listing = await session.view("")
+    assert listing.success is True
+    assert listing.output == "[file] notes.txt"
+
+    await session.close()
+
+
+@pytest.mark.asyncio
+async def test_local_code_execution_session_rejects_path_traversal(
+    tmp_path: Path,
+) -> None:
+    provider = LocalCodeExecutionProvider(_settings(tmp_path))
+    session = provider.create_session("session-3")
+
+    result = await session.create("../escape.txt", "nope")
+    assert result.success is False
+    assert "escapes the session workspace" in (result.error or "")
+
+    await session.close()
+
+
+def test_local_code_execution_provider_delete_session_removes_workspace(
+    tmp_path: Path,
+) -> None:
+    provider = LocalCodeExecutionProvider(_settings(tmp_path))
+    session = provider.create_session("session-delete")
+    workspace = tmp_path / "workspaces" / "session-delete"
+
+    assert workspace.exists() is True
+
+    provider.delete_session(session)
+
+    assert workspace.exists() is False

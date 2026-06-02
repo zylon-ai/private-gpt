@@ -1,0 +1,74 @@
+---
+title: "Skills"
+description: "Package reusable instructions into versioned skills and attach them to any conversation."
+---
+
+A skill is a packaged set of instructions — defined by a `SKILL.md` file — that can be attached to a model request. Skills let you build reusable personas, workflows, or domain-specific assistants without repeating system prompts.
+
+Skills are versioned. You can update a skill without breaking existing integrations that pin to an older version.
+
+---
+
+## Create a skill
+
+```bash
+curl -X POST http://localhost:8080/v1/skills \
+  -F 'display_title=Legal Reviewer' \
+  -F 'collection=my-org' \
+  -F 'skill_md=# Legal Reviewer\n\nYou are a legal document reviewer. Always flag missing clauses and ambiguous language.'
+```
+
+**Key fields:**
+
+| Field | Description |
+|---|---|
+| `display_title` | Human-readable name |
+| `collection` | Scope — usually an org or workspace identifier |
+| `skill_md` | Inline `SKILL.md` content |
+| `loading` | `lazy` (default) or `eager` — when instructions are injected |
+
+---
+
+## List skills
+
+```bash
+curl "http://localhost:8080/v1/skills?collection=my-org"
+```
+
+---
+
+## Get a skill
+
+```bash
+curl "http://localhost:8080/v1/skills/skill_01abc...?collection=my-org"
+```
+
+---
+
+## Update
+
+Skills are immutable once created. Add a new version instead of editing:
+
+```bash
+curl -X POST http://localhost:8080/v1/skills/skill_01abc.../versions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "skill_md": "# Legal Reviewer v2\n\nUpdated instructions..."
+  }'
+```
+
+List versions:
+
+```bash
+curl http://localhost:8080/v1/skills/skill_01abc.../versions
+```
+
+---
+
+## Delete a skill
+
+```bash
+curl -X DELETE "http://localhost:8080/v1/skills/skill_01abc...?collection=my-org"
+```
+
+Read-only skills (source `anthropic` or `zylon`) cannot be deleted.

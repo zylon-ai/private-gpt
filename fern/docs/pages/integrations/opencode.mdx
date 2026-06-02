@@ -1,0 +1,90 @@
+---
+title: "OpenCode"
+description: "Point OpenCode at your private-gpt server for fully local AI coding."
+---
+
+[OpenCode](https://opencode.ai) is an open-source AI coding agent with terminal, IDE, and desktop interfaces. It supports custom OpenAI-compatible providers via the `@ai-sdk/openai-compatible` package, so it works with `private-gpt` out of the box.
+
+## Compatibility
+
+| Feature | Status | Notes |
+|---|:---:|---|
+| Chat & streaming | ✅ | |
+| Tool use / function calling | ✅ | Model-dependent |
+| File tools (read, write, edit) | ✅ | Managed by OpenCode |
+| MCP servers | ✅ | Configured in OpenCode |
+| Multi-session agents | ✅ | |
+| Images | ❌ | Not supported |
+
+---
+
+## Prerequisites
+
+- OpenCode installed — see [opencode.ai](https://opencode.ai)
+- `private-gpt` server running (see [serve](/manual/cli#serve))
+
+---
+
+## Run
+
+`private-gpt run` generates a config file at `~/.config/opencode/private-gpt.json`, sets `OPENCODE_CONFIG` to point at it, and launches OpenCode:
+
+```bash
+private-gpt run opencode
+```
+
+The server is started automatically if it is not already running. Pass `--no-server` to skip that check when the server is managed externally.
+
+**With a specific model:**
+
+```bash
+private-gpt run opencode --model my-model
+```
+
+On first launch, press `Ctrl+P` → **Switch Model** → select the model under **PrivateGPT**.
+
+---
+
+## Manual setup
+
+If you prefer to manage the configuration yourself:
+
+**1. Create the config file**
+
+Create `~/.config/opencode/private-gpt.json` (a separate file to avoid overriding your default OpenCode config):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "private-gpt": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "PrivateGPT",
+      "options": {
+        "baseURL": "http://localhost:8080/v1",
+        "apiKey": "secret-key"
+      },
+      "models": {
+        "default": {
+          "name": "PrivateGPT - default",
+          "limit": {
+            "context": 8096,
+            "output": 1024
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Replace `secret-key` with the value of `server.auth.secret` from your `private-gpt` settings. If auth is disabled, any non-empty string works.
+
+**2. Launch with the custom config**
+
+```bash
+export OPENCODE_CONFIG=~/.config/opencode/private-gpt.json
+opencode
+```
+
+On first launch, press `Ctrl+P` → **Switch Model** → select the model under **PrivateGPT**.

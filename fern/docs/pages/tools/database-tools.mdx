@@ -1,0 +1,83 @@
+---
+title: "Database Tools"
+description: "Install and configure built-in database query tools."
+---
+
+This page covers installation and server-side configuration for built-in database tools.
+
+Use this together with:
+
+- [Tools](/api-guide/tools) for request examples and runtime usage
+
+---
+
+## Supported database tools
+
+Built-in database tools include:
+
+- `database_query_v1`
+- `/v1/tools/database-query`
+
+---
+
+## How to install
+
+Choose the smallest extra that matches your database:
+
+| Database | Extra | Installs |
+|---|---|---|
+| PostgreSQL | `private-gpt[database-postgres]` | `psycopg2-binary`, `asyncpg` |
+| MySQL | `private-gpt[database-mysql]` | `pymysql` |
+| SQL Server | `private-gpt[database-mssql]` | `pyodbc` |
+| DB2 | `private-gpt[database-db2]` | `ibm-db`, `ibm-db-sa` |
+| All database drivers | `private-gpt[database]` | all of the above |
+| Database tool bundle | `private-gpt[tool-database]` | `private-gpt[database]` |
+
+If you only want the database tool itself, `tool-database` is the simplest entry point. If you want a narrower install, use the driver-specific extra directly.
+
+<Warning>
+  The `database-db2` extra is only published for non-`aarch64` platforms in the current package metadata.
+</Warning>
+
+Examples:
+
+```bash
+uv sync --extra database-postgres
+uv sync --extra database-mysql
+uv sync --extra database-mssql
+uv sync --extra database-db2
+uv sync --extra tool-database
+```
+
+`database_query_v1` will also work when you install broader bundles that include database support, such as `private-gpt[database]`, `private-gpt[tool-database]`, `private-gpt[tools]`, or `private-gpt[core]`.
+
+---
+
+## Settings reference
+
+Database query does not have a global `enabled` flag in `settings.yaml`. Instead, the server uses runtime limits from `database_query`, and each request provides the target database through a `sql_database` artifact.
+
+```yaml
+database_query:
+  timeout_seconds: 1000
+  batch_size: 1000
+  max_mb_result: 150
+```
+
+---
+
+### Settings
+
+| Setting | Description |
+|---|---|
+| `database_query.timeout_seconds` | Maximum time allowed for a database query. |
+| `database_query.batch_size` | Number of rows processed per batch. |
+| `database_query.max_mb_result` | Maximum response size in MB before truncation or failure. |
+
+---
+
+### Runtime requirement
+
+The database connection is not configured globally in `settings.yaml`. Pass it in the request as a `sql_database` artifact.
+
+See [Tools](/api-guide/tools) for Messages API and standalone tool endpoint examples.

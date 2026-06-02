@@ -1,0 +1,178 @@
+---
+title: "LlamaCPP Server"
+description: "Run GGUF models locally with llama-server — full tokenizer support, CPU and GPU."
+---
+
+[llama.cpp](https://github.com/ggerganov/llama.cpp) is a high-performance inference engine for GGUF models. Its built-in HTTP server (`llama-server`) exposes an OpenAI-compatible API with **full tokenizer support**, making it the most capable local option for PrivateGPT.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ |
+| Tokenizer endpoint (`/tokenize`) | ✅ |
+| Embeddings | ✅ |
+| Tool / function calling | ✅ model-dependent |
+| Structured output | ❌ |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Download llama-server">
+    Download a pre-built binary from the [llama.cpp releases page](https://github.com/ggerganov/llama.cpp/releases). Choose the variant matching your hardware:
+
+    | Variant | Use when |
+    |---|---|
+    | `llama-server` (CPU) | No GPU, or testing |
+    | `llama-server-cuda` | NVIDIA GPU (CUDA) |
+    | `llama-server-metal` | macOS with Apple Silicon |
+    | `llama-server-vulkan` | AMD / other Vulkan-capable GPU |
+
+    Or build from source:
+    ```bash
+    git clone https://github.com/ggerganov/llama.cpp
+    cd llama.cpp
+    cmake -B build && cmake --build build --config Release -j
+    ```
+  </Step>
+
+  <Step title="Download a GGUF model">
+    Download a GGUF model file from [Hugging Face](https://huggingface.co). Example:
+
+    ```bash
+    # Using huggingface-cli (pip install huggingface_hub)
+    # Example LLM (~18 GB, Q4 quantization)
+    huggingface-cli download \
+      unsloth/Qwen3.5-35B-A3B-GGUF \
+      Qwen3.5-35B-A3B-Q4_K_M.gguf \
+      --local-dir ./models
+
+    # Example embeddings model
+    huggingface-cli download \
+      ChristianAzinn/mxbai-embed-large-v1-gguf \
+      mxbai-embed-large-v1-f16.gguf \
+      --local-dir ./models
+    ```
+  </Step>
+
+  <Step title="Start llama-server">
+    Run the LLM server on port `8000`:
+
+    ```bash
+    llama-server \
+      --model ./models/Qwen3.5-35B-A3B-Q4_K_M.gguf \
+      --port 8000 \
+      --ctx-size 32768
+    ```
+
+    If you want a dedicated embeddings model, start a second server on port `8001`:
+
+    ```bash
+    llama-server \
+      --model ./models/mxbai-embed-large-v1-f16.gguf \
+      --port 8001 \
+      --embeddings
+    ```
+
+    | Flag | Description |
+    |---|---|
+    | `--model` | Path to your GGUF model file |
+    | `--port` | HTTP port (default: 8080; use 8000/8001 to avoid conflict with PrivateGPT) |
+    | `--ctx-size` | Maximum context window in tokens |
+    | `--embeddings` | Enable the embeddings endpoint for an embedding model |
+    | `--n-gpu-layers N` | Offload N layers to GPU (omit for CPU-only) |
+
+    The LLM API is available at `http://localhost:8000/v1`. If you start the second instance, the embeddings API is available at `http://localhost:8001/v1`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=http://localhost:8000/v1 \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:8001/v1 \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=http://host.docker.internal:8000/v1 \
+          -e OPENAI_EMBEDDING_API_BASE=http://host.docker.internal:8001/v1 \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=http://localhost:8000/v1 \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:8001/v1 \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+```yaml
+# settings-model.yaml
+llm:
+  default_model: Qwen3.5-35B-A3B-Q4_K_M
+
+embedding:
+  default_model: mxbai-embed-large-v1-f16
+
+models:
+  - name: Qwen3.5-35B-A3B-Q4_K_M
+    type: llm
+    mode: openai
+    context_window: 32768
+    tokenizer: Qwen/Qwen3.5-35B-A3B   # Exact token counting via HuggingFace tokenizer
+    support_tools: true
+    support_reasoning: true
+    sampling_params:
+      temperature: 0.6
+      top_p: 0.95
+      top_k: 20
+      min_p: 0.0
+
+  - name: mxbai-embed-large-v1-f16
+    type: embedding
+    mode: openai
+    context_window: 512
+```
+
+---
+
+## GPU acceleration
+
+<Tabs>
+  <Tab title="NVIDIA (CUDA)">
+    Offload layers to GPU:
+    ```bash
+    llama-server \
+      --model ./models/Qwen3.5-35B-A3B-Q4_K_M.gguf \
+      --port 8000 \
+      --ctx-size 32768 \
+      --n-gpu-layers 99   # Offload all layers; reduce if you run out of VRAM
+    ```
+  </Tab>
+  <Tab title="Apple Silicon (Metal)">
+    Metal is enabled by default when building on macOS with Apple Silicon:
+    ```bash
+    llama-server \
+      --model ./models/Qwen3.5-35B-A3B-Q4_K_M.gguf \
+      --port 8000 \
+      --n-gpu-layers 99
+    ```
+  </Tab>
+</Tabs>
+
+If you also run the embedding model as a second `llama-server` instance, apply the same GPU flags to that server separately.

@@ -1,9 +1,9 @@
 server:
   env_name: ${APP_ENV:mock}
 
-# This configuration allows you to use GPU for creating embeddings while avoiding loading LLM into vRAM
+# This configuration allows you to use hardware acceleration for creating embeddings while avoiding loading the full LLM into (video) memory.
 llm:
   mode: mock
 
 embedding:
-  mode: huggingface
+  mode: local

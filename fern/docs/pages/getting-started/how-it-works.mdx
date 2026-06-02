@@ -1,0 +1,67 @@
+---
+title: "How it works"
+description: "Startup flow, model discovery, configuration profiles, and environment variables."
+---
+
+## Startup flow
+
+When PrivateGPT starts, it:
+
+1. Loads `settings.yaml` and any additional profiles specified in `PGPT_PROFILES`.
+2. Calls `GET /v1/models` on your LLM server and registers all returned models automatically.
+3. Applies smart defaults to each discovered model (128k context window, tool use, vision).
+4. Starts the API server on port `8080`.
+
+No config file is required for basic use — auto-discovery handles everything.
+
+---
+
+## Configuration profiles
+
+For full control over model settings (tokenizer, context window, sampling parameters), use YAML profiles. A profile is a file named `settings-{name}.yaml` placed in the project root.
+
+Load one or more profiles at startup:
+
+```bash
+PGPT_PROFILES=my-profile private-gpt serve
+```
+
+Profiles are merged in order on top of the base `settings.yaml` — later ones override earlier ones.
+
+Check [Settings & Profiles](/manual/settings) for more detail.
+
+### Generating a profile
+
+With your LLM server running, auto-generate a profile from the discovered models:
+
+```bash
+OPENAI_API_BASE=http://localhost:11434/v1 \
+  uv run python scripts/auto_discover_models.py --out settings-model.yaml
+```
+
+Then edit `settings-model.yaml` to tune tokenizer, context window, and sampling parameters. See [Detailed Model Configuration](/manual/advanced) for a full walkthrough.
+
+---
+
+## Model discovery
+
+On startup PrivateGPT queries your LLM server for available models. Every model returned is registered and available immediately via `GET /v1/models`.
+
+To disable auto-discovery and manage models manually:
+
+```bash
+PGPT_LLM_AUTO_DISCOVER_MODELS=false private-gpt serve
+```
+
+---
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENAI_API_BASE` | — | LLM server endpoint (required) |
+| `OPENAI_API_KEY` | _(empty)_ | API key, if required by your server |
+| `OPENAI_EMBEDDING_API_BASE` | same as `OPENAI_API_BASE` | Embeddings server endpoint if different |
+| `PGPT_PROFILES` | _(none)_ | Comma-separated profile names to load |
+| `PGPT_LLM_AUTO_DISCOVER_MODELS` | `true` | Auto-discover models from `/v1/models` on startup |
+| `PORT` | `8080` | Port the PrivateGPT server listens on |

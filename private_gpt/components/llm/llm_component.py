@@ -1,225 +1,237 @@
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from injector import inject, singleton
-from llama_index.core.llms import LLM, MockLLM
-from llama_index.core.settings import Settings as LlamaIndexSettings
-from llama_index.core.utils import set_global_tokenizer
-from transformers import AutoTokenizer  # type: ignore
+from llama_index.core.base.llms.types import LLMMetadata
+from llama_index.core.llms import LLM
 
-from private_gpt.components.llm.prompt_helper import get_prompt_style
-from private_gpt.paths import models_cache_path, models_path
-from private_gpt.settings.settings import Settings
+from private_gpt.components.llm.custom.base import ZylonLLM
+from private_gpt.components.llm.discovery import get_models
+from private_gpt.components.llm.factories.registry import LLMFactoryRegistry
+from private_gpt.components.llm.llm_helper import TokenizerFn, get_tokenizer_fn
+from private_gpt.components.llm.registry import LLMInstance, LLMRegistry
+from private_gpt.components.llm.tokenizers.tokenizer_base import TokenizerBase
+from private_gpt.components.model_discovery.service import are_distinct_api_bases
+from private_gpt.settings.settings import LLMModelConfig, Settings
 
 logger = logging.getLogger(__name__)
 
 
 @singleton
 class LLMComponent:
-    llm: LLM
-
     @inject
-    def __init__(self, settings: Settings) -> None:
-        llm_mode = settings.llm.mode
-        if settings.llm.tokenizer and settings.llm.mode != "mock":
-            # Try to download the tokenizer. If it fails, the LLM will still work
-            # using the default one, which is less accurate.
+    def __init__(self, settings: Settings, llm_registry: LLMRegistry) -> None:
+        self.registry = llm_registry
+        self.settings = settings
+
+        self.factory_registry = LLMFactoryRegistry(settings)
+        self.llm_models = {
+            model.name: model
+            for model in self.settings.models
+            if model.type == "llm" and model.enabled
+        }
+        self._default_model_id = settings.llm.default_model
+
+        self._initialize_models()
+
+    def _discover_models(self) -> list[LLMModelConfig]:
+        if not self.settings.llm.auto_discover_models:
+            return []
+
+        return get_models(
+            self.settings.openai.api_base,
+            self.settings.openai.api_key,
+            force_model_kind=are_distinct_api_bases(
+                self.settings.openai.embedding_api_key,
+                self.settings.openai.embedding_api_base,
+            ),
+        )
+
+    def _initialize_models(self) -> None:
+        for model in self._discover_models():
+            if model.name not in self.llm_models:
+                self.llm_models[model.name] = model
+
+        if not self.llm_models:
+            logger.warning(
+                "No LLM models are configured, "
+                "or it was impossible to discover any models from the API"
+            )
+
+        registered_model_ids: list[str] = []
+        for model_id, model_config in list(self.llm_models.items()):
             try:
-                set_global_tokenizer(
-                    AutoTokenizer.from_pretrained(
-                        pretrained_model_name_or_path=settings.llm.tokenizer,
-                        cache_dir=str(models_cache_path),
-                        token=settings.huggingface.access_token,
-                    )
+                logger.info(
+                    "Initializing LLM model '%s' with mode='%s'",
+                    model_id,
+                    model_config.mode,
                 )
+
+                factory = self.factory_registry.get_factory(model_config.mode)
+                instance = factory.create_llm(model_config)
+
+                alias = instance.alias
+                aliases = [alias] if alias and alias != model_id else []
+                if model_id == self._default_model_id:
+                    aliases.append(LLMRegistry.default())
+
+                registry_instance = LLMInstance(
+                    llm=instance.llm, tokenizer=instance.tokenizer
+                )
+                self.registry.register(model_id, registry_instance, aliases=aliases)
+                registered_model_ids.append(model_id)
+
+                logger.info("Successfully registered LLM model '%s'", model_id)
+
             except Exception as e:
+                self.llm_models.pop(model_id, None)
+                if model_id == self._default_model_id:
+                    raise ValueError(
+                        f"Default LLM model '{model_id}' could not be initialized: {e}"
+                    ) from e
                 logger.warning(
-                    f"Failed to download tokenizer {settings.llm.tokenizer}: {e!s}"
-                    f"Please follow the instructions in the documentation to download it if needed: "
-                    f"https://docs.privategpt.dev/installation/getting-started/troubleshooting#tokenizer-setup."
-                    f"Falling back to default tokenizer."
+                    "Skipping unavailable LLM model '%s': %s",
+                    model_id,
+                    e,
                 )
 
-        logger.info("Initializing the LLM in mode=%s", llm_mode)
-        match settings.llm.mode:
-            case "llamacpp":
-                try:
-                    from llama_index.llms.llama_cpp import LlamaCPP  # type: ignore
-                except ImportError as e:
-                    raise ImportError(
-                        "Local dependencies not found, install with `poetry install --extras llms-llama-cpp`"
-                    ) from e
+        if not self._default_model_id and registered_model_ids:
+            self._default_model_id = next(iter(self.llm_models))
+            logger.warning(
+                "No default LLM model configured. Auto-selecting: '%s'",
+                self._default_model_id,
+            )
 
-                prompt_style = get_prompt_style(settings.llm.prompt_style)
-                settings_kwargs = {
-                    "tfs_z": settings.llamacpp.tfs_z,  # ollama and llama-cpp
-                    "top_k": settings.llamacpp.top_k,  # ollama and llama-cpp
-                    "top_p": settings.llamacpp.top_p,  # ollama and llama-cpp
-                    "repeat_penalty": settings.llamacpp.repeat_penalty,  # ollama llama-cpp
-                    "n_gpu_layers": -1,
-                    "offload_kqv": True,
-                }
-                self.llm = LlamaCPP(
-                    model_path=str(models_path / settings.llamacpp.llm_hf_model_file),
-                    temperature=settings.llm.temperature,
-                    max_new_tokens=settings.llm.max_new_tokens,
-                    context_window=settings.llm.context_window,
-                    generate_kwargs={},
-                    callback_manager=LlamaIndexSettings.callback_manager,
-                    # All to GPU
-                    model_kwargs=settings_kwargs,
-                    # transform inputs into Llama2 format
-                    messages_to_prompt=prompt_style.messages_to_prompt,
-                    completion_to_prompt=prompt_style.completion_to_prompt,
-                    verbose=True,
+        if self._default_model_id:
+            default_instance = self.registry.get(self._default_model_id)
+            if not default_instance:
+                raise ValueError(
+                    f"Default model '{self._default_model_id}' not found in registered models"
                 )
 
-            case "sagemaker":
-                try:
-                    from private_gpt.components.llm.custom.sagemaker import SagemakerLLM
-                except ImportError as e:
-                    raise ImportError(
-                        "Sagemaker dependencies not found, install with `poetry install --extras llms-sagemaker`"
-                    ) from e
+            if not self.registry.get(LLMRegistry.default()):
+                self.registry.register(LLMRegistry.default(), default_instance)
 
-                self.llm = SagemakerLLM(
-                    endpoint_name=settings.sagemaker.llm_endpoint_name,
-                    max_new_tokens=settings.llm.max_new_tokens,
-                    context_window=settings.llm.context_window,
+            logger.info("Set default model to '%s'", self._default_model_id)
+
+    def get_llm(self, model_id: str | None = None) -> LLM:
+        target_model = model_id or self._default_model_id
+
+        if not target_model:
+            raise ValueError("No model specified and no models are configured")
+
+        llm_instance = self.registry.get(target_model)
+        if not llm_instance:
+            available = self.registry.get_all_aliases()
+            raise ValueError(
+                f"Model '{target_model}' not found. Available: {available}"
+            )
+
+        return llm_instance.llm
+
+    def get_alias(self, model_id: str | None = None) -> str | None:
+        target_model = model_id or self._default_model_id
+        if not target_model:
+            return None
+        aliases = self.registry.get_aliases(target_model)
+        return aliases.pop() if aliases else None
+
+    def get_config(self, model_id: str | None = None) -> LLMModelConfig:
+        target_model = model_id or self._default_model_id
+
+        if not target_model:
+            raise ValueError("No model specified and no models are configured")
+
+        model_config = self.llm_models.get(target_model)
+        if not model_config:
+            available = list(self.llm_models.keys())
+            for alias in self.registry.get_aliases(target_model):
+                if alias in self.llm_models:
+                    model_config = self.llm_models[alias]
+                    return model_config
+
+            raise ValueError(
+                f"Model config '{target_model}' not found. Available: {available}"
+            )
+
+        return model_config
+
+    def get_tokenizer(self, model_id: str | None = None) -> TokenizerBase | None:
+        target_model = model_id or self._default_model_id
+
+        if not target_model:
+            raise ValueError("No model specified and no models are configured")
+
+        llm_instance = self.registry.get(target_model)
+        if not llm_instance:
+            available = self.registry.get_all_aliases()
+            raise ValueError(
+                f"Model '{target_model}' not found. Available: {available}"
+            )
+
+        tokenizer = llm_instance.tokenizer
+        return tokenizer
+
+    def filter(
+        self, predicate: Callable[[LLM, LLMModelConfig], bool]
+    ) -> Iterator[tuple[LLM, LLMModelConfig, TokenizerFn | None]]:
+        """Filter LLM components based on a predicate function.
+
+        :param predicate: A function that takes an LLM
+         and returns True if it matches the criteria.
+        :return: An iterator over the filtered LLM components.
+        """
+        seen = set()
+        for model_id, component in self.registry._registry.items():
+            model_config = self.llm_models.get(model_id)
+            if (
+                model_config
+                and id(model_id) not in seen
+                and predicate(component.llm, model_config)
+            ):
+                seen.add(id(model_id))
+
+                tokenizer_fn = (
+                    get_tokenizer_fn(component.tokenizer)
+                    if component.tokenizer
+                    else None
                 )
-            case "openai":
-                try:
-                    from llama_index.llms.openai import OpenAI  # type: ignore
-                except ImportError as e:
-                    raise ImportError(
-                        "OpenAI dependencies not found, install with `poetry install --extras llms-openai`"
-                    ) from e
+                yield component.llm, model_config, tokenizer_fn
 
-                openai_settings = settings.openai
-                self.llm = OpenAI(
-                    api_base=openai_settings.api_base,
-                    api_key=openai_settings.api_key,
-                    model=openai_settings.model,
-                )
-            case "openailike":
-                try:
-                    from llama_index.llms.openai_like import OpenAILike  # type: ignore
-                except ImportError as e:
-                    raise ImportError(
-                        "OpenAILike dependencies not found, install with `poetry install --extras llms-openai-like`"
-                    ) from e
-                prompt_style = get_prompt_style(settings.llm.prompt_style)
-                openai_settings = settings.openai
-                self.llm = OpenAILike(
-                    api_base=openai_settings.api_base,
-                    api_key=openai_settings.api_key,
-                    model=openai_settings.model,
-                    is_chat_model=True,
-                    max_tokens=settings.llm.max_new_tokens,
-                    api_version="",
-                    temperature=settings.llm.temperature,
-                    context_window=settings.llm.context_window,
-                    messages_to_prompt=prompt_style.messages_to_prompt,
-                    completion_to_prompt=prompt_style.completion_to_prompt,
-                    tokenizer=settings.llm.tokenizer,
-                    timeout=openai_settings.request_timeout,
-                    reuse_client=False,
-                )
-            case "ollama":
-                try:
-                    from llama_index.llms.ollama import Ollama  # type: ignore
-                except ImportError as e:
-                    raise ImportError(
-                        "Ollama dependencies not found, install with `poetry install --extras llms-ollama`"
-                    ) from e
+    @property
+    def llm(self) -> LLM:
+        return self.get_llm()
 
-                ollama_settings = settings.ollama
+    @llm.setter
+    def llm(self, value: LLM) -> None:
+        if not self._default_model_id:
+            raise ValueError("No default model configured to set LLM")
 
-                settings_kwargs = {
-                    "tfs_z": ollama_settings.tfs_z,  # ollama and llama-cpp
-                    "num_predict": ollama_settings.num_predict,  # ollama only
-                    "top_k": ollama_settings.top_k,  # ollama and llama-cpp
-                    "top_p": ollama_settings.top_p,  # ollama and llama-cpp
-                    "repeat_last_n": ollama_settings.repeat_last_n,  # ollama
-                    "repeat_penalty": ollama_settings.repeat_penalty,  # ollama llama-cpp
-                }
+        before_tokenizer: TokenizerBase | None = None
+        llm_instance = self.registry.get(self._default_model_id)
+        if llm_instance:
+            before_tokenizer = llm_instance.tokenizer
+            self.registry.unregister(self._default_model_id)
 
-                # calculate llm model. If not provided tag, it will be use latest
-                model_name = (
-                    ollama_settings.llm_model + ":latest"
-                    if ":" not in ollama_settings.llm_model
-                    else ollama_settings.llm_model
-                )
+        instance = LLMInstance(llm=value, tokenizer=before_tokenizer)
+        logger.warning(
+            "Directly setting the LLM instance is deprecated. "
+            "Use ONLY for testing purposes."
+        )
+        self.registry.register(self._default_model_id, instance)
 
-                llm = Ollama(
-                    model=model_name,
-                    base_url=ollama_settings.api_base,
-                    temperature=settings.llm.temperature,
-                    context_window=settings.llm.context_window,
-                    additional_kwargs=settings_kwargs,
-                    request_timeout=ollama_settings.request_timeout,
-                )
+    @property
+    def alias(self) -> str | None:
+        return self.get_alias()
 
-                if ollama_settings.autopull_models:
-                    from private_gpt.utils.ollama import check_connection, pull_model
+    @property
+    def tokenizer(self) -> TokenizerBase | None:
+        return self.get_tokenizer()
 
-                    if not check_connection(llm.client):
-                        raise ValueError(
-                            f"Failed to connect to Ollama, "
-                            f"check if Ollama server is running on {ollama_settings.api_base}"
-                        )
-                    pull_model(llm.client, model_name)
-
-                if (
-                    ollama_settings.keep_alive
-                    != ollama_settings.model_fields["keep_alive"].default
-                ):
-                    # Modify Ollama methods to use the "keep_alive" field.
-                    def add_keep_alive(func: Callable[..., Any]) -> Callable[..., Any]:
-                        def wrapper(*args: Any, **kwargs: Any) -> Any:
-                            kwargs["keep_alive"] = ollama_settings.keep_alive
-                            return func(*args, **kwargs)
-
-                        return wrapper
-
-                    Ollama.chat = add_keep_alive(Ollama.chat)  # type: ignore
-                    Ollama.stream_chat = add_keep_alive(Ollama.stream_chat)  # type: ignore
-                    Ollama.complete = add_keep_alive(Ollama.complete)  # type: ignore
-                    Ollama.stream_complete = add_keep_alive(Ollama.stream_complete)  # type: ignore
-
-                self.llm = llm
-
-            case "azopenai":
-                try:
-                    from llama_index.llms.azure_openai import (  # type: ignore
-                        AzureOpenAI,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "Azure OpenAI dependencies not found, install with `poetry install --extras llms-azopenai`"
-                    ) from e
-
-                azopenai_settings = settings.azopenai
-                self.llm = AzureOpenAI(
-                    model=azopenai_settings.llm_model,
-                    deployment_name=azopenai_settings.llm_deployment_name,
-                    api_key=azopenai_settings.api_key,
-                    azure_endpoint=azopenai_settings.azure_endpoint,
-                    api_version=azopenai_settings.api_version,
-                )
-            case "gemini":
-                try:
-                    from llama_index.llms.gemini import (  # type: ignore
-                        Gemini,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "Google Gemini dependencies not found, install with `poetry install --extras llms-gemini`"
-                    ) from e
-                gemini_settings = settings.gemini
-                self.llm = Gemini(
-                    model_name=gemini_settings.model, api_key=gemini_settings.api_key
-                )
-            case "mock":
-                self.llm = MockLLM()
+    def metadata(self, model_id: str | None = None, **kwargs: Any) -> LLMMetadata:
+        llm = self.get_llm(model_id)
+        llm_metadata: Any = (
+            llm.get_metadata(**kwargs) if isinstance(llm, ZylonLLM) else llm.metadata
+        )
+        return llm_metadata  # type: ignore[no-any-return]

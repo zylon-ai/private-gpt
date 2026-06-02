@@ -6,11 +6,7 @@
       {
         "type": "toml",
         "path": "pyproject.toml",
-        "jsonpath": "$.tool.poetry.version"
-      },
-      {
-        "type": "generic",
-        "path": "docker-compose.yaml"
+        "jsonpath": "$.project.version"
       }
     ],
     "packages": {

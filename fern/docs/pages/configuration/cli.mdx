@@ -1,0 +1,172 @@
+---
+title: "CLI"
+description: "Manage the server, workers, and connected apps with the private-gpt CLI."
+---
+
+The `private-gpt` CLI covers the full service lifecycle: starting the HTTP server, launching background workers, and running connected apps like Claude Code.
+
+```
+private-gpt <command> [flags]
+
+Commands:
+  serve     Start the HTTP server
+  worker    Start a background worker process
+  run       Launch a connected app (claude-code, openclaw, custom)
+  help      Show help for any command
+```
+
+---
+
+## serve
+
+Starts the uvicorn HTTP server.
+
+```bash
+private-gpt serve [flags]
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--host` | `0.0.0.0` | Bind address |
+| `--port` | from settings | HTTP port |
+| `--reload` | off | Enable auto-reload for development |
+| `--log-level` | `info` | `debug` \| `info` \| `warn` \| `error` |
+| `--pid-file` | — | Write PID to file (for systemd / launchd) |
+
+**Examples:**
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    # Start with defaults
+    private-gpt serve
+
+    # Development mode with auto-reload
+    private-gpt serve --reload --log-level debug
+
+    # Production with PID file for process supervision
+    private-gpt serve --pid-file /var/run/private-gpt.pid
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    # Start with defaults
+    private-gpt serve
+
+    # Development mode with auto-reload
+    private-gpt serve --reload --log-level debug
+
+    # Production with PID file for process supervision
+    private-gpt serve --pid-file C:\ProgramData\private-gpt\private-gpt.pid
+    ```
+  </Tab>
+</Tabs>
+
+**PID file behavior:** if `--pid-file` is given and the file already exists with a live process, the command exits with code 1 and prints the existing PID. On `SIGTERM` the PID file is removed.
+
+---
+
+## worker
+
+Starts the Celery worker stack. All behaviour is controlled through environment variables — no CLI flags.
+
+```bash
+private-gpt worker
+```
+
+The worker process manages up to three sub-processes depending on `PGPT_WORKER_MODE`:
+
+| `PGPT_WORKER_MODE` | What starts |
+|---|---|
+| `mixed` (default) | Celery worker + Flower UI |
+| `worker` | Celery worker only |
+| `flower` | Flower UI only |
+
+**Examples:**
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    # Default: worker + Flower UI
+    private-gpt worker
+
+    # Worker only, no Flower
+    PGPT_WORKER_MODE=worker private-gpt worker
+
+    # Custom concurrency and queues
+    PGPT_CELERY_QUEUES=ingest,chat PGPT_CELERY_CONCURRENCY=4 private-gpt worker
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    # Default: worker + Flower UI
+    private-gpt worker
+
+    # Worker only, no Flower
+    $env:PGPT_WORKER_MODE = "worker"
+    private-gpt worker
+
+    # Custom concurrency and queues
+    $env:PGPT_CELERY_QUEUES = "ingest,chat"
+    $env:PGPT_CELERY_CONCURRENCY = "4"
+    private-gpt worker
+    ```
+  </Tab>
+  <Tab title="Windows (CMD)">
+    ```cmd
+    :: Default: worker + Flower UI
+    private-gpt worker
+
+    :: Worker only, no Flower
+    set PGPT_WORKER_MODE=worker
+    private-gpt worker
+
+    :: Custom concurrency and queues
+    set PGPT_CELERY_QUEUES=ingest,chat
+    set PGPT_CELERY_CONCURRENCY=4
+    private-gpt worker
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## run
+
+Launches a connected app as a managed child process, automatically injecting the server connection details.
+
+See the [Integrations](/integrations/claude-code) section for app-specific setup guides.
+
+```bash
+private-gpt run <app> [flags] [-- <app-args>]
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--attach / --no-attach` | auto (TTY detected) | Attach stdin/stdout |
+| `--detach` | off | Run in background, print run ID |
+| `--session <id>` | — | Resume a previous app session |
+| `--model <id>` | `llm.default_model` | Model name (forwarded via env) |
+| `--auto-approve` | off | Skip confirmations (CI mode) |
+| `--no-server` | off | Skip server detection and auto-start |
+
+**Server auto-start:** before launching the app, `private-gpt run` checks `/health`. If the server is not reachable it starts one automatically and waits up to 60 s. Pass `--no-server` to skip this — useful when the server is managed externally (systemd, Docker).
+
+---
+
+## help
+
+Show help for any command:
+
+```bash
+private-gpt help
+private-gpt help serve
+private-gpt serve --help
+```
+
+Unknown commands print a suggestion:
+
+```
+$ private-gpt srve
+Unknown command: 'srve'. Did you mean: 'serve'?
+```

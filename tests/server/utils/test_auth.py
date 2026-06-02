@@ -2,5 +2,5 @@ from fastapi.testclient import TestClient
 
 
 def test_default_does_not_require_auth(test_client: TestClient) -> None:
-    response_before = test_client.get("/v1/ingest/list")
+    response_before = test_client.get("/v1/artifacts/list?collection=default")
     assert response_before.status_code == 200
