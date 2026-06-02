@@ -5,20 +5,22 @@ on:
     branches:
       - main
   pull_request:
+    paths:
+      - 'private_gpt/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'Makefile'
+      - 'Dockerfile'
+      - '.github/workflows/tests.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.head_ref || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/workflows/actions/install_dependencies
-
   checks:
-    needs: setup
     runs-on: ubuntu-latest
     name: ${{ matrix.quality-command }}
     strategy:
@@ -34,7 +36,6 @@ jobs:
         run: make ${{ matrix.quality-command }}
 
   test:
-    needs: setup
     runs-on: ubuntu-latest
     name: test
     steps:
