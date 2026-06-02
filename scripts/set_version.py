@@ -8,7 +8,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VERSION_TXT = REPO_ROOT / "version.txt"
 PYPROJECT = REPO_ROOT / "pyproject.toml"
@@ -18,7 +17,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Update the local project version across release-managed files."
     )
-    parser.add_argument("version", help="Version to set, for example 1.0.0 or 1.0.0-rc1")
+    parser.add_argument(
+        "version", help="Version to set, for example 1.0.0 or 1.0.0-rc1"
+    )
     parser.add_argument(
         "--no-lock",
         action="store_true",
@@ -79,4 +80,4 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except RuntimeError as exc:
         print(f"error: {exc}", file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from exc
