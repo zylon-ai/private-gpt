@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.0.0](https://github.com/zylon-ai/private-gpt/compare/v0.6.2...v1.0.0) (2026-06-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* PrivateGPT revamp v1 ([#2230](https://github.com/zylon-ai/private-gpt/issues/2230))
+
+### Features
+
+* add markdown table renderer to the workbench ui ([#2255](https://github.com/zylon-ai/private-gpt/issues/2255)) ([d1ac2e2](https://github.com/zylon-ai/private-gpt/commit/d1ac2e29ad333a2d187fcbf45a00a30f6e1d63e6))
+* add retry connection to ollama ([#2084](https://github.com/zylon-ai/private-gpt/issues/2084)) ([77461b9](https://github.com/zylon-ai/private-gpt/commit/77461b96cf2e18b88b592fff441206a49826db97))
+* Adding MistralAI mode ([#2065](https://github.com/zylon-ai/private-gpt/issues/2065)) ([f9182b3](https://github.com/zylon-ai/private-gpt/commit/f9182b3a86d88af7c699b41b3a5f21401117acfc))
+* change logo app ([#2254](https://github.com/zylon-ai/private-gpt/issues/2254)) ([f2e6685](https://github.com/zylon-ai/private-gpt/commit/f2e668595123426834e8c055d7ad4b8b8a0a77a9))
+* PrivateGPT revamp v1 ([#2230](https://github.com/zylon-ai/private-gpt/issues/2230)) ([183cd03](https://github.com/zylon-ai/private-gpt/commit/183cd038570d7e3138e9286463c74b7c7fc50a2a))
+* update llama-index + dependencies ([#2092](https://github.com/zylon-ai/private-gpt/issues/2092)) ([5851b02](https://github.com/zylon-ai/private-gpt/commit/5851b02378313f3dba315e0251cfd421af79dae6))
+
+
+### Bug Fixes
+
+* 503 when private gpt gets ollama service ([#2104](https://github.com/zylon-ai/private-gpt/issues/2104)) ([940bdd4](https://github.com/zylon-ai/private-gpt/commit/940bdd49af14d9c1e7fd4af54f12648b5fc1f9c0))
+* Add default mode option to settings ([#2078](https://github.com/zylon-ai/private-gpt/issues/2078)) ([fa3c306](https://github.com/zylon-ai/private-gpt/commit/fa3c30661d2ab04634361e20e7819365e3dd351a))
+* citation/thinking prompts ([#2257](https://github.com/zylon-ai/private-gpt/issues/2257)) ([c438ba1](https://github.com/zylon-ai/private-gpt/commit/c438ba183f7e7528321f28b97a08922bba811c4d))
+* claude desktop after changes yesterday ([#2245](https://github.com/zylon-ai/private-gpt/issues/2245)) ([a6ab856](https://github.com/zylon-ai/private-gpt/commit/a6ab856c2b03fca4dfabdf20654d639f7d97b66d))
+* code agents ([#2244](https://github.com/zylon-ai/private-gpt/issues/2244)) ([aa52621](https://github.com/zylon-ai/private-gpt/commit/aa5262154f1080052d87d7068152c057401830c0))
+* CVE-2026-35030 security vulnerability ([#2232](https://github.com/zylon-ai/private-gpt/issues/2232)) ([27bd992](https://github.com/zylon-ai/private-gpt/commit/27bd9923874ec4ba30d5a18dfbd60af5ec3d3eb1))
+* docker permissions ([#2059](https://github.com/zylon-ai/private-gpt/issues/2059)) ([8c12c68](https://github.com/zylon-ai/private-gpt/commit/8c12c6830b37851cccb3fea75faa820fce49284a))
+* naming image and ollama-cpu ([#2056](https://github.com/zylon-ai/private-gpt/issues/2056)) ([89477ea](https://github.com/zylon-ai/private-gpt/commit/89477ea9d3a83181b0222b732a81c71db9edf142))
+* Rectify ffmpy poetry config; update version from 0.3.2 to 0.4.0 ([#2062](https://github.com/zylon-ai/private-gpt/issues/2062)) ([7603b36](https://github.com/zylon-ai/private-gpt/commit/7603b3627d91aed1cce2e1ae407fec11ca1ad132))
+* Sanitize null bytes before ingestion ([#2090](https://github.com/zylon-ai/private-gpt/issues/2090)) ([5fbb402](https://github.com/zylon-ai/private-gpt/commit/5fbb402477c41e09f56a3e5adc32f316341772bf))
+* ui auth header ([#2242](https://github.com/zylon-ai/private-gpt/issues/2242)) ([3dbadc0](https://github.com/zylon-ai/private-gpt/commit/3dbadc0b328b7baad1b6991e8e29434a3846958d))
+* update claude api spec ([#2246](https://github.com/zylon-ai/private-gpt/issues/2246)) ([feb11e4](https://github.com/zylon-ai/private-gpt/commit/feb11e45cb67ce5f9c2e9d39fdf84e8771cb7ed0))
+
 ## [0.6.2](https://github.com/zylon-ai/private-gpt/compare/v0.6.1...v0.6.2) (2024-08-08)
 
 
