@@ -12,17 +12,6 @@ PrivateGPT connects to any OpenAI-compatible LLM server and exposes a private, s
 <Steps>
   <Step title="Install PrivateGPT">
     <Tabs>
-      <Tab title="Windows">
-        ```powershell
-        # Install uv first
-        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-        # Then install PrivateGPT
-        uv tool install --python 3.11 `
-          --find-links https://wheels.privategpt.dev/packages/ `
-          "private-gpt[core]"
-        ```
-      </Tab>
       <Tab title="Linux">
         ```bash
         # Install uv first
@@ -38,6 +27,17 @@ PrivateGPT connects to any OpenAI-compatible LLM server and exposes a private, s
         ```bash
         brew tap zylon-ai/tap
         brew install private-gpt
+        ```
+      </Tab>
+      <Tab title="Windows">
+        ```powershell
+        # Install uv first
+        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+        # Then install PrivateGPT
+        uv tool install --python 3.11 `
+          --find-links https://wheels.privategpt.dev/packages/ `
+          "private-gpt[core]"
         ```
       </Tab>
     </Tabs>
@@ -143,6 +143,10 @@ PrivateGPT connects to any OpenAI-compatible LLM server and exposes a private, s
 ---
 
 ## What's next?
+
+<Note>
+  If you plan to use database querying or web search tools, review the dependency guides in [Database Tools](/tools/database-tools) and [Web Tools](/tools/web-tools) to install the required drivers, OS libraries, and browser dependencies.
+</Note>
 
 <CardGroup cols={2}>
   <Card title="Docker install" icon="fa-brands fa-docker" href="/installation/docker">
