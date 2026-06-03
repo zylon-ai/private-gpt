@@ -247,11 +247,11 @@ PrivateGPT is maintained by the team at [Zylon](https://zylon.ai/).
 
 - Integrated inference server based on NVIDIA Triton + vLLM to run open-weight models.
 - Concurrency, batch processing and load balancing capabilities to operate at scale.
-- Kubernetes sefl-contained deployment with 20+ production services packaged and supported.
+- Kubernetes self-contained deployment with 20+ production services packaged and supported.
 - CLI for installation, updates, model selection, and platform configuration.
 - API gateway for governance and developer platform.
 - Workspace application for non-technical end users.
-- LDAP/ActiveDirectory integration and RBAC user management.
+- LDAP/Active Directory integration and RBAC user management.
 - Telemetry, observability and operational monitoring.
 - SIEM audit logs for compliance.
 - SharePoint, Confluence, FTP, and Samba connectors.
