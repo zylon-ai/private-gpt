@@ -14,14 +14,8 @@
       "CompletionInput.properties.metadata.additionalProperties: True!=False": "Local runtime intentionally allows additional properties to preserve Zylon extensions and forward-compatible client metadata while keeping the Anthropic-compatible core shape."
     },
     "CompletionOutput": {},
-    "ModelInfoOutput": {
-      "ModelInfoOutput.properties.capabilities.properties.effort.properties.xhigh: only_remote": "Anthropic added xhigh effort tier to capabilities; not yet implemented in PrivateGPT.",
-      "ModelInfoOutput.properties.capabilities.properties.effort.required: len 5!=6": "Required count increased due to new xhigh effort tier; not yet implemented in PrivateGPT."
-    },
-    "ModelListOutput": {
-      "ModelListOutput.properties.data.items.properties.capabilities.properties.effort.properties.xhigh: only_remote": "Anthropic added xhigh effort tier to capabilities; not yet implemented in PrivateGPT.",
-      "ModelListOutput.properties.data.items.properties.capabilities.properties.effort.required: len 5!=6": "Required count increased due to new xhigh effort tier; not yet implemented in PrivateGPT."
-    },
+    "ModelInfoOutput": {},
+    "ModelListOutput": {},
     "CountTokensInput": {
       "CountTokensInput.properties.system.anyOf: only_remote": "Local runtime normalizes system into list[System]; remote OpenAPI exposes broader union input.",
       "CountTokensInput.properties.thinking.discriminator: only_remote": "Zylon thinking runtime model differs from Anthropic's discriminated request union.",
@@ -121,8 +115,7 @@
       "CountTokensInput.properties.messages.items.properties.content.anyOf[0].items.oneOf[type:tool_use].properties.caller.oneOf[type:code_execution_20260120].additionalProperties: True!=False": "Local runtime intentionally allows additional properties to preserve Zylon extensions and forward-compatible client metadata while keeping the Anthropic-compatible core shape.",
       "CountTokensInput.properties.messages.items.properties.content.anyOf[0].items.oneOf[type:tool_use].properties.caller.oneOf[type:direct].additionalProperties: True!=False": "Local runtime intentionally allows additional properties to preserve Zylon extensions and forward-compatible client metadata while keeping the Anthropic-compatible core shape.",
       "CountTokensInput.properties.output_config.properties.format.additionalProperties: True!=False": "Local runtime intentionally allows additional properties to preserve Zylon extensions and forward-compatible client metadata while keeping the Anthropic-compatible core shape.",
-      "CountTokensInput.properties.messages.items.properties.content.anyOf[0].items.oneOf[type:mid_conv_system]: only_remote": "Anthropic added mid_conv_system content type for system messages mid-conversation; not yet implemented in PrivateGPT.",
-      "CountTokensInput.properties.output_config.properties.effort.enum: len 4!=5": "Anthropic added xhigh to the effort enum; not yet implemented in PrivateGPT."
+      "CountTokensInput.properties.messages.items.properties.content.anyOf[0].items.oneOf[type:mid_conv_system]: only_remote": "Anthropic added mid_conv_system content type for system messages mid-conversation; not yet implemented in PrivateGPT."
     },
     "CountTokensOutput": {},
     "ChatBody": {
@@ -226,8 +219,7 @@
       "ChatBody.properties.metadata.additionalProperties: True!=False": "Local runtime intentionally allows additional properties to preserve Zylon extensions and forward-compatible client metadata while keeping the Anthropic-compatible core shape.",
       "ChatBody.properties.output_config.properties.format.additionalProperties: True!=False": "Local runtime intentionally allows additional properties to preserve Zylon extensions and forward-compatible client metadata while keeping the Anthropic-compatible core shape.",
       "ChatBody.properties.max_tokens.minimum: type float!=int": "Local schema uses float for max_tokens minimum; Anthropic remote schema uses int.",
-      "ChatBody.properties.messages.items.properties.content.anyOf[0].items.oneOf[type:mid_conv_system]: only_remote": "Anthropic added mid_conv_system content type for system messages mid-conversation; not yet implemented in PrivateGPT.",
-      "ChatBody.properties.output_config.properties.effort.enum: len 4!=5": "Anthropic added xhigh to the effort enum; not yet implemented in PrivateGPT."
+      "ChatBody.properties.messages.items.properties.content.anyOf[0].items.oneOf[type:mid_conv_system]: only_remote": "Anthropic added mid_conv_system content type for system messages mid-conversation; not yet implemented in PrivateGPT."
     }
   }
 }

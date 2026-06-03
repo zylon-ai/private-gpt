@@ -7,6 +7,7 @@ class ReasoningEffort(enum.StrEnum):
     MEDIUM = "medium"
     HIGH = "high"
     MAX = "max"
+    XHIGH = "xhigh"
 
     @classmethod
     def from_str(cls, effort_str: str) -> "ReasoningEffort":

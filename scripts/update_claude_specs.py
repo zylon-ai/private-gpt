@@ -10,9 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 
-ANTHROPIC_STATS_URL = (
-    "https://raw.githubusercontent.com/anthropics/anthropic-sdk-typescript/main/.stats.yml"
-)
+ANTHROPIC_STATS_URL = "https://raw.githubusercontent.com/anthropics/anthropic-sdk-typescript/main/.stats.yml"
 ANTHROPIC_PYPI_URL = "https://pypi.org/pypi/anthropic/json"
 
 OPENAPI_TEST_FILE = ROOT / "tests/models/anthropic/test_openapi_schema.py"
@@ -23,19 +21,22 @@ def fetch_openapi_spec_url() -> str:
     with urllib.request.urlopen(ANTHROPIC_STATS_URL, timeout=15) as resp:
         for line in resp.read().decode().splitlines():
             if line.startswith("openapi_spec_url:"):
-                return line.split(":", 1)[1].strip()
+                spec_url: str = line.split(":", 1)[1].strip()
+                return spec_url
     raise RuntimeError(f"openapi_spec_url not found in {ANTHROPIC_STATS_URL}")
 
 
 def fetch_latest_anthropic_version() -> str:
     with urllib.request.urlopen(ANTHROPIC_PYPI_URL, timeout=15) as resp:
-        return json.loads(resp.read().decode())["info"]["version"]
+        version: str = json.loads(resp.read().decode())["info"]["version"]
+        return version
 
 
 def current_openapi_spec_url() -> str:
     source = OPENAPI_TEST_FILE.read_text(encoding="utf-8")
     match = re.search(r'^OPENAPI_SPEC_URL\s*=\s*"([^"]*)"', source, re.MULTILINE)
-    return match.group(1) if match else "<not found>"
+    spec_url: str = match.group(1) if match else "<not found>"
+    return spec_url
 
 
 def current_anthropic_version() -> str:
@@ -53,7 +54,9 @@ def update_openapi_spec_url(new_url: str) -> None:
         flags=re.MULTILINE,
     )
     if count == 0:
-        raise RuntimeError(f"OPENAPI_SPEC_URL assignment not found in {OPENAPI_TEST_FILE}")
+        raise RuntimeError(
+            f"OPENAPI_SPEC_URL assignment not found in {OPENAPI_TEST_FILE}"
+        )
     OPENAPI_TEST_FILE.write_text(updated, encoding="utf-8")
 
 
@@ -65,7 +68,7 @@ def update_anthropic_version(new_version: str) -> None:
         source,
     )
     if count == 0:
-        raise RuntimeError(f'anthropic dependency not found in {PYPROJECT_FILE}')
+        raise RuntimeError(f"anthropic dependency not found in {PYPROJECT_FILE}")
     PYPROJECT_FILE.write_text(updated, encoding="utf-8")
 
 

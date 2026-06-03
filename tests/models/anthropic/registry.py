@@ -57,6 +57,10 @@ class TypeMapping:
     sdk_sample: dict[str, Any]
     notes: str = ""
     skip: bool = False
+    # Fields present in the remote OpenAPI schema and our type but not yet in the
+    # Python SDK (SDK is lagging behind the spec). Not stripped during schema
+    # validation, not flagged as undeclared extensions.
+    forward_compat_fields: frozenset[str] = frozenset()
 
 
 _BASE_ZYLON_FIELDS: frozenset[str] = frozenset(
@@ -370,6 +374,7 @@ MESSAGE_REGISTRY: list[TypeMapping] = [
         openapi_schema_name=None,
         zylon_only_fields=frozenset(),
         sdk_only_fields=_USAGE_SDK_ONLY,
+        forward_compat_fields=frozenset({"output_tokens_details"}),
         sdk_sample={
             "cache_creation": None,
             "cache_creation_input_tokens": None,

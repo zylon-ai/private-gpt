@@ -152,7 +152,7 @@ class ChatRequestMapper:
             or bool(request.output_config and request.output_config.effort)
             or bool(request.thinking.effort)
         )
-        effort: Literal["low", "medium", "high", "max"] | None = (
+        effort: Literal["low", "medium", "high", "max", "xhigh"] | None = (
             request.output_config.effort
             if request.output_config is not None
             and request.output_config.effort is not None
