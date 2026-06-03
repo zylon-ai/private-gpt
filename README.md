@@ -242,7 +242,7 @@ PrivateGPT         =  API layer for building self-hosted AI applications
 
 ## PrivateGPT vs Zylon
 
-<a href="https://www.zylon.ai/" target="_blank"><img src="./fern/docs/assets/zylon_banner.png" width="456" height="149"/></a>
+<a href="https://www.zylon.ai/" target="_blank"><img src="./fern/docs/assets/zylon_banner.png"/></a>
 
 PrivateGPT is maintained by the team at [Zylon](https://zylon.ai/).
 
