@@ -176,14 +176,14 @@ def test_create_context_prompt_empty_list(
 def test_create_citation_prompt(
     prompt_builder: PromptBuilderService, sample_nodes: list[NodeWithScore]
 ) -> None:
-    prompt = prompt_builder.create_citation_prompt(nodes=sample_nodes)
+    prompt = prompt_builder.create_citation_guidelines(nodes=sample_nodes)
     formatted = prompt.format()
     assert "citation" in formatted.lower()
     assert "citation_protocol" in formatted.lower()
 
 
 def test_create_citation_prompt_empty(prompt_builder: PromptBuilderService) -> None:
-    prompt = prompt_builder.create_citation_prompt(nodes=None)
+    prompt = prompt_builder.create_citation_guidelines(nodes=None)
     formatted = prompt.format()
     assert formatted == ""
 
@@ -191,7 +191,7 @@ def test_create_citation_prompt_empty(prompt_builder: PromptBuilderService) -> N
 def test_create_citation_prompt_empty_list(
     prompt_builder: PromptBuilderService, empty_node_list: list[NodeWithScore]
 ) -> None:
-    prompt = prompt_builder.create_citation_prompt(nodes=empty_node_list)
+    prompt = prompt_builder.create_citation_guidelines(nodes=empty_node_list)
     formatted = prompt.format()
     assert formatted == ""
 
@@ -210,7 +210,7 @@ def test_create_citation_prompt_no_metadata(
         ),
     ]
 
-    prompt = prompt_builder.create_citation_prompt(nodes=no_metadata_nodes)
+    prompt = prompt_builder.create_citation_guidelines(nodes=no_metadata_nodes)
     formatted = prompt.format()
 
     # Should still produce a valid citation prompt
@@ -631,8 +631,10 @@ def test_create_thinking_guidelines_few_shots(
     assert len(with_shots.format()) > len(without_shots.format())
 
 
-def test_create_citation_guidelines(prompt_builder: PromptBuilderService) -> None:
-    prompt = prompt_builder.create_citation_guidelines()
+def test_create_citation_guidelines(
+    prompt_builder: PromptBuilderService, sample_nodes: list[NodeWithScore]
+) -> None:
+    prompt = prompt_builder.create_citation_guidelines(nodes=sample_nodes)
     formatted = prompt.format()
     assert "citation" in formatted.lower()
     assert formatted != ""
