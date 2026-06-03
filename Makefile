@@ -7,7 +7,7 @@ PROD_BINARY ?= .venv/bin/private-gpt
 PROD_ARGS ?= serve
 PROD_UV_CACHE_DIR ?= .uv-cache
 
-.PHONY: test test-coverage black ruff format mypy check auto-discover-models run dev-windows dev prod-run api-docs docs ingest wipe celery flower
+.PHONY: test test-coverage black ruff format mypy check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower
 
 ########################################################################################################################
 # Quality checks
@@ -44,6 +44,9 @@ check:
 
 auto-discover-models:
 	uv run python scripts/auto_discover_models.py $(AUTO_DISCOVER_ARGS)
+
+update-openapi-spec:
+	uv run python scripts/update_claude_openapi.py
 
 
 ########################################################################################################################

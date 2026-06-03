@@ -14,6 +14,7 @@ from private_gpt.components.chunk.models import Chunk
 from private_gpt.components.engines.citations.utils import process_history_citations
 from private_gpt.events.models import (
     ImageBlock,
+    MidConvSystemBlock,
     SourceBlock,
     TextBlock,
     ThinkingBlock,
@@ -45,6 +46,49 @@ def test_simple_message_conversion(
     assert result[0].role == expected_role
     assert result[0].content == expected_content
     assert tool_uses == {}
+
+
+def test_user_message_with_mid_conv_system_block() -> None:
+    message = MessageInput(
+        role="user",
+        content=[
+            TextBlock(type="text", text="Hello"),
+            MidConvSystemBlock(
+                content=[
+                    TextBlock(type="text", text="Be concise."),
+                    TextBlock(type="text", text="Use bullet points."),
+                ]
+            ),
+        ],
+    )
+    result, _ = message._convert_into_llama_index_messages()
+
+    assert len(result) == 1
+    assert result[0].role == MessageRole.USER
+    blocks = result[0].blocks
+    assert len(blocks) == 2
+    assert isinstance(blocks[0], LITextBlock)
+    assert blocks[0].text == "Hello"
+    assert isinstance(blocks[1], LITextBlock)
+    assert blocks[1].text == "Be concise.\nUse bullet points."
+
+
+def test_user_message_mid_conv_system_single_text_block() -> None:
+    message = MessageInput(
+        role="user",
+        content=[
+            MidConvSystemBlock(
+                content=[TextBlock(type="text", text="Focus on safety.")]
+            ),
+        ],
+    )
+    result, _ = message._convert_into_llama_index_messages()
+
+    assert len(result) == 1
+    blocks = result[0].blocks
+    assert len(blocks) == 1
+    assert isinstance(blocks[0], LITextBlock)
+    assert blocks[0].text == "Focus on safety."
 
 
 def test_assistant_message_with_text_block() -> None:

@@ -458,6 +458,13 @@ class SearchResultBlock(CacheableContentBlock, StandardContentProtocol):
     citations: list[ZylonCitation] | None = Field(default=None)
 
 
+class MidConvSystemBlock(CacheableContentBlock, StandardContentProtocol):
+    """System instructions injected at a specific point mid-conversation."""
+
+    type: Literal["mid_conv_system"] = Field(default="mid_conv_system")
+    content: list[TextBlock] = Field(description="System instruction text blocks.")
+
+
 # --------------------------------
 # Custom Zylon Blocks
 # --------------------------------
@@ -578,6 +585,7 @@ BasicContentBlockType = (
     | ContainerUploadBlock
     | DocumentBlock
     | SearchResultBlock
+    | MidConvSystemBlock
 )
 
 

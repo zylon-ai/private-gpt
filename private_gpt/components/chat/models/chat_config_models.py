@@ -377,7 +377,7 @@ class ThinkingConfig(BaseModel):
         default=False,
         description="Whether to enable reasoning in the chat.",
     )
-    type: Literal["low", "medium", "high", "max"] | None = Field(
+    type: Literal["low", "medium", "high", "max", "xhigh"] | None = Field(
         default="medium",
         description="The level of reasoning to use in the chat.",
     )

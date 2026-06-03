@@ -152,7 +152,12 @@ class TestFieldParity:
 
             sdk_names = _sdk_field_names(mapping)
             our_names = _our_field_names(mapping)
-            extras = our_names - sdk_names - mapping.zylon_only_fields
+            extras = (
+                our_names
+                - sdk_names
+                - mapping.zylon_only_fields
+                - mapping.forward_compat_fields
+            )
 
             if extras:
                 failures.append(
