@@ -16,26 +16,42 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install UV and set Python version
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v8
         with:
           python-version: "3.11"
 
       - name: Update Claude specs and lock file
         run: uv run python scripts/update_claude_specs.py
 
-      - name: Create draft PR
-        uses: peter-evans/create-pull-request@v7
-        with:
-          commit-message: "chore(deps): update Claude specs and anthropic SDK"
-          branch: chore/update-claude-specs
-          delete-branch: true
-          draft: true
-          title: "chore(deps): update Claude specs and anthropic SDK"
-          body: |
-            Automated update of:
-            - `OPENAPI_SPEC_URL` in `tests/models/anthropic/test_openapi_schema.py` — fetched from [`anthropic-sdk-typescript/.stats.yml`](https://raw.githubusercontent.com/anthropics/anthropic-sdk-typescript/main/.stats.yml)
-            - `anthropic` minimum version in `pyproject.toml` — fetched from [PyPI](https://pypi.org/pypi/anthropic/json)
-            - `uv.lock` re-resolved via `uv lock`
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b chore/update-claude-specs
+          git add .
+          git diff --staged --quiet && exit 0
+          git commit -m "chore(deps): update Claude specs and anthropic SDK"
+          git push --force origin chore/update-claude-specs
+          echo "CHANGES=true" >> "$GITHUB_ENV"
 
-            _Opened automatically by the `update-claude-specs` workflow — review and merge when tests pass._
-          labels: dependencies
+      - name: Create draft PR
+        if: env.CHANGES == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh pr view chore/update-claude-specs --json number &>/dev/null; then
+            echo "PR already exists, branch updated via force push"
+          else
+            gh pr create \
+              --title "chore(deps): update Claude specs and anthropic SDK" \
+              --body "Automated update of:
+            - \`OPENAPI_SPEC_URL\` in \`tests/models/anthropic/test_openapi_schema.py\` — fetched from [\`anthropic-sdk-typescript/.stats.yml\`](https://raw.githubusercontent.com/anthropics/anthropic-sdk-typescript/main/.stats.yml)
+            - \`anthropic\` minimum version in \`pyproject.toml\` — fetched from [PyPI](https://pypi.org/pypi/anthropic/json)
+            - \`uv.lock\` re-resolved via \`uv lock\`
+
+            _Opened automatically by the \`update-claude-specs\` workflow — review and merge when tests pass._" \
+              --draft \
+              --label dependencies \
+              --base main \
+              --head chore/update-claude-specs
+          fi

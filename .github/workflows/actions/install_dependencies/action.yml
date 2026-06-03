@@ -21,14 +21,14 @@ runs:
   using: composite
   steps:
     - name: Install UV and set Python version
-      uses: astral-sh/setup-uv@v6
+      uses: astral-sh/setup-uv@v8
       with:
         version: ${{ inputs.uv_version }}
         python-version: ${{ inputs.python_version }}
         enable-cache: ${{ inputs.enable_cache }}
 
     - name: Setup FFmpeg
-      uses: AnimMouse/setup-ffmpeg@v1
+      uses: AnimMouse/setup-ffmpeg@v1.2.3
 
     - name: Install Dependencies
       run: |
