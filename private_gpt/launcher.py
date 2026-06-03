@@ -11,7 +11,7 @@ import nest_asyncio  # type: ignore
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from injector import Injector
 from llama_index.core.embeddings import MockEmbedding
@@ -216,6 +216,23 @@ def create_app(root_injector: Injector) -> FastAPI:
             async def redirect_ui_index(request: Request) -> RedirectResponse:
                 root_path = request.scope.get("root_path", "").rstrip("/")
                 return RedirectResponse(url=f"{root_path}{ui_path}/", status_code=307)
+
+        connect_host = (
+            "127.0.0.1" if settings.server.host == "0.0.0.0" else settings.server.host
+        )
+        server_url = f"http://{connect_host}:{settings.server.port}"
+        if settings.server.root_path:
+            server_url += "/" + settings.server.root_path.strip("/")
+        _index_html = (UI_DIRECTORY / "index.html").read_text()
+        _index_html = _index_html.replace(
+            'const DEFAULT_BASE_URL = window.location.origin === "null" ? "http://127.0.0.1:8080" : window.location.origin;',
+            f'const DEFAULT_BASE_URL = "{server_url}";',
+        )
+
+        @app.get(f"{ui_path}/", include_in_schema=False)
+        @app.get(f"{ui_path}/index.html", include_in_schema=False)
+        async def serve_ui_index() -> HTMLResponse:
+            return HTMLResponse(content=_index_html)
 
         static_files = StaticFiles(directory=UI_DIRECTORY, html=True)
 
