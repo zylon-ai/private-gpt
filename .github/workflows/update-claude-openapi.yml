@@ -1,0 +1,40 @@
+name: update-claude-openapi
+
+on:
+  schedule:
+    - cron: "0 3 * * *"  # daily at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install UV and set Python version
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+
+      - name: Update Claude OpenAPI spec
+        run: uv run python scripts/update_claude_openapi.py
+
+      - name: Create draft PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(openapi): update Claude OpenAPI spec"
+          branch: chore/update-claude-openapi-spec
+          delete-branch: true
+          draft: true
+          title: "chore(openapi): update Claude OpenAPI spec"
+          body: |
+            Automated update of `OPENAPI_SPEC_URL` in `tests/models/anthropic/test_openapi_schema.py`.
+
+            Fetched from [`anthropic-sdk-typescript/.stats.yml`](https://raw.githubusercontent.com/anthropics/anthropic-sdk-typescript/main/.stats.yml).
+
+            _Opened automatically by the `update-claude-openapi` workflow — review and merge when tests pass._
+          labels: dependencies
