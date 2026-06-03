@@ -127,6 +127,11 @@ This UI is a demonstrator, not the core product. Developers are expected to buil
 
 ## Integrations
 
+| | | |
+|:-------------------------:|:-------------------------:|:-------------------------:|
+|<img alt="claude cowork" src="./fern/docs/assets/claude_cowork_privategpt.png"><br/>**Claude Desktop / Cowork**|<img alt="ms excel claude" src="./fern/docs/assets/ms_excel_claude_privategpt.png"><br/>**Microsoft Excel Claude add-in**|<img alt="ms word claude" src="./fern/docs/assets/ms_word_claude_privategpt.png"><br/>**Microsoft Word Claude add-in**|
+|<img alt="n8n" src="./fern/docs/assets/n8n_privategpt.png"><br/>**n8n**|<img alt="opencode" src="./fern/docs/assets/opencode_privategpt.png"><br/>**OpenCode**|<img alt="privategpt workbench" src="./fern/docs/assets/privategpt_workbench.png"><br/>**PrivateGPT Workbench**|
+
 PrivateGPT works natively as the local backend for the tools developers and end users already use.
 
 | Integration Guide | What it enables |
