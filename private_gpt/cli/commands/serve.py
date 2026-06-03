@@ -1,3 +1,4 @@
+import logging
 import os
 import signal
 from pathlib import Path
@@ -6,6 +7,9 @@ import typer
 import uvicorn
 
 from private_gpt.settings.settings import settings
+from private_gpt.settings.settings_loader import active_profiles
+
+logger = logging.getLogger(__name__)
 
 PID_FILE_OPTION = typer.Option(
     None, "--pid-file", help="Write PID to file (for systemd / launchd)"
@@ -26,6 +30,9 @@ def serve_command(
     """Start the HTTP server."""
     s = settings()
     resolved_port = port if port is not None else s.server.port
+    logger.info(
+        "Starting server with profiles=%s on port %s", active_profiles, resolved_port
+    )
 
     if pid_file and pid_file.exists():
         try:
