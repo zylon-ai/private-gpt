@@ -1369,8 +1369,40 @@
     .markdown p,
     .markdown ul,
     .markdown ol,
+    .markdown table,
     .markdown pre {
       margin: 0;
+    }
+
+    .markdown-table-scroll {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    .markdown table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.14);
+      font-size: 0.94em;
+      white-space: normal;
+    }
+
+    .markdown th,
+    .markdown td {
+      padding: 8px 10px;
+      border: 1px solid var(--border-soft);
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: break-word;
+    }
+
+    .markdown th {
+      color: rgba(255, 255, 255, 0.96);
+      background: rgba(255, 255, 255, 0.08);
+      font-weight: 750;
     }
 
     .markdown ul,
@@ -5022,10 +5054,30 @@
           list = null;
         }
       };
-      for (const raw of lines) {
+      for (let index = 0; index < lines.length; index += 1) {
+        const raw = lines[index];
         const line = raw.trimEnd();
         if (!line.trim()) {
           closeList();
+          continue;
+        }
+        const nextLine = lines[index + 1]?.trimEnd() || "";
+        if (isMarkdownTableHeader(line, nextLine)) {
+          closeList();
+          const header = parseMarkdownTableRow(line);
+          const alignments = parseMarkdownTableAlignments(nextLine);
+          const rows = [];
+          index += 2;
+          while (index < lines.length) {
+            const rowLine = lines[index].trimEnd();
+            if (!rowLine.trim() || !rowLine.includes("|")) break;
+            const row = parseMarkdownTableRow(rowLine);
+            if (row.length < 2) break;
+            rows.push(row);
+            index += 1;
+          }
+          index -= 1;
+          html.push(renderMarkdownTable(header, alignments, rows));
           continue;
         }
         const bullet = line.match(/^\s*[-*]\s+(.+)$/);
@@ -5048,6 +5100,49 @@
       }
       closeList();
       return html.join("");
+    }
+
+    function isMarkdownTableHeader(headerLine, dividerLine) {
+      const divider = parseMarkdownTableRow(dividerLine);
+      return headerLine.includes("|") &&
+        parseMarkdownTableRow(headerLine).length >= 2 &&
+        /^:?-{3,}:?$/.test(divider[0] || "") &&
+        divider.every(cell => /^:?-{3,}:?$/.test(cell));
+    }
+
+    function parseMarkdownTableRow(line) {
+      let trimmed = String(line || "").trim();
+      if (trimmed.startsWith("|")) trimmed = trimmed.slice(1);
+      if (trimmed.endsWith("|")) trimmed = trimmed.slice(0, -1);
+      return trimmed.split("|").map(cell => cell.trim());
+    }
+
+    function parseMarkdownTableAlignments(line) {
+      return parseMarkdownTableRow(line).map(cell => {
+        const left = cell.startsWith(":");
+        const right = cell.endsWith(":");
+        if (left && right) return "center";
+        if (right) return "right";
+        return "left";
+      });
+    }
+
+    function renderMarkdownTable(header, alignments, rows) {
+      const cellStyle = index => alignments[index] && alignments[index] !== "left"
+        ? ` style="text-align:${alignments[index]}"`
+        : "";
+      const columnCount = header.length;
+      const renderCells = (cells, tag) => Array.from({ length: columnCount }, (_unused, index) =>
+        `<${tag}${cellStyle(index)}>${inlineMarkdown(cells[index] || "")}</${tag}>`
+      ).join("");
+      return `
+        <div class="markdown-table-scroll">
+          <table>
+            <thead><tr>${renderCells(header, "th")}</tr></thead>
+            <tbody>${rows.map(row => `<tr>${renderCells(row, "td")}</tr>`).join("")}</tbody>
+          </table>
+        </div>
+      `;
     }
 
     function inlineMarkdown(value) {
