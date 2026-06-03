@@ -14,13 +14,13 @@ permissions:
 jobs:
   update-openapi:
     runs-on: ubuntu-latest
-    if: github.head_ref == 'release-please--branches--main' || github.ref_name == 'release-please--branches--main'
+    if: github.head_ref == 'release-please--branches--main'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          token: ${{ secrets.PAT || github.token }}
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.PAT }}
 
       - name: Install dependencies
         uses: ./.github/workflows/actions/install_dependencies
@@ -42,13 +42,13 @@ jobs:
 
   update-uv-lock:
     runs-on: ubuntu-latest
-    if: github.head_ref == 'release-please--branches--main' || github.ref_name == 'release-please--branches--main'
+    if: github.head_ref == 'release-please--branches--main'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          token: ${{ secrets.PAT || github.token }}
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.PAT }}
 
       - name: Install dependencies
         uses: ./.github/workflows/actions/install_dependencies
@@ -62,8 +62,8 @@ jobs:
 
       - name: Commit and push changes
         run: |
-          git config user.email "ci@zylon.ai"
-          git config user.name "Zylon CI"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add uv.lock
           git diff --staged --quiet || git commit -m "build: update uv.lock for ${{ steps.update-uv-lock.outputs.version }}"
           git push
