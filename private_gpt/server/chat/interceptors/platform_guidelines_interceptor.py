@@ -17,6 +17,7 @@ from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_conte
 from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
     InterceptorPhase,
 )
+from private_gpt.components.engines.citations.types import Document
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
 
 if TYPE_CHECKING:
@@ -104,7 +105,8 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
         return stack
 
     def _inject_citations(self, stack: ContextStack) -> ContextStack:
-        content = self._get_citation_guidelines_content()
+        documents = stack.all_documents()
+        content = self._get_citation_guidelines_content(documents=documents)
         if content:
             stack = stack.append_layer(
                 ToolInstructionsLayer(
@@ -138,9 +140,13 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
             )
         return self._thinking_content
 
-    def _get_citation_guidelines_content(self) -> str:
+    def _get_citation_guidelines_content(
+        self, documents: list[Document] | None = None
+    ) -> str:
         if self._citation_guidelines_content is None:
             self._citation_guidelines_content = (
-                self._prompt_builder.create_citation_guidelines().format()
+                self._prompt_builder.create_citation_guidelines(
+                    documents=documents
+                ).format()
             )
         return self._citation_guidelines_content
