@@ -17,7 +17,7 @@ jobs:
     if: github.head_ref == 'release-please--branches--main' || github.ref_name == 'release-please--branches--main'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref || github.ref_name }}
           token: ${{ secrets.PAT }}
@@ -45,7 +45,7 @@ jobs:
     if: github.head_ref == 'release-please--branches--main' || github.ref_name == 'release-please--branches--main'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref || github.ref_name }}
           token: ${{ secrets.PAT }}
