@@ -17,6 +17,7 @@ from private_gpt.events.models import (
     InputJSONDelta,
     Message,
     MessageOutputDelta,
+    MidConvSystemBlock,
     PingEvent,
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
@@ -440,6 +441,19 @@ ZYLON_ONLY_REGISTRY: list[TypeMapping] = [
         sdk_sample={},
         notes="Zylon-only search result content block",
         skip=True,
+    ),
+    TypeMapping(
+        sdk_type=None,
+        our_type=MidConvSystemBlock,
+        sdk_schema_name="RequestMidConvSystemBlock",
+        openapi_schema_name="RequestMidConvSystemBlock",
+        zylon_only_fields=_CACHEABLE_ZYLON_FIELDS,
+        sdk_only_fields=frozenset(),
+        sdk_sample={
+            "type": "mid_conv_system",
+            "content": [{"type": "text", "text": "You are a helpful assistant."}],
+        },
+        notes="In the Anthropic OpenAPI spec (InputContentBlock) but not yet in the Python SDK",
     ),
     TypeMapping(
         sdk_type=None,

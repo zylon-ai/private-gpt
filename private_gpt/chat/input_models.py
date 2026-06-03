@@ -38,6 +38,7 @@ from private_gpt.events.models import (
     CacheControlEphemeral,
     ContentBlockType,
     ImageBlock,
+    MidConvSystemBlock,
     TextBlock,
     TLDRBlock,
     ToolResultBlock,
@@ -877,6 +878,9 @@ class MessageInput(BaseModel):
             for block in content:
                 if isinstance(block, TextBlock):
                     blocks.append(LITextBlock(text=block.text))
+                elif isinstance(block, MidConvSystemBlock):
+                    text = "\n".join(b.text for b in block.content)
+                    blocks.append(LITextBlock(text=text))
                 elif isinstance(block, ImageBlock) and isinstance(
                     block.source, Base64ImageSource
                 ):
