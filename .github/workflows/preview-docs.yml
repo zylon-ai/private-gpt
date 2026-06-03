@@ -41,7 +41,7 @@ jobs:
           # Set the output for the step
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
       - name: Comment PR with URL using github-actions bot
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         if: ${{ steps.generate_docs.outputs.preview_url }}
         with:
           script: |
