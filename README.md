@@ -9,8 +9,6 @@
 [![Discord](https://img.shields.io/discord/1164200432894234644?logo=discord&label=PrivateGPT)](https://discord.gg/F8KCFeZbkx)
 [![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/ZylonPrivateGPT)](https://twitter.com/ZylonPrivateGPT)
 
-[Quickstart](#quickstart) · [Documentation](https://docs.privategpt.dev/) · [API Reference](https://docs.privategpt.dev/api-reference/api-reference) · [Discord](https://discord.gg/F8KCFeZbkx)
-
 <a href="https://trendshift.io/repositories/8691" target="_blank"><img src="https://trendshift.io/api/badge/repositories/8691" alt="zylon-ai%2Fprivate-gpt | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
 </div>
