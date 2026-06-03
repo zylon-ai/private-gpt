@@ -5,7 +5,15 @@ import typer
 
 from private_gpt.cli.commands.run import run_command
 from private_gpt.cli.commands.serve import serve_command
-from private_gpt.cli.commands.worker import worker_command
+
+try:
+    import celery as _celery  # noqa: F401
+
+    from private_gpt.cli.commands.worker import worker_command
+
+    _CELERY_AVAILABLE = True
+except ImportError:
+    _CELERY_AVAILABLE = False
 
 app = typer.Typer(
     name="private-gpt",
@@ -16,7 +24,8 @@ app = typer.Typer(
 )
 
 app.command("serve")(serve_command)
-app.command("worker")(worker_command)
+if _CELERY_AVAILABLE:
+    app.command("worker")(worker_command)
 app.command(
     "run",
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
@@ -38,7 +47,9 @@ def help_command(
         raise SystemExit(0)
 
 
-_KNOWN_COMMANDS = ["serve", "worker", "run", "help"]
+_KNOWN_COMMANDS = ["serve", "run", "help"]
+if _CELERY_AVAILABLE:
+    _KNOWN_COMMANDS.append("worker")
 
 
 def main() -> None:
