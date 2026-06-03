@@ -87,31 +87,6 @@ class PromptBuilderService:
         )
         return prompt, documents
 
-    def create_citation_prompt(
-        self,
-        generate_citations: bool = True,
-        documents: list[Document] | None = None,
-        nodes: list[NodeWithScore] | None = None,
-        few_shots: bool = True,
-    ) -> BasePromptTemplate:
-        if not generate_citations:
-            return PromptTemplate(template="")
-
-        if documents is None and nodes is not None:
-            documents = [Document.from_node(node) for node in nodes]
-
-        if not documents:
-            return PromptTemplate(template="")
-
-        sources = [format_llm_source(doc) for doc in documents]
-        return self.template_service.create_prompt_template(
-            "citations/citation.j2",
-            all_cites=", ".join(sources),
-            sample_cite_1=sources[0],
-            sample_cite_2=sources[min(len(sources) - 1, 1)],
-            few_shots=few_shots,
-        )
-
     def create_chat_condense_prompt(
         self,
         question: str,
@@ -524,40 +499,41 @@ class PromptBuilderService:
             logger.warning("PromptBuilder: failed to render %s: %s", template_path, exc)
             return PromptTemplate(template="")
 
-    def create_citation_guidelines(self) -> BasePromptTemplate:
-        """Create the citation formatting guidelines prompt.
-
-        Returns an empty ``PromptTemplate`` when the template is not found or
-        rendering fails.
-        """
-        try:
-            template = self.template_service.get_template(
-                "chat/guidelines/citations.j2"
-            )
-            return PromptTemplate(template=template.render().strip())
-        except TemplateNotFound:
-            logger.warning("PromptBuilder: citations.j2 template not found")
-            return PromptTemplate(template="")
-        except Exception as exc:
-            logger.warning("PromptBuilder: failed to render citations.j2: %s", exc)
+    def create_citation_guidelines(
+        self,
+        generate_citations: bool = True,
+        documents: list[Document] | None = None,
+        nodes: list[NodeWithScore] | None = None,
+        few_shots: bool = True,
+    ) -> BasePromptTemplate:
+        if not generate_citations:
             return PromptTemplate(template="")
 
-    def create_thinking_guidelines(self, few_shots: bool = False) -> BasePromptTemplate:
+        if documents is None and nodes is not None:
+            documents = [Document.from_node(node) for node in nodes]
+
+        if not documents:
+            return PromptTemplate(template="")
+
+        sources = [format_llm_source(doc) for doc in documents]
+        return self.template_service.create_prompt_template(
+            "chat/guidelines/citations.j2",
+            all_cites=", ".join(sources),
+            sample_cite_1=sources[0],
+            sample_cite_2=sources[min(len(sources) - 1, 1)],
+            few_shots=few_shots,
+        )
+
+    def create_thinking_guidelines(self, few_shots: bool = True) -> BasePromptTemplate:
         """Create the thinking/reasoning guidelines prompt.
 
         Returns an empty ``PromptTemplate`` when the template is not found or
         rendering fails.
         """
-        try:
-            template = self.template_service.get_template("chat/guidelines/thinking.j2")
-            rendered = template.render(few_shots=str(few_shots))
-            return PromptTemplate(template=rendered.strip())
-        except TemplateNotFound:
-            logger.warning("PromptBuilder: thinking.j2 template not found")
-            return PromptTemplate(template="")
-        except Exception as exc:
-            logger.warning("PromptBuilder: failed to render thinking.j2: %s", exc)
-            return PromptTemplate(template="")
+        return self.template_service.create_prompt_template(
+            "chat/guidelines/thinking.j2",
+            few_shots=few_shots,
+        )
 
     def seed_tool_instructions(self, tools: list["ToolSpec"]) -> list["ToolSpec"]:
         """Seed tool instructions from Jinja templates for tools that lack them.
