@@ -642,11 +642,10 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      min-height: 46px;
       background: rgba(10, 11, 18, 0.28);
       border: 1px solid var(--border-soft);
       border-radius: 14px;
-      padding: 2px 6px 2px 0;
+      padding: 0 6px 0 0;
       overflow: hidden;
     }
 
@@ -2620,6 +2619,18 @@
       display: none;
     }
 
+    .advanced-panel .panel-chevron {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      color: var(--muted);
+      transition: transform 0.2s ease;
+    }
+
+    .advanced-panel[open] .panel-chevron {
+      transform: rotate(180deg);
+    }
+
     .advanced-panel[open] summary {
       border-bottom: 1px solid var(--border-soft);
     }
@@ -2884,23 +2895,25 @@
                 <label for="privateGptBaseUrl">PrivateGPT base URL</label>
                 <input id="privateGptBaseUrl" autocomplete="off" spellcheck="false" />
               </div>
-              <div class="field">
-                <h3>Authorization</h3>
-                <small>Configure HTTP Basic auth credentials for PrivateGPT. Stored only in this browser. Debugger headers are always redacted.</small>
-              </div>
-              <div class="auth-grid">
-                <div class="field">
-                  <label for="privateGptUsername">Username</label>
-                  <input id="privateGptUsername" autocomplete="username" spellcheck="false" placeholder="Optional" />
-                </div>
-                <div class="field">
-                  <label for="privateGptPassword">Password</label>
-                  <div class="password-field">
-                    <input id="privateGptPassword" type="password" autocomplete="current-password" spellcheck="false" placeholder="Optional" />
-                    <button class="icon-button" id="togglePasswordButton" type="button" aria-label="Show password"><span data-icon="eye"></span></button>
+              <details class="advanced-panel">
+                <summary><span>Authentication <span class="subtle" style="font-weight:400;font-size:12px;">(HTTP Basic Auth)</span></span><span data-icon="chevron-down" class="panel-chevron"></span></summary>
+                <div class="advanced-panel-body">
+                  <p class="subtle" style="margin:0;font-size:12px;">Credentials are Base64-encoded and sent as an <code>Authorization</code> header on every request. Only enable if your PrivateGPT server requires Basic Auth. Stored only in this browser; debugger headers are always redacted.</p>
+                  <div class="auth-grid">
+                    <div class="field">
+                      <label for="privateGptUsername">Username</label>
+                      <input id="privateGptUsername" autocomplete="username" spellcheck="false" placeholder="Optional" />
+                    </div>
+                    <div class="field">
+                      <label for="privateGptPassword">Password</label>
+                      <div class="password-field">
+                        <input id="privateGptPassword" type="password" autocomplete="current-password" spellcheck="false" placeholder="Optional" />
+                        <button class="icon-button" id="togglePasswordButton" type="button" aria-label="Show password"><span data-icon="eye"></span></button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </details>
             </div>
           </div>
 
@@ -3116,16 +3129,25 @@
                 <label for="onboardingBaseUrl">PrivateGPT base URL</label>
                 <input id="onboardingBaseUrl" autocomplete="off" spellcheck="false" placeholder="Current host" />
               </div>
-              <div class="auth-grid">
-                <div class="field">
-                  <label for="onboardingUsername">Username</label>
-                  <input id="onboardingUsername" autocomplete="username" spellcheck="false" placeholder="Optional" />
+              <details class="advanced-panel">
+                <summary><span>Authentication <span class="subtle" style="font-weight:400;font-size:12px;">(HTTP Basic Auth)</span></span><span data-icon="chevron-down" class="panel-chevron"></span></summary>
+                <div class="advanced-panel-body">
+                  <p class="subtle" style="margin:0;font-size:12px;">Credentials are Base64-encoded and sent as an <code>Authorization</code> header on every request. Only enable if your PrivateGPT server requires Basic Auth. Stored only in this browser; debugger headers are always redacted.</p>
+                  <div class="auth-grid">
+                    <div class="field">
+                      <label for="onboardingUsername">Username</label>
+                      <input id="onboardingUsername" autocomplete="username" spellcheck="false" placeholder="Optional" />
+                    </div>
+                    <div class="field">
+                      <label for="onboardingPassword">Password</label>
+                      <div class="password-field">
+                        <input id="onboardingPassword" type="password" autocomplete="current-password" spellcheck="false" placeholder="Optional" />
+                        <button class="icon-button" id="toggleOnboardingPasswordButton" type="button" aria-label="Show password"><span data-icon="eye"></span></button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="field">
-                  <label for="onboardingPassword">Password</label>
-                  <input id="onboardingPassword" type="password" autocomplete="current-password" spellcheck="false" placeholder="Optional" />
-                </div>
-              </div>
+              </details>
               <div class="field">
                 <label for="onboardingCollection">Collection ID</label>
                 <input id="onboardingCollection" autocomplete="off" spellcheck="false" placeholder="pgpt_collection" />
@@ -6408,6 +6430,10 @@
       $("#refreshSkillsButton").addEventListener("click", () => refreshSkills());
       $("#togglePasswordButton").addEventListener("click", () => {
         const input = $("#privateGptPassword");
+        input.type = input.type === "password" ? "text" : "password";
+      });
+      $("#toggleOnboardingPasswordButton").addEventListener("click", () => {
+        const input = $("#onboardingPassword");
         input.type = input.type === "password" ? "text" : "password";
       });
       $("#defaultCollection").addEventListener("change", async event => {
