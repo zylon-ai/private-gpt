@@ -47,7 +47,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.head_ref || github.ref_name }}
           token: ${{ secrets.PAT }}
 
       - name: Install dependencies
