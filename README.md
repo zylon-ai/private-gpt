@@ -243,19 +243,24 @@ PrivateGPT is maintained by the team at [Zylon](https://zylon.ai/).
 
 **PrivateGPT** is the open-source application API layer: messages, ingestion, tools, retrieval, citations, database access, tabular analysis, MCP, skills, and custom tools.
 
-**Zylon** wraps that layer into a complete production platform for regulated organizations. On top of PrivateGPT, Zylon adds:
+**Zylon** is the end-to-end AI Infrastructure orchestrating the hardware and software layers into a complete production platform for regulated organizations. On top of PrivateGPT, Zylon adds:
 
-- Integrated inference server and Kubernetes deployment package
-- API gateway and developer platform
-- Workspace application for non-technical end users
-- LDAP integration and user management
-- SIEM audit logs for compliance
-- SharePoint, Confluence, FTP, and Samba connectors
-- Disconnected / air-gapped operation
-- 20+ production services packaged and supported
+- Integrated inference server based on NVIDIA Triton + vLLM to run open-weight models.
+- Concurrency, batch processing and load balancing capabilities to operate at scale.
+- Kubernetes sefl-contained deployment with 20+ production services packaged and supported.
+- CLI for installation, updates, model selection, and platform configuration.
+- API gateway for governance and developer platform.
+- Workspace application for non-technical end users.
+- LDAP/ActiveDirectory integration and RBAC user management.
+- Telemetry, observability and operational monitoring.
+- SIEM audit logs for compliance.
+- SharePoint, Confluence, FTP, and Samba connectors.
+- Disconnected (air-gapped) operation without external cloud dependencies.
+- Integrated n8n Community Edition for workflow automation.
 
-Use **PrivateGPT** if you want the open-source local AI backend.
-Use **Zylon** if you need the full enterprise platform around it.
+Use **PrivateGPT** if you want the open-source local AI application layer and developer API.
+
+Use **Zylon** if you need the full enterprise AI infrastructure around it: deployment, governance, operations, user management, integrations, auditability, and support.
 
 [Learn more at zylon.ai](https://zylon.ai) · [Book a demo](https://cal.com/zylon/demo?source=privategptreadme)
 
