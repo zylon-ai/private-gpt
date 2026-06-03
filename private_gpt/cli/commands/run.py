@@ -50,13 +50,31 @@ def _wait_for_server(base_url: str, timeout: float = _HEALTH_TIMEOUT) -> bool:
     return False
 
 
+def _server_log_path() -> Path:
+    log_dir = Path.home() / ".private-gpt"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir / "server.log"
+
+
 def _start_server_subprocess() -> "subprocess.Popen[bytes]":
-    return subprocess.Popen(
-        [sys.executable, "-m", "private_gpt", "serve"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
+    s = settings().server
+    private_gpt_bin = shutil.which("private-gpt")
+    base_cmd = (
+        [private_gpt_bin, "serve"]
+        if private_gpt_bin
+        else [sys.executable, "-m", "private_gpt", "serve"]
     )
+    cmd = [*base_cmd, "--host", s.host, "--port", str(s.port)]
+    log_path = _server_log_path()
+    typer.echo(f"Server logs: {log_path}")
+    with log_path.open("wb") as log_fh:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=log_fh,
+            stderr=log_fh,
+            start_new_session=True,
+        )
+    return proc
 
 
 def _stop_server_subprocess(server_proc: "subprocess.Popen[bytes]") -> None:
@@ -75,29 +93,140 @@ def _stop_server_subprocess(server_proc: "subprocess.Popen[bytes]") -> None:
         server_proc.wait()
 
 
+_OPENCODE_FALLBACK: dict[str, Any] = {
+    "id": "default",
+    "context": 8096,
+    "output": 1024,
+}
+
+
+def _fetch_llm_models(base_url: str, api_key: str) -> list[dict[str, Any]]:
+    import httpx
+
+    try:
+        r = httpx.get(
+            f"{base_url}/v1/models",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=5.0,
+        )
+        r.raise_for_status()
+        return [m for m in r.json().get("data", []) if m.get("embed_dim") is None]
+    except Exception:
+        return []
+
+
+_MODEL_PAGE_SIZE = 20
+
+
+def _render_model_page(
+    models: list[dict[str, Any]], page: int, total_pages: int
+) -> None:
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+    table = Table(title=f"Available Models  (page {page + 1}/{total_pages})")
+    table.add_column("#", style="bold cyan", justify="right", width=4)
+    table.add_column("Model ID", style="white")
+    table.add_column("Context", justify="right", style="green")
+    table.add_column("Max output", justify="right", style="yellow")
+
+    offset = page * _MODEL_PAGE_SIZE
+    for i, m in enumerate(models, offset + 1):
+        ctx = str(m["max_input_tokens"]) if m.get("max_input_tokens") else "-"
+        out = str(m["max_tokens"]) if m.get("max_tokens") else "-"
+        table.add_row(str(i), m["id"], ctx, out)
+
+    console.print(table)
+
+
+def _pick_model(model: str | None) -> str:
+    s = settings()
+    base_url = _base_url()
+    api_key = s.server.auth.secret if s.server.auth.enabled else "no-auth"
+
+    models = _fetch_llm_models(base_url, api_key)
+
+    if model is not None:
+        return model
+
+    if not models:
+        default_model: str = _OPENCODE_FALLBACK["id"]
+        return default_model
+
+    if len(models) == 1:
+        default_id: str = models[0]["id"]
+        return default_id
+
+    total_pages = (len(models) + _MODEL_PAGE_SIZE - 1) // _MODEL_PAGE_SIZE
+    page = 0
+
+    while True:
+        start = page * _MODEL_PAGE_SIZE
+        end = start + _MODEL_PAGE_SIZE
+        page_models = models[start:end]
+
+        _render_model_page(page_models, page, total_pages)
+
+        nav = []
+        if page > 0:
+            nav.append("[p] prev")
+        if page < total_pages - 1:
+            nav.append("[n] next")
+        nav.append("[1-N] pick")
+
+        raw = typer.prompt(f"  {' · '.join(nav)}", default="1").strip().lower()
+
+        if raw == "n" and page < total_pages - 1:
+            page += 1
+            continue
+        if raw == "p" and page > 0:
+            page -= 1
+            continue
+
+        try:
+            idx = int(raw) - 1
+            if 0 <= idx < len(models):
+                model_id: str = models[idx]["id"]
+                return model_id
+            typer.echo(f"  Pick a number between 1 and {len(models)}.", err=True)
+        except ValueError:
+            if any(m["id"] == raw for m in models):
+                model_raw: str = raw
+                return model_raw
+            typer.echo(f"  Unknown model {raw!r}.", err=True)
+
+
 def _inject_opencode_env(model: str | None = None) -> None:
     import json
-
-    from private_gpt.settings.settings import LLMModelConfig
 
     s = settings()
     base_url = _base_url()
     api_key = s.server.auth.secret if s.server.auth.enabled else "no-auth"
 
-    llm_models = {
-        alias: {
-            "name": f"PrivateGPT - {alias}",
+    llm_models: dict[str, Any] = {
+        m["id"]: {
+            "name": f"PrivateGPT - {m['id']}",
             "limit": {
-                "context": m.context_window,
-                "output": m.sampling_params.max_new_tokens,
+                "context": m.get("max_input_tokens") or _OPENCODE_FALLBACK["context"],
+                "output": m.get("max_tokens") or _OPENCODE_FALLBACK["output"],
             },
         }
-        for m in s.models
-        for alias in [m.name, m.alias]
-        if isinstance(m, LLMModelConfig)
-        if alias
+        for m in _fetch_llm_models(base_url, api_key)
     }
-    default_model = model or s.llm.default_model or next(iter(s.models)).name
+
+    if not llm_models:
+        fid = _OPENCODE_FALLBACK["id"]
+        llm_models[fid] = {
+            "name": f"PrivateGPT - {fid}",
+            "limit": {
+                "context": _OPENCODE_FALLBACK["context"],
+                "output": _OPENCODE_FALLBACK["output"],
+            },
+        }
+
+    first_model_id = next(iter(llm_models))
+    default_model = model or s.llm.default_model or first_model_id
     default_model = f"PrivateGPT - {default_model}"
 
     config: dict[str, Any] = {
@@ -153,7 +282,7 @@ def run_command(
     ),
     session: str
     | None = typer.Option(None, "--session", help="Resume a previous app session"),
-    model: str | None = typer.Option("default", "--model", help="Model name to use"),
+    model: str | None = typer.Option(None, "--model", help="Model name to use"),
     auto_approve: bool = typer.Option(
         False, "--auto-approve", help="Skip confirmations (CI mode)"
     ),
@@ -193,7 +322,7 @@ def run_command(
         case "opencode":
             _inject_opencode_env(model)
         case _:
-            inject_app_env(model)
+            inject_app_env(_pick_model(model))
 
     cmd: list[str] = [resolved]
     if session:
