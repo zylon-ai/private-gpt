@@ -107,6 +107,7 @@ class LmStudioStrategy:
                 "medium": supported if "medium" in effort else unsupported,
                 "high": supported if "high" in effort else unsupported,
                 "max": unsupported,
+                "xhigh": unsupported,
             },
             "image_input": {"supported": vision, "maximum": 1 if vision else 0},
             "audio_input": {"supported": False, "maximum": 0},

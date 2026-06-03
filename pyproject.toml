@@ -50,7 +50,7 @@ llm-mistral = [
 ]
 llm-anthropic = [
     "langchain-anthropic>=1.4.3",
-    "anthropic>=0.97.0",
+    "anthropic>=0.105.2",
 ]
 
 # ---------------------------------------------------------------------------

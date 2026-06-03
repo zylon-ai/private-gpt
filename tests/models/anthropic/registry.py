@@ -17,6 +17,7 @@ from private_gpt.events.models import (
     InputJSONDelta,
     Message,
     MessageOutputDelta,
+    MidConvSystemBlock,
     PingEvent,
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
@@ -57,6 +58,10 @@ class TypeMapping:
     sdk_sample: dict[str, Any]
     notes: str = ""
     skip: bool = False
+    # Fields present in the remote OpenAPI schema and our type but not yet in the
+    # Python SDK (SDK is lagging behind the spec). Not stripped during schema
+    # validation, not flagged as undeclared extensions.
+    forward_compat_fields: frozenset[str] = frozenset()
 
 
 _BASE_ZYLON_FIELDS: frozenset[str] = frozenset(
@@ -262,6 +267,7 @@ STREAMING_EVENT_REGISTRY: list[TypeMapping] = [
                 "role": "assistant",
                 "content": [],
                 "model": "claude-sonnet-4-6",
+                "stop_details": None,
                 "stop_reason": "end_turn",
                 "stop_sequence": None,
                 "container": None,
@@ -272,6 +278,7 @@ STREAMING_EVENT_REGISTRY: list[TypeMapping] = [
                     "inference_geo": None,
                     "input_tokens": 10,
                     "output_tokens": 0,
+                    "output_tokens_details": None,
                     "server_tool_use": None,
                     "service_tier": None,
                 },
@@ -289,6 +296,7 @@ STREAMING_EVENT_REGISTRY: list[TypeMapping] = [
             "type": "message_delta",
             "delta": {
                 "container": None,
+                "stop_details": None,
                 "stop_reason": "end_turn",
                 "stop_sequence": None,
             },
@@ -297,6 +305,7 @@ STREAMING_EVENT_REGISTRY: list[TypeMapping] = [
                 "cache_read_input_tokens": None,
                 "input_tokens": None,
                 "output_tokens": 42,
+                "output_tokens_details": None,
                 "server_tool_use": None,
             },
         },
@@ -334,7 +343,7 @@ MESSAGE_REGISTRY: list[TypeMapping] = [
         our_type=Message,
         sdk_schema_name="Message",
         openapi_schema_name=None,
-        zylon_only_fields=frozenset({"cache_control", "stop_details"}),
+        zylon_only_fields=frozenset({"cache_control"}),
         sdk_only_fields=frozenset(),
         sdk_sample={
             "id": "msg_01abc",
@@ -353,6 +362,7 @@ MESSAGE_REGISTRY: list[TypeMapping] = [
                 "inference_geo": None,
                 "input_tokens": 10,
                 "output_tokens": 5,
+                "output_tokens_details": None,
                 "server_tool_use": None,
                 "service_tier": None,
             },
@@ -365,6 +375,7 @@ MESSAGE_REGISTRY: list[TypeMapping] = [
         openapi_schema_name=None,
         zylon_only_fields=frozenset(),
         sdk_only_fields=_USAGE_SDK_ONLY,
+        forward_compat_fields=frozenset({"output_tokens_details"}),
         sdk_sample={
             "cache_creation": None,
             "cache_creation_input_tokens": None,
@@ -372,6 +383,7 @@ MESSAGE_REGISTRY: list[TypeMapping] = [
             "inference_geo": None,
             "input_tokens": 42,
             "output_tokens": 17,
+            "output_tokens_details": None,
             "server_tool_use": None,
             "service_tier": None,
         },
@@ -429,6 +441,19 @@ ZYLON_ONLY_REGISTRY: list[TypeMapping] = [
         sdk_sample={},
         notes="Zylon-only search result content block",
         skip=True,
+    ),
+    TypeMapping(
+        sdk_type=None,
+        our_type=MidConvSystemBlock,
+        sdk_schema_name="RequestMidConvSystemBlock",
+        openapi_schema_name="RequestMidConvSystemBlock",
+        zylon_only_fields=_CACHEABLE_ZYLON_FIELDS,
+        sdk_only_fields=frozenset(),
+        sdk_sample={
+            "type": "mid_conv_system",
+            "content": [{"type": "text", "text": "You are a helpful assistant."}],
+        },
+        notes="In the Anthropic OpenAPI spec (InputContentBlock) but not yet in the Python SDK",
     ),
     TypeMapping(
         sdk_type=None,
@@ -540,7 +565,7 @@ ZYLON_ONLY_REGISTRY: list[TypeMapping] = [
         sdk_schema_name="MessageDelta",
         openapi_schema_name=None,
         zylon_only_fields=_BASE_ZYLON_FIELDS
-        | {"id", "type", "role", "content", "model", "usage", "stop_details"},
+        | {"id", "type", "role", "content", "model", "usage"},
         sdk_only_fields=frozenset(),
         sdk_sample={
             "container": None,

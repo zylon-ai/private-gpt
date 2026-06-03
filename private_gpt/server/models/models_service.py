@@ -76,6 +76,7 @@ class ModelsService:
                 medium=supported if thinking_enabled else unsupported,
                 high=supported if thinking_enabled else unsupported,
                 max=supported if thinking_enabled else unsupported,
+                xhigh=supported if thinking_enabled else unsupported,
             ),
             image_input=CountCapabilitySupportOutput(
                 supported=supports_image_input, maximum=config.support_image or 0

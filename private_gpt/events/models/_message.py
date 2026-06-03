@@ -9,6 +9,14 @@ from private_gpt.events.models._base import StandardContentProtocol
 from private_gpt.events.models._tool_result_blocks import ContentBlockType
 
 
+class OutputTokensDetails(BaseModel):
+    """Breakdown of output tokens by category."""
+
+    reasoning_tokens: int | None = Field(
+        default=None, description="Output tokens spent on internal reasoning."
+    )
+
+
 class CacheCreation(BaseModel):
     """Token counts cached by ephemeral policy."""
 
@@ -66,6 +74,9 @@ class Usage(BaseModel):
     )
     output_tokens: int | None = Field(
         default=None, description="Output token count for this response."
+    )
+    output_tokens_details: OutputTokensDetails | None = Field(
+        default=None, description="Breakdown of output tokens by category."
     )
     server_tool_use: ServerToolUsage | None = Field(
         default=None, description="Usage counters for server-side tool calls."

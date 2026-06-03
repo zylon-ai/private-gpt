@@ -22,6 +22,7 @@ _EFFORT_BUDGET_RATIO: dict[ReasoningEffort, float] = {
     ReasoningEffort.MEDIUM: 0.8,
     ReasoningEffort.HIGH: 0.8,
     ReasoningEffort.MAX: 0.8,
+    ReasoningEffort.XHIGH: 0.8,
 }
 
 

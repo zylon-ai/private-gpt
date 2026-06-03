@@ -38,6 +38,7 @@ from private_gpt.events.models import (
     CacheControlEphemeral,
     ContentBlockType,
     ImageBlock,
+    MidConvSystemBlock,
     TextBlock,
     TLDRBlock,
     ToolResultBlock,
@@ -275,7 +276,7 @@ class Thinking(BaseModel):
         default=False,
         description="Enable reasoning capabilities for the model, allowing it to think step-by-step",
     )
-    effort: Literal["low", "medium", "high", "max"] | None = Field(
+    effort: Literal["low", "medium", "high", "max", "xhigh"] | None = Field(
         default=None,
         deprecated=True,
         description=(
@@ -324,7 +325,7 @@ class JsonObjectFormat(BaseModel):
 class OutputConfigInput(BaseModel):
     """Output configuration shared across Anthropic-compatible request models."""
 
-    effort: Literal["low", "medium", "high", "max"] | None = Field(
+    effort: Literal["low", "medium", "high", "max", "xhigh"] | None = Field(
         default=None,
         description="Reasoning effort level for output generation.",
     )
@@ -339,7 +340,7 @@ class OutputConfigInput(BaseModel):
 class MessageInput(BaseModel):
     """Input message for AI conversations."""
 
-    role: Literal["assistant", "user"] = Field(
+    role: Literal["assistant", "user", "system"] = Field(
         description="The role of the message sender"
     )
     content: str | list[
@@ -877,6 +878,9 @@ class MessageInput(BaseModel):
             for block in content:
                 if isinstance(block, TextBlock):
                     blocks.append(LITextBlock(text=block.text))
+                elif isinstance(block, MidConvSystemBlock):
+                    text = "\n".join(b.text for b in block.content)
+                    blocks.append(LITextBlock(text=text))
                 elif isinstance(block, ImageBlock) and isinstance(
                     block.source, Base64ImageSource
                 ):
@@ -1340,6 +1344,7 @@ class EffortCapabilityOutput(BaseModel):
     medium: CapabilitySupportOutput = Field(description='Support for effort "medium".')
     high: CapabilitySupportOutput = Field(description='Support for effort "high".')
     max: CapabilitySupportOutput = Field(description='Support for effort "max".')
+    xhigh: CapabilitySupportOutput = Field(description='Support for effort "xhigh".')
 
 
 class ContextManagementCapabilityOutput(BaseModel):

@@ -50,6 +50,7 @@ if not TYPE_CHECKING:
 _CUSTOM_REASONING_EFFORT_MAPPING = {
     ReasoningEffort.NONE: "none",
     ReasoningEffort.MAX: "xhigh",
+    ReasoningEffort.XHIGH: "xhigh",
 }
 
 
