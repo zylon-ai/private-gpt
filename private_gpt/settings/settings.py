@@ -313,6 +313,10 @@ class ServerSettings(BaseModel):
         default="",
         description="Root path for the FastAPI server",
     )
+    host: str = Field(
+        default="0.0.0.0",
+        description="Host of PrivateGPT FastAPI server, defaults to 0.0.0.0",
+    )
     port: int = Field(description="Port of PrivateGPT FastAPI server, defaults to 8080")
     cors: CorsSettings = Field(description="CORS configuration", default=CorsSettings())
     auth: AuthSettings = Field(
