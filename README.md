@@ -192,7 +192,17 @@ PrivateGPT started as a proof of concept in 2023: a script that let you chat wit
 
 That early version made one thing clear: there was serious demand for private, local AI that worked without cloud dependencies.
 
-PrivateGPT 2.0 is the evolution of that idea — rebuilt from the ground up as a proper API layer for private AI applications. Read the [PrivateGPT 1.0 launch post](https://blog.zylon.ai/privategpt-launch) for context on where it started and why.
+PrivateGPT 1.0 is the evolution of that idea — rebuilt from the ground up as a proper API layer for private AI applications. 
+
+<!-- Read the [PrivateGPT 1.0 launch post](https://blog.zylon.ai/privategpt-launch) for context on where it started and why. -->
+
+<a href="https://www.star-history.com/?repos=zylon-ai%2Fprivate-gpt&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=zylon-ai/private-gpt&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=zylon-ai/private-gpt&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=zylon-ai/private-gpt&type=date&legend=top-left" />
+ </picture>
+</a>
 
 ---
 
@@ -255,4 +265,4 @@ Use **Zylon** if you need the full enterprise platform around it.
 - [Documentation](https://docs.privategpt.dev/) — full reference, guides, and API docs
 - [Issues](https://github.com/zylon-ai/private-gpt/issues) — bug reports and feature requests
 
-Pull requests are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+Pull requests are welcome. 
