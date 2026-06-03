@@ -14,7 +14,7 @@ permissions:
 jobs:
   update-openapi:
     runs-on: ubuntu-latest
-    if: github.head_ref == 'release-please--branches--main'
+    if: github.head_ref == 'release-please--branches--main' || github.ref_name == 'release-please--branches--main'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
