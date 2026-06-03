@@ -3,7 +3,7 @@
   "info": {
     "title": "Private-GPT API",
     "description": "PrivateGPT -built by Zylon- is a production-ready AI project that allows you to ask questions about your documents using the power\nof Large Language Models (LLMs), even in scenarios without an Internet connection. 100% private, no data leaves your\nexecution environment at any point.",
-    "version": "0.6.2"
+    "version": "1.0.0"
   },
   "paths": {
     "/v1/messages": {
@@ -441,7 +441,7 @@
               "type": "integer",
               "maximum": 1000,
               "minimum": 1,
-              "default": 20,
+              "default": 100,
               "title": "Limit"
             }
           }
@@ -1387,6 +1387,240 @@
         ]
       }
     },
+    "/v1/artifacts/ingest/async": {
+      "post": {
+        "tags": [
+          "Artifacts",
+          "Artifacts"
+        ],
+        "summary": "Ingest Content Asynchronously",
+        "description": "Initiate asynchronous ingestion of content from multiple sources",
+        "operationId": "ingest_content_async_v1_artifacts_ingest_async_post",
+        "requestBody": {
+          "description": "JSON request body containing ingestion parameters and callback configuration for asynchronous processing notifications",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestAsyncBody"
+              },
+              "examples": {
+                "file_async": {
+                  "summary": "Async file ingestion",
+                  "value": {
+                    "callback": {
+                      "amqp": {
+                        "exchange": "ingestion_events",
+                        "routing_key_done": "ingest.completed",
+                        "routing_key_error": "ingest.failed",
+                        "routing_key_progress": "ingest.progress"
+                      }
+                    },
+                    "ingest_body": {
+                      "input": {
+                        "type": "file",
+                        "value": "JVBERi0xLjQKJaqrrK0KMS..."
+                      },
+                      "artifact": "quarterly_report",
+                      "collection": "financial_docs",
+                      "metadata": {
+                        "file_name": "Q3_Report.pdf"
+                      }
+                    }
+                  }
+                },
+                "uri_async": {
+                  "summary": "Async URI ingestion",
+                  "value": {
+                    "callback": {
+                      "amqp": {
+                        "exchange": "ingestion_events",
+                        "routing_key_done": "ingest.completed",
+                        "routing_key_error": "ingest.failed",
+                        "routing_key_progress": "ingest.progress"
+                      }
+                    },
+                    "ingest_body": {
+                      "input": {
+                        "type": "uri",
+                        "value": "s3://company-docs/annual-2023.pdf"
+                      },
+                      "artifact": "annual_report_2023",
+                      "collection": "financial_reports",
+                      "metadata": {
+                        "year": "2023"
+                      }
+                    }
+                  }
+                },
+                "text_async": {
+                  "summary": "Async text ingestion",
+                  "value": {
+                    "callback": {
+                      "amqp": {
+                        "exchange": "ingestion_events",
+                        "routing_key_done": "ingest.completed",
+                        "routing_key_error": "ingest.failed",
+                        "routing_key_progress": "ingest.progress"
+                      }
+                    },
+                    "ingest_body": {
+                      "input": {
+                        "type": "text",
+                        "value": "Our company was founded in 2020..."
+                      },
+                      "artifact": "company_profile",
+                      "collection": "corporate_docs",
+                      "metadata": {
+                        "author": "Marketing Team"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully initiated ingestion task",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                },
+                "example": {
+                  "task_id": "123e4567-e89b-12d3-a456-426614174000"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "422": {
+            "description": "Invalid input format or request parameters",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Input format is invalid or parameters are missing"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not accessible (for URI inputs)",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "The URI resource could not be accessed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/artifacts/ingest/async/{task_id}": {
+      "get": {
+        "tags": [
+          "Artifacts",
+          "Artifacts"
+        ],
+        "summary": "Check Ingestion Task Status",
+        "description": "Retrieve the current status and results of an asynchronous ingestion task",
+        "operationId": "get_ingest_async_status_v1_artifacts_ingest_async__task_id__get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Unique identifier of the ingestion task to check status for",
+              "examples": [
+                "123e4567-e89b-12d3-a456-426614174000"
+              ],
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved task status and results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskStatus_IngestResponse_"
+                },
+                "examples": {
+                  "completed_task": {
+                    "summary": "Completed ingestion task with results",
+                    "value": {
+                      "task_id": "123e4567-e89b-12d3-a456-426614174000",
+                      "task_status": "SUCCESS",
+                      "task_result": {
+                        "object": "list",
+                        "model": "private-gpt",
+                        "data": [
+                          {
+                            "object": "ingest.document",
+                            "artifact": "annual_report",
+                            "doc_metadata": {
+                              "file_name": "report.pdf",
+                              "page_count": 45,
+                              "department": "finance"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "pending_task": {
+                    "summary": "Task still in progress",
+                    "value": {
+                      "task_id": "456e7890-e89b-12d3-a456-426614174001",
+                      "task_status": "PENDING"
+                    }
+                  },
+                  "failed_task": {
+                    "summary": "Failed ingestion task with error",
+                    "value": {
+                      "task_id": "789e0123-e89b-12d3-a456-426614174002",
+                      "task_status": "FAILURE",
+                      "task_result": "File format not supported or URI inaccessible"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Task not found or expired",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Task with specified ID not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/artifacts/list": {
       "get": {
         "tags": [
@@ -1495,6 +1729,145 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/artifacts/delete/async": {
+      "post": {
+        "tags": [
+          "Artifacts",
+          "Artifacts"
+        ],
+        "summary": "Delete Document Asynchronously",
+        "description": "Initiates asynchronous deletion of a document and all associated data.\n\nThis endpoint queues a deletion task for background processing, making it\nsuitable for large documents or when non-blocking operation is required.\nThe task can be monitored using the returned task ID.\n\nIf an ingestion task is currently running for the same document, it will\nbe automatically revoked before initiating the deletion.",
+        "operationId": "delete_ingested_async_v1_artifacts_delete_async_post",
+        "requestBody": {
+          "description": "JSON request body containing deletion parameters and optional callback configuration for asynchronous processing notifications",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteIngestedDocumentAsyncBody"
+              },
+              "example": {
+                "callback": {
+                  "amqp": {
+                    "exchange": "deletion_events",
+                    "routing_key_done": "delete.completed",
+                    "routing_key_error": "delete.failed",
+                    "routing_key_progress": "delete.progress"
+                  }
+                },
+                "delete_body": {
+                  "collection": "financial_reports",
+                  "artifact": "obsolete_report_2022"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully initiated deletion task",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "422": {
+            "description": "Invalid request parameters"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/delete/async/{task_id}": {
+      "get": {
+        "tags": [
+          "Artifacts",
+          "Artifacts"
+        ],
+        "summary": "Check Deletion Task Status",
+        "description": "Retrieve the current status of an asynchronous deletion task",
+        "operationId": "get_delete_async_status_v1_artifacts_delete_async__task_id__get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Unique identifier of the deletion task to check status for",
+              "examples": [
+                "123e4567-e89b-12d3-a456-426614174000"
+              ],
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved task status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskStatus_NoneType_"
+                },
+                "examples": {
+                  "completed_deletion": {
+                    "summary": "Completed deletion task",
+                    "value": {
+                      "task_id": "123e4567-e89b-12d3-a456-426614174000",
+                      "task_status": "SUCCESS"
+                    }
+                  },
+                  "pending_deletion": {
+                    "summary": "Deletion task in progress",
+                    "value": {
+                      "task_id": "456e7890-e89b-12d3-a456-426614174001",
+                      "task_status": "PENDING"
+                    }
+                  },
+                  "failed_deletion": {
+                    "summary": "Failed deletion task",
+                    "value": {
+                      "task_id": "789e0123-e89b-12d3-a456-426614174002",
+                      "task_status": "FAILURE",
+                      "task_result": "Document not found in collection"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Task not found or expired",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Task with specified ID not found"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -3408,6 +3781,69 @@
   },
   "components": {
     "schemas": {
+      "AMQP": {
+        "properties": {
+          "exchange": {
+            "type": "string",
+            "title": "Exchange",
+            "description": "AMQP exchange name where task notifications will be published",
+            "examples": [
+              "ingest"
+            ]
+          },
+          "routing_key_done": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Key Done",
+            "description": "Routing key used when publishing task completion notifications",
+            "examples": [
+              "ingest.done"
+            ]
+          },
+          "routing_key_progress": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Key Progress",
+            "description": "Routing key used when publishing task progress update notifications",
+            "examples": [
+              "ingest.progress"
+            ]
+          },
+          "routing_key_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Key Error",
+            "description": "Routing key used when publishing task error notifications",
+            "examples": [
+              "ingest.error"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "exchange"
+        ],
+        "title": "AMQP",
+        "description": "AMQP configuration for message queue notifications."
+      },
       "AudioBlock": {
         "properties": {
           "type": {
@@ -3852,6 +4288,45 @@
         "title": "CacheCreation",
         "description": "Token counts cached by ephemeral policy."
       },
+      "Callback": {
+        "properties": {
+          "amqp": {
+            "$ref": "#/components/schemas/AMQP",
+            "description": "AMQP (Advanced Message Queuing Protocol) configuration for task status notifications",
+            "examples": [
+              {
+                "exchange": "ingest",
+                "routing_key_done": "ingest.done",
+                "routing_key_error": "ingest.error"
+              }
+            ]
+          },
+          "properties": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Properties",
+            "description": "Additional properties and metadata to include with callback notifications",
+            "examples": [
+              {
+                "key": "value"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "amqp"
+        ],
+        "title": "Callback",
+        "description": "Callback configuration for asynchronous task notifications."
+      },
       "CapabilitySupportOutput": {
         "properties": {
           "supported": {
@@ -4191,7 +4666,7 @@
               }
             ],
             "title": "Context Management",
-            "description": "context management field."
+            "description": "Optional context management configuration"
           }
         },
         "additionalProperties": true,
@@ -4665,6 +5140,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/SearchResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/MidConvSystemBlock"
                 },
                 {
                   "$ref": "#/components/schemas/TLDRBlock"
@@ -5599,6 +6077,59 @@
         "title": "DatabaseQueryBody",
         "description": "Request body for database query using the tool."
       },
+      "DeleteIngestedDocumentAsyncBody": {
+        "properties": {
+          "callback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Callback"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional callback configuration for receiving asynchronous task notifications",
+            "examples": [
+              {
+                "amqp": {
+                  "exchange": "ingest",
+                  "routing_key_done": "ingest.done",
+                  "routing_key_error": "ingest.error"
+                },
+                "properties": {
+                  "key": "value"
+                }
+              }
+            ]
+          },
+          "delete_body": {
+            "$ref": "#/components/schemas/DeleteIngestedDocumentBody",
+            "description": "Document deletion parameters including collection and artifact identifiers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "delete_body"
+        ],
+        "title": "DeleteIngestedDocumentAsyncBody",
+        "description": "Request body for asynchronous document deletion.",
+        "examples": [
+          {
+            "callback": {
+              "amqp": {
+                "exchange": "deletion_events",
+                "routing_key_done": "delete.completed",
+                "routing_key_error": "delete.failed",
+                "routing_key_progress": "delete.progress"
+              }
+            },
+            "delete_body": {
+              "artifact": "obsolete_report_2022",
+              "collection": "financial_reports"
+            }
+          }
+        ]
+      },
       "DeleteIngestedDocumentBody": {
         "properties": {
           "collection": {
@@ -5821,6 +6352,10 @@
           "max": {
             "$ref": "#/components/schemas/CapabilitySupportOutput",
             "description": "Support for effort \"max\"."
+          },
+          "xhigh": {
+            "$ref": "#/components/schemas/CapabilitySupportOutput",
+            "description": "Support for effort \"xhigh\"."
           }
         },
         "type": "object",
@@ -5829,7 +6364,8 @@
           "low",
           "medium",
           "high",
-          "max"
+          "max",
+          "xhigh"
         ],
         "title": "EffortCapabilityOutput",
         "description": "EffortCapabilityOutput schema."
@@ -6199,6 +6735,68 @@
         ],
         "title": "ImageBlock",
         "description": "Anthropic-compatible image content block."
+      },
+      "IngestAsyncBody": {
+        "properties": {
+          "callback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Callback"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional callback configuration for receiving asynchronous task notifications",
+            "examples": [
+              {
+                "amqp": {
+                  "exchange": "ingest",
+                  "routing_key_done": "ingest.done",
+                  "routing_key_error": "ingest.error"
+                },
+                "properties": {
+                  "key": "value"
+                }
+              }
+            ]
+          },
+          "ingest_body": {
+            "$ref": "#/components/schemas/IngestBody",
+            "description": "Document ingestion parameters including artifact, collection, input data, and optional metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingest_body"
+        ],
+        "title": "IngestAsyncBody",
+        "description": "Request body for asynchronous URI ingestion.",
+        "examples": [
+          {
+            "callback": {
+              "amqp": {
+                "exchange": "ingestion_events",
+                "routing_key_done": "ingest.completed",
+                "routing_key_error": "ingest.failed",
+                "routing_key_progress": "ingest.progress"
+              }
+            },
+            "ingest_body": {
+              "artifact": "large_document_2024",
+              "collection": "technical_docs",
+              "input": {
+                "type": "uri",
+                "value": "https://example.com/docs/large-document.pdf"
+              },
+              "metadata": {
+                "file_name": "large-document.pdf",
+                "pages": 120,
+                "size_mb": 45
+              }
+            }
+          }
+        ]
       },
       "IngestBody": {
         "properties": {
@@ -6762,6 +7360,9 @@
                   "$ref": "#/components/schemas/SearchResultBlock"
                 },
                 {
+                  "$ref": "#/components/schemas/MidConvSystemBlock"
+                },
+                {
                   "$ref": "#/components/schemas/TLDRBlock"
                 },
                 {
@@ -6839,8 +7440,9 @@
           "role": {
             "type": "string",
             "enum": [
-              "assistant",
-              "user"
+              "system",
+              "user",
+              "assistant"
             ],
             "title": "Role",
             "description": "The role of the message sender"
@@ -6896,6 +7498,9 @@
                       "$ref": "#/components/schemas/SearchResultBlock"
                     },
                     {
+                      "$ref": "#/components/schemas/MidConvSystemBlock"
+                    },
+                    {
                       "$ref": "#/components/schemas/TLDRBlock"
                     },
                     {
@@ -6910,6 +7515,7 @@
                       "container_upload": "#/components/schemas/ContainerUploadBlock-Input",
                       "document": "#/components/schemas/DocumentBlock-Input",
                       "image": "#/components/schemas/ImageBlock-Input",
+                      "mid_conv_system": "#/components/schemas/MidConvSystemBlock-Input",
                       "redacted_thinking": "#/components/schemas/RedactedThinkingBlock-Input",
                       "resource": "#/components/schemas/ResourceBlock-Input",
                       "resource_link": "#/components/schemas/ResourceLinkBlock-Input",
@@ -6941,6 +7547,87 @@
         "discriminator": {
           "propertyName": "role"
         }
+      },
+      "MidConvSystemBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "mid_conv_system",
+            "title": "Type",
+            "default": "mid_conv_system",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "cache_control": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CacheControlEphemeral"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "ephemeral": "#/components/schemas/CacheControlEphemeral"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Control",
+            "description": "cache control field."
+          },
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/TextBlock"
+            },
+            "type": "array",
+            "title": "Content",
+            "description": "System instruction text blocks."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "content",
+          "type"
+        ],
+        "title": "MidConvSystemBlock",
+        "description": "System instructions injected at a specific point mid-conversation."
       },
       "ModelCapabilitiesOutput": {
         "properties": {
@@ -7152,7 +7839,8 @@
                   "low",
                   "medium",
                   "high",
-                  "max"
+                  "max",
+                  "xhigh"
                 ]
               },
               {
@@ -7178,6 +7866,25 @@
         "type": "object",
         "title": "OutputConfigInput",
         "description": "Output configuration shared across Anthropic-compatible request models."
+      },
+      "OutputTokensDetails": {
+        "properties": {
+          "reasoning_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Tokens",
+            "description": "Output tokens spent on internal reasoning."
+          }
+        },
+        "type": "object",
+        "title": "OutputTokensDetails",
+        "description": "Breakdown of output tokens by category."
       },
       "PlainTextSource": {
         "properties": {
@@ -8603,6 +9310,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/SearchResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/MidConvSystemBlock"
                 }
               ]
             },
@@ -8651,6 +9361,198 @@
         ],
         "title": "TabularDataAnalysisBody",
         "description": "Request body for tabular data analysis using the tool."
+      },
+      "Task": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "Unique identifier for the asynchronous task, used to track progress and retrieve results",
+            "examples": [
+              "123e4567-e89b-12d3-a456-426614174000",
+              "revoked"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id"
+        ],
+        "title": "Task",
+        "description": "Represents an asynchronous task that has been queued.",
+        "examples": [
+          {
+            "task_id": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          {
+            "task_id": "456e7890-e89b-12d3-a456-426614174001"
+          }
+        ]
+      },
+      "TaskStatus_IngestResponse_": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "Unique identifier of the task being monitored",
+            "examples": [
+              "123e4567-e89b-12d3-a456-426614174000"
+            ]
+          },
+          "task_status": {
+            "type": "string",
+            "title": "Task Status",
+            "description": "Current execution status of the task. Common values: PENDING, SUCCESS, FAILURE, REVOKED",
+            "examples": [
+              "PENDING",
+              "SUCCESS",
+              "FAILURE",
+              "REVOKED"
+            ]
+          },
+          "task_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IngestResponse"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Result",
+            "description": "Task execution result. Contains typed result data on success, error message string on failure, or None for pending/deletion tasks",
+            "examples": [
+              null,
+              "File format not supported",
+              {
+                "data": [],
+                "model": "private-gpt",
+                "object": "list"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "task_status",
+          "task_result"
+        ],
+        "title": "TaskStatus[IngestResponse]",
+        "description": "Represents the status of an asynchronous task, including its ID, status, and result.",
+        "examples": [
+          {
+            "task_id": "123e4567-e89b-12d3-a456-426614174000",
+            "task_result": {
+              "data": [
+                {
+                  "artifact": "annual_report",
+                  "doc_metadata": {
+                    "file_name": "report.pdf",
+                    "pages": 45
+                  },
+                  "object": "ingest.document"
+                }
+              ],
+              "model": "private-gpt",
+              "object": "list"
+            },
+            "task_status": "SUCCESS"
+          },
+          {
+            "task_id": "456e7890-e89b-12d3-a456-426614174001",
+            "task_status": "PENDING"
+          },
+          {
+            "task_id": "789e0123-e89b-12d3-a456-426614174002",
+            "task_result": "URI resource could not be accessed",
+            "task_status": "FAILURE"
+          }
+        ]
+      },
+      "TaskStatus_NoneType_": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id",
+            "description": "Unique identifier of the task being monitored",
+            "examples": [
+              "123e4567-e89b-12d3-a456-426614174000"
+            ]
+          },
+          "task_status": {
+            "type": "string",
+            "title": "Task Status",
+            "description": "Current execution status of the task. Common values: PENDING, SUCCESS, FAILURE, REVOKED",
+            "examples": [
+              "PENDING",
+              "SUCCESS",
+              "FAILURE",
+              "REVOKED"
+            ]
+          },
+          "task_result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Result",
+            "description": "Task execution result. Contains typed result data on success, error message string on failure, or None for pending/deletion tasks",
+            "examples": [
+              null,
+              "File format not supported",
+              {
+                "data": [],
+                "model": "private-gpt",
+                "object": "list"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "task_status",
+          "task_result"
+        ],
+        "title": "TaskStatus[NoneType]",
+        "description": "Represents the status of an asynchronous task, including its ID, status, and result.",
+        "examples": [
+          {
+            "task_id": "123e4567-e89b-12d3-a456-426614174000",
+            "task_result": {
+              "data": [
+                {
+                  "artifact": "annual_report",
+                  "doc_metadata": {
+                    "file_name": "report.pdf",
+                    "pages": 45
+                  },
+                  "object": "ingest.document"
+                }
+              ],
+              "model": "private-gpt",
+              "object": "list"
+            },
+            "task_status": "SUCCESS"
+          },
+          {
+            "task_id": "456e7890-e89b-12d3-a456-426614174001",
+            "task_status": "PENDING"
+          },
+          {
+            "task_id": "789e0123-e89b-12d3-a456-426614174002",
+            "task_result": "URI resource could not be accessed",
+            "task_status": "FAILURE"
+          }
+        ]
       },
       "TextArtifact": {
         "properties": {
@@ -8784,7 +9686,8 @@
                   "low",
                   "medium",
                   "high",
-                  "max"
+                  "max",
+                  "xhigh"
                 ]
               },
               {
@@ -9115,6 +10018,9 @@
                   "$ref": "#/components/schemas/SearchResultBlock"
                 },
                 {
+                  "$ref": "#/components/schemas/MidConvSystemBlock"
+                },
+                {
                   "$ref": "#/components/schemas/TLDRBlock"
                 }
               ]
@@ -9257,6 +10163,9 @@
                       "$ref": "#/components/schemas/SearchResultBlock"
                     },
                     {
+                      "$ref": "#/components/schemas/MidConvSystemBlock"
+                    },
+                    {
                       "$ref": "#/components/schemas/TLDRBlock"
                     },
                     {
@@ -9271,6 +10180,7 @@
                       "container_upload": "#/components/schemas/ContainerUploadBlock-Input",
                       "document": "#/components/schemas/DocumentBlock-Input",
                       "image": "#/components/schemas/ImageBlock-Input",
+                      "mid_conv_system": "#/components/schemas/MidConvSystemBlock-Input",
                       "redacted_thinking": "#/components/schemas/RedactedThinkingBlock-Input",
                       "resource": "#/components/schemas/ResourceBlock-Input",
                       "resource_link": "#/components/schemas/ResourceLinkBlock-Input",
@@ -9711,6 +10621,17 @@
             ],
             "title": "Output Tokens",
             "description": "Output token count for this response."
+          },
+          "output_tokens_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutputTokensDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Breakdown of output tokens by category."
           },
           "server_tool_use": {
             "anyOf": [
