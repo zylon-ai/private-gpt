@@ -2,7 +2,7 @@ name: update-claude-specs
 
 on:
   schedule:
-    - cron: "0 3 * * *"  # daily at 03:00 UTC
+    - cron: "0 3 * * 1"  # weekly on Monday at 03:00 UTC
   workflow_dispatch:
 
 jobs:
