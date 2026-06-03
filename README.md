@@ -1,3 +1,5 @@
+![Banner image](./fern/docs/assets/privategpt_banner.png)
+
 <div align="center">
 
 **PrivateGPT is the open-source API layer that turns local models into production AI applications.**
