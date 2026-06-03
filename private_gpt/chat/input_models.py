@@ -339,7 +339,7 @@ class OutputConfigInput(BaseModel):
 class MessageInput(BaseModel):
     """Input message for AI conversations."""
 
-    role: Literal["assistant", "user"] = Field(
+    role: Literal["assistant", "user", "system"] = Field(
         description="The role of the message sender"
     )
     content: str | list[
