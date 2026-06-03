@@ -340,7 +340,7 @@ class OutputConfigInput(BaseModel):
 class MessageInput(BaseModel):
     """Input message for AI conversations."""
 
-    role: Literal["assistant", "user", "system"] = Field(
+    role: Literal["system", "user", "assistant"] = Field(
         description="The role of the message sender"
     )
     content: str | list[
@@ -1256,6 +1256,27 @@ class MessagesInputBase(BaseModel):
         if value is None:
             return "default"
         return value
+
+    @model_validator(mode="after")
+    def extract_system_messages(self) -> "MessagesInputBase":
+        """Extract role=system messages and append them to the system list."""
+        system_msgs = [msg for msg in self.messages if msg.role == "system"]
+        if not system_msgs:
+            return self
+
+        self.messages = [msg for msg in self.messages if msg.role != "system"]
+
+        for msg in system_msgs:
+            if isinstance(msg.content, str):
+                self.system.append(System(text=msg.content))
+            elif isinstance(msg.content, list):
+                texts = [
+                    b.text for b in msg.content if isinstance(b, TextBlock) and b.text
+                ]
+                if texts:
+                    self.system.append(System(text="\n".join(texts)))
+
+        return self
 
 
 class CompletionInput(BaseModel):

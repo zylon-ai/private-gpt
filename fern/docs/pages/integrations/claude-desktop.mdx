@@ -4,7 +4,7 @@ description: "Connect Claude Desktop (Cowork) to your private-gpt server using t
 ---
 
 <Warning>
-  This page was last updated and tested on **2026-06-02**. The setup is stable, but Claude Desktop updates can change UI labels or configuration keys without notice — if something stops working, check this page for an updated guide.
+  This page was last updated and tested on **2026-06-03**. The setup is stable, but Claude Desktop updates can change UI labels or configuration keys without notice — if something stops working, check this page for an updated guide.
 </Warning>
 
 [Claude Desktop](https://claude.ai/download) ships with a **Cowork** agent harness — skills, plugins, MCP servers, and multi-agent coordination — that can be pointed at any Anthropic-compatible endpoint, including your `private-gpt` server. This lets you run the full Cowork experience against your self-hosted models without routing data through Anthropic's first-party infrastructure.
@@ -63,13 +63,31 @@ Tested against `private-gpt` on 2026-05-27.
     ```
   </Step>
 
+  <Step title="Configure your model">
+    Open the model configuration panel and add a custom model entry with the following values:
+
+    | Field | Value |
+    |---|---|
+    | Model Discoverability | **Disabled** |
+    | Model ID | `claude-local` (must start with `claude-`) |
+    | Display Name | `PrivateGPT` (or any label you prefer) |
+
+    <Warning>
+      Claude Desktop requires the **Model ID** to follow the `claude-*` naming convention (e.g. `claude-local`, `claude-private`). Using an ID that does not start with `claude-` will cause the model to be rejected or ignored.
+    </Warning>
+
+    <Warning>
+      Do **not** include `gpt` anywhere in the **Model ID** — Claude Desktop bans that string and will reject the model entry.
+    </Warning>
+
+    Because Claude Desktop requires a `claude-*` Model ID, the value you enter (e.g. `claude-local`) will not match any model name in your `settings.yaml` — PrivateGPT will automatically fall back to the **default model** configured on the server.
+
+    For fine-grained control over context window, tokenizer, tool support, and sampling parameters, see [Advanced Model Configuration](/configuration/advanced).
+  </Step>
+
   <Step title="Apply and relaunch">
     Click **Apply locally → Relaunch now**.
 
     After relaunch, log out of your Anthropic account and choose **Continue with Gateway**.
-  </Step>
-
-  <Step title="Select your model">
-    Use the model picker to enter the model identifier exposed by your `private-gpt` server (e.g. `default`). This name must match a model registered in your server's `settings.yaml`.
   </Step>
 </Steps>

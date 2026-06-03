@@ -892,7 +892,7 @@ async def test_chat_body_validation_duplicate_tools(
             [
                 {"content": "test", "role": "system"},
             ],
-            "Input should be 'assistant' or 'user'",
+            "Messages cannot be empty",
         ),
     ],
 )
