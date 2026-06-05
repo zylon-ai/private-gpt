@@ -11,6 +11,7 @@ from private_gpt.chat.extensions.context_filter import ContextFilter
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import IngestComponent
+from private_gpt.components.ingest.parse_component import ParseComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
@@ -56,6 +57,7 @@ class SummarizeWorkflowBuilder:
         node_store_component: NodeStoreComponent | None = None,
         embedding_component: EmbeddingComponent | None = None,
         ingest_component: IngestComponent | None = None,
+        parse_component: ParseComponent | None = None,
         content_service: ContentService | None = None,
     ) -> None:
         self.settings = settings
@@ -64,6 +66,7 @@ class SummarizeWorkflowBuilder:
         self.node_store_component = node_store_component
         self.embedding_component = embedding_component
         self.ingest_component = ingest_component
+        self.parse_component = parse_component
         self.content_service = content_service
         self.prompt_builder_service = prompt_builder_service
 
@@ -82,6 +85,7 @@ class SummarizeWorkflowBuilder:
         assert self.node_store_component, "Node store component is required"
         assert self.embedding_component, "Embedding component is required"
         assert self.ingest_component, "Ingest component is required"
+        assert self.parse_component, "Parse component is required"
         assert self.content_service, "Content service is required"
 
         # If artifacts are provided, verify the related required indexes are ready
@@ -95,6 +99,7 @@ class SummarizeWorkflowBuilder:
                     node_store_component=self.node_store_component,
                     embedding_component=self.embedding_component,
                     ingest_component=self.ingest_component,
+                    parse_component=self.parse_component,
                 )
                 vector_artifact_index.populated_or_error()
 

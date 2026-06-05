@@ -213,14 +213,7 @@ class IngestService:
         )
 
         # Check if the vector index is initialized
-        vector_artifact_index = VectorArtifactIndex(
-            collection=collection,
-            artifact=artifact,
-            node_store_component=self.node_store_component,
-            vector_store_component=self.vector_store_component,
-            embedding_component=self.embedding_component,
-            ingest_component=self.ingest_component,
-        )
+        vector_artifact_index = self._make_vector_artifact_index(collection, artifact)
 
         try:
             vector_artifact_index.populated_or_error()
