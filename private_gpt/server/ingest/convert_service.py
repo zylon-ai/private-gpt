@@ -53,6 +53,17 @@ class ConvertService:
     ) -> Path:
         return self.data_path_from_data(raw_file_data.read(), extension)
 
+    def bytes_to_text(self, raw: bytes, ext: str) -> str:
+        with self.temporary_file(
+            lambda: self.data_path_from_data(raw, ext)
+        ) as tmp_path:
+            result = self.convert_file(tmp_path)
+            return "\n\n".join(
+                node.get_content()
+                for node in result.nodes
+                if node.get_content().strip()
+            )
+
     @classmethod
     @contextmanager
     def temporary_file(

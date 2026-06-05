@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 import re
-from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Protocol, cast
 
 from llama_index.core.base.llms.types import AudioBlock as LIAudioBlock
 from llama_index.core.base.llms.types import ImageBlock as LIImageBlock
@@ -30,6 +30,13 @@ if TYPE_CHECKING:
     from llama_index.core.schema import NodeWithScore
     from PIL.Image import Image
     from pydantic_core.core_schema import SerializerFunctionWrapHandler
+
+
+class DocumentConverter(Protocol):
+    """Structural protocol satisfied by ConvertService."""
+
+    def bytes_to_text(self, raw: bytes, ext: str) -> str:
+        ...
 
 
 class TextBlock(CacheableContentBlock, StandardContentProtocol):
@@ -410,12 +417,27 @@ class ContainerUploadBlock(CacheableContentBlock, StandardContentProtocol):
 class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
     """Anthropic document block (used for document-grounded generation)."""
 
-    class Base64PDFSource(BaseModel):
+    class Base64Source(BaseModel):
         type: Literal["base64"]
         data: str = Field(json_schema_extra={"format": "byte"})
-        media_type: Literal["application/pdf"]
+        media_type: str = Field(default="application/pdf")
 
         model_config = ConfigDict(extra="allow")
+
+        def to_bytes(self) -> bytes:
+            data = self.data
+            if ";base64," in data:
+                data = data.split(";base64,", 1)[1]
+            return base64.b64decode(data)
+
+        def extension(self) -> str:
+            import filetype  # type: ignore[import-untyped]
+
+            ft = filetype.get_type(mime=self.media_type)
+            return f".{ft.extension}" if ft else ".pdf"
+
+        def to_text(self, convert_service: DocumentConverter) -> str:
+            return convert_service.bytes_to_text(self.to_bytes(), self.extension())
 
     class PlainTextSource(BaseModel):
         type: Literal["text"]
@@ -423,6 +445,9 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
         media_type: Literal["text/plain"]
 
         model_config = ConfigDict(extra="allow")
+
+        def to_text(self, convert_service: DocumentConverter) -> str:
+            return self.data
 
     class ContentSource(BaseModel):
         type: Literal["content"]
@@ -432,15 +457,33 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
 
         model_config = ConfigDict(extra="allow")
 
-    class URLPDFSource(BaseModel):
+        def to_text(self, convert_service: DocumentConverter) -> str:
+            if isinstance(self.content, str):
+                return self.content
+            return "\n".join(str(block) for block in self.content)
+
+    class URLDocumentSource(BaseModel):
         type: Literal["url"]
         url: str
 
         model_config = ConfigDict(extra="allow")
 
+        def to_bytes(self) -> bytes:
+            from private_gpt.server.ingest.uri_loader import load_file_from_uri
+
+            return load_file_from_uri(self.url).read()
+
+        def extension(self) -> str:
+            from pathlib import Path
+
+            return Path(self.url.split("?")[0]).suffix or ".pdf"
+
+        def to_text(self, convert_service: DocumentConverter) -> str:
+            return convert_service.bytes_to_text(self.to_bytes(), self.extension())
+
     type: Literal["document"] = Field(default="document")
     source: Annotated[
-        Base64PDFSource | PlainTextSource | ContentSource | URLPDFSource,
+        Base64Source | PlainTextSource | ContentSource | URLDocumentSource,
         Field(discriminator="type"),
     ] = Field(description="Document source payload")
     title: str | None = Field(default=None)

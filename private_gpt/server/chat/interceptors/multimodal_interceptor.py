@@ -27,16 +27,17 @@ from private_gpt.events.models import (
     ToolUseBlock,
 )
 
+MULTIMODAL_TOOL_NAME = "multimodal_preprocessing"
+
 
 @singleton
 class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
     """Preprocess image and audio content in conversation history."""
 
-    _tool_name = "multimodal_preprocessing"
-
     @inject
     def __init__(self, llm_component: LLMComponent) -> None:
         self._llm_component = llm_component
+        self._tool_name = MULTIMODAL_TOOL_NAME
 
     async def intercept(self, context: ChatLoopInterceptorContext) -> None:
         """Apply multimodal preprocessing to the current chat history."""

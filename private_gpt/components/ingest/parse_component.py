@@ -136,7 +136,7 @@ class ParseComponent:
         file_metadata: dict[str, Any] | None,
         progress: NotifyProtocol | None = None,
     ) -> FileInfo:
-        file_name = get_file_name(file_metadata)
+        file_name = get_file_name(file_metadata) or file_data.name
         return get_file_info(file_data, file_name=file_name, progress=progress)
 
     def _validate_file(
