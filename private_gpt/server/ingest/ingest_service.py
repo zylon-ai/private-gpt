@@ -15,6 +15,7 @@ from private_gpt.artifact_index.vector_artifact_index import VectorArtifactIndex
 from private_gpt.celery.notify import ProgressStatus
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import IngestComponent
+from private_gpt.components.ingest.parse_component import ParseComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.readers.nodes import TreeNode
 from private_gpt.components.vector_store.vector_store_component import (
@@ -36,24 +37,30 @@ class IngestService:
         embedding_component: EmbeddingComponent,
         node_store_component: NodeStoreComponent,
         ingest_component: IngestComponent,
+        parse_component: ParseComponent,
     ) -> None:
         self.settings = settings
         self.vector_store_component = vector_store_component
         self.node_store_component = node_store_component
         self.embedding_component = embedding_component
         self.ingest_component = ingest_component
+        self.parse_component = parse_component
 
-    def initialize_artifact_indices(self, collection: str, artifact: str) -> None:
-        # Initialize Vector Artifact index
-        vector_artifact_index = VectorArtifactIndex(
+    def _make_vector_artifact_index(
+        self, collection: str, artifact: str
+    ) -> VectorArtifactIndex:
+        return VectorArtifactIndex(
             collection=collection,
             artifact=artifact,
             node_store_component=self.node_store_component,
             vector_store_component=self.vector_store_component,
             embedding_component=self.embedding_component,
             ingest_component=self.ingest_component,
+            parse_component=self.parse_component,
         )
-        vector_artifact_index.initialize()
+
+    def initialize_artifact_indices(self, collection: str, artifact: str) -> None:
+        self._make_vector_artifact_index(collection, artifact).initialize()
 
     def populate_vector_index(
         self,
@@ -72,14 +79,7 @@ class IngestService:
         logger.info("Populating vector index for artifact: %s", artifact)
 
         # Check if the vector index is initialized
-        vector_artifact_index = VectorArtifactIndex(
-            collection=collection,
-            artifact=artifact,
-            node_store_component=self.node_store_component,
-            vector_store_component=self.vector_store_component,
-            embedding_component=self.embedding_component,
-            ingest_component=self.ingest_component,
-        )
+        vector_artifact_index = self._make_vector_artifact_index(collection, artifact)
         if vector_artifact_index.status() == ArtifactIndexStatus.NOT_INITIALIZED:
             # Throw an error if the index is not initialized
             raise ValueError(

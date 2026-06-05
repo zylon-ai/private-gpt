@@ -45,6 +45,7 @@ from private_gpt.server.completion.completion_router import completion_router
 from private_gpt.server.content.content_router import content_router
 from private_gpt.server.embeddings.embeddings_router import embeddings_router
 from private_gpt.server.health.health_router import health_router
+from private_gpt.server.ingest.convert_router import convert_router
 from private_gpt.server.ingest.ingest_router import ingest_router
 from private_gpt.server.models.models_router import models_router
 from private_gpt.server.primitives.primitives_router import primitives_router
@@ -195,6 +196,7 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(chat_async_router)
     app.include_router(embeddings_router)
     app.include_router(ingest_router)
+    app.include_router(convert_router)
     app.include_router(content_router)
     app.include_router(primitives_router)
     app.include_router(tool_router)
