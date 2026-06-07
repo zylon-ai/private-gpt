@@ -27,7 +27,11 @@ class OpenAILikeEmbeddingFactory(EmbeddingFactory):
         api_base = (
             self.settings.openai.embedding_api_base or self.settings.openai.api_base
         )
-        api_key = self.settings.openai.embedding_api_key or self.settings.openai.api_key
+        api_key = (
+            self.settings.openai.embedding_api_key
+            or self.settings.openai.api_key
+            or "default"
+        )
         model = model_config.name
 
         embedding_model = OpenAILikeEmbedding(
