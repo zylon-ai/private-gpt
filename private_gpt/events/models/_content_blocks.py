@@ -474,8 +474,9 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
             return load_file_from_uri(self.url).read()
 
         def to_text(self, convert_service: DocumentConverter) -> str:
-            import filetype
             from pathlib import Path
+
+            import filetype
 
             data = self.to_bytes()
             ext = Path(self.url.split("?")[0]).suffix
