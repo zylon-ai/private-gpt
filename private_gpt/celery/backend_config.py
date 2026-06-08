@@ -3,6 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import settings
 
 celery_settings = settings().celery
@@ -17,7 +18,7 @@ BackendConfigProvider = Callable[[], BackendConfig]
 
 
 def _local_backend() -> BackendConfig:
-    return BackendConfig(url="db+sqlite:///celery_backend.db")
+    return BackendConfig(url=f"db+sqlite:///{local_data_path / 'celery_backend.db'}")
 
 
 def _redis_backend() -> BackendConfig:

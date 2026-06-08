@@ -3,6 +3,7 @@ import threading
 from importlib.util import find_spec
 from pathlib import Path
 
+from private_gpt.paths import resolve_data_path
 from private_gpt.settings.settings import Settings
 
 if find_spec("sqlalchemy") is None:
@@ -18,7 +19,7 @@ logger.setLevel(logging.DEBUG)
 
 class SQLiteClient:
     def __init__(self, local_path: str, database: str) -> None:
-        self._local_path = Path(local_path).joinpath(f"{database}.db")
+        self._local_path = resolve_data_path(local_path) / f"{database}.db"
         Path(self._local_path).parent.mkdir(parents=True, exist_ok=True)
         self._sync_engine = create_engine(f"sqlite:///{self._local_path}")
         self._sync_engine = self._sync_engine.execution_options(
