@@ -26,6 +26,7 @@ from private_gpt.events.models import (
     ToolResultBlock,
     ToolUseBlock,
 )
+from private_gpt.settings.settings import Settings
 
 MULTIMODAL_TOOL_NAME = "multimodal_preprocessing"
 
@@ -35,9 +36,10 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
     """Preprocess image and audio content in conversation history."""
 
     @inject
-    def __init__(self, llm_component: LLMComponent) -> None:
+    def __init__(self, llm_component: LLMComponent, settings: Settings) -> None:
         self._llm_component = llm_component
         self._tool_name = MULTIMODAL_TOOL_NAME
+        self._max_concurrency = settings.chat.multimodal_processing_max_concurrency
 
     async def intercept(self, context: ChatLoopInterceptorContext) -> None:
         """Apply multimodal preprocessing to the current chat history."""
@@ -47,16 +49,21 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
         state = context.state
         image_model, audio_model = self.resolve_multimodal_models(state, context.llm)
 
+        # One tool_id per modality type so each gets its own use/result pair.
+        tool_ids: dict[str, str] = {}
+
         async for response in preprocess_multimodal_history(
             main_llm=context.llm,
             chat_history=state.input.request.messages,
             image_multimodal_llm=image_model,
             audio_multimodal_llm=audio_model,
+            max_concurrency=self._max_concurrency,
         ):
             processing = response.processing_status
             if processing is not None:
-                tool_id = f"tool_{uuid4().hex}"
                 if processing.status == "processing":
+                    tool_id = f"tool_{uuid4().hex}"
+                    tool_ids[processing.type] = tool_id
                     use_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
                         content_block=ToolUseBlock(
@@ -68,6 +75,7 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
                     context.emit_event(use_start)
                     context.emit_event(RawContentBlockStopEvent.from_start(use_start))
                 elif processing.status in {"completed", "failed"}:
+                    tool_id = tool_ids.get(processing.type, f"tool_{uuid4().hex}")
                     result_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
                         content_block=ToolResultBlock(

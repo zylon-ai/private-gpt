@@ -508,6 +508,13 @@ class ChatSettings(BaseModel):
             "multiple document blocks. -1 means unlimited."
         ),
     )
+    multimodal_processing_max_concurrency: int = Field(
+        -1,
+        description=(
+            "Maximum number of modalities (image, audio) processed concurrently per "
+            "message. -1 means unlimited."
+        ),
+    )
 
     def model_post_init(self, __context: Any) -> None:
         # If maximum_context_length is set to 0, set it to None
