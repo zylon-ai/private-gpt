@@ -34,7 +34,7 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
     def __init__(self, convert_service: ConvertService, settings: Settings) -> None:
         self._convert_service = convert_service
         self._tool_name = DOCUMENT_PROCESSING_TOOL_NAME
-        self._max_concurrency = settings.chat.document_processing_max_concurrency
+        self._max_concurrency = settings.chat.preprocess.documents.max_concurrency
 
     async def intercept(self, context: ChatLoopInterceptorContext) -> None:
         """Convert document blocks to text before inference."""

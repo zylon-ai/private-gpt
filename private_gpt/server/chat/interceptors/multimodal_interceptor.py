@@ -39,7 +39,7 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
     def __init__(self, llm_component: LLMComponent, settings: Settings) -> None:
         self._llm_component = llm_component
         self._tool_name = MULTIMODAL_TOOL_NAME
-        self._max_concurrency = settings.chat.multimodal_processing_max_concurrency
+        self._max_concurrency = settings.chat.preprocess.multimodal.max_concurrency
 
     async def intercept(self, context: ChatLoopInterceptorContext) -> None:
         """Apply multimodal preprocessing to the current chat history."""

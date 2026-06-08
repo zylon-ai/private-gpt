@@ -2423,8 +2423,8 @@ async def test_chat_with_multiple_document_files_with_concurrency_limit(
     async_test_client: AsyncClient,
 ) -> None:
     """3 documents with max_concurrency=1 still produce 3 paired tool events."""
-    original = settings().chat.document_processing_max_concurrency
-    settings().chat.document_processing_max_concurrency = 1
+    original = settings().chat.preprocess.documents.max_concurrency
+    settings().chat.preprocess.documents.max_concurrency = 1
     try:
         body = {
             "model": "default",
@@ -2452,4 +2452,4 @@ async def test_chat_with_multiple_document_files_with_concurrency_limit(
         for result in tool_results:
             assert result["tool_use_id"] in use_ids
     finally:
-        settings().chat.document_processing_max_concurrency = original
+        settings().chat.preprocess.documents.max_concurrency = original

@@ -419,6 +419,23 @@ class RetrievalSettings(BaseModel):
     )
 
 
+class PreprocessTypeSettings(BaseModel):
+    """Per-type preprocessing settings (extensible for future options)."""
+
+    max_concurrency: int = -1
+
+
+class PreprocessSettings(BaseModel):
+    documents: PreprocessTypeSettings = Field(
+        default_factory=lambda: PreprocessTypeSettings(),
+        description="Settings for document block preprocessing.",
+    )
+    multimodal: PreprocessTypeSettings = Field(
+        default_factory=lambda: PreprocessTypeSettings(),
+        description="Settings for image/audio block preprocessing.",
+    )
+
+
 class ChatSettings(BaseModel):
     allow_use_default_prompt: bool = Field(
         True,
@@ -501,19 +518,9 @@ class ChatSettings(BaseModel):
         25 * 1024 * 1024,
         description="The maximum size in bytes of a blob that can be processed by the chat engine.",
     )
-    document_processing_max_concurrency: int = Field(
-        -1,
-        description=(
-            "Maximum number of documents processed concurrently when a message contains "
-            "multiple document blocks. -1 means unlimited."
-        ),
-    )
-    multimodal_processing_max_concurrency: int = Field(
-        -1,
-        description=(
-            "Maximum number of modalities (image, audio) processed concurrently per "
-            "message. -1 means unlimited."
-        ),
+    preprocess: PreprocessSettings = Field(
+        default_factory=PreprocessSettings,
+        description="Concurrency settings for in-message preprocessing (documents, multimodal).",
     )
 
     def model_post_init(self, __context: Any) -> None:
