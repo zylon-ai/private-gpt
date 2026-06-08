@@ -181,11 +181,15 @@ async def preprocess_multimodal_history(
         yield MultimodalProcessingResponse(chat_history=chat_history)
         return
 
-    is_first_user_message = True
+    if chat_history[-1].role != MessageRole.USER:
+        yield MultimodalProcessingResponse(chat_history=chat_history)
+        return
+
+    is_last_user_message = True
     preprocessed_history = []
 
     for message in reversed(chat_history):
-        if message.role == MessageRole.USER and is_first_user_message:
+        if message.role == MessageRole.USER and is_last_user_message:
             async for response in preprocess_multimodal_message(
                 main_llm,
                 message,
@@ -199,7 +203,7 @@ async def preprocess_multimodal_history(
                 if response.modified_message:
                     preprocessed_history.append(response.modified_message)
 
-            is_first_user_message = False
+            is_last_user_message = False
         else:
             message.blocks = [
                 block for block in message.blocks if isinstance(block, TextBlock)

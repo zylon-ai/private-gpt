@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from typing import Literal
 
+from llama_index.core.base.llms.types import MessageRole
 from llama_index.core.base.llms.types import TextBlock as LITextBlock
 from llama_index.core.llms import ChatMessage
 from pydantic import BaseModel
@@ -24,6 +25,7 @@ class DocumentProcessingStatus(BaseModel):
 class DocumentProcessingResponse(BaseModel):
     message: ChatMessage | None = None
     processing_status: DocumentProcessingStatus | None = None
+    chat_history: list[ChatMessage] | None = None
 
 
 async def _process_document(
@@ -121,3 +123,54 @@ async def preprocess_document_message(
             additional_kwargs=remaining_kwargs,
         )
     )
+
+
+async def preprocess_document_history(
+    chat_history: list[ChatMessage] | None,
+    convert_service: ConvertService,
+    max_concurrency: int = -1,
+) -> AsyncIterator[DocumentProcessingResponse]:
+    """Preprocess documents in the last user message only.
+
+    Document blocks are stripped from all other history messages.
+    """
+    if not chat_history:
+        yield DocumentProcessingResponse(chat_history=chat_history)
+        return
+
+    if not any(_extract_document_blocks(msg) for msg in chat_history):
+        yield DocumentProcessingResponse(chat_history=chat_history)
+        return
+
+    if chat_history[-1].role != MessageRole.USER:
+        yield DocumentProcessingResponse(chat_history=chat_history)
+        return
+
+    is_last_user_message = True
+    preprocessed_history: list[ChatMessage] = []
+
+    for message in reversed(chat_history):
+        if message.role == MessageRole.USER and is_last_user_message:
+            async for response in preprocess_document_message(
+                message,
+                convert_service=convert_service,
+                max_concurrency=max_concurrency,
+            ):
+                if response.processing_status is not None:
+                    yield response
+                if response.message is not None:
+                    preprocessed_history.append(response.message)
+            is_last_user_message = False
+        else:
+            remaining_kwargs = {
+                k: v for k, v in message.additional_kwargs.items() if k != "document"
+            }
+            preprocessed_history.append(
+                ChatMessage(
+                    role=message.role,
+                    blocks=message.blocks,
+                    additional_kwargs=remaining_kwargs,
+                )
+            )
+
+    yield DocumentProcessingResponse(chat_history=list(reversed(preprocessed_history)))
