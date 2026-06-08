@@ -27,6 +27,10 @@ class ConvertBody(BaseModel):
     metadata: dict[str, Any] | None = Field(
         default=None,
         description="Optional metadata, must include 'file_name' to resolve file extension",
+        examples=[
+            {"file_name": "report.pdf"},
+            {"file_name": "document.docx", "author": "John Doe"},
+        ],
     )
     reader: str | None = Field(
         default=None,
@@ -36,7 +40,37 @@ class ConvertBody(BaseModel):
     format: ContentFormat = Field(
         default=ContentFormat.Markdown,
         description="Output format: 'markdown' returns text, 'object' returns a content tree.",
+        examples=["markdown", "object"],
     )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "input": {
+                        "type": "text",
+                        "value": "# Hello\n\nThis is a simple markdown document.",
+                    },
+                    "metadata": {"file_name": "hello.md"},
+                    "format": "markdown",
+                },
+                {
+                    "input": {"type": "file", "value": "JVBERi0xLjQKJaqrrK0KMS..."},
+                    "metadata": {"file_name": "report.pdf"},
+                    "reader": "markitdown",
+                    "format": "markdown",
+                },
+                {
+                    "input": {
+                        "type": "uri",
+                        "value": "https://example.com/document.pdf",
+                    },
+                    "metadata": {"file_name": "document.pdf"},
+                    "format": "object",
+                },
+            ]
+        }
+    }
 
 
 class ConvertResponse(BaseModel):
@@ -96,6 +130,147 @@ def list_readers(request: Request) -> ReadersResponse:
         "Parse a file using the document readers and return its content as markdown text "
         "or a structured content tree, without ingesting it into the knowledge base."
     ),
+    responses={
+        200: {
+            "description": "Successful conversion",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "markdown_result": {
+                            "summary": "Converted content as markdown text",
+                            "value": {
+                                "content": "# Annual Report 2023\n\nExecutive Summary\n\nFiscal year 2023 marked a transformative period...",
+                                "reader": "markitdown",
+                            },
+                        },
+                        "object_result": {
+                            "summary": "Converted content as structured tree",
+                            "value": {
+                                "content": {
+                                    "id": "root",
+                                    "type": "document",
+                                    "content": "",
+                                    "children": [
+                                        {
+                                            "id": "section-1",
+                                            "type": "SectionNode",
+                                            "content": "Annual Report 2023",
+                                            "children": [
+                                                {
+                                                    "id": "text-1",
+                                                    "type": "TextNode",
+                                                    "content": "Executive Summary\n\nFiscal year 2023 marked a transformative period...",
+                                                    "children": [],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                                "reader": "docling",
+                            },
+                        },
+                    }
+                }
+            },
+        },
+        422: {
+            "description": "Validation Error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid_reader": {
+                            "summary": "Reader not supported for file extension",
+                            "value": {
+                                "detail": "Reader 'docling' is not supported for '.txt'. Valid readers: ['text']"
+                            },
+                        },
+                        "invalid_base64": {
+                            "summary": "Invalid base64 encoded file",
+                            "value": {
+                                "detail": [
+                                    {
+                                        "loc": ["body", "input", "value"],
+                                        "msg": "File input requires valid base64 encoded content",
+                                        "type": "value_error",
+                                    }
+                                ]
+                            },
+                        },
+                    }
+                }
+            },
+        },
+    },
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/ConvertBody"},
+                    "examples": {
+                        "text": {
+                            "summary": "Plain text content",
+                            "value": {
+                                "input": {
+                                    "type": "text",
+                                    "value": "# Hello\n\nThis is a simple markdown document.",
+                                },
+                                "metadata": {"file_name": "hello.md"},
+                                "format": "markdown",
+                            },
+                        },
+                        "file_base64": {
+                            "summary": "File content (base64)",
+                            "value": {
+                                "input": {
+                                    "type": "file",
+                                    "value": "JVBERi0xLjQKJaqrrK0KMS...",
+                                },
+                                "metadata": {"file_name": "report.pdf"},
+                                "reader": "markitdown",
+                                "format": "markdown",
+                            },
+                        },
+                        "uri": {
+                            "summary": "Remote URI",
+                            "value": {
+                                "input": {
+                                    "type": "uri",
+                                    "value": "https://example.com/document.pdf",
+                                },
+                                "metadata": {"file_name": "document.pdf"},
+                                "format": "object",
+                            },
+                        },
+                        "object_format": {
+                            "summary": "Return structured content tree",
+                            "value": {
+                                "input": {
+                                    "type": "text",
+                                    "value": "# Section\n\nSome content here.",
+                                },
+                                "metadata": {"file_name": "doc.md"},
+                                "format": "object",
+                            },
+                        },
+                    },
+                }
+            },
+            "required": True,
+            "description": (
+                "Request body for converting a file to markdown or structured tree.\n\n"
+                "Input Types:\n"
+                "* file: Base64-encoded file content — set 'file_name' in metadata to specify the extension\n"
+                "* uri: Remote URL or S3 URI pointing to the file\n"
+                "* text: Plain text or markdown content\n\n"
+                "Format Options:\n"
+                "* markdown (default): Returns parsed content as a flat markdown string\n"
+                "* object: Returns a hierarchical content tree with typed nodes\n\n"
+                "Reader Selection:\n"
+                "* Omit 'reader' to use the default reader for the detected file type\n"
+                "* Use GET /v1/artifacts/readers to list available readers and their supported extensions"
+            ),
+        }
+    },
 )
 def convert_content(request: Request, body: ConvertBody) -> ConvertResponse:
     service: ConvertService = request.state.injector.get(ConvertService)
