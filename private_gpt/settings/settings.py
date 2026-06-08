@@ -501,6 +501,13 @@ class ChatSettings(BaseModel):
         25 * 1024 * 1024,
         description="The maximum size in bytes of a blob that can be processed by the chat engine.",
     )
+    document_processing_max_concurrency: int = Field(
+        -1,
+        description=(
+            "Maximum number of documents processed concurrently when a message contains "
+            "multiple document blocks. -1 means unlimited."
+        ),
+    )
 
     def model_post_init(self, __context: Any) -> None:
         # If maximum_context_length is set to 0, set it to None

@@ -21,6 +21,7 @@ from private_gpt.events.models import (
     ToolUseBlock,
 )
 from private_gpt.server.ingest.convert_service import ConvertService
+from private_gpt.settings.settings import Settings
 
 DOCUMENT_PROCESSING_TOOL_NAME = "document_preprocessing"
 
@@ -30,9 +31,10 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
     """Preprocess DocumentBlock sources by converting file content to plain text."""
 
     @inject
-    def __init__(self, convert_service: ConvertService) -> None:
+    def __init__(self, convert_service: ConvertService, settings: Settings) -> None:
         self._convert_service = convert_service
         self._tool_name = DOCUMENT_PROCESSING_TOOL_NAME
+        self._max_concurrency = settings.chat.document_processing_max_concurrency
 
     async def intercept(self, context: ChatLoopInterceptorContext) -> None:
         """Convert document blocks to text before inference."""
@@ -43,20 +45,28 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
         updated_messages = list(state.input.request.messages)
 
         for idx, message in enumerate(updated_messages):
+            # One tool_id per document so each gets its own use/result pair.
+            tool_ids: dict[int, str] = {}
+
             async for response in preprocess_document_message(
                 message=message,
                 convert_service=self._convert_service,
+                max_concurrency=self._max_concurrency,
             ):
                 processing = response.processing_status
                 if processing is not None:
-                    tool_id = f"tool_{uuid4().hex}"
                     if processing.status == "processing":
+                        tool_id = f"tool_{uuid4().hex}"
+                        tool_ids[processing.doc_index] = tool_id
                         use_start = RawContentBlockStartEvent(
                             block_id=f"block_{uuid4().hex}",
                             content_block=ToolUseBlock(
                                 id=tool_id,
                                 name=self._tool_name,
-                                input={"type": "document"},
+                                input={
+                                    "type": "document",
+                                    "index": processing.doc_index,
+                                },
                             ),
                         )
                         context.emit_event(use_start)
@@ -64,6 +74,9 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
                             RawContentBlockStopEvent.from_start(use_start)
                         )
                     elif processing.status in {"completed", "failed"}:
+                        tool_id = tool_ids.get(
+                            processing.doc_index, f"tool_{uuid4().hex}"
+                        )
                         result_start = RawContentBlockStartEvent(
                             block_id=f"block_{uuid4().hex}",
                             content_block=ToolResultBlock(

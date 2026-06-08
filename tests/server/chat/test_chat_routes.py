@@ -2316,3 +2316,140 @@ async def test_concurrent_requests_dont_share_state(
 
     assert status_1 == 200, f"Request 1 failed with status {status_1}"
     assert status_2 == 200, f"Request 2 failed with status {status_2}"
+
+
+# ---------------------------------------------------------------------------
+# Document file tests
+# ---------------------------------------------------------------------------
+
+
+def _plain_doc(data: str, title: str | None = None) -> dict[str, Any]:
+    """Build a document content block with a plain-text source."""
+    block: dict[str, Any] = {
+        "type": "document",
+        "source": {"type": "text", "media_type": "text/plain", "data": data},
+    }
+    if title:
+        block["title"] = title
+    return block
+
+
+def _parse_sse_tool_blocks(sse_text: str) -> tuple[list[dict], list[dict]]:
+    """Return (tool_use_blocks, tool_result_blocks) found in an SSE response."""
+    tool_uses: list[dict] = []
+    tool_results: list[dict] = []
+    for chunk in sse_text.split("\n\n"):
+        if "content_block_start" not in chunk:
+            continue
+        data_line = next(
+            (line for line in chunk.splitlines() if line.startswith("data:")), None
+        )
+        if not data_line:
+            continue
+        payload = json.loads(data_line.split("data:", 1)[1].strip())
+        block = payload.get("content_block", {})
+        if block.get("type") == "tool_use":
+            tool_uses.append(block)
+        elif block.get("type") == "tool_result":
+            tool_results.append(block)
+    return tool_uses, tool_results
+
+
+@pytest.mark.anyio
+async def test_chat_with_single_document_file(
+    async_test_client: AsyncClient,
+) -> None:
+    """A message with one document block is processed and returns 200."""
+    body = {
+        "model": "default",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    _plain_doc("Hello, this is a test document.", title="Test Doc"),
+                    {"type": "text", "text": "Summarize the document."},
+                ],
+            }
+        ],
+        "stream": False,
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+    completion = Message.model_validate(response.json())
+    assert completion.content is not None
+
+
+@pytest.mark.anyio
+async def test_chat_with_multiple_document_files_emits_one_tool_pair_per_document(
+    async_test_client: AsyncClient,
+) -> None:
+    """3 document blocks → 3 ToolUseBlock + 3 ToolResultBlock pairs in the stream."""
+    body = {
+        "model": "default",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    _plain_doc("Q1 revenue was 3.2M.", title="Q1 Report"),
+                    _plain_doc("Q2 revenue was 4.1M.", title="Q2 Report"),
+                    _plain_doc("Q3 revenue was 5.0M.", title="Q3 Report"),
+                    {"type": "text", "text": "Compare the quarters."},
+                ],
+            }
+        ],
+        "stream": True,
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+    assert "text/event-stream" in response.headers["content-type"]
+
+    tool_uses, tool_results = _parse_sse_tool_blocks(response.text)
+    doc_uses = [b for b in tool_uses if b.get("name") == "document_preprocessing"]
+    assert len(doc_uses) == 3, f"Expected 3 tool use blocks, got {len(doc_uses)}"
+    assert (
+        len(tool_results) == 3
+    ), f"Expected 3 tool result blocks, got {len(tool_results)}"
+
+    # Each result must reference a use that was emitted for this message.
+    use_ids = {b["id"] for b in doc_uses}
+    for result in tool_results:
+        assert (
+            result["tool_use_id"] in use_ids
+        ), f"tool_result references unknown tool_use_id {result['tool_use_id']!r}"
+
+
+@pytest.mark.anyio
+async def test_chat_with_multiple_document_files_with_concurrency_limit(
+    async_test_client: AsyncClient,
+) -> None:
+    """3 documents with max_concurrency=1 still produce 3 paired tool events."""
+    original = settings().chat.document_processing_max_concurrency
+    settings().chat.document_processing_max_concurrency = 1
+    try:
+        body = {
+            "model": "default",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        _plain_doc("Doc A content.", title="Doc A"),
+                        _plain_doc("Doc B content.", title="Doc B"),
+                        _plain_doc("Doc C content.", title="Doc C"),
+                        {"type": "text", "text": "What do the docs say?"},
+                    ],
+                }
+            ],
+            "stream": True,
+        }
+        response = await async_test_client.post("/v1/messages", json=body)
+        assert response.status_code == 200
+
+        tool_uses, tool_results = _parse_sse_tool_blocks(response.text)
+        doc_uses = [b for b in tool_uses if b.get("name") == "document_preprocessing"]
+        assert len(doc_uses) == 3
+        assert len(tool_results) == 3
+        use_ids = {b["id"] for b in doc_uses}
+        for result in tool_results:
+            assert result["tool_use_id"] in use_ids
+    finally:
+        settings().chat.document_processing_max_concurrency = original
