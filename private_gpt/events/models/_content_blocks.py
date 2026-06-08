@@ -418,7 +418,7 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
     """Anthropic document block (used for document-grounded generation)."""
 
     class Base64Source(BaseModel):
-        type: Literal["base64"]
+        type: Literal["base64"] = Field(default="base64")
         data: str = Field(json_schema_extra={"format": "byte"})
         media_type: str = Field(default="application/pdf")
 
@@ -434,13 +434,13 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
             import filetype  # type: ignore[import-untyped]
 
             ft = filetype.get_type(mime=self.media_type)
-            return f".{ft.extension}" if ft else ".pdf"
+            return f".{ft.extension}" if ft else ".txt"
 
         def to_text(self, convert_service: DocumentConverter) -> str:
             return convert_service.bytes_to_text(self.to_bytes(), self.extension())
 
     class PlainTextSource(BaseModel):
-        type: Literal["text"]
+        type: Literal["text"] = Field(default="text")
         data: str
         media_type: Literal["text/plain"]
 
@@ -450,7 +450,7 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
             return self.data
 
     class ContentSource(BaseModel):
-        type: Literal["content"]
+        type: Literal["content"] = Field(default="content")
         content: (
             str | list[Annotated[TextBlock | ImageBlock, Field(discriminator="type")]]
         )
@@ -463,7 +463,7 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
             return "\n".join(str(block) for block in self.content)
 
     class URLDocumentSource(BaseModel):
-        type: Literal["url"]
+        type: Literal["url"] = Field(default="url")
         url: str
 
         model_config = ConfigDict(extra="allow")
@@ -473,13 +473,16 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
 
             return load_file_from_uri(self.url).read()
 
-        def extension(self) -> str:
+        def to_text(self, convert_service: DocumentConverter) -> str:
+            import filetype
             from pathlib import Path
 
-            return Path(self.url.split("?")[0]).suffix or ".pdf"
-
-        def to_text(self, convert_service: DocumentConverter) -> str:
-            return convert_service.bytes_to_text(self.to_bytes(), self.extension())
+            data = self.to_bytes()
+            ext = Path(self.url.split("?")[0]).suffix
+            if not ext:
+                kind = filetype.guess(data)
+                ext = f".{kind.extension}" if kind else ext
+            return convert_service.bytes_to_text(data, ext or ".txt")
 
     type: Literal["document"] = Field(default="document")
     source: Annotated[
@@ -489,6 +492,10 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
     title: str | None = Field(default=None)
     context: str | None = Field(default=None, min_length=1)
     citations: list[ZylonCitation] | None = Field(default=None)
+
+    @classmethod
+    def from_binary_block(cls, block: BinaryBlock) -> DocumentBlock:
+        return cls(source=block.source.to_document_source(), title=block.filename)
 
 
 class SearchResultBlock(CacheableContentBlock, StandardContentProtocol):
@@ -522,6 +529,13 @@ class Base64BinarySource(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+    def to_document_source(self) -> DocumentBlock.Base64Source:
+        return DocumentBlock.Base64Source(
+            type="base64",
+            data=self.data,
+            media_type=self.media_type,
+        )
+
 
 class URIBinarySource(BaseModel):
     """URI source payload for arbitrary binary data."""
@@ -534,6 +548,9 @@ class URIBinarySource(BaseModel):
     )
 
     model_config = ConfigDict(extra="allow")
+
+    def to_document_source(self) -> DocumentBlock.URLDocumentSource:
+        return DocumentBlock.URLDocumentSource(url=self.url)
 
 
 BinarySource = Annotated[
@@ -571,6 +588,9 @@ class BinaryBlock(BaseContentBlock, ExtendedContentProtocol):
         cls, text: str, mime_type: str, filename: str | None = None
     ) -> BinaryBlock:
         return cls.from_bytes(text.encode(), mime_type=mime_type, filename=filename)
+
+    def to_document_block(self) -> DocumentBlock:
+        return DocumentBlock.from_binary_block(self)
 
 
 class ResourceLinkBlock(BaseContentBlock, StandardContentProtocol):

@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import AsyncIterator
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from llama_index.core.base.llms.types import MessageRole
 from llama_index.core.base.llms.types import TextBlock as LITextBlock
@@ -15,9 +15,28 @@ from private_gpt.events.models import (
 )
 from private_gpt.server.ingest.convert_service import ConvertService
 
+if TYPE_CHECKING:
+    from private_gpt.events.models import (
+        BinaryBlock,
+    )
+
 
 def _extract_document_blocks(message: ChatMessage) -> list[DocumentBlock]:
-    return list(message.additional_kwargs.get("document", []))
+    documents_blocks: list[DocumentBlock] = list(
+        message.additional_kwargs.get("document", [])
+    )
+    legacy_binary_blocks: list[BinaryBlock] = list(
+        message.additional_kwargs.get("binary", [])
+    )
+    if legacy_binary_blocks:
+        documents_blocks.extend(
+            [
+                legacy_binary_block.to_document_block()
+                for legacy_binary_block in legacy_binary_blocks
+            ]
+        )
+
+    return documents_blocks
 
 
 class DocumentProcessingStatus(BaseModel):
