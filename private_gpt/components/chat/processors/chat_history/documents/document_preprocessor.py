@@ -7,7 +7,12 @@ from llama_index.core.base.llms.types import TextBlock as LITextBlock
 from llama_index.core.llms import ChatMessage
 from pydantic import BaseModel
 
-from private_gpt.events.models import DocumentBlock
+from private_gpt.events.models import (
+    DocumentBlock,
+    ResultContentBlockType,
+    TextBlock,
+    from_tool_output,
+)
 from private_gpt.server.ingest.convert_service import ConvertService
 
 
@@ -18,7 +23,8 @@ def _extract_document_blocks(message: ChatMessage) -> list[DocumentBlock]:
 class DocumentProcessingStatus(BaseModel):
     status: Literal["processing", "completed", "failed"]
     doc_index: int
-    content: str | None = None
+    reference: str | None = None
+    content: str | list[ResultContentBlockType] | None = None
     error_detail: str | None = None
 
 
@@ -52,7 +58,8 @@ async def _process_document(
 async def preprocess_document_message(
     message: ChatMessage,
     convert_service: ConvertService,
-    max_concurrency: int = -1,
+    max_concurrency: int | None = None,
+    return_type: Literal["user_message", "tool_result"] = "user_message",
 ) -> AsyncIterator[DocumentProcessingResponse]:
     """Preprocess a message by converting DocumentBlock sources in parallel.
 
@@ -74,7 +81,11 @@ async def preprocess_document_message(
             processing_status=DocumentProcessingStatus(status="processing", doc_index=i)
         )
 
-    semaphore = asyncio.Semaphore(max_concurrency) if max_concurrency > 0 else None
+    semaphore = (
+        asyncio.Semaphore(max_concurrency)
+        if max_concurrency and max_concurrency > 0
+        else None
+    )
 
     async def _bounded(doc: DocumentBlock) -> LITextBlock:
         if semaphore is not None:
@@ -89,7 +100,7 @@ async def preprocess_document_message(
 
     converted_blocks: list[LITextBlock] = []
     for i, result in enumerate(results):
-        if isinstance(result, Exception):
+        if isinstance(result, BaseException):
             yield DocumentProcessingResponse(
                 processing_status=DocumentProcessingStatus(
                     status="failed",
@@ -107,19 +118,36 @@ async def preprocess_document_message(
                 )
             )
         else:
+            content: list[ResultContentBlockType] = (
+                [TextBlock(text=f"Converted document {i + 1} of {n}.")]
+                if return_type == "user_message"
+                else from_tool_output(result)
+            )
             yield DocumentProcessingResponse(
                 processing_status=DocumentProcessingStatus(
                     status="completed",
                     doc_index=i,
-                    content=f"Converted document {i + 1} of {n}.",
+                    content=content,
                 )
             )
-            converted_blocks.append(result)  # type: ignore[arg-type]
+            converted_blocks.append(result)
+
+    final_blocks = list(message.blocks)
+    if return_type == "user_message":
+        final_blocks.extend(
+            [
+                LITextBlock(
+                    text="The following document has been included after "
+                    "processing the binary and convert into markdown: \n\n" + block.text
+                )
+                for block in converted_blocks
+            ]
+        )
 
     yield DocumentProcessingResponse(
         message=ChatMessage(
             role=message.role,
-            blocks=[*message.blocks, *converted_blocks],
+            blocks=final_blocks,
             additional_kwargs=remaining_kwargs,
         )
     )
@@ -128,7 +156,8 @@ async def preprocess_document_message(
 async def preprocess_document_history(
     chat_history: list[ChatMessage] | None,
     convert_service: ConvertService,
-    max_concurrency: int = -1,
+    max_concurrency: int | None = None,
+    return_type: Literal["user_message", "tool_result"] = "user_message",
 ) -> AsyncIterator[DocumentProcessingResponse]:
     """Preprocess documents in the last user message only.
 
@@ -155,6 +184,7 @@ async def preprocess_document_history(
                 message,
                 convert_service=convert_service,
                 max_concurrency=max_concurrency,
+                return_type=return_type,
             ):
                 if response.processing_status is not None:
                     yield response

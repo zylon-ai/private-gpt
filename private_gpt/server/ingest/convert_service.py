@@ -12,6 +12,7 @@ from private_gpt.components.ingest.parse_component import (
     FileParseResult,
     ParseComponent,
 )
+from private_gpt.components.readers.nodes.tree_node import TreeMetadataMode, TreeNode
 
 logger = logging.getLogger(__name__)
 
@@ -58,11 +59,17 @@ class ConvertService:
             lambda: self.data_path_from_data(raw, ext)
         ) as tmp_path:
             result = self.convert_file(tmp_path)
-            return "\n\n".join(
-                node.get_content()
-                for node in result.nodes
-                if node.get_content().strip()
-            )
+
+            roots = [
+                n for n in result.nodes if isinstance(n, TreeNode) and n.parent is None
+            ]
+            if not roots:
+                raise ValueError("No root node found in parse result.")
+
+            content = [
+                node.get_content(metadata_mode=TreeMetadataMode.USER) for node in roots
+            ]
+            return "\n\n".join([c for c in content if c])
 
     @classmethod
     @contextmanager

@@ -84,8 +84,10 @@ chat:
   preprocess:
     documents:
       max_concurrency: ${PGPT_PREPROCESS_DOCUMENTS_MAX_CONCURRENCY:-1}
+      return_type: ${PGPT_PREPROCESS_DOCUMENTS_RETURN_TYPE:user_message}
     multimodal:
       max_concurrency: ${PGPT_PREPROCESS_MULTIMODAL_MAX_CONCURRENCY:-1}
+      return_type: ${PGPT_PREPROCESS_MULTIMODAL_RETURN_TYPE:user_message}
 
 stream:
   broker: ${PGPT_ASYNC_BROKER:memory}

@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, Literal
 
 from llama_index.core.base.llms.types import MessageRole, TextBlock
 from llama_index.core.llms import LLM, ChatMessage
@@ -28,12 +28,13 @@ async def _collect_image_response(
     main_llm: LLM,
     message: ChatMessage,
     image_multimodal_llm: LLM | None,
+    return_type: Literal["user_message", "tool_result"] = "user_message",
     **kwargs: Any,
 ) -> tuple[list[MultimodalProcessingStatus], ChatMessage]:
     statuses: list[MultimodalProcessingStatus] = []
     final_message = message
     async for resp in preprocess_image_message(
-        main_llm, message, image_multimodal_llm, **kwargs
+        main_llm, message, image_multimodal_llm, return_type=return_type, **kwargs
     ):
         if resp.processing_status is not None:
             statuses.append(resp.processing_status)
@@ -46,12 +47,13 @@ async def _collect_audio_response(
     main_llm: LLM,
     message: ChatMessage,
     audio_multimodal_llm: LLM | None,
+    return_type: Literal["user_message", "tool_result"] = "user_message",
     **kwargs: Any,
 ) -> tuple[list[MultimodalProcessingStatus], ChatMessage]:
     statuses: list[MultimodalProcessingStatus] = []
     final_message = message
     async for resp in preprocess_audio_message(
-        main_llm, message, audio_multimodal_llm, **kwargs
+        main_llm, message, audio_multimodal_llm, return_type=return_type, **kwargs
     ):
         if resp.processing_status is not None:
             statuses.append(resp.processing_status)
@@ -65,7 +67,8 @@ async def preprocess_multimodal_message(
     message: ChatMessage,
     image_multimodal_llm: LLM | None = None,
     audio_multimodal_llm: LLM | None = None,
-    max_concurrency: int = -1,
+    max_concurrency: int | None = None,
+    return_type: Literal["user_message", "tool_result"] = "user_message",
     **kwargs: Any,
 ) -> AsyncIterator[MultimodalProcessingResponse]:
     """Process image and audio blocks in the message in parallel.
@@ -99,26 +102,38 @@ async def preprocess_multimodal_message(
             )
         )
 
-    semaphore = asyncio.Semaphore(max_concurrency) if max_concurrency > 0 else None
+    semaphore = (
+        asyncio.Semaphore(max_concurrency)
+        if max_concurrency and max_concurrency > 0
+        else None
+    )
 
     async def _bounded_image() -> tuple[list[MultimodalProcessingStatus], ChatMessage]:
         if semaphore is not None:
             async with semaphore:
                 return await _collect_image_response(
-                    main_llm, message, image_multimodal_llm, **kwargs
+                    main_llm,
+                    message,
+                    image_multimodal_llm,
+                    return_type=return_type,
+                    **kwargs,
                 )
         return await _collect_image_response(
-            main_llm, message, image_multimodal_llm, **kwargs
+            main_llm, message, image_multimodal_llm, return_type=return_type, **kwargs
         )
 
     async def _bounded_audio() -> tuple[list[MultimodalProcessingStatus], ChatMessage]:
         if semaphore is not None:
             async with semaphore:
                 return await _collect_audio_response(
-                    main_llm, message, audio_multimodal_llm, **kwargs
+                    main_llm,
+                    message,
+                    audio_multimodal_llm,
+                    return_type=return_type,
+                    **kwargs,
                 )
         return await _collect_audio_response(
-            main_llm, message, audio_multimodal_llm, **kwargs
+            main_llm, message, audio_multimodal_llm, return_type=return_type, **kwargs
         )
 
     # Run image and audio preprocessing concurrently (bounded by semaphore when set).
@@ -157,12 +172,14 @@ async def preprocess_multimodal_message(
     if image_statuses:
         image_blocks = extract_image_blocks(message)
         final_blocks = [b for b in final_blocks if b not in image_blocks]
-        final_blocks.append(image_msg.blocks[-1])
+        if return_type == "user_message" and image_msg.blocks:
+            final_blocks.append(image_msg.blocks[-1])
 
     if audio_statuses:
         audio_blocks = extract_audio_blocks(message)
         final_blocks = [b for b in final_blocks if b not in audio_blocks]
-        final_blocks.append(audio_msg.blocks[-1])
+        if return_type == "user_message" and audio_msg.blocks:
+            final_blocks.append(audio_msg.blocks[-1])
 
     yield MultimodalProcessingResponse(
         modified_message=ChatMessage(role=message.role, blocks=final_blocks)
@@ -174,7 +191,8 @@ async def preprocess_multimodal_history(
     chat_history: list[ChatMessage] | None,
     image_multimodal_llm: LLM | None = None,
     audio_multimodal_llm: LLM | None = None,
-    max_concurrency: int = -1,
+    max_concurrency: int | None = None,
+    return_type: Literal["user_message", "tool_result"] = "user_message",
     **kwargs: Any,
 ) -> AsyncIterator[MultimodalProcessingResponse]:
     if not chat_history:
@@ -196,6 +214,7 @@ async def preprocess_multimodal_history(
                 image_multimodal_llm=image_multimodal_llm,
                 audio_multimodal_llm=audio_multimodal_llm,
                 max_concurrency=max_concurrency,
+                return_type=return_type,
                 **kwargs,
             ):
                 if response.processing_status:

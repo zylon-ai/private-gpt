@@ -422,7 +422,18 @@ class RetrievalSettings(BaseModel):
 class PreprocessTypeSettings(BaseModel):
     """Per-type preprocessing settings (extensible for future options)."""
 
-    max_concurrency: int = -1
+    max_concurrency: int | None = Field(
+        description="The maximum number of concurrent workers to use.",
+        default=None,
+    )
+    return_type: Literal["user_message", "tool_result"] = Field(
+        default="user_message",
+        description=(
+            "Where to store the preprocessed content. "
+            "'user_message' appends it directly to the user message; "
+            "'tool_result' carries it as a tool-use/result pair in the history."
+        ),
+    )
 
 
 class PreprocessSettings(BaseModel):
