@@ -272,10 +272,10 @@ brave:
   rate_limit: ${PGPT_BRAVE_RATE_LIMIT:1}
 
 skills:
-  database: ${SKILLS_DATABASE:sqlite}
-  storage_provider: ${SKILLS_STORAGE_PROVIDER:local}
-  skill_injection_mode: ${SKILL_INJECTION_MODE:system_prompt}
-  maximum_loaded_skills: ${SKILL_MAXIMUM_LOADED_SKILLS:1}
+  database: ${PGPT_SKILLS_DATABASE:sqlite}
+  storage_provider: ${PGPT_SKILLS_STORAGE_PROVIDER:local}
+  skill_injection_mode: ${PGPT_SKILL_INJECTION_MODE:system_prompt}
+  maximum_loaded_skills: ${PGPT_SKILL_MAXIMUM_LOADED_SKILLS:1}
 
 semaphore:
   mode: ${PGPT_SEMAPHORE_MODE:memory}
