@@ -6,9 +6,10 @@ from private_gpt.settings.settings import settings
 
 def resolve_data_path(path: str) -> Path:
     """Resolve a data path, handling absolute paths and paths relative to PGPT_HOME."""
-    if path.startswith("/") or path.startswith("~"):
-        return Path(path).expanduser().resolve()
-    return PGPT_HOME / path
+    p = Path(path).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    return (PGPT_HOME / p).resolve()
 
 
 models_path: Path = PGPT_HOME / "models"
