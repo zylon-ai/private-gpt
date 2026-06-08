@@ -420,7 +420,7 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
     class Base64Source(BaseModel):
         type: Literal["base64"] = Field(default="base64")
         data: str = Field(json_schema_extra={"format": "byte"})
-        media_type: str = Field(default="application/pdf")
+        media_type: str
 
         model_config = ConfigDict(extra="allow")
 

@@ -376,7 +376,7 @@ class TestMultipleDocuments:
         statuses = [r.processing_status for r in responses if r.processing_status]
         completed = next(s for s in statuses if s.status == "completed")
         assert completed.content is not None
-        assert "2" in completed.content
+        assert "2" in str(completed.content)
 
     async def test_mixed_text_and_document_blocks(
         self, convert_service: MagicMock
