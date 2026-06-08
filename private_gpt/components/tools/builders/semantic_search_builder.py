@@ -16,6 +16,7 @@ from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.engines.citations.types import Document
 from private_gpt.components.ingest.ingest_component import IngestComponent
+from private_gpt.components.ingest.parse_component import ParseComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.tokenizers.tokenizer_base import TokenizerBase
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
@@ -69,6 +70,7 @@ class SemanticSearchToolBuilder:
         node_store_component: NodeStoreComponent,
         embedding_component: EmbeddingComponent,
         ingest_component: IngestComponent,
+        parse_component: ParseComponent,
         prompt_builder_service: PromptBuilderService,
     ) -> None:
         self.settings = settings
@@ -77,6 +79,7 @@ class SemanticSearchToolBuilder:
         self.node_store_component = node_store_component
         self.embedding_component = embedding_component
         self.ingest_component = ingest_component
+        self.parse_component = parse_component
         self.prompt_builder_service = prompt_builder_service
 
     async def _validate_context(
@@ -103,6 +106,7 @@ class SemanticSearchToolBuilder:
                     node_store_component=self.node_store_component,
                     embedding_component=self.embedding_component,
                     ingest_component=self.ingest_component,
+                    parse_component=self.parse_component,
                 )
                 tasks.append(vector_artifact_index.apopulated_or_error())
             results = await asyncio.gather(*tasks, return_exceptions=True)

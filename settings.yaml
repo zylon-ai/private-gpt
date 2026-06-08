@@ -81,6 +81,13 @@ chat:
   multiplexing_threshold: ${PGPT_MULTIPLEXING_THRESHOLD:10}
   maximum_concurrent_requests: ${PGPT_MAXIMUM_CONCURRENT_REQUESTS:10}
   maximum_blob_size: ${PGPT_MAXIMUM_BLOB_SIZE:26214400}
+  preprocess:
+    documents:
+      max_concurrency: ${PGPT_PREPROCESS_DOCUMENTS_MAX_CONCURRENCY:-1}
+      return_type: ${PGPT_PREPROCESS_DOCUMENTS_RETURN_TYPE:user_message}
+    multimodal:
+      max_concurrency: ${PGPT_PREPROCESS_MULTIMODAL_MAX_CONCURRENCY:-1}
+      return_type: ${PGPT_PREPROCESS_MULTIMODAL_RETURN_TYPE:user_message}
 
 stream:
   broker: ${PGPT_ASYNC_BROKER:memory}

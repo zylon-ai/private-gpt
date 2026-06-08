@@ -15,6 +15,7 @@ from private_gpt.chat.input_models import BlobVisibilityMode
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import IngestComponent
+from private_gpt.components.ingest.parse_component import ParseComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.postprocessor.tree_expansion.table_expansion_post_processor import (
@@ -100,6 +101,7 @@ class TabularDataToolBuilder:
         node_store_component: NodeStoreComponent,
         embedding_component: EmbeddingComponent,
         ingest_component: IngestComponent,
+        parse_component: ParseComponent,
         sandbox_component: SandboxComponent,
     ) -> None:
         self.settings = settings
@@ -108,6 +110,7 @@ class TabularDataToolBuilder:
         self.node_store_component = node_store_component
         self.embedding_component = embedding_component
         self.ingest_component = ingest_component
+        self.parse_component = parse_component
         self.sandbox_component = sandbox_component
 
     async def _validate_context(
@@ -134,6 +137,7 @@ class TabularDataToolBuilder:
                     node_store_component=self.node_store_component,
                     embedding_component=self.embedding_component,
                     ingest_component=self.ingest_component,
+                    parse_component=self.parse_component,
                 )
                 tasks.append(vector_artifact_index.apopulated_or_error())
             results = await asyncio.gather(*tasks, return_exceptions=True)

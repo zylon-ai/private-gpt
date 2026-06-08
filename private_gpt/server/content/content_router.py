@@ -67,7 +67,7 @@ class ContentTree(BaseModel):
             id=node.id_,
             type=node.type if hasattr(node, "type") else node.get_type(),
             content=node.get_content(mode),
-            children=[cls.from_node(child) for child in node.children],
+            children=[cls.from_node(child, mode=mode) for child in node.children],
         )
 
 

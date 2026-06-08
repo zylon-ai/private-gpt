@@ -4,6 +4,7 @@ from injector import inject, singleton
 
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import IngestComponent
+from private_gpt.components.ingest.parse_component import ParseComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
@@ -49,6 +50,7 @@ class SemanticSearchToolBuilderFactory:
         node_store_component: NodeStoreComponent,
         embedding_component: EmbeddingComponent,
         ingest_component: IngestComponent,
+        parse_component: ParseComponent,
         prompt_builder_service: PromptBuilderService,
     ) -> None:
         self.settings = settings
@@ -57,6 +59,7 @@ class SemanticSearchToolBuilderFactory:
         self.node_store_component = node_store_component
         self.embedding_component = embedding_component
         self.ingest_component = ingest_component
+        self.parse_component = parse_component
         self.prompt_builder_service = prompt_builder_service
 
     def create(self) -> "SemanticSearchToolBuilder":
@@ -71,6 +74,7 @@ class SemanticSearchToolBuilderFactory:
             node_store_component=self.node_store_component,
             embedding_component=self.embedding_component,
             ingest_component=self.ingest_component,
+            parse_component=self.parse_component,
             prompt_builder_service=self.prompt_builder_service,
         )
 
@@ -86,6 +90,7 @@ class TabularDataToolBuilderFactory:
         node_store_component: NodeStoreComponent,
         embedding_component: EmbeddingComponent,
         ingest_component: IngestComponent,
+        parse_component: ParseComponent,
         sandbox_component: SandboxComponent,
     ) -> None:
         self.settings = settings
@@ -94,6 +99,7 @@ class TabularDataToolBuilderFactory:
         self.node_store_component = node_store_component
         self.embedding_component = embedding_component
         self.ingest_component = ingest_component
+        self.parse_component = parse_component
         self.sandbox_component = sandbox_component
 
     def create(self) -> "TabularDataToolBuilder":
@@ -108,6 +114,7 @@ class TabularDataToolBuilderFactory:
             node_store_component=self.node_store_component,
             embedding_component=self.embedding_component,
             ingest_component=self.ingest_component,
+            parse_component=self.parse_component,
             sandbox_component=self.sandbox_component,
         )
 

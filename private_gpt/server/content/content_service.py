@@ -9,6 +9,7 @@ from private_gpt.artifact_index.vector_artifact_index import VectorArtifactIndex
 from private_gpt.chat.extensions.context_filter import ContextFilter
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import IngestComponent
+from private_gpt.components.ingest.parse_component import ParseComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import TokenizerFn, get_tokenizer
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
@@ -35,12 +36,14 @@ class ContentService:
         embedding_component: EmbeddingComponent,
         node_store_component: NodeStoreComponent,
         ingest_component: IngestComponent,
+        parse_component: ParseComponent,
     ) -> None:
         self.vector_store_component = vector_store_component
         self.llm_component = llm_component
         self.embedding_component = embedding_component
         self.node_store_component = node_store_component
         self.ingest_component = ingest_component
+        self.parse_component = parse_component
 
     async def _format_nodes(
         self,
@@ -228,6 +231,7 @@ class ContentService:
                     node_store_component=self.node_store_component,
                     embedding_component=self.embedding_component,
                     ingest_component=self.ingest_component,
+                    parse_component=self.parse_component,
                 )
                 vector_artifact_index.populated_or_error()
 
