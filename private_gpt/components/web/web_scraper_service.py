@@ -108,6 +108,8 @@ class WebScraperService:
             ) from e
 
         async with async_playwright() as p:
+            browser = None
+            context = None
             try:
                 browser = await p.chromium.launch(
                     headless=True,
@@ -122,6 +124,15 @@ class WebScraperService:
                         "--disable-gpu",
                     ],
                 )
+                context_options: dict[str, Any] = self._get_context()
+                context = await browser.new_context(**context_options)
+                page = await context.new_page()
+
+                async with asyncio.timeout(self._settings.web_fetch.timeout_seconds):
+                    await page.goto(url)
+                    await page.wait_for_load_state("domcontentloaded")
+                    return await page.content()
+
             except Exception as e:
                 if re.search(
                     r"playwright.*install|browser.*executable|download new browsers",
@@ -133,20 +144,11 @@ class WebScraperService:
                         "Run `playwright install` and try again."
                     ) from e
                 raise
-
-            context_options: dict[str, Any] = self._get_context()
-            context = await browser.new_context(**context_options)
-            page = await context.new_page()
-
-            await page.goto(url, timeout=timeout)
-            await page.wait_for_load_state("networkidle", timeout=timeout)
-
-            html_content: str = await page.content()
-
-            await context.close()
-            await browser.close()
-
-            return html_content
+            finally:
+                if context is not None:
+                    await asyncio.shield(browser.close())
+                if browser is not None:
+                    await asyncio.shield(context.close())
 
     async def scrape(self, url: str) -> WebScraperResult:
         """Scrape a web page and convert it to markdown format.
