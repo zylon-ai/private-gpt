@@ -126,30 +126,31 @@ def convert_content(request: Request, body: ConvertBody) -> ConvertResponse:
             reader=body.reader,
         )
 
-    if body.format == ContentFormat.Object:
-        roots = [
-            n for n in result.nodes if isinstance(n, TreeNode) and n.parent is None
-        ]
-        if roots:
-            tree = ContentTree.from_node(roots[0], mode=TreeMetadataMode.NONE)
-        else:
-            tree = ContentTree(
-                id="root",
-                type="document",
-                content="",
-                children=[
-                    ContentTree(
-                        id=n.id_,
-                        type=n.get_type() if hasattr(n, "get_type") else "text",
-                        content=n.get_content(),
-                        children=[],
-                    )
-                    for n in result.nodes
-                ],
-            )
-        return ConvertResponse(content=tree, reader=result.reader)
-
-    markdown = "\n\n".join(
-        n.get_content() for n in result.nodes if n.get_content().strip()
+    metadata_mode = (
+        TreeMetadataMode.USER
+        if body.format == ContentFormat.Markdown
+        else TreeMetadataMode.NONE
     )
-    return ConvertResponse(content=markdown, reader=result.reader)
+    roots = [n for n in result.nodes if isinstance(n, TreeNode) and n.parent is None]
+    if roots:
+        tree = ContentTree.from_node(roots[0], mode=metadata_mode)
+    else:
+        tree = ContentTree(
+            id="root",
+            type="document",
+            content="",
+            children=[
+                ContentTree(
+                    id=n.id_,
+                    type=n.get_type() if hasattr(n, "get_type") else "text",
+                    content=n.get_content(metadata_mode=metadata_mode),  # type: ignore[arg-type]
+                    children=[],
+                )
+                for n in result.nodes
+            ],
+        )
+
+    return ConvertResponse(
+        content=(tree.content if body.format == ContentFormat.Markdown else tree),
+        reader=result.reader,
+    )
