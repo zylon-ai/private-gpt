@@ -18,6 +18,7 @@ BackendConfigProvider = Callable[[], BackendConfig]
 
 
 def _local_backend() -> BackendConfig:
+    local_data_path.mkdir(parents=True, exist_ok=True)
     return BackendConfig(url=f"db+sqlite:///{local_data_path / 'celery_backend.db'}")
 
 
