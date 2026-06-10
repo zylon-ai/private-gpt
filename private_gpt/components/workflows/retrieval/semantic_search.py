@@ -2,7 +2,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from llama_index.core.base.base_retriever import BaseRetriever
 from llama_index.core.base.llms.types import ChatMessage
@@ -207,14 +207,17 @@ class SemanticSearchWorkflow(Workflow):
             chat_history=ev.chat_history,
         )
 
-        condense_result = await self._condenser_workflow.run(start_event=condense_input)
+        condense_result = cast(
+            CondenseResultEvent,
+            await self._condenser_workflow.run(start_event=condense_input),
+        )
         await ctx.store.set("condense_result", condense_result)
 
         token_limit = await ctx.store.get("token_limit")
         kwargs = await ctx.store.get("kwargs")
 
         return RetrieveEvent(
-            query=condense_result.condensed_query,
+            query=str(condense_result.condensed_query),
             token_limit=token_limit,
             kwargs=kwargs,
         )

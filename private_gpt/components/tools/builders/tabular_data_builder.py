@@ -311,7 +311,7 @@ class TabularDataToolBuilder:
             )
             return await asyncio.to_thread(
                 _sync_format_results,
-                result.content,
+                result.content,  # type: ignore[attr-defined]
             )
 
         if validate == ToolValidationMode.EAGER:
