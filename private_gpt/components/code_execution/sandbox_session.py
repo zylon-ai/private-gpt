@@ -11,11 +11,11 @@ from private_gpt.components.code_execution.base import (
 from private_gpt.components.sandbox.base import SandboxExecOptions
 
 if TYPE_CHECKING:
-    from private_gpt.components.sandbox.base import AsyncSandboxSession
+    from private_gpt.components.sandbox.base import SandboxSession
 
 
 class SandboxCodeExecutionSession(CodeExecutionSession):
-    """Generic CodeExecutionSession backed by any AsyncSandboxSession.
+    """Generic CodeExecutionSession backed by any SandboxSession.
 
     The sandbox is responsible for path translation and permission enforcement.
     This class only adds the CodeExecutionSession protocol on top.
@@ -24,7 +24,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     def __init__(
         self,
         session_id: str,
-        sandbox: AsyncSandboxSession,
+        sandbox: SandboxSession,
         workspace_canonical: str,
         last_accessed: list[float],
     ) -> None:

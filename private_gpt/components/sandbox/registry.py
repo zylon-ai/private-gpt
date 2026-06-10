@@ -1,29 +1,23 @@
 from private_gpt.components.sandbox.base import (
-    AsyncSandboxProvider,
-    AsyncSandboxProviderFactory,
     SandboxProvider,
     SandboxProviderFactory,
 )
 from private_gpt.components.sandbox.local import LocalSandboxProvider
 from private_gpt.settings.settings import Settings
 
-_PROVIDERS: dict[str, SandboxProviderFactory | AsyncSandboxProviderFactory] = {
-    "local": LocalSandboxProvider
-}
+_PROVIDERS: dict[str, SandboxProviderFactory] = {"local": LocalSandboxProvider}
 
 
-def register_sandbox(
-    name: str, provider: SandboxProviderFactory | AsyncSandboxProviderFactory
-) -> None:
+def register_sandbox(name: str, provider: SandboxProviderFactory) -> None:
     _PROVIDERS[name] = provider
 
 
 class SandboxProviderRegistry:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._providers: dict[str, SandboxProvider | AsyncSandboxProvider] = {}
+        self._providers: dict[str, SandboxProvider] = {}
 
-    def get_provider(self, name: str) -> SandboxProvider | AsyncSandboxProvider:
+    def get_provider(self, name: str) -> SandboxProvider:
         provider = self._providers.get(name)
         if provider is not None:
             return provider

@@ -6,6 +6,7 @@ from private_gpt.components.sandbox.base import (
     SandboxSession,
 )
 from private_gpt.components.sandbox.local import (
+    BashExecutorSandbox,
     LocalSandboxProvider,
     LocalSandboxSession,
 )
@@ -13,6 +14,7 @@ from private_gpt.components.sandbox.registry import register_sandbox
 from private_gpt.components.sandbox.sandbox_component import SandboxComponent
 
 __all__ = [
+    "BashExecutorSandbox",
     "LocalSandboxProvider",
     "LocalSandboxSession",
     "SandboxCodeOptions",

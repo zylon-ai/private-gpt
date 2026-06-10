@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -51,79 +51,6 @@ class SandboxCodeOptions(SandboxExecOptions):
 
 
 class SandboxSession(ABC):
-    @abstractmethod
-    def start(self) -> None:
-        """Start or attach to the remote sandbox session."""
-
-    @abstractmethod
-    def close(self) -> None:
-        """Release the remote sandbox session."""
-
-    @abstractmethod
-    def exec(
-        self, command: str, options: SandboxExecOptions | None = None
-    ) -> SandboxExecutionResult:
-        """Execute a shell command in the sandbox."""
-
-    @abstractmethod
-    def run_code(
-        self, code: str, options: SandboxCodeOptions | None = None
-    ) -> SandboxExecutionResult:
-        """Execute code in a named runtime."""
-
-    def install_package(self, package_name: str) -> SandboxExecutionResult:
-        return self.exec(f"python -m pip install {package_name}")
-
-    def __enter__(self) -> SandboxSession:
-        self.start()
-        return self
-
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.close()
-
-
-class SandboxProvider(ABC):
-    def __init__(self, settings: Settings) -> None:
-        self.settings = settings
-
-    @abstractmethod
-    def create_session(
-        self, user_id: str | None = None, timeout: int | None = None
-    ) -> SandboxSession:
-        """Create a sandbox session. The session may be lazy until start()."""
-
-    @abstractmethod
-    def delete_session(self, session: SandboxSession) -> None:
-        """Delete a sandbox session and release all associated resources."""
-
-
-SandboxProviderFactory = type[SandboxProvider] | Callable[[Settings], SandboxProvider]
-
-
-class AsyncSandboxProvider(ABC):
-    def __init__(self, settings: Settings) -> None:
-        self.settings = settings
-
-    @abstractmethod
-    async def create_session(
-        self,
-        user_id: str | None = None,
-        timeout: int | None = None,
-        bundle_specs: list[SandboxMountSpec] | None = None,
-    ) -> AsyncSandboxSession:
-        """Create a sandbox session. The session may be lazy until start()."""
-
-    @abstractmethod
-    async def delete_session(self, session: AsyncSandboxSession) -> None:
-        """Delete a sandbox session and release all associated resources."""
-
-
-AsyncSandboxProviderFactory = (
-    type[AsyncSandboxProvider] | Callable[[Settings], AsyncSandboxProvider]
-)
-
-
-class AsyncSandboxSession(ABC):
     """Async sandbox session with exec + file operations.
 
     Permission enforcement: write_file() and chmod() check if the path is
@@ -132,11 +59,37 @@ class AsyncSandboxSession(ABC):
     make_dir() does not check writable.
     """
 
+    python_executable: str = "python"
+
     @abstractmethod
     async def exec(
         self, command: str, opts: SandboxExecOptions | None = None
     ) -> SandboxExecutionResult:
         """Execute a shell command."""
+
+    async def run_code(
+        self, code: str, opts: SandboxCodeOptions | None = None
+    ) -> SandboxExecutionResult:
+        """Execute code in a named runtime."""
+        opts = opts or SandboxCodeOptions()
+        language = opts.language.lower()
+        if language in {"bash", "sh", "shell"}:
+            return await self.exec(code, opts)
+        return await self.exec(self._command_for_language(language, code), opts)
+
+    async def install_package(self, package_name: str) -> SandboxExecutionResult:
+        return await self.exec(
+            f"{self.python_executable} -m pip install {package_name}"
+        )
+
+    def _command_for_language(self, language: str, code: str) -> str:
+        match language:
+            case "python" | "py":
+                return f"{self.python_executable} <<'EOF'\n{code}\nEOF"
+            case "javascript" | "js" | "node" | "typescript" | "ts":
+                return f"node <<'EOF'\n{code}\nEOF"
+            case _:
+                return f"{language} <<'EOF'\n{code}\nEOF"
 
     @abstractmethod
     async def read_file(self, path: str) -> bytes:
@@ -175,3 +128,24 @@ class AsyncSandboxSession(ABC):
     @abstractmethod
     async def close(self) -> None:
         """Release resources."""
+
+
+class SandboxProvider(ABC):
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+
+    @abstractmethod
+    async def create_session(
+        self,
+        user_id: str | None = None,
+        timeout: int | None = None,
+        bundle_specs: list[SandboxMountSpec] | None = None,
+    ) -> SandboxSession:
+        """Create a sandbox session. The session may be lazy until first use."""
+
+    @abstractmethod
+    async def delete_session(self, session: SandboxSession) -> None:
+        """Delete a sandbox session and release all associated resources."""
+
+
+SandboxProviderFactory = type[SandboxProvider] | Callable[[Settings], SandboxProvider]

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from private_gpt.components.code_execution.content_bundle import BundledFile
-    from private_gpt.components.sandbox.base import AsyncSandboxSession
+    from private_gpt.components.sandbox.base import SandboxSession
 
 
 class SandboxMountSpec(BaseModel):
@@ -33,10 +33,10 @@ class SessionMount(ABC):
         ...
 
     @abstractmethod
-    async def prepare(self, sandbox: AsyncSandboxSession) -> None:
+    async def prepare(self, sandbox: SandboxSession) -> None:
         """Initialize this mount via sandbox APIs."""
 
-    async def teardown(self, sandbox: AsyncSandboxSession) -> None:  # noqa: B027
+    async def teardown(self, sandbox: SandboxSession) -> None:  # noqa: B027
         """Optional cleanup. Default is a no-op."""
 
 
@@ -50,7 +50,7 @@ class LocalMount(SessionMount):
     def spec(self) -> SandboxMountSpec:
         return self._spec
 
-    async def prepare(self, sandbox: AsyncSandboxSession) -> None:
+    async def prepare(self, sandbox: SandboxSession) -> None:
         await sandbox.make_dir(self._spec.canonical)
 
 
@@ -69,6 +69,6 @@ class ReadOnlyMount(SessionMount):
     def spec(self) -> SandboxMountSpec:
         return self._spec
 
-    async def prepare(self, sandbox: AsyncSandboxSession) -> None:
+    async def prepare(self, sandbox: SandboxSession) -> None:
         if not await sandbox.path_exists(self._spec.canonical):
             await sandbox.initialize_mount(self._spec.canonical, self._files)

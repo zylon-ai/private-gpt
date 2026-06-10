@@ -18,7 +18,7 @@ from private_gpt.components.code_execution.sandbox_session import (
 from private_gpt.components.code_execution.workspace_manager import (
     LocalWorkspaceManager,
 )
-from private_gpt.components.sandbox.local_async import BashExecutorSandbox
+from private_gpt.components.sandbox.local import BashExecutorSandbox
 from private_gpt.components.sandbox.mount import (
     LocalMount,
     LocalMountSpec,
@@ -80,7 +80,9 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
 
         # Build LocalMountSpec list — typed pydantic models
         local_specs: list[LocalMountSpec] = [
-            LocalMountSpec(canonical=c, real_path=p, writable=(c != "/mnt/user-data/uploads/"))
+            LocalMountSpec(
+                canonical=c, real_path=p, writable=(c != "/mnt/user-data/uploads/")
+            )
             for c, p in host_paths.items()
         ]
         for bundle in extra_bundles or []:
