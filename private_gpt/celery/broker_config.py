@@ -23,6 +23,7 @@ def _local_broker() -> BrokerConfig:
         transport_options={
             "data_folder_in": local_data_path,
             "data_folder_out": local_data_path,
+            "control_folder": local_data_path / "control",
         },
     )
 

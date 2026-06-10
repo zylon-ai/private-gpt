@@ -6,6 +6,10 @@ PROD_PYTHON ?= .venv/bin/python
 PROD_BINARY ?= .venv/bin/private-gpt
 PROD_ARGS ?= serve
 PROD_UV_CACHE_DIR ?= .uv-cache
+TEST_PGPT_HOME ?= $(CURDIR)
+TEST_LOCAL_DATA_DIR ?= $(TEST_PGPT_HOME)/local_data/tests
+WIPE_PGPT_HOME := $(if $(PGPT_HOME),$(PGPT_HOME),$(HOME)/.local/share/private-gpt)
+WIPE_LOCAL_DATA_DIR := $(WIPE_PGPT_HOME)/local_data
 
 .PHONY: test test-coverage black ruff format mypy check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower
 
@@ -14,12 +18,12 @@ PROD_UV_CACHE_DIR ?= .uv-cache
 ########################################################################################################################
 
 test:
-	rm -rf local_data/tests/*
-	PYTHONPATH=. uv run pytest tests
+	rm -rf "$(TEST_LOCAL_DATA_DIR)"/*
+	PGPT_HOME=$(TEST_PGPT_HOME) PYTHONPATH=. uv run pytest tests
 
 test-coverage:
-	rm -rf local_data/tests/*
-	PYTHONPATH=. uv run pytest tests --cov private_gpt --cov-report term --cov-report=html --cov-report xml --junit-xml=tests-results.xml
+	rm -rf "$(TEST_LOCAL_DATA_DIR)"/*
+	PGPT_HOME=$(TEST_PGPT_HOME) PYTHONPATH=. uv run pytest tests --cov private_gpt --cov-report term --cov-report=html --cov-report xml --junit-xml=tests-results.xml
 
 black:
 	uv run black . --check
@@ -92,8 +96,8 @@ ingest:
 	@uv run python scripts/ingest_folder.py $(call args)
 
 wipe:
-	@mkdir -p local_data
-	@find local_data -mindepth 1 ! -name '.gitignore' -exec rm -rf {} +
+	@mkdir -p "$(WIPE_LOCAL_DATA_DIR)"
+	@find "$(WIPE_LOCAL_DATA_DIR)" -mindepth 1 ! -name '.gitignore' -exec rm -rf {} +
 ########################################################################################################################
 # Celery
 ########################################################################################################################

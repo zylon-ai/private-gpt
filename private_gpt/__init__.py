@@ -6,6 +6,8 @@ import warnings
 
 from pydantic import PydanticDeprecatedSince20
 
+from private_gpt.constants import PGPT_HOME
+
 # Set to 'DEBUG' to have extensive logging turned on, even for libraries
 ROOT_LOG_LEVEL = "INFO"
 
@@ -15,7 +17,8 @@ logging.captureWarnings(True)
 
 
 # adding tiktoken cache path within repo to be able to run in offline environment.
-os.environ["TIKTOKEN_CACHE_DIR"] = "tiktoken_cache"
+if "TIKTOKEN_CACHE_DIR" not in os.environ:
+    os.environ["TIKTOKEN_CACHE_DIR"] = str(PGPT_HOME / "tiktoken_cache")
 
 # Disable warning tokenizer about torch
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"

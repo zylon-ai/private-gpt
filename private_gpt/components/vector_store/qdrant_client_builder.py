@@ -70,6 +70,10 @@ class QdrantClientBuilder:
         config = settings.qdrant.get_parameters(QdrantClient, exclude_none=True)
 
         if QdrantClientBuilder.is_local_path(config):
+            from private_gpt.paths import resolve_data_path
+
+            config = dict(config)
+            config["path"] = str(resolve_data_path(config["path"]))
             # This is a workaround to allow to execute tests/local qdrant
             # when we want to support sync/async client.
             # To allow, remove .lock from the db_dir
