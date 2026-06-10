@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from private_gpt.components.code_execution.content_bundle import BundledFile
+
 
 class SessionMount(ABC):
     """One mount point for a local session.
@@ -55,7 +57,7 @@ class ReadOnlyMount(SessionMount):
     def __init__(
         self,
         canonical: str,
-        files: dict[str, bytes],
+        files: list[BundledFile],
         cache_dir: Path,
     ) -> None:
         self.canonical = canonical
@@ -65,11 +67,9 @@ class ReadOnlyMount(SessionMount):
 
     async def prepare(self) -> Path:
         if not self._cache_dir.exists():
-            for rel_path, content in self._files.items():
-                target = self._cache_dir / rel_path
+            for file in self._files:
+                target = self._cache_dir / file.path
                 target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(content)
-            for f in self._cache_dir.rglob("*"):
-                if f.is_file():
-                    f.chmod(0o444)
+                target.write_bytes(file.content)
+                target.chmod(file.permissions)
         return self._cache_dir

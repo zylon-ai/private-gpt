@@ -2,7 +2,10 @@ from pathlib import Path
 
 from injector import inject, singleton
 
-from private_gpt.components.code_execution.content_bundle import ContentBundle
+from private_gpt.components.code_execution.content_bundle import (
+    BundledFile,
+    ContentBundle,
+)
 from private_gpt.components.skills.models.skill_entities import SkillFilter
 from private_gpt.components.skills.services.skill_service import SkillService
 from private_gpt.components.storage.storage_component import StorageComponent
@@ -51,7 +54,10 @@ class SkillLoader:
             bundles.append(
                 ContentBundle(
                     canonical_path=f"/mnt/skills/{item.skill.id}/",
-                    files=files,
+                    files=[
+                        BundledFile(path=fp, content=content, permissions=0o444)
+                        for fp, content in files.items()
+                    ],
                     writable=False,
                 )
             )

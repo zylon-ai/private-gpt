@@ -19,15 +19,11 @@ from private_gpt.components.code_execution.base import (
 from private_gpt.components.code_execution.bash_executor import BashExecutor
 from private_gpt.components.code_execution.mount import LocalMount, ReadOnlyMount
 from private_gpt.components.code_execution.path_translator import PathTranslator
-from private_gpt.components.skills.services.skill_loader import (
-    SkillLoader,  # noqa: TC001
-)
 from private_gpt.settings.settings import Settings  # noqa: TC001
 
 if TYPE_CHECKING:
     from private_gpt.components.code_execution.content_bundle import ContentBundle
     from private_gpt.components.code_execution.mount import SessionMount
-    from private_gpt.components.skills.models.skill_entities import SkillFilter
 
 
 def _cache_key(canonical_path: str) -> str:
@@ -241,7 +237,7 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
     """
 
     @inject
-    def __init__(self, settings: Settings, skill_loader: SkillLoader) -> None:
+    def __init__(self, settings: Settings) -> None:
         super().__init__(settings)
         ce = settings.code_execution
         base = Path(
@@ -250,7 +246,6 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
         )
         self._sessions_dir = base / "sessions"
         self._content_cache = Path(ce.skills_cache_path or base / "content_cache")
-        self._skill_loader = skill_loader
         self._executor = BashExecutor(
             cpu_limit_seconds=ce.bash_cpu_limit_seconds,
             memory_limit_mb=ce.bash_memory_limit_mb,
@@ -266,7 +261,6 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
     async def create_session(
         self,
         session_id: str,
-        skill_filter: SkillFilter | None = None,
         extra_bundles: list[ContentBundle] | None = None,
     ) -> LocalCodeExecutionSession:
         session_dir = self._sessions_dir / session_id
@@ -281,14 +275,7 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
             ),
         ]
 
-        # Resolve content bundles: skills + any extra bundles
-        bundles: list[ContentBundle] = []
-        if skill_filter:
-            bundles.extend(await self._skill_loader.load(skill_filter))
-        if extra_bundles:
-            bundles.extend(extra_bundles)
-
-        for bundle in bundles:
+        for bundle in extra_bundles or []:
             cache_dir = self._content_cache / _cache_key(bundle.canonical_path)
             mounts.append(ReadOnlyMount(bundle.canonical_path, bundle.files, cache_dir))
 

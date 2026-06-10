@@ -14,7 +14,6 @@ if TYPE_CHECKING:
         CodeExecutionSession,
     )
     from private_gpt.components.code_execution.content_bundle import ContentBundle
-    from private_gpt.components.skills.models.skill_entities import SkillFilter
 
 
 @singleton
@@ -33,7 +32,6 @@ class CodeExecutionComponent:
     async def get_or_create_session(
         self,
         session_id: str,
-        skill_filter: SkillFilter | None = None,
         extra_bundles: list[ContentBundle] | None = None,
     ) -> CodeExecutionSession | None:
         provider = self._get_code_execution_provider()
@@ -47,7 +45,6 @@ class CodeExecutionComponent:
 
             session = await provider.create_session(
                 session_id,
-                skill_filter=skill_filter,
                 extra_bundles=extra_bundles,
             )
             self._sessions[session_id] = session

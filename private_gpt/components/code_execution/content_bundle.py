@@ -1,18 +1,13 @@
-from dataclasses import dataclass, field
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class ContentBundle:
-    """A named bundle of files to mount at a canonical path.
+class BundledFile(BaseModel):
+    path: str  # relative path within the bundle e.g. "SKILL.md"
+    content: bytes
+    permissions: int = 0o444  # Unix permissions
 
-    Backend-agnostic: local provider materializes files to disk, OpenSandbox
-    provider uploads them to the container. Works for skills, plugins, or any
-    future content type.
 
-    canonical_path must end with "/" (e.g. "/mnt/skills/my-skill/").
-    files maps relative paths to raw bytes (e.g. {"SKILL.md": b"..."}).
-    """
-
-    canonical_path: str
-    files: dict[str, bytes] = field(default_factory=dict)
+class ContentBundle(BaseModel):
+    canonical_path: str  # must end with "/" e.g. "/mnt/skills/foo/"
+    files: list[BundledFile] = Field(default_factory=list)
     writable: bool = False
