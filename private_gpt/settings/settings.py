@@ -1462,6 +1462,10 @@ class CodeExecutionSettings(BaseModel):
         description="Idle TTL in seconds before a local session kernel is destroyed. "
         "Workspace files are preserved for restart.",
     )
+    vfs_sessions_prefix: str = Field(
+        default="sessions",
+        description="Path prefix inside the storage bucket for session workspace data.",
+    )
 
     @field_validator("provider", mode="before")
     @classmethod

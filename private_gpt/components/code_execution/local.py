@@ -15,6 +15,9 @@ from private_gpt.components.code_execution.bash_executor import LocalBashExecuto
 from private_gpt.components.code_execution.sandbox_session import (
     SandboxCodeExecutionSession,
 )
+from private_gpt.components.code_execution.workspace_manager import (
+    LocalWorkspaceManager,
+)
 from private_gpt.components.sandbox.local_async import BashExecutorSandbox
 from private_gpt.components.sandbox.mount import (
     LocalMount,
@@ -26,6 +29,7 @@ from private_gpt.settings.settings import Settings
 if TYPE_CHECKING:
     from private_gpt.components.code_execution.base import CodeExecutionSession
     from private_gpt.components.code_execution.content_bundle import ContentBundle
+    from private_gpt.components.code_execution.workspace_manager import WorkspaceManager
     from private_gpt.components.sandbox.mount import SessionMount
 
 
@@ -47,8 +51,10 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
             settings.code_execution.workspace_path
             or Path(settings.data.local_data_folder) / "code_execution_workspaces"
         )
-        self._sessions_dir = base / "sessions"
         self._content_cache = Path(base / "content_cache")
+        self._workspace = self._make_workspace_manager(base / "sessions")
+        self._workspace.ensure_mounted()
+        self._sessions_dir = self._workspace.sessions_path
         self._executor = LocalBashExecutor(
             cpu_limit_seconds=settings.bash.cpu_limit_seconds,
             memory_limit_mb=settings.bash.memory_limit_mb,
@@ -61,30 +67,21 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
         self._lock = asyncio.Lock()
         self._reaper_started = False
 
+    def _make_workspace_manager(self, base: Path) -> WorkspaceManager:
+        """Factory hook — subclasses override to inject cloud-backed storage."""
+        return LocalWorkspaceManager(base)
+
     async def create_session(
         self,
         session_id: str,
         extra_bundles: list[ContentBundle] | None = None,
     ) -> SandboxCodeExecutionSession:
-        session_dir = self._sessions_dir / session_id
+        host_paths = self._workspace.prepare_session_dirs(session_id)
 
         # Build LocalMountSpec list — typed pydantic models
         local_specs: list[LocalMountSpec] = [
-            LocalMountSpec(
-                canonical="/home/agent/",
-                real_path=session_dir / "workspace",
-                writable=True,
-            ),
-            LocalMountSpec(
-                canonical="/mnt/user-data/uploads/",
-                real_path=session_dir / "uploads",
-                writable=False,
-            ),
-            LocalMountSpec(
-                canonical="/mnt/user-data/outputs/",
-                real_path=session_dir / "outputs",
-                writable=True,
-            ),
+            LocalMountSpec(canonical=c, real_path=p, writable=(c != "/mnt/user-data/uploads/"))
+            for c, p in host_paths.items()
         ]
         for bundle in extra_bundles or []:
             cache_dir = self._content_cache / _cache_key(bundle.canonical_path)
