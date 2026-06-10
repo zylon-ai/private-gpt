@@ -10,7 +10,6 @@ from private_gpt.components.broker.blocking_publisher import BlockingPublisher
 from private_gpt.settings.settings import Settings, settings
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 BrokerProvider = Callable[[Settings], BlockingPublisher | None]
 
