@@ -17,6 +17,9 @@ from injector import Injector
 from llama_index.core.embeddings import MockEmbedding
 from llama_index.core.settings import Settings as LlamaIndexSettings
 
+from private_gpt.components.code_execution.code_execution_component import (
+    CodeExecutionComponent,
+)
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
@@ -82,6 +85,7 @@ def eager_loading(injector: Injector) -> None:
     logger.debug("Initializing auxiliar services")
     injector.get(PromptBuilderService)
     injector.get(ToolService)
+    injector.get(CodeExecutionComponent)
 
 
 def apply_migrations(injector: Injector) -> None:

@@ -37,7 +37,7 @@ def _cap_bytes(data: bytes, limit: int) -> str:
     return data.decode("utf-8", errors="replace")
 
 
-class BashExecutor:
+class LocalBashExecutor:
     """Async subprocess executor with resource isolation (Unix) and output capping.
 
     On Unix: uses os.setsid + setrlimit (CPU, virtual memory, file size, nproc).

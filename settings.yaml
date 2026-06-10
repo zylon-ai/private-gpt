@@ -220,15 +220,20 @@ opik:
 
 sandbox:
   provider: ${PGPT_SANDBOX_PROVIDER:local}
-  base_url: ${PGPT_SANDBOX_URL:}
   timeout: ${PGPT_SANDBOX_TIMEOUT:60}
-
 
 code_execution:
   provider: ${PGPT_CODE_EXECUTION_PROVIDER:local}
   workspace_path: ${PGPT_CODE_EXECUTION_WORKSPACE_PATH:}
   timeout: ${PGPT_CODE_EXECUTION_TIMEOUT:60}
   max_output_bytes: ${PGPT_CODE_EXECUTION_MAX_OUTPUT_BYTES:1048576}
+
+bash:
+  cpu_limit_seconds: ${PGPT_BASH_CPU_LIMIT_SECONDS:30}
+  memory_limit_mb: ${PGPT_BASH_MEMORY_LIMIT_MB:512}
+  fsize_limit_mb: ${PGPT_BASH_FSIZE_LIMIT_MB:10}
+  nproc_limit: ${PGPT_BASH_NPROC_LIMIT:50}
+  output_cap_bytes: ${PGPT_BASH_OUTPUT_CAP_BYTES:1048576}
 
 web_fetch:
   enabled: ${PGPT_WEBFETCH_ENABLED:false}

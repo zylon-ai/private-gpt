@@ -1402,10 +1402,6 @@ class SandboxSettings(BaseModel):
         description="Sandbox provider registered by the application layer. "
         "Defaults to null (disabled); set explicitly to enable sandbox usage.",
     )
-    base_url: str | None = Field(
-        default=None,
-        description="Base URL for remote sandbox providers.",
-    )
     timeout: int = Field(
         default=60,
         description="Default sandbox operation timeout in seconds.",
@@ -1419,20 +1415,26 @@ class SandboxSettings(BaseModel):
         return value
 
 
-class OpenSandboxSettings(BaseModel):
-    base_url: str = Field(description="Base URL of the OpenSandbox server.")
-    api_key: str | None = Field(default=None, description="API key for OpenSandbox.")
-    image: str = Field(
-        default="python:3.11",
-        description="Container image used for sandbox sessions.",
+class BashSettings(BaseModel):
+    cpu_limit_seconds: int = Field(
+        default=30,
+        description="RLIMIT_CPU applied to each isolated bash subprocess.",
     )
-    session_ttl_seconds: int = Field(
-        default=3600,
-        description="How long (seconds) a sandbox container lives before expiry.",
+    memory_limit_mb: int = Field(
+        default=512,
+        description="RLIMIT_AS in MB applied to each isolated bash subprocess.",
     )
-    resource_limits: dict[str, str] = Field(
-        default_factory=lambda: {"cpu": "500m", "memory": "512Mi"},
-        description="Resource limits applied to each sandbox container.",
+    fsize_limit_mb: int = Field(
+        default=50,
+        description="RLIMIT_FSIZE in MB applied to each isolated bash subprocess.",
+    )
+    nproc_limit: int = Field(
+        default=50,
+        description="RLIMIT_NPROC applied to each isolated bash subprocess.",
+    )
+    output_cap_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        description="Hard cap on raw subprocess output bytes before LLM truncation.",
     )
 
 
@@ -1459,35 +1461,6 @@ class CodeExecutionSettings(BaseModel):
         default=1800,
         description="Idle TTL in seconds before a local session kernel is destroyed. "
         "Workspace files are preserved for restart.",
-    )
-    skills_cache_path: str | None = Field(
-        default=None,
-        description="Directory for cached skill/plugin file trees. "
-        "Defaults to {workspace_path}/content_cache.",
-    )
-    bash_cpu_limit_seconds: int = Field(
-        default=30,
-        description="RLIMIT_CPU applied to each isolated bash subprocess.",
-    )
-    bash_memory_limit_mb: int = Field(
-        default=512,
-        description="RLIMIT_AS in MB applied to each isolated bash subprocess.",
-    )
-    bash_fsize_limit_mb: int = Field(
-        default=50,
-        description="RLIMIT_FSIZE in MB applied to each isolated bash subprocess.",
-    )
-    bash_nproc_limit: int = Field(
-        default=50,
-        description="RLIMIT_NPROC applied to each isolated bash subprocess.",
-    )
-    bash_output_cap_bytes: int = Field(
-        default=10 * 1024 * 1024,
-        description="Hard cap on raw subprocess output bytes before LLM truncation.",
-    )
-    opensandbox: OpenSandboxSettings | None = Field(
-        default=None,
-        description="OpenSandbox provider settings. Required when provider='opensandbox'.",
     )
 
     @field_validator("provider", mode="before")
@@ -1600,19 +1573,15 @@ class Settings(BaseModel):
     phoenix: ArizePhoenixSettings
     opik: OpikSettings
     sandbox: SandboxSettings
-    code_execution: CodeExecutionSettings = Field(default_factory=CodeExecutionSettings)
+    bash: BashSettings
+    code_execution: CodeExecutionSettings
     web_fetch: WebFetchSettings
     web_search: WebSearchSettings
     database_query: DatabaseQuerySettings
     brave: BraveSearchSettings
-    skills: SkillSettings = Field(default_factory=SkillSettings)
-    transformation: TransformationSettings = Field(
-        default_factory=TransformationSettings
-    )
-    semaphore: SemaphoreSettings = Field(
-        default_factory=SemaphoreSettings,
-        description="Settings for the semaphore manager",
-    )
+    skills: SkillSettings
+    transformation: TransformationSettings
+    semaphore: SemaphoreSettings
 
 
 """

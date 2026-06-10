@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 from injector import inject, singleton
 
 from private_gpt.components.code_execution.registry import CodeExecutionProviderRegistry
-from private_gpt.settings.settings import Settings  # noqa: TC001
+from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
     from private_gpt.components.code_execution.base import (
         CodeExecutionProvider,
-        CodeExecutionSession,
+        CodeExecutionSession,  # noqa: TC004
     )
     from private_gpt.components.code_execution.content_bundle import ContentBundle
 

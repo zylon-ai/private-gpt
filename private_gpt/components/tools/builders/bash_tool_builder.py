@@ -6,15 +6,15 @@ from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.code_execution.code_execution_component import (
-    CodeExecutionComponent,  # noqa: TC001
+    CodeExecutionComponent,
 )
 from private_gpt.components.skills.services.skill_loader import (
-    SkillLoader,  # noqa: TC001
+    SkillLoader,
 )
 from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import BASH_TOOL_FN
 from private_gpt.events.models import TextBlock
-from private_gpt.settings.settings import Settings  # noqa: TC001
+from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
     from private_gpt.components.skills.models.skill_entities import SkillFilter
