@@ -2737,37 +2737,6 @@ wheels = [
 ]
 
 [[package]]
-name = "opensandbox"
-source = { directory = "../OpenSandbox/sdks/sandbox/python" }
-dependencies = [
-    { name = "attrs" },
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "python-dateutil" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "attrs", specifier = ">=21.3.0" },
-    { name = "httpx", specifier = ">=0.27.0,<1.0" },
-    { name = "pydantic", specifier = ">=2.4.2,<3.0" },
-    { name = "python-dateutil", specifier = ">=2.8.2,<3.0" },
-    { name = "redis", marker = "extra == 'pool-redis'", specifier = ">=5.0,<6.0" },
-]
-provides-extras = ["pool-redis"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "openapi-python-client", specifier = ">=0.28.0" },
-    { name = "pyright", specifier = ">=1.1.0" },
-    { name = "pytest", specifier = ">=7.0.0" },
-    { name = "pytest-asyncio", specifier = ">=0.21.0" },
-    { name = "pytest-cov", specifier = ">=4.0.0" },
-    { name = "redis", specifier = ">=5.0,<6.0" },
-    { name = "ruff", specifier = ">=0.14.8" },
-]
-
-[[package]]
 name = "opentelemetry-api"
 version = "1.41.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3227,9 +3196,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-code-execution = [
-    { name = "opensandbox" },
-]
 core = [
     { name = "asyncpg" },
     { name = "beautifulsoup4" },
@@ -3671,7 +3637,6 @@ requires-dist = [
     { name = "opencv-python-headless", marker = "extra == 'media-image'", specifier = ">=4.10.0.84,<4.13.0" },
     { name = "openinference-instrumentation-llama-index", marker = "extra == 'observability-arize-phoenix'", specifier = ">=4.3.9,<5" },
     { name = "openpyxl", marker = "extra == 'ingest-documents'", specifier = ">=3.1.5,<4" },
-    { name = "opensandbox", marker = "extra == 'code-execution'", directory = "../OpenSandbox/sdks/sandbox/python" },
     { name = "opentelemetry-exporter-otlp", marker = "extra == 'observability-arize-phoenix'", specifier = ">=1.41.0,<2" },
     { name = "opentelemetry-proto", marker = "extra == 'observability-arize-phoenix'", specifier = ">=1.41.0,<2" },
     { name = "opentelemetry-sdk", marker = "extra == 'observability-arize-phoenix'", specifier = ">=1.41.0,<2" },
@@ -3758,7 +3723,7 @@ requires-dist = [
     { name = "types-tqdm", marker = "extra == 'typecheck'", specifier = ">=4.67.0.20250809" },
     { name = "watchdog", specifier = ">=4.0.1,<5" },
 ]
-provides-extras = ["sdk-openai", "llm-openai", "llm-openai-compatible", "llm-mistral", "llm-anthropic", "tokenizer-local", "tokenizer", "embedding-openai", "embedding-openai-compatible", "model-openai", "model-openai-compatible", "ingest-core", "ingest-documents", "ingest-markitdown", "ingest-markup", "ingest", "storage-s3", "storage-smb", "storage", "vectorstore-qdrant", "nodestore-postgres", "indexstore-postgres", "redis-core", "redis", "database-core", "database-postgres", "database-mysql", "database-mssql", "database-db2", "database", "queue-celery", "queue-rabbitmq", "queue", "data-pandas", "data-pandasai", "tool-mcp", "tool-tabular", "tool-database", "tool-web-scraping", "tools", "media-core", "media-image", "media-audio", "media-video", "media", "observability-arize-phoenix", "observability-opik", "observability", "core", "lint", "test", "typecheck", "dev", "code-execution"]
+provides-extras = ["sdk-openai", "llm-openai", "llm-openai-compatible", "llm-mistral", "llm-anthropic", "tokenizer-local", "tokenizer", "embedding-openai", "embedding-openai-compatible", "model-openai", "model-openai-compatible", "ingest-core", "ingest-documents", "ingest-markitdown", "ingest-markup", "ingest", "storage-s3", "storage-smb", "storage", "vectorstore-qdrant", "nodestore-postgres", "indexstore-postgres", "redis-core", "redis", "database-core", "database-postgres", "database-mysql", "database-mssql", "database-db2", "database", "queue-celery", "queue-rabbitmq", "queue", "data-pandas", "data-pandasai", "tool-mcp", "tool-tabular", "tool-database", "tool-web-scraping", "tools", "media-core", "media-image", "media-audio", "media-video", "media", "observability-arize-phoenix", "observability-opik", "observability", "core", "lint", "test", "typecheck", "dev"]
 
 [[package]]
 name = "prometheus-client"

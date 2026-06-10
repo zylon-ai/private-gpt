@@ -329,15 +329,9 @@ typecheck = [
 dev = [
     "private-gpt[lint,test,typecheck]",
 ]
-code-execution = [
-    "opensandbox",
-]
 
 [tool.uv]
 default-groups = []
-
-[tool.uv.sources]
-opensandbox = { path = "../OpenSandbox/sdks/sandbox/python" }
 
 [build-system]
 requires = ["hatchling"]

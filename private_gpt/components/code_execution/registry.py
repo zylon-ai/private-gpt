@@ -3,14 +3,10 @@ from private_gpt.components.code_execution.base import (
     CodeExecutionProviderFactory,
 )
 from private_gpt.components.code_execution.local import LocalCodeExecutionProvider
-from private_gpt.components.code_execution.opensandbox import (
-    OpenSandboxCodeExecutionProvider,
-)
 from private_gpt.settings.settings import Settings
 
 _PROVIDERS: dict[str, CodeExecutionProviderFactory] = {
     "local": LocalCodeExecutionProvider,
-    "opensandbox": OpenSandboxCodeExecutionProvider,
 }
 
 
