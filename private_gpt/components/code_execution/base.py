@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 
 from private_gpt.settings.settings import Settings
+
+if TYPE_CHECKING:
+    from private_gpt.components.code_execution.content_bundle import ContentBundle
+    from private_gpt.components.skills.models.skill_entities import SkillFilter
 
 
 class BashExecutionResult(BaseModel):
@@ -63,8 +70,13 @@ class CodeExecutionProvider(ABC):
         self.settings = settings
 
     @abstractmethod
-    def create_session(self, session_id: str) -> CodeExecutionSession:
-        """Create a code execution session."""
+    async def create_session(
+        self,
+        session_id: str,
+        skill_filter: SkillFilter | None = None,
+        extra_bundles: list[ContentBundle] | None = None,
+    ) -> CodeExecutionSession:
+        """Create a code execution session, optionally mounting skill content."""
 
     @abstractmethod
     def delete_session(self, session: CodeExecutionSession) -> None:

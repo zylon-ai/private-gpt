@@ -21,6 +21,11 @@ class ObjectStorage(ABC):
     async def read_file(self, prefix: str, path: str) -> bytes:
         ...
 
+    @abstractmethod
+    async def list_files(self, prefix: str) -> list[str]:
+        """List all file paths relative to prefix."""
+        ...
+
 
 class LocalObjectStorage(ObjectStorage):
     def __init__(self, root_path: str) -> None:
@@ -49,6 +54,15 @@ class LocalObjectStorage(ObjectStorage):
     def _read_file_sync(self, prefix: str, path: str) -> bytes:
         target = Path(self._root_path) / prefix / path
         return target.read_bytes()
+
+    async def list_files(self, prefix: str) -> list[str]:
+        return await to_thread.run_sync(self._list_files_sync, prefix)
+
+    def _list_files_sync(self, prefix: str) -> list[str]:
+        root = Path(self._root_path) / prefix
+        if not root.exists():
+            return []
+        return [str(p.relative_to(root)) for p in root.rglob("*") if p.is_file()]
 
 
 class S3ObjectStorage(ObjectStorage):
@@ -88,3 +102,13 @@ class S3ObjectStorage(ObjectStorage):
         s3_url = f"s3://{self._bucket_name}/{prefix}/{path}"
         binary = self._s3_helper.load_file_from_s3(s3_url)
         return binary.read()
+
+    async def list_files(self, prefix: str) -> list[str]:
+        return await to_thread.run_sync(self._list_files_sync, prefix)
+
+    def _list_files_sync(self, prefix: str) -> list[str]:
+        keys = self._s3_helper.list_objects_by_prefix(
+            bucket_name=self._bucket_name,
+            prefix=prefix,
+        )
+        return [k[len(prefix) :].lstrip("/") for k in keys]

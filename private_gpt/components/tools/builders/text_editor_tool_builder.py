@@ -44,20 +44,20 @@ class TextEditorToolBuilder:
         self._component = code_execution_component
         self._settings = settings
 
-    def _session(self, session_id: str) -> CodeExecutionSession:
-        session = self._component.get_or_create_session(session_id)
+    async def _session(self, session_id: str) -> CodeExecutionSession:
+        session = await self._component.get_or_create_session(session_id)
         if session is None:
             raise ValueError("code_execution provider is not configured.")
         return session
 
-    def build_view_tool(
+    async def build_view_tool(
         self,
         session_id: str,
         name: str = TEXT_EDITOR_VIEW_TOOL_NAME,
         type: str = TEXT_EDITOR_VIEW_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_VIEW_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = self._session(session_id)
+        session = await self._session(session_id)
 
         async def view(
             path: str,
@@ -90,14 +90,14 @@ class TextEditorToolBuilder:
             async_fn=view,
         )
 
-    def build_str_replace_tool(
+    async def build_str_replace_tool(
         self,
         session_id: str,
         name: str = TEXT_EDITOR_STR_REPLACE_TOOL_NAME,
         type: str = TEXT_EDITOR_STR_REPLACE_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_STR_REPLACE_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = self._session(session_id)
+        session = await self._session(session_id)
 
         async def str_replace(
             path: str,
@@ -119,14 +119,14 @@ class TextEditorToolBuilder:
             async_fn=str_replace,
         )
 
-    def build_create_tool(
+    async def build_create_tool(
         self,
         session_id: str,
         name: str = TEXT_EDITOR_CREATE_TOOL_NAME,
         type: str = TEXT_EDITOR_CREATE_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_CREATE_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = self._session(session_id)
+        session = await self._session(session_id)
 
         async def create(
             path: str,
@@ -147,14 +147,14 @@ class TextEditorToolBuilder:
             async_fn=create,
         )
 
-    def build_insert_tool(
+    async def build_insert_tool(
         self,
         session_id: str,
         name: str = TEXT_EDITOR_INSERT_TOOL_NAME,
         type: str = TEXT_EDITOR_INSERT_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_INSERT_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = self._session(session_id)
+        session = await self._session(session_id)
 
         async def insert(
             path: str,

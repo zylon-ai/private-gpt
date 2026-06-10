@@ -1,13 +1,21 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.code_execution.code_execution_component import (
-    CodeExecutionComponent,
+    CodeExecutionComponent,  # noqa: TC001
 )
 from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import BASH_TOOL_FN
-from private_gpt.events.models import ResultContentBlockType, TextBlock
-from private_gpt.settings.settings import Settings
+from private_gpt.events.models import TextBlock
+from private_gpt.settings.settings import Settings  # noqa: TC001
+
+if TYPE_CHECKING:
+    from private_gpt.components.skills.models.skill_entities import SkillFilter
+    from private_gpt.events.models import ResultContentBlockType
 
 
 def _truncate_output(text: str, max_bytes: int) -> str:
@@ -29,14 +37,17 @@ class BashToolBuilder:
         self._component = code_execution_component
         self._settings = settings
 
-    def build_tool(
+    async def build_tool(
         self,
         session_id: str,
+        skill_filter: SkillFilter | None = None,
         name: str = BASH_TOOL_NAME,
         type: str = BASH_TOOL_NAME + "_v1",
         description: str = BASH_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = self._component.get_or_create_session(session_id)
+        session = await self._component.get_or_create_session(
+            session_id, skill_filter=skill_filter
+        )
         if session is None:
             raise ValueError("code_execution provider is not configured.")
 

@@ -1419,6 +1419,23 @@ class SandboxSettings(BaseModel):
         return value
 
 
+class OpenSandboxSettings(BaseModel):
+    base_url: str = Field(description="Base URL of the OpenSandbox server.")
+    api_key: str | None = Field(default=None, description="API key for OpenSandbox.")
+    image: str = Field(
+        default="python:3.11",
+        description="Container image used for sandbox sessions.",
+    )
+    session_ttl_seconds: int = Field(
+        default=3600,
+        description="How long (seconds) a sandbox container lives before expiry.",
+    )
+    resource_limits: dict[str, str] = Field(
+        default_factory=lambda: {"cpu": "500m", "memory": "512Mi"},
+        description="Resource limits applied to each sandbox container.",
+    )
+
+
 class CodeExecutionSettings(BaseModel):
     provider: str | None = Field(
         default="local",
@@ -1437,6 +1454,40 @@ class CodeExecutionSettings(BaseModel):
     max_output_bytes: int = Field(
         default=1_048_576,
         description="Maximum output size to return from code execution tools.",
+    )
+    session_ttl_seconds: int = Field(
+        default=1800,
+        description="Idle TTL in seconds before a local session kernel is destroyed. "
+        "Workspace files are preserved for restart.",
+    )
+    skills_cache_path: str | None = Field(
+        default=None,
+        description="Directory for cached skill/plugin file trees. "
+        "Defaults to {workspace_path}/content_cache.",
+    )
+    bash_cpu_limit_seconds: int = Field(
+        default=30,
+        description="RLIMIT_CPU applied to each isolated bash subprocess.",
+    )
+    bash_memory_limit_mb: int = Field(
+        default=512,
+        description="RLIMIT_AS in MB applied to each isolated bash subprocess.",
+    )
+    bash_fsize_limit_mb: int = Field(
+        default=50,
+        description="RLIMIT_FSIZE in MB applied to each isolated bash subprocess.",
+    )
+    bash_nproc_limit: int = Field(
+        default=50,
+        description="RLIMIT_NPROC applied to each isolated bash subprocess.",
+    )
+    bash_output_cap_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        description="Hard cap on raw subprocess output bytes before LLM truncation.",
+    )
+    opensandbox: OpenSandboxSettings | None = Field(
+        default=None,
+        description="OpenSandbox provider settings. Required when provider='opensandbox'.",
     )
 
     @field_validator("provider", mode="before")

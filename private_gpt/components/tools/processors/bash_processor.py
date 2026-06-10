@@ -10,6 +10,7 @@ from private_gpt.components.tools.processors.base import (
     _tool_matches,
 )
 from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
+from private_gpt.server.utils.artifact_input import SkillArtifact
 
 
 @singleton
@@ -23,8 +24,14 @@ class BashProcessor(ToolProcessor):
             if not _tool_matches(tool, BASH_TOOL_NAME) or not _is_unresolved_tool(tool):
                 continue
 
-            resolved = self._bash_builder.build_tool(
+            skill_artifacts = [
+                a for a in request.tool_context if isinstance(a, SkillArtifact)
+            ]
+            skill_filter = skill_artifacts[0].skill_filter if skill_artifacts else None
+
+            resolved = await self._bash_builder.build_tool(
                 _session_id(request),
+                skill_filter=skill_filter,
                 name=tool.name or BASH_TOOL_NAME,
                 type=tool.type or BASH_TOOL_NAME + "_v1",
             )
