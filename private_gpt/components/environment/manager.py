@@ -61,6 +61,10 @@ class EnvironmentManager:
                 env = self._active.get(session_id)
             if env:
                 env.touch()
+                if extra_bundles:
+                    # Content activated mid-session (e.g. a newly enabled
+                    # skill) must appear in the live sandbox. Idempotent.
+                    await self._mounter.prepare_bundles(env.sandbox, extra_bundles)
                 return env
             return await self._create(session_id, extra_bundles)
 
@@ -127,9 +131,7 @@ class EnvironmentManager:
             logger.info("Killed sandbox for session %s", session_id)
         except Exception as exc:
             # Backend-side TTL is the backstop if the kill never lands.
-            logger.warning(
-                "Failed to kill sandbox for session %s: %s", session_id, exc
-            )
+            logger.warning("Failed to kill sandbox for session %s: %s", session_id, exc)
 
     def _spawn(self, coro: Coroutine[Any, Any, Any], what: str) -> None:
         """Run a fire-and-forget coroutine, keeping a strong reference.

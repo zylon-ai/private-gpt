@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
+from private_gpt.components.sandbox.content_bundle import StoredBundle
 from private_gpt.components.sandbox.mount import SandboxMountSpec, VolumeSpec
 
 if TYPE_CHECKING:
@@ -46,6 +47,14 @@ class Mounter(ABC):
     def ensure_ready(self) -> None:  # noqa: B027 — optional hook, default no-op
         """One-time setup of the backing storage (e.g. mount s3fs). Idempotent."""
 
+    def storage_host_root(self) -> Path | None:
+        """Host path under which object-storage prefixes are visible, if any.
+
+        When set, StoredBundles are bind-mounted directly from
+        ``{root}/{storage_prefix}`` instead of being copied into the sandbox.
+        """
+        return None
+
     @abstractmethod
     def session_volumes(
         self, session_id: str, extra_bundles: list[ContentBundle] | None = None
@@ -54,6 +63,24 @@ class Mounter(ABC):
 
         Implementations create the host directories they return. Idempotent.
         """
+
+    def _stored_bundle_volumes(
+        self, extra_bundles: list[ContentBundle] | None
+    ) -> list[VolumeSpec]:
+        """Direct read-only volumes for stored bundles — no duplication."""
+        root = self.storage_host_root()
+        if root is None:
+            return []
+        return [
+            VolumeSpec(
+                name=f"stored-{_cache_key(bundle.canonical_path)[:8]}",
+                host_path=root / bundle.storage_prefix,
+                mount_path=bundle.canonical_path,
+                read_only=True,
+            )
+            for bundle in extra_bundles or []
+            if isinstance(bundle, StoredBundle)
+        ]
 
     def mount_specs(
         self, extra_bundles: list[ContentBundle] | None = None
@@ -77,12 +104,28 @@ class Mounter(ABC):
     ) -> None:
         """Materialise the layout and bundles inside the sandbox. Idempotent."""
         if self.session_volumes(session_id, extra_bundles) is None:
-            await asyncio.gather(
-                *[sandbox.make_dir(m.canonical) for m in self._layout]
-            )
+            await asyncio.gather(*[sandbox.make_dir(m.canonical) for m in self._layout])
+        await self.prepare_bundles(sandbox, extra_bundles)
+
+    async def prepare_bundles(
+        self,
+        sandbox: SandboxSession,
+        extra_bundles: list[ContentBundle] | None = None,
+    ) -> None:
+        """Materialise bundles not already present (e.g. via a direct volume).
+
+        Also runs on environment reuse, so content activated mid-session (a
+        newly enabled skill) appears in the live sandbox via the copy fallback.
+        """
         for bundle in extra_bundles or []:
-            if not await sandbox.path_exists(bundle.canonical_path):
-                await sandbox.initialize_mount(bundle.canonical_path, bundle.files)
+            if await sandbox.path_exists(bundle.canonical_path):
+                continue
+            files = (
+                await bundle.fetch()
+                if isinstance(bundle, StoredBundle)
+                else bundle.files
+            )
+            await sandbox.initialize_mount(bundle.canonical_path, files)
 
 
 class SandboxDirMounter(Mounter):
@@ -107,14 +150,19 @@ class LocalDirMounter(Mounter):
     def __init__(
         self,
         base: Path,
+        storage_root: Path | None = None,
         layout: Sequence[SessionMountDef] = DEFAULT_SESSION_LAYOUT,
     ) -> None:
         super().__init__(layout)
         self._sessions = base / "sessions"
         self._content_cache = base / "content_cache"
+        self._storage_root = storage_root
 
     def ensure_ready(self) -> None:
         self._sessions.mkdir(parents=True, exist_ok=True)
+
+    def storage_host_root(self) -> Path | None:
+        return self._storage_root
 
     def session_volumes(
         self, session_id: str, extra_bundles: list[ContentBundle] | None = None
@@ -132,7 +180,11 @@ class LocalDirMounter(Mounter):
                     read_only=not mount.writable,
                 )
             )
+        volumes.extend(self._stored_bundle_volumes(extra_bundles))
+        directly_mounted = {v.mount_path for v in volumes}
         for bundle in extra_bundles or []:
+            if bundle.canonical_path in directly_mounted:
+                continue
             key = _cache_key(bundle.canonical_path)
             # Not created here: prepare() skips re-materialising a bundle
             # whose cache directory already exists.

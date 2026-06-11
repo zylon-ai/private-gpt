@@ -22,6 +22,7 @@ from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
     InterceptorPhase,
 )
 from private_gpt.components.skills.models.skill_entities import SkillFilter
+from private_gpt.components.skills.paths import skill_mount_path
 from private_gpt.components.skills.services.skill_service import SkillService
 from private_gpt.components.tools.tool_names import (
     SKILL_LOAD_TOOL_NAME,
@@ -100,6 +101,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
 
         skills_cache = state.runtime.cache.skill
         entries = skills_cache.entries if skills_cache else []
+        resources = skills_cache.resources if skills_cache else {}
         if not entries:
             state.input.context_stack = stack
             context.set_state(state)
@@ -129,6 +131,8 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
                         name=name,
                         description=version.frontmatter.description,
                         loading=loading,
+                        location=f"{skill_mount_path(version.skill_id)}SKILL.md",
+                        resources=resources.get(version.skill_id, []),
                     )
                 )
 
@@ -151,6 +155,8 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
                     name=version.frontmatter.name,
                     version=version.version,
                     instructions=instructions,
+                    location=skill_mount_path(version.skill_id),
+                    resources=resources.get(version.skill_id, []),
                     source=f"skill:{version.frontmatter.name}",
                 )
             )

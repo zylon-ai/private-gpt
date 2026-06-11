@@ -253,6 +253,11 @@ class SkillService:
         parsed = parse_skill_markdown(markdown_bytes.decode("utf-8"))
         return parsed.body
 
+    async def list_version_files(self, version: SkillVersionEntity) -> list[str]:
+        """Relative paths of a version's bundled files (SKILL.md excluded)."""
+        files = await self._storage_component.list_files(version.storage_prefix)
+        return sorted(path for path in files if path != "SKILL.md")
+
 
 def _extract_skill_md(files: list[StoredFile]) -> str:
     for file in files:

@@ -45,7 +45,12 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
 
     def _make_mounter(self, base: Path) -> Mounter:
         """Factory hook — subclasses override to inject cloud-backed storage."""
-        return LocalDirMounter(base)
+        storage_root = (
+            Path(self.settings.data.local_data_folder) / "storage"
+            if self.settings.skills.storage_provider == "local"
+            else None
+        )
+        return LocalDirMounter(base, storage_root=storage_root)
 
     async def create_session(
         self,

@@ -1,12 +1,14 @@
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from injector import inject, singleton
 
 from private_gpt.components.sandbox.content_bundle import (
     BundledFile,
-    ContentBundle,
+    StoredBundle,
 )
 from private_gpt.components.skills.models.skill_entities import SkillFilter
+from private_gpt.components.skills.paths import skill_mount_path
 from private_gpt.components.skills.services.skill_service import SkillService
 from private_gpt.components.storage.storage_component import StorageComponent
 from private_gpt.settings.settings import Settings
@@ -14,14 +16,16 @@ from private_gpt.settings.settings import Settings
 
 @singleton
 class SkillLoader:
-    """Resolves active skills from a SkillFilter into ContentBundles.
+    """Resolves active skills from a SkillFilter into StoredBundles.
 
     Skill-specific knowledge (where skills live in storage, how to identify them)
-    is encapsulated here. The code execution layer receives generic ContentBundles
-    and does not need to know they came from skills.
+    is encapsulated here. The environment layer receives generic bundles and
+    does not need to know they came from skills.
 
-    Future content types (plugins, etc.) follow the same pattern with their own
-    loader, returning ContentBundles with different canonical_path prefixes.
+    Bundles are references (storage prefix + lazy fetch): when the execution
+    host can see the storage (s3fs mount or local storage dir), the skill is
+    bind-mounted directly with no copying; fetch() is only invoked by the
+    mounter's copy fallback.
     """
 
     @inject
@@ -39,26 +43,34 @@ class SkillLoader:
             bucket_name=settings.s3.durable_bucket_name,
         )
 
-    async def load(self, skill_filter: SkillFilter) -> list[ContentBundle]:
-        """Download skill files from object storage and return them as ContentBundles.
+    async def resolve(self, skill_filter: SkillFilter) -> list[StoredBundle]:
+        """Resolve active skills into by-reference bundles. No downloads here.
 
-        Each bundle has canonical_path="/mnt/skills/{skill_id}/" and the raw bytes
-        of every file stored under that skill version's storage prefix.
+        Each bundle points at the skill version's storage prefix and is mounted
+        at canonical_path="/mnt/skills/{skill_id}/"; bytes are fetched lazily
+        and only when the mounter cannot bind the storage path directly.
         """
         versions = await self._skill_service.recover_versions(skill_filter)
-        bundles: list[ContentBundle] = []
-        for item in versions:
-            prefix = item.version.storage_prefix
-            file_paths = await self._storage.list_files(prefix)
-            files = {fp: await self._storage.read_file(prefix, fp) for fp in file_paths}
-            bundles.append(
-                ContentBundle(
-                    canonical_path=f"/mnt/skills/{item.skill.id}/",
-                    files=[
-                        BundledFile(path=fp, content=content, permissions=0o444)
-                        for fp, content in files.items()
-                    ],
-                    writable=False,
-                )
+        return [
+            StoredBundle(
+                canonical_path=skill_mount_path(item.skill.id),
+                storage_prefix=item.version.storage_prefix,
+                writable=False,
+                fetch=self._fetcher(item.version.storage_prefix),
             )
-        return bundles
+            for item in versions
+        ]
+
+    def _fetcher(self, prefix: str) -> Callable[[], Awaitable[list[BundledFile]]]:
+        async def fetch() -> list[BundledFile]:
+            file_paths = await self._storage.list_files(prefix)
+            return [
+                BundledFile(
+                    path=fp,
+                    content=await self._storage.read_file(prefix, fp),
+                    permissions=0o444,
+                )
+                for fp in file_paths
+            ]
+
+        return fetch

@@ -17,6 +17,7 @@ from private_gpt.events.models import TextBlock
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
+    from private_gpt.components.sandbox.content_bundle import ContentBundle
     from private_gpt.components.skills.models.skill_entities import SkillFilter
     from private_gpt.events.models import ResultContentBlockType
 
@@ -50,7 +51,9 @@ class BashToolBuilder:
         type: str = BASH_TOOL_NAME + "_v1",
         description: str = BASH_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        bundles = await self._skill_loader.load(skill_filter) if skill_filter else []
+        bundles: list[ContentBundle] = (
+            list(await self._skill_loader.resolve(skill_filter)) if skill_filter else []
+        )
         session = await self._component.get_or_create_session(
             session_id, extra_bundles=bundles or None
         )

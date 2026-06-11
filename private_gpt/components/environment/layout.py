@@ -17,6 +17,8 @@ class SessionMountDef(SandboxMountSpec):
 # with a different layout pass their own tuple to the Mounter.
 DEFAULT_SESSION_LAYOUT: tuple[SessionMountDef, ...] = (
     SessionMountDef(name="workspace", canonical="/home/agent/", writable=True),
-    SessionMountDef(name="uploads", canonical="/mnt/user-data/uploads/", writable=False),
+    SessionMountDef(
+        name="uploads", canonical="/mnt/user-data/uploads/", writable=False
+    ),
     SessionMountDef(name="outputs", canonical="/mnt/user-data/outputs/", writable=True),
 )
