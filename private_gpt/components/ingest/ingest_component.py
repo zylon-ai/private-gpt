@@ -43,6 +43,7 @@ from private_gpt.components.ingest.utils import (
 )
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
+from private_gpt.components.readers.docling.docling_api_reader import ExtractionUnsuccessfulError
 from private_gpt.components.readers.reader_component import ReaderComponent
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import Settings
@@ -267,6 +268,14 @@ class IngestComponent:
                     notification=notification,
                     warnings=warnings,
                 )
+            except ExtractionUnsuccessfulError as e:
+                logger.warning(
+                    "Extraction unsuccessful for %s: %s", file_info.file_name, e
+                )
+                raise InvalidFileError(
+                    errors=[IngestionParseErrors.PARSING_FAILURE],
+                    warnings=warnings,
+                ) from e
             except RuntimeError as e:
                 raise InvalidFileError(
                     errors=[IngestionParseErrors.PARSING_FAILURE],

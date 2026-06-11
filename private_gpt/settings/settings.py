@@ -1181,6 +1181,14 @@ class DoclingSettings(BaseModel):
         description="Timeout in seconds for the Docling API requests.",
     )
 
+    failure_threshold: float = Field(
+        0.3,
+        description=(
+            "Ratio of unmapped-glyph characters over total characters above which a "
+            "document extraction is considered unsuccessful."
+        ),
+    )
+
     def __init__(self, **data: Any) -> None:
         # Convert a string in langs to a list (consider as a json)
         if "langs" in data:
