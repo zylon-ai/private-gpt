@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
-    from private_gpt.components.code_execution.content_bundle import ContentBundle
+    from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
 class BashExecutionResult(BaseModel):

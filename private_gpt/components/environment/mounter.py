@@ -113,10 +113,6 @@ class LocalDirMounter(Mounter):
         self._sessions = base / "sessions"
         self._content_cache = base / "content_cache"
 
-    @property
-    def sessions_path(self) -> Path:
-        return self._sessions
-
     def ensure_ready(self) -> None:
         self._sessions.mkdir(parents=True, exist_ok=True)
 

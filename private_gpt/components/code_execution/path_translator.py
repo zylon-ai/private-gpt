@@ -95,18 +95,3 @@ class PathTranslator:
             result = result.replace(real_str + "/", canonical)
             result = result.replace(real_str, canonical.rstrip("/"))
         return result
-
-    # ------------------------------------------------------------------
-    # Write-guard
-    # ------------------------------------------------------------------
-
-    def assert_writable(self, canonical_path: str) -> None:
-        """Raise ValueError if canonical_path resolves to a read-only mount."""
-        for canonical, _, writable in self._mounts:
-            if canonical_path.startswith(canonical):
-                if not writable:
-                    raise ValueError(
-                        f"Path '{canonical_path}' is in a read-only mount ('{canonical}')."
-                    )
-                return
-        # Outside all mounts: allow as workspace-relative (writable).

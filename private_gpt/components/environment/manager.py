@@ -48,10 +48,6 @@ class EnvironmentManager:
         self._background_tasks: set[asyncio.Task[Any]] = set()
         self._mounter.ensure_ready()
 
-    @property
-    def mounter(self) -> Mounter:
-        return self._mounter
-
     async def acquire(
         self,
         session_id: str,

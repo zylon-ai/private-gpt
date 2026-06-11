@@ -13,7 +13,7 @@ if TYPE_CHECKING:
         CodeExecutionProvider,
         CodeExecutionSession,  # noqa: TC004
     )
-    from private_gpt.components.code_execution.content_bundle import ContentBundle
+    from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
 @singleton

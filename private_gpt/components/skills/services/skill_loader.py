@@ -2,7 +2,7 @@ from pathlib import Path
 
 from injector import inject, singleton
 
-from private_gpt.components.code_execution.content_bundle import (
+from private_gpt.components.sandbox.content_bundle import (
     BundledFile,
     ContentBundle,
 )
