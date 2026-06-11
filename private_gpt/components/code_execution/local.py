@@ -41,7 +41,6 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
             sandbox_provider=LocalSandboxProvider(settings),
             mounter=self._make_mounter(base),
             ttl_seconds=settings.code_execution.session_ttl_seconds,
-            reaper_interval_seconds=settings.code_execution.session_reaper_interval_seconds,
         )
 
     def _make_mounter(self, base: Path) -> Mounter:

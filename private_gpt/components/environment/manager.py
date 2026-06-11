@@ -33,7 +33,7 @@ class EnvironmentManager:
         sandbox_provider: SandboxProvider,
         mounter: Mounter,
         ttl_seconds: int,
-        reaper_interval_seconds: int,
+        reaper_interval_seconds: int | None = None,
     ) -> None:
         self._provider = sandbox_provider
         self._mounter = mounter
@@ -153,12 +153,18 @@ class EnvironmentManager:
         task.add_done_callback(_done)
 
     def _ensure_reaper(self) -> None:
+        if not self._reaper_interval:
+            return
+
         if self._reaper_task is None or self._reaper_task.done():
             self._reaper_task = asyncio.get_running_loop().create_task(
                 self._reaper_loop()
             )
 
     async def _reaper_loop(self) -> None:
+        if not self._reaper_interval:
+            return
+
         while True:
             await asyncio.sleep(self._reaper_interval)
             try:
