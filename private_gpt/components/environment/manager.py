@@ -17,8 +17,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_REAPER_INTERVAL_SECONDS = 60
-
 
 class EnvironmentManager:
     """Owns the lifecycle of managed environments, keyed by session id.
@@ -35,7 +33,7 @@ class EnvironmentManager:
         sandbox_provider: SandboxProvider,
         mounter: Mounter,
         ttl_seconds: int,
-        reaper_interval_seconds: int = _REAPER_INTERVAL_SECONDS,
+        reaper_interval_seconds: int,
     ) -> None:
         self._provider = sandbox_provider
         self._mounter = mounter
