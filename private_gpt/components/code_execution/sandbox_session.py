@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING
 
 from private_gpt.components.code_execution.base import (
@@ -11,44 +10,38 @@ from private_gpt.components.code_execution.base import (
 from private_gpt.components.sandbox.base import SandboxExecOptions
 
 if TYPE_CHECKING:
+    from private_gpt.components.environment.environment import Environment
     from private_gpt.components.sandbox.base import SandboxSession
 
 
 class SandboxCodeExecutionSession(CodeExecutionSession):
-    """Generic CodeExecutionSession backed by any SandboxSession.
+    """CodeExecutionSession tool protocol over a managed Environment.
 
-    The sandbox is responsible for path translation and permission enforcement.
-    This class only adds the CodeExecutionSession protocol on top.
+    The environment owns lifetime/idle tracking; its sandbox owns path
+    translation and permission enforcement. This class only adapts the
+    tool protocol on top.
     """
 
-    def __init__(
-        self,
-        session_id: str,
-        sandbox: SandboxSession,
-        workspace_canonical: str,
-        last_accessed: list[float],
-    ) -> None:
-        self._id = session_id
-        self._sandbox = sandbox
-        self._workspace = workspace_canonical
-        self._last_accessed = last_accessed
+    def __init__(self, environment: Environment) -> None:
+        self._env = environment
+        self._id = environment.id
 
-    def _touch(self) -> None:
-        self._last_accessed[0] = time.monotonic()
+    @property
+    def _sandbox(self) -> SandboxSession:
+        return self._env.sandbox
 
     async def execute_bash(
         self, command: str, timeout: int | None = None, restart: bool = False
     ) -> BashExecutionResult:
-        self._touch()
+        workspace = self._env.workspace
         if restart:
-            await self._sandbox.exec(
-                f"rm -rf {self._workspace}* {self._workspace}.[!.]*",
-                SandboxExecOptions(cwd="/"),
-            )
-            await self._sandbox.make_dir(self._workspace)
-        result = await self._sandbox.exec(
+            # No cwd: the default is the workspace itself, which every backend
+            # can resolve (cwd="/" is outside the local translator's mounts).
+            await self._env.exec(f"rm -rf {workspace}* {workspace}.[!.]*")
+            await self._sandbox.make_dir(workspace)
+        result = await self._env.exec(
             command,
-            SandboxExecOptions(timeout=timeout, cwd=self._workspace),
+            SandboxExecOptions(timeout=timeout, cwd=workspace),
         )
         return BashExecutionResult(
             success=result.success,
@@ -61,7 +54,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     async def view(
         self, path: str, view_range: tuple[int, int] | None = None
     ) -> FileOperationResult:
-        self._touch()
+        self._env.touch()
         try:
             if not await self._sandbox.path_exists(path):
                 return FileOperationResult(
@@ -90,7 +83,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     async def str_replace(
         self, path: str, old_str: str, new_str: str
     ) -> FileOperationResult:
-        self._touch()
+        self._env.touch()
         try:
             raw = await self._sandbox.read_file(path)
             text = raw.decode("utf-8", errors="replace")
@@ -111,7 +104,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             return FileOperationResult(success=False, error=str(exc))
 
     async def create(self, path: str, file_text: str) -> FileOperationResult:
-        self._touch()
+        self._env.touch()
         try:
             if await self._sandbox.path_exists(path):
                 return FileOperationResult(
@@ -125,7 +118,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     async def insert(
         self, path: str, insert_line: int, new_str: str
     ) -> FileOperationResult:
-        self._touch()
+        self._env.touch()
         try:
             raw = await self._sandbox.read_file(path)
             text = raw.decode("utf-8", errors="replace")

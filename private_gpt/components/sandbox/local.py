@@ -21,11 +21,11 @@ from private_gpt.components.sandbox.base import (
 from private_gpt.components.sandbox.mount import LocalMountSpec
 
 if TYPE_CHECKING:
-    from private_gpt.components.code_execution.content_bundle import BundledFile
     from private_gpt.components.sandbox.base import (
         SandboxExecOptions,
     )
-    from private_gpt.components.sandbox.mount import SandboxMountSpec
+    from private_gpt.components.sandbox.content_bundle import BundledFile
+    from private_gpt.components.sandbox.mount import SandboxMountSpec, VolumeSpec
     from private_gpt.settings.settings import Settings
 
 
@@ -47,6 +47,7 @@ class BashExecutorSandbox(SandboxSession):
         )
         self._executor = executor
         self._readonly = [m.canonical for m in mounts if not m.writable]
+        self._default_cwd = next((m.canonical for m in mounts if m.writable), "/")
 
     def _assert_writable(self, path: str) -> None:
         for prefix in self._readonly:
@@ -56,7 +57,9 @@ class BashExecutorSandbox(SandboxSession):
     async def exec(
         self, command: str, opts: SandboxExecOptions | None = None
     ) -> SandboxExecutionResult:
-        cwd = self._translator.to_real((opts.cwd if opts else None) or "/home/agent/")
+        cwd = self._translator.to_real(
+            (opts.cwd if opts else None) or self._default_cwd
+        )
         cmd = self._translator.rewrite_command(command)
         result = await self._executor.run(
             cmd, cwd=cwd, timeout=opts.timeout if opts else None
@@ -171,11 +174,28 @@ class LocalSandboxProvider(SandboxProvider):
         user_id: str | None = None,
         timeout: int | None = None,
         bundle_specs: list[SandboxMountSpec] | None = None,
+        *,
+        session_id: str | None = None,
+        volumes: list[VolumeSpec] | None = None,
     ) -> SandboxSession:
+        if volumes:
+            # Host-backed session: the mounter owns the directories, the
+            # sandbox only translates canonical paths onto them.
+            specs = [
+                LocalMountSpec(
+                    canonical=v.mount_path,
+                    real_path=v.host_path,
+                    writable=not v.read_only,
+                )
+                for v in volumes
+            ]
+            return BashExecutorSandbox(specs, self._executor)
+
+        # Standalone use: an ephemeral workspace owned by the session.
         workdir = await anyio.to_thread.run_sync(
             lambda: Path(tempfile.mkdtemp(prefix=f"sandbox_{user_id or 'local'}_"))
         )
-        specs: list[LocalMountSpec] = [
+        specs = [
             LocalMountSpec(canonical="/home/agent/", real_path=workdir, writable=True)
         ]
         specs.extend(s for s in bundle_specs or [] if isinstance(s, LocalMountSpec))

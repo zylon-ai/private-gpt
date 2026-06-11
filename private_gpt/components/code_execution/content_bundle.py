@@ -1,13 +1,5 @@
-from pydantic import BaseModel, Field
+"""Compatibility re-export — the models live in the sandbox layer now."""
 
+from private_gpt.components.sandbox.content_bundle import BundledFile, ContentBundle
 
-class BundledFile(BaseModel):
-    path: str  # relative path within the bundle e.g. "SKILL.md"
-    content: bytes
-    permissions: int = 0o444  # Unix permissions
-
-
-class ContentBundle(BaseModel):
-    canonical_path: str  # must end with "/" e.g. "/mnt/skills/foo/"
-    files: list[BundledFile] = Field(default_factory=list)
-    writable: bool = False
+__all__ = ["BundledFile", "ContentBundle"]

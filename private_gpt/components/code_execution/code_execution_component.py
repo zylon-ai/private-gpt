@@ -39,10 +39,9 @@ class CodeExecutionComponent:
             return None
 
         async with self._lock:
-            session = self._sessions.get(session_id)
-            if session is not None:
-                return session
-
+            # Always delegate: the provider reuses or restores per session_id,
+            # and a session cached here could outlive its managed backend
+            # (e.g. after the idle reaper killed the sandbox).
             session = await provider.create_session(
                 session_id,
                 extra_bundles=extra_bundles,

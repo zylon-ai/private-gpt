@@ -9,8 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
-    from private_gpt.components.code_execution.content_bundle import BundledFile
-    from private_gpt.components.sandbox.mount import SandboxMountSpec
+    from private_gpt.components.sandbox.content_bundle import BundledFile
+    from private_gpt.components.sandbox.mount import SandboxMountSpec, VolumeSpec
 
 
 class SandboxExecutionResult(BaseModel):
@@ -140,8 +140,40 @@ class SandboxProvider(ABC):
         user_id: str | None = None,
         timeout: int | None = None,
         bundle_specs: list[SandboxMountSpec] | None = None,
+        *,
+        session_id: str | None = None,
+        volumes: list[VolumeSpec] | None = None,
     ) -> SandboxSession:
-        """Create a sandbox session. The session may be lazy until first use."""
+        """Create a sandbox session. The session may be lazy until first use.
+
+        ``session_id`` tags the backend resource so it can be found again by
+        restore_session(); ``volumes`` are host directories to bind-mount.
+        Backends without those capabilities may ignore both.
+        """
+
+    async def restore_session(
+        self,
+        session_id: str,
+        timeout: int | None = None,
+        bundle_specs: list[SandboxMountSpec] | None = None,
+    ) -> SandboxSession | None:
+        """Reattach to an existing backend sandbox for this session, if any.
+
+        Default: the backend cannot restore — returns None.
+        """
+        return None
+
+    async def renew_session(self, session: SandboxSession) -> None:  # noqa: B027
+        """Extend the backend-side lifetime of a live session. Default: no-op."""
+
+    async def kill_session(
+        self, session: SandboxSession, session_id: str | None = None
+    ) -> None:
+        """Forcefully release a session's backend resources.
+
+        Default: delegate to delete_session().
+        """
+        await self.delete_session(session)
 
     @abstractmethod
     async def delete_session(self, session: SandboxSession) -> None:
