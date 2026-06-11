@@ -5,9 +5,13 @@ from injector import inject, singleton
 
 from private_gpt.components.sandbox.content_bundle import (
     BundledFile,
+    ContentBundle,
     StoredBundle,
 )
-from private_gpt.components.skills.models.skill_entities import SkillFilter
+from private_gpt.components.skills.models.skill_entities import (
+    SkillFilter,
+    SkillVersionEntity,
+)
 from private_gpt.components.skills.paths import skill_mount_path
 from private_gpt.components.skills.services.skill_service import SkillService
 from private_gpt.components.storage.storage_component import StorageComponent
@@ -42,6 +46,26 @@ class SkillLoader:
             local_root_path=local_root,
             bucket_name=settings.s3.durable_bucket_name,
         )
+
+    def bundles_for_versions(
+        self, versions: list[SkillVersionEntity]
+    ) -> list[ContentBundle]:
+        """Create by-reference bundles from already-resolved skill version entities.
+
+        Used by the skills interceptor to populate ``ContentBundlesLayer`` without
+        a redundant ``recover_versions`` round-trip.
+        """
+        bundles: list[ContentBundle] = []
+        for v in versions:
+            bundles.append(
+                StoredBundle(
+                    canonical_path=skill_mount_path(v.skill_id),
+                    storage_prefix=v.storage_prefix,
+                    writable=False,
+                    fetch=self._fetcher(v.storage_prefix),
+                )
+            )
+        return bundles
 
     async def resolve(self, skill_filter: SkillFilter) -> list[StoredBundle]:
         """Resolve active skills into by-reference bundles. No downloads here.

@@ -8,9 +8,6 @@ from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
-from private_gpt.components.skills.services.skill_loader import (
-    SkillLoader,
-)
 from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import BASH_TOOL_FN
 from private_gpt.events.models import TextBlock
@@ -18,7 +15,6 @@ from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
     from private_gpt.components.sandbox.content_bundle import ContentBundle
-    from private_gpt.components.skills.models.skill_entities import SkillFilter
     from private_gpt.events.models import ResultContentBlockType
 
 
@@ -37,23 +33,18 @@ class BashToolBuilder:
         self,
         code_execution_component: CodeExecutionComponent,
         settings: Settings,
-        skill_loader: SkillLoader,
     ) -> None:
         self._component = code_execution_component
         self._settings = settings
-        self._skill_loader = skill_loader
 
     async def build_tool(
         self,
         session_id: str,
-        skill_filter: SkillFilter | None = None,
+        bundles: list[ContentBundle] | None = None,
         name: str = BASH_TOOL_NAME,
         type: str = BASH_TOOL_NAME + "_v1",
         description: str = BASH_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        bundles: list[ContentBundle] = (
-            list(await self._skill_loader.resolve(skill_filter)) if skill_filter else []
-        )
         session = await self._component.get_or_create_session(
             session_id, extra_bundles=bundles or None
         )

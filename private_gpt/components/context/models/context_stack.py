@@ -4,11 +4,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.context.models.context_layer import (
     AnyContextLayer,
+    ContentBundlesLayer,
     DocumentLayer,
     ToolDefinitionsLayer,
 )
 from private_gpt.components.context.models.layer_type import LayerType
 from private_gpt.components.engines.citations.types import Document
+from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
 class ContextStack(BaseModel):
@@ -61,6 +63,15 @@ class ContextStack(BaseModel):
         """Return documents from all DOCUMENT layers in insertion order."""
         return [
             layer.document for layer in self.layers if isinstance(layer, DocumentLayer)
+        ]
+
+    def all_bundles(self) -> list[ContentBundle]:
+        """Return bundles from all CONTENT_BUNDLES layers in insertion order."""
+        return [
+            bundle
+            for layer in self.layers
+            if isinstance(layer, ContentBundlesLayer)
+            for bundle in layer.bundles
         ]
 
     def layers_of_type(

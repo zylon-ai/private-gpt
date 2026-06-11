@@ -15,6 +15,7 @@ from private_gpt.chat.input_models import BlobVisibilityMode, PromptConfig
 from private_gpt.chat.schema_models import create_model_from_json_schema
 from private_gpt.components.engines.citations.types import Citation, Document
 from private_gpt.components.llm.llm_helper import TokenizerFn
+from private_gpt.components.sandbox.content_bundle import ContentBundle
 from private_gpt.components.tools.tool_names import resolve_internal_tool_name
 from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.server.mcp.config import McpServerConfig
@@ -490,14 +491,26 @@ class ResolvedToolConfig(ToolConfig):
 class ResolvedContextConfig(ContextConfig):
     """Consolidated version of ContextConfig."""
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     documents: list[Document] | None = Field(
         default=None,
         description="List of documents to use as context in the chat.",
+    )
+    content_bundles: list[ContentBundle] = Field(
+        default_factory=list,
+        description=(
+            "Content bundles transferred from ContentBundlesLayer. "
+            "Consumed by tool builders (e.g. BashToolBuilder) to mount skills."
+        ),
+        exclude=True,
     )
 
 
 class ResolvedChatRequest(ChatRequest):
     """Consolidated version of ChatRequest with flattened fields for easier access."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     system: ResolvedSystemConfig = Field(
         default_factory=ResolvedSystemConfig,
