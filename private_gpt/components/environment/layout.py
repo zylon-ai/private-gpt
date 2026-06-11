@@ -16,9 +16,22 @@ class SessionMountDef(SandboxMountSpec):
 # The canonical session filesystem layout, defined exactly once. Environments
 # with a different layout pass their own tuple to the Mounter.
 DEFAULT_SESSION_LAYOUT: tuple[SessionMountDef, ...] = (
-    SessionMountDef(name="workspace", canonical="/home/agent/", writable=True),
     SessionMountDef(
-        name="uploads", canonical="/mnt/user-data/uploads/", writable=False
+        name="workspace",
+        canonical="/home/agent/",
+        writable=True,
+        description="Working directory — create all new files here",
     ),
-    SessionMountDef(name="outputs", canonical="/mnt/user-data/outputs/", writable=True),
+    SessionMountDef(
+        name="uploads",
+        canonical="/mnt/user-data/uploads/",
+        writable=False,
+        description="Files uploaded by the user",
+    ),
+    SessionMountDef(
+        name="outputs",
+        canonical="/mnt/user-data/outputs/",
+        writable=True,
+        description="Deliverables the user can download",
+    ),
 )

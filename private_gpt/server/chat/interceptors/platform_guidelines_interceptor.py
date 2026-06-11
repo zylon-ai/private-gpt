@@ -19,6 +19,7 @@ from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
 )
 from private_gpt.components.engines.citations.types import Document
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
+from private_gpt.components.tools.tool_names import CODE_EXECUTION_INTERNAL_TOOLS
 
 if TYPE_CHECKING:
     from private_gpt.chat.input_models import PromptConfig
@@ -29,9 +30,15 @@ logger = logging.getLogger(__name__)
 _SOURCE_TOOL_INSTRUCTIONS = "platform:tool_instructions"
 _SOURCE_CITATIONS = "platform:citations"
 _SOURCE_THINKING = "platform:thinking"
+_SOURCE_CODE_EXECUTION = "platform:code_execution"
 
 _ALL_PLATFORM_SOURCES = frozenset(
-    {_SOURCE_TOOL_INSTRUCTIONS, _SOURCE_CITATIONS, _SOURCE_THINKING}
+    {
+        _SOURCE_TOOL_INSTRUCTIONS,
+        _SOURCE_CITATIONS,
+        _SOURCE_THINKING,
+        _SOURCE_CODE_EXECUTION,
+    }
 )
 
 
@@ -74,6 +81,10 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
         # 3. Thinking guidelines (only when reasoning is enabled)
         if prompt.thinking and request.thinking.enabled:
             stack = self._inject_thinking(stack)
+
+        # 4. Code execution environment instructions
+        if prompt.code_execution and self._has_code_execution_tool(tools):
+            stack = self._inject_code_execution(stack, tools)
 
         state.input.context_stack = stack
         context.set_state(state)
@@ -128,6 +139,31 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
                 )
             )
         return stack
+
+    def _inject_code_execution(
+        self, stack: ContextStack, tools: list[ToolSpec]
+    ) -> ContextStack:
+        content = self._prompt_builder.create_code_execution_prompt(tools).format()
+        if content:
+            stack = stack.append_layer(
+                ToolInstructionsLayer(
+                    tool_name="bash",
+                    instructions=content,
+                    source=_SOURCE_CODE_EXECUTION,
+                )
+            )
+        return stack
+
+    @staticmethod
+    def _has_code_execution_tool(tools: list[ToolSpec]) -> bool:
+        for tool in tools:
+            try:
+                canonical = tool.get_original_tool_name()
+            except ValueError:
+                canonical = tool.name or ""
+            if canonical in CODE_EXECUTION_INTERNAL_TOOLS:
+                return True
+        return False
 
     # ------------------------------------------------------------------
     # Cached content loaders
