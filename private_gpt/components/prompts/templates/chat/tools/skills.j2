@@ -1,0 +1,30 @@
+{% set list_tool = namespace.tools.get("list_skills_tool_name") %}
+{% set load_tool = namespace.tools.get("load_skill_tool_name") %}
+{% set unload_tool = namespace.tools.get("unload_skill_tool_name") %}
+<skills>
+Skills are curated instruction sets that give you specialised knowledge and workflows for specific domains. Use them whenever the user's request falls within a skill's area of expertise.
+
+**When to use skills:**
+- The user's request mentions a topic or task that a skill might cover.
+- A task requires domain-specific steps, tools, or conventions you wouldn't know otherwise.
+- The user explicitly asks you to use a skill.
+
+**Workflow:**
+1. Call `{{ list_tool }}` to see available skills and their descriptions.
+2. Call `{{ load_tool }}` with the skill name that best matches the request.
+3. Follow the instructions returned by `{{ load_tool }}` when completing the task.
+4. Call `{{ unload_tool }}` when the task is done and the skill is no longer needed.
+
+**Rules:**
+- Always list skills before loading to confirm the name is correct.
+- Load at most one skill at a time unless the task clearly spans multiple domains.
+- If no skill matches the request, proceed without loading any.
+- Never invent skill names; only use names returned by `{{ list_tool }}`.
+
+{% if few_shots == "True" %}
+Examples:
+- User asks to "analyse this dataset using the data-science skill" → call `{{ list_tool }}`, then `{{ load_tool }}` with name `data-science`.
+- User asks a general question unrelated to any skill → skip skill tools and answer directly.
+- After finishing a skill-guided task → call `{{ unload_tool }}` with the skill name.
+{% endif %}
+</skills>

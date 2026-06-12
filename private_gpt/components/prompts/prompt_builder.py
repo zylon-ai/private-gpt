@@ -529,6 +529,29 @@ class PromptBuilderService:
             few_shots=few_shots,
         )
 
+    def create_skills_prompt(
+        self,
+        tools: list["ToolSpec"],
+        few_shots: bool = False,
+    ) -> BasePromptTemplate:
+        """Create the skill management instructions prompt.
+
+        Renders ``chat/tools/skills.j2`` with the active skill tool namespace.
+        Returns an empty template when the template is missing or rendering fails.
+        """
+        namespace = _build_tool_namespace(tools)
+        template_path = "chat/tools/skills.j2"
+        try:
+            template = self.template_service.get_template(template_path)
+            rendered = template.render(
+                namespace=namespace,
+                few_shots=str(few_shots),
+            )
+            return PromptTemplate(template=rendered.strip())
+        except Exception as exc:
+            logger.warning("PromptBuilder: failed to render %s: %s", template_path, exc)
+            return PromptTemplate(template="")
+
     def create_thinking_guidelines(self, few_shots: bool = True) -> BasePromptTemplate:
         """Create the thinking/reasoning guidelines prompt.
 

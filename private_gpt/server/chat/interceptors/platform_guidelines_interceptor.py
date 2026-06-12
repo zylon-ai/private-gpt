@@ -19,6 +19,9 @@ from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
 )
 from private_gpt.components.engines.citations.types import Document
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
+from private_gpt.components.tools.tool_names import (
+    SKILL_MANAGEMENT_TOOLS,
+)
 
 if TYPE_CHECKING:
     from private_gpt.chat.input_models import PromptConfig
@@ -29,9 +32,15 @@ logger = logging.getLogger(__name__)
 _SOURCE_TOOL_INSTRUCTIONS = "platform:tool_instructions"
 _SOURCE_CITATIONS = "platform:citations"
 _SOURCE_THINKING = "platform:thinking"
+_SOURCE_SKILLS = "platform:skills"
 
 _ALL_PLATFORM_SOURCES = frozenset(
-    {_SOURCE_TOOL_INSTRUCTIONS, _SOURCE_CITATIONS, _SOURCE_THINKING}
+    {
+        _SOURCE_TOOL_INSTRUCTIONS,
+        _SOURCE_CITATIONS,
+        _SOURCE_THINKING,
+        _SOURCE_SKILLS,
+    }
 )
 
 
@@ -74,6 +83,10 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
         # 3. Thinking guidelines (only when reasoning is enabled)
         if prompt.thinking and request.thinking.enabled:
             stack = self._inject_thinking(stack)
+
+        # 5. Skill management instructions
+        if prompt.skills and self._has_skill_management_tool(tools):
+            stack = self._inject_skills(stack, tools)
 
         state.input.context_stack = stack
         context.set_state(state)
@@ -128,6 +141,31 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
                 )
             )
         return stack
+
+    def _inject_skills(
+        self, stack: ContextStack, tools: list[ToolSpec]
+    ) -> ContextStack:
+        content = self._prompt_builder.create_skills_prompt(tools).format()
+        if content:
+            stack = stack.append_layer(
+                ToolInstructionsLayer(
+                    tool_name="skills",
+                    instructions=content,
+                    source=_SOURCE_SKILLS,
+                )
+            )
+        return stack
+
+    @staticmethod
+    def _has_skill_management_tool(tools: list[ToolSpec]) -> bool:
+        for tool in tools:
+            try:
+                canonical = tool.get_original_tool_name()
+            except ValueError:
+                canonical = tool.name or ""
+            if canonical in SKILL_MANAGEMENT_TOOLS:
+                return True
+        return False
 
     # ------------------------------------------------------------------
     # Cached content loaders
