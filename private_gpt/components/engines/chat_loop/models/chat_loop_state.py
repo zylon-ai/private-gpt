@@ -1,4 +1,3 @@
-import copy
 from collections.abc import Mapping
 from typing import Any, Self
 
@@ -35,13 +34,6 @@ class ChatLoopInputState(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def model_copy(
-        self, *, update: Mapping[str, Any] | None = None, deep: bool = False
-    ) -> Self:
-        if deep:
-            return copy.deepcopy(self)
-        return super().model_copy(update=update, deep=deep)
-
 
 class ChatLoopRuntimeState(BaseModel):
     """Store runtime counters."""
@@ -54,18 +46,6 @@ class ChatLoopRuntimeState(BaseModel):
     cache: "ChatLoopRuntimeCache" = Field(
         default_factory=lambda: ChatLoopRuntimeCache()
     )
-
-    def model_copy(
-        self, *, update: Mapping[str, Any] | None = None, deep: bool = False
-    ) -> Self:
-        if deep:
-            # Override the default deep copy behavior to use deepcopy
-            # for the entire model, ensuring all nested structures
-            # are copied correctly with types.
-            # Otherwise, the types inside additional_kwargs dicts can get lost
-            return copy.deepcopy(self)
-
-        return super().model_copy(update=update, deep=deep)
 
 
 class ChatLoopOutputState(BaseModel):
@@ -113,3 +93,32 @@ class ChatLoopState(BaseModel):
     timeline: list[ChatLoopTimelineEntry] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def model_copy(
+        self, *, update: Mapping[str, Any] | None = None, deep: bool = False
+    ) -> Self:
+
+        # Temporarily detach fields that must not be deep-copied:
+        # - tokenizer_fn: HF tokenizer is not safely copyable and expensive
+        # - context_stack: pydantic frozen — all mutations return new instances
+        # - original_input: set once at loop init, never mutated
+        tokenizer_fn = self.runtime.tokenizer_fn
+        context_stack = self.input.context_stack
+        original_input = self.original_input
+
+        self.runtime.tokenizer_fn = None
+        self.input.context_stack = ContextStack()
+        self.original_input = None
+
+        try:
+            copied = super().model_copy(update=update, deep=deep)
+        finally:
+            self.runtime.tokenizer_fn = tokenizer_fn
+            self.input.context_stack = context_stack
+            self.original_input = original_input
+
+        copied.runtime.tokenizer_fn = tokenizer_fn
+        copied.input.context_stack = context_stack
+        copied.original_input = original_input
+
+        return copied
