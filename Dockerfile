@@ -17,12 +17,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     ENABLE_WEB_SCRAPING=0; \
     ENABLE_DATABASE=0; \
     for extra in $EXTRAS; do \
-      case "$extra" in \
-        core|ingest|ingest-core|ingest-documents|ingest-markitdown|ingest-markup) ENABLE_DOCUMENTS=1 ;; \
-        core|media|media-core|media-image|media-audio|media-video) ENABLE_MEDIA=1 ;; \
-        core|tools|tool-web-scraping) ENABLE_WEB_SCRAPING=1 ;; \
-        core|tools|tool-database|database|database-core|database-postgres|database-mysql|database-mssql|database-db2) ENABLE_DATABASE=1 ;; \
-      esac; \
+      case "$extra" in core|ingest|ingest-core|ingest-documents|ingest-markitdown|ingest-markup) ENABLE_DOCUMENTS=1 ;; esac; \
+      case "$extra" in core|media|media-core|media-image|media-audio|media-video) ENABLE_MEDIA=1 ;; esac; \
+      case "$extra" in core|tools|tool-web-scraping) ENABLE_WEB_SCRAPING=1 ;; esac; \
+      case "$extra" in core|tools|tool-database|database|database-core|database-postgres|database-mysql|database-mssql|database-db2) ENABLE_DATABASE=1 ;; esac; \
     done; \
     apt update; \
     apt install -yqq --no-install-recommends \
