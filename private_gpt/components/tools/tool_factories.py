@@ -136,11 +136,14 @@ class WebScraperServiceFactory:
     @inject
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self._instance: "WebScraperService | None" = None
 
     def create(self) -> "WebScraperService":
         from private_gpt.components.web.web_scraper_service import WebScraperService
 
-        return WebScraperService(settings=self.settings)
+        if self._instance is None:
+            self._instance = WebScraperService(settings=self.settings)
+        return self._instance
 
 
 @singleton
