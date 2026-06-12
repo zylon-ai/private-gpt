@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.1](https://github.com/zylon-ai/private-gpt/compare/v1.0.0...v1.0.1) (2026-06-12)
+
+
+### Bug Fixes
+
+* add missing docker database deps ([#2264](https://github.com/zylon-ai/private-gpt/issues/2264)) ([4302bd6](https://github.com/zylon-ai/private-gpt/commit/4302bd629a4ca5fcee23e9064a0448cd110eb523))
+* ensure that the publisher is ready to publish new messages ([#2266](https://github.com/zylon-ai/private-gpt/issues/2266)) ([4c0c500](https://github.com/zylon-ai/private-gpt/commit/4c0c500bbd34a06feedb52e1d267d9b7b918554b))
+* make embedding API key optional for local OpenAI-compatible engines ([#2261](https://github.com/zylon-ai/private-gpt/issues/2261)) ([c120a90](https://github.com/zylon-ai/private-gpt/commit/c120a90603f78bb28b19f758a9ba4b40c37480ff)), closes [#2260](https://github.com/zylon-ai/private-gpt/issues/2260)
+* use PGPT_HOME for local data, caches, and cleanup paths ([#2267](https://github.com/zylon-ai/private-gpt/issues/2267)) ([4021cf4](https://github.com/zylon-ai/private-gpt/commit/4021cf4e203d4c309f496a8fbf95271f6084834c))
+
 ## [1.0.0](https://github.com/zylon-ai/private-gpt/compare/v0.6.2...v1.0.0) (2026-06-03)
 
 
