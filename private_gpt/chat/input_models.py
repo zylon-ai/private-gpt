@@ -109,6 +109,13 @@ class PromptConfig(BaseModel):
             "available paths) when any code execution tool is present."
         ),
     )
+    skills: bool = Field(
+        default=False,
+        description=(
+            "Enable skill management instructions (when to load/unload skills, "
+            "workflow guidance) when any skill management tool is present."
+        ),
+    )
 
 
 class System(BaseModel):

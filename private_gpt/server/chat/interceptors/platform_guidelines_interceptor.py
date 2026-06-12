@@ -19,7 +19,10 @@ from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
 )
 from private_gpt.components.engines.citations.types import Document
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
-from private_gpt.components.tools.tool_names import CODE_EXECUTION_INTERNAL_TOOLS
+from private_gpt.components.tools.tool_names import (
+    CODE_EXECUTION_INTERNAL_TOOLS,
+    SKILL_MANAGEMENT_TOOLS,
+)
 
 if TYPE_CHECKING:
     from private_gpt.chat.input_models import PromptConfig
@@ -31,6 +34,7 @@ _SOURCE_TOOL_INSTRUCTIONS = "platform:tool_instructions"
 _SOURCE_CITATIONS = "platform:citations"
 _SOURCE_THINKING = "platform:thinking"
 _SOURCE_CODE_EXECUTION = "platform:code_execution"
+_SOURCE_SKILLS = "platform:skills"
 
 _ALL_PLATFORM_SOURCES = frozenset(
     {
@@ -38,6 +42,7 @@ _ALL_PLATFORM_SOURCES = frozenset(
         _SOURCE_CITATIONS,
         _SOURCE_THINKING,
         _SOURCE_CODE_EXECUTION,
+        _SOURCE_SKILLS,
     }
 )
 
@@ -85,6 +90,10 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
         # 4. Code execution environment instructions
         if prompt.code_execution and self._has_code_execution_tool(tools):
             stack = self._inject_code_execution(stack, tools)
+
+        # 5. Skill management instructions
+        if prompt.skills and self._has_skill_management_tool(tools):
+            stack = self._inject_skills(stack, tools)
 
         state.input.context_stack = stack
         context.set_state(state)
@@ -154,6 +163,20 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
             )
         return stack
 
+    def _inject_skills(
+        self, stack: ContextStack, tools: list[ToolSpec]
+    ) -> ContextStack:
+        content = self._prompt_builder.create_skills_prompt(tools).format()
+        if content:
+            stack = stack.append_layer(
+                ToolInstructionsLayer(
+                    tool_name="skills",
+                    instructions=content,
+                    source=_SOURCE_SKILLS,
+                )
+            )
+        return stack
+
     @staticmethod
     def _has_code_execution_tool(tools: list[ToolSpec]) -> bool:
         for tool in tools:
@@ -162,6 +185,17 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
             except ValueError:
                 canonical = tool.name or ""
             if canonical in CODE_EXECUTION_INTERNAL_TOOLS:
+                return True
+        return False
+
+    @staticmethod
+    def _has_skill_management_tool(tools: list[ToolSpec]) -> bool:
+        for tool in tools:
+            try:
+                canonical = tool.get_original_tool_name()
+            except ValueError:
+                canonical = tool.name or ""
+            if canonical in SKILL_MANAGEMENT_TOOLS:
                 return True
         return False
 
