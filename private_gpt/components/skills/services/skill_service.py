@@ -11,7 +11,7 @@ from private_gpt.components.skills.models.skill_entities import (
     SkillVersionEntity,
     SkillVersionWithSkillEntity,
 )
-from private_gpt.components.skills.parser import parse_skill_markdown
+from private_gpt.components.skills.parser import ParsedSkillDocument, parse_skill_markdown
 from private_gpt.components.skills.paths import skill_path
 from private_gpt.components.skills.repositories.skill_repository import (
     CreateSkillInput,
@@ -101,6 +101,11 @@ class SkillService:
         except Exception:
             await self._storage_component.delete_prefix(storage_prefix)
             raise
+
+    async def validate_skill(self, files: list[StoredFile]) -> ParsedSkillDocument:
+        """Dry-run: parse and validate files without persisting anything."""
+        skill_markdown = _extract_skill_md(files)
+        return parse_skill_markdown(skill_markdown)
 
     async def list_skills(
         self, collection: str, limit: int, page: str | None

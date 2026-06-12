@@ -163,3 +163,21 @@ class RecoverSkillsResponse(BaseModel):
         default_factory=list,
         description="Recovered skill versions resolved by filter.",
     )
+
+
+class SkillValidationResponse(BaseModel):
+    """Result of a dry-run skill validation."""
+
+    valid: bool = Field(description="Whether the skill payload would be accepted.")
+    name: str | None = Field(
+        default=None,
+        description="Parsed skill name from SKILL.md frontmatter (when valid).",
+    )
+    description: str | None = Field(
+        default=None,
+        description="Parsed skill description from SKILL.md frontmatter (when valid).",
+    )
+    errors: list[str] = Field(
+        default_factory=list,
+        description="Validation error messages (when invalid).",
+    )
