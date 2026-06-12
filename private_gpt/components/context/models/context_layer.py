@@ -1,5 +1,5 @@
 import re
-from typing import TYPE_CHECKING, Annotated, Literal
+from typing import Annotated, Literal
 
 from llama_index.core.base.llms.types import TextBlock
 from pydantic import BaseModel, ConfigDict, Field
@@ -7,9 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.context.models.layer_type import LayerType
 from private_gpt.components.engines.citations.types import Document
-
-if TYPE_CHECKING:
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
+from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
 class BaseContextLayer(BaseModel):
@@ -209,7 +207,7 @@ class ContentBundlesLayer(BaseContextLayer):
         default=LayerType.CONTENT_BUNDLES, frozen=True
     )
     priority: int = Field(default=2000, frozen=True)
-    bundles: list["ContentBundle"] = Field(default_factory=list)
+    bundles: list[ContentBundle] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
