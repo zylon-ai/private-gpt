@@ -1,5 +1,6 @@
 {% set tool_name = namespace.tools.get("bash_tool_name") %}
 {% set has_text_editor = namespace.tools.get("has_text_editor") %}
+{% if layout is not defined or not layout %}{% else %}
 {% set workspace = layout | selectattr("name", "equalto", "workspace") | first %}
 
 <{{ tool_name }}>
@@ -28,3 +29,4 @@ Examples:
 - Save result: `cp analysis.png {{ outputs.canonical }}analysis.png`
 {% endif %}
 </{{ tool_name }}>
+{% endif %}
