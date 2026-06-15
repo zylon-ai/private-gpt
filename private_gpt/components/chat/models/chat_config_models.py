@@ -337,6 +337,10 @@ class ContextConfig(BaseModel):
         default=None,
         description="Opaque user identifier for the chat session.",
     )
+    container: str | None = Field(
+        default=None,
+        description="Container identifier for reuse across requests.",
+    )
     maximum_loaded_skills: int | None = Field(
         default=None,
         description=(

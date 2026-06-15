@@ -29,7 +29,10 @@ def _get_tool_context(
 
 def _session_id(request: ResolvedChatRequest) -> str:
     return (
-        request.context.user_id or request.context.correlation_id or str(uuid.uuid4())
+        request.context.container
+        or request.context.user_id
+        or request.context.correlation_id
+        or str(uuid.uuid4())
     )
 
 

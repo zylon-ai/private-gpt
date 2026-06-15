@@ -7,6 +7,7 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import suppress
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from enum import StrEnum
 from functools import partial
 from typing import Any, Literal
@@ -21,6 +22,7 @@ from private_gpt.components.chat.models.chat_config_models import (
     ChatRequest,
     ResolvedChatRequest,
 )
+from private_gpt.components.tools.processors.base import _session_id
 from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
     ChatRequestLoopInterceptor,
@@ -65,6 +67,7 @@ from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.models import ReasoningEffort
 from private_gpt.components.llm.priorities import DefinedPriorities
 from private_gpt.events.models import (
+    Container,
     Event,
     InputJSONDelta,
     MessageOutputDelta,
@@ -425,7 +428,10 @@ class ChatLoopEngine:
             run.stopped = True
             handler.emit(
                 RawMessageDeltaEvent(
-                    delta=MessageOutputDelta(stop_reason=stop_reason),
+                    delta=MessageOutputDelta(
+                        stop_reason=stop_reason,
+                        container=self._build_container(run),
+                    ),
                     usage=self._build_total_usage(run),
                 )
             )
@@ -983,3 +989,20 @@ class ChatLoopEngine:
             input_tokens=run.total_input_tokens if run.has_input_usage else None,
             output_tokens=run.total_output_tokens if run.has_output_usage else None,
         )
+
+    @staticmethod
+    def _build_container(run: _LoopRun) -> Container | None:
+        """Return a container handle if the request used code-execution tools."""
+        from private_gpt.components.tools.tool_names import CODE_EXECUTION_TOOL_NAME
+
+        tools = run.state.input.request.tool_config.tools
+        has_code_execution = any(
+            (tool.type or "").startswith("code_execution") or tool.name == CODE_EXECUTION_TOOL_NAME
+            for tool in tools
+        )
+        if not has_code_execution:
+            return None
+
+        session_id = _session_id(run.state.input.request)
+        expires_at = datetime.now(tz=timezone.utc) + timedelta(hours=1)
+        return Container(id=session_id, expires_at=expires_at)

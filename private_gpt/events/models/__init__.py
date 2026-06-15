@@ -58,6 +58,7 @@ from private_gpt.events.models._events import (
     RawMessageStopEvent,
 )
 from private_gpt.events.models._message import (
+    Container,
     Message,
     MessageOutputDelta,
     StopReasonEnum,
@@ -121,6 +122,7 @@ _types = [
     RawMessageStartEvent,
     RawMessageStopEvent,
     # Messages
+    Container,
     Message,
     MessageOutputDelta,
     StopReasonEnum,
@@ -144,6 +146,7 @@ __all__ = [
     "CacheControlEphemeral",
     "CacheableContentBlock",
     "CitationsDelta",
+    "Container",
     "ContainerUploadBlock",
     "ContentBlockDeltaType",
     "ContentBlockType",
