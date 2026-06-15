@@ -11,6 +11,7 @@ from private_gpt.components.tools.processors.base import (
 from private_gpt.components.tools.tool_names import (
     BASH_TOOL_NAME,
     CODE_EXECUTION_TOOL_NAME,
+    PRESENT_FILES_TOOL_NAME,
     TEXT_EDITOR_TOOL_NAME,
 )
 
@@ -32,12 +33,9 @@ class CodeExecutionProcessor(ToolProcessor):
                 request,
                 tool,
                 [
-                    _wrapper_tool(
-                        BASH_TOOL_NAME,
-                    ),
-                    _wrapper_tool(
-                        TEXT_EDITOR_TOOL_NAME,
-                    ),
+                    _wrapper_tool(BASH_TOOL_NAME),
+                    _wrapper_tool(TEXT_EDITOR_TOOL_NAME),
+                    _wrapper_tool(PRESENT_FILES_TOOL_NAME),
                 ],
             )
         return False

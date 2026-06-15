@@ -60,6 +60,10 @@ class CodeExecutionSession(ABC):
         """Insert text into a file after a given line number."""
 
     @abstractmethod
+    async def read_file(self, path: str) -> bytes:
+        """Read raw file bytes from the session workspace."""
+
+    @abstractmethod
     async def close(self) -> None:
         """Close and release the backing execution session."""
 

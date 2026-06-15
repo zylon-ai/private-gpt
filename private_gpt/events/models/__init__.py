@@ -18,6 +18,7 @@ from private_gpt.events.models._content_blocks import (
     ContainerUploadBlock,
     DocumentBlock,
     ImageBlock,
+    LocalResourceBlock,
     MidConvSystemBlock,
     RedactedThinkingBlock,
     ResourceBlock,
@@ -128,6 +129,7 @@ _types = [
     ToolResultBlock,
     # Custom Zylon Elements
     BinaryBlock,
+    LocalResourceBlock,
     ResourceBlock,
     ResourceLinkBlock,
     SourceBlock,
@@ -153,6 +155,7 @@ __all__ = [
     "FatalError",
     "ImageBlock",
     "InputJSONDelta",
+    "LocalResourceBlock",
     "Message",
     "MessageOutputDelta",
     "MidConvSystemBlock",

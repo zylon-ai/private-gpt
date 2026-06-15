@@ -138,5 +138,9 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
         except Exception as exc:
             return FileOperationResult(success=False, error=str(exc))
 
+    async def read_file(self, path: str) -> bytes:
+        self._env.touch()
+        return await self._sandbox.read_file(path)
+
     async def close(self) -> None:
         await self._sandbox.close()

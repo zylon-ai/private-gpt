@@ -11,6 +11,9 @@ from private_gpt.components.tools.processors.code_execution_processor import (
 from private_gpt.components.tools.processors.database_query_processor import (
     DatabaseQueryProcessor,
 )
+from private_gpt.components.tools.processors.present_files_processor import (
+    PresentFilesProcessor,
+)
 from private_gpt.components.tools.processors.semantic_search_processor import (
     SemanticSearchProcessor,
 )
@@ -46,6 +49,7 @@ class ToolPipeline:
         code_execution_processor: CodeExecutionProcessor,
         bash_processor: BashProcessor,
         text_editor_processor: TextEditorProcessor,
+        present_files_processor: PresentFilesProcessor,
     ) -> None:
         self._processors = [
             anthropic_tool_translation_processor,
@@ -58,6 +62,7 @@ class ToolPipeline:
             code_execution_processor,
             bash_processor,
             text_editor_processor,
+            present_files_processor,
         ]
 
     async def contextualize_internal_tools(

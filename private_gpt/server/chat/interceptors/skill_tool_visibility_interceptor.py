@@ -4,7 +4,10 @@ from collections.abc import Sequence
 from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
-from private_gpt.components.context.models.context_layer import ToolDefinitionsLayer
+from private_gpt.components.context.models.context_layer import (
+    SkillBodyLayer,
+    ToolDefinitionsLayer,
+)
 from private_gpt.components.context.models.layer_type import LayerType
 from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
     ChatRequestLoopInterceptor,
@@ -61,6 +64,12 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
             has_activatable_skills = bool(entries)
             active_names = _resolve_active_skill_names(state.input.request.messages)
 
+            loaded_body_skill_ids = {
+                layer.skill_id
+                for layer in stack.layers_of_type(LayerType.SKILL_BODY)
+                if isinstance(layer, SkillBodyLayer)
+            }
+
             for entry in entries:
                 skill = entry.skill
                 version = entry.version
@@ -69,6 +78,12 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
                     loading == "eager" or version.frontmatter.name in active_names
                 )
                 if not is_active:
+                    continue
+
+                # Eager skills whose body failed to load (NoSuchKey or other
+                # storage error) are not actually available to the model —
+                # don't let them influence tool visibility or allowed_tools.
+                if loading == "eager" and version.skill_id not in loaded_body_skill_ids:
                     continue
 
                 has_loaded_skill = True
