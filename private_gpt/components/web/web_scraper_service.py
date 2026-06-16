@@ -4,6 +4,8 @@ import logging
 import os
 import re
 import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 import html2text
@@ -90,220 +92,146 @@ class _BrowserInstance:
 class _BrowserPool:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._playwright: Any = None
-        self._browsers: list[_BrowserInstance] = []
+        self._max_pages = (
+            settings.web_fetch.pool_size * settings.web_fetch.pool_max_pages_per_browser
+        )
+        self._sem = asyncio.Semaphore(self._max_pages)
         self._lock = asyncio.Lock()
-        self._page_available = asyncio.Condition(self._lock)
-        self._cleanup_task: asyncio.Task[None] | None = None
+        self._playwright: Any = None
+        self._browser: Any = None
+        self._active = 0
+        self._last_used = time.monotonic()
         self._closed = False
-        self._waiters_count = 0
 
-    async def _ensure_playwright(self) -> None:
-        if self._playwright is None:
-            logger.info("Starting Playwright (first use)")
-            try:
+    def _available_capacity(self) -> int:
+        """Pages that can be served right now without anyone having to wait."""
+        return self._max_pages - self._active
+
+    async def _ensure_browser(self) -> Any:
+        async with self._lock:
+            if self._closed:
+                raise RuntimeError("Browser pool is closed")
+            # Relaunch if there's no browser OR the existing one died
+            if self._browser is None or not self._browser.is_connected():
+                if self._browser is not None:
+                    logger.warning("Browser was disconnected, relaunching")
                 from playwright.async_api import (  # type: ignore[import-not-found]
                     async_playwright,
                 )
-            except ImportError as e:
-                raise ImportError(
-                    "Playwright is required for web scraping. Install it with `pip install playwright`"
-                ) from e
 
-            self._playwright = await async_playwright().start()
-            logger.info("Playwright started successfully")
+                if self._playwright is None:
+                    self._playwright = await async_playwright().start()
+                self._browser = await self._playwright.chromium.launch(
+                    headless=True,
+                    args=[
+                        "--no-sandbox",
+                        "--disable-setuid-sandbox",
+                        "--disable-dev-shm-usage",
+                        "--disable-gpu",
+                        "--no-first-run",
+                        # "--no-zygote",
+                        # "--single-process",
+                    ],
+                )
+                logger.info("Chromium launched")
+            return self._browser
 
-    async def _launch_browser(self) -> _BrowserInstance:
-        logger.debug(
-            f"Launching new Chromium browser "
-            f"(current={len(self._browsers)}, max={self._settings.web_fetch.pool_size})"
-        )
-        browser_args = [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-accelerated-2d-canvas",
-            "--no-first-run",
-            "--no-zygote",
-            "--single-process",
-            "--disable-gpu",
-        ]
-        browser = await self._playwright.chromium.launch(
-            headless=True,
-            args=browser_args,
-        )
-        context_options: dict[str, Any] = {}
+    @asynccontextmanager
+    async def page(self) -> AsyncIterator[Any]:
+        full = self._sem.locked()
+        if full:
+            logger.info(
+                f"Pool FULL, request waiting for a free slot "
+                f"(active={self._active}/{self._max_pages})"
+            )
+        async with self._sem:  # bloquea aquí si está lleno
+            async with self._lock:
+                self._active += 1
+                if full:
+                    logger.info(
+                        f"Slot freed, page acquired after waiting "
+                        f"(active={self._active}/{self._max_pages})"
+                    )
+                else:
+                    logger.info(
+                        f"Page requested "
+                        f"(active={self._active}/{self._max_pages}, "
+                        f"available_capacity={self._available_capacity()})"
+                    )
+            try:
+                browser = await self._ensure_browser()
+                context = await browser.new_context(**self._context_options())
+                page = await context.new_page()
+                logger.info(f"Page ACQUIRED (active={self._active}/{self._max_pages})")
+                try:
+                    yield page
+                finally:
+                    await context.close()
+            finally:
+                async with self._lock:
+                    self._active -= 1
+                    self._last_used = time.monotonic()
+                    logger.info(
+                        f"Page RELEASED (active={self._active}/{self._max_pages}, "
+                        f"available_capacity={self._available_capacity()})"
+                    )
 
-        proxy_settings = self._get_proxy_settings("")
-        if proxy_settings:
-            context_options["proxy"] = proxy_settings
-            logger.debug("Proxy settings applied to browser context")
+    def _context_options(self) -> dict[str, Any]:
+        opts: dict[str, Any] = {}
+        proxy = self._proxy_settings()
+        if proxy:
+            opts["proxy"] = proxy
+        ssl = self._settings.server.network.ssl
+        if not ssl.verify_ssl or ssl.cert_file:
+            opts["ignore_https_errors"] = True
+            if not ssl.verify_ssl:
+                logger.warning("SSL verification disabled")
+        return opts
 
-        ssl_context = self._get_ssl_context()
-        context_options.update(ssl_context)
-
-        context = await browser.new_context(**context_options)
-        instance = _BrowserInstance(
-            browser=browser,
-            context=context,
-            max_pages=self._settings.web_fetch.pool_max_pages_per_browser,
-        )
-        self._browsers.append(instance)
-        logger.debug(
-            f"[Browser-{instance.id}] Launched. Pool now has {len(self._browsers)} browser(s)"
-        )
-        return instance
-
-    def _get_proxy_settings(self, url: str) -> Any | None:
-        proxy_config = self._settings.server.network.proxy
-        if not proxy_config.enabled:
+    def _proxy_settings(self) -> Any | None:
+        cfg = self._settings.server.network.proxy
+        if not cfg.enabled:
             return None
-        proxy_url = (
-            proxy_config.https_server
-            if url.startswith("https://")
-            else proxy_config.http_server
-        )
-        if not proxy_url:
+        url = cfg.https_server or cfg.http_server  # decided once, no dead code
+        if not url:
             return None
         from playwright.async_api import ProxySettings
 
         return ProxySettings(
-            server=f"{proxy_url.scheme}://{proxy_url.host}"
-            + (f":{proxy_url.port}" if proxy_url.port else ""),
-            username=proxy_url.username,
-            password=proxy_url.password,
-            bypass=proxy_config.bypass or None,
+            server=f"{url.scheme}://{url.host}" + (f":{url.port}" if url.port else ""),
+            username=url.username,
+            password=url.password,
+            bypass=cfg.bypass or None,
         )
 
-    def _get_ssl_context(self) -> dict[str, Any]:
-        ssl_config = self._settings.server.network.ssl
-        ssl_context: dict[str, Any] = {}
-        needs_ignore_errors = not ssl_config.verify_ssl or ssl_config.cert_file
-        if needs_ignore_errors:
-            ssl_context["ignore_https_errors"] = True
-            if not ssl_config.verify_ssl:
-                logger.warning("SSL certificate verification is disabled.")
-        return ssl_context
-
-    async def acquire_page(self) -> tuple[Any, _BrowserInstance]:
-        async with self._page_available:
-            if self._closed:
-                raise RuntimeError("Browser pool is closed")
-            await self._ensure_playwright()
-            while True:
-                for instance in self._browsers:
-                    if instance.has_capacity:
-                        page = await instance.create_page()
-                        logger.debug(
-                            f"[Browser-{instance.id}] Page acquired "
-                            f"(in_use={instance.in_use_count}/{instance.max_pages}, "
-                            f"pool_browsers={len(self._browsers)})"
-                        )
-                        return page, instance
-
-                if len(self._browsers) < self._settings.web_fetch.pool_size:
-                    instance = await self._launch_browser()
-                    page = await instance.create_page()
-                    logger.debug(
-                        f"[Browser-{instance.id}] New browser page acquired "
-                        f"(pool_browsers={len(self._browsers)})"
-                    )
-                    return page, instance
-
-                logger.debug(
-                    f"All {len(self._browsers)} browser(s) at capacity "
-                    f"(max_pages={self._settings.web_fetch.pool_max_pages_per_browser}), "
-                    f"waiting for release..."
-                )
-                self._waiters_count += 1
-                await self._page_available.wait()
-                self._waiters_count -= 1
-                if self._closed:
-                    raise RuntimeError("Browser pool is closed")
-
-    async def release_page(self, page: Any, instance: _BrowserInstance) -> None:
-        async with self._page_available:
-            await instance.close_page(page)
-            logger.debug(
-                f"[Browser-{instance.id}] Page released "
-                f"(in_use={instance.in_use_count}/{instance.max_pages}, "
-                f"waiters={self._waiters_count}, pool_browsers={len(self._browsers)})"
-            )
-            self._page_available.notify_all()
-
-    async def _cleanup_idle(self) -> None:
-        logger.debug("Idle browser cleanup task started (cycle every 60s)")
-        await asyncio.sleep(60)
+    async def cleanup_idle(self) -> None:
+        timeout = self._settings.web_fetch.pool_idle_timeout_seconds
         while not self._closed:
-            try:
-                await self._cleanup_once()
-            except Exception as e:
-                logger.error(f"Error during browser cleanup: {e}")
             await asyncio.sleep(60)
-        logger.debug("Idle browser cleanup task stopped")
+            async with self._lock:
+                idle = self._browser is not None and self._active == 0
+                if idle and time.monotonic() - self._last_used >= timeout:
+                    await self._browser.close()
+                    await self._playwright.stop()
+                    self._browser = self._playwright = None
+                    logger.info(
+                        f"Idle browser closed after {timeout}s with no activity"
+                    )
 
-    async def _cleanup_once(self) -> None:
-        idle_timeout = self._settings.web_fetch.pool_idle_timeout_seconds
-        now = time.monotonic()
-        async with self._page_available:
-            if not self._browsers:
-                logger.debug("Cleanup: no browsers in pool")
-                return
-            to_remove = []
-            for instance in self._browsers:
-                idle_for = now - instance.last_used
-                if instance.is_idle and idle_for >= idle_timeout:
-                    to_remove.append(instance)
-            if to_remove:
-                for instance in to_remove:
-                    self._browsers.remove(instance)
-                    await instance.close()
-                if not self._browsers and self._playwright is not None:
-                    await self._playwright.__aexit__(None, None, None)
-                    self._playwright = None  #
-                logger.info(
-                    f"Cleanup closed {len(to_remove)} idle browser(s), "
-                    f"pool now has {len(self._browsers)} active"
-                )
-            else:
-                idle = sum(1 for b in self._browsers if b.is_idle)
-                busy = sum(1 for b in self._browsers if not b.is_idle)
-                logger.debug(
-                    f"Cleanup: pool={len(self._browsers)} "
-                    f"(idle={idle}, busy={busy}, timeout={idle_timeout}s)"
-                )
-
-    def start_cleanup(self) -> None:
-        if self._cleanup_task is None or self._cleanup_task.done():
-            logger.debug("Starting idle browser cleanup task")
-            self._cleanup_task = asyncio.create_task(self._cleanup_idle())
-        else:
-            logger.debug("Cleanup task already running")
-
-    async def close_all(self) -> None:
-        logger.info(
-            f"Shutting down browser pool: " f"closing {len(self._browsers)} browser(s)"
-        )
-        self._closed = True
-        if self._cleanup_task and not self._cleanup_task.done():
-            logger.debug("Cancelling cleanup task")
-            self._cleanup_task.cancel()
-            try:
-                await self._cleanup_task
-            except asyncio.CancelledError:
-                logger.error("Cleanup task was cancelled during shutdown")
-                pass
-        async with self._page_available:
-            for instance in self._browsers:
-                await instance.close()
-            browser_count = len(self._browsers)
-            self._browsers.clear()
-            self._page_available.notify_all()
+    async def close(self) -> None:
+        async with self._lock:
+            self._closed = True
+            logger.info(
+                f"Shutting down browser pool "
+                f"(active_pages={self._active}, "
+                f"browser_alive={self._browser is not None})"
+            )
+            if self._browser is not None:
+                await self._browser.close()
             if self._playwright is not None:
-                logger.info("Stopping Playwright")
                 await self._playwright.stop()
-                self._playwright = None
-        logger.info(f"Browser pool shut down: {browser_count} browser(s) closed")
+            self._browser = self._playwright = None
+            logger.info("Browser pool shut down")
 
 
 class WebScraperService:
@@ -311,6 +239,7 @@ class WebScraperService:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._pool: _BrowserPool | None = None
+        self._cleanup_task: asyncio.Task[None] | None = None
         self._initialized: bool = False
         self._initialize()
 
@@ -335,7 +264,7 @@ class WebScraperService:
         if self._pool is None:
             logger.info("Creating browser pool (first scrape request)")
             self._pool = _BrowserPool(self._settings)
-            self._pool.start_cleanup()
+            self._cleanup_task = asyncio.create_task(self._pool.cleanup_idle())
         return self._pool
 
     def _apply_ssl_environment(self) -> None:
@@ -360,44 +289,38 @@ class WebScraperService:
 
         pool = self._ensure_pool()
         _start_acquire = time.monotonic()
-        page, instance = await pool.acquire_page()
-        _acquire_time = time.monotonic() - _start_acquire
-        logger.debug(
-            f"[Browser-{instance.id}] Scraping {url} "
-            f"(acquire_time={_acquire_time:.3f}s)"
-        )
-        _start_scrape = time.monotonic()
-        try:
-            async with asyncio.timeout(self._settings.web_fetch.timeout_seconds):
-                await page.goto(url)
-                await page.wait_for_load_state("domcontentloaded")
-                content = await page.content()
-                _scrape_time = time.monotonic() - _start_scrape
-                logger.debug(
-                    f"[Browser-{instance.id}] Scraped {url} "
-                    f"(content_size={len(content)}, scrape_time={_scrape_time:.3f}s)"
+        async with pool.page() as page:
+            _acquire_time = time.monotonic() - _start_acquire
+            logger.debug(f"Scraping {url} (acquire_time={_acquire_time:.3f}s)")
+            _start_scrape = time.monotonic()
+            try:
+                async with asyncio.timeout(self._settings.web_fetch.timeout_seconds):
+                    await page.goto(url)
+                    await page.wait_for_load_state("domcontentloaded")
+                    content = await page.content()
+                    _scrape_time = time.monotonic() - _start_scrape
+                    logger.debug(
+                        f"Scraped {url} "
+                        f"(content_size={len(content)}, scrape_time={_scrape_time:.3f}s)"
+                    )
+                    return str(content)
+            except TimeoutError:
+                logger.warning(
+                    f"Timeout ({self._settings.web_fetch.timeout_seconds}s) scraping {url}"
                 )
-                return str(content)
-        except TimeoutError:
-            logger.warning(
-                f"[Browser-{instance.id}] Timeout ({self._settings.web_fetch.timeout_seconds}s) "
-                f"scraping {url}"
-            )
-            raise
-        except Exception as e:
-            if re.search(
-                r"playwright.*install|browser.*executable|download new browsers",
-                str(e),
-                re.IGNORECASE,
-            ):
-                raise RuntimeError(
-                    "Playwright browsers are not installed. "
-                    "Run `playwright install` and try again."
-                ) from e
-            logger.warning(f"[Browser-{instance.id}] Error scraping {url}: {e}")
-            raise
-        finally:
-            await pool.release_page(page, instance)
+                raise
+            except Exception as e:
+                if re.search(
+                    r"playwright.*install|browser.*executable|download new browsers",
+                    str(e),
+                    re.IGNORECASE,
+                ):
+                    raise RuntimeError(
+                        "Playwright browsers are not installed. "
+                        "Run `playwright install` and try again."
+                    ) from e
+                logger.warning(f"Error scraping {url}: {e}")
+                raise
 
     async def scrape(self, url: str) -> WebScraperResult:
         _start = time.monotonic()
@@ -532,9 +455,19 @@ class WebScraperService:
             return html
 
     async def close(self) -> None:
+        if self._cleanup_task is not None and not self._cleanup_task.done():
+            self._cleanup_task.cancel()
+            try:
+                await self._cleanup_task
+            except asyncio.CancelledError:
+                logger.error(
+                    "WebScraperService cleanup task was cancelled during shutdown"
+                )
+                pass
+            self._cleanup_task = None
         if self._pool is not None:
             logger.info("Closing WebScraperService browser pool")
-            await self._pool.close_all()
+            await self._pool.close()
             self._pool = None
             logger.info("WebScraperService closed")
         else:
