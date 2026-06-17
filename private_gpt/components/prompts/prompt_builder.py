@@ -382,6 +382,16 @@ class PromptBuilderService:
             has_text=extracted_text is not None and extracted_text != "",
         )
 
+    def create_document_image_extract_prompt(
+        self,
+        max_words: int | None = None
+    )-> BasePromptTemplate:
+        return self.template_service.create_prompt_template(
+            "multimodality/images/document_image_extract.j2",
+            max_words=max_words,
+        )
+
+
     def create_image_strategy_prompt(
         self,
     ) -> BasePromptTemplate:

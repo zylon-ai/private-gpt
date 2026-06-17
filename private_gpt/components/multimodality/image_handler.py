@@ -78,6 +78,7 @@ class ImageProcessingInputEvent(StartEvent):
     max_iterations: int = 3
     enable_preprocessing: bool = True
     enable_evaluation: bool = True
+    extraction_type_override: str | None = None
     kwargs: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -158,6 +159,7 @@ class ImageProcessingWorkflow(Workflow):
         await ctx.store.set("max_iterations", ev.max_iterations)
         await ctx.store.set("enable_preprocessing", ev.enable_preprocessing)
         await ctx.store.set("enable_evaluation", ev.enable_evaluation)
+        await ctx.store.set("extraction_type_override", ev.extraction_type_override)
         await ctx.store.set("kwargs", ev.kwargs)
         await ctx.store.set("results", [])
         await ctx.store.set("iteration", 1)
@@ -169,11 +171,23 @@ class ImageProcessingWorkflow(Workflow):
         self, ctx: AnyContext, ev: WorkflowInitializedEvent
     ) -> StrategyInferredEvent | ImagesPreprocessedEvent:
 
-        iteration = await ctx.store.get("iteration", 1)
         enable_preprocessing = await ctx.store.get("enable_preprocessing")
+        extraction_type_override = await ctx.store.get("extraction_type_override")
         kwargs = await ctx.store.get("kwargs")
 
-        strategy = await self._infer_strategy(ev.image_blocks, seed=iteration, **kwargs)
+        if extraction_type_override:
+            strategy = ExtractionStrategy(
+                type=extraction_type_override,
+                confidence=0.9,
+                language="en",
+                has_structure=True,
+            )
+        else:
+            iteration = await ctx.store.get("iteration", 1)
+            strategy = await self._infer_strategy(
+                ev.image_blocks, seed=iteration, **kwargs
+            )
+
         await ctx.store.set("strategy", strategy)
 
         return (
@@ -593,6 +607,7 @@ async def describe_image(
     max_iterations: int = 2,
     enable_preprocessing: bool = True,
     enable_evaluation: bool = True,
+    extraction_type_override: str | None = None,
     **kwargs: Any,
 ) -> str | None:
     if not image_blocks:
@@ -608,6 +623,7 @@ async def describe_image(
             max_iterations=max_iterations,
             enable_preprocessing=enable_preprocessing,
             enable_evaluation=enable_evaluation,
+            extraction_type_override=extraction_type_override,
             kwargs=kwargs,
         )
 

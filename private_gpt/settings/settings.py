@@ -1522,6 +1522,11 @@ class TransformationSettings(BaseModel):
         description="Settings for Docling file processing during ingestion.",
     )
 
+    vision_documents: TransformationReadersSettings = Field(
+        default_factory=lambda: TransformationReadersSettings(),
+        description="Settings for vision processing of documents during ingestion.",
+    )
+
 
 class SemaphoreSettings(BaseModel):
     mode: Literal["memory", "redis"] = Field(
