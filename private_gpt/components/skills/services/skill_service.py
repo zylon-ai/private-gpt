@@ -11,7 +11,10 @@ from private_gpt.components.skills.models.skill_entities import (
     SkillVersionEntity,
     SkillVersionWithSkillEntity,
 )
-from private_gpt.components.skills.parser import ParsedSkillDocument, parse_skill_markdown
+from private_gpt.components.skills.parser import (
+    ParsedSkillDocument,
+    parse_skill_markdown,
+)
 from private_gpt.components.skills.paths import skill_path
 from private_gpt.components.skills.repositories.skill_repository import (
     CreateSkillInput,

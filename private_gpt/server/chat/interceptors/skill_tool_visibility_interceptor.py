@@ -17,6 +17,7 @@ from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
 )
 from private_gpt.components.skills.models.skill_entities import SkillFilter
 from private_gpt.components.tools.tool_names import (
+    SKILL_LIST_TOOL_NAME,
     SKILL_LOAD_TOOL_NAME,
     SKILL_MANAGEMENT_TOOLS,
     SKILL_UNLOAD_TOOL_NAME,
@@ -51,32 +52,35 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
             return
 
         has_loaded_skill = False
-        has_activatable_skills = False
+        has_catalog = False  # at least one non-eager skill not yet loaded
+        has_loaded_nonEager = False  # at least one non-eager skill currently loaded
         allowed_tools: set[str] = set()
 
         skill_filter = self._find_skill_filter(state.input.request.tool_context)
         if skill_filter is not None and state.runtime.cache.skill is not None:
             cache = state.runtime.cache.skill
             entries = cache.entries
-            has_activatable_skills = bool(entries)
             active_names = _resolve_active_skill_names(state.input.request.messages)
 
             for entry in entries:
                 skill = entry.skill
                 version = entry.version
                 loading = skill.loading
-                is_active = (
-                    loading == "eager" or version.frontmatter.name in active_names
-                )
-                if not is_active:
-                    continue
+                name = version.frontmatter.name
+                is_eager = loading == "eager"
+                is_active = is_eager or name in active_names
 
-                has_loaded_skill = True
-                if version.frontmatter.allowed_tools:
-                    allowed_tools.update(
-                        self._normalize_token(item)
-                        for item in version.frontmatter.allowed_tools
-                    )
+                if is_active:
+                    has_loaded_skill = True
+                    if not is_eager:
+                        has_loaded_nonEager = True
+                    if version.frontmatter.allowed_tools:
+                        allowed_tools.update(
+                            self._normalize_token(item)
+                            for item in version.frontmatter.allowed_tools
+                        )
+                else:
+                    has_catalog = True
 
         filtered = [
             tool
@@ -84,7 +88,8 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
             if self._is_visible(
                 tool=tool,
                 has_loaded_skill=has_loaded_skill,
-                has_activatable_skills=has_activatable_skills,
+                has_catalog=has_catalog,
+                has_loaded_nonEager=has_loaded_nonEager,
                 allowed_tools=allowed_tools,
             )
         ]
@@ -109,11 +114,18 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
         self,
         tool: ToolSpec,
         has_loaded_skill: bool,
-        has_activatable_skills: bool,
+        has_catalog: bool,
+        has_loaded_nonEager: bool,
         allowed_tools: set[str],
     ) -> bool:
-        if (tool.name or "") in {SKILL_LOAD_TOOL_NAME, SKILL_UNLOAD_TOOL_NAME}:
-            return has_activatable_skills
+        tool_name = tool.name or ""
+
+        if tool_name == SKILL_LOAD_TOOL_NAME:
+            return has_catalog
+        if tool_name == SKILL_UNLOAD_TOOL_NAME:
+            return has_loaded_nonEager
+        if tool_name == SKILL_LIST_TOOL_NAME:
+            return has_catalog
 
         if tool.defer_loading and not has_loaded_skill:
             return False
@@ -122,7 +134,7 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
             return True
 
         # Never block the skill-management controls.
-        if (tool.name or "") in SKILL_MANAGEMENT_TOOLS:
+        if tool_name in SKILL_MANAGEMENT_TOOLS:
             return True
 
         return bool(self._tool_tokens(tool) & allowed_tools)
