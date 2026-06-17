@@ -249,7 +249,7 @@ web_search:
   num_links: ${PGPT_WEBSEARCH_NUM_LINKS:20}
   mode_quality: ${PGPT_WEBSEARCH_MODE_QUALITY:fast}
   cached: ${PGPT_WEBSEARCH_CACHED:false}
-  context_token: ${PGPT_WEBSEARCH_CONTEXT_TOKEN:0}
+  context_token: ${PGPT_WEBSEARCH_CONTEXT_TOKEN:2000}
 
   fast_params:
     max_timeout_seconds: ${PGPT_WEBSEARCH_FAST_MAX_TIMEOUT_SECONDS:100}
