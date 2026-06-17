@@ -115,7 +115,12 @@ class BlockingPublisher(threading.Thread):
             job = PublishJob(exchange, routing_key, body)
             self._publish_queue.put(job)
 
+    def drain(self) -> None:
+        """Wait for all queued messages to be published without stopping the thread."""
+        self._publish_queue.join()
+
     def join(self, timeout: float | None = None) -> None:
+        """Stop the publisher thread and wait for it to finish."""
         self.is_running = False
         self._publish_queue.join()
         super().join(timeout)
