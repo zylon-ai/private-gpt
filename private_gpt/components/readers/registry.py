@@ -3,7 +3,7 @@ from injector import inject, singleton
 _DEFAULT_EXTENSION_READERS: dict[str, list[str]] = {
     # Binary document formats prefer the existing default readers first.
     # Optional alternative readers like MarkItDown can still be tried when available.
-    ".pdf": ["markitdown", "docling"],
+    ".pdf": ["markitdown", "docling", "vision"],
     ".pptx": ["markitdown", "pptx2md"],
     ".docx": ["markitdown", "docling"],
     ".xlsx": ["markitdown", "docling"],

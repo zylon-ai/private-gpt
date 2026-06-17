@@ -390,6 +390,13 @@ class DataSettings(BaseModel):
         description="Flag indicating if generated nodes should be reused when same file was ingested before.",
         default=False,
     )
+    enable_vision_fallback: bool = Field(
+        default=False,
+        description=(
+            "Retry PDF extraction with the vision reader when the primary reader "
+            "raises ExtractionUnsuccessfulError. Requires a configured VLM."
+        ),
+    )
     enable_term_extractor: bool = Field(
         description="Flag indicating if term extraction should be enabled or not.",
         default=False,
@@ -1480,7 +1487,7 @@ class ReaderSettings(BaseModel):
 
 class VisionSettings(ReaderSettings):
     enable_evaluation: bool = Field(  # Preset
-        default=True,
+        default=False,
         description="Flag indicating if validation of extracted information is enabled.",
     )
 
