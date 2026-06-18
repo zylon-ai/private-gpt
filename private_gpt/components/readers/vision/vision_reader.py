@@ -17,8 +17,9 @@ from private_gpt.components.ingest.progress.errors import IngestionParseErrors
 from private_gpt.components.ingest.utils import FileInfo
 from private_gpt.components.llm.llm_helper import supports_images
 from private_gpt.components.readers.base_reader import IngestionReader
-from private_gpt.components.readers.vision.vision_transforms import vision_docs_transformations
-
+from private_gpt.components.readers.vision.vision_transforms import (
+    vision_docs_transformations,
+)
 from private_gpt.di import get_global_injector
 from private_gpt.settings.settings import TransformationReadersSettings
 
@@ -35,8 +36,7 @@ class MetadataChunk(Enum):
 
 
 class VisionReader(IngestionReader):
-    """Vision-only reader: rasterize each PDF page to an image and let the
-    vision transforms turn those images into markdown sections."""
+    """Vision-only reader for PDF documents."""
 
     _reader_settings: TransformationReadersSettings
 
@@ -53,9 +53,7 @@ class VisionReader(IngestionReader):
                 bitmap = page.render(scale=scale)
                 pil_image = bitmap.to_pil()
                 buffer = io.BytesIO()
-                pil_image.save(
-                    buffer, format="JPEG", quality=85, optimize=True
-                )
+                pil_image.save(buffer, format="JPEG", quality=85, optimize=True)
                 images.append(buffer.getvalue())
                 page.close()
         finally:
@@ -145,14 +143,14 @@ class VisionReader(IngestionReader):
         logger.info(f"Created {len(docs)} documents from {file_info.file_name}")
 
         if not execute_transformations:
-            logger.debug(
-                "Skipping transformations for file: %s", file_info.file_name
-            )
+            logger.debug("Skipping transformations for file: %s", file_info.file_name)
             for node in docs:
                 yield node
             return
 
-        logger.debug("Starting PDF vision transformations of file: %s", file_info.file_name)
+        logger.debug(
+            "Starting PDF vision transformations of file: %s", file_info.file_name
+        )
 
         for transformed_node in await arun_transformations(
             nodes=docs,

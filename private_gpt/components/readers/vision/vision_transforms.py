@@ -1,5 +1,4 @@
 import logging
-import re
 from collections.abc import Iterable
 
 from llama_index.core.schema import TransformComponent
@@ -7,17 +6,8 @@ from llama_index.core.schema import TransformComponent
 from private_gpt.components.ingest.transformations.combine_tree_transform import (
     CombineTreeTransform,
 )
-from private_gpt.components.ingest.transformations.convert_image_to_full_slide_transform import (
-    ConvertImageToFullSlideTransform,
-)
 from private_gpt.components.ingest.transformations.create_llama_index_relationships_transform import (
     CreateLlamaIndexRelationshipsTransform,
-)
-from private_gpt.components.ingest.transformations.describe_image_transform import (
-    DescribeImageTransform,
-)
-from private_gpt.components.ingest.transformations.extract_slide_content_from_image_and_text_transform import (
-    ExtractSlideContentFromImageAndTextTransform,
 )
 from private_gpt.components.ingest.transformations.flatten_tree_nodes_transform import (
     FlattenTreeNodesTransform,
@@ -40,17 +30,12 @@ from private_gpt.components.ingest.transformations.markdown_to_tree_transform im
 from private_gpt.components.ingest.transformations.refresh_tree_node_transform import (
     RefreshTreeNodeTransform,
 )
-from private_gpt.components.ingest.transformations.replace_images_for_placeholder import (
-    ReplaceImageByPlaceholder,
-)
 from private_gpt.components.ingest.transformations.sentence_tree_node_parser import (
     SentenceTreeNodeParser,
 )
-from private_gpt.components.ingest.transformations.slide_header_checker_transform import (
-    AddTitleHeaderTransform,
-    ReduceHeaderLevelsTransform,
+from private_gpt.components.ingest.transformations.vision_docs_transformations import (
+    ExtractDocumentContentFromImage,
 )
-from private_gpt.components.ingest.transformations.vision_docs_transformations import ExtractDocumentContentFromImage
 from private_gpt.settings.settings import TransformationReadersSettings
 
 logger = logging.getLogger(__name__)

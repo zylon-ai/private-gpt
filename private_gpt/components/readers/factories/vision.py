@@ -18,4 +18,6 @@ class VisionReaderFactory(ReaderFactory):
                 )
             ) from e
 
-        return VisionReader(reader_settings=self.settings.transformation.vision_documents)
+        return VisionReader(
+            reader_settings=self.settings.transformation.vision_documents
+        )

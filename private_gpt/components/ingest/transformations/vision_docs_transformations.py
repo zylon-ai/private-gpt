@@ -7,7 +7,7 @@ from typing import Any
 
 from llama_index.core.base.llms.types import ImageBlock
 from llama_index.core.llms import LLM
-from llama_index.core.schema import BaseNode, MetadataMode, TransformComponent
+from llama_index.core.schema import BaseNode, TransformComponent
 
 from private_gpt.components.concurrency.registry import create_semaphore_manager
 from private_gpt.components.concurrency.semaphore_manager import SemaphoreManager
@@ -42,7 +42,7 @@ class ExtractDocumentContentFromImage(TransformComponent):
         reader_settings: TransformationReadersSettings,
         retry_delay: float = _DEFAULT_RETRY_DELAY,
         retry_jitter: tuple[float, float] = _JITTER,
-    ) -> "ExtractSlideContentFromImageAndTextTransform":
+    ) -> "ExtractDocumentContentFromImage":
         kwargs: Any = {
             "num_max_retries": reader_settings.vision.retry_number,
             "retry_delay": retry_delay,
@@ -146,7 +146,6 @@ class ExtractDocumentContentFromImage(TransformComponent):
             logger.warning("Failed to decode doc image metadata: %s", e)
             self._clean_doc_metadata(node)
             return node
-
 
         prompt = prompt_builder.create_document_image_extract_prompt()
         user_query = prompt.format().strip()

@@ -43,7 +43,9 @@ from private_gpt.components.ingest.utils import (
 )
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
-from private_gpt.components.readers.docling.docling_api_reader import ExtractionUnsuccessfulError
+from private_gpt.components.readers.docling.docling_api_reader import (
+    ExtractionUnsuccessfulError,
+)
 from private_gpt.components.readers.reader_component import ReaderComponent
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import Settings
@@ -446,9 +448,7 @@ class IngestComponent:
             )
             return None
 
-        logger.info(
-            "Falling back to vision reader for %s", converted_file.file_name
-        )
+        logger.info("Falling back to vision reader for %s", converted_file.file_name)
         vision_nodes = self._load_data(
             converted_file,
             file_metadata,

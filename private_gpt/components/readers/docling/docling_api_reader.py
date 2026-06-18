@@ -43,8 +43,10 @@ _MAX_SAMPLED_PAGES = 10
 
 
 class ExtractionUnsuccessfulError(Exception):
-    """Raised when a document is converted but the extracted text is unusable
-    (e.g. mostly unmapped glyphs from CID fonts without a ToUnicode map)."""
+    """Raised when a document is converted but the extracted text is unusable.
+
+    (e.g. mostly unmapped glyphs from CID fonts without a ToUnicode map).
+    """
 
 
 def _glyph_unknown_ratio(text: str) -> float:
@@ -260,4 +262,3 @@ class DoclingApiReader(IngestionReader):
         sampled_text = "".join(contents[i] for i in sampled_indices)
 
         return _glyph_unknown_ratio(sampled_text) > self.config.failure_threshold
-
