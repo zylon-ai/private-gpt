@@ -2,15 +2,17 @@ import asyncio
 import base64
 import io
 import logging
+import subprocess
+import tempfile
 import uuid
 from collections.abc import AsyncIterable
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import pypdfium2 as pdfium
 from llama_index.core.ingestion import arun_transformations
 from llama_index.core.schema import BaseNode, Document
+from PIL import Image
 
 from private_gpt.celery.notify import NotifyProtocol
 from private_gpt.components.ingest.progress.errors import IngestionParseErrors
@@ -45,20 +47,53 @@ class VisionReader(IngestionReader):
         self._reader_settings = reader_settings
 
     def _render_pdf_to_images(self, file_path: Path, scale: float) -> list[bytes]:
-        """Rasterize every page of the PDF to JPEG bytes (one per page)."""
+        """Rasterize every page of the PDF to JPEG bytes via Ghostscript."""
+        resolution = int(72 * scale)
         images: list[bytes] = []
-        pdf = pdfium.PdfDocument(str(file_path))
-        try:
-            for page in pdf:
-                bitmap = page.render(scale=scale)
-                pil_image = bitmap.to_pil()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            temp_path = Path(tmp_dir)
+            output_pattern = str(temp_path / "page-%02d.png")
+
+            cmd = [
+                "gs",
+                "-sDEVICE=png16m",
+                f"-o{output_pattern}",
+                f"-r{resolution}",
+                "-dNOPAUSE",
+                "-dBATCH",
+                str(file_path),
+            ]
+
+            try:
+                result = subprocess.run(cmd, capture_output=True, timeout=120)
+                if result.returncode != 0:
+                    stderr_text = (
+                        result.stderr.decode("utf-8", errors="replace")
+                        if result.stderr
+                        else "No error output"
+                    )
+                    raise RuntimeError(
+                        f"Ghostscript failed for {file_path.name}: {stderr_text}"
+                    )
+            except subprocess.TimeoutExpired:
+                raise RuntimeError(
+                    f"Ghostscript timed out for {file_path.name}"
+                ) from None
+
+            png_files = sorted(temp_path.glob("page-*.png"))
+            for png_file in png_files:
+                pil_image = Image.open(png_file)
                 buffer = io.BytesIO()
                 pil_image.save(buffer, format="JPEG", quality=85, optimize=True)
                 images.append(buffer.getvalue())
-                page.close()
-        finally:
-            pdf.close()
-        logger.info(f"Rendered {len(images)} pages from {file_path.name}")
+
+        logger.info(
+            "Rendered %d pages from %s (gs, %ddpi)",
+            len(images),
+            file_path.name,
+            resolution,
+        )
         return images
 
     def _page_to_doc(
