@@ -47,3 +47,18 @@ By default, PrivateGPT looks for settings files in the project root. Override th
 ```bash
 PGPT_SETTINGS_FOLDER=/path/to/settings private-gpt serve
 ```
+
+---
+
+## Data settings
+
+### `PGPT_ENABLE_VISION_FALLBACK`
+
+Controls whether PDF ingestion retries extraction with the **vision reader** (VLM-based) when the primary reader (e.g. Docling) fails to extract meaningful text — typically due to unmapped glyphs from CID fonts without a ToUnicode map.
+
+```yaml
+data:
+  enable_vision_fallback: ${PGPT_ENABLE_VISION_FALLBACK:false}
+```
+
+Requires at least one multimodal model configured. See [Model Configuration](./advanced.mdx) for setup instructions.
