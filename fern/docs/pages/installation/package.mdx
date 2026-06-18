@@ -98,6 +98,22 @@ After installing, set `OPENAI_API_BASE` to your LLM server and start:
 
 PrivateGPT starts on port `8080` by default. Change it with `private-gpt serve --port <port>`.
 
+## Data storage
+
+All application data (vector store, ingested documents, models, caches) is stored under a single home directory:
+
+| Platform | Default path |
+|---|---|
+| macOS / Linux | `~/.local/share/private-gpt/` |
+| Windows | `%LOCALAPPDATA%\private-gpt\` |
+| Docker | `/home/worker/app/` (fixed) |
+
+Override the location with `PGPT_HOME`:
+
+```bash
+PGPT_HOME=/data/private-gpt private-gpt serve
+```
+
 ## Key environment variables
 
 | Variable | Default | Description |
@@ -106,6 +122,7 @@ PrivateGPT starts on port `8080` by default. Change it with `private-gpt serve -
 | `OPENAI_API_KEY` | _(empty)_ | API key, if your server requires one |
 | `OPENAI_EMBEDDING_API_BASE` | same as `OPENAI_API_BASE` | Override for the embeddings endpoint |
 | `PORT` | `8080` | Port the server listens on (also settable via `private-gpt serve --port`) |
+| `PGPT_HOME` | `~/.local/share/private-gpt` | Root directory for all local data (vector store, models, caches) |
 | `PGPT_LLM_AUTO_DISCOVER_MODELS` | `true` | Discover LLM models from `/v1/models` on startup |
 
 ## What's next?

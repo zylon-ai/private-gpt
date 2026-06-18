@@ -3,7 +3,7 @@
   "info": {
     "title": "Private-GPT API",
     "description": "PrivateGPT -built by Zylon- is a production-ready AI project that allows you to ask questions about your documents using the power\nof Large Language Models (LLMs), even in scenarios without an Internet connection. 100% private, no data leaves your\nexecution environment at any point.",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "paths": {
     "/v1/messages": {

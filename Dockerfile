@@ -17,12 +17,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     ENABLE_WEB_SCRAPING=0; \
     ENABLE_DATABASE=0; \
     for extra in $EXTRAS; do \
-      case "$extra" in \
-        ingest|ingest-core|ingest-documents|ingest-markitdown|ingest-markup|core) ENABLE_DOCUMENTS=1 ;; \
-        media|media-core|media-image|media-audio|media-video) ENABLE_MEDIA=1 ;; \
-        tools|tool-web-scraping|core) ENABLE_WEB_SCRAPING=1 ;; \
-        database|database-core|database-postgres|database-mysql|database-mssql|database-db2|tool-database) ENABLE_DATABASE=1 ;; \
-      esac; \
+      case "$extra" in core|ingest|ingest-core|ingest-documents|ingest-markitdown|ingest-markup) ENABLE_DOCUMENTS=1 ;; esac; \
+      case "$extra" in core|media|media-core|media-image|media-audio|media-video) ENABLE_MEDIA=1 ;; esac; \
+      case "$extra" in core|tools|tool-web-scraping) ENABLE_WEB_SCRAPING=1 ;; esac; \
+      case "$extra" in core|tools|tool-database|database|database-core|database-postgres|database-mysql|database-mssql|database-db2) ENABLE_DATABASE=1 ;; esac; \
     done; \
     apt update; \
     apt install -yqq --no-install-recommends \
@@ -122,7 +120,8 @@ ARG PGPT_DOWNLOAD_PLAYWRIGHT
 
 COPY pyproject.toml uv.lock ./
 
-ENV HF_HOME=local_data
+ENV PGPT_HOME=/home/worker/app
+ENV HF_HOME=/home/worker/app/local_data
 ENV PLAYWRIGHT_BROWSERS_PATH=/home/worker/app/.local-browsers
 ENV TIKTOKEN_CACHE_DIR=/home/worker/app/tiktoken_cache
 ENV TIKTOKEN_ENCODINGS_BASE=/home/worker/app/encodings
@@ -206,11 +205,13 @@ COPY --chown=worker settings.yaml settings.yaml
 RUN --mount=type=cache,target=/root/.cache/uv uv pip install --python /home/worker/app/.venv/bin/python --no-deps .
 
 ENV PATH="/home/worker/app/.venv/bin:/usr/local/bin:${PATH}"
-ENV HF_HOME=local_data
+ENV PGPT_HOME=/home/worker/app
+ENV HF_HOME=/home/worker/app/local_data
 ENV PYTHONPATH="$PYTHONPATH:/private_gpt/"
 ENV SETUPTOOLS_USE_DISTUTILS=stdlib
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/home/worker/app/.local-browsers
+ENV TIKTOKEN_CACHE_DIR=/home/worker/app/tiktoken_cache
 ENV TIKTOKEN_ENCODINGS_BASE=/home/worker/app/encodings
 ENV TIKTOKEN_RS_CACHE_DIR=/home/worker/app/encodings
 

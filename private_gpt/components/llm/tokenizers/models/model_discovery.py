@@ -21,11 +21,12 @@ from private_gpt.components.llm.tokenizers.models.model_cache import (
     validate_model_path,
 )
 from private_gpt.components.llm.tokenizers.models.model_downloader import download_model
+from private_gpt.constants import PGPT_HOME
 
 logger = logging.getLogger(__name__)
 
 # CLI constants
-HF_HOME = Path(os.environ.get("HF_HOME", "./models/cache"))
+HF_HOME = Path(os.environ.get("HF_HOME", str(PGPT_HOME / "models" / "cache")))
 LOCK_FILE = HF_HOME / ".model-download.lock"
 LOCK_TIMEOUT = int(os.environ.get("DOWNLOAD_LOCK_TIMEOUT", "3600"))
 OFFLINE_MODE = os.environ.get("HF_HUB_OFFLINE", "0") == "1"
