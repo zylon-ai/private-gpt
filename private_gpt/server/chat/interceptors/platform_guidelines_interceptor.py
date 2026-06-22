@@ -84,7 +84,7 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
         if prompt.thinking and request.thinking.enabled:
             stack = self._inject_thinking(stack)
 
-        # 5. Skill management instructions
+        # 4. Skill management instructions
         if prompt.skills and self._has_skill_management_tool(tools):
             stack = self._inject_skills(stack, tools)
 
