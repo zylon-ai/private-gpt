@@ -90,6 +90,7 @@ async def preprocess_document_message(
         yield DocumentProcessingResponse(message=message)
         return
 
+    n = len(document_blocks)
     remaining_kwargs = {
         k: v
         for k, v in message.additional_kwargs.items()
