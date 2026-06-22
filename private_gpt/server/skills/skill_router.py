@@ -246,8 +246,29 @@ async def list_skills(
 )
 async def validate_skill(
     request: Request,
+    display_title: Annotated[
+        str,
+        Form(
+            min_length=1,
+            max_length=255,
+            examples=["Sales Ops Helper"],
+        ),
+    ],
+    collection: Annotated[
+        str,
+        Form(
+            min_length=1,
+            max_length=255,
+            examples=["acme-prod"],
+        ),
+    ],
+    loading: Annotated[
+        Literal["eager", "lazy"],
+        Form(examples=["lazy"]),
+    ] = "lazy",
 ) -> SkillValidationResponse:
-    """Validate skill payload (request fields + SKILL.md) without creating anything."""
+    """Validate skill payload (form fields + SKILL.md) without creating anything."""
+    del display_title, collection, loading
     service: SkillService = request.state.injector.get(SkillService)
     form = await request.form()
     uploads = await uploads_from_request_form(list(form.multi_items()))
@@ -256,7 +277,15 @@ async def validate_skill(
         files = await stored_files_from_uploads(uploads)
         parsed = await service.validate_skill(files)
     except ValueError as exc:
-        return SkillValidationResponse(valid=False, errors=[str(exc)])
+        raw = exc.args[0] if exc.args else str(exc)
+        if isinstance(raw, list):
+            errors = [
+                str(item.get("msg", item)) if isinstance(item, dict) else str(item)
+                for item in raw
+            ]
+        else:
+            errors = [str(raw)]
+        return SkillValidationResponse(valid=False, errors=errors)
 
     return SkillValidationResponse(
         valid=True,
