@@ -133,7 +133,7 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
         if not allowed_tools:
             return True
 
-        # Never block the skill-management controls.
+        # Once visible, do not further restrict skill-management controls.
         if tool_name in SKILL_MANAGEMENT_TOOLS:
             return True
 
