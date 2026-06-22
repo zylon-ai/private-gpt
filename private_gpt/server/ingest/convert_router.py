@@ -106,14 +106,13 @@ def list_readers(request: Request) -> ReadersResponse:
 
     # Invert the registry: extension → [readers] becomes reader → [extensions]
     reader_extensions: dict[str, list[str]] = {}
-    for extension, reader_names in registry._registry.items():
-        for name in reader_names:
+    for extension in sorted(registry.get_all_extensions()):
+        for name in registry.get_reader_names(extension):
             try:
                 factory_registry.get_factory(name)  # validate the factory exists
             except ValueError:
                 continue
             reader_extensions.setdefault(name, []).append(extension)
-
     return ReadersResponse(
         data={
             name: ReaderInfo(extensions=exts)
