@@ -133,14 +133,14 @@ class _BrowserPool:
                         # "--single-process",
                     ],
                 )
-                logger.info("Chromium launched")
+                logger.debug("Chromium launched")
             return self._browser
 
     @asynccontextmanager
     async def page(self) -> AsyncIterator[Any]:
         full = self._sem.locked()
         if full:
-            logger.info(
+            logger.debug(
                 f"Pool FULL, request waiting for a free slot "
                 f"(active={self._active}/{self._max_pages})"
             )
@@ -148,12 +148,12 @@ class _BrowserPool:
             async with self._lock:
                 self._active += 1
                 if full:
-                    logger.info(
+                    logger.debug(
                         f"Slot freed, page acquired after waiting "
                         f"(active={self._active}/{self._max_pages})"
                     )
                 else:
-                    logger.info(
+                    logger.debug(
                         f"Page requested "
                         f"(active={self._active}/{self._max_pages}, "
                         f"available_capacity={self._available_capacity()})"
@@ -162,7 +162,7 @@ class _BrowserPool:
                 browser = await self._ensure_browser()
                 context = await browser.new_context(**self._context_options())
                 page = await context.new_page()
-                logger.info(f"Page ACQUIRED (active={self._active}/{self._max_pages})")
+                logger.debug(f"Page ACQUIRED (active={self._active}/{self._max_pages})")
                 try:
                     yield page
                 finally:
@@ -171,7 +171,7 @@ class _BrowserPool:
                 async with self._lock:
                     self._active -= 1
                     self._last_used = time.monotonic()
-                    logger.info(
+                    logger.debug(
                         f"Page RELEASED (active={self._active}/{self._max_pages}, "
                         f"available_capacity={self._available_capacity()})"
                     )
@@ -214,14 +214,14 @@ class _BrowserPool:
                     await self._browser.close()
                     await self._playwright.stop()
                     self._browser = self._playwright = None
-                    logger.info(
+                    logger.debug(
                         f"Idle browser closed after {timeout}s with no activity"
                     )
 
     async def close(self) -> None:
         async with self._lock:
             self._closed = True
-            logger.info(
+            logger.debug(
                 f"Shutting down browser pool "
                 f"(active_pages={self._active}, "
                 f"browser_alive={self._browser is not None})"
@@ -466,9 +466,9 @@ class WebScraperService:
                 pass
             self._cleanup_task = None
         if self._pool is not None:
-            logger.info("Closing WebScraperService browser pool")
+            logger.debug("Closing WebScraperService browser pool")
             await self._pool.close()
             self._pool = None
-            logger.info("WebScraperService closed")
+            logger.debug("WebScraperService closed")
         else:
             logger.debug("WebScraperService close: no pool to close")
