@@ -73,6 +73,12 @@ class URLSource(BaseModel):
     )
     model_config = ConfigDict(extra="allow")
 
+    def get_data(self) -> str:
+        return self.url
+
+    def get_media_type(self) -> str | None:
+        return None
+
 
 class CitationsConfig(BaseModel):
     enabled: bool | None = Field(default=None)
@@ -242,6 +248,12 @@ class Base64ImageSource(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+    def get_data(self) -> str:
+        return self.data
+
+    def get_media_type(self) -> ImageMediaType:
+        return self.media_type
+
 
 ImageSource = Annotated[Base64ImageSource | URLSource, Field(discriminator="type")]
 
@@ -302,6 +314,12 @@ class Base64AudioSource(BaseModel):
     media_type: str = Field(description="Audio MIME type, e.g. 'audio/mpeg'")
 
     model_config = ConfigDict(extra="allow")
+
+    def get_data(self) -> str:
+        return self.data
+
+    def get_media_type(self) -> str:
+        return self.media_type
 
 
 AudioSource = Annotated[Base64AudioSource | URLSource, Field(discriminator="type")]

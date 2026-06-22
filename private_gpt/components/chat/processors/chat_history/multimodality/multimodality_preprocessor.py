@@ -102,6 +102,10 @@ async def preprocess_multimodal_message(
             )
         )
 
+    if not needs_image and not needs_audio:
+        yield MultimodalProcessingResponse(modified_message=message)
+        return
+
     semaphore = (
         asyncio.Semaphore(max_concurrency)
         if max_concurrency and max_concurrency > 0
