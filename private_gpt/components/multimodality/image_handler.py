@@ -220,7 +220,11 @@ class ImageProcessingWorkflow(Workflow):
         iteration = await ctx.store.get("iteration", 1)
         issues_found = await ctx.store.get("issues_found", [])
 
-        skippable = strategy is not None and strategy.type in SKIPPABLE_TYPES and strategy.confidence > 0.6
+        skippable = (
+            strategy is not None
+            and strategy.type in SKIPPABLE_TYPES
+            and strategy.confidence > 0.6
+        )
         if skippable:
             await ctx.store.set("iteration", max_iterations + 1)
             return ContentEvaluatedEvent(final_content=IMAGE_NOT_PROCESSABLE)
