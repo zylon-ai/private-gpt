@@ -141,6 +141,11 @@ def test_validate_skill_returns_errors_for_invalid_frontmatter(
 ) -> None:
     resp = test_client.post(
         "/v1/skills/validate",
+        data={
+            "display_title": "Broken Skill",
+            "collection": _collection(),
+            "loading": "lazy",
+        },
         files=[
             (
                 "files",
