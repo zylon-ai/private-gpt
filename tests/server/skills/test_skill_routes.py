@@ -107,6 +107,61 @@ def _collection() -> str:
     return f"tenant-{uuid.uuid4()}"
 
 
+def test_validate_skill_returns_parsed_name_and_description(
+    test_client: TestClient, injector: MockInjector
+) -> None:
+    resp = test_client.post(
+        "/v1/skills/validate",
+        data={
+            "display_title": "Sales Ops Helper",
+            "collection": _collection(),
+            "loading": "lazy",
+        },
+        files=[
+            (
+                "files",
+                _multipart_file(
+                    "sales-ops-helper", "Helps sales reps draft outreach."
+                ),
+            )
+        ],
+    )
+
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "valid": True,
+        "name": "sales-ops-helper",
+        "description": "Helps sales reps draft outreach.",
+        "errors": [],
+    }
+
+
+def test_validate_skill_returns_errors_for_invalid_frontmatter(
+    test_client: TestClient, injector: MockInjector
+) -> None:
+    resp = test_client.post(
+        "/v1/skills/validate",
+        files=[
+            (
+                "files",
+                (
+                    "SKILL.md",
+                    b"body without yaml frontmatter",
+                    "text/markdown",
+                ),
+            )
+        ],
+    )
+
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "valid": False,
+        "name": None,
+        "description": None,
+        "errors": ["SKILL.md must start with YAML frontmatter"],
+    }
+
+
 def test_skill_crud_flow(test_client: TestClient, injector: MockInjector) -> None:
     collection = _collection()
 
