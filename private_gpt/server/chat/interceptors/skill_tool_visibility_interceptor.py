@@ -53,7 +53,7 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
 
         has_loaded_skill = False
         has_catalog = False  # at least one non-eager skill not yet loaded
-        has_loaded_nonEager = False  # at least one non-eager skill currently loaded
+        has_loaded_non_eager = False  # at least one non-eager skill currently loaded
         allowed_tools: set[str] = set()
 
         skill_filter = self._find_skill_filter(state.input.request.tool_context)
@@ -73,7 +73,7 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
                 if is_active:
                     has_loaded_skill = True
                     if not is_eager:
-                        has_loaded_nonEager = True
+                        has_loaded_non_eager = True
                     if version.frontmatter.allowed_tools:
                         allowed_tools.update(
                             self._normalize_token(item)
@@ -89,7 +89,7 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
                 tool=tool,
                 has_loaded_skill=has_loaded_skill,
                 has_catalog=has_catalog,
-                has_loaded_nonEager=has_loaded_nonEager,
+                has_loaded_non_eager=has_loaded_non_eager,
                 allowed_tools=allowed_tools,
             )
         ]
@@ -115,7 +115,7 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
         tool: ToolSpec,
         has_loaded_skill: bool,
         has_catalog: bool,
-        has_loaded_nonEager: bool,
+        has_loaded_non_eager: bool,
         allowed_tools: set[str],
     ) -> bool:
         tool_name = tool.name or ""
@@ -123,7 +123,7 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
         if tool_name == SKILL_LOAD_TOOL_NAME:
             return has_catalog
         if tool_name == SKILL_UNLOAD_TOOL_NAME:
-            return has_loaded_nonEager
+            return has_loaded_non_eager
         if tool_name == SKILL_LIST_TOOL_NAME:
             return has_catalog
 
