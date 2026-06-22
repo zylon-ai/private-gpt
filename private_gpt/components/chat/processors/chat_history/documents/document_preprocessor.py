@@ -90,11 +90,11 @@ async def preprocess_document_message(
         yield DocumentProcessingResponse(message=message)
         return
 
-    n = len(document_blocks)
     remaining_kwargs = {
-        k: v for k, v in message.additional_kwargs.items() if k != "document"
+        k: v
+        for k, v in message.additional_kwargs.items()
+        if k not in {"document", "binary"}
     }
-
     for i in range(n):
         yield DocumentProcessingResponse(
             processing_status=DocumentProcessingStatus(status="processing", doc_index=i)
