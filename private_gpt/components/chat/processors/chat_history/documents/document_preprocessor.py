@@ -212,7 +212,9 @@ async def preprocess_document_history(
             is_last_user_message = False
         else:
             remaining_kwargs = {
-                k: v for k, v in message.additional_kwargs.items() if k != "document"
+                k: v
+                for k, v in message.additional_kwargs.items()
+                if k not in {"document", "binary"}
             }
             preprocessed_history.append(
                 ChatMessage(
