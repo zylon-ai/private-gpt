@@ -1487,7 +1487,7 @@ class ReaderSettings(BaseModel):
 
 class VisionSettings(ReaderSettings):
     enable_evaluation: bool = Field(  # Preset
-        default=False,
+        default=True,
         description="Flag indicating if validation of extracted information is enabled.",
     )
 
