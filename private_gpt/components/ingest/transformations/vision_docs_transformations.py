@@ -158,7 +158,7 @@ class ExtractDocumentContentFromImage(TransformComponent):
                 enable_preprocessing=False,
                 enable_evaluation=self._reader_settings.vision.enable_evaluation,
                 max_iterations=self._reader_settings.vision.max_iterations,
-                extraction_type_override="mixed",
+                skip_strategy_inference=True,
                 **kwargs,
             )
             if extracted_content and extracted_content.strip():
