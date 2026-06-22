@@ -22,6 +22,7 @@ from private_gpt.components.prompts.prompt_builder import PromptBuilderService
 from private_gpt.components.tools.tool_names import (
     SKILL_MANAGEMENT_TOOLS,
 )
+from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
     from private_gpt.chat.input_models import PromptConfig
@@ -49,8 +50,11 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
     """Injects all platform-level prompt layers before each LLM iteration."""
 
     @inject
-    def __init__(self, prompt_builder: PromptBuilderService) -> None:
+    def __init__(
+        self, prompt_builder: PromptBuilderService, settings: Settings
+    ) -> None:
         self._prompt_builder = prompt_builder
+        self._skill_injection_mode = settings.skills.skill_injection_mode
         self._thinking_content: str | None = None
         self._citation_guidelines_content: str | None = None
 
@@ -145,7 +149,9 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
     def _inject_skills(
         self, stack: ContextStack, tools: list[ToolSpec]
     ) -> ContextStack:
-        content = self._prompt_builder.create_skills_prompt(tools).format()
+        content = self._prompt_builder.create_skills_prompt(
+            tools, skill_injection_mode=self._skill_injection_mode
+        ).format()
         if content:
             stack = stack.append_layer(
                 ToolInstructionsLayer(

@@ -91,8 +91,13 @@ class SkillManagementToolBuilder:
         name: str = SKILL_LIST_TOOL_NAME,
         type: str = SKILL_LIST_TOOL_NAME + "_v1",
     ) -> ToolSpec:
-        async def list_skills() -> list[ResultContentBlockType]:
+        async def list_skills(
+            page: int = 0, page_size: int = 20
+        ) -> list[ResultContentBlockType]:
             versions = await self._versions()
+            total = len(versions)
+            start = page * page_size
+            page_versions = versions[start : start + page_size]
             return _ok(
                 {
                     "skills": [
@@ -102,8 +107,12 @@ class SkillManagementToolBuilder:
                             "skill_id": s.skill_id,
                             "version": s.version,
                         }
-                        for s in versions
-                    ]
+                        for s in page_versions
+                    ],
+                    "page": page,
+                    "page_size": page_size,
+                    "total": total,
+                    "has_more": start + page_size < total,
                 }
             )
 
@@ -111,6 +120,6 @@ class SkillManagementToolBuilder:
             name=name,
             type=type,
             runtime="server",
-            description="List available skills from current skill_filter.",
+            description="Browse the skill catalog (paginated). Use page/page_size to navigate large catalogs.",
             async_fn=list_skills,
         )

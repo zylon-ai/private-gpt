@@ -533,6 +533,7 @@ class PromptBuilderService:
         self,
         tools: list["ToolSpec"],
         few_shots: bool = False,
+        skill_injection_mode: str = "system_prompt",
     ) -> BasePromptTemplate:
         """Create the skill management instructions prompt.
 
@@ -546,6 +547,7 @@ class PromptBuilderService:
             rendered = template.render(
                 namespace=namespace,
                 few_shots=str(few_shots),
+                skill_injection_mode=skill_injection_mode,
             )
             return PromptTemplate(template=rendered.strip())
         except Exception as exc:
