@@ -120,9 +120,7 @@ def test_validate_skill_returns_parsed_name_and_description(
         files=[
             (
                 "files",
-                _multipart_file(
-                    "sales-ops-helper", "Helps sales reps draft outreach."
-                ),
+                _multipart_file("sales-ops-helper", "Helps sales reps draft outreach."),
             )
         ],
     )
