@@ -165,6 +165,7 @@ def test_validate_skill_returns_errors_for_invalid_frontmatter(
             {
                 "code": "MISSING_FRONTMATTER",
                 "message": "SKILL.md must start with YAML frontmatter",
+                "params": None,
             }
         ],
     }
