@@ -72,6 +72,7 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
                             input={
                                 "type": "document",
                                 "index": processing.doc_index,
+                                "name": processing.reference,
                             },
                         ),
                     )

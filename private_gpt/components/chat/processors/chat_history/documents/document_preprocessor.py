@@ -97,8 +97,11 @@ async def preprocess_document_message(
         if k not in {"document", "binary"}
     }
     for i in range(n):
+        filename = document_blocks[i].title
         yield DocumentProcessingResponse(
-            processing_status=DocumentProcessingStatus(status="processing", doc_index=i)
+            processing_status=DocumentProcessingStatus(
+                status="processing", doc_index=i, reference=filename
+            )
         )
 
     semaphore = (
@@ -120,11 +123,13 @@ async def preprocess_document_message(
 
     converted_blocks: list[LITextBlock] = []
     for i, result in enumerate(results):
+        reference = document_blocks[i].title
         if isinstance(result, BaseException):
             yield DocumentProcessingResponse(
                 processing_status=DocumentProcessingStatus(
                     status="failed",
                     doc_index=i,
+                    reference=reference,
                     error_detail=str(result),
                 )
             )
@@ -147,6 +152,7 @@ async def preprocess_document_message(
                 processing_status=DocumentProcessingStatus(
                     status="completed",
                     doc_index=i,
+                    reference=reference,
                     content=content,
                 )
             )
