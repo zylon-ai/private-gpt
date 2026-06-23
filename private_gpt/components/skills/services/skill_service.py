@@ -41,6 +41,7 @@ class SkillService:
         skill_repository: SQLAlchemySkillRepository,
     ) -> None:
         self._skill_repository = skill_repository
+        self._max_bundle_size_bytes = settings.skills.max_bundle_size_bytes
         local_root = str(Path(settings.data.local_data_folder) / "storage")
         self._storage_bucket_name = settings.s3.durable_bucket_name
         self._storage_component = storage_component.get_object_storage(
@@ -48,6 +49,16 @@ class SkillService:
             local_root_path=local_root,
             bucket_name=self._storage_bucket_name,
         )
+
+    def _check_bundle_size(self, files: list[StoredFile]) -> None:
+        if self._max_bundle_size_bytes is None:
+            return
+        total = sum(len(f.content) for f in files)
+        if total > self._max_bundle_size_bytes:
+            raise ValueError(
+                f"Skill bundle size ({total} bytes) exceeds the maximum allowed "
+                f"size of {self._max_bundle_size_bytes} bytes."
+            )
 
     async def create_skill(
         self,
@@ -58,6 +69,7 @@ class SkillService:
         readonly: bool,
         files: list[StoredFile],
     ) -> SkillEntity:
+        self._check_bundle_size(files)
         skill_id = new_skill_id()
         version_id = new_skill_version_id()
         now = datetime.now(tz=UTC)
@@ -107,6 +119,7 @@ class SkillService:
 
     async def validate_skill(self, files: list[StoredFile]) -> ParsedSkillDocument:
         """Dry-run: parse and validate files without persisting anything."""
+        self._check_bundle_size(files)
         skill_markdown = _extract_skill_md(files)
         return parse_skill_markdown(skill_markdown)
 
@@ -143,6 +156,7 @@ class SkillService:
         collection: str,
         files: list[StoredFile],
     ) -> SkillVersionEntity | None:
+        self._check_bundle_size(files)
         now = datetime.now(tz=UTC)
         skill_markdown = _extract_skill_md(files)
         parsed_document = parse_skill_markdown(skill_markdown)

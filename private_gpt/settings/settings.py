@@ -1394,6 +1394,21 @@ class SkillSettings(BaseModel):
         ge=1,
         description="Default max number of concurrently loaded skills per chat.",
     )
+    max_bundle_size_bytes: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Maximum total size in bytes allowed for a skill bundle upload (all files combined). "
+            "If None (default), no size limit is enforced."
+        ),
+    )
+
+    @field_validator("max_bundle_size_bytes", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: object) -> object:
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 
 
 class SandboxSettings(BaseModel):
