@@ -65,13 +65,19 @@ async def stored_files_from_uploads(
 
     if len(resolved) == 1 and "SKILL.md" not in resolved:
         stored = next(iter(resolved.values()))
-        resolved = {
-            "SKILL.md": StoredFile(
-                path="SKILL.md",
-                content=stored.content,
-                mime_type="text/markdown",
-            )
-        }
+        try:
+            text = stored.content.decode("utf-8")
+            is_text = "\x00" not in text
+        except UnicodeDecodeError:
+            is_text = False
+        if is_text:
+            resolved = {
+                "SKILL.md": StoredFile(
+                    path="SKILL.md",
+                    content=stored.content,
+                    mime_type="text/markdown",
+                )
+            }
 
     for value in resolved.values():
         if not value.mime_type:
@@ -157,7 +163,7 @@ def _extract_zip(upload: UploadFile, payload: bytes) -> list[tuple[str, bytes]]:
     try:
         with zipfile.ZipFile(io.BytesIO(payload)) as archive:
             members = [item for item in archive.infolist() if not item.is_dir()]
-            if not members:
+            if not members or all(item.file_size == 0 for item in members):
                 raise SkillDomainError(
                     SkillErrorCode.EMPTY_ZIP, "ZIP file cannot be empty"
                 )
@@ -166,7 +172,9 @@ def _extract_zip(upload: UploadFile, payload: bytes) -> list[tuple[str, bytes]]:
                 (item.filename, archive.read(item.filename)) for item in members
             ]
             return _flatten_wrapper_directory(raw_entries)
-    except zipfile.BadZipFile as exc:
+    except SkillDomainError as e:
+        raise e
+    except Exception as exc:
         raise SkillDomainError(
             SkillErrorCode.INVALID_ZIP,
             f"Invalid ZIP file: {upload.filename or 'unnamed.zip'}",
