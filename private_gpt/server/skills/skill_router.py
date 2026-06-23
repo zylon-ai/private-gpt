@@ -2,6 +2,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Form, Header, HTTPException, Query, Request
 
+from private_gpt.components.skills.errors import SkillDomainError, SkillValidationErrors
 from private_gpt.components.skills.models.skill_entities import (
     SkillEntity,
     SkillVersionEntity,
@@ -12,6 +13,7 @@ from private_gpt.server.skills.skill_models import (
     ListSkillVersionsResponse,
     SkillDeletedResponse,
     SkillResponse,
+    SkillValidationError,
     SkillValidationResponse,
     SkillVersionDeletedResponse,
     SkillVersionResponse,
@@ -276,16 +278,25 @@ async def validate_skill(
     try:
         files = await stored_files_from_uploads(uploads)
         parsed = await service.validate_skill(files)
-    except ValueError as exc:
-        raw = exc.args[0] if exc.args else str(exc)
-        if isinstance(raw, list):
-            errors = [
-                str(item.get("msg", item)) if isinstance(item, dict) else str(item)
-                for item in raw
-            ]
-        else:
-            errors = [str(raw)]
-        return SkillValidationResponse(valid=False, errors=errors)
+    except SkillValidationErrors as exc:
+        return SkillValidationResponse(
+            valid=False,
+            errors=[
+                SkillValidationError(
+                    code=str(e.code), message=e.message, params=e.params
+                )
+                for e in exc.errors
+            ],
+        )
+    except SkillDomainError as exc:
+        return SkillValidationResponse(
+            valid=False,
+            errors=[
+                SkillValidationError(
+                    code=str(exc.code), message=exc.message, params=exc.params
+                )
+            ],
+        )
 
     return SkillValidationResponse(
         valid=True,

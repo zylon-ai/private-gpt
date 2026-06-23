@@ -4,6 +4,7 @@ from typing import Literal
 
 from injector import inject, singleton
 
+from private_gpt.components.skills.errors import SkillDomainError, SkillErrorCode
 from private_gpt.components.skills.models.skill_entities import (
     SkillEntity,
     SkillFilter,
@@ -55,9 +56,12 @@ class SkillService:
             return
         total = sum(len(f.content) for f in files)
         if total > self._max_bundle_size_bytes:
-            raise ValueError(
+            max_mb = round(self._max_bundle_size_bytes / (1024 * 1024))
+            raise SkillDomainError(
+                SkillErrorCode.BUNDLE_TOO_LARGE,
                 f"Skill bundle size ({total} bytes) exceeds the maximum allowed "
-                f"size of {self._max_bundle_size_bytes} bytes."
+                f"size of {self._max_bundle_size_bytes} bytes.",
+                params={"size": str(max_mb)},
             )
 
     async def create_skill(
@@ -280,4 +284,4 @@ def _extract_skill_md(files: list[StoredFile]) -> str:
     for file in files:
         if file.path == "SKILL.md":
             return file.content.decode("utf-8")
-    raise ValueError("SKILL.md is required")
+    raise SkillDomainError(SkillErrorCode.MISSING_SKILL_MD, "SKILL.md is required")
