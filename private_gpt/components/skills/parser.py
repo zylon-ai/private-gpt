@@ -80,7 +80,13 @@ def parse_skill_markdown(skill_markdown: str) -> ParsedSkillDocument:
         )
 
     raw_frontmatter = match.group(1)
-    parsed_yaml = yaml.safe_load(raw_frontmatter)
+    try:
+        parsed_yaml = yaml.safe_load(raw_frontmatter)
+    except yaml.YAMLError as e:
+        raise SkillDomainError(
+            SkillErrorCode.INVALID_FRONTMATTER,
+            "The SKILL.md frontmatter is not valid YAML.",
+        ) from e
     if not isinstance(parsed_yaml, dict):
         raise SkillDomainError(
             SkillErrorCode.INVALID_FRONTMATTER,
