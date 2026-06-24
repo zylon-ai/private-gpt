@@ -1,0 +1,29 @@
+Extract the complete content of this document image and reproduce it as faithfully as possible in Markdown. Return raw Markdown only—no code fences around the whole output, no preamble.
+
+**Core Rules:**
+- Reproduce the visible layout and structure as faithfully as possible: titles, sections, headings, bullet and numbered lists, tables, and emphasis.
+- Preserve the original language of the document. Do not translate.
+- **Strict Accuracy:** Return only what is actually visible in the image. Never invent, infer, or complete values, labels, headers, or data. If something is unclear or unreadable, omit it rather than guessing.
+- Do not hallucinate: no content that is not present in the image.
+- No emojis.
+{% if has_word_limit %}- Stay under {{ max_words }} words.{% endif %}
+
+**Tables:**
+- Reproduce every table using standard Markdown table syntax.
+- Keep the exact rows, columns, headers, and cell values shown. Do not add, drop, or merge cells that aren't there.
+
+**Visual Elements (charts, graphs, diagrams, images):**
+Describe only what is visible—never invent data—including:
+1. **Type & Title:** element type (e.g., line chart, bar graph, flow diagram) and its title if shown.
+2. **Color & Style:** distinguish each line/bar/segment by its exact color (including subtle shades), pattern (solid, dashed, dotted) and thickness. If multiple series exist, describe how they differ visually.
+3. **Axes & Labels:** axis names, units, and scale ranges.
+4. **Data Points:** specific values, trends, peaks, troughs, or relative positions clearly visible.
+5. **Flow/Relationships:** for diagrams, map the connections and directional flow.
+Keep each description in its position within the page.
+
+**Markdown Format:**
+- `# Title`, `## Section`, `### Sub-section`
+- `- bullet`, `1. numbered list`
+- Standard Markdown table syntax for tables
+- ```` ``` ```` fenced blocks for technical/code content
+- `**bold**` for emphasis

@@ -78,6 +78,7 @@ class ImageProcessingInputEvent(StartEvent):
     max_iterations: int = 3
     enable_preprocessing: bool = True
     enable_evaluation: bool = True
+    skip_strategy_inference: bool = False
     kwargs: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -86,7 +87,7 @@ class WorkflowInitializedEvent(Event):
 
 
 class StrategyInferredEvent(Event):
-    strategy: ExtractionStrategy
+    strategy: ExtractionStrategy | None
 
 
 class ImagesPreprocessedEvent(Event):
@@ -158,6 +159,7 @@ class ImageProcessingWorkflow(Workflow):
         await ctx.store.set("max_iterations", ev.max_iterations)
         await ctx.store.set("enable_preprocessing", ev.enable_preprocessing)
         await ctx.store.set("enable_evaluation", ev.enable_evaluation)
+        await ctx.store.set("skip_strategy_inference", ev.skip_strategy_inference)
         await ctx.store.set("kwargs", ev.kwargs)
         await ctx.store.set("results", [])
         await ctx.store.set("iteration", 1)
@@ -169,11 +171,18 @@ class ImageProcessingWorkflow(Workflow):
         self, ctx: AnyContext, ev: WorkflowInitializedEvent
     ) -> StrategyInferredEvent | ImagesPreprocessedEvent:
 
-        iteration = await ctx.store.get("iteration", 1)
         enable_preprocessing = await ctx.store.get("enable_preprocessing")
+        skip_strategy_inference = await ctx.store.get("skip_strategy_inference")
         kwargs = await ctx.store.get("kwargs")
 
-        strategy = await self._infer_strategy(ev.image_blocks, seed=iteration, **kwargs)
+        if skip_strategy_inference:
+            strategy = None
+        else:
+            iteration = await ctx.store.get("iteration", 1)
+            strategy = await self._infer_strategy(
+                ev.image_blocks, seed=iteration, **kwargs
+            )
+
         await ctx.store.set("strategy", strategy)
 
         return (
@@ -190,7 +199,7 @@ class ImageProcessingWorkflow(Workflow):
         enable_preprocessing = await ctx.store.get("enable_preprocessing")
 
         processed_blocks = image_blocks
-        if enable_preprocessing and ev.strategy.increase_contrast:
+        if enable_preprocessing and ev.strategy and ev.strategy.increase_contrast:
             processed_blocks = [
                 self._preprocess_image(block, ev.strategy) for block in image_blocks
             ]
@@ -211,7 +220,11 @@ class ImageProcessingWorkflow(Workflow):
         iteration = await ctx.store.get("iteration", 1)
         issues_found = await ctx.store.get("issues_found", [])
 
-        skippable = strategy.type in SKIPPABLE_TYPES and strategy.confidence > 0.6
+        skippable = (
+            strategy is not None
+            and strategy.type in SKIPPABLE_TYPES
+            and strategy.confidence > 0.6
+        )
         if skippable:
             await ctx.store.set("iteration", max_iterations + 1)
             return ContentEvaluatedEvent(final_content=IMAGE_NOT_PROCESSABLE)
@@ -224,10 +237,10 @@ class ImageProcessingWorkflow(Workflow):
         template = self._prompt_builder.create_image_interpretation_prompt(
             user_query=user_query,
             last_content=continue_content,
-            extraction_type=strategy.type,
-            confidence=strategy.confidence,
-            language=strategy.language,
-            has_structure=strategy.has_structure,
+            extraction_type=strategy.type if strategy else None,
+            confidence=strategy.confidence if strategy else None,
+            language=strategy.language if strategy else None,
+            has_structure=strategy.has_structure if strategy else None,
             errors=issues_found or None,
         )
 
@@ -593,6 +606,7 @@ async def describe_image(
     max_iterations: int = 2,
     enable_preprocessing: bool = True,
     enable_evaluation: bool = True,
+    skip_strategy_inference: bool = False,
     **kwargs: Any,
 ) -> str | None:
     if not image_blocks:

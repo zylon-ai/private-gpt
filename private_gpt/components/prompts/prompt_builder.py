@@ -117,7 +117,12 @@ class PromptBuilderService:
             assistant_name=assistant_name or settings().chat.assistant_name,
             assistant_description=assistant_description
             or settings().chat.assistant_description,
-            current_date=current_date.astimezone().isoformat(),
+            # Use date-level granularity: a sub-second timestamp here changes on
+            # every request and sits at the front of the system prompt (before the
+            # guidelines and retrieved context), which defeats LLM prompt-prefix
+            # caching (e.g. OpenAI automatic prefix caching, local KV-cache reuse).
+            # The model only needs the calendar date for relative-date reasoning.
+            current_date=current_date.astimezone().date().isoformat(),
         )
 
     def create_chat_context_for_system_prompt(
@@ -380,6 +385,14 @@ class PromptBuilderService:
             extracted_text=extracted_text,
             max_words=max_words,
             has_text=extracted_text is not None and extracted_text != "",
+        )
+
+    def create_document_image_extract_prompt(
+        self, max_words: int | None = None
+    ) -> BasePromptTemplate:
+        return self.template_service.create_prompt_template(
+            "multimodality/images/document_image_extract.j2",
+            max_words=max_words,
         )
 
     def create_image_strategy_prompt(
