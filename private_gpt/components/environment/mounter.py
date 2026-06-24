@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
-from private_gpt.components.sandbox.content_bundle import StoredBundle
 from private_gpt.components.sandbox.mount import SandboxMountSpec, VolumeSpec
 
 if TYPE_CHECKING:
@@ -13,16 +11,15 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from private_gpt.components.environment.layout import SessionMountDef
-    from private_gpt.components.sandbox.base import SandboxSession
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
-class Mounter(ABC):
-    """Single owner of all mount logic for an environment.
+class LayoutMounter(ABC):
+    """Owns the session filesystem layout — workspace, uploads, outputs.
 
-    Decides which host directories back the session filesystem (if any),
-    which mount specs the sandbox enforces writability with, and how the
-    layout and content bundles are materialised inside the sandbox.
+    Responsible only for structural concerns: which canonical paths make up
+    the session's persistent directory tree and how they are backed on the
+    host. Bundle content (skills, tools, ...) is a separate concern handled
+    by ContentMounter implementations.
     """
 
     def __init__(
@@ -36,82 +33,54 @@ class Mounter(ABC):
 
     @property
     def workspace_canonical(self) -> str:
-        """The canonical working directory: first writable layout entry."""
+        """Canonical working directory: the first writable layout entry."""
         return next(m.canonical for m in self._layout if m.writable)
 
     def ensure_ready(self) -> None:  # noqa: B027 — optional hook, default no-op
-        """One-time setup of the backing storage (e.g. mount s3fs). Idempotent."""
+        """One-time idempotent setup of backing storage (e.g. mount s3fs)."""
 
     @abstractmethod
     def session_volumes(self, session_id: str) -> list[VolumeSpec] | None:
-        """Host volumes backing this session's layout dirs, or None when not host-backed.
+        """Host volumes backing this session's layout dirs, or None if not host-backed.
 
         Only covers the fixed session layout (workspace, uploads, outputs).
-        Bundle/skill content is always injected post-creation via prepare_bundles().
+        Bundle/skill volumes are declared by ContentMounter.prepare_volume().
         Implementations create the host directories they return. Idempotent.
         """
 
-    def mount_specs(
-        self, extra_bundles: list[ContentBundle] | None = None
-    ) -> list[SandboxMountSpec]:
-        """Canonical mount specs the sandbox uses for writability enforcement."""
-        specs: list[SandboxMountSpec] = [
+    def mount_specs(self) -> list[SandboxMountSpec]:
+        """Canonical mount specs for the session layout (writability enforcement).
+
+        Bundle specs are added separately by the EnvironmentManager so this
+        class stays unaware of content.
+        """
+        return [
             SandboxMountSpec(canonical=m.canonical, writable=m.writable)
             for m in self._layout
         ]
-        specs.extend(
-            SandboxMountSpec(canonical=b.canonical_path, writable=b.writable)
-            for b in extra_bundles or []
-        )
-        return specs
-
-    async def prepare(
-        self,
-        sandbox: SandboxSession,
-        session_id: str,
-        extra_bundles: list[ContentBundle] | None = None,
-    ) -> None:
-        """Materialise the layout and bundles inside the sandbox. Idempotent."""
-        if self.session_volumes(session_id) is None:
-            await asyncio.gather(*[sandbox.make_dir(m.canonical) for m in self._layout])
-        await self.prepare_bundles(sandbox, extra_bundles)
-
-    async def prepare_bundles(
-        self,
-        sandbox: SandboxSession,
-        extra_bundles: list[ContentBundle] | None = None,
-    ) -> None:
-        """Materialise bundles not already present (e.g. via a direct volume).
-
-        Also runs on environment reuse, so content activated mid-session (a
-        newly enabled skill) appears in the live sandbox via the copy fallback.
-        """
-        for bundle in extra_bundles or []:
-            if await sandbox.path_exists(bundle.canonical_path):
-                continue
-            files = (
-                await bundle.fetch()
-                if isinstance(bundle, StoredBundle)
-                else bundle.files
-            )
-            await sandbox.initialize_mount(bundle.canonical_path, files)
 
 
-class SandboxDirMounter(Mounter):
-    """No host backing: layout dirs are created inside the sandbox itself.
+# Backward-compatible alias so existing imports of `Mounter` keep working.
+Mounter = LayoutMounter
 
-    Files live and die with the sandbox — for development or ephemeral use.
+
+class SandboxDirMounter(LayoutMounter):
+    """No host backing — layout dirs are created inside the sandbox itself.
+
+    Files live and die with the sandbox. Suitable for development or
+    ephemeral use where persistence is not required.
     """
 
     def session_volumes(self, session_id: str) -> list[VolumeSpec] | None:
         return None
 
 
-class LocalDirMounter(Mounter):
+class LocalDirMounter(LayoutMounter):
     """Host-directory backing under a local base path.
 
-    Layout dirs live under ``{base}/sessions/{session_id}/{name}`` and survive
-    sandbox restarts; bundle files are cached under ``{base}/content_cache``.
+    Layout dirs live under ``{base}/sessions/{session_id}/{name}`` and
+    survive sandbox restarts. Bundle content is handled by
+    LocalStorageContentMounter or FetchContentMounter, not here.
     """
 
     def __init__(

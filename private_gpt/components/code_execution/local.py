@@ -11,6 +11,11 @@ from private_gpt.components.code_execution.base import (
 from private_gpt.components.code_execution.sandbox_session import (
     SandboxCodeExecutionSession,
 )
+from private_gpt.components.environment.content_mounter import (
+    FetchContentMounter,
+    InlineContentMounter,
+    LocalStorageContentMounter,
+)
 from private_gpt.components.environment.manager import EnvironmentManager
 from private_gpt.components.environment.mounter import LocalDirMounter
 from private_gpt.components.sandbox.local import LocalSandboxProvider
@@ -18,7 +23,8 @@ from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
     from private_gpt.components.code_execution.base import CodeExecutionSession
-    from private_gpt.components.environment.mounter import Mounter
+    from private_gpt.components.environment.content_mounter import ContentMounter
+    from private_gpt.components.environment.mounter import LayoutMounter
     from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
@@ -39,18 +45,30 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
         )
         self._manager = EnvironmentManager(
             sandbox_provider=LocalSandboxProvider(settings),
-            mounter=self._make_mounter(base),
+            layout_mounter=self._make_layout_mounter(base),
+            content_mounters=self._make_content_mounters(),
             ttl_seconds=settings.code_execution.session_ttl_seconds,
         )
 
-    def _make_mounter(self, base: Path) -> Mounter:
+    def _make_layout_mounter(self, base: Path) -> LayoutMounter:
         """Factory hook — subclasses override to inject cloud-backed storage."""
-        storage_root = (
-            Path(self.settings.data.local_data_folder) / "storage"
-            if self.settings.skills.storage_provider == "local"
-            else None
-        )
-        return LocalDirMounter(base, storage_root=storage_root)
+        return LocalDirMounter(base)
+
+    def _make_content_mounters(self) -> list[ContentMounter]:
+        """Build the ordered content-mounter list for this deployment.
+
+        When skills are stored locally, LocalStorageContentMounter provides a
+        direct host-path volume (no fetch needed). FetchContentMounter is the
+        universal fallback for any StoredBundle. InlineContentMounter handles
+        plain ContentBundle instances whose files are already in memory.
+        """
+        mounters: list[ContentMounter] = []
+        if self.settings.skills.storage_provider == "local":
+            storage_root = Path(self.settings.data.local_data_folder) / "storage"
+            mounters.append(LocalStorageContentMounter(storage_root))
+        mounters.append(FetchContentMounter())
+        mounters.append(InlineContentMounter())
+        return mounters
 
     async def create_session(
         self,

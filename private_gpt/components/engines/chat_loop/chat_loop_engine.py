@@ -7,7 +7,7 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import suppress
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from functools import partial
 from typing import Any, Literal
@@ -22,7 +22,6 @@ from private_gpt.components.chat.models.chat_config_models import (
     ChatRequest,
     ResolvedChatRequest,
 )
-from private_gpt.components.tools.processors.base import _session_id
 from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
     ChatRequestLoopInterceptor,
@@ -66,6 +65,7 @@ from private_gpt.components.llm.custom.base import StructuredOutputsParams, Zylo
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.models import ReasoningEffort
 from private_gpt.components.llm.priorities import DefinedPriorities
+from private_gpt.components.tools.processors.base import _session_id
 from private_gpt.events.models import (
     Container,
     Event,
@@ -997,12 +997,13 @@ class ChatLoopEngine:
 
         tools = run.state.input.request.tool_config.tools
         has_code_execution = any(
-            (tool.type or "").startswith("code_execution") or tool.name == CODE_EXECUTION_TOOL_NAME
+            (tool.type or "").startswith("code_execution")
+            or tool.name == CODE_EXECUTION_TOOL_NAME
             for tool in tools
         )
         if not has_code_execution:
             return None
 
         session_id = _session_id(run.state.input.request)
-        expires_at = datetime.now(tz=timezone.utc) + timedelta(hours=1)
+        expires_at = datetime.now(tz=UTC) + timedelta(hours=1)
         return Container(id=session_id, expires_at=expires_at)

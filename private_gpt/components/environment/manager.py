@@ -6,12 +6,14 @@ import time
 from typing import TYPE_CHECKING
 
 from private_gpt.components.environment.environment import Environment
+from private_gpt.components.sandbox.mount import SandboxMountSpec
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
     from typing import Any
 
-    from private_gpt.components.environment.mounter import Mounter
+    from private_gpt.components.environment.content_mounter import ContentMounter
+    from private_gpt.components.environment.mounter import LayoutMounter
     from private_gpt.components.sandbox.base import SandboxProvider, SandboxSession
     from private_gpt.components.sandbox.content_bundle import ContentBundle
 
@@ -21,22 +23,33 @@ logger = logging.getLogger(__name__)
 class EnvironmentManager:
     """Owns the lifecycle of managed environments, keyed by session id.
 
-    Generic over the sandbox backend (SandboxProvider) and the mount strategy
-    (Mounter). acquire() reuses a live environment, restores a backend sandbox
-    when the provider supports it, or creates a fresh one. A background reaper
-    kills environments idle past the TTL and renews the backend lifetime of
-    the ones still in use, so a long conversation is never cut off mid-flight.
+    Generic over the sandbox backend (SandboxProvider), the layout strategy
+    (LayoutMounter), and the ordered list of content mounters (ContentMounter).
+
+    acquire() reuses a live environment, restores a backend sandbox when the
+    provider supports it, or creates a fresh one. Bundle registration on reuse
+    is zero-network: bundles are added to a pending list and materialized lazily
+    just before the first exec() that follows.
+
+    A stale sandbox (e.g. after the backend server restarts) marks the
+    Environment as _stale during the first failing exec/flush; acquire() then
+    evicts and recreates transparently.
+
+    A background reaper kills environments idle past the TTL and renews the
+    backend lifetime of those still in use.
     """
 
     def __init__(
         self,
         sandbox_provider: SandboxProvider,
-        mounter: Mounter,
+        layout_mounter: LayoutMounter,
+        content_mounters: list[ContentMounter],
         ttl_seconds: int,
         reaper_interval_seconds: int | None = None,
     ) -> None:
         self._provider = sandbox_provider
-        self._mounter = mounter
+        self._layout = layout_mounter
+        self._content_mounters = content_mounters
         self._ttl = ttl_seconds
         self._reaper_interval = reaper_interval_seconds
         self._active: dict[str, Environment] = {}
@@ -57,29 +70,25 @@ class EnvironmentManager:
             async with self._lock:
                 env = self._active.get(session_id)
             if env:
-                env.touch()
-                if extra_bundles:
-                    try:
-                        # Content activated mid-session (e.g. a newly enabled
-                        # skill) must appear in the live sandbox. Idempotent.
-                        await self._mounter.prepare_bundles(env.sandbox, extra_bundles)
-                    except Exception as exc:
-                        # The sandbox server may have restarted while this
-                        # process kept the stale env in _active.  Evict it and
-                        # let _create() restore or create a fresh one.
-                        logger.warning(
-                            "Sandbox for session %s is stale, recreating: %s",
-                            session_id,
-                            exc,
-                        )
-                        async with self._lock:
-                            self._active.pop(session_id, None)
-                        self._spawn(
-                            self._kill(env.sandbox, session_id),
-                            f"kill stale sandbox ({session_id})",
-                        )
-                        return await self._create(session_id, extra_bundles)
-                return env
+                if env._stale:
+                    # Sandbox died (e.g. server restart). Evict and fall
+                    # through to _create() so the next acquire gets a fresh env.
+                    logger.warning(
+                        "Sandbox for session %s is stale, recreating", session_id
+                    )
+                    async with self._lock:
+                        self._active.pop(session_id, None)
+                    self._spawn(
+                        self._kill(env.sandbox, session_id),
+                        f"kill stale sandbox ({session_id})",
+                    )
+                else:
+                    env.touch()
+                    if extra_bundles:
+                        # Zero network calls: bundles are registered as pending
+                        # and materialized lazily before the next exec().
+                        env.add_pending(extra_bundles)
+                    return env
             return await self._create(session_id, extra_bundles)
 
     def release(self, session_id: str) -> None:
@@ -97,8 +106,31 @@ class EnvironmentManager:
         session_id: str,
         extra_bundles: list[ContentBundle] | None,
     ) -> Environment:
-        await asyncio.to_thread(self._mounter.ensure_ready)
-        specs = self._mounter.mount_specs(extra_bundles)
+        await asyncio.to_thread(self._layout.ensure_ready)
+
+        # Layout volumes (workspace, uploads, outputs).
+        layout_volumes = self._layout.session_volumes(session_id)
+        volumes = list(layout_volumes or [])
+
+        # Bundle mount specs — always added for writability enforcement.
+        specs = self._layout.mount_specs()
+        for bundle in extra_bundles or []:
+            specs.append(
+                SandboxMountSpec(
+                    canonical=bundle.canonical_path, writable=bundle.writable
+                )
+            )
+
+        # Bundles that support eager volume-mounting (e.g. local storage,
+        # S3FS bind-mount). Pre-populate _mounted so they skip materialize().
+        pre_mounted: set[str] = set()
+        for bundle in extra_bundles or []:
+            mounter = self._find_content_mounter(bundle)
+            if mounter:
+                vol = await mounter.prepare_volume(bundle, session_id)
+                if vol:
+                    volumes.append(vol)
+                    pre_mounted.add(bundle.canonical_path)
 
         sandbox = await self._provider.restore_session(
             session_id, timeout=self._ttl, bundle_specs=specs
@@ -108,29 +140,44 @@ class EnvironmentManager:
                 timeout=self._ttl,
                 bundle_specs=specs,
                 session_id=session_id,
-                volumes=self._mounter.session_volumes(session_id),
+                volumes=volumes or None,
             )
 
         try:
-            await self._mounter.prepare(sandbox, session_id, extra_bundles)
+            # Layout dirs are only needed when not volume-backed.
+            if layout_volumes is None:
+                await asyncio.gather(
+                    *[sandbox.make_dir(m.canonical) for m in self._layout.layout]
+                )
         except Exception:
-            # A half-initialized sandbox must not be reused or leaked.
             self._spawn(
                 self._kill(sandbox, session_id),
-                f"kill sandbox after failed mount setup ({session_id})",
+                f"kill sandbox after failed layout setup ({session_id})",
             )
             raise
 
         env = Environment(
             id=session_id,
             sandbox=sandbox,
-            workspace=self._mounter.workspace_canonical,
+            workspace=self._layout.workspace_canonical,
+            content_mounters=self._content_mounters,
         )
+        env._mounted.update(pre_mounted)
+
+        # Deferred bundles: not volume-mounted, will be materialized on exec().
+        deferred = [
+            b for b in (extra_bundles or []) if b.canonical_path not in pre_mounted
+        ]
+        env.add_pending(deferred)
+
         async with self._lock:
             self._active[session_id] = env
 
         self._ensure_reaper()
         return env
+
+    def _find_content_mounter(self, bundle: ContentBundle) -> ContentMounter | None:
+        return next((m for m in self._content_mounters if m.can_handle(bundle)), None)
 
     async def _creation_lock(self, session_id: str) -> asyncio.Lock:
         async with self._lock:
