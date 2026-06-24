@@ -108,7 +108,7 @@ class EnvironmentManager:
                 timeout=self._ttl,
                 bundle_specs=specs,
                 session_id=session_id,
-                volumes=self._mounter.session_volumes(session_id, extra_bundles),
+                volumes=self._mounter.session_volumes(session_id),
             )
 
         try:
