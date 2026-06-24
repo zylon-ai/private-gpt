@@ -48,17 +48,18 @@ class BashToolBuilder:
         type: str = BASH_TOOL_NAME + "_v1",
         description: str = BASH_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = await self._component.get_or_create_session(
-            session_id, extra_bundles=bundles or None
-        )
-        if session is None:
-            raise ValueError("code_execution provider is not configured.")
 
         async def run_bash(
             command: str,
             timeout: int | None = None,
             restart: bool = False,
         ) -> list[ResultContentBlockType]:
+            session = await self._component.get_or_create_session(
+                session_id, extra_bundles=bundles or None
+            )
+            if session is None:
+                raise ValueError("code_execution provider is not configured.")
+
             result = await session.execute_bash(
                 command,
                 timeout=timeout,

@@ -60,8 +60,6 @@ class TextEditorToolBuilder:
         type: str = TEXT_EDITOR_VIEW_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_VIEW_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = await self._session(session_id)
-
         async def view(
             path: str,
             view_range: list[int] | None = None,
@@ -75,6 +73,7 @@ class TextEditorToolBuilder:
                     )
                 resolved_view_range = (view_range[0], view_range[1])
 
+            session = await self._session(session_id)
             result = await session.view(
                 path,
                 view_range=resolved_view_range,
@@ -101,13 +100,13 @@ class TextEditorToolBuilder:
         type: str = TEXT_EDITOR_STR_REPLACE_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_STR_REPLACE_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = await self._session(session_id)
 
         async def str_replace(
             path: str,
             old_str: str,
             new_str: str,
         ) -> list[ResultContentBlockType]:
+            session = await self._session(session_id)
             result = await session.str_replace(path, old_str, new_str)
             output = result.output if result.success else f"Error: {result.error}"
             return _format_output(
@@ -131,12 +130,12 @@ class TextEditorToolBuilder:
         type: str = TEXT_EDITOR_CREATE_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_CREATE_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = await self._session(session_id)
 
         async def create(
             path: str,
             file_text: str,
         ) -> list[ResultContentBlockType]:
+            session = await self._session(session_id)
             result = await session.create(path, file_text)
             output = result.output if result.success else f"Error: {result.error}"
             return _format_output(
@@ -160,13 +159,13 @@ class TextEditorToolBuilder:
         type: str = TEXT_EDITOR_INSERT_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_INSERT_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = await self._session(session_id)
 
         async def insert(
             path: str,
             insert_line: int,
             new_str: str,
         ) -> list[ResultContentBlockType]:
+            session = await self._session(session_id)
             result = await session.insert(path, insert_line, new_str)
             output = result.output if result.success else f"Error: {result.error}"
             return _format_output(
