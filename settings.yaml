@@ -48,6 +48,7 @@ data:
   reader: ${PGPT_DATA_READER:auto}
   enable_fake_progress: ${PGPT_ENABLE_FAKE_PROGRESS:false}
   enable_reuse_generated_nodes_before: ${PGPT_ENABLE_REUSE_GENERATED_NODES_BEFORE:false}
+  enable_vision_fallback: ${PGPT_ENABLE_VISION_FALLBACK:false}
   enable_term_extractor: ${PGPT_ENABLE_TERM_EXTRACTOR:false}
   max_num_nodes: ${PGPT_MAX_NUM_NODES:0}
   use_async: ${PGPT_USE_ASYNC:false}
@@ -303,3 +304,14 @@ transformation:
       max_iterations: ${PGPT_TRANSFORMATION_DOCLING_VISION_MAX_ITERATIONS:2}
       enable_semaphore: ${PGPT_TRANSFORMATION_DOCLING_ENABLE_SEMAPHORE:false}
       mode: ${PGPT_TRANSFORMATION_DOCLING_VISION_MODE:none}
+
+  vision_documents:
+      vision:
+        retry_number: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_RETRY_NUMBER:3}
+        enable_evaluation: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_ENABLE_EVALUATION:false}
+        max_concurrent: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MAX_CONCURRENT:4}
+        batch_size: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_BATCH_SIZE:8}
+        max_iterations: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MAX_ITERATIONS:2}
+        enable_semaphore: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_ENABLE_SEMAPHORE:false}
+        mode: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MODE:none}
+

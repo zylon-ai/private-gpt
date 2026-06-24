@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from injector import inject, singleton
 from llama_index.core.indices.base import BaseIndex
-from llama_index.core.schema import BaseNode
+from llama_index.core.schema import BaseNode, MetadataMode
 from llama_index.core.vector_stores import FilterCondition, FilterOperator
 
 from private_gpt.artifact_index.artifact_exception import (
@@ -43,6 +43,9 @@ from private_gpt.components.ingest.utils import (
 )
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
+from private_gpt.components.readers.docling.docling_api_reader import (
+    ExtractionUnsuccessfulError,
+)
 from private_gpt.components.readers.reader_component import ReaderComponent
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import Settings
@@ -64,6 +67,7 @@ class IngestComponent:
 
     _generate_fake_percentage: bool
     _enable_reuse_generated_nodes_before: bool
+    _enable_vision_fallback: bool
 
     @inject
     def __init__(
@@ -84,6 +88,7 @@ class IngestComponent:
         self._enable_reuse_generated_nodes_before = (
             settings.data.enable_reuse_generated_nodes_before
         )
+        self._enable_vision_fallback = settings.data.enable_vision_fallback
 
     def load_and_validate_file(
         self,
@@ -267,6 +272,37 @@ class IngestComponent:
                     notification=notification,
                     warnings=warnings,
                 )
+            except ExtractionUnsuccessfulError as e:
+                logger.warning(
+                    "Extraction unsuccessful for %s: %s", file_info.file_name, e
+                )
+                try:
+                    vision_nodes = self._extract_with_vision_fallback(
+                        converted_file,
+                        file_metadata,
+                        notification=notification,
+                        warnings=warnings,
+                    )
+                except Exception as vision_error:
+                    # Vision reader was available but failed during extraction
+                    logger.error(
+                        "Vision reader fallback failed for %s: %s",
+                        file_info.file_name,
+                        vision_error,
+                        exc_info=True,
+                    )
+                    raise InvalidFileError(
+                        errors=[IngestionParseErrors.PARSING_FAILURE],
+                        warnings=warnings,
+                    ) from vision_error
+
+                if vision_nodes:
+                    nodes = vision_nodes
+                else:
+                    raise InvalidFileError(
+                        errors=[IngestionParseErrors.PARSING_FAILURE],
+                        warnings=warnings,
+                    ) from e
             except RuntimeError as e:
                 raise InvalidFileError(
                     errors=[IngestionParseErrors.PARSING_FAILURE],
@@ -337,6 +373,7 @@ class IngestComponent:
         self,
         file_info: FileInfo,
         file_metadata: dict[str, Any] | None,
+        reader_name: str | None = None,
         notification: NotifyProtocol | None = None,
         warnings: list[str] | None = None,
     ) -> list[BaseNode]:
@@ -344,6 +381,7 @@ class IngestComponent:
             self._aload_data(
                 file_info=file_info,
                 file_metadata=file_metadata,
+                reader_name=reader_name,
                 notification=notification,
                 warnings=warnings,
             )
@@ -353,12 +391,18 @@ class IngestComponent:
         self,
         file_info: FileInfo,
         file_metadata: dict[str, Any] | None,
+        reader_name: str | None = None,
         notification: NotifyProtocol | None = None,
         warnings: list[str] | None = None,
     ) -> list[BaseNode]:
-        loader = self.reader_component.get_reader_by_extension(
-            file_info.extension or ""
-        )
+        if reader_name:
+            loader = self.reader_component.get_reader(
+                reader_name, file_info.extension or ""
+            )
+        else:
+            loader = self.reader_component.get_reader_by_extension(
+                file_info.extension or ""
+            )
         nodes: list[BaseNode] = []
         async for node in loader.lazy_load_data(
             file_info,
@@ -368,6 +412,64 @@ class IngestComponent:
         ):
             nodes.append(node)
         return nodes
+
+    def _extract_with_vision_fallback(
+        self,
+        converted_file: FileInfo,
+        file_metadata: dict[str, Any] | None,
+        notification: NotifyProtocol,
+        warnings: list[str] | None = None,
+    ) -> list[BaseNode] | None:
+        """Retry extraction of a PDF using the vision reader.
+
+        Returns the extracted nodes, or ``None`` when the fallback does not
+        apply (disabled / not a PDF), the vision reader is not available in
+        this deployment (logged as a warning), or the vision reader produced
+        no usable text (e.g. VLM in mode="none" rasterizing without OCR). If
+        the vision reader *is* available but raises during extraction, the
+        exception is propagated to the caller.
+        """
+        if not self._enable_vision_fallback:
+            return None
+
+        extension = (converted_file.extension or "").lower()
+        if extension != ".pdf":
+            return None
+
+        # Availability check: factory registered + VLM instantiable.
+        # If not available, degrade gracefully (decision #3).
+        try:
+            self.reader_component.get_reader("vision", extension)
+        except Exception as availability_error:
+            logger.warning(
+                "Vision reader fallback not available for %s; skipping. Reason: %s",
+                converted_file.file_name,
+                availability_error,
+            )
+            return None
+
+        logger.info("Falling back to vision reader for %s", converted_file.file_name)
+        vision_nodes = self._load_data(
+            converted_file,
+            file_metadata,
+            reader_name="vision",
+            notification=notification,
+            warnings=warnings,
+        )
+
+        # Guard: a VLM in mode="none" may rasterize pages but return nodes
+        # with empty text. Treat "no usable text" as a failed extraction.
+        if not vision_nodes or all(
+            not node.get_content(metadata_mode=MetadataMode.NONE).strip()
+            for node in vision_nodes
+        ):
+            logger.warning(
+                "Vision reader produced no usable text for %s; treating as failure.",
+                converted_file.file_name,
+            )
+            return None
+
+        return vision_nodes
 
     def load_index(
         self,

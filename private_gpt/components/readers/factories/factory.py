@@ -7,6 +7,7 @@ from private_gpt.components.readers.factories.docling import DoclingReaderFactor
 from private_gpt.components.readers.factories.markitdown import MarkItDownReaderFactory
 from private_gpt.components.readers.factories.pptx2md import PPTX2MdReaderFactory
 from private_gpt.components.readers.factories.text import TextReaderFactory
+from private_gpt.components.readers.factories.vision import VisionReaderFactory
 from private_gpt.settings.settings import Settings
 
 ReaderFactoryProvider = (
@@ -36,6 +37,7 @@ class ReaderFactoryRegistry:
             "pptx2md": PPTX2MdReaderFactory(settings, injector),
             "markitdown": MarkItDownReaderFactory(settings, injector),
             "text": TextReaderFactory(settings, injector),
+            "vision": VisionReaderFactory(settings, injector),
         }
         self._factories: dict[str, ReaderFactory] = {
             **built_ins,

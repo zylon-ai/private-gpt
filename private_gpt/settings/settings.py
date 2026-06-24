@@ -390,6 +390,13 @@ class DataSettings(BaseModel):
         description="Flag indicating if generated nodes should be reused when same file was ingested before.",
         default=False,
     )
+    enable_vision_fallback: bool = Field(
+        default=False,
+        description=(
+            "Retry PDF extraction with the vision reader when the primary reader "
+            "raises ExtractionUnsuccessfulError. Requires a configured VLM."
+        ),
+    )
     enable_term_extractor: bool = Field(
         description="Flag indicating if term extraction should be enabled or not.",
         default=False,
@@ -1181,6 +1188,14 @@ class DoclingSettings(BaseModel):
         description="Timeout in seconds for the Docling API requests.",
     )
 
+    failure_threshold: float = Field(
+        0.3,
+        description=(
+            "Ratio of unmapped-glyph characters over total characters above which a "
+            "document extraction is considered unsuccessful."
+        ),
+    )
+
     def __init__(self, **data: Any) -> None:
         # Convert a string in langs to a list (consider as a json)
         if "langs" in data:
@@ -1521,6 +1536,11 @@ class TransformationSettings(BaseModel):
     docling: TransformationReadersSettings = Field(
         default_factory=lambda: TransformationReadersSettings(),
         description="Settings for Docling file processing during ingestion.",
+    )
+
+    vision_documents: TransformationReadersSettings = Field(
+        default_factory=lambda: TransformationReadersSettings(),
+        description="Settings for vision processing of documents during ingestion.",
     )
 
 
