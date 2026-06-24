@@ -1,4 +1,5 @@
 import builtins
+import enum
 import inspect
 import re
 from collections.abc import Awaitable, Callable
@@ -106,6 +107,10 @@ async def _dummy_tool_async_fn(**kwargs: Any) -> Any:
     )
 
 
+class ToolRequirements(enum.StrEnum):
+    SANDBOX = "sandbox"
+
+
 class ToolSpec(BaseModel):
     name: str | None = Field(description="Unique name identifier for the tool")
     type: str | None = Field(
@@ -155,6 +160,10 @@ class ToolSpec(BaseModel):
             "a value here overrides that default. Set to an empty string to disable."
         ),
     )
+    requirements: list[ToolRequirements] = Field(
+        default_factory=list,
+        description="List of requirements for the tool, e.g., SANDBOX",
+    )
 
     def get_original_tool_name(self) -> str:
         """Get the original tool name without version suffix."""
@@ -180,6 +189,7 @@ class ToolSpec(BaseModel):
         async_callback: AsyncCallable | None = None,
         partial_params: dict[str, Any] | None = None,
         instructions: str | None = None,
+        requirements: list[ToolRequirements] | None = None,
     ) -> "ToolSpec":
         """Create a ToolSpec from default parameters."""
         if not input_schema and not async_fn:
@@ -203,6 +213,7 @@ class ToolSpec(BaseModel):
             async_callback=async_callback,
             partial_params=partial_params,
             instructions=instructions,
+            requirements=requirements or [],
         )
 
     @classmethod

@@ -1,7 +1,10 @@
 import json
 from typing import Any
 
-from private_gpt.components.chat.models.chat_config_models import ToolSpec
+from private_gpt.components.chat.models.chat_config_models import (
+    ToolRequirements,
+    ToolSpec,
+)
 from private_gpt.components.skills.models.skill_entities import (
     SkillFilter,
     SkillVersionEntity,
@@ -68,6 +71,7 @@ class SkillManagementToolBuilder:
             runtime="server",
             description="Mark one available skill as loaded for this conversation.",
             async_fn=load_skill,
+            requirements=[ToolRequirements.SANDBOX],
         )
 
     def build_unload_skill(
@@ -84,6 +88,7 @@ class SkillManagementToolBuilder:
             runtime="server",
             description="Mark one loaded skill as unloaded for this conversation.",
             async_fn=unload_skill,
+            requirements=[ToolRequirements.SANDBOX],
         )
 
     def build_list_skills(
@@ -113,4 +118,5 @@ class SkillManagementToolBuilder:
             runtime="server",
             description="List available skills from current skill_filter.",
             async_fn=list_skills,
+            requirements=[ToolRequirements.SANDBOX],
         )

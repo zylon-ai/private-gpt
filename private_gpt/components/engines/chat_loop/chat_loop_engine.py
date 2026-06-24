@@ -21,6 +21,7 @@ from llama_index.core.tools import AsyncBaseTool, ToolSelection, adapt_to_async_
 from private_gpt.components.chat.models.chat_config_models import (
     ChatRequest,
     ResolvedChatRequest,
+    ToolRequirements,
 )
 from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
@@ -993,19 +994,15 @@ class ChatLoopEngine:
     @staticmethod
     def _build_container(run: _LoopRun) -> Container | None:
         """Return a container handle if the request used code-execution tools."""
-        from private_gpt.components.tools.tool_names import CODE_EXECUTION_TOOL_NAME
-
         request = run.state.input.request
         if not isinstance(request, ResolvedChatRequest):
             return None
 
         tools = request.tool_config.tools
-        has_code_execution = any(
-            (tool.type or "").startswith("code_execution")
-            or tool.name == CODE_EXECUTION_TOOL_NAME
-            for tool in tools
+        has_sandbox_requirement = any(
+            ToolRequirements.SANDBOX in tool.requirements for tool in tools
         )
-        if not has_code_execution:
+        if not has_sandbox_requirement:
             return None
 
         session_id = _session_id(request)

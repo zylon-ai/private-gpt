@@ -1,6 +1,9 @@
 from injector import inject, singleton
 
-from private_gpt.components.chat.models.chat_config_models import ToolSpec
+from private_gpt.components.chat.models.chat_config_models import (
+    ToolRequirements,
+    ToolSpec,
+)
 from private_gpt.components.code_execution.base import CodeExecutionSession
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
@@ -88,6 +91,7 @@ class TextEditorToolBuilder:
             runtime="server",
             description=description,
             async_fn=view,
+            requirements=[ToolRequirements.SANDBOX],
         )
 
     async def build_str_replace_tool(
@@ -117,6 +121,7 @@ class TextEditorToolBuilder:
             runtime="server",
             description=description,
             async_fn=str_replace,
+            requirements=[ToolRequirements.SANDBOX],
         )
 
     async def build_create_tool(
@@ -145,6 +150,7 @@ class TextEditorToolBuilder:
             runtime="server",
             description=description,
             async_fn=create,
+            requirements=[ToolRequirements.SANDBOX],
         )
 
     async def build_insert_tool(
@@ -174,4 +180,5 @@ class TextEditorToolBuilder:
             runtime="server",
             description=description,
             async_fn=insert,
+            requirements=[ToolRequirements.SANDBOX],
         )

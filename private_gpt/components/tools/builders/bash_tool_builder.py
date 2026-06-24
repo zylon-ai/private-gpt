@@ -4,7 +4,10 @@ from typing import TYPE_CHECKING
 
 from injector import inject, singleton
 
-from private_gpt.components.chat.models.chat_config_models import ToolSpec
+from private_gpt.components.chat.models.chat_config_models import (
+    ToolRequirements,
+    ToolSpec,
+)
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
@@ -78,4 +81,5 @@ class BashToolBuilder:
             runtime="server",
             description=description,
             async_fn=run_bash,
+            requirements=[ToolRequirements.SANDBOX],
         )

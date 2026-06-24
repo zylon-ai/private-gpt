@@ -12,7 +12,10 @@ from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from private_gpt.artifact_index.vector_artifact_index import VectorArtifactIndex
 from private_gpt.chat.extensions.context_filter import ContextFilter
 from private_gpt.chat.input_models import BlobVisibilityMode
-from private_gpt.components.chat.models.chat_config_models import ToolSpec
+from private_gpt.components.chat.models.chat_config_models import (
+    ToolRequirements,
+    ToolSpec,
+)
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import IngestComponent
 from private_gpt.components.llm.llm_component import LLMComponent
@@ -323,4 +326,5 @@ class TabularDataToolBuilder:
             runtime=runtime,
             description=description,
             async_fn=tabular_data_analysis,
+            requirements=[ToolRequirements.SANDBOX],
         )
