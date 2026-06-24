@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from injector import inject, singleton
 
 from private_gpt.components.code_execution.registry import CodeExecutionProviderRegistry
+from private_gpt.components.container_registry import ContainerRegistry
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
@@ -19,9 +20,12 @@ if TYPE_CHECKING:
 @singleton
 class CodeExecutionComponent:
     @inject
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self, settings: Settings, container_registry: ContainerRegistry
+    ) -> None:
         self._settings = settings
         self._registry = CodeExecutionProviderRegistry(settings)
+        self._container_registry = container_registry
         self._sessions: dict[str, CodeExecutionSession] = {}
         self._lock = asyncio.Lock()
 
@@ -47,6 +51,9 @@ class CodeExecutionComponent:
                 extra_bundles=extra_bundles,
             )
             self._sessions[session_id] = session
+            self._container_registry.register(
+                session_id, self._settings.code_execution.session_ttl_seconds
+            )
             return session
 
     async def delete_session(self, session_id: str) -> None:
@@ -56,5 +63,6 @@ class CodeExecutionComponent:
 
         async with self._lock:
             session = self._sessions.pop(session_id, None)
+            self._container_registry.unregister(session_id)
             if session is not None:
                 provider.delete_session(session)

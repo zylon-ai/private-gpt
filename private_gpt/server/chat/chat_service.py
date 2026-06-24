@@ -12,6 +12,7 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedChatRequest,
 )
 from private_gpt.components.chunk.models import SourceType
+from private_gpt.components.container_registry import ContainerRegistry
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.engines.chat_loop.chat_loop_engine import ChatLoopEngine
 from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
@@ -148,6 +149,7 @@ class ChatService:
         ingest_component: IngestComponent,
         chat_interceptor_service: ChatInterceptorService,
         models_service: ModelsService,
+        container_registry: ContainerRegistry,
     ) -> None:
         self.settings = settings
         self.llm_component = llm_component
@@ -157,6 +159,7 @@ class ChatService:
         self.ingest_component = ingest_component
         self.chat_interceptor_service = chat_interceptor_service
         self.models_service = models_service
+        self.container_registry = container_registry
 
     def _build_loop_engine(self) -> ChatLoopEngine:
         # Don't build a singleton since the interceptors
@@ -168,6 +171,7 @@ class ChatService:
             request_interceptors=chain.request_interceptors,
             response_interceptors=chain.response_interceptors,
             max_iterations=40,
+            container_registry=self.container_registry,
         )
 
     async def stream_chat(

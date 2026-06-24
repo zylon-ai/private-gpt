@@ -21,8 +21,8 @@ from llama_index.core.tools import AsyncBaseTool, ToolSelection, adapt_to_async_
 from private_gpt.components.chat.models.chat_config_models import (
     ChatRequest,
     ResolvedChatRequest,
-    ToolRequirements,
 )
+from private_gpt.components.container_registry import ContainerRegistry
 from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
     ChatRequestLoopInterceptor,
@@ -186,6 +186,7 @@ class ChatLoopEngine:
         request_interceptors: list[ChatRequestLoopInterceptor] | None = None,
         response_interceptors: list[ChatResponseLoopInterceptor] | None = None,
         max_iterations: int = 40,
+        container_registry: ContainerRegistry | None = None,
     ) -> None:
         self._llm_component = llm_component
         self._request_interceptors = [
@@ -199,6 +200,7 @@ class ChatLoopEngine:
             EnsureTimestampInContentBlocksInterceptor(),
         ]
         self._max_iterations = max_iterations
+        self._container_registry = container_registry
 
     async def run(
         self,
@@ -991,20 +993,21 @@ class ChatLoopEngine:
             output_tokens=run.total_output_tokens if run.has_output_usage else None,
         )
 
-    @staticmethod
-    def _build_container(run: _LoopRun) -> Container | None:
-        """Return a container handle if the request used code-execution tools."""
+    def _build_container(self, run: _LoopRun) -> Container | None:
+        """Return a container handle if a persistent session was registered."""
+        if self._container_registry is None:
+            return None
+
         request = run.state.input.request
         if not isinstance(request, ResolvedChatRequest):
             return None
 
-        tools = request.tool_config.tools
-        has_sandbox_requirement = any(
-            ToolRequirements.SANDBOX in tool.requirements for tool in tools
-        )
-        if not has_sandbox_requirement:
+        session_id = _session_id(request)
+        ttl = self._container_registry.get_ttl(session_id)
+        if ttl is None:
             return None
 
-        session_id = _session_id(request)
-        expires_at = datetime.now(tz=UTC) + timedelta(hours=1)
-        return Container(id=session_id, expires_at=expires_at)
+        return Container(
+            id=session_id,
+            expires_at=datetime.now(tz=UTC) + timedelta(seconds=ttl),
+        )
