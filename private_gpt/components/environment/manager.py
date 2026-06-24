@@ -44,7 +44,6 @@ class EnvironmentManager:
         self._creation_locks: dict[str, asyncio.Lock] = {}
         self._reaper_task: asyncio.Task[None] | None = None
         self._background_tasks: set[asyncio.Task[Any]] = set()
-        self._mounter.ensure_ready()
 
     async def acquire(
         self,
@@ -98,6 +97,7 @@ class EnvironmentManager:
         session_id: str,
         extra_bundles: list[ContentBundle] | None,
     ) -> Environment:
+        await asyncio.to_thread(self._mounter.ensure_ready)
         specs = self._mounter.mount_specs(extra_bundles)
 
         sandbox = await self._provider.restore_session(
