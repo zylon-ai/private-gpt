@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         WebScraperResult,
     )
 
+
 logger = logging.getLogger(__name__)
 
 

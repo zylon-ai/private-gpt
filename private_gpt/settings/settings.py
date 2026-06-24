@@ -1264,6 +1264,15 @@ class WebFetchSettings(BaseModel):
     timeout_seconds: int = Field(
         default=15, description="Timeout in seconds for web page fetching."
     )
+    pool_size: int = Field(
+        default=5, description="Number of browser instances to keep in pool."
+    )
+    pool_idle_timeout_seconds: int = Field(
+        default=300, description="Seconds before idle browser is terminated."
+    )
+    pool_max_pages_per_browser: int = Field(
+        default=5, description="Max concurrent pages per browser instance."
+    )
 
 
 class BraveSearchSettings(BaseModel):

@@ -131,8 +131,8 @@ class SelectBestLinks(BaseWebSearchResultProcessor):
                             )
                             scraped_results[scraped_results.index(res)] = copy
 
-                            priority = self._compute_priority(res, max_tokens)
-                            await summary_queue.put((priority, res))
+                            priority = self._compute_priority(copy, max_tokens)
+                            await summary_queue.put((priority, copy))
                 except Exception as e:
                     logger.debug(f"Error processing {res.url}: {e}")
                     res.is_in_error = True
@@ -145,7 +145,7 @@ class SelectBestLinks(BaseWebSearchResultProcessor):
                 if res is None:
                     break
 
-                if res.tokens > token_limit:
+                if res.tokens > token_limit and res.tokens < max_tokens:
                     logger.debug(f"Reached {res.url}, summarizing to reduce tokens")
                     content = await self._summarize_result(res, model_id)
                     if content:
@@ -153,7 +153,7 @@ class SelectBestLinks(BaseWebSearchResultProcessor):
                         copy.content = content
                         copy.tokens = len(
                             await async_tokenizer(
-                                res.content or "",
+                                content,
                                 tokenizer_fn=self._llm_component.get_tokenizer(
                                     model_id
                                 ),
@@ -260,13 +260,10 @@ class SelectBestLinks(BaseWebSearchResultProcessor):
         except (TimeoutError, CancelledError):
             logger.debug("Completion criteria met or timeout reached")
 
-        # Guarantee that all tasks are finished or cancelled
-        async def wait_until_done_or_cancel(task: asyncio.Task[Any]) -> None:
+        for task in all_tasks:
             if not task.done():
                 task.cancel()
-
-        tasks = [wait_until_done_or_cancel(task) for task in all_tasks]
-        await asyncio.gather(*tasks)
+        await asyncio.gather(*all_tasks, return_exceptions=True)
 
         # Return results
         total_elapsed = time.perf_counter() - start
@@ -277,10 +274,20 @@ class SelectBestLinks(BaseWebSearchResultProcessor):
             return final_selection
         else:
             logger.debug("No optimal selection found, returning best effort")
-            return sorted(
+            candidates = sorted(
                 (r for r in scraped_results if not r.is_in_error and r.is_relevant),
                 key=lambda r: r.idx or 0,
-            )[: self._params.num_references]
+            )
+            fallback: list[WebSearchResult] = []
+            total_tokens = 0
+            for r in candidates:
+                if total_tokens + r.tokens > max_tokens:
+                    continue
+                fallback.append(r)
+                total_tokens += r.tokens
+                if len(fallback) >= self._params.num_references:
+                    break
+            return fallback
 
     def _init_params(self) -> None:
         match self._settings.web_search.mode_quality:
@@ -323,6 +330,9 @@ class SelectBestLinks(BaseWebSearchResultProcessor):
             res.content_type = "text/markdown"
             res.is_in_error = False
             logger.debug(f"Scraped {res.url}")
+        except asyncio.CancelledError:
+            res.is_in_error = True
+            raise
         except Exception as e:
             logger.debug(f"Error scraping {res.url}: {e}")
             res.is_in_error = True

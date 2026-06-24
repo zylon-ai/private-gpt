@@ -179,7 +179,8 @@ class BraveSearchProvider(BaseWebSearchProvider):
 
     async def _ensure_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession()
+            enabled_proxy = self._settings.server.network.proxy.enabled
+            self._session = aiohttp.ClientSession(trust_env=enabled_proxy)
         return self._session
 
     async def _wait_for_rate_limit(self) -> None:

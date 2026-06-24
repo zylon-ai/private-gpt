@@ -233,6 +233,9 @@ code_execution:
 web_fetch:
   enabled: ${PGPT_WEBFETCH_ENABLED:false}
   timeout_seconds: ${PGPT_WEBFETCH_TIMEOUT_SECONDS:15}
+  pool_size: ${PGPT_WEBFETCH_POOL_SIZE:8}
+  pool_idle_timeout_seconds: ${PGPT_WEBFETCH_POOL_IDLE_TIMEOUT:300}
+  pool_max_pages_per_browser: ${PGPT_WEBFETCH_POOL_MAX_PAGES:4}
 
 database_query:
   timeout_seconds: ${PGPT_DATABASE_QUERY_TIMEOUT_SECONDS:1000}
@@ -246,7 +249,7 @@ web_search:
   num_links: ${PGPT_WEBSEARCH_NUM_LINKS:20}
   mode_quality: ${PGPT_WEBSEARCH_MODE_QUALITY:fast}
   cached: ${PGPT_WEBSEARCH_CACHED:false}
-  context_token: ${PGPT_WEBSEARCH_CONTEXT_TOKEN:0}
+  context_token: ${PGPT_WEBSEARCH_CONTEXT_TOKEN:2000}
 
   fast_params:
     max_timeout_seconds: ${PGPT_WEBSEARCH_FAST_MAX_TIMEOUT_SECONDS:100}
