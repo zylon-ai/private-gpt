@@ -995,7 +995,11 @@ class ChatLoopEngine:
         """Return a container handle if the request used code-execution tools."""
         from private_gpt.components.tools.tool_names import CODE_EXECUTION_TOOL_NAME
 
-        tools = run.state.input.request.tool_config.tools
+        request = run.state.input.request
+        if not isinstance(request, ResolvedChatRequest):
+            return None
+
+        tools = request.tool_config.tools
         has_code_execution = any(
             (tool.type or "").startswith("code_execution")
             or tool.name == CODE_EXECUTION_TOOL_NAME
@@ -1004,6 +1008,6 @@ class ChatLoopEngine:
         if not has_code_execution:
             return None
 
-        session_id = _session_id(run.state.input.request)
+        session_id = _session_id(request)
         expires_at = datetime.now(tz=UTC) + timedelta(hours=1)
         return Container(id=session_id, expires_at=expires_at)
