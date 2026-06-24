@@ -60,9 +60,26 @@ class EnvironmentManager:
             if env:
                 env.touch()
                 if extra_bundles:
-                    # Content activated mid-session (e.g. a newly enabled
-                    # skill) must appear in the live sandbox. Idempotent.
-                    await self._mounter.prepare_bundles(env.sandbox, extra_bundles)
+                    try:
+                        # Content activated mid-session (e.g. a newly enabled
+                        # skill) must appear in the live sandbox. Idempotent.
+                        await self._mounter.prepare_bundles(env.sandbox, extra_bundles)
+                    except Exception as exc:
+                        # The sandbox server may have restarted while this
+                        # process kept the stale env in _active.  Evict it and
+                        # let _create() restore or create a fresh one.
+                        logger.warning(
+                            "Sandbox for session %s is stale, recreating: %s",
+                            session_id,
+                            exc,
+                        )
+                        async with self._lock:
+                            self._active.pop(session_id, None)
+                        self._spawn(
+                            self._kill(env.sandbox, session_id),
+                            f"kill stale sandbox ({session_id})",
+                        )
+                        return await self._create(session_id, extra_bundles)
                 return env
             return await self._create(session_id, extra_bundles)
 
