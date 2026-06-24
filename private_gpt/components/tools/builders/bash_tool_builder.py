@@ -48,7 +48,6 @@ class BashToolBuilder:
         type: str = BASH_TOOL_NAME + "_v1",
         description: str = BASH_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-
         async def run_bash(
             command: str,
             timeout: int | None = None,

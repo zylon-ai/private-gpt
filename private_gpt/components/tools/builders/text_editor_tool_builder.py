@@ -100,7 +100,6 @@ class TextEditorToolBuilder:
         type: str = TEXT_EDITOR_STR_REPLACE_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_STR_REPLACE_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-
         async def str_replace(
             path: str,
             old_str: str,
@@ -130,7 +129,6 @@ class TextEditorToolBuilder:
         type: str = TEXT_EDITOR_CREATE_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_CREATE_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-
         async def create(
             path: str,
             file_text: str,
@@ -159,7 +157,6 @@ class TextEditorToolBuilder:
         type: str = TEXT_EDITOR_INSERT_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_INSERT_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-
         async def insert(
             path: str,
             insert_line: int,
