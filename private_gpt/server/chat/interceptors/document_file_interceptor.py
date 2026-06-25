@@ -3,11 +3,10 @@ from uuid import uuid4
 
 from injector import inject, singleton
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
-from llama_index.core.llms import LLM
 from llama_index.core.llms.llm import ToolSelection
 
-from private_gpt.components.chat.processors.chat_history.multimodality.multimodality_preprocessor import (
-    preprocess_multimodal_history,
+from private_gpt.components.chat.processors.chat_history.documents.document_preprocessor import (
+    preprocess_document_history,
 )
 from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
     ChatRequestLoopInterceptor,
@@ -18,11 +17,6 @@ from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_conte
 from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
     InterceptorPhase,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
-    ChatLoopState,
-)
-from private_gpt.components.llm.llm_component import LLMComponent
-from private_gpt.components.llm.llm_helper import supports_audio, supports_images
 from private_gpt.events.models import (
     RawContentBlockStartEvent,
     RawContentBlockStopEvent,
@@ -30,40 +24,38 @@ from private_gpt.events.models import (
     ToolUseBlock,
     to_llama_index_blocks,
 )
+from private_gpt.server.ingest.convert_service import ConvertService
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
     from private_gpt.events.models import ResultContentBlockType
 
-MULTIMODAL_TOOL_NAME = "multimodal_preprocessing"
+DOCUMENT_PROCESSING_TOOL_NAME = "document_preprocessing"
 
 
 @singleton
-class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
-    """Preprocess image and audio content in conversation history."""
+class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
+    """Preprocess DocumentBlock sources by converting file content to plain text."""
 
     @inject
-    def __init__(self, llm_component: LLMComponent, settings: Settings) -> None:
-        self._llm_component = llm_component
-        self._tool_name = MULTIMODAL_TOOL_NAME
-        self._preprocess_settings = settings.chat.preprocess.multimodal
+    def __init__(self, convert_service: ConvertService, settings: Settings) -> None:
+        self._convert_service = convert_service
+        self._tool_name = DOCUMENT_PROCESSING_TOOL_NAME
+        self._preprocess_settings = settings.chat.preprocess.documents
 
     async def intercept(self, context: ChatLoopInterceptorContext) -> None:
-        """Apply multimodal preprocessing to the current chat history."""
+        """Convert document blocks to text before inference."""
         if context.phase != InterceptorPhase.BEFORE_ITERATION:
             return
 
         state = context.state
-        image_model, audio_model = self.resolve_multimodal_models(state, context.llm)
 
-        tool_ids: dict[str, str] = {}
+        tool_ids: dict[int, str] = {}
         completed_tools: list[tuple[str, str | list[ResultContentBlockType], bool]] = []
 
-        async for response in preprocess_multimodal_history(
-            main_llm=context.llm,
+        async for response in preprocess_document_history(
             chat_history=state.input.request.messages,
-            image_multimodal_llm=image_model,
-            audio_multimodal_llm=audio_model,
+            convert_service=self._convert_service,
             max_concurrency=self._preprocess_settings.max_concurrency,
             return_type=self._preprocess_settings.return_type,
         ):
@@ -71,23 +63,27 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
             if processing is not None:
                 if processing.status == "processing":
                     tool_id = f"tool_{uuid4().hex}"
-                    tool_ids[processing.type] = tool_id
+                    tool_ids[processing.doc_index] = tool_id
                     use_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
                         content_block=ToolUseBlock(
                             id=tool_id,
                             name=self._tool_name,
-                            input={"type": processing.type},
+                            input={
+                                "type": "document",
+                                "index": processing.doc_index,
+                                "name": processing.reference,
+                            },
                         ),
                     )
                     context.emit_event(use_start)
                     context.emit_event(RawContentBlockStopEvent.from_start(use_start))
                 elif processing.status in {"completed", "failed"}:
-                    tool_id = tool_ids.get(processing.type, f"tool_{uuid4().hex}")
+                    tool_id = tool_ids.get(processing.doc_index, f"tool_{uuid4().hex}")
                     content: str | list[ResultContentBlockType] = (
                         processing.content
                         or processing.error_detail
-                        or "There was an error during multimodal processing."
+                        or "There was an error during document processing."
                     )
                     result_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
@@ -154,42 +150,3 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
             ]
 
         context.set_state(state)
-
-    def resolve_multimodal_models(
-        self,
-        state: ChatLoopState,
-        main_llm: LLM,
-    ) -> tuple[LLM | None, LLM | None]:
-        """Resolve optional multimodal models using configured LLM registry."""
-        request = state.input.request
-        image_model: LLM | None = None
-        audio_model: LLM | None = None
-
-        model_id = request.system.model
-        model_config = self._llm_component.get_config(model_id)
-
-        if supports_images(main_llm, model_config):
-            image_model = main_llm
-        elif not model_id:
-            potential = next(
-                self._llm_component.filter(
-                    lambda potential_llm, cfg: supports_images(potential_llm, cfg)
-                ),
-                None,
-            )
-            if potential is not None:
-                image_model = potential[0]
-
-        if supports_audio(main_llm, model_config):
-            audio_model = main_llm
-        elif not model_id:
-            potential = next(
-                self._llm_component.filter(
-                    lambda potential_llm, cfg: supports_audio(potential_llm, cfg)
-                ),
-                None,
-            )
-            if potential is not None:
-                audio_model = potential[0]
-
-        return image_model, audio_model

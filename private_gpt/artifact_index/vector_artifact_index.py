@@ -18,6 +18,7 @@ from private_gpt.artifact_index.base_artifact_index import (
 from private_gpt.celery.notify import ProgressStatus
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import IngestComponent
+from private_gpt.components.ingest.parse_component import ParseComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
@@ -39,12 +40,14 @@ class VectorArtifactIndex(BaseArtifactIndex):
         vector_store_component: VectorStoreComponent,
         embedding_component: EmbeddingComponent,
         ingest_component: IngestComponent,
+        parse_component: ParseComponent,
         embed_model_id: str | None = None,
     ) -> None:
         super().__init__(collection, artifact, node_store_component)
         self.vector_store_component = vector_store_component
         self.embedding_component = embedding_component
         self.ingest_component = ingest_component
+        self.parse_component = parse_component
         self.embed_model_id = embed_model_id
         self._vector_kwargs = {
             "show_progress": False,
@@ -137,7 +140,7 @@ class VectorArtifactIndex(BaseArtifactIndex):
         logger.info("Populating vector index for artifact = %s", self.artifact)
 
         # Step 1. Retrieve file information and validate
-        file_info, _, warnings = self.ingest_component.load_and_validate_file(
+        file_info, _, warnings = self.parse_component.load_and_validate_file(
             file_data=file_data,
             file_metadata=file_metadata,
             notify=notify,

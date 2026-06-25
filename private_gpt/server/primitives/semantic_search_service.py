@@ -9,6 +9,7 @@ from private_gpt.chat.extensions.context_filter import ContextFilter
 from private_gpt.components.chunk.models import Chunk
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import IngestComponent
+from private_gpt.components.ingest.parse_component import ParseComponent
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.postprocessor.tree_expansion.document_expander import (
@@ -33,12 +34,14 @@ class SemanticSearchService:
         embedding_component: EmbeddingComponent,
         node_store_component: NodeStoreComponent,
         ingest_component: IngestComponent,
+        parse_component: ParseComponent,
     ) -> None:
         self.llm_component = llm_component
         self.vector_store_component = vector_store_component
         self.embedding_component = embedding_component
         self.node_store_component = node_store_component
         self.ingest_component = ingest_component
+        self.parse_component = parse_component
 
     def _expand_nodes(
         self,
@@ -114,6 +117,7 @@ class SemanticSearchService:
                     node_store_component=self.node_store_component,
                     embedding_component=self.embedding_component,
                     ingest_component=self.ingest_component,
+                    parse_component=self.parse_component,
                 )
                 vector_artifact_index.populated_or_error()
 

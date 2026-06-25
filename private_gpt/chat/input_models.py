@@ -44,10 +44,6 @@ from private_gpt.events.models import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from private_gpt.events.models._content_blocks import (
-    Base64AudioSource,
-    Base64ImageSource,
-)
 from private_gpt.server.ingest.uri_loader import load_file_from_uri
 from private_gpt.server.utils.artifact_input import ArtifactType
 from private_gpt.settings.settings import settings
@@ -888,39 +884,35 @@ class MessageInput(BaseModel):
                 elif isinstance(block, MidConvSystemBlock):
                     text = "\n".join(b.text for b in block.content)
                     blocks.append(LITextBlock(text=text))
-                elif isinstance(block, ImageBlock) and isinstance(
-                    block.source, Base64ImageSource
-                ):
-                    image = load_file_from_uri(block.source.data)
-                    image_size = len(image.read())
+                elif isinstance(block, ImageBlock):
+                    image_bytes = load_file_from_uri(block.source.get_data())
+                    image_size = len(image_bytes.read())
                     if image_size > settings().chat.maximum_blob_size:
                         raise ValueError(
                             f"Image size {image_size} exceeds maximum "
                             f"allowed size of {settings().chat.maximum_blob_size} bytes."
                         )
 
-                    image.seek(0)
+                    image_bytes.seek(0)
                     blocks.append(
                         LIImageBlock(
-                            image=image.read(),
-                            image_mimetype=block.source.media_type,
+                            image=image_bytes.read(),
+                            image_mimetype=block.source.get_media_type(),
                         )
                     )
-                elif isinstance(block, AudioBlock) and isinstance(
-                    block.source, Base64AudioSource
-                ):
-                    audio = load_file_from_uri(block.source.data)
-                    audio_size = len(audio.read())
+                elif isinstance(block, AudioBlock):
+                    audio_bytes = load_file_from_uri(block.source.get_data())
+                    audio_size = len(audio_bytes.read())
                     if audio_size > settings().chat.maximum_blob_size:
                         raise ValueError(
                             f"Audio size {audio_size} exceeds maximum "
                             f"allowed size of {settings().chat.maximum_blob_size} bytes."
                         )
-                    audio.seek(0)
+                    audio_bytes.seek(0)
                     blocks.append(
                         LIAudioBlock(
-                            audio=audio.read(),
-                            format=block.source.media_type,
+                            audio=audio_bytes.read(),
+                            format=block.source.get_media_type(),
                         )
                     )
                 elif isinstance(block, ContentBlockType):
