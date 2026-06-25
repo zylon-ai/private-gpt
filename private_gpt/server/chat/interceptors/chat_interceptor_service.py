@@ -112,10 +112,10 @@ class ChatInterceptorService:
                     skills_validation_interceptor,
                     skills_interceptor,
                     internal_tools_interceptor,
-                    platform_guidelines_interceptor,
                     skill_tool_visibility_interceptor,
                     tool_choice_interceptor,
                     configure_tool_interceptor,
+                    platform_guidelines_interceptor,
                 ],
             )
             # Preprocess the chat history

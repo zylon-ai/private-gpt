@@ -2,6 +2,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Form, Header, HTTPException, Query, Request
 
+from private_gpt.components.skills.errors import SkillDomainError, SkillValidationErrors
 from private_gpt.components.skills.models.skill_entities import (
     SkillEntity,
     SkillVersionEntity,
@@ -12,6 +13,8 @@ from private_gpt.server.skills.skill_models import (
     ListSkillVersionsResponse,
     SkillDeletedResponse,
     SkillResponse,
+    SkillValidationError,
+    SkillValidationResponse,
     SkillVersionDeletedResponse,
     SkillVersionResponse,
 )
@@ -187,6 +190,118 @@ async def list_skills(
         data=[_skill_response(item) for item in result.data],
         has_more=result.has_more,
         next_page=result.next_page,
+    )
+
+
+@skill_router.post(
+    "/validate",
+    response_model=SkillValidationResponse,
+    description="Dry-run validation of skill files and metadata without persisting.",
+    responses={
+        200: {
+            "description": "Validation result.",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "valid": {
+                            "summary": "Valid skill",
+                            "value": {
+                                "valid": True,
+                                "name": "sales-ops-helper",
+                                "description": "Helps sales reps draft outreach.",
+                                "errors": [],
+                            },
+                        },
+                        "invalid": {
+                            "summary": "Invalid SKILL.md",
+                            "value": {
+                                "valid": False,
+                                "name": None,
+                                "description": None,
+                                "errors": ["SKILL.md must start with YAML frontmatter"],
+                            },
+                        },
+                    }
+                }
+            },
+        }
+    },
+    openapi_extra={
+        "requestBody": {
+            "description": "Multipart form payload to validate before creating a skill.",
+            "content": {
+                "multipart/form-data": {
+                    "examples": {
+                        "validate_skill": {
+                            "summary": "Validate skill with collection and title",
+                            "value": {
+                                "display_title": "Sales Ops Helper",
+                                "collection": "acme-prod",
+                                "loading": "lazy",
+                            },
+                        }
+                    }
+                }
+            },
+        }
+    },
+)
+async def validate_skill(
+    request: Request,
+    display_title: Annotated[
+        str,
+        Form(
+            min_length=1,
+            max_length=255,
+            examples=["Sales Ops Helper"],
+        ),
+    ],
+    collection: Annotated[
+        str,
+        Form(
+            min_length=1,
+            max_length=255,
+            examples=["acme-prod"],
+        ),
+    ],
+    loading: Annotated[
+        Literal["eager", "lazy"],
+        Form(examples=["lazy"]),
+    ] = "lazy",
+) -> SkillValidationResponse:
+    """Validate skill payload (form fields + SKILL.md) without creating anything."""
+    del display_title, collection, loading
+    service: SkillService = request.state.injector.get(SkillService)
+    form = await request.form()
+    uploads = await uploads_from_request_form(list(form.multi_items()))
+
+    try:
+        files = await stored_files_from_uploads(uploads)
+        parsed = await service.validate_skill(files)
+    except SkillValidationErrors as exc:
+        return SkillValidationResponse(
+            valid=False,
+            errors=[
+                SkillValidationError(
+                    code=str(e.code), message=e.message, params=e.params
+                )
+                for e in exc.errors
+            ],
+        )
+    except SkillDomainError as exc:
+        return SkillValidationResponse(
+            valid=False,
+            errors=[
+                SkillValidationError(
+                    code=str(exc.code), message=exc.message, params=exc.params
+                )
+            ],
+        )
+
+    return SkillValidationResponse(
+        valid=True,
+        name=parsed.frontmatter.name,
+        description=parsed.frontmatter.description,
     )
 
 

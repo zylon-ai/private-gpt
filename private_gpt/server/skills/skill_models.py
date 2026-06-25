@@ -163,3 +163,32 @@ class RecoverSkillsResponse(BaseModel):
         default_factory=list,
         description="Recovered skill versions resolved by filter.",
     )
+
+
+class SkillValidationError(BaseModel):
+    """A single structured validation error with stable code and message."""
+
+    code: str = Field(description="Uppercase error code identifying the failure kind.")
+    message: str = Field(description="Human-readable description of the error.")
+    params: dict[str, str] | None = Field(
+        default=None,
+        description="Optional i18n interpolation parameters (e.g. {'size': '10'}).",
+    )
+
+
+class SkillValidationResponse(BaseModel):
+    """Result of a dry-run skill validation."""
+
+    valid: bool = Field(description="Whether the skill payload would be accepted.")
+    name: str | None = Field(
+        default=None,
+        description="Parsed skill name from SKILL.md frontmatter (when valid).",
+    )
+    description: str | None = Field(
+        default=None,
+        description="Parsed skill description from SKILL.md frontmatter (when valid).",
+    )
+    errors: list[SkillValidationError] = Field(
+        default_factory=list,
+        description="Validation errors (when invalid).",
+    )

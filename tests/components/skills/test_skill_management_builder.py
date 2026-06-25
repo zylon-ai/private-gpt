@@ -128,7 +128,11 @@ async def test_list_skills_returns_resolved_versions(
                 "skill_id": "skill_1",
                 "version": "1000000",
             }
-        ]
+        ],
+        "page": 0,
+        "page_size": 20,
+        "total": 1,
+        "has_more": False,
     }
 
 
@@ -144,7 +148,13 @@ async def test_list_skills_empty_when_no_versions() -> None:
     )
     result = await builder.build_list_skills().async_fn()
     data = _parse(result)
-    assert data == {"skills": []}
+    assert data == {
+        "skills": [],
+        "page": 0,
+        "page_size": 20,
+        "total": 0,
+        "has_more": False,
+    }
 
 
 def test_tool_names_match_constraints(builder: SkillManagementToolBuilder) -> None:

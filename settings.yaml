@@ -280,6 +280,7 @@ skills:
   storage_provider: ${PGPT_SKILLS_STORAGE_PROVIDER:local}
   skill_injection_mode: ${PGPT_SKILL_INJECTION_MODE:system_prompt}
   maximum_loaded_skills: ${PGPT_SKILL_MAXIMUM_LOADED_SKILLS:1}
+  max_bundle_size_bytes: ${PGPT_SKILLS_MAX_BUNDLE_SIZE_BYTES:}
 
 semaphore:
   mode: ${PGPT_SEMAPHORE_MODE:memory}

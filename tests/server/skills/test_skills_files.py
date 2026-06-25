@@ -1,7 +1,74 @@
 """Unit tests for skills_files.py wrapper directory handling."""
 
+import io
+import zipfile
 
-from private_gpt.server.skills.skills_files import _flatten_wrapper_directory
+import pytest
+from starlette.datastructures import Headers, UploadFile
+
+from private_gpt.components.skills.errors import SkillDomainError, SkillErrorCode
+from private_gpt.server.skills.skills_files import (
+    _extract_zip,
+    _flatten_wrapper_directory,
+    stored_files_from_uploads,
+)
+
+
+def _make_upload(payload: bytes, filename: str = "skill.zip") -> UploadFile:
+    return UploadFile(
+        file=io.BytesIO(payload),
+        filename=filename,
+        headers=Headers({"content-type": "application/zip"}),
+    )
+
+
+def _zip_with_files(files: dict[str, bytes]) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for path, content in files.items():
+            zf.writestr(path, content)
+    return buf.getvalue()
+
+
+def _empty_zip() -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w"):
+        pass
+    return buf.getvalue()
+
+
+class TestExtractZip:
+    def test_empty_zip_raises_empty_zip(self):
+        upload = _make_upload(_empty_zip())
+        with pytest.raises(SkillDomainError) as exc_info:
+            _extract_zip(upload, _empty_zip())
+        assert exc_info.value.code == SkillErrorCode.EMPTY_ZIP
+
+    def test_all_empty_files_raises_empty_zip(self):
+        payload = _zip_with_files({"SKILL.md": b"", "scripts/run.py": b""})
+        upload = _make_upload(payload)
+        with pytest.raises(SkillDomainError) as exc_info:
+            _extract_zip(upload, payload)
+        assert exc_info.value.code == SkillErrorCode.EMPTY_ZIP
+
+    def test_empty_skill_md_alone_raises_empty_zip(self):
+        payload = _zip_with_files({"SKILL.md": b""})
+        upload = _make_upload(payload)
+        with pytest.raises(SkillDomainError) as exc_info:
+            _extract_zip(upload, payload)
+        assert exc_info.value.code == SkillErrorCode.EMPTY_ZIP
+
+    def test_non_empty_files_pass_through(self):
+        payload = _zip_with_files({"SKILL.md": b"---\nname: x\n---", "run.py": b""})
+        upload = _make_upload(payload)
+        result = _extract_zip(upload, payload)
+        assert any(p == "SKILL.md" for p, _ in result)
+
+    def test_invalid_zip_raises_invalid_zip(self):
+        upload = _make_upload(b"not a zip file")
+        with pytest.raises(SkillDomainError) as exc_info:
+            _extract_zip(upload, b"not a zip file")
+        assert exc_info.value.code == SkillErrorCode.INVALID_ZIP
 
 
 def _create_zip_entries(files: dict[str, bytes]) -> list[tuple[str, bytes]]:
@@ -246,3 +313,28 @@ class TestRealWorldScenarios:
         # No wrapper prefixes
         assert not any("ios-simulator-skill-main" in p for p in paths)
         assert not any("ios-simulator-skill/" in p for p in paths)
+
+
+class TestStoredFilesFromUploads:
+    async def test_single_text_file_promoted_to_skill_md(self):
+        content = b"---\nname: my-skill\ndescription: test\n---"
+        upload = UploadFile(
+            file=io.BytesIO(content),
+            filename="my-skill.md",
+            headers=Headers({"content-type": "text/markdown"}),
+        )
+        result = await stored_files_from_uploads([upload])
+        assert len(result) == 1
+        assert result[0].path == "SKILL.md"
+        assert result[0].content == content
+
+    async def test_single_binary_file_not_promoted_to_skill_md(self):
+        binary = b"\x50\x4b\x03\x04" + b"\x00" * 20  # zip magic bytes
+        upload = UploadFile(
+            file=io.BytesIO(binary),
+            filename="data.bin",
+            headers=Headers({"content-type": "application/octet-stream"}),
+        )
+        with pytest.raises(SkillDomainError) as exc_info:
+            await stored_files_from_uploads([upload])
+        assert exc_info.value.code == SkillErrorCode.MISSING_SKILL_MD

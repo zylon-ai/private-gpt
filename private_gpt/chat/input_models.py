@@ -102,6 +102,13 @@ class PromptConfig(BaseModel):
         default=False,
         description="Enable thinking/reasoning guidelines when thinking is enabled.",
     )
+    skills: bool = Field(
+        default=False,
+        description=(
+            "Enable skill management instructions (when to load/unload skills, "
+            "workflow guidance) when any skill management tool is present."
+        ),
+    )
 
 
 class System(BaseModel):

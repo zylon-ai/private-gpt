@@ -6,6 +6,7 @@ from pathlib import PurePosixPath
 
 from starlette.datastructures import Headers, UploadFile
 
+from private_gpt.components.skills.errors import SkillDomainError, SkillErrorCode
 from private_gpt.components.storage.models import StoredFile
 
 
@@ -42,7 +43,9 @@ async def stored_files_from_uploads(
     default_mime_type: str | None = "application/octet-stream",
 ) -> list[StoredFile]:
     if not uploads:
-        raise ValueError("At least one file is required")
+        raise SkillDomainError(
+            SkillErrorCode.MISSING_FILES, "At least one file is required"
+        )
 
     resolved: dict[str, StoredFile] = {}
     for upload in uploads:
@@ -62,13 +65,19 @@ async def stored_files_from_uploads(
 
     if len(resolved) == 1 and "SKILL.md" not in resolved:
         stored = next(iter(resolved.values()))
-        resolved = {
-            "SKILL.md": StoredFile(
-                path="SKILL.md",
-                content=stored.content,
-                mime_type="text/markdown",
-            )
-        }
+        try:
+            text = stored.content.decode("utf-8")
+            is_text = "\x00" not in text
+        except UnicodeDecodeError:
+            is_text = False
+        if is_text:
+            resolved = {
+                "SKILL.md": StoredFile(
+                    path="SKILL.md",
+                    content=stored.content,
+                    mime_type="text/markdown",
+                )
+            }
 
     for value in resolved.values():
         if not value.mime_type:
@@ -80,10 +89,15 @@ async def stored_files_from_uploads(
             value.mime_type = mime_type or default_mime_type
 
         if not value.mime_type:
-            raise ValueError(f"Could not determine MIME type for file: {value.path}")
+            raise SkillDomainError(
+                SkillErrorCode.MIME_TYPE_UNKNOWN,
+                f"Could not determine MIME type for file: {value.path}",
+            )
 
     if "SKILL.md" not in resolved:
-        raise ValueError("Upload must include a SKILL.md file.")
+        raise SkillDomainError(
+            SkillErrorCode.MISSING_SKILL_MD, "Upload must include a SKILL.md file."
+        )
 
     return list(resolved.values())
 
@@ -95,10 +109,16 @@ def _normalize_path(path: str) -> str:
     parsed = PurePosixPath(path)
 
     if parsed.is_absolute():
-        raise ValueError(f"Unsafe file path (absolute): {path!r}")
+        raise SkillDomainError(
+            SkillErrorCode.UNSAFE_PATH_ABSOLUTE,
+            f"Unsafe file path (absolute): {path!r}",
+        )
 
     if ".." in parsed.parts:
-        raise ValueError(f"Unsafe file path (path traversal): {path!r}")
+        raise SkillDomainError(
+            SkillErrorCode.UNSAFE_PATH_TRAVERSAL,
+            f"Unsafe file path (path traversal): {path!r}",
+        )
 
     parts = list(parsed.parts)
     if parts and parts[-1].lower() == "skill.md":
@@ -143,16 +163,21 @@ def _extract_zip(upload: UploadFile, payload: bytes) -> list[tuple[str, bytes]]:
     try:
         with zipfile.ZipFile(io.BytesIO(payload)) as archive:
             members = [item for item in archive.infolist() if not item.is_dir()]
-            if not members:
-                raise ValueError("ZIP file cannot be empty")
+            if not members or all(item.file_size == 0 for item in members):
+                raise SkillDomainError(
+                    SkillErrorCode.EMPTY_ZIP, "ZIP file cannot be empty"
+                )
 
             raw_entries = [
                 (item.filename, archive.read(item.filename)) for item in members
             ]
             return _flatten_wrapper_directory(raw_entries)
-    except zipfile.BadZipFile as exc:
-        raise ValueError(
-            f"Invalid ZIP file: {upload.filename or 'unnamed.zip'}"
+    except SkillDomainError as e:
+        raise e
+    except Exception as exc:
+        raise SkillDomainError(
+            SkillErrorCode.INVALID_ZIP,
+            f"Invalid ZIP file: {upload.filename or 'unnamed.zip'}",
         ) from exc
 
 

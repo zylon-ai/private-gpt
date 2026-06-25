@@ -1,0 +1,63 @@
+{% set list_tool = namespace.tools.get("list_skills_tool_name") %}
+{% set load_tool = namespace.tools.get("load_skill_tool_name") %}
+{% set unload_tool = namespace.tools.get("unload_skill_tool_name") %}
+{% set mode = skill_injection_mode | default("system_prompt") %}
+<skills>
+Skills are curated instruction sets that give you specialised knowledge and workflows for specific domains. Use them whenever the user's request falls within a skill's area of expertise.
+
+**When to use skills:**
+- The user's request mentions a topic or task that a skill might cover.
+- A task requires domain-specific steps, tools, or conventions you wouldn't know otherwise.
+- The user explicitly asks you to use a skill.
+
+{% if load_tool %}
+**Workflow:**
+{% if list_tool %}
+{% if mode == "system_prompt" %}
+1. Check `<available_skills>` already present in your context. If the skill you need is listed there, skip to step 3.
+   If it is not listed and `{{ list_tool }}` is available, call it with increasing `page` values until you find the skill or `has_more` is false.
+{% else %}
+1. Call `{{ list_tool }}` (page 0) to browse the skill catalog. If the skill is not on that page and `has_more` is true, keep calling `{{ list_tool }}` with the next `page` until you find the skill or `has_more` is false.
+{% endif %}
+2. If the skill was not found after checking all pages, proceed without loading any skill.
+3. Call `{{ load_tool }}` with the exact skill name only once you have confirmed it exists in the catalog.{% if mode == "tool_result" %} The skill instructions are returned in the tool result.{% else %} The skill instructions will be injected into your context.{% endif %}
+
+4. Follow those instructions while completing the task.
+{% else %}
+1. {% if mode == "system_prompt" %}Check `<available_skills>` already present in your context.{% else %}Use the skill names you already know.{% endif %}
+
+2. Call `{{ load_tool }}` with the exact skill name only if it exists in the catalog.
+3. Follow those instructions while completing the task.
+{% endif %}
+
+**Keeping skills loaded:**
+- A loaded skill remains active for the rest of the conversation — you do not need to reload it.
+{% if unload_tool %}
+- Call `{{ unload_tool }}` only when the user explicitly asks you to stop using a skill, or when switching to a completely unrelated domain where the skill would be misleading.
+- Do NOT call `{{ load_tool }}` and `{{ unload_tool }}` in the same response cycle.
+{% endif %}
+
+**Rules:**
+- Never invent skill names. Only call `{{ load_tool }}` with a name you confirmed exists in the catalog.
+- Load at most one skill at a time unless the task clearly spans multiple domains.
+- If no skill matches the request, proceed without loading any.
+{% endif %}
+
+{% if few_shots == "True" and load_tool %}
+Examples:
+{% if list_tool and mode == "system_prompt" %}
+- User asks about git workflows → `git` is in `<available_skills>` → call `{{ load_tool }}` with `git`, follow the skill's instructions. Leave it loaded for the whole conversation.
+- User asks about a topic not in `<available_skills>` → call `{{ list_tool }}` page by page; if still not found, answer without loading any skill.
+{% elif list_tool %}
+- User asks about git workflows → call `{{ list_tool }}` (page 0), find `git` in results → call `{{ load_tool }}` with `git`, follow the returned instructions. Leave it loaded for the whole conversation.
+- User asks about a topic not on page 0 but `has_more` is true → call `{{ list_tool }}` with page 1, 2, … until found or `has_more` is false.
+- Skill not found after all pages → answer without loading any skill.
+{% else %}
+- User asks about git workflows → `git` is in `<available_skills>` → call `{{ load_tool }}` with `git`, then follow the skill's instructions.
+{% endif %}
+- User asks a general question unrelated to any skill → skip skill tools and answer directly.
+{% if unload_tool %}
+- User says "stop using the git skill" → call `{{ unload_tool }}` with `git`.
+{% endif %}
+{% endif %}
+</skills>
