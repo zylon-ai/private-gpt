@@ -344,4 +344,7 @@ class PandasAIService(BaseModel):
             f"Last code executed: {result.response.last_code_executed}"
         )
 
+        if sandbox is not None:
+            await asyncio.to_thread(sandbox.stop)
+
         return result
