@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
@@ -36,6 +37,22 @@ debug_mode = settings().server.debug_mode
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
+
+GLYPH_UNKNOWN_MARKER = "glyph<UNKNOWN>"
+_MAX_SAMPLED_PAGES = 10
+
+
+class ExtractionUnsuccessfulError(Exception):
+    """Raised when a document is converted but the extracted text is unusable.
+
+    (e.g. mostly unmapped glyphs from CID fonts without a ToUnicode map).
+    """
+
+
+def _glyph_unknown_ratio(text: str) -> float:
+    if not text:
+        return 0.0
+    return text.count(GLYPH_UNKNOWN_MARKER) * len(GLYPH_UNKNOWN_MARKER) / len(text)
 
 
 class DoclingApiReader(IngestionReader):
@@ -163,6 +180,11 @@ class DoclingApiReader(IngestionReader):
         valid_contents = [content for content in contents if content]
         if not valid_contents:
             raise ValueError("No valid document content found after conversion")
+        if self._is_extraction_unsuccessful(valid_contents):
+            raise ExtractionUnsuccessfulError(
+                f"Document extraction unsuccessful for '{file_name}': unmapped-glyph "
+                f"ratio exceeded threshold ({self.config.failure_threshold})."
+            )
 
         docs = [
             self._page_to_doc(
@@ -223,3 +245,20 @@ class DoclingApiReader(IngestionReader):
             "Finished Docling API parsing and transformations of file: %s",
             file_info.file_name,
         )
+
+    def _is_extraction_unsuccessful(self, contents: list[str]) -> bool:
+        """Detect when Docling failed to extract meaningful text.
+
+        Sample up to ``_MAX_SAMPLED_PAGES`` pages at random and evaluate the
+        unmapped-glyph ratio over them. A broken extraction (e.g. CID fonts
+        without a ToUnicode map) typically affects the whole document, so a
+        random sample estimates it well while bounding work on large docs.
+        """
+        if not contents:
+            return False
+
+        sample_size = min(_MAX_SAMPLED_PAGES, len(contents))
+        sampled_indices = random.sample(range(len(contents)), sample_size)
+        sampled_text = "".join(contents[i] for i in sampled_indices)
+
+        return _glyph_unknown_ratio(sampled_text) > self.config.failure_threshold
