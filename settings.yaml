@@ -199,6 +199,15 @@ qdrant:
   prefer_grpc: ${PGPT_QDRANT_PREFER_GRPC:true}
   timeout: ${PGPT_QDRANT_TIMEOUT:120000}
 
+opengauss:
+  host: ${PGPT_OPENGAUSS_HOST:localhost}
+  port: ${PGPT_OPENGAUSS_PORT:5432}
+  database: ${PGPT_OPENGAUSS_DATABASE:postgres}
+  user: ${PGPT_OPENGAUSS_USER:gaussdb}
+  password: ${PGPT_OPENGAUSS_PASSWORD:}
+  schema_name: ${PGPT_OPENGAUSS_SCHEMA:private_gpt}
+  distance: ${PGPT_OPENGAUSS_DISTANCE:cosine}
+
 s3:
   endpoint_url: ${PGPT_S3_ENDPOINT_URL:}
   public_endpoint_url: ${PGPT_S3_PUBLIC_ENDPOINT_URL:}

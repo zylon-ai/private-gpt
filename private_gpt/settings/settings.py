@@ -951,6 +951,25 @@ class QdrantSettings(BaseModel):
         return v
 
 
+class OpenGaussSettings(BaseModel):
+    host: str = Field(description="openGauss database host")
+    port: int = Field(5432, description="openGauss database port")
+    database: str = Field(description="openGauss database name")
+    user: str = Field(description="openGauss database user")
+    password: str = Field(description="openGauss database password", repr=False)
+    schema_name: str = Field(
+        "private_gpt",
+        description="Schema name in the openGauss database to use.",
+    )
+    distance: Literal["cosine", "l2", "inner_product"] = Field(
+        "cosine",
+        description=(
+            "Distance metric for similarity search. "
+            "Maps to DataVec operators: cosine=<=>, l2=<->, inner_product=<#>."
+        ),
+    )
+
+
 class RabbitMQSettings(BaseModel):
     host: str = Field(description="RabbitMQ host")
     username: str = Field(description="RabbitMQ username")
@@ -1540,6 +1559,7 @@ class Settings(BaseModel):
     vectorstore: VectorstoreSettings
     node_store: NodeStoreSettings
     qdrant: QdrantSettings
+    opengauss: OpenGaussSettings | None = None
     rabbitmq: RabbitMQSettings
     database: DatabaseSettings
     celery: CelerySettings

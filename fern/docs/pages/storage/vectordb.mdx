@@ -38,3 +38,51 @@ vectorstore:
 ```
 
 Run `make wipe` before re-ingesting to avoid a dimension mismatch error.
+
+---
+
+## openGauss DataVec
+
+[openGauss DataVec](https://docs.opengauss.org/zh/docs/latest/datavec/datavec_overview.html) is a vector engine built into the openGauss kernel. It is a drop-in alternative to Qdrant that keeps your data in a relational database and lets you query vectors with SQL.
+
+PrivateGPT connects to openGauss directly via `psycopg2` .
+
+<Note>
+  This requires the `vectorstore-opengauss` extra:
+
+  ```bash
+  uv sync --frozen --extra core --extra vectorstore-opengauss
+  ```
+</Note>
+
+### Configuration
+
+```yaml
+vectorstore:
+  database: openGauss
+
+opengauss:
+  host: localhost
+  port: 5432
+  database: postgres
+  user: gaussdb
+  password: your-password
+  schema_name: private_gpt
+  distance: cosine          # cosine | l2 | inner_product
+```
+
+Or via environment variables (`PGPT_OPENGAUSS_HOST`, `PGPT_OPENGAUSS_PORT`, …).
+
+### Distance metrics
+
+| Setting | DataVec operator |
+|---|---|
+| `cosine` (default) | `<=>` |
+| `l2` | `<->` |
+| `inner_product` | `<#>` |
+
+### Notes
+
+- Each collection is stored as a table under the configured schema.
+- Logical multitenancy (`vectorstore.multitenancy: logical`) shares a single table across collections and filters by the `collection` metadata field.
+- openGauss DataVec supports `vector` (up to 16000 dims), `halfvec`, `bitvec`, and `sparsevec` types. This integration uses `vector`.

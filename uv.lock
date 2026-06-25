@@ -3577,6 +3577,9 @@ typecheck = [
     { name = "types-retry" },
     { name = "types-tqdm" },
 ]
+vectorstore-opengauss = [
+    { name = "psycopg2-binary" },
+]
 vectorstore-qdrant = [
     { name = "llama-index-vector-stores-qdrant" },
     { name = "qdrant-client" },
@@ -3685,6 +3688,7 @@ requires-dist = [
     { name = "private-gpt", extras = ["tokenizer-local"], marker = "extra == 'tokenizer'" },
     { name = "private-gpt", extras = ["tool-mcp", "tool-tabular", "tool-database", "tool-web-scraping"], marker = "extra == 'tools'" },
     { name = "psycopg2-binary", marker = "extra == 'database-postgres'", specifier = ">=2.9.12,<3" },
+    { name = "psycopg2-binary", marker = "extra == 'vectorstore-opengauss'", specifier = ">=2.9.12,<3" },
     { name = "pydub", marker = "extra == 'media-audio'", specifier = ">=0.25.1" },
     { name = "pymysql", marker = "extra == 'database-mysql'", specifier = ">=1.1.1,<2" },
     { name = "pyodbc", marker = "extra == 'database-mssql'", specifier = ">=5.3.0" },
@@ -3723,7 +3727,7 @@ requires-dist = [
     { name = "types-tqdm", marker = "extra == 'typecheck'", specifier = ">=4.67.0.20250809" },
     { name = "watchdog", specifier = ">=4.0.1,<5" },
 ]
-provides-extras = ["sdk-openai", "llm-openai", "llm-openai-compatible", "llm-mistral", "llm-anthropic", "tokenizer-local", "tokenizer", "embedding-openai", "embedding-openai-compatible", "model-openai", "model-openai-compatible", "ingest-core", "ingest-documents", "ingest-markitdown", "ingest-markup", "ingest", "storage-s3", "storage-smb", "storage", "vectorstore-qdrant", "nodestore-postgres", "indexstore-postgres", "redis-core", "redis", "database-core", "database-postgres", "database-mysql", "database-mssql", "database-db2", "database", "queue-celery", "queue-rabbitmq", "queue", "data-pandas", "data-pandasai", "tool-mcp", "tool-tabular", "tool-database", "tool-web-scraping", "tools", "media-core", "media-image", "media-audio", "media-video", "media", "observability-arize-phoenix", "observability-opik", "observability", "core", "lint", "test", "typecheck", "dev"]
+provides-extras = ["sdk-openai", "llm-openai", "llm-openai-compatible", "llm-mistral", "llm-anthropic", "tokenizer-local", "tokenizer", "embedding-openai", "embedding-openai-compatible", "model-openai", "model-openai-compatible", "ingest-core", "ingest-documents", "ingest-markitdown", "ingest-markup", "ingest", "storage-s3", "storage-smb", "storage", "vectorstore-qdrant", "vectorstore-opengauss", "nodestore-postgres", "indexstore-postgres", "redis-core", "redis", "database-core", "database-postgres", "database-mysql", "database-mssql", "database-db2", "database", "queue-celery", "queue-rabbitmq", "queue", "data-pandas", "data-pandasai", "tool-mcp", "tool-tabular", "tool-database", "tool-web-scraping", "tools", "media-core", "media-image", "media-audio", "media-video", "media", "observability-arize-phoenix", "observability-opik", "observability", "core", "lint", "test", "typecheck", "dev"]
 
 [[package]]
 name = "prometheus-client"

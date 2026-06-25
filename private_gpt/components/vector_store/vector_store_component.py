@@ -42,11 +42,20 @@ class VectorStoreComponent:
 
         self._settings = settings
         all_providers = {"qdrant": QdrantVectorStoreFactory, **_PROVIDERS}
-        provider = all_providers.get(settings.vectorstore.database)
+
+        database = settings.vectorstore.database
+        if database == "openGauss":
+            from private_gpt.components.vector_store.opengauss_factory import (
+                OpenGaussVectorStoreFactory,
+            )
+
+            all_providers["openGauss"] = OpenGaussVectorStoreFactory
+
+        provider = all_providers.get(database)
         if provider is None:
             available = ", ".join(sorted(all_providers)) or "none"
             raise ValueError(
-                f"Vector store '{settings.vectorstore.database}' is not supported. "
+                f"Vector store '{database}' is not supported. "
                 f"Available: {available}"
             )
 
