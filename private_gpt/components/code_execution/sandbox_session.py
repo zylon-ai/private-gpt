@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import posixpath
 from typing import TYPE_CHECKING
 
 from private_gpt.components.code_execution.base import (
@@ -30,6 +31,11 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     def _sandbox(self) -> SandboxSession:
         return self._env.sandbox
 
+    def _resolve_path(self, path: str) -> str:
+        if posixpath.isabs(path):
+            return path
+        return posixpath.join(self._env.workspace, path)
+
     async def execute_bash(
         self, command: str, timeout: int | None = None, restart: bool = False
     ) -> BashExecutionResult:
@@ -54,6 +60,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     async def view(
         self, path: str, view_range: tuple[int, int] | None = None
     ) -> FileOperationResult:
+        path = self._resolve_path(path)
         self._env.touch()
         try:
             if not await self._sandbox.path_exists(path):
@@ -83,6 +90,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     async def str_replace(
         self, path: str, old_str: str, new_str: str
     ) -> FileOperationResult:
+        path = self._resolve_path(path)
         self._env.touch()
         try:
             raw = await self._sandbox.read_file(path)
@@ -104,6 +112,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             return FileOperationResult(success=False, error=str(exc))
 
     async def create(self, path: str, file_text: str) -> FileOperationResult:
+        path = self._resolve_path(path)
         self._env.touch()
         try:
             if await self._sandbox.path_exists(path):
@@ -118,6 +127,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     async def insert(
         self, path: str, insert_line: int, new_str: str
     ) -> FileOperationResult:
+        path = self._resolve_path(path)
         self._env.touch()
         try:
             raw = await self._sandbox.read_file(path)
@@ -139,6 +149,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             return FileOperationResult(success=False, error=str(exc))
 
     async def read_file(self, path: str) -> bytes:
+        path = self._resolve_path(path)
         self._env.touch()
         return await self._sandbox.read_file(path)
 

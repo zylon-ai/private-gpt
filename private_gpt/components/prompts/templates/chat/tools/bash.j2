@@ -1,7 +1,7 @@
 {% set tool_name = namespace.tools.get("bash_tool_name") %}
 {% set has_text_editor = namespace.tools.get("has_text_editor") %}
 {% if layout is not defined or not layout %}{% else %}
-{% set workspace = layout | selectattr("name", "equalto", "workspace") | first %}
+{% set workspace = layout | selectattr("name", "equalto", "user") | first %}
 
 <{{ tool_name }}>
 Execute shell commands in an isolated sandbox environment.
@@ -25,7 +25,6 @@ Rules:
 {% set outputs = layout | selectattr("name", "equalto", "outputs") | first %}
 Examples:
 - Read an upload: `cat {{ uploads.canonical }}report.csv`
-- Install a package: `pip install pandas`
 - Save result: `cp analysis.png {{ outputs.canonical }}analysis.png`
 {% endif %}
 </{{ tool_name }}>

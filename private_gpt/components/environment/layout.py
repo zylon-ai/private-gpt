@@ -18,7 +18,7 @@ class SessionMountDef(SandboxMountSpec):
 DEFAULT_SESSION_LAYOUT: tuple[SessionMountDef, ...] = (
     SessionMountDef(
         name="user",
-        canonical="/home/agent/",
+        canonical="/home/agent/workspace/",
         writable=True,
         description="Working directory — create all new files here",
     ),
