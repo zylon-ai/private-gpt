@@ -347,6 +347,21 @@ def extract_pdf_info(file_data: Path) -> dict[str, Any | None]:
     return config
 
 
+def extract_pdf_page_range(file_bytes: bytes, start: int, end: int) -> bytes:
+    """Return a new PDF containing only pages [start, end] (1-based, inclusive)."""
+    import io
+
+    from pypdf import PdfReader, PdfWriter
+
+    reader = PdfReader(io.BytesIO(file_bytes))
+    writer = PdfWriter()
+    for idx in range(start - 1, min(end, len(reader.pages))):
+        writer.add_page(reader.pages[idx])
+    buf = io.BytesIO()
+    writer.write(buf)
+    return buf.getvalue()
+
+
 def extract_config(file_data: Path, extension: str | None) -> dict[str, int | None]:
     """Extract specific config based on the file type."""
     match extension:

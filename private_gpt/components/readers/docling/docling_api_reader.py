@@ -12,7 +12,7 @@ from pydantic import Field
 
 from private_gpt.celery.notify import NotifyProtocol
 from private_gpt.components.ingest.metadata_helper import MetadataChunk
-from private_gpt.components.ingest.utils import FileInfo
+from private_gpt.components.ingest.utils import FileInfo, extract_pdf_page_range
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import supports_images
 from private_gpt.components.readers.base_reader import IngestionReader
@@ -146,6 +146,57 @@ class DoclingApiReader(IngestionReader):
 
         return post_process_content(content)
 
+    async def _do_convert(
+        self,
+        file_name: str,
+        file_bytes: bytes,
+        extra_info: dict[str, Any] | None,
+        page_offset: int = 0,
+        pages: int | None = None,
+        **load_kwargs: Any,
+    ) -> tuple[list[LIDocument], dict[str, Any]]:
+        """Run one Docling conversion call and return (docs, timings).
+
+        *page_offset* shifts page-metadata numbers so that a sub-PDF extracted
+        from a larger document gets correct absolute page numbers.
+        *pages* is a hint to cap the page range at (1, pages) on v1 API.
+        """
+        try:
+            result = await self.client.convert_from_bytes(
+                file_name, file_bytes, to_formats=["md"],
+                pages=pages, **load_kwargs
+            )
+        except Exception as e:
+            raise ValueError(f"Document conversion failed: {e}") from e
+
+        if result.status not in ["success", "partial_success"]:
+            raise ValueError(
+                f"Document conversion failed with status: {result.status}. "
+                f"Errors: {result.errors}"
+            )
+
+        contents = self._get_content(result)
+        valid_contents = [c for c in contents if c]
+        if not valid_contents:
+            raise ValueError("No valid document content found after conversion")
+        if self._is_extraction_unsuccessful(valid_contents):
+            raise ExtractionUnsuccessfulError(
+                f"Document extraction unsuccessful for '{file_name}': unmapped-glyph "
+                f"ratio exceeded threshold ({self.config.failure_threshold})."
+            )
+
+        include_page_meta = page_offset > 0 or len(valid_contents) > 1
+        docs = [
+            self._page_to_doc(
+                content=content,
+                index=page_offset + idx,
+                include_page_metadata=include_page_meta,
+                extra_info=extra_info,
+            )
+            for idx, content in enumerate(valid_contents)
+        ]
+        return docs, result.timings
+
     async def lazy_load_data(
         self,
         file_info: FileInfo,
@@ -159,49 +210,52 @@ class DoclingApiReader(IngestionReader):
         logger.debug("Starting Docling API parsing of file: %s", file_info.file_name)
 
         file_name = file_info.file_name or file_info.file_data.name
-        file_data = file_info.file_data
-        file_bytes = await asyncio.to_thread(file_data.read_bytes)
-        pages = file_info.config.get("pages", None)
+        file_bytes = await asyncio.to_thread(file_info.file_data.read_bytes)
 
-        try:
-            conversion_result = await self.client.convert_from_bytes(
-                file_name, file_bytes, to_formats=["md"], pages=pages, **load_kwargs
+        total_pages: int | None = file_info.config.get("pages")
+        chunk_size = settings().data.limits.chunk_size_pages
+
+        timings: dict[str, Any] = {}
+
+        if total_pages is not None and total_pages > chunk_size:
+            chunks = [
+                (start, min(start + chunk_size - 1, total_pages))
+                for start in range(1, total_pages + 1, chunk_size)
+            ]
+            logger.debug(
+                "Splitting %d-page document into %d chunks of %d pages: %s",
+                total_pages, len(chunks), chunk_size, file_name,
             )
-        except Exception as e:
-            raise ValueError(f"Document conversion failed: {e}") from e
-
-        if conversion_result.status not in ["success", "partial_success"]:
-            raise ValueError(
-                f"Document conversion failed with status: {conversion_result.status}. "
-                f"Errors: {conversion_result.errors}"
-            )
-
-        contents = self._get_content(conversion_result)
-        valid_contents = [content for content in contents if content]
-        if not valid_contents:
-            raise ValueError("No valid document content found after conversion")
-        if self._is_extraction_unsuccessful(valid_contents):
-            raise ExtractionUnsuccessfulError(
-                f"Document extraction unsuccessful for '{file_name}': unmapped-glyph "
-                f"ratio exceeded threshold ({self.config.failure_threshold})."
-            )
-
-        docs = [
-            self._page_to_doc(
-                content=content,
-                index=idx,
-                include_page_metadata=len(valid_contents) > 1,
+            docs: list[LIDocument] = []
+            for i, (start, end) in enumerate(chunks):
+                chunk_bytes = await asyncio.to_thread(
+                    extract_pdf_page_range, file_bytes, start, end
+                )
+                chunk_docs, _ = await self._do_convert(
+                    file_name=file_name,
+                    file_bytes=chunk_bytes,
+                    extra_info=extra_info,
+                    page_offset=start - 1,
+                    **load_kwargs,
+                )
+                docs.extend(chunk_docs)
+                if notification:
+                    notification(percentage=(i + 1) / len(chunks) * 100)
+        else:
+            docs, timings = await self._do_convert(
+                file_name=file_name,
+                file_bytes=file_bytes,
                 extra_info=extra_info,
+                pages=total_pages,
+                **load_kwargs,
             )
-            for idx, content in enumerate(valid_contents)
-        ]
 
         if debug_mode:
             logger.info(f"Loaded document from {file_name}")
             logger.info(f"Document has {len(docs)} pages")
-            if conversion_result.timings:
+            if timings:
                 logger.debug("Following are the timings for the document conversion:")
-                for key, value in conversion_result.timings.items():
+                for key, value in timings.items():
                     obj = {
                         "scope": value.scope.value,
                         "count": value.count,

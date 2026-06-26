@@ -363,6 +363,14 @@ class FileLimitSettings(BaseModel):
         default=100,
         description="The maximum number of pages that can be ingested from a file.",
     )
+    chunk_size_pages: int = Field(
+        default=100,
+        description=(
+            "Maximum number of pages sent to the document reader in a single request. "
+            "Documents with more pages are split into consecutive page-range chunks "
+            "and processed sequentially, with progress reported after each chunk."
+        ),
+    )
 
 
 class DataSettings(BaseModel):
