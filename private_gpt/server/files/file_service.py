@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -7,6 +8,7 @@ import magic
 from fastapi import HTTPException
 from injector import inject, singleton
 
+from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
 from private_gpt.components.storage.storage_component import StorageComponent
 from private_gpt.server.files.file_models import (
     DeletedFile,
@@ -28,6 +30,35 @@ def _detect_mime_from_bytes(content: bytes) -> str:
         return magic.Magic(mime=True).from_buffer(content)
     except Exception:
         return "application/octet-stream"
+
+
+def _encode_file_id(path: str) -> str:
+    return base64.urlsafe_b64encode(path.encode()).decode().rstrip("=")
+
+
+def _decode_file_id(file_id: str) -> str:
+    padding = (4 - len(file_id) % 4) % 4
+    try:
+        return base64.urlsafe_b64decode(file_id + "=" * padding).decode()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid file ID encoding.") from e
+
+
+def _canonical_to_storage_path(canonical: str) -> str:
+    for mount in DEFAULT_SESSION_LAYOUT:
+        if canonical.startswith(mount.canonical):
+            relative = canonical[len(mount.canonical):]
+            return f"{mount.name}/{relative}"
+    return canonical
+
+
+def _storage_to_canonical_path(storage: str) -> str:
+    for mount in DEFAULT_SESSION_LAYOUT:
+        prefix = f"{mount.name}/"
+        if storage.startswith(prefix):
+            relative = storage[len(prefix):]
+            return f"{mount.canonical}{relative}"
+    return storage
 
 
 @singleton
@@ -53,8 +84,9 @@ class FileService:
 
     def _to_metadata(self, file_info: FileInfo, scope_id: str) -> FileMetadata:
         downloadable = not file_info.path.startswith("uploads/")
+        canonical = _storage_to_canonical_path(file_info.path)
         return FileMetadata(
-            id=file_info.path,
+            id=_encode_file_id(canonical),
             created_at=file_info.created_at,
             filename=file_info.path.split("/")[-1],
             mime_type=file_info.mime_type,
@@ -135,8 +167,10 @@ class FileService:
 
     async def get_file_metadata(self, scope_id: str, file_id: str) -> FileMetadata:
         storage = self._require_storage()
-        self._validate_file_id(file_id)
-        file_info = await storage.stat_file(self._prefix(scope_id), file_id)
+        canonical = _decode_file_id(file_id)
+        storage_path = _canonical_to_storage_path(canonical)
+        self._validate_file_id(storage_path)
+        file_info = await storage.stat_file(self._prefix(scope_id), storage_path)
         if file_info is None:
             raise HTTPException(status_code=404, detail=f"File '{file_id}' not found.")
         return self._to_metadata(file_info, scope_id)
@@ -146,23 +180,27 @@ class FileService:
     ) -> tuple[bytes, str, str]:
         """Returns (bytes, mime_type, display_filename)."""
         storage = self._require_storage()
-        self._validate_file_id(file_id)
-        file_info = await storage.stat_file(self._prefix(scope_id), file_id)
+        canonical = _decode_file_id(file_id)
+        storage_path = _canonical_to_storage_path(canonical)
+        self._validate_file_id(storage_path)
+        file_info = await storage.stat_file(self._prefix(scope_id), storage_path)
         if file_info is None:
             raise HTTPException(status_code=404, detail=f"File '{file_id}' not found.")
-        content = await storage.read_file(self._prefix(scope_id), file_id)
-        filename = file_id.split("/")[-1]
+        content = await storage.read_file(self._prefix(scope_id), storage_path)
+        filename = canonical.split("/")[-1]
         return content, file_info.mime_type, filename
 
     async def delete_file(self, scope_id: str, file_id: str) -> DeletedFile:
         storage = self._require_storage()
-        self._validate_file_id(file_id)
-        if not file_id.startswith("uploads/"):
+        canonical = _decode_file_id(file_id)
+        storage_path = _canonical_to_storage_path(canonical)
+        self._validate_file_id(storage_path)
+        if not storage_path.startswith("uploads/"):
             raise HTTPException(
                 status_code=404,
                 detail=f"File '{file_id}' not found or is a sandbox output (cannot be deleted).",
             )
-        deleted = await storage.delete_file(self._prefix(scope_id), file_id)
+        deleted = await storage.delete_file(self._prefix(scope_id), storage_path)
         if not deleted:
             raise HTTPException(
                 status_code=404,

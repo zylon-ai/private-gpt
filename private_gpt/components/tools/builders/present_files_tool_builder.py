@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import mimetypes
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -20,6 +21,26 @@ from private_gpt.events.models import LocalResourceBlock, TextBlock
 if TYPE_CHECKING:
     from private_gpt.components.sandbox.content_bundle import ContentBundle
     from private_gpt.events.models import ResultContentBlockType
+
+
+_EXTENSION_MIME_FALLBACKS: dict[str, str] = {
+    ".md": "text/markdown",
+    ".markdown": "text/markdown",
+    ".yaml": "text/yaml",
+    ".yml": "text/yaml",
+    ".toml": "application/toml",
+    ".jsonl": "application/jsonl",
+    ".csv": "text/csv",
+    ".tsv": "text/tab-separated-values",
+    ".sh": "text/x-sh",
+    ".py": "text/x-python",
+    ".rs": "text/x-rust",
+    ".go": "text/x-go",
+}
+
+
+def _encode_file_id(path: str) -> str:
+    return base64.urlsafe_b64encode(path.encode()).decode().rstrip("=")
 
 
 @singleton
@@ -43,10 +64,14 @@ class PresentFilesToolBuilder:
                 try:
                     mime_type, _ = mimetypes.guess_type(filepath)
                     if mime_type is None:
-                        mime_type = "application/octet-stream"
+                        suffix = Path(filepath).suffix.lower()
+                        mime_type = _EXTENSION_MIME_FALLBACKS.get(
+                            suffix, "application/octet-stream"
+                        )
                     blocks.append(
                         LocalResourceBlock(
                             file_path=filepath,
+                            file_id=_encode_file_id(filepath),
                             name=Path(filepath).stem,
                             mime_type=mime_type,
                         )

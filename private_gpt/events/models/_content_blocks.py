@@ -537,6 +537,10 @@ class LocalResourceBlock(BaseContentBlock, StandardContentProtocol):
     file_path: str = Field(
         description="Absolute path to the file inside the execution environment"
     )
+    file_id: str | None = Field(
+        default=None,
+        description="Base64url-encoded storage file ID used to download the file via the files API",
+    )
     name: str = Field(description="Human-readable file name (stem, without extension)")
     mime_type: str = Field(description="MIME type of the file")
 
