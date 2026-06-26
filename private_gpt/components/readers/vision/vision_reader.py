@@ -187,14 +187,19 @@ class VisionReader(IngestionReader):
             "Starting PDF vision transformations of file: %s", file_info.file_name
         )
 
-        for transformed_node in await arun_transformations(
-            nodes=docs,
-            transformations=list(
-                vision_docs_transformations(
-                    reader_settings=self._reader_settings, vision_mode=vision_mode
-                )
-            ),
-        ):
-            yield transformed_node
+        transformations = list(
+            vision_docs_transformations(
+                reader_settings=self._reader_settings, vision_mode=vision_mode
+            )
+        )
+        total_pages = len(docs)
+        for i, doc in enumerate(docs):
+            for transformed_node in await arun_transformations(
+                nodes=[doc],
+                transformations=transformations,
+            ):
+                yield transformed_node
+            if notification:
+                notification(percentage=(i + 1) / total_pages * 100)
 
         logger.debug("Finished PDF vision parsing of file: %s", file_info.file_name)
