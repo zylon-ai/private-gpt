@@ -11,6 +11,7 @@ from private_gpt.server.files.file_models import (
     FileListResponse,
     FileMetadata,
 )
+from private_gpt.server.files.file_service import _decode_file_id, _encode_file_id
 from tests.server.files.conftest import (
     _FILE_CONTENT,
     _FILE_NAME,
@@ -38,10 +39,11 @@ def test_upload_returns_file_metadata(
     assert meta.size_bytes == len(_FILE_CONTENT)
     assert meta.downloadable is False
     assert meta.scope.id == _SESSION_ID
-    # ID must be an absolute path pointing into uploads/
-    assert meta.id.startswith("/")
-    assert "uploads" in meta.id
-    assert meta.id.endswith(_FILE_NAME)
+    # ID is a base64-encoded canonical path pointing into uploads/
+    decoded = _decode_file_id(meta.id)
+    assert decoded.startswith("/")
+    assert "uploads" in decoded
+    assert decoded.endswith(_FILE_NAME)
 
 
 def test_list_files_empty_session(files_client: TestClient) -> None:
@@ -80,7 +82,8 @@ def test_get_file_metadata(files_client: TestClient) -> None:
 
 
 def test_get_file_metadata_not_found(files_client: TestClient) -> None:
-    resp = files_client.get(_file_url("/nonexistent/path/file.txt", _SESSION_ID))
+    encoded_id = _encode_file_id("/nonexistent/path/file.txt")
+    resp = files_client.get(_file_url(encoded_id, _SESSION_ID))
     assert resp.status_code == 404
 
 
@@ -100,7 +103,9 @@ def test_download_output_file(files_client: TestClient, volume_root: Path) -> No
     """A sandbox output file can be downloaded via its absolute path ID."""
     output_path = volume_root / "sessions" / _SESSION_ID / "outputs" / "result.csv"
     output_path.write_bytes(_FILE_CONTENT)
-    file_id = str(output_path.resolve())
+
+    canonical = "/mnt/user-data/outputs/result.csv"
+    file_id = _encode_file_id(canonical)
 
     resp = files_client.get(_file_url(file_id, _SESSION_ID, suffix="/content"))
     assert resp.status_code == 200
@@ -110,7 +115,9 @@ def test_download_output_file(files_client: TestClient, volume_root: Path) -> No
 def test_list_includes_outputs(files_client: TestClient, volume_root: Path) -> None:
     output_path = volume_root / "sessions" / _SESSION_ID / "outputs" / "result.png"
     output_path.write_bytes(b"\x89PNG")
-    output_id = str(output_path.resolve())
+
+    canonical = "/mnt/user-data/outputs/result.png"
+    output_id = _encode_file_id(canonical)
 
     resp = files_client.get(f"/v1/files?scope_id={_SESSION_ID}")
     listing = FileListResponse.model_validate(resp.json())
@@ -139,7 +146,9 @@ def test_delete_uploaded_file(files_client: TestClient) -> None:
 def test_delete_output_returns_404(files_client: TestClient, volume_root: Path) -> None:
     output_path = volume_root / "sessions" / _SESSION_ID / "outputs" / "result.csv"
     output_path.write_bytes(b"a,b\n1,2")
-    output_id = str(output_path.resolve())
+
+    canonical = "/mnt/user-data/outputs/result.csv"
+    output_id = _encode_file_id(canonical)
 
     resp = files_client.delete(_file_url(output_id, _SESSION_ID))
     assert resp.status_code == 404

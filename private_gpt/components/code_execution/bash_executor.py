@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import signal
 import sys
@@ -17,14 +18,22 @@ _ISOLATION_AVAILABLE = sys.platform != "win32"
 
 
 def _child_setup(cpu_s: int, mem_mb: int, fsize_mb: int, nproc: int) -> None:
-    """Runs in child process before exec — sets up isolation via rlimit + setsid."""
+    """Runs in child process before exec — sets up isolation via rlimit + setsid.
+
+    setrlimit calls are best-effort: some platforms (macOS) reject certain
+    limits (e.g. RLIMIT_AS always fails with a finite value).
+    """
     os.setsid()
     import resource as r
 
-    r.setrlimit(r.RLIMIT_CPU, (cpu_s, cpu_s))
-    r.setrlimit(r.RLIMIT_AS, (mem_mb << 20, mem_mb << 20))
-    r.setrlimit(r.RLIMIT_FSIZE, (fsize_mb << 20, fsize_mb << 20))
-    r.setrlimit(r.RLIMIT_NPROC, (nproc, nproc))
+    def _set(which: int, limit: tuple[int, int]) -> None:
+        with contextlib.suppress(ValueError, OSError):
+            r.setrlimit(which, limit)
+
+    _set(r.RLIMIT_CPU, (cpu_s, cpu_s))
+    _set(r.RLIMIT_AS, (mem_mb << 20, mem_mb << 20))
+    _set(r.RLIMIT_FSIZE, (fsize_mb << 20, fsize_mb << 20))
+    _set(r.RLIMIT_NPROC, (nproc, nproc))
 
 
 def _cap_bytes(data: bytes, limit: int) -> str:

@@ -43,37 +43,47 @@ def _request(tools: list[ToolSpec]) -> ResolvedChatRequest:
 @pytest.mark.asyncio
 async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> None:
     bash_builder = SimpleNamespace(
-        build_tool=lambda session_id, name="bash", type="bash_v1": ToolSpec.from_defaults(
-            name=name,
-            type=type,
-            description="bash",
-            async_fn=AsyncMock(return_value=[]),
+        build_tool=AsyncMock(
+            side_effect=lambda session_id, name="bash", type="bash_v1", bundles=None: ToolSpec.from_defaults(
+                name=name,
+                type=type,
+                description="bash",
+                async_fn=AsyncMock(return_value=[]),
+            )
         )
     )
     text_editor_builder = SimpleNamespace(
-        build_view_tool=lambda session_id, name="view", type="view_v1": ToolSpec.from_defaults(
-            name=name,
-            type=type,
-            description="view",
-            async_fn=AsyncMock(return_value=[]),
+        build_view_tool=AsyncMock(
+            side_effect=lambda session_id, name="view", type="view_v1", bundles=None: ToolSpec.from_defaults(
+                name=name,
+                type=type,
+                description="view",
+                async_fn=AsyncMock(return_value=[]),
+            )
         ),
-        build_str_replace_tool=lambda session_id, name="str_replace", type="str_replace_v1": ToolSpec.from_defaults(
-            name=name,
-            type=type,
-            description="replace",
-            async_fn=AsyncMock(return_value=[]),
+        build_str_replace_tool=AsyncMock(
+            side_effect=lambda session_id, name="str_replace", type="str_replace_v1", bundles=None: ToolSpec.from_defaults(
+                name=name,
+                type=type,
+                description="replace",
+                async_fn=AsyncMock(return_value=[]),
+            )
         ),
-        build_create_tool=lambda session_id, name="create", type="create_v1": ToolSpec.from_defaults(
-            name=name,
-            type=type,
-            description="create",
-            async_fn=AsyncMock(return_value=[]),
+        build_create_tool=AsyncMock(
+            side_effect=lambda session_id, name="create", type="create_v1", bundles=None: ToolSpec.from_defaults(
+                name=name,
+                type=type,
+                description="create",
+                async_fn=AsyncMock(return_value=[]),
+            )
         ),
-        build_insert_tool=lambda session_id, name="insert", type="insert_v1": ToolSpec.from_defaults(
-            name=name,
-            type=type,
-            description="insert",
-            async_fn=AsyncMock(return_value=[]),
+        build_insert_tool=AsyncMock(
+            side_effect=lambda session_id, name="insert", type="insert_v1", bundles=None: ToolSpec.from_defaults(
+                name=name,
+                type=type,
+                description="insert",
+                async_fn=AsyncMock(return_value=[]),
+            )
         ),
     )
     noop = SimpleNamespace(intercept=AsyncMock(return_value=False))
@@ -88,6 +98,7 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
         code_execution_processor=CodeExecutionProcessor(),
         bash_processor=BashProcessor(bash_builder),
         text_editor_processor=TextEditorProcessor(text_editor_builder),
+        present_files_processor=noop,
     )
     request = _request(
         [
@@ -158,6 +169,7 @@ async def test_skill_tools_are_built_without_pre_recovery() -> None:
         code_execution_processor=CodeExecutionProcessor(),
         bash_processor=noop,
         text_editor_processor=noop,
+        present_files_processor=noop,
     )
     request = _request(
         [
@@ -216,6 +228,7 @@ async def test_tool_pipeline_expands_skills_wrapper() -> None:
         code_execution_processor=CodeExecutionProcessor(),
         bash_processor=noop,
         text_editor_processor=noop,
+        present_files_processor=noop,
     )
     request = _request(
         [
