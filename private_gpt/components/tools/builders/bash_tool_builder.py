@@ -13,20 +13,13 @@ from private_gpt.components.code_execution.code_execution_component import (
 )
 from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import BASH_TOOL_FN
+from private_gpt.components.tools.utils import truncate_output
 from private_gpt.events.models import TextBlock
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
     from private_gpt.components.sandbox.content_bundle import ContentBundle
     from private_gpt.events.models import ResultContentBlockType
-
-
-def _truncate_output(text: str, max_bytes: int) -> str:
-    encoded = text.encode("utf-8")
-    if len(encoded) <= max_bytes:
-        return text
-    truncated = encoded[:max_bytes].decode("utf-8", errors="ignore")
-    return truncated + "\n...[truncated]"
 
 
 @singleton
@@ -69,7 +62,7 @@ class BashToolBuilder:
                 sections.append(f"stdout:\n{result.stdout}")
             if result.stderr:
                 sections.append(f"stderr:\n{result.stderr}")
-            output = _truncate_output(
+            output = truncate_output(
                 "\n\n".join(sections),
                 self._settings.code_execution.max_output_bytes,
             )

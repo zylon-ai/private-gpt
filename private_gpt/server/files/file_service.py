@@ -1,28 +1,31 @@
-from datetime import UTC, datetime
-from pathlib import Path
+from __future__ import annotations
 
-import anyio
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 import magic
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException
 from injector import inject, singleton
 
-from private_gpt.components.code_execution.code_execution_component import (
-    CodeExecutionComponent,
-)
-from private_gpt.components.environment.session_volume_locator import (
-    SessionVolumeLocator,
-)
+from private_gpt.components.storage.storage_component import StorageComponent
 from private_gpt.server.files.file_models import (
     DeletedFile,
     FileListResponse,
     FileMetadata,
     FileScope,
 )
+from private_gpt.settings.settings import Settings
+
+if TYPE_CHECKING:
+    from fastapi import UploadFile
+
+    from private_gpt.components.storage.models import FileInfo
+    from private_gpt.components.storage.object_storage import ObjectStorage
 
 
-def _detect_mime(path: Path) -> str:
+def _detect_mime_from_bytes(content: bytes) -> str:
     try:
-        return magic.Magic(mime=True).from_file(str(path))
+        return magic.Magic(mime=True).from_buffer(content)
     except Exception:
         return "application/octet-stream"
 
@@ -30,76 +33,51 @@ def _detect_mime(path: Path) -> str:
 @singleton
 class FileService:
     @inject
-    def __init__(
-        self,
-        locator: SessionVolumeLocator,
-        code_execution: CodeExecutionComponent,
-    ) -> None:
-        self._locator = locator
-        self._code_execution = code_execution
+    def __init__(self, storage_component: StorageComponent, settings: Settings) -> None:
+        self._settings = settings
+        cfg = settings.code_execution
+        local_root = cfg.volume_root or str(
+            Path(settings.data.local_data_folder) / "code_execution"
+        )
+        self._storage = storage_component.get_object_storage(
+            provider=cfg.storage_provider,
+            local_root_path=local_root,
+            bucket_name=settings.s3.durable_bucket_name,
+        )
 
-    async def _ensure_session(self, scope_id: str) -> None:
-        await self._code_execution.get_or_create_session(scope_id)
+    def _require_storage(self) -> ObjectStorage:
+        return self._storage
 
-    def _session_root(self, scope_id: str) -> Path:
-        return self._locator.uploads_path(scope_id).parent
+    def _prefix(self, scope_id: str) -> str:
+        return f"{self._settings.code_execution.vfs_sessions_prefix}/{scope_id}"
 
-    def _is_under(self, path: Path, base: Path) -> bool:
-        try:
-            path.resolve().relative_to(base.resolve())
-            return True
-        except ValueError:
-            return False
-
-    def _make_entry(
-        self, path: Path, scope_id: str, downloadable: bool
-    ) -> FileMetadata:
-        stat = path.stat()
+    def _to_metadata(self, file_info: FileInfo, scope_id: str) -> FileMetadata:
+        downloadable = not file_info.path.startswith("uploads/")
         return FileMetadata(
-            id=str(path.resolve()),
-            created_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
-            filename=path.name,
-            mime_type=_detect_mime(path),
-            size_bytes=stat.st_size,
+            id=file_info.path,
+            created_at=file_info.created_at,
+            filename=file_info.path.split("/")[-1],
+            mime_type=file_info.mime_type,
+            size_bytes=file_info.size_bytes,
             downloadable=downloadable,
             scope=FileScope(id=scope_id),
         )
 
-    def _load_upload_entries(self, scope_id: str) -> list[FileMetadata]:
-        uploads_dir = self._locator.uploads_path(scope_id)
-        if not uploads_dir.exists():
-            return []
-        return [
-            self._make_entry(p, scope_id, downloadable=False)
-            for p in uploads_dir.iterdir()
-            if p.is_file()
-        ]
-
-    def _load_output_entries(self, scope_id: str) -> list[FileMetadata]:
-        outputs_dir = self._locator.outputs_path(scope_id)
-        if not outputs_dir.exists():
-            return []
-        return [
-            self._make_entry(p, scope_id, downloadable=True)
-            for p in outputs_dir.iterdir()
-            if p.is_file()
-        ]
-
     async def upload_file(self, scope_id: str, upload: UploadFile) -> FileMetadata:
-        await self._ensure_session(scope_id)
-        bytes_data = await upload.read()
+        storage = self._require_storage()
+        content = await upload.read()
         filename = upload.filename or "upload"
-        dest = self._locator.uploads_path(scope_id) / filename
+        path = f"uploads/{filename}"
+        mime_type = _detect_mime_from_bytes(content)
 
-        def _write() -> None:
-            dest.write_bytes(bytes_data)
+        await storage.write_file(self._prefix(scope_id), path, content, mime_type)
 
-        await anyio.to_thread.run_sync(_write)
-
-        def _make() -> FileMetadata:
-            return self._make_entry(dest, scope_id, downloadable=False)
-
-        return await anyio.to_thread.run_sync(_make)
+        file_info = await storage.stat_file(self._prefix(scope_id), path)
+        if file_info is None:
+            raise HTTPException(
+                status_code=500, detail="File written but could not be read back."
+            )
+        return self._to_metadata(file_info, scope_id)
 
     async def list_files(
         self,
@@ -108,14 +86,26 @@ class FileService:
         after_id: str | None = None,
         before_id: str | None = None,
     ) -> FileListResponse:
-        def _collect() -> list[FileMetadata]:
-            return sorted(
-                self._load_upload_entries(scope_id)
-                + self._load_output_entries(scope_id),
-                key=lambda f: f.created_at,
-            )
+        storage = self._require_storage()
+        prefix = self._prefix(scope_id)
 
-        all_files = await anyio.to_thread.run_sync(_collect)
+        uploads = await storage.list_files_meta(f"{prefix}/uploads")
+        outputs = await storage.list_files_meta(f"{prefix}/outputs")
+
+        all_infos = sorted(
+            [
+                *[
+                    fi.model_copy(update={"path": f"uploads/{fi.path}"})
+                    for fi in uploads
+                ],
+                *[
+                    fi.model_copy(update={"path": f"outputs/{fi.path}"})
+                    for fi in outputs
+                ],
+            ],
+            key=lambda fi: fi.created_at,
+        )
+        all_files = [self._to_metadata(fi, scope_id) for fi in all_infos]
 
         if after_id:
             ids = [f.id for f in all_files]
@@ -144,54 +134,43 @@ class FileService:
         )
 
     async def get_file_metadata(self, scope_id: str, file_id: str) -> FileMetadata:
-        def _load() -> FileMetadata | None:
-            path = Path(file_id)
-            if not path.exists() or not path.is_file():
-                return None
-            if not self._is_under(path, self._session_root(scope_id)):
-                return None
-            downloadable = not self._is_under(
-                path, self._locator.uploads_path(scope_id)
-            )
-            return self._make_entry(path, scope_id, downloadable=downloadable)
-
-        result = await anyio.to_thread.run_sync(_load)
-        if result is None:
+        storage = self._require_storage()
+        self._validate_file_id(file_id)
+        file_info = await storage.stat_file(self._prefix(scope_id), file_id)
+        if file_info is None:
             raise HTTPException(status_code=404, detail=f"File '{file_id}' not found.")
-        return result
+        return self._to_metadata(file_info, scope_id)
 
     async def get_file_content(
         self, scope_id: str, file_id: str
     ) -> tuple[bytes, str, str]:
         """Returns (bytes, mime_type, display_filename)."""
-
-        def _read() -> tuple[bytes, str, str] | None:
-            path = Path(file_id)
-            if not path.exists() or not path.is_file():
-                return None
-            if not self._is_under(path, self._session_root(scope_id)):
-                return None
-            return path.read_bytes(), _detect_mime(path), path.name
-
-        result = await anyio.to_thread.run_sync(_read)
-        if result is None:
+        storage = self._require_storage()
+        self._validate_file_id(file_id)
+        file_info = await storage.stat_file(self._prefix(scope_id), file_id)
+        if file_info is None:
             raise HTTPException(status_code=404, detail=f"File '{file_id}' not found.")
-        return result
+        content = await storage.read_file(self._prefix(scope_id), file_id)
+        filename = file_id.split("/")[-1]
+        return content, file_info.mime_type, filename
 
     async def delete_file(self, scope_id: str, file_id: str) -> DeletedFile:
-        def _delete() -> bool:
-            path = Path(file_id)
-            if not self._is_under(path, self._locator.uploads_path(scope_id)):
-                return False
-            if not path.exists():
-                return False
-            path.unlink()
-            return True
-
-        deleted = await anyio.to_thread.run_sync(_delete)
+        storage = self._require_storage()
+        self._validate_file_id(file_id)
+        if not file_id.startswith("uploads/"):
+            raise HTTPException(
+                status_code=404,
+                detail=f"File '{file_id}' not found or is a sandbox output (cannot be deleted).",
+            )
+        deleted = await storage.delete_file(self._prefix(scope_id), file_id)
         if not deleted:
             raise HTTPException(
                 status_code=404,
                 detail=f"File '{file_id}' not found or is a sandbox output (cannot be deleted).",
             )
         return DeletedFile(id=file_id)
+
+    @staticmethod
+    def _validate_file_id(file_id: str) -> None:
+        if ".." in file_id.split("/"):
+            raise HTTPException(status_code=400, detail="Invalid file ID.")

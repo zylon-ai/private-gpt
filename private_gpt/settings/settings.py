@@ -1495,7 +1495,12 @@ class CodeExecutionSettings(BaseModel):
         description="Host filesystem root for session volumes. "
         "When set, session upload/output directories are created under "
         "{volume_root}/{vfs_sessions_prefix}/{session_id}/. "
-        "Required by the Files API.",
+        "Required by the Files API when storage_provider is 'local'.",
+    )
+    storage_provider: Literal["local", "s3"] = Field(
+        default="local",
+        description="Storage backend for session files (Files API). "
+        "Use 'local' with volume_root set, or 's3' with s3.durable_bucket_name set.",
     )
 
     @field_validator("provider", mode="before")

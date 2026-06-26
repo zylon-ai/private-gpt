@@ -27,7 +27,7 @@ class FileMetadata(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "id": "/local_data/sessions/session-abc123/uploads/data.csv",
+                    "id": "uploads/data.csv",
                     "created_at": "2024-01-15T10:30:00Z",
                     "filename": "data.csv",
                     "mime_type": "text/csv",
@@ -41,8 +41,11 @@ class FileMetadata(BaseModel):
     )
 
     id: str = Field(
-        description="Absolute host-side path to the file. Use this value as `file_id` in subsequent requests.",
-        examples=["/local_data/sessions/session-abc123/uploads/data.csv"],
+        description=(
+            "Relative path of the file within the session, e.g. 'uploads/data.csv' or "
+            "'outputs/result.png'. Use this value as `file_id` in subsequent requests."
+        ),
+        examples=["uploads/data.csv"],
     )
     created_at: datetime = Field(
         description="ISO-8601 timestamp when the file was created or last modified.",
@@ -53,7 +56,7 @@ class FileMetadata(BaseModel):
         examples=["data.csv"],
     )
     mime_type: str = Field(
-        description="MIME type detected from the file content via libmagic.",
+        description="MIME type detected from the file content.",
         examples=["text/csv"],
     )
     size_bytes: int = Field(
@@ -81,7 +84,7 @@ class DeletedFile(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "id": "/local_data/sessions/session-abc123/uploads/data.csv",
+                    "id": "uploads/data.csv",
                     "type": "file_deleted",
                 }
             ]
@@ -89,8 +92,8 @@ class DeletedFile(BaseModel):
     )
 
     id: str = Field(
-        description="Absolute path of the file that was deleted.",
-        examples=["/local_data/sessions/session-abc123/uploads/data.csv"],
+        description="Relative path of the file that was deleted.",
+        examples=["uploads/data.csv"],
     )
     type: Literal["file_deleted"] = Field(
         default="file_deleted",
@@ -108,7 +111,7 @@ class FileListResponse(BaseModel):
                 {
                     "data": [
                         {
-                            "id": "/local_data/sessions/session-abc123/uploads/data.csv",
+                            "id": "uploads/data.csv",
                             "created_at": "2024-01-15T10:30:00Z",
                             "filename": "data.csv",
                             "mime_type": "text/csv",
@@ -118,8 +121,8 @@ class FileListResponse(BaseModel):
                             "scope": {"id": "session-abc123", "type": "session"},
                         }
                     ],
-                    "first_id": "/local_data/sessions/session-abc123/uploads/data.csv",
-                    "last_id": "/local_data/sessions/session-abc123/uploads/data.csv",
+                    "first_id": "uploads/data.csv",
+                    "last_id": "outputs/result.png",
                     "has_more": False,
                 }
             ]
@@ -133,12 +136,12 @@ class FileListResponse(BaseModel):
     first_id: str | None = Field(
         default=None,
         description="ID of the first file in the current page, used for cursor-based pagination.",
-        examples=["/local_data/sessions/session-abc123/uploads/data.csv"],
+        examples=["uploads/data.csv"],
     )
     last_id: str | None = Field(
         default=None,
         description="ID of the last file in the current page, used for cursor-based pagination.",
-        examples=["/local_data/sessions/session-abc123/outputs/result.png"],
+        examples=["outputs/result.png"],
     )
     has_more: bool = Field(
         default=False,
