@@ -1490,6 +1490,13 @@ class CodeExecutionSettings(BaseModel):
         default="sessions",
         description="Path prefix inside the storage bucket for session workspace data.",
     )
+    volume_root: str | None = Field(
+        default=None,
+        description="Host filesystem root for session volumes. "
+        "When set, session upload/output directories are created under "
+        "{volume_root}/{vfs_sessions_prefix}/{session_id}/. "
+        "Required by the Files API.",
+    )
 
     @field_validator("provider", mode="before")
     @classmethod

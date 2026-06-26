@@ -220,6 +220,7 @@ code_execution:
   workspace_path: ${PGPT_CODE_EXECUTION_WORKSPACE_PATH:}
   timeout: ${PGPT_CODE_EXECUTION_TIMEOUT:60}
   max_output_bytes: ${PGPT_CODE_EXECUTION_MAX_OUTPUT_BYTES:1048576}
+  volume_root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:./local_data/private_gpt/volumes}
 
 bash:
   cpu_limit_seconds: ${PGPT_BASH_CPU_LIMIT_SECONDS:30}

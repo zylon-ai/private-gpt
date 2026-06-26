@@ -94,6 +94,15 @@ class LocalDirMounter(LayoutMounter):
     def ensure_ready(self) -> None:
         self._sessions.mkdir(parents=True, exist_ok=True)
 
+    def uploads_path(self, session_id: str) -> Path:
+        return self._sessions / session_id / "uploads"
+
+    def outputs_path(self, session_id: str) -> Path:
+        return self._sessions / session_id / "outputs"
+
+    def meta_path(self, session_id: str) -> Path:
+        return self._sessions / session_id / ".files_meta"
+
     def session_volumes(self, session_id: str) -> list[VolumeSpec] | None:
         base = self._sessions / session_id
         volumes: list[VolumeSpec] = []
