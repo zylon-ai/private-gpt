@@ -426,6 +426,34 @@ class RetrievalSettings(BaseModel):
     )
 
 
+class PreprocessTypeSettings(BaseModel):
+    """Per-type preprocessing settings (extensible for future options)."""
+
+    max_concurrency: int | None = Field(
+        description="The maximum number of concurrent workers to use.",
+        default=None,
+    )
+    return_type: Literal["user_message", "tool_result"] = Field(
+        default="user_message",
+        description=(
+            "Where to store the preprocessed content. "
+            "'user_message' appends it directly to the user message; "
+            "'tool_result' carries it as a tool-use/result pair in the history."
+        ),
+    )
+
+
+class PreprocessSettings(BaseModel):
+    documents: PreprocessTypeSettings = Field(
+        default_factory=lambda: PreprocessTypeSettings(),
+        description="Settings for document block preprocessing.",
+    )
+    multimodal: PreprocessTypeSettings = Field(
+        default_factory=lambda: PreprocessTypeSettings(),
+        description="Settings for image/audio block preprocessing.",
+    )
+
+
 class ChatSettings(BaseModel):
     allow_use_default_prompt: bool = Field(
         True,
@@ -507,6 +535,10 @@ class ChatSettings(BaseModel):
     maximum_blob_size: int = Field(
         25 * 1024 * 1024,
         description="The maximum size in bytes of a blob that can be processed by the chat engine.",
+    )
+    preprocess: PreprocessSettings = Field(
+        default_factory=PreprocessSettings,
+        description="Concurrency settings for in-message preprocessing (documents, multimodal).",
     )
 
     def model_post_init(self, __context: Any) -> None:
@@ -1418,6 +1450,21 @@ class SkillSettings(BaseModel):
         ge=1,
         description="Default max number of concurrently loaded skills per chat.",
     )
+    max_bundle_size_bytes: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Maximum total size in bytes allowed for a skill bundle upload (all files combined). "
+            "If None (default), no size limit is enforced."
+        ),
+    )
+
+    @field_validator("max_bundle_size_bytes", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: object) -> object:
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 
 
 class SandboxSettings(BaseModel):

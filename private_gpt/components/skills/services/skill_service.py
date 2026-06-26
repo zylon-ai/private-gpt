@@ -4,6 +4,7 @@ from typing import Literal
 
 from injector import inject, singleton
 
+from private_gpt.components.skills.errors import SkillDomainError, SkillErrorCode
 from private_gpt.components.skills.models.skill_entities import (
     SkillEntity,
     SkillFilter,
@@ -11,7 +12,10 @@ from private_gpt.components.skills.models.skill_entities import (
     SkillVersionEntity,
     SkillVersionWithSkillEntity,
 )
-from private_gpt.components.skills.parser import parse_skill_markdown
+from private_gpt.components.skills.parser import (
+    ParsedSkillDocument,
+    parse_skill_markdown,
+)
 from private_gpt.components.skills.paths import skill_path
 from private_gpt.components.skills.repositories.skill_repository import (
     CreateSkillInput,
@@ -38,6 +42,7 @@ class SkillService:
         skill_repository: SQLAlchemySkillRepository,
     ) -> None:
         self._skill_repository = skill_repository
+        self._max_bundle_size_bytes = settings.skills.max_bundle_size_bytes
         local_root = str(Path(settings.data.local_data_folder) / "storage")
         self._storage_bucket_name = settings.s3.durable_bucket_name
         self._storage_component = storage_component.get_object_storage(
@@ -45,6 +50,19 @@ class SkillService:
             local_root_path=local_root,
             bucket_name=self._storage_bucket_name,
         )
+
+    def _check_bundle_size(self, files: list[StoredFile]) -> None:
+        if self._max_bundle_size_bytes is None:
+            return
+        total = sum(len(f.content) for f in files)
+        if total > self._max_bundle_size_bytes:
+            max_mb = round(self._max_bundle_size_bytes / (1024 * 1024))
+            raise SkillDomainError(
+                SkillErrorCode.BUNDLE_TOO_LARGE,
+                f"Skill bundle size ({total} bytes) exceeds the maximum allowed "
+                f"size of {self._max_bundle_size_bytes} bytes.",
+                params={"size": str(max_mb)},
+            )
 
     async def create_skill(
         self,
@@ -55,6 +73,7 @@ class SkillService:
         readonly: bool,
         files: list[StoredFile],
     ) -> SkillEntity:
+        self._check_bundle_size(files)
         skill_id = new_skill_id()
         version_id = new_skill_version_id()
         now = datetime.now(tz=UTC)
@@ -102,6 +121,12 @@ class SkillService:
             await self._storage_component.delete_prefix(storage_prefix)
             raise
 
+    async def validate_skill(self, files: list[StoredFile]) -> ParsedSkillDocument:
+        """Dry-run: parse and validate files without persisting anything."""
+        self._check_bundle_size(files)
+        skill_markdown = _extract_skill_md(files)
+        return parse_skill_markdown(skill_markdown)
+
     async def list_skills(
         self, collection: str, limit: int, page: str | None
     ) -> SkillPage:
@@ -135,6 +160,7 @@ class SkillService:
         collection: str,
         files: list[StoredFile],
     ) -> SkillVersionEntity | None:
+        self._check_bundle_size(files)
         now = datetime.now(tz=UTC)
         skill_markdown = _extract_skill_md(files)
         parsed_document = parse_skill_markdown(skill_markdown)
@@ -263,4 +289,4 @@ def _extract_skill_md(files: list[StoredFile]) -> str:
     for file in files:
         if file.path == "SKILL.md":
             return file.content.decode("utf-8")
-    raise ValueError("SKILL.md is required")
+    raise SkillDomainError(SkillErrorCode.MISSING_SKILL_MD, "SKILL.md is required")

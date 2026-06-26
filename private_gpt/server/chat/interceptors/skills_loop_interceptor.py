@@ -145,7 +145,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
                     )
                 )
 
-        if catalog_entries:
+        if catalog_entries and self._skill_injection_mode == "system_prompt":
             stack = stack.append_layer(
                 SkillCatalogLayer(entries=catalog_entries, source="skills")
             )

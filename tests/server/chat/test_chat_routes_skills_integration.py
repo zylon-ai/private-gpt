@@ -222,7 +222,23 @@ async def test_skill_tools_visible_only_when_activatable(
     )
     assert with_skills_resp.status_code == 200
     assert SKILL_LOAD_TOOL_NAME in capture.tool_names_per_call[-1]
+    assert SKILL_UNLOAD_TOOL_NAME not in capture.tool_names_per_call[-1]
+
+    # Once a skill is loaded unload_skill becomes visible and load_skill disappears
+    loaded_body = {
+        "messages": [
+            _assistant_load_history("active-skill"),
+            {"role": "user", "content": "now what"},
+        ],
+        "tools": _skill_tools(),
+        "tool_context": [
+            {"type": "skill", "skill_filter": {"collection": active_collection}}
+        ],
+    }
+    loaded_resp = await async_test_client.post("/v1/messages", json=loaded_body)
+    assert loaded_resp.status_code == 200
     assert SKILL_UNLOAD_TOOL_NAME in capture.tool_names_per_call[-1]
+    assert SKILL_LOAD_TOOL_NAME not in capture.tool_names_per_call[-1]
 
 
 @pytest.mark.anyio

@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, Literal
 
 from llama_index.core.base.llms.types import TextBlock as LITextBlock
 from llama_index.core.llms import LLM, ChatMessage
@@ -25,6 +25,7 @@ async def preprocess_image_message(
     main_llm: LLM,
     message: ChatMessage,
     image_multimodal_llm: LLM | None = None,
+    return_type: Literal["user_message", "tool_result"] = "user_message",
     **kwargs: Any,
 ) -> AsyncIterator[ImageProcessingResponse]:
     """Preprocess a message by extracting insights from images only.
@@ -33,6 +34,7 @@ async def preprocess_image_message(
         main_llm: The primary LLM that will process the final message
         message: Original chat message potentially containing images
         image_multimodal_llm: LLM capable of processing images (None if no support)
+        return_type: Type of way to return the content
         kwargs: Additional keyword arguments
 
     Returns:
@@ -106,12 +108,11 @@ async def preprocess_image_message(
         )
 
     other_blocks = [block for block in message.blocks if block not in image_blocks]
+    final_blocks = (
+        [*other_blocks, LITextBlock(text=final_message)]
+        if return_type == "user_message"
+        else other_blocks
+    )
     yield ImageProcessingResponse(
-        message=ChatMessage(
-            role=message.role,
-            blocks=[
-                *other_blocks,
-                LITextBlock(text=final_message),
-            ],
-        )
+        message=ChatMessage(role=message.role, blocks=final_blocks)
     )
