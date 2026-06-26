@@ -47,7 +47,7 @@ def _decode_file_id(file_id: str) -> str:
 def _canonical_to_storage_path(canonical: str) -> str:
     for mount in DEFAULT_SESSION_LAYOUT:
         if canonical.startswith(mount.canonical):
-            relative = canonical[len(mount.canonical):]
+            relative = canonical[len(mount.canonical) :]
             return f"{mount.name}/{relative}"
     return canonical
 
@@ -56,7 +56,7 @@ def _storage_to_canonical_path(storage: str) -> str:
     for mount in DEFAULT_SESSION_LAYOUT:
         prefix = f"{mount.name}/"
         if storage.startswith(prefix):
-            relative = storage[len(prefix):]
+            relative = storage[len(prefix) :]
             return f"{mount.canonical}{relative}"
     return storage
 
