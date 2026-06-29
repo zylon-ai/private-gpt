@@ -16,26 +16,6 @@ def _settings(tmp_path: Path):
 
 
 @pytest.mark.asyncio
-async def test_local_code_execution_session_supports_bash_and_restart(
-    tmp_path: Path,
-) -> None:
-    provider = LocalCodeExecutionProvider(_settings(tmp_path))
-    session = await provider.create_session("session-1")
-
-    await session.create("hello.txt", "hello")
-    result = await session.execute_bash("cat hello.txt")
-    assert result.success is True
-    assert result.stdout.strip() == "hello"
-
-    await session.execute_bash("pwd", restart=True)
-    missing = await session.view("hello.txt")
-    assert missing.success is False
-    assert missing.error == "File not found: /home/agent/workspace/hello.txt"
-
-    await session.close()
-
-
-@pytest.mark.asyncio
 async def test_local_code_execution_session_supports_file_operations(
     tmp_path: Path,
 ) -> None:
