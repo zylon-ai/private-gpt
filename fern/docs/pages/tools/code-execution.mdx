@@ -1,0 +1,191 @@
+---
+title: "Code Execution Tools"
+description: "Configure the built-in server-side code execution sandbox — bash commands, file operations, resource limits, and workspace layout."
+---
+
+This page covers configuration for the built-in server-side code execution environment.
+
+Use this together with [Built-in Tools](/api-guide/tools) for request examples and runtime usage.
+
+---
+
+## Supported code execution tools
+
+The code execution subsystem provides:
+
+| Type identifier | Role |
+|---|---|
+| `code_execution_v1` | Top-level wrapper — expands into `bash_v1`, `text_editor_v1`, and optionally `present_files_v1` |
+| `bash_v1` | Run arbitrary bash commands in a sandboxed subprocess |
+| `text_editor_v1` | View, create, and edit files in the workspace |
+| `view_v1` | View file or directory contents |
+| `str_replace_v1` | Replace one exact string in a file |
+| `create_v1` | Create a new file |
+| `insert_v1` | Insert text after a given line |
+| `present_files_v1` | Expose generated files to the caller |
+
+Standalone endpoints are not provided for code execution tools. Use them through `/v1/messages`.
+
+<Note>
+  `present_files_v1` is a server-only metadata tool that surfaces created files to API consumers. It is enabled automatically when `code_execution_v1` is used and does not require explicit configuration.
+</Note>
+
+---
+
+## How it works
+
+When the model submits a `code_execution_v1` tool call, the server expands it into its constituent tools, creates or reuses a per-session sandbox, and executes the requested operations:
+
+1. **Tool expansion** — `code_execution_v1` expands into `bash_v1`, `text_editor_v1`, and optionally `present_files_v1`
+2. **Session management** — each chat session gets an isolated workspace on the host filesystem
+3. **Path translation** — canonical LLM-visible paths (`/home/agent/workspace/`) are transparently mapped to real host paths
+4. **Subprocess isolation** — bash commands run as child processes with OS-level resource limits (`setrlimit`)
+5. **Output scrubbing** — real host paths are removed from output before returning to the LLM
+
+Code execution requires no external containers or Docker-in-Docker. The entire sandbox runs in the same process as the PrivateGPT server, using OS-level isolation primitives.
+
+---
+
+## How to install
+
+Code execution is part of the core PrivateGPT package. No additional extras are required:
+
+```bash
+uv sync --extra core
+```
+
+No OS-level libraries or external runtimes are needed for code execution.
+
+---
+
+## Workspace layout
+
+Each code execution session has a defined filesystem layout visible to the LLM:
+
+| Directory | Canonical path | Writable | Purpose |
+|---|---|---|---|
+| Workspace | `/home/agent/workspace/` | Yes | Working directory — create all new files here |
+| Uploads | `/mnt/user-data/uploads/` | No | Files uploaded by the user (read-only) |
+| Outputs | `/mnt/user-data/outputs/` | Yes | Deliverables the user can download |
+| Skills | `/skills/` | Yes | Loaded skill bundles (when skills are active) |
+
+All canonical paths are translated to host filesystem paths automatically. The LLM only sees and uses canonical paths.
+
+<Warning>
+  Attempting to write to `/mnt/user-data/uploads/` or access paths outside the workspace layout will be rejected.
+</Warning>
+
+---
+
+## Settings reference
+
+### `code_execution` settings
+
+Code execution does not have a global `enabled` flag. The server always supports code execution when the tool is present in a request.
+
+```yaml
+code_execution:
+  provider: ${PGPT_CODE_EXECUTION_PROVIDER:local}
+  workspace_path: ${PGPT_CODE_EXECUTION_WORKSPACE_PATH:}
+  timeout: ${PGPT_CODE_EXECUTION_TIMEOUT:60}
+  max_output_bytes: ${PGPT_CODE_EXECUTION_MAX_OUTPUT_BYTES:1048576}
+  volume_root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:./local_data/private_gpt/volumes}
+```
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `code_execution.provider` | `str` | `"local"` | Code execution provider. Only `"local"` is supported by default. |
+| `code_execution.workspace_path` | `str \| null` | `null` | Filesystem path for persistent workspaces. Falls back to `{local_data_folder}/code_execution_workspaces` when unset. |
+| `code_execution.timeout` | `int` | `60` | Default bash execution timeout in seconds. |
+| `code_execution.max_output_bytes` | `int` | `1048576` | Maximum output size returned to the LLM from code execution tools (1 MiB). Output is truncated at this limit after `output_cap_bytes`. |
+| `code_execution.volume_root` | `str \| null` | `null` | Host filesystem root for session volumes. Required for Files API integration when `storage_provider` is `"local"`. |
+| `code_execution.session_ttl_seconds` | `int` | `1800` | Idle TTL in seconds before a session kernel is destroyed (30 min). Workspace files are preserved. |
+| `code_execution.vfs_sessions_prefix` | `str` | `"sessions"` | Path prefix inside the storage bucket for session workspace data. |
+| `code_execution.storage_provider` | `"local"` or `"s3"` | `"local"` | Storage backend for session files (Files API). Use `"local"` with `volume_root` set, or `"s3"` with `s3.durable_bucket_name` set. |
+
+### `bash` settings
+
+Resource limits applied to each isolated bash subprocess via OS-level `setrlimit`:
+
+```yaml
+bash:
+  cpu_limit_seconds: ${PGPT_BASH_CPU_LIMIT_SECONDS:30}
+  memory_limit_mb: ${PGPT_BASH_MEMORY_LIMIT_MB:512}
+  fsize_limit_mb: ${PGPT_BASH_FSIZE_LIMIT_MB:10}
+  nproc_limit: ${PGPT_BASH_NPROC_LIMIT:50}
+  output_cap_bytes: ${PGPT_BASH_OUTPUT_CAP_BYTES:1048576}
+```
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `bash.cpu_limit_seconds` | `int` | `30` | CPU time limit per subprocess (`RLIMIT_CPU`). |
+| `bash.memory_limit_mb` | `int` | `512` | Virtual memory limit per subprocess in MB (`RLIMIT_AS`). |
+| `bash.fsize_limit_mb` | `int` | `50` | Maximum file size a subprocess can create in MB (`RLIMIT_FSIZE`). |
+| `bash.nproc_limit` | `int` | `50` | Maximum number of child processes per subprocess (`RLIMIT_NPROC`). |
+| `bash.output_cap_bytes` | `int` | `1048576` | Hard cap on raw stdout+stderr before the second `max_output_bytes` truncation (1 MiB). |
+
+### Prompt configuration
+
+Per-request, you can control whether code execution environment instructions are injected into the system prompt:
+
+```json
+{
+  "prompt_config": {
+    "code_execution": true
+  }
+}
+```
+
+When `true` and a code execution tool is present, the prompt includes filesystem layout instructions and available paths. This flag only affects the system prompt — it does not enable or disable the tool itself.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `prompt_config.code_execution` | `bool` | `false` | Enables code execution environment instructions in the system prompt. |
+
+---
+
+## Resource limits and sandboxing
+
+Code execution applies **two layers** of output size control:
+
+1. **Raw subprocess cap** (`bash.output_cap_bytes`, default 1 MiB) — hard truncation at the subprocess level
+2. **Tool output truncation** (`code_execution.max_output_bytes`, default 1 MiB) — applied before returning results to the LLM
+
+On Unix systems, each bash subprocess is isolated with:
+
+- **Process group isolation** — `os.setsid()` prevents orphaned child processes
+- **CPU limit** — `RLIMIT_CPU` caps CPU time
+- **Memory limit** — `RLIMIT_AS` caps virtual memory
+- **File size limit** — `RLIMIT_FSIZE` prevents runaway file creation
+- **Process count limit** — `RLIMIT_NPROC` limits fork bombs
+- **Timeout enforcement** — `SIGKILL` sent to the entire process group
+
+On Windows, resource isolation is gracefully skipped.
+
+### Output scrubbing
+
+All host filesystem paths are automatically removed from command output before being returned to the LLM. The LLM only sees canonical paths.
+
+---
+
+## Session lifecycle
+
+Code execution sessions are managed automatically:
+
+- **Creation** — a new sandbox is created on the first code execution tool call in a chat session
+- **Reuse** — subsequent code execution calls in the same chat session reuse the existing sandbox
+- **File persistence** — workspace files survive across `bash_v1` restart operations
+- **Idle expiry** — sessions idle for longer than `session_ttl_seconds` (default 30 minutes) are destroyed by a background reaper
+- **Stale detection** — if the sandbox process dies, it is transparently recreated on the next tool call
+
+---
+
+## Platform compatibility
+
+| Platform | Subprocess isolation | Resource limits | Notes |
+|---|---|---|---|
+| Linux | Full | Full | All `setrlimit` and `setsid` isolation active |
+| macOS | Full | Full | All `setrlimit` and `setsid` isolation active |
+| Windows | None | None | Subprocesses run without resource limits |
+
+All platforms support the same canonical path translation, output scrubbing, and session lifecycle management.

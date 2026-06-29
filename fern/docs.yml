@@ -107,6 +107,9 @@ navigation:
           - page: Database Tools
             slug: tools/database-tools
             path: ./docs/pages/tools/database-tools.mdx
+          - page: Code Execution Tools
+            slug: tools/code-execution
+            path: ./docs/pages/tools/code-execution.mdx
       - section: Storage Providers
         skip-slug: true
         contents:
