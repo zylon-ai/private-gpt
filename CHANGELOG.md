@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.0](https://github.com/zylon-ai/private-gpt/compare/v1.0.1...v1.1.0) (2026-06-29)
+
+
+### Features
+
+* add validation skill endpoint + skill prompt ([#2272](https://github.com/zylon-ai/private-gpt/issues/2272)) ([42a6c04](https://github.com/zylon-ai/private-gpt/commit/42a6c047d0c63ae862bf4981d1adf9d359df646b))
+* allow to attach files as Anthropic does ([#2265](https://github.com/zylon-ai/private-gpt/issues/2265)) ([4cca7d0](https://github.com/zylon-ai/private-gpt/commit/4cca7d0b97007f720d62c32d8ccce350f54a64e3))
+* code execution v2 ([#2278](https://github.com/zylon-ai/private-gpt/issues/2278)) ([f2cffd1](https://github.com/zylon-ai/private-gpt/commit/f2cffd1ab93be08175c19613cd65e90d64130b38))
+* control docs parser ([#2273](https://github.com/zylon-ai/private-gpt/issues/2273)) ([78a1e8b](https://github.com/zylon-ai/private-gpt/commit/78a1e8b9f64a1c2b2dc5223f800519a62cf0d8a6))
+* improve web search ([#2274](https://github.com/zylon-ai/private-gpt/issues/2274)) ([5d60141](https://github.com/zylon-ai/private-gpt/commit/5d60141f08f9f4a274915c5149049aa832b4d8de))
+
+
+### Bug Fixes
+
+* async_playwright for test ([5d60141](https://github.com/zylon-ai/private-gpt/commit/5d60141f08f9f4a274915c5149049aa832b4d8de))
+* mypy ([5d60141](https://github.com/zylon-ai/private-gpt/commit/5d60141f08f9f4a274915c5149049aa832b4d8de))
+
 ## [1.0.1](https://github.com/zylon-ai/private-gpt/compare/v1.0.0...v1.0.1) (2026-06-16)
 
 
