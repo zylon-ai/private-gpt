@@ -1,9 +1,28 @@
-from pathlib import Path
+from __future__ import annotations
+
+import resource
+import sys
+from typing import TYPE_CHECKING
 
 import pytest
 
 from private_gpt.components.code_execution.local import LocalCodeExecutionProvider
 from private_gpt.settings.settings import unsafe_typed_settings
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+_IS_UNIX = sys.platform != "win32"
+
+
+def _nproc_is_too_restrictive() -> bool:
+    if not _IS_UNIX:
+        return False
+    try:
+        _, hard = resource.getrlimit(resource.RLIMIT_NPROC)
+    except ValueError:
+        return True
+    return hard < 50
 
 
 def _settings(tmp_path: Path):
@@ -16,6 +35,10 @@ def _settings(tmp_path: Path):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    _nproc_is_too_restrictive(),
+    reason="RLIMIT_NPROC too low for fork (CI environments may restrict process count)",
+)
 async def test_local_code_execution_session_supports_bash_and_restart(
     tmp_path: Path,
 ) -> None:
