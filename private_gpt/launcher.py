@@ -53,6 +53,7 @@ from private_gpt.server.ingest.convert_router import convert_router
 from private_gpt.server.ingest.ingest_router import ingest_router
 from private_gpt.server.models.models_router import models_router
 from private_gpt.server.primitives.primitives_router import primitives_router
+from private_gpt.server.principal import Principal
 from private_gpt.server.skills.skill_router import skill_router
 from private_gpt.server.tools.tool_router import tool_router
 from private_gpt.server.tools.tool_service import ToolService
@@ -187,11 +188,25 @@ def create_app(root_injector: Injector) -> FastAPI:
     @app.middleware("http")
     async def inject_injector_middleware(request: Request, call_next: Any) -> Any:
         """Middleware to inject the injector into the request state."""
-        request.state.injector = (
+        injector = (
             request.app.state.injector
             if hasattr(request.app, "state") and hasattr(request.app.state, "injector")
             else root_injector
         )
+        request.state.injector = injector
+
+        settings = injector.get(Settings)
+        forwarded = settings.principal.forwarded_headers
+        authorization = request.headers.get("authorization") if "authorization" in forwarded else None
+        anthropic_beta_raw = request.headers.get("anthropic-beta") if "anthropic-beta" in forwarded else None
+        anthropic_beta: list[str] | None = None
+        if anthropic_beta_raw:
+            anthropic_beta = [f.strip() for f in anthropic_beta_raw.split(",") if f.strip()]
+        Principal(
+            authorization=authorization,
+            anthropic_beta=anthropic_beta,
+        ).set_current()
+
         response = await call_next(request)
         return response
 

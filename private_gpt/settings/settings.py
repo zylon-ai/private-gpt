@@ -1497,6 +1497,25 @@ class SandboxSettings(BaseModel):
         return value
 
 
+class PrincipalSettings(BaseModel):
+    forwarded_headers: list[str] = Field(
+        default_factory=lambda: ["authorization", "anthropic-beta"],
+        description="HTTP request headers to capture in the Principal. "
+        "Supported values: 'authorization', 'anthropic-beta'. "
+        "When set via env var, use a JSON list string: "
+        "'[\"authorization\",\"anthropic-beta\"]'.",
+    )
+
+    @field_validator("forwarded_headers", mode="before")
+    @classmethod
+    def _parse_headers(cls, value: object) -> list[str]:
+        if isinstance(value, str):
+            value = json.loads(value)
+        if not isinstance(value, list):
+            raise ValueError("forwarded_headers must be a list of header names")
+        return [str(h).strip().lower() for h in value if h]
+
+
 class BashSettings(BaseModel):
     cpu_limit_seconds: int = Field(
         default=30,
@@ -1675,6 +1694,7 @@ class Settings(BaseModel):
     s3: S3Settings
     phoenix: ArizePhoenixSettings
     opik: OpikSettings
+    principal: PrincipalSettings
     sandbox: SandboxSettings
     bash: BashSettings
     code_execution: CodeExecutionSettings

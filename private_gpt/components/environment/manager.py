@@ -63,6 +63,7 @@ class EnvironmentManager:
         session_id: str,
         extra_bundles: list[ContentBundle] | None = None,
         bundles_to_remove: list[str] | None = None,
+        sandbox_env: dict[str, str] | None = None,
     ) -> Environment:
         # Serialize per session_id so concurrent calls cannot race into
         # creating two backend sandboxes for the same session (one would leak).
@@ -92,7 +93,7 @@ class EnvironmentManager:
                         # and materialized lazily before the next exec().
                         env.add_pending(extra_bundles)
                     return env
-            return await self._create(session_id, extra_bundles, bundles_to_remove)
+            return await self._create(session_id, extra_bundles, bundles_to_remove, sandbox_env)
 
     def release(self, session_id: str) -> None:
         """Drop the environment and release its backend resources."""
@@ -109,6 +110,7 @@ class EnvironmentManager:
         session_id: str,
         extra_bundles: list[ContentBundle] | None,
         bundles_to_remove: list[str] | None = None,
+        sandbox_env: dict[str, str] | None = None,
     ) -> Environment:
         await asyncio.to_thread(self._layout.ensure_ready)
 
@@ -150,6 +152,7 @@ class EnvironmentManager:
                 bundle_specs=specs,
                 session_id=session_id,
                 volumes=volumes or None,
+                env=sandbox_env,
             )
 
         try:

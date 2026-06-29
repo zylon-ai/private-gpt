@@ -10,6 +10,7 @@ from private_gpt.components.tools.processors.base import (
     _tool_matches,
 )
 from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
+from private_gpt.server.principal import Principal
 
 
 @singleton
@@ -29,6 +30,7 @@ class BashProcessor(ToolProcessor):
                 type=tool.type or BASH_TOOL_NAME + "_v1",
                 bundles=request.context.content_bundles or None,
                 bundles_to_remove=request.context.bundles_to_remove or None,
+                env=Principal.current().as_env() or None,
             )
             return _replace_tool(request, tool, [resolved])
         return False

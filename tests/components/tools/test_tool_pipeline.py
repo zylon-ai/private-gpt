@@ -44,7 +44,7 @@ def _request(tools: list[ToolSpec]) -> ResolvedChatRequest:
 async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> None:
     bash_builder = SimpleNamespace(
         build_tool=AsyncMock(
-            side_effect=lambda session_id, name="bash", type="bash_v1", bundles=None: ToolSpec.from_defaults(
+            side_effect=lambda session_id, name="bash", type="bash_v1", bundles=None, **kw: ToolSpec.from_defaults(
                 name=name,
                 type=type,
                 description="bash",
@@ -54,7 +54,7 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
     )
     text_editor_builder = SimpleNamespace(
         build_view_tool=AsyncMock(
-            side_effect=lambda session_id, name="view", type="view_v1", bundles=None: ToolSpec.from_defaults(
+            side_effect=lambda session_id, name="view", type="view_v1", bundles=None, **kw: ToolSpec.from_defaults(
                 name=name,
                 type=type,
                 description="view",
@@ -62,7 +62,7 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
             )
         ),
         build_str_replace_tool=AsyncMock(
-            side_effect=lambda session_id, name="str_replace", type="str_replace_v1", bundles=None: ToolSpec.from_defaults(
+            side_effect=lambda session_id, name="str_replace", type="str_replace_v1", bundles=None, **kw: ToolSpec.from_defaults(
                 name=name,
                 type=type,
                 description="replace",
@@ -70,7 +70,7 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
             )
         ),
         build_create_tool=AsyncMock(
-            side_effect=lambda session_id, name="create", type="create_v1", bundles=None: ToolSpec.from_defaults(
+            side_effect=lambda session_id, name="create", type="create_v1", bundles=None, **kw: ToolSpec.from_defaults(
                 name=name,
                 type=type,
                 description="create",
@@ -78,7 +78,7 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
             )
         ),
         build_insert_tool=AsyncMock(
-            side_effect=lambda session_id, name="insert", type="insert_v1", bundles=None: ToolSpec.from_defaults(
+            side_effect=lambda session_id, name="insert", type="insert_v1", bundles=None, **kw: ToolSpec.from_defaults(
                 name=name,
                 type=type,
                 description="insert",

@@ -22,6 +22,7 @@ from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.sandbox.sandbox_component import SandboxComponent
 from private_gpt.components.tabular.pandasai_model import PGPTPandasAILLM
 from private_gpt.components.tabular.pandasai_sandbox import PandasAISandboxAdapter
+from private_gpt.server.principal import Principal
 from private_gpt.settings.settings import settings
 from private_gpt.utils.dataframe import df_to_minimal_markdown
 
@@ -277,7 +278,9 @@ class PandasAIService(BaseModel):
         if sandbox is not None:
             return sandbox
 
-        session = await self._sandbox_component.create_session()
+        session = await self._sandbox_component.create_session(
+            env=Principal.current().as_env() or None,
+        )
         if session is None:
             return None
 

@@ -40,7 +40,10 @@ class BashExecutorSandbox(SandboxSession):
     python_executable: str = sys.executable
 
     def __init__(
-        self, mounts: list[LocalMountSpec], executor: LocalBashExecutor
+        self,
+        mounts: list[LocalMountSpec],
+        executor: LocalBashExecutor,
+        env: dict[str, str] | None = None,
     ) -> None:
         self._translator = PathTranslator(
             [(m.canonical, m.real_path, m.writable) for m in mounts]
@@ -48,6 +51,7 @@ class BashExecutorSandbox(SandboxSession):
         self._executor = executor
         self._readonly = [m.canonical for m in mounts if not m.writable]
         self._default_cwd = next((m.canonical for m in mounts if m.writable), "/")
+        self._env = env
 
     def _assert_writable(self, path: str) -> None:
         for prefix in self._readonly:
@@ -146,8 +150,9 @@ class LocalSandboxSession(BashExecutorSandbox):
         mounts: list[LocalMountSpec],
         executor: LocalBashExecutor,
         workdir: Path,
+        env: dict[str, str] | None = None,
     ) -> None:
-        super().__init__(mounts, executor)
+        super().__init__(mounts, executor, env=env)
         self._workdir = workdir
 
     async def close(self) -> None:
@@ -177,10 +182,9 @@ class LocalSandboxProvider(SandboxProvider):
         *,
         session_id: str | None = None,
         volumes: list[VolumeSpec] | None = None,
+        env: dict[str, str] | None = None,
     ) -> SandboxSession:
         if volumes:
-            # Host-backed session: the mounter owns the directories, the
-            # sandbox only translates canonical paths onto them.
             specs = [
                 LocalMountSpec(
                     canonical=v.mount_path,
@@ -189,9 +193,8 @@ class LocalSandboxProvider(SandboxProvider):
                 )
                 for v in volumes
             ]
-            return BashExecutorSandbox(specs, self._executor)
+            return BashExecutorSandbox(specs, self._executor, env=env)
 
-        # Standalone use: an ephemeral workspace owned by the session.
         workdir = await anyio.to_thread.run_sync(
             lambda: Path(tempfile.mkdtemp(prefix=f"sandbox_{user_id or 'local'}_"))
         )
@@ -199,7 +202,7 @@ class LocalSandboxProvider(SandboxProvider):
             LocalMountSpec(canonical="/home/agent/", real_path=workdir, writable=True)
         ]
         specs.extend(s for s in bundle_specs or [] if isinstance(s, LocalMountSpec))
-        return LocalSandboxSession(specs, self._executor, workdir)
+        return LocalSandboxSession(specs, self._executor, workdir, env=env)
 
     async def delete_session(self, session: SandboxSession) -> None:
         if isinstance(session, BashExecutorSandbox):

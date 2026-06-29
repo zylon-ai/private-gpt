@@ -41,6 +41,7 @@ class BashToolBuilder:
         name: str = BASH_TOOL_NAME,
         type: str = BASH_TOOL_NAME + "_v1",
         description: str = BASH_TOOL_FN.metadata.description,
+        env: dict[str, str] | None = None,
     ) -> ToolSpec:
         async def run_bash(
             command: str,
@@ -51,6 +52,7 @@ class BashToolBuilder:
                 session_id,
                 extra_bundles=bundles or None,
                 bundles_to_remove=bundles_to_remove or None,
+				env=env,
             )
             if session is None:
                 raise ValueError("code_execution provider is not configured.")

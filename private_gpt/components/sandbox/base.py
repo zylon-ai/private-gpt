@@ -143,12 +143,14 @@ class SandboxProvider(ABC):
         *,
         session_id: str | None = None,
         volumes: list[VolumeSpec] | None = None,
+        env: dict[str, str] | None = None,
     ) -> SandboxSession:
         """Create a sandbox session. The session may be lazy until first use.
 
         ``session_id`` tags the backend resource so it can be found again by
         restore_session(); ``volumes`` are host directories to bind-mount.
-        Backends without those capabilities may ignore both.
+        ``env`` carries environment variables to inject into the sandbox.
+        Backends without those capabilities may ignore them.
         """
 
     async def restore_session(

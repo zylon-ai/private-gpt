@@ -38,19 +38,18 @@ class CodeExecutionComponent:
         session_id: str,
         extra_bundles: list[ContentBundle] | None = None,
         bundles_to_remove: list[str] | None = None,
+        env: dict[str, str] | None = None,
     ) -> CodeExecutionSession | None:
         provider = self._get_code_execution_provider()
         if not provider:
             return None
 
         async with self._lock:
-            # Always delegate: the provider reuses or restores per session_id,
-            # and a session cached here could outlive its managed backend
-            # (e.g. after the idle reaper killed the sandbox).
             session = await provider.create_session(
                 session_id,
                 extra_bundles=extra_bundles,
                 bundles_to_remove=bundles_to_remove,
+                env=env,
             )
             self._sessions[session_id] = session
             self._container_registry.register(

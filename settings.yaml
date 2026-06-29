@@ -218,6 +218,9 @@ opik:
   workspace: ${PGPT_OPIK_WORKSPACE:default}
   task_threads: ${PGPT_OPIK_TASK_THREADS:16}
 
+principal:
+  forwarded_headers: ${PGPT_PRINCIPAL_FORWARDED_HEADERS:["authorization","anthropic-beta"]}
+
 sandbox:
   provider: ${PGPT_SANDBOX_PROVIDER:local}
   timeout: ${PGPT_SANDBOX_TIMEOUT:60}

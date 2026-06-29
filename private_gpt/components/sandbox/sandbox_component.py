@@ -18,6 +18,7 @@ class SandboxComponent:
         user_id: str | None = None,
         timeout: int | None = None,
         bundle_specs: list[SandboxMountSpec] | None = None,
+        env: dict[str, str] | None = None,
     ) -> SandboxSession | None:
         provider_name = self._settings.sandbox.provider
         if provider_name is None:
@@ -25,5 +26,8 @@ class SandboxComponent:
 
         provider = self._registry.get_provider(provider_name)
         return await provider.create_session(
-            user_id=user_id, timeout=timeout, bundle_specs=bundle_specs
+            user_id=user_id,
+            timeout=timeout,
+            bundle_specs=bundle_specs,
+            env=env,
         )
