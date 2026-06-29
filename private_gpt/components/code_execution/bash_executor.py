@@ -17,30 +17,7 @@ if TYPE_CHECKING:
 _ISOLATION_AVAILABLE = sys.platform != "win32"
 
 
-def _count_user_procs() -> int:
-    """Count running processes for the current user via /proc (Linux only)."""
-    if not os.path.isdir("/proc"):
-        return 0
-    uid = os.getuid()
-    count = 0
-    with contextlib.suppress(OSError):
-        for entry in os.scandir("/proc"):
-            if not entry.name.isdigit():
-                continue
-            with contextlib.suppress(OSError), open(
-                f"/proc/{entry.name}/status", "rb"
-            ) as f:
-                for line in f:
-                    if line.startswith(b"Uid:"):
-                        if int(line.split()[1]) == uid:
-                            count += 1
-                        break
-    return count
-
-
-def _child_setup(
-    cpu_s: int, mem_mb: int, fsize_mb: int, nproc: int, current_nproc: int
-) -> None:
+def _child_setup(cpu_s: int, mem_mb: int, fsize_mb: int, nproc: int) -> None:
     """Runs in child process before exec — sets up isolation via rlimit + setsid.
 
     setrlimit calls are best-effort: some platforms (macOS) reject certain
@@ -56,10 +33,7 @@ def _child_setup(
     _set(r.RLIMIT_CPU, (cpu_s, cpu_s))
     _set(r.RLIMIT_AS, (mem_mb << 20, mem_mb << 20))
     _set(r.RLIMIT_FSIZE, (fsize_mb << 20, fsize_mb << 20))
-    # RLIMIT_NPROC is per-user system-wide; floor the limit at current_nproc so
-    # the child shell can still fork even in busy CI environments.  nproc here
-    # means "how many additional processes this sandbox may spawn", not "total".
-    _set(r.RLIMIT_NPROC, (current_nproc + nproc, current_nproc + nproc))
+    _set(r.RLIMIT_NPROC, (nproc, nproc))
 
 
 def _cap_bytes(data: bytes, limit: int) -> str:
@@ -102,18 +76,13 @@ class LocalBashExecutor:
     ) -> BashExecutionResult:
         import functools
 
-        if _ISOLATION_AVAILABLE:
-            current_nproc = _count_user_procs()
-            preexec = functools.partial(
-                _child_setup,
-                self._cpu_s,
-                self._mem_mb,
-                self._fsize_mb,
-                self._nproc,
-                current_nproc,
+        preexec = (
+            functools.partial(
+                _child_setup, self._cpu_s, self._mem_mb, self._fsize_mb, self._nproc
             )
-        else:
-            preexec = None
+            if _ISOLATION_AVAILABLE
+            else None
+        )
 
         t0 = time.monotonic()
         proc = await asyncio.create_subprocess_shell(
