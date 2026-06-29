@@ -79,6 +79,40 @@ class ConvertResponse(BaseModel):
     )
     reader: str = Field(..., description="Reader that was used to parse the file")
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "content": "# Annual Report 2023\n\nExecutive Summary\n\nFiscal year 2023 marked a transformative period...",
+                    "reader": "markitdown",
+                },
+                {
+                    "content": {
+                        "id": "root",
+                        "type": "document",
+                        "content": "",
+                        "children": [
+                            {
+                                "id": "section-1",
+                                "type": "SectionNode",
+                                "content": "Annual Report 2023",
+                                "children": [
+                                    {
+                                        "id": "text-1",
+                                        "type": "TextNode",
+                                        "content": "Executive Summary\n\nFiscal year 2023 marked a transformative period...",
+                                        "children": [],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    "reader": "docling",
+                },
+            ]
+        }
+    }
+
 
 class ReaderInfo(BaseModel):
     extensions: list[str] = Field(

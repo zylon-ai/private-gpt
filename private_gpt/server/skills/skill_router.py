@@ -218,7 +218,12 @@ async def list_skills(
                                 "valid": False,
                                 "name": None,
                                 "description": None,
-                                "errors": ["SKILL.md must start with YAML frontmatter"],
+                                "errors": [
+                                    {
+                                        "code": "INVALID_FRONTMATTER",
+                                        "message": "SKILL.md must start with YAML frontmatter",
+                                    }
+                                ],
                             },
                         },
                     }

@@ -1882,6 +1882,188 @@
         }
       }
     },
+    "/v1/artifacts/readers": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "List Available Readers",
+        "description": "Returns all registered readers and the file extensions each one supports.",
+        "operationId": "list_readers_v1_artifacts_readers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/v1/artifacts/convert": {
+      "post": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Convert File to Markdown or Tree",
+        "description": "Parse a file using the document readers and return its content as markdown text or a structured content tree, without ingesting it into the knowledge base.",
+        "operationId": "convert_content_v1_artifacts_convert_post",
+        "requestBody": {
+          "description": "Request body for converting a file to markdown or structured tree.\n\nInput Types:\n* file: Base64-encoded file content \u2014 set 'file_name' in metadata to specify the extension\n* uri: Remote URL or S3 URI pointing to the file\n* text: Plain text or markdown content\n\nFormat Options:\n* markdown (default): Returns parsed content as a flat markdown string\n* object: Returns a hierarchical content tree with typed nodes\n\nReader Selection:\n* Omit 'reader' to use the default reader for the detected file type\n* Use GET /v1/artifacts/readers to list available readers and their supported extensions",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertBody"
+              },
+              "examples": {
+                "text": {
+                  "summary": "Plain text content",
+                  "value": {
+                    "input": {
+                      "type": "text",
+                      "value": "# Hello\n\nThis is a simple markdown document."
+                    },
+                    "metadata": {
+                      "file_name": "hello.md"
+                    },
+                    "format": "markdown"
+                  }
+                },
+                "file_base64": {
+                  "summary": "File content (base64)",
+                  "value": {
+                    "input": {
+                      "type": "file",
+                      "value": "JVBERi0xLjQKJaqrrK0KMS..."
+                    },
+                    "metadata": {
+                      "file_name": "report.pdf"
+                    },
+                    "reader": "markitdown",
+                    "format": "markdown"
+                  }
+                },
+                "uri": {
+                  "summary": "Remote URI",
+                  "value": {
+                    "input": {
+                      "type": "uri",
+                      "value": "https://example.com/document.pdf"
+                    },
+                    "metadata": {
+                      "file_name": "document.pdf"
+                    },
+                    "format": "object"
+                  }
+                },
+                "object_format": {
+                  "summary": "Return structured content tree",
+                  "value": {
+                    "input": {
+                      "type": "text",
+                      "value": "# Section\n\nSome content here."
+                    },
+                    "metadata": {
+                      "file_name": "doc.md"
+                    },
+                    "format": "object"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful conversion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertResponse"
+                },
+                "examples": {
+                  "markdown_result": {
+                    "summary": "Converted content as markdown text",
+                    "value": {
+                      "content": "# Annual Report 2023\n\nExecutive Summary\n\nFiscal year 2023 marked a transformative period...",
+                      "reader": "markitdown"
+                    }
+                  },
+                  "object_result": {
+                    "summary": "Converted content as structured tree",
+                    "value": {
+                      "content": {
+                        "id": "root",
+                        "type": "document",
+                        "content": "",
+                        "children": [
+                          {
+                            "id": "section-1",
+                            "type": "SectionNode",
+                            "content": "Annual Report 2023",
+                            "children": [
+                              {
+                                "id": "text-1",
+                                "type": "TextNode",
+                                "content": "Executive Summary\n\nFiscal year 2023 marked a transformative period...",
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "reader": "docling"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "invalid_reader": {
+                    "summary": "Reader not supported for file extension",
+                    "value": {
+                      "detail": "Reader 'docling' is not supported for '.txt'. Valid readers: ['text']"
+                    }
+                  },
+                  "invalid_base64": {
+                    "summary": "Invalid base64 encoded file",
+                    "value": {
+                      "detail": [
+                        {
+                          "loc": [
+                            "body",
+                            "input",
+                            "value"
+                          ],
+                          "msg": "File input requires valid base64 encoded content",
+                          "type": "value_error"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/artifacts/content": {
       "post": {
         "tags": [
@@ -3166,6 +3348,87 @@
         }
       }
     },
+    "/v1/skills/validate": {
+      "post": {
+        "tags": [
+          "Skills"
+        ],
+        "summary": "Validate Skill",
+        "description": "Dry-run validation of skill files and metadata without persisting.",
+        "operationId": "validate_skill_v1_skills_validate_post",
+        "requestBody": {
+          "description": "Multipart form payload to validate before creating a skill.",
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_validate_skill_v1_skills_validate_post"
+              }
+            },
+            "multipart/form-data": {
+              "examples": {
+                "validate_skill": {
+                  "summary": "Validate skill with collection and title",
+                  "value": {
+                    "display_title": "Sales Ops Helper",
+                    "collection": "acme-prod",
+                    "loading": "lazy"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillValidationResponse"
+                },
+                "examples": {
+                  "valid": {
+                    "summary": "Valid skill",
+                    "value": {
+                      "valid": true,
+                      "name": "sales-ops-helper",
+                      "description": "Helps sales reps draft outreach.",
+                      "errors": []
+                    }
+                  },
+                  "invalid": {
+                    "summary": "Invalid SKILL.md",
+                    "value": {
+                      "valid": false,
+                      "errors": [
+                        {
+                          "code": "INVALID_FRONTMATTER",
+                          "message": "SKILL.md must start with YAML frontmatter"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/skills/{skill_id}": {
       "get": {
         "tags": [
@@ -3777,6 +4040,371 @@
           }
         }
       }
+    },
+    "/v1/files": {
+      "post": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Upload a file",
+        "description": "Upload a file into the session's uploads directory. The file is stored under `uploads/{filename}` within the session scope and its relative path is returned as the file ID. Uploading a file with the same name overwrites the existing one.",
+        "operationId": "upload_file_v1_files_post",
+        "parameters": [
+          {
+            "name": "scope_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Session / container identifier (matches the `container` field in chat requests).",
+              "examples": [
+                "session-abc123"
+              ],
+              "title": "Scope Id"
+            },
+            "description": "Session / container identifier (matches the `container` field in chat requests)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_file_v1_files_post"
+              }
+            }
+          },
+          "description": "Request payload."
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileMetadata"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "List files in a session",
+        "description": "List all files associated with a session, combining uploaded input files and sandbox-generated output files. Results are sorted by creation time and support cursor-based pagination.",
+        "operationId": "list_files_v1_files_get",
+        "parameters": [
+          {
+            "name": "scope_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Session / container identifier.",
+              "examples": [
+                "session-abc123"
+              ],
+              "title": "Scope Id"
+            },
+            "description": "Session / container identifier."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "description": "Maximum number of files to return per page.",
+              "examples": [
+                20
+              ],
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Maximum number of files to return per page."
+          },
+          {
+            "name": "after_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Return files created after this file ID (exclusive). Used for forward pagination.",
+              "examples": [
+                "uploads/data.csv"
+              ],
+              "title": "After Id"
+            },
+            "description": "Return files created after this file ID (exclusive). Used for forward pagination."
+          },
+          {
+            "name": "before_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Return files created before this file ID (exclusive). Used for backward pagination.",
+              "examples": [
+                "outputs/result.png"
+              ],
+              "title": "Before Id"
+            },
+            "description": "Return files created before this file ID (exclusive). Used for backward pagination."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/{file_id}/content": {
+      "get": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Download file content",
+        "description": "Download the raw binary content of a file. The response includes an appropriate `Content-Type` header detected via libmagic and a `Content-Disposition: attachment` header with the original filename.",
+        "operationId": "get_file_content_v1_files__file_id__content_get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "scope_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Session / container identifier.",
+              "examples": [
+                "session-abc123"
+              ],
+              "title": "Scope Id"
+            },
+            "description": "Session / container identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Raw file bytes with MIME-typed content.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/octet-stream": {}
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "File not found in the session."
+          },
+          "503": {
+            "description": "Files API not configured (volume_root not set)."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/{file_id}": {
+      "get": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Get file metadata",
+        "description": "Retrieve metadata for a specific file by its relative path ID, e.g. `uploads/data.csv` or `outputs/result.png`.",
+        "operationId": "get_file_metadata_v1_files__file_id__get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "scope_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Session / container identifier.",
+              "examples": [
+                "session-abc123"
+              ],
+              "title": "Scope Id"
+            },
+            "description": "Session / container identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileMetadata"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "File not found in the session."
+          },
+          "503": {
+            "description": "Files API not configured (volume_root not set)."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Delete an uploaded file",
+        "description": "Permanently delete an uploaded file from the session. Only files that were uploaded via `POST /v1/files` can be deleted; sandbox-generated output files cannot be deleted through this endpoint.",
+        "operationId": "delete_file_v1_files__file_id__delete",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "scope_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Session / container identifier.",
+              "examples": [
+                "session-abc123"
+              ],
+              "title": "Scope Id"
+            },
+            "description": "Session / container identifier."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedFile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "File not found or is a sandbox output (outputs cannot be deleted)."
+          },
+          "503": {
+            "description": "Files API not configured (volume_root not set)."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4030,12 +4658,13 @@
         "title": "Base64ImageSource",
         "description": "Anthropic base64 image source payload."
       },
-      "Base64PDFSource": {
+      "Base64Source": {
         "properties": {
           "type": {
             "type": "string",
             "const": "base64",
             "title": "Type",
+            "default": "base64",
             "description": "type field."
           },
           "data": {
@@ -4046,7 +4675,6 @@
           },
           "media_type": {
             "type": "string",
-            "const": "application/pdf",
             "title": "Media Type",
             "description": "media type field."
           }
@@ -4054,12 +4682,11 @@
         "additionalProperties": true,
         "type": "object",
         "required": [
-          "type",
           "data",
           "media_type"
         ],
-        "title": "Base64PDFSource",
-        "description": "Base64PDFSource schema."
+        "title": "Base64Source",
+        "description": "Base64Source schema."
       },
       "BinaryBlock": {
         "properties": {
@@ -4239,6 +4866,66 @@
         ],
         "title": "Body_create_skill_version_v1_skills__skill_id__versions_post",
         "description": "Body_create_skill_version_v1_skills__skill_id__versions_post schema."
+      },
+      "Body_upload_file_v1_files_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "file field."
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_file_v1_files_post",
+        "description": "Body_upload_file_v1_files_post schema."
+      },
+      "Body_validate_skill_v1_skills_validate_post": {
+        "properties": {
+          "display_title": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Display Title",
+            "examples": [
+              "Sales Ops Helper"
+            ],
+            "description": "display title field."
+          },
+          "collection": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Collection",
+            "examples": [
+              "acme-prod"
+            ],
+            "description": "collection field."
+          },
+          "loading": {
+            "type": "string",
+            "enum": [
+              "eager",
+              "lazy"
+            ],
+            "title": "Loading",
+            "default": "lazy",
+            "examples": [
+              "lazy"
+            ],
+            "description": "loading field."
+          }
+        },
+        "type": "object",
+        "required": [
+          "display_title",
+          "collection"
+        ],
+        "title": "Body_validate_skill_v1_skills_validate_post",
+        "description": "Body_validate_skill_v1_skills_validate_post schema."
       },
       "CacheControlEphemeral": {
         "properties": {
@@ -4844,7 +5531,17 @@
           "message_id"
         ],
         "title": "ChatCancellationResponse",
-        "description": "Response model for cancelled asynchronous chat streams"
+        "description": "Response model for cancelled asynchronous chat streams",
+        "examples": [
+          {
+            "message": "Stream cancelled successfully",
+            "message_id": "msg_async_12345"
+          },
+          {
+            "message": "Stream cancelled successfully",
+            "message_id": "msg_async_long_running"
+          }
+        ]
       },
       "ChatResponse": {
         "properties": {
@@ -4870,7 +5567,19 @@
           "status"
         ],
         "title": "ChatResponse",
-        "description": "Response model for initiated asynchronous chat completion streams"
+        "description": "Response model for initiated asynchronous chat completion streams",
+        "examples": [
+          {
+            "message": "Request initiated successfully",
+            "message_id": "msg_async_12345",
+            "status": "pending"
+          },
+          {
+            "message": "Request initiated successfully",
+            "message_id": "custom_msg_67890",
+            "status": "pending"
+          }
+        ]
       },
       "ChatValidationResult": {
         "properties": {
@@ -5112,6 +5821,9 @@
                   "$ref": "#/components/schemas/BinaryBlock"
                 },
                 {
+                  "$ref": "#/components/schemas/LocalResourceBlock"
+                },
+                {
                   "$ref": "#/components/schemas/ResourceLinkBlock"
                 },
                 {
@@ -5178,7 +5890,22 @@
           "data"
         ],
         "title": "ChunkedContentResponse",
-        "description": "Response containing chunked document content for chat usage."
+        "description": "Response containing chunked document content for chat usage.",
+        "examples": [
+          {
+            "data": [
+              {
+                "artifact_id": "annual_report_2023",
+                "content": [
+                  {
+                    "text": "ANNUAL REPORT 2023\n\nExecutive Summary\n\nFiscal year 2023 marked a transformative period...",
+                    "type": "text"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       },
       "Citations": {
         "properties": {
@@ -5657,7 +6384,17 @@
           "data"
         ],
         "title": "ContentResponse",
-        "description": "Response containing full document content for filtered documents."
+        "description": "Response containing full document content for filtered documents.",
+        "examples": [
+          {
+            "data": [
+              {
+                "artifact_id": "annual_report_2023",
+                "content": "ANNUAL REPORT 2023\n\nExecutive Summary\n\nFiscal year 2023 marked a transformative period..."
+              }
+            ]
+          }
+        ]
       },
       "ContentSource": {
         "properties": {
@@ -5665,6 +6402,7 @@
             "type": "string",
             "const": "content",
             "title": "Type",
+            "default": "content",
             "description": "type field."
           },
           "content": {
@@ -5700,7 +6438,6 @@
         "additionalProperties": true,
         "type": "object",
         "required": [
-          "type",
           "content"
         ],
         "title": "ContentSource",
@@ -5852,6 +6589,176 @@
         ],
         "title": "ContextManagementCapabilityOutput",
         "description": "ContextManagementCapabilityOutput schema."
+      },
+      "ConvertBody": {
+        "properties": {
+          "input": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/FileArtifact"
+              },
+              {
+                "$ref": "#/components/schemas/UriArtifact"
+              },
+              {
+                "$ref": "#/components/schemas/TextArtifact"
+              }
+            ],
+            "title": "ConvertBodyInput",
+            "description": "File content as base64, remote URI, or plain text",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "file": "#/components/schemas/FileArtifact",
+                "text": "#/components/schemas/TextArtifact",
+                "uri": "#/components/schemas/UriArtifact"
+              }
+            }
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata",
+            "description": "Optional metadata, must include 'file_name' to resolve file extension",
+            "examples": [
+              {
+                "file_name": "report.pdf"
+              },
+              {
+                "author": "John Doe",
+                "file_name": "document.docx"
+              }
+            ]
+          },
+          "reader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reader",
+            "description": "Reader to use for parsing. If omitted the default reader for the file type is used.",
+            "examples": [
+              "markitdown",
+              "docling"
+            ]
+          },
+          "format": {
+            "$ref": "#/components/schemas/ContentFormat",
+            "description": "Output format: 'markdown' returns text, 'object' returns a content tree.",
+            "default": "markdown",
+            "examples": [
+              "markdown",
+              "object"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "input"
+        ],
+        "title": "ConvertBody",
+        "examples": [
+          {
+            "format": "markdown",
+            "input": {
+              "type": "text",
+              "value": "# Hello\n\nThis is a simple markdown document."
+            },
+            "metadata": {
+              "file_name": "hello.md"
+            }
+          },
+          {
+            "format": "markdown",
+            "input": {
+              "type": "file",
+              "value": "JVBERi0xLjQKJaqrrK0KMS..."
+            },
+            "metadata": {
+              "file_name": "report.pdf"
+            },
+            "reader": "markitdown"
+          },
+          {
+            "format": "object",
+            "input": {
+              "type": "uri",
+              "value": "https://example.com/document.pdf"
+            },
+            "metadata": {
+              "file_name": "document.pdf"
+            }
+          }
+        ],
+        "description": "ConvertBody schema."
+      },
+      "ConvertResponse": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/ContentTree"
+              }
+            ],
+            "title": "Content",
+            "description": "Parsed file content in the requested format"
+          },
+          "reader": {
+            "type": "string",
+            "title": "Reader",
+            "description": "Reader that was used to parse the file"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content",
+          "reader"
+        ],
+        "title": "ConvertResponse",
+        "examples": [
+          {
+            "content": "# Annual Report 2023\n\nExecutive Summary\n\nFiscal year 2023 marked a transformative period...",
+            "reader": "markitdown"
+          },
+          {
+            "content": {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "children": [],
+                      "content": "Executive Summary\n\nFiscal year 2023 marked a transformative period...",
+                      "id": "text-1",
+                      "type": "TextNode"
+                    }
+                  ],
+                  "content": "Annual Report 2023",
+                  "id": "section-1",
+                  "type": "SectionNode"
+                }
+              ],
+              "content": "",
+              "id": "root",
+              "type": "document"
+            },
+            "reader": "docling"
+          }
+        ],
+        "description": "ConvertResponse schema."
       },
       "CountCapabilitySupportOutput": {
         "properties": {
@@ -6173,6 +7080,40 @@
           }
         ]
       },
+      "DeletedFile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Relative path of the file that was deleted.",
+            "examples": [
+              "uploads/data.csv"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "const": "file_deleted",
+            "title": "Type",
+            "description": "Object type discriminator, always 'file_deleted'.",
+            "default": "file_deleted",
+            "examples": [
+              "file_deleted"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "DeletedFile",
+        "description": "Confirmation that a file was deleted.",
+        "examples": [
+          {
+            "id": "uploads/data.csv",
+            "type": "file_deleted"
+          }
+        ]
+      },
       "DirectCaller": {
         "properties": {
           "type": {
@@ -6256,7 +7197,7 @@
           "source": {
             "oneOf": [
               {
-                "$ref": "#/components/schemas/Base64PDFSource"
+                "$ref": "#/components/schemas/Base64Source"
               },
               {
                 "$ref": "#/components/schemas/PlainTextSource"
@@ -6265,7 +7206,7 @@
                 "$ref": "#/components/schemas/ContentSource"
               },
               {
-                "$ref": "#/components/schemas/URLPDFSource"
+                "$ref": "#/components/schemas/URLDocumentSource"
               }
             ],
             "title": "Source",
@@ -6273,10 +7214,10 @@
             "discriminator": {
               "propertyName": "type",
               "mapping": {
-                "base64": "#/components/schemas/Base64PDFSource",
+                "base64": "#/components/schemas/Base64Source",
                 "content": "#/components/schemas/ContentSource-Input",
                 "text": "#/components/schemas/PlainTextSource",
-                "url": "#/components/schemas/URLPDFSource"
+                "url": "#/components/schemas/URLDocumentSource"
               }
             }
           },
@@ -6515,7 +7456,51 @@
           "data"
         ],
         "title": "EmbeddingsResponse",
-        "description": "Response containing generated embeddings for input text(s)."
+        "description": "Response containing generated embeddings for input text(s).",
+        "examples": [
+          {
+            "data": [
+              {
+                "embedding": [
+                  0.123,
+                  -0.456,
+                  0.789,
+                  0.234,
+                  -0.567,
+                  0.891
+                ],
+                "index": 0,
+                "object": "embedding"
+              }
+            ],
+            "model": "private-gpt",
+            "object": "list"
+          },
+          {
+            "data": [
+              {
+                "embedding": [
+                  0.234,
+                  -0.567,
+                  0.123
+                ],
+                "index": 0,
+                "object": "embedding"
+              },
+              {
+                "embedding": [
+                  -0.123,
+                  0.456,
+                  -0.789
+                ],
+                "index": 1,
+                "object": "embedding"
+              }
+            ],
+            "model": "private-gpt",
+            "object": "list"
+          }
+        ]
       },
       "FileArtifact": {
         "properties": {
@@ -6538,6 +7523,204 @@
         ],
         "title": "FileArtifact",
         "description": "Input for base64 encoded files."
+      },
+      "FileListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FileMetadata"
+            },
+            "type": "array",
+            "title": "Data",
+            "description": "List of file metadata objects for the current page."
+          },
+          "first_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Id",
+            "description": "ID of the first file in the current page, used for cursor-based pagination.",
+            "examples": [
+              "uploads/data.csv"
+            ]
+          },
+          "last_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Id",
+            "description": "ID of the last file in the current page, used for cursor-based pagination.",
+            "examples": [
+              "outputs/result.png"
+            ]
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More",
+            "description": "True when there are additional pages of results beyond this one.",
+            "default": false,
+            "examples": [
+              false
+            ]
+          }
+        },
+        "type": "object",
+        "title": "FileListResponse",
+        "description": "Paginated list of files in a session.",
+        "examples": [
+          {
+            "data": [
+              {
+                "created_at": "2024-01-15T10:30:00Z",
+                "downloadable": false,
+                "filename": "data.csv",
+                "id": "uploads/data.csv",
+                "mime_type": "text/csv",
+                "scope": {
+                  "id": "session-abc123",
+                  "type": "session"
+                },
+                "size_bytes": 4096,
+                "type": "file"
+              }
+            ],
+            "first_id": "uploads/data.csv",
+            "has_more": false,
+            "last_id": "outputs/result.png"
+          }
+        ]
+      },
+      "FileMetadata": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Relative path of the file within the session, e.g. 'uploads/data.csv' or 'outputs/result.png'. Use this value as `file_id` in subsequent requests.",
+            "examples": [
+              "uploads/data.csv"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "ISO-8601 timestamp when the file was created or last modified.",
+            "examples": [
+              "2024-01-15T10:30:00Z"
+            ]
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Filename derived from the path.",
+            "examples": [
+              "data.csv"
+            ]
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type detected from the file content.",
+            "examples": [
+              "text/csv"
+            ]
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes",
+            "description": "File size in bytes.",
+            "examples": [
+              4096
+            ]
+          },
+          "type": {
+            "type": "string",
+            "const": "file",
+            "title": "Type",
+            "description": "Object type discriminator, always 'file'.",
+            "default": "file",
+            "examples": [
+              "file"
+            ]
+          },
+          "downloadable": {
+            "type": "boolean",
+            "title": "Downloadable",
+            "description": "True for sandbox output files; False for uploaded input files.",
+            "examples": [
+              false
+            ]
+          },
+          "scope": {
+            "$ref": "#/components/schemas/FileScope",
+            "description": "Session scope this file belongs to."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "filename",
+          "mime_type",
+          "size_bytes",
+          "downloadable",
+          "scope"
+        ],
+        "title": "FileMetadata",
+        "description": "Metadata for a file stored in a session (upload or sandbox output).",
+        "examples": [
+          {
+            "created_at": "2024-01-15T10:30:00Z",
+            "downloadable": false,
+            "filename": "data.csv",
+            "id": "uploads/data.csv",
+            "mime_type": "text/csv",
+            "scope": {
+              "id": "session-abc123",
+              "type": "session"
+            },
+            "size_bytes": 4096,
+            "type": "file"
+          }
+        ]
+      },
+      "FileScope": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Session / container identifier that owns this file.",
+            "examples": [
+              "session-abc123"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "const": "session",
+            "title": "Type",
+            "description": "Object type discriminator, always 'session'.",
+            "default": "session",
+            "examples": [
+              "session"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "FileScope",
+        "description": "Scope that a file belongs to (always a session)."
       },
       "HTTPValidationError": {
         "properties": {
@@ -7221,6 +8404,86 @@
         "title": "ListSkillsResponse",
         "description": "Paginated list response containing skill objects."
       },
+      "LocalResourceBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "local_resource",
+            "title": "Type",
+            "default": "local_resource",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path",
+            "description": "Absolute path to the file inside the execution environment"
+          },
+          "file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Id",
+            "description": "Base64url-encoded storage file ID used to download the file via the files API"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Human-readable file name (stem, without extension)"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "description": "MIME type of the file"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "file_path",
+          "mime_type",
+          "name",
+          "type"
+        ],
+        "title": "LocalResourceBlock",
+        "description": "Reference to a local file produced by code execution."
+      },
       "McpServerConfig": {
         "properties": {
           "name": {
@@ -7328,6 +8591,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/BinaryBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/LocalResourceBlock"
                 },
                 {
                   "$ref": "#/components/schemas/ResourceLinkBlock"
@@ -7468,6 +8734,9 @@
                       "$ref": "#/components/schemas/BinaryBlock"
                     },
                     {
+                      "$ref": "#/components/schemas/LocalResourceBlock"
+                    },
+                    {
                       "$ref": "#/components/schemas/ResourceLinkBlock"
                     },
                     {
@@ -7515,6 +8784,7 @@
                       "container_upload": "#/components/schemas/ContainerUploadBlock-Input",
                       "document": "#/components/schemas/DocumentBlock-Input",
                       "image": "#/components/schemas/ImageBlock-Input",
+                      "local_resource": "#/components/schemas/LocalResourceBlock-Input",
                       "mid_conv_system": "#/components/schemas/MidConvSystemBlock-Input",
                       "redacted_thinking": "#/components/schemas/RedactedThinkingBlock-Input",
                       "resource": "#/components/schemas/ResourceBlock-Input",
@@ -7892,6 +9162,7 @@
             "type": "string",
             "const": "text",
             "title": "Type",
+            "default": "text",
             "description": "type field."
           },
           "data": {
@@ -7909,7 +9180,6 @@
         "additionalProperties": true,
         "type": "object",
         "required": [
-          "type",
           "data",
           "media_type"
         ],
@@ -7935,11 +9205,59 @@
             "title": "Thinking",
             "description": "Enable thinking/reasoning guidelines when thinking is enabled.",
             "default": false
+          },
+          "code_execution": {
+            "type": "boolean",
+            "title": "Code Execution",
+            "description": "Enable code execution environment instructions (filesystem layout, available paths) when any code execution tool is present.",
+            "default": false
+          },
+          "skills": {
+            "type": "boolean",
+            "title": "Skills",
+            "description": "Enable skill management instructions (when to load/unload skills, workflow guidance) when any skill management tool is present.",
+            "default": false
           }
         },
         "type": "object",
         "title": "PromptConfig",
         "description": "Controls which platform-level prompt features are injected.\n\nThese flags represent optional AI features adding internal instructions\nto the system prompt. All flags default to ``False`` \u2014 opt-in explicitly."
+      },
+      "ReaderInfo": {
+        "properties": {
+          "extensions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Extensions",
+            "description": "File extensions this reader can process"
+          }
+        },
+        "type": "object",
+        "required": [
+          "extensions"
+        ],
+        "title": "ReaderInfo",
+        "description": "ReaderInfo schema."
+      },
+      "ReadersResponse": {
+        "properties": {
+          "data": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ReaderInfo"
+            },
+            "type": "object",
+            "title": "Data",
+            "description": "Available readers and the extensions each one supports"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ReadersResponse",
+        "description": "ReadersResponse schema."
       },
       "RedactedThinkingBlock": {
         "properties": {
@@ -8863,6 +10181,106 @@
         "title": "SkillResponse",
         "description": "Serialized skill object returned by skills endpoints."
       },
+      "SkillValidationError": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Uppercase error code identifying the failure kind."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable description of the error."
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params",
+            "description": "Optional i18n interpolation parameters (e.g. {'size': '10'})."
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "SkillValidationError",
+        "description": "A single structured validation error with stable code and message."
+      },
+      "SkillValidationResponse": {
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "title": "Valid",
+            "description": "Whether the skill payload would be accepted."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Parsed skill name from SKILL.md frontmatter (when valid)."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Parsed skill description from SKILL.md frontmatter (when valid)."
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/SkillValidationError"
+            },
+            "type": "array",
+            "title": "Errors",
+            "description": "Validation errors (when invalid)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "valid"
+        ],
+        "title": "SkillValidationResponse",
+        "description": "Result of a dry-run skill validation.",
+        "examples": [
+          {
+            "description": "Helps sales reps draft outreach.",
+            "errors": [],
+            "name": "sales-ops-helper",
+            "valid": true
+          },
+          {
+            "errors": [
+              {
+                "code": "INVALID_FRONTMATTER",
+                "message": "SKILL.md must start with YAML frontmatter"
+              }
+            ],
+            "valid": false
+          }
+        ]
+      },
       "SkillVersionDeletedResponse": {
         "properties": {
           "id": {
@@ -9152,7 +10570,30 @@
           "updated_at"
         ],
         "title": "StreamMetadata",
-        "description": "Stream metadata and status information for asynchronous chat completions"
+        "description": "Stream metadata and status information for asynchronous chat completions",
+        "examples": [
+          {
+            "created_at": "2025-07-10T09:11:16.003615Z",
+            "message_id": "msg_async_12345",
+            "metadata": {},
+            "status": "pending",
+            "stream_type": "default",
+            "updated_at": "2025-07-10T09:11:16.003615Z"
+          },
+          {
+            "created_at": "2025-07-10T09:11:16.003615Z",
+            "message_id": "msg_async_67890",
+            "metadata": {
+              "tokens_processed": 156,
+              "tools_used": [
+                "security_scanner"
+              ]
+            },
+            "status": "processing",
+            "stream_type": "default",
+            "updated_at": "2025-07-10T09:11:20.123456Z"
+          }
+        ]
       },
       "StreamStatus": {
         "type": "string",
@@ -9280,6 +10721,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/BinaryBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/LocalResourceBlock"
                 },
                 {
                   "$ref": "#/components/schemas/ResourceLinkBlock"
@@ -9988,6 +11432,9 @@
                   "$ref": "#/components/schemas/BinaryBlock"
                 },
                 {
+                  "$ref": "#/components/schemas/LocalResourceBlock"
+                },
+                {
                   "$ref": "#/components/schemas/ResourceLinkBlock"
                 },
                 {
@@ -10041,7 +11488,27 @@
           "content"
         ],
         "title": "ToolResponse",
-        "description": "Response returned from tool-based operations."
+        "description": "Response returned from tool-based operations.",
+        "examples": [
+          {
+            "content": [
+              {
+                "text": "The analysis shows that Q4 revenue increased by 25% compared to Q3.",
+                "type": "text"
+              }
+            ],
+            "is_error": false
+          },
+          {
+            "content": [
+              {
+                "text": "Unable to connect to the database.",
+                "type": "text"
+              }
+            ],
+            "is_error": true
+          }
+        ]
       },
       "ToolResultBlock": {
         "properties": {
@@ -10133,6 +11600,9 @@
                       "$ref": "#/components/schemas/BinaryBlock"
                     },
                     {
+                      "$ref": "#/components/schemas/LocalResourceBlock"
+                    },
+                    {
                       "$ref": "#/components/schemas/ResourceLinkBlock"
                     },
                     {
@@ -10180,6 +11650,7 @@
                       "container_upload": "#/components/schemas/ContainerUploadBlock-Input",
                       "document": "#/components/schemas/DocumentBlock-Input",
                       "image": "#/components/schemas/ImageBlock-Input",
+                      "local_resource": "#/components/schemas/LocalResourceBlock-Input",
                       "mid_conv_system": "#/components/schemas/MidConvSystemBlock-Input",
                       "redacted_thinking": "#/components/schemas/RedactedThinkingBlock-Input",
                       "resource": "#/components/schemas/ResourceBlock-Input",
@@ -10481,12 +11952,13 @@
         "title": "URIBinarySource",
         "description": "URI source payload for arbitrary binary data."
       },
-      "URLPDFSource": {
+      "URLDocumentSource": {
         "properties": {
           "type": {
             "type": "string",
             "const": "url",
             "title": "Type",
+            "default": "url",
             "description": "type field."
           },
           "url": {
@@ -10498,11 +11970,10 @@
         "additionalProperties": true,
         "type": "object",
         "required": [
-          "type",
           "url"
         ],
-        "title": "URLPDFSource",
-        "description": "URLPDFSource schema."
+        "title": "URLDocumentSource",
+        "description": "URLDocumentSource schema."
       },
       "URLSource": {
         "properties": {

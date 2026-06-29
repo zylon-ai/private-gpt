@@ -184,6 +184,21 @@ class ContentResponse(BaseModel):
         ..., description="List of documents with their full content"
     )
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "data": [
+                        {
+                            "artifact_id": "annual_report_2023",
+                            "content": "ANNUAL REPORT 2023\n\nExecutive Summary\n\nFiscal year 2023 marked a transformative period...",
+                        },
+                    ]
+                },
+            ]
+        }
+    }
+
 
 class ChunkedContentDocumentResponse(BaseModel):
     """Response model for chunked document content."""
@@ -202,6 +217,26 @@ class ChunkedContentResponse(BaseModel):
         ...,
         description="List of documents with their content split into chunks for chat usage",
     )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "data": [
+                        {
+                            "artifact_id": "annual_report_2023",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": "ANNUAL REPORT 2023\n\nExecutive Summary\n\nFiscal year 2023 marked a transformative period...",
+                                },
+                            ],
+                        },
+                    ]
+                },
+            ]
+        }
+    }
 
 
 @content_router.post(

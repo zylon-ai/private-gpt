@@ -20,7 +20,32 @@ class StreamMetadata(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "description": "Stream metadata and status information for asynchronous chat completions"
+            "description": "Stream metadata and status information for asynchronous chat completions",
+            "examples": [
+                {
+                    "message_id": "msg_async_12345",
+                    "status": "pending",
+                    "created_at": "2025-07-10T09:11:16.003615Z",
+                    "updated_at": "2025-07-10T09:11:16.003615Z",
+                    "completed_at": None,
+                    "error_message": None,
+                    "stream_type": "default",
+                    "metadata": {},
+                },
+                {
+                    "message_id": "msg_async_67890",
+                    "status": "processing",
+                    "created_at": "2025-07-10T09:11:16.003615Z",
+                    "updated_at": "2025-07-10T09:11:20.123456Z",
+                    "completed_at": None,
+                    "error_message": None,
+                    "stream_type": "default",
+                    "metadata": {
+                        "tokens_processed": 156,
+                        "tools_used": ["security_scanner"],
+                    },
+                },
+            ],
         }
     }
 
@@ -59,7 +84,19 @@ class ChatResponse(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "description": "Response model for initiated asynchronous chat completion streams"
+            "description": "Response model for initiated asynchronous chat completion streams",
+            "examples": [
+                {
+                    "message_id": "msg_async_12345",
+                    "status": "pending",
+                    "message": "Request initiated successfully",
+                },
+                {
+                    "message_id": "custom_msg_67890",
+                    "status": "pending",
+                    "message": "Request initiated successfully",
+                },
+            ],
         }
     }
 
@@ -78,7 +115,17 @@ class ChatCancellationResponse(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "description": "Response model for cancelled asynchronous chat streams"
+            "description": "Response model for cancelled asynchronous chat streams",
+            "examples": [
+                {
+                    "message": "Stream cancelled successfully",
+                    "message_id": "msg_async_12345",
+                },
+                {
+                    "message": "Stream cancelled successfully",
+                    "message_id": "msg_async_long_running",
+                },
+            ],
         }
     }
 

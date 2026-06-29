@@ -106,6 +106,31 @@ class ToolResponse(BaseModel):
         description="True if the tool encountered an error during execution.",
     )
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "The analysis shows that Q4 revenue increased by 25% compared to Q3.",
+                        }
+                    ],
+                    "is_error": False,
+                },
+                {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Unable to connect to the database.",
+                        }
+                    ],
+                    "is_error": True,
+                },
+            ]
+        }
+    }
+
 
 @tool_router.post(
     "/tools/semantic-search",
