@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from llama_index.core.base.llms.types import ImageBlock, TextBlock
 from llama_index.core.callbacks import CallbackManager
@@ -616,14 +616,16 @@ async def describe_image(
     handler: WorkflowHandler | None = None
 
     try:
-        result = await workflow.run(
-            image_blocks=image_blocks,
-            user_query=user_query,
-            max_iterations=max_iterations,
-            enable_preprocessing=enable_preprocessing,
-            enable_evaluation=enable_evaluation,
-            skip_strategy_inference=skip_strategy_inference,
-            kwargs=kwargs,
+        result = cast(
+            ImageProcessingResultEvent,
+            await workflow.run(
+                image_blocks=image_blocks,
+                user_query=user_query,
+                max_iterations=max_iterations,
+                enable_preprocessing=enable_preprocessing,
+                enable_evaluation=enable_evaluation,
+                kwargs=kwargs,
+            ),
         )
 
         return result.description if result else None

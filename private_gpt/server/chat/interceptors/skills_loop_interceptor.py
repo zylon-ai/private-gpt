@@ -7,6 +7,7 @@ from injector import inject, singleton
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 from private_gpt.components.context.models.context_layer import (
+    ContentBundlesLayer,
     SkillBodyLayer,
     SkillCatalogEntry,
     SkillCatalogLayer,
@@ -22,6 +23,8 @@ from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
     InterceptorPhase,
 )
 from private_gpt.components.skills.models.skill_entities import SkillFilter
+from private_gpt.components.skills.paths import skill_mount_path
+from private_gpt.components.skills.services.skill_loader import SkillLoader
 from private_gpt.components.skills.services.skill_service import SkillService
 from private_gpt.components.tools.tool_names import (
     SKILL_LOAD_TOOL_NAME,
@@ -79,8 +82,14 @@ def _resolve_active_skill_names(
 @singleton
 class SkillsInterceptor(ChatRequestLoopInterceptor):
     @inject
-    def __init__(self, skill_service: SkillService, settings: Settings) -> None:
+    def __init__(
+        self,
+        skill_service: SkillService,
+        skill_loader: SkillLoader,
+        settings: Settings,
+    ) -> None:
         self._skill_service = skill_service
+        self._skill_loader = skill_loader
         self._skill_injection_mode = settings.skills.skill_injection_mode
 
     async def intercept(self, context: ChatLoopInterceptorContext) -> None:
@@ -93,6 +102,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
         stack = state.input.context_stack
         stack = stack.remove_layers_of_type(LayerType.SKILL_CATALOG)
         stack = stack.remove_layers_of_type(LayerType.SKILL_BODY)
+        stack = stack.remove_layers_of_type(LayerType.CONTENT_BUNDLES)
         if filter_input is None:
             state.input.context_stack = stack
             context.set_state(state)
@@ -100,6 +110,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
 
         skills_cache = state.runtime.cache.skill
         entries = skills_cache.entries if skills_cache else []
+        resources = skills_cache.resources if skills_cache else {}
         if not entries:
             state.input.context_stack = stack
             context.set_state(state)
@@ -129,6 +140,8 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
                         name=name,
                         description=version.frontmatter.description,
                         loading=loading,
+                        location=f"{skill_mount_path(version.skill_id)}SKILL.md",
+                        resources=resources.get(version.skill_id, []),
                     )
                 )
 
@@ -151,8 +164,19 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
                     name=version.frontmatter.name,
                     version=version.version,
                     instructions=instructions,
+                    location=skill_mount_path(version.skill_id),
+                    resources=resources.get(version.skill_id, []),
                     source=f"skill:{version.frontmatter.name}",
                 )
+            )
+
+        # Bundles for all skills in the cache — mounted regardless of active state
+        # so the agent can browse skill files even for lazy-loaded skills.
+        all_versions = [entry.version for entry in entries]
+        bundles = self._skill_loader.bundles_for_versions(all_versions)
+        if bundles:
+            stack = stack.append_layer(
+                ContentBundlesLayer(bundles=bundles, source="skills")
             )
 
         state.input.context_stack = stack

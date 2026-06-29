@@ -22,3 +22,4 @@ class LayerType(StrEnum):
     # State layers
     TOOL_DEFINITIONS = "TOOL_DEFINITIONS"
     DOCUMENT = "DOCUMENT"
+    CONTENT_BUNDLES = "CONTENT_BUNDLES"

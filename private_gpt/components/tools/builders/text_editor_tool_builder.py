@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from injector import inject, singleton
 
-from private_gpt.components.chat.models.chat_config_models import ToolSpec
-from private_gpt.components.code_execution.base import CodeExecutionSession
+from private_gpt.components.chat.models.chat_config_models import (
+    ToolRequirements,
+    ToolSpec,
+)
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
@@ -17,20 +23,18 @@ from private_gpt.components.tools.tool_placeholders import (
     TEXT_EDITOR_STR_REPLACE_TOOL_FN,
     TEXT_EDITOR_VIEW_TOOL_FN,
 )
-from private_gpt.events.models import ResultContentBlockType, TextBlock
+from private_gpt.components.tools.utils import truncate_output
+from private_gpt.events.models import TextBlock
 from private_gpt.settings.settings import Settings
 
-
-def _truncate_output(text: str, max_bytes: int) -> str:
-    encoded = text.encode("utf-8")
-    if len(encoded) <= max_bytes:
-        return text
-    truncated = encoded[:max_bytes].decode("utf-8", errors="ignore")
-    return truncated + "\n...[truncated]"
+if TYPE_CHECKING:
+    from private_gpt.components.code_execution.base import CodeExecutionSession
+    from private_gpt.components.sandbox.content_bundle import ContentBundle
+    from private_gpt.events.models import ResultContentBlockType
 
 
 def _format_output(output: str, max_bytes: int) -> list[ResultContentBlockType]:
-    return [TextBlock(text=_truncate_output(output, max_bytes))]
+    return [TextBlock(text=truncate_output(output, max_bytes))]
 
 
 @singleton
@@ -44,21 +48,26 @@ class TextEditorToolBuilder:
         self._component = code_execution_component
         self._settings = settings
 
-    def _session(self, session_id: str) -> CodeExecutionSession:
-        session = self._component.get_or_create_session(session_id)
+    async def _session(
+        self,
+        session_id: str,
+        bundles: list[ContentBundle] | None = None,
+    ) -> CodeExecutionSession:
+        session = await self._component.get_or_create_session(
+            session_id, extra_bundles=bundles or None
+        )
         if session is None:
             raise ValueError("code_execution provider is not configured.")
         return session
 
-    def build_view_tool(
+    async def build_view_tool(
         self,
         session_id: str,
+        bundles: list[ContentBundle] | None = None,
         name: str = TEXT_EDITOR_VIEW_TOOL_NAME,
         type: str = TEXT_EDITOR_VIEW_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_VIEW_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = self._session(session_id)
-
         async def view(
             path: str,
             view_range: list[int] | None = None,
@@ -72,6 +81,7 @@ class TextEditorToolBuilder:
                     )
                 resolved_view_range = (view_range[0], view_range[1])
 
+            session = await self._session(session_id, bundles)
             result = await session.view(
                 path,
                 view_range=resolved_view_range,
@@ -88,22 +98,23 @@ class TextEditorToolBuilder:
             runtime="server",
             description=description,
             async_fn=view,
+            requirements=[ToolRequirements.SANDBOX],
         )
 
-    def build_str_replace_tool(
+    async def build_str_replace_tool(
         self,
         session_id: str,
+        bundles: list[ContentBundle] | None = None,
         name: str = TEXT_EDITOR_STR_REPLACE_TOOL_NAME,
         type: str = TEXT_EDITOR_STR_REPLACE_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_STR_REPLACE_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = self._session(session_id)
-
         async def str_replace(
             path: str,
             old_str: str,
             new_str: str,
         ) -> list[ResultContentBlockType]:
+            session = await self._session(session_id, bundles)
             result = await session.str_replace(path, old_str, new_str)
             output = result.output if result.success else f"Error: {result.error}"
             return _format_output(
@@ -117,21 +128,22 @@ class TextEditorToolBuilder:
             runtime="server",
             description=description,
             async_fn=str_replace,
+            requirements=[ToolRequirements.SANDBOX],
         )
 
-    def build_create_tool(
+    async def build_create_tool(
         self,
         session_id: str,
+        bundles: list[ContentBundle] | None = None,
         name: str = TEXT_EDITOR_CREATE_TOOL_NAME,
         type: str = TEXT_EDITOR_CREATE_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_CREATE_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = self._session(session_id)
-
         async def create(
             path: str,
             file_text: str,
         ) -> list[ResultContentBlockType]:
+            session = await self._session(session_id, bundles)
             result = await session.create(path, file_text)
             output = result.output if result.success else f"Error: {result.error}"
             return _format_output(
@@ -145,22 +157,23 @@ class TextEditorToolBuilder:
             runtime="server",
             description=description,
             async_fn=create,
+            requirements=[ToolRequirements.SANDBOX],
         )
 
-    def build_insert_tool(
+    async def build_insert_tool(
         self,
         session_id: str,
+        bundles: list[ContentBundle] | None = None,
         name: str = TEXT_EDITOR_INSERT_TOOL_NAME,
         type: str = TEXT_EDITOR_INSERT_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_INSERT_TOOL_FN.metadata.description,
     ) -> ToolSpec:
-        session = self._session(session_id)
-
         async def insert(
             path: str,
             insert_line: int,
             new_str: str,
         ) -> list[ResultContentBlockType]:
+            session = await self._session(session_id, bundles)
             result = await session.insert(path, insert_line, new_str)
             output = result.output if result.success else f"Error: {result.error}"
             return _format_output(
@@ -174,4 +187,5 @@ class TextEditorToolBuilder:
             runtime="server",
             description=description,
             async_fn=insert,
+            requirements=[ToolRequirements.SANDBOX],
         )

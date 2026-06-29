@@ -11,6 +11,7 @@ from private_gpt.components.tools.processors.base import (
 from private_gpt.components.tools.tool_names import (
     BASH_TOOL_NAME,
     CODE_EXECUTION_TOOL_NAME,
+    PRESENT_FILES_TOOL_NAME,
     TEXT_EDITOR_TOOL_NAME,
 )
 
@@ -28,16 +29,11 @@ class CodeExecutionProcessor(ToolProcessor):
             ) or not _is_unresolved_tool(tool):
                 continue
 
-            return _replace_tool(
-                request,
-                tool,
-                [
-                    _wrapper_tool(
-                        BASH_TOOL_NAME,
-                    ),
-                    _wrapper_tool(
-                        TEXT_EDITOR_TOOL_NAME,
-                    ),
-                ],
-            )
+            expanded = [
+                _wrapper_tool(BASH_TOOL_NAME),
+                _wrapper_tool(TEXT_EDITOR_TOOL_NAME),
+            ]
+            if request.system.extensions.zylon_enabled:
+                expanded.append(_wrapper_tool(PRESENT_FILES_TOOL_NAME))
+            return _replace_tool(request, tool, expanded)
         return False

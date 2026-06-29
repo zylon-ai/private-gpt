@@ -681,3 +681,49 @@ def test_seed_tool_instructions_empty_string_suppresses(
     tool = ToolSpec(name="web_search", instructions="")
     seeded = prompt_builder.seed_tool_instructions([tool])
     assert seeded[0].instructions == ""
+
+
+def test_create_code_execution_prompt_contains_paths(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+    from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
+
+    tools = [ToolSpec(name="bash"), ToolSpec(name="text_editor")]
+    prompt = prompt_builder.create_code_execution_prompt(tools)
+    formatted = prompt.format()
+    assert formatted != ""
+    for mount in DEFAULT_SESSION_LAYOUT:
+        assert mount.canonical in formatted
+        assert mount.access in formatted
+        assert mount.description in formatted
+    assert "/mnt/skills/" in formatted
+
+
+def test_create_code_execution_prompt_no_code_execution_tool(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+    from private_gpt.server.chat.interceptors.platform_guidelines_interceptor import (
+        PlatformGuidelinesInterceptor,
+    )
+
+    # On platforms where code execution raises OSError (no FUSE/sandbox), no
+    # code execution tool is wired up. The interceptor guard prevents injection.
+    tools: list[ToolSpec] = [ToolSpec(name="web_search")]
+    assert not PlatformGuidelinesInterceptor._has_code_execution_tool(tools)
+
+
+def test_create_code_execution_prompt_cross_references_text_editor(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+
+    tools = [ToolSpec(name="bash"), ToolSpec(name="text_editor")]
+    prompt_with_editor = prompt_builder.create_code_execution_prompt(tools)
+
+    tools_no_editor = [ToolSpec(name="bash")]
+    prompt_without_editor = prompt_builder.create_code_execution_prompt(tools_no_editor)
+
+    assert "text editor" in prompt_with_editor.format().lower()
+    assert "text editor" not in prompt_without_editor.format().lower()

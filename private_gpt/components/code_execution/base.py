@@ -1,9 +1,15 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 
 from private_gpt.settings.settings import Settings
+
+if TYPE_CHECKING:
+    from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
 class BashExecutionResult(BaseModel):
@@ -54,6 +60,10 @@ class CodeExecutionSession(ABC):
         """Insert text into a file after a given line number."""
 
     @abstractmethod
+    async def read_file(self, path: str) -> bytes:
+        """Read raw file bytes from the session workspace."""
+
+    @abstractmethod
     async def close(self) -> None:
         """Close and release the backing execution session."""
 
@@ -63,8 +73,12 @@ class CodeExecutionProvider(ABC):
         self.settings = settings
 
     @abstractmethod
-    def create_session(self, session_id: str) -> CodeExecutionSession:
-        """Create a code execution session."""
+    async def create_session(
+        self,
+        session_id: str,
+        extra_bundles: list[ContentBundle] | None = None,
+    ) -> CodeExecutionSession:
+        """Create a code execution session, optionally mounting extra bundles."""
 
     @abstractmethod
     def delete_session(self, session: CodeExecutionSession) -> None:

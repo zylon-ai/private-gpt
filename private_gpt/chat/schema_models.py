@@ -295,6 +295,7 @@ def _create_array_model(
             warnings: bool | Literal["none", "warn", "error"] = True,
             fallback: Callable[[Any], Any] | None = None,
             serialize_as_any: bool = False,
+            polymorphic_serialization: bool | None = None,
         ) -> str:
             """Return JSON array directly, not wrapped in object."""
             import json

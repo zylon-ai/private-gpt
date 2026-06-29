@@ -4,7 +4,9 @@ from collections.abc import Sequence
 from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
-from private_gpt.components.context.models.context_layer import ToolDefinitionsLayer
+from private_gpt.components.context.models.context_layer import (
+    ToolDefinitionsLayer,
+)
 from private_gpt.components.context.models.layer_type import LayerType
 from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
     ChatRequestLoopInterceptor,

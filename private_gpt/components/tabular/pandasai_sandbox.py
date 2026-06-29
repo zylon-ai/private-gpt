@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -6,8 +7,9 @@ import shutil
 import tempfile
 import textwrap
 import uuid
+from collections.abc import Coroutine
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeVar
 
 import pandas as pd
 from pandasai import Sandbox  # type: ignore
@@ -18,6 +20,8 @@ from private_gpt.components.sandbox.base import (
     SandboxExecutionResult,
     SandboxSession,
 )
+
+T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +63,7 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
     _user_id: str
     _timeout: int
     _client: SandboxSession | None
+    _loop: asyncio.AbstractEventLoop | None
     _temp_dir: Path | None
     _started: bool
 
@@ -118,6 +123,28 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
         self._temp_dir = None
         self._started = False
 
+        # Capture the event loop the async sandbox session belongs to. PandasAI
+        # drives this adapter from a worker thread (asyncio.to_thread), so async
+        # sandbox calls are submitted back to this loop via _run().
+        try:
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = None
+
+    # ------------------------------------------------------------------
+    # Sync → async bridge
+    # ------------------------------------------------------------------
+
+    def _run(self, coro: Coroutine[Any, Any, T]) -> T:
+        """Run an async sandbox call from this adapter's sync interface.
+
+        Must not be called from the captured loop's own thread — it blocks
+        until the coroutine completes.
+        """
+        if self._loop is not None and self._loop.is_running():
+            return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
+        return asyncio.run(coro)
+
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
@@ -131,7 +158,6 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
         try:
             if self._client is None:
                 raise RuntimeError("Sandbox client not configured")
-            self._client.start()
             self._temp_dir = Path(
                 tempfile.mkdtemp(prefix=f"zylon_sandbox_{self._user_id}_")
             )
@@ -150,7 +176,7 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
 
         try:
             if self._client:
-                self._client.close()
+                self._run(self._client.close())
             if self._temp_dir and self._temp_dir.exists():
                 shutil.rmtree(self._temp_dir, ignore_errors=True)
         except Exception as e:
@@ -231,8 +257,8 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
         ).strip()
 
         try:
-            result = self._client.run_code(
-                setup_code, SandboxCodeOptions(language="python")
+            result = self._run(
+                self._client.run_code(setup_code, SandboxCodeOptions(language="python"))
             )
             if not result.success:
                 logger.warning("Environment setup warning: %s", result.error)
@@ -263,9 +289,11 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
                 part for part in (self._PREAMBLE, datasets_code, processed_code) if part
             )
 
-            execution_result = self._client.run_code(
-                full_code,
-                SandboxCodeOptions(language="python", timeout=self._timeout),
+            execution_result = self._run(
+                self._client.run_code(
+                    full_code,
+                    SandboxCodeOptions(language="python", timeout=self._timeout),
+                )
             )
             return self._process_execution_result(execution_result)
 
@@ -468,8 +496,10 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
         ).strip()
 
         try:
-            result = self._client.run_code(
-                transfer_code, SandboxCodeOptions(language="python")
+            result = self._run(
+                self._client.run_code(
+                    transfer_code, SandboxCodeOptions(language="python")
+                )
             )
             if not result.success:
                 raise RuntimeError(f"File transfer failed: {result.error}")
@@ -501,8 +531,8 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
         ).strip()
 
         try:
-            result = self._client.run_code(
-                read_code, SandboxCodeOptions(language="python")
+            result = self._run(
+                self._client.run_code(read_code, SandboxCodeOptions(language="python"))
             )
             if result.success and "FILE_CONTENT_START" in result.output:
                 lines = result.output.split("\n")
@@ -543,8 +573,8 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
         ).strip()
 
         try:
-            result = self._client.run_code(
-                list_code, SandboxCodeOptions(language="python")
+            result = self._run(
+                self._client.run_code(list_code, SandboxCodeOptions(language="python"))
             )
             if result.success:
                 files: list[str] = json.loads(result.output.strip())

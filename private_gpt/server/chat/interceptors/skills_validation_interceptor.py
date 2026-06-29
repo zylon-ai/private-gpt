@@ -45,8 +45,17 @@ class SkillsValidationInterceptor(ChatRequestLoopInterceptor):
             return
 
         entries = await self._skill_service.recover_versions(skill_filter)
+        resources: dict[str, list[str]] = {}
+        for entry in entries:
+            try:
+                resources[
+                    entry.skill.id
+                ] = await self._skill_service.list_version_files(entry.version)
+            except Exception:
+                resources[entry.skill.id] = []
         state.runtime.cache.skill = SkillsRuntimeCache(
             entries=entries,
+            resources=resources,
         )
         context.set_state(state)
 

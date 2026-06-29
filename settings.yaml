@@ -137,14 +137,6 @@ openai:
   embedding_api_key: ${OPENAI_EMBEDDING_API_KEY:}
   request_timeout: ${OPENAI_REQUEST_TIMEOUT:600.0}
 
-triton:
-  api_base: ${PGPT_TRITON_API_BASE:http://localhost:8000}
-  ssl: ${PGPT_TRITON_SSL:false}
-  grpc_keep_alive_time: ${PGPT_TRITON_GRPC_KEEP_ALIVE_TIME:30000}
-  grpc_keep_alive_timeout: ${PGPT_TRITON_GRPC_KEEP_ALIVE_TIMEOUT:20000}
-  grpc_permit_keep_alive_without_calls: ${PGPT_TRITON_GRPC_PERMIT_KEEP_ALIVE_WITHOUT_CALLS:true}
-  grpc_max_pings_without_data: ${PGPT_TRITON_GRPC_MAX_PINGS_WITHOUT_DATA:0}
-
 docling:
   mode: ${PGPT_DOCLING_MODE:api}
   api_base: ${PGPT_DOCLING_API_BASE:http://localhost:5001}
@@ -228,15 +220,21 @@ opik:
 
 sandbox:
   provider: ${PGPT_SANDBOX_PROVIDER:local}
-  base_url: ${PGPT_SANDBOX_URL:}
   timeout: ${PGPT_SANDBOX_TIMEOUT:60}
-
 
 code_execution:
   provider: ${PGPT_CODE_EXECUTION_PROVIDER:local}
   workspace_path: ${PGPT_CODE_EXECUTION_WORKSPACE_PATH:}
   timeout: ${PGPT_CODE_EXECUTION_TIMEOUT:60}
   max_output_bytes: ${PGPT_CODE_EXECUTION_MAX_OUTPUT_BYTES:1048576}
+  volume_root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:./local_data/private_gpt/volumes}
+
+bash:
+  cpu_limit_seconds: ${PGPT_BASH_CPU_LIMIT_SECONDS:30}
+  memory_limit_mb: ${PGPT_BASH_MEMORY_LIMIT_MB:512}
+  fsize_limit_mb: ${PGPT_BASH_FSIZE_LIMIT_MB:10}
+  nproc_limit: ${PGPT_BASH_NPROC_LIMIT:50}
+  output_cap_bytes: ${PGPT_BASH_OUTPUT_CAP_BYTES:1048576}
 
 web_fetch:
   enabled: ${PGPT_WEBFETCH_ENABLED:false}

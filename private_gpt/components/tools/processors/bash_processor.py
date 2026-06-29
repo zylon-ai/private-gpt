@@ -23,10 +23,11 @@ class BashProcessor(ToolProcessor):
             if not _tool_matches(tool, BASH_TOOL_NAME) or not _is_unresolved_tool(tool):
                 continue
 
-            resolved = self._bash_builder.build_tool(
+            resolved = await self._bash_builder.build_tool(
                 _session_id(request),
                 name=tool.name or BASH_TOOL_NAME,
                 type=tool.type or BASH_TOOL_NAME + "_v1",
+                bundles=request.context.content_bundles or None,
             )
             return _replace_tool(request, tool, [resolved])
         return False

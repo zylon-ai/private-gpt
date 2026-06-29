@@ -1,0 +1,31 @@
+{% set tool_name = namespace.tools.get("bash_tool_name") %}
+{% set has_text_editor = namespace.tools.get("has_text_editor") %}
+{% if layout is not defined or not layout %}{% else %}
+{% set workspace = layout | selectattr("name", "equalto", "user") | first %}
+
+<{{ tool_name }}>
+Execute shell commands in an isolated sandbox environment.
+
+**Filesystem layout:**
+| Path | Access | Purpose |
+|---|---|---|
+{% for mount in layout %}
+| `{{ mount.canonical }}` | {{ mount.access }} | {{ mount.description }} |
+{% endfor %}
+| `{{ skills_prefix }}*/` | ro | Mounted skill content |
+
+Rules:
+- Use absolute paths. `{{ workspace.canonical }}` is the working directory.
+- Save any file the user should receive to `{{ (layout | selectattr("name", "equalto", "outputs") | first).canonical }}`.
+- Do not access paths outside the directories listed above.{% if has_text_editor %}
+- Prefer the text editor tools for viewing or editing existing files.{% endif %}
+
+{% if few_shots == "True" %}
+{% set uploads = layout | selectattr("name", "equalto", "uploads") | first %}
+{% set outputs = layout | selectattr("name", "equalto", "outputs") | first %}
+Examples:
+- Read an upload: `cat {{ uploads.canonical }}report.csv`
+- Save result: `cp analysis.png {{ outputs.canonical }}analysis.png`
+{% endif %}
+</{{ tool_name }}>
+{% endif %}

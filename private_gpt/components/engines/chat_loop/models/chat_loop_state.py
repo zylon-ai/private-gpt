@@ -69,6 +69,11 @@ class SkillsRuntimeCache(BaseModel):
     """Validated/resolved skills cached during runtime."""
 
     entries: list[SkillVersionWithSkillEntity] = Field(default_factory=list)
+    resources: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="skill_id → bundled file paths relative to the skill dir "
+        "(SKILL.md excluded).",
+    )
 
 
 class ChatLoopRuntimeCache(BaseModel):

@@ -1,4 +1,7 @@
-from private_gpt.components.sandbox.base import SandboxProvider, SandboxProviderFactory
+from private_gpt.components.sandbox.base import (
+    SandboxProvider,
+    SandboxProviderFactory,
+)
 from private_gpt.components.sandbox.local import LocalSandboxProvider
 from private_gpt.settings.settings import Settings
 

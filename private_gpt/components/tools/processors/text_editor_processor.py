@@ -38,27 +38,21 @@ class TextEditorProcessor(ToolProcessor):
                     request,
                     tool,
                     [
-                        _wrapper_tool(
-                            TEXT_EDITOR_VIEW_TOOL_NAME,
-                        ),
-                        _wrapper_tool(
-                            TEXT_EDITOR_STR_REPLACE_TOOL_NAME,
-                        ),
-                        _wrapper_tool(
-                            TEXT_EDITOR_CREATE_TOOL_NAME,
-                        ),
-                        _wrapper_tool(
-                            TEXT_EDITOR_INSERT_TOOL_NAME,
-                        ),
+                        _wrapper_tool(TEXT_EDITOR_VIEW_TOOL_NAME),
+                        _wrapper_tool(TEXT_EDITOR_STR_REPLACE_TOOL_NAME),
+                        _wrapper_tool(TEXT_EDITOR_CREATE_TOOL_NAME),
+                        _wrapper_tool(TEXT_EDITOR_INSERT_TOOL_NAME),
                     ],
                 )
+            bundles = request.context.content_bundles or None
             if _tool_matches(tool, TEXT_EDITOR_VIEW_TOOL_NAME):
                 return _replace_tool(
                     request,
                     tool,
                     [
-                        self._builder.build_view_tool(
+                        await self._builder.build_view_tool(
                             session_id,
+                            bundles=bundles,
                             name=tool.name or TEXT_EDITOR_VIEW_TOOL_NAME,
                             type=tool.type or TEXT_EDITOR_VIEW_TOOL_NAME + "_v1",
                         )
@@ -69,8 +63,9 @@ class TextEditorProcessor(ToolProcessor):
                     request,
                     tool,
                     [
-                        self._builder.build_str_replace_tool(
+                        await self._builder.build_str_replace_tool(
                             session_id,
+                            bundles=bundles,
                             name=tool.name or TEXT_EDITOR_STR_REPLACE_TOOL_NAME,
                             type=tool.type or TEXT_EDITOR_STR_REPLACE_TOOL_NAME + "_v1",
                         )
@@ -81,8 +76,9 @@ class TextEditorProcessor(ToolProcessor):
                     request,
                     tool,
                     [
-                        self._builder.build_create_tool(
+                        await self._builder.build_create_tool(
                             session_id,
+                            bundles=bundles,
                             name=tool.name or TEXT_EDITOR_CREATE_TOOL_NAME,
                             type=tool.type or TEXT_EDITOR_CREATE_TOOL_NAME + "_v1",
                         )
@@ -93,8 +89,9 @@ class TextEditorProcessor(ToolProcessor):
                     request,
                     tool,
                     [
-                        self._builder.build_insert_tool(
+                        await self._builder.build_insert_tool(
                             session_id,
+                            bundles=bundles,
                             name=tool.name or TEXT_EDITOR_INSERT_TOOL_NAME,
                             type=tool.type or TEXT_EDITOR_INSERT_TOOL_NAME + "_v1",
                         )

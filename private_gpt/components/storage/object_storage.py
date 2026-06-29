@@ -1,11 +1,19 @@
+from __future__ import annotations
+
 import shutil
 from abc import ABC, abstractmethod
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+import magic
 from anyio import to_thread
 
-from private_gpt.components.storage.models import StoredFile
-from private_gpt.components.storage.s3_helper import S3Helper
+from private_gpt.components.storage.models import FileInfo
+
+if TYPE_CHECKING:
+    from private_gpt.components.storage.models import StoredFile
+    from private_gpt.components.storage.s3_helper import S3Helper
 
 
 class ObjectStorage(ABC):
@@ -19,6 +27,37 @@ class ObjectStorage(ABC):
 
     @abstractmethod
     async def read_file(self, prefix: str, path: str) -> bytes:
+        ...
+
+    @abstractmethod
+    async def list_files(self, prefix: str) -> list[str]:
+        """List all file paths relative to prefix."""
+        ...
+
+    @abstractmethod
+    async def write_file(
+        self,
+        prefix: str,
+        path: str,
+        content: bytes,
+        mime_type: str = "application/octet-stream",
+    ) -> None:
+        """Write a single file at prefix/path. Creates parent directories as needed."""
+        ...
+
+    @abstractmethod
+    async def stat_file(self, prefix: str, path: str) -> FileInfo | None:
+        """Return metadata for a single file, or None if it does not exist."""
+        ...
+
+    @abstractmethod
+    async def list_files_meta(self, prefix: str) -> list[FileInfo]:
+        """List files under prefix with metadata (non-recursive, top-level only)."""
+        ...
+
+    @abstractmethod
+    async def delete_file(self, prefix: str, path: str) -> bool:
+        """Delete a single file. Returns True if the file existed and was deleted."""
         ...
 
 
@@ -49,6 +88,84 @@ class LocalObjectStorage(ObjectStorage):
     def _read_file_sync(self, prefix: str, path: str) -> bytes:
         target = Path(self._root_path) / prefix / path
         return target.read_bytes()
+
+    async def list_files(self, prefix: str) -> list[str]:
+        return await to_thread.run_sync(self._list_files_sync, prefix)
+
+    def _list_files_sync(self, prefix: str) -> list[str]:
+        root = Path(self._root_path) / prefix
+        if not root.exists():
+            return []
+        return [str(p.relative_to(root)) for p in root.rglob("*") if p.is_file()]
+
+    async def write_file(
+        self,
+        prefix: str,
+        path: str,
+        content: bytes,
+        mime_type: str = "application/octet-stream",
+    ) -> None:
+        await to_thread.run_sync(self._write_file_sync, prefix, path, content)
+
+    def _write_file_sync(self, prefix: str, path: str, content: bytes) -> None:
+        dest = Path(self._root_path) / prefix / path
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(content)
+
+    async def stat_file(self, prefix: str, path: str) -> FileInfo | None:
+        return await to_thread.run_sync(self._stat_file_sync, prefix, path)
+
+    def _stat_file_sync(self, prefix: str, path: str) -> FileInfo | None:
+        target = Path(self._root_path) / prefix / path
+        if not target.exists() or not target.is_file():
+            return None
+        stat = target.stat()
+        try:
+            mime = magic.Magic(mime=True).from_file(str(target))
+        except Exception:
+            mime = "application/octet-stream"
+        return FileInfo(
+            path=path,
+            size_bytes=stat.st_size,
+            created_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
+            mime_type=mime,
+        )
+
+    async def list_files_meta(self, prefix: str) -> list[FileInfo]:
+        return await to_thread.run_sync(self._list_files_meta_sync, prefix)
+
+    def _list_files_meta_sync(self, prefix: str) -> list[FileInfo]:
+        root = Path(self._root_path) / prefix
+        if not root.exists():
+            return []
+        results: list[FileInfo] = []
+        for entry in root.iterdir():
+            if not entry.is_file():
+                continue
+            stat = entry.stat()
+            try:
+                mime = magic.Magic(mime=True).from_file(str(entry))
+            except Exception:
+                mime = "application/octet-stream"
+            results.append(
+                FileInfo(
+                    path=str(entry.relative_to(root)),
+                    size_bytes=stat.st_size,
+                    created_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
+                    mime_type=mime,
+                )
+            )
+        return results
+
+    async def delete_file(self, prefix: str, path: str) -> bool:
+        return await to_thread.run_sync(self._delete_file_sync, prefix, path)
+
+    def _delete_file_sync(self, prefix: str, path: str) -> bool:
+        target = Path(self._root_path) / prefix / path
+        if not target.exists():
+            return False
+        target.unlink()
+        return True
 
 
 class S3ObjectStorage(ObjectStorage):
@@ -88,3 +205,92 @@ class S3ObjectStorage(ObjectStorage):
         s3_url = f"s3://{self._bucket_name}/{prefix}/{path}"
         binary = self._s3_helper.load_file_from_s3(s3_url)
         return binary.read()
+
+    async def list_files(self, prefix: str) -> list[str]:
+        return await to_thread.run_sync(self._list_files_sync, prefix)
+
+    def _list_files_sync(self, prefix: str) -> list[str]:
+        keys = self._s3_helper.list_objects_by_prefix(
+            bucket_name=self._bucket_name,
+            prefix=prefix,
+        )
+        return [k[len(prefix) :].lstrip("/") for k in keys]
+
+    async def write_file(
+        self,
+        prefix: str,
+        path: str,
+        content: bytes,
+        mime_type: str = "application/octet-stream",
+    ) -> None:
+        await to_thread.run_sync(
+            self._write_file_sync, prefix, path, content, mime_type
+        )
+
+    def _write_file_sync(
+        self, prefix: str, path: str, content: bytes, mime_type: str
+    ) -> None:
+        self._s3_helper.upload_file_to_s3(
+            filename=path,
+            bytes_data=content,
+            bucket_name=self._bucket_name,
+            object_name=f"{prefix}/{path}",
+            mime_type=mime_type,
+        )
+
+    async def stat_file(self, prefix: str, path: str) -> FileInfo | None:
+        return await to_thread.run_sync(self._stat_file_sync, prefix, path)
+
+    def _stat_file_sync(self, prefix: str, path: str) -> FileInfo | None:
+        meta = self._s3_helper.head_object(self._bucket_name, f"{prefix}/{path}")
+        if meta is None:
+            return None
+        last_modified = meta.get("last_modified")
+        created_at = (
+            last_modified
+            if isinstance(last_modified, datetime)
+            else datetime.now(tz=UTC)
+        )
+        return FileInfo(
+            path=path,
+            size_bytes=int(meta.get("content_length", 0)),
+            created_at=created_at,
+            mime_type=str(meta.get("content_type", "application/octet-stream")),
+        )
+
+    async def list_files_meta(self, prefix: str) -> list[FileInfo]:
+        return await to_thread.run_sync(self._list_files_meta_sync, prefix)
+
+    def _list_files_meta_sync(self, prefix: str) -> list[FileInfo]:
+        keys = self._s3_helper.list_objects_by_prefix(
+            bucket_name=self._bucket_name,
+            prefix=prefix,
+        )
+        results: list[FileInfo] = []
+        for key in keys:
+            relative_path = key[len(prefix) :].lstrip("/")
+            if not relative_path:
+                continue
+            meta = self._s3_helper.head_object(self._bucket_name, key)
+            if meta is None:
+                continue
+            last_modified = meta.get("last_modified")
+            created_at = (
+                last_modified
+                if isinstance(last_modified, datetime)
+                else datetime.now(tz=UTC)
+            )
+            results.append(
+                FileInfo(
+                    path=relative_path,
+                    size_bytes=int(meta.get("content_length", 0)),
+                    created_at=created_at,
+                    mime_type=str(meta.get("content_type", "application/octet-stream")),
+                )
+            )
+        return results
+
+    async def delete_file(self, prefix: str, path: str) -> bool:
+        return await to_thread.run_sync(
+            self._s3_helper.delete_key, self._bucket_name, f"{prefix}/{path}"
+        )

@@ -1473,10 +1473,6 @@ class SandboxSettings(BaseModel):
         description="Sandbox provider registered by the application layer. "
         "Defaults to null (disabled); set explicitly to enable sandbox usage.",
     )
-    base_url: str | None = Field(
-        default=None,
-        description="Base URL for remote sandbox providers.",
-    )
     timeout: int = Field(
         default=60,
         description="Default sandbox operation timeout in seconds.",
@@ -1488,6 +1484,29 @@ class SandboxSettings(BaseModel):
         if isinstance(value, str) and not value.strip():
             return None
         return value
+
+
+class BashSettings(BaseModel):
+    cpu_limit_seconds: int = Field(
+        default=30,
+        description="RLIMIT_CPU applied to each isolated bash subprocess.",
+    )
+    memory_limit_mb: int = Field(
+        default=512,
+        description="RLIMIT_AS in MB applied to each isolated bash subprocess.",
+    )
+    fsize_limit_mb: int = Field(
+        default=50,
+        description="RLIMIT_FSIZE in MB applied to each isolated bash subprocess.",
+    )
+    nproc_limit: int = Field(
+        default=50,
+        description="RLIMIT_NPROC applied to each isolated bash subprocess.",
+    )
+    output_cap_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        description="Hard cap on raw subprocess output bytes before LLM truncation.",
+    )
 
 
 class CodeExecutionSettings(BaseModel):
@@ -1508,6 +1527,27 @@ class CodeExecutionSettings(BaseModel):
     max_output_bytes: int = Field(
         default=1_048_576,
         description="Maximum output size to return from code execution tools.",
+    )
+    session_ttl_seconds: int = Field(
+        default=1800,
+        description="Idle TTL in seconds before a local session kernel is destroyed. "
+        "Workspace files are preserved for restart.",
+    )
+    vfs_sessions_prefix: str = Field(
+        default="sessions",
+        description="Path prefix inside the storage bucket for session workspace data.",
+    )
+    volume_root: str | None = Field(
+        default=None,
+        description="Host filesystem root for session volumes. "
+        "When set, session upload/output directories are created under "
+        "{volume_root}/{vfs_sessions_prefix}/{session_id}/. "
+        "Required by the Files API when storage_provider is 'local'.",
+    )
+    storage_provider: Literal["local", "s3"] = Field(
+        default="local",
+        description="Storage backend for session files (Files API). "
+        "Use 'local' with volume_root set, or 's3' with s3.durable_bucket_name set.",
     )
 
     @field_validator("provider", mode="before")
@@ -1625,19 +1665,15 @@ class Settings(BaseModel):
     phoenix: ArizePhoenixSettings
     opik: OpikSettings
     sandbox: SandboxSettings
-    code_execution: CodeExecutionSettings = Field(default_factory=CodeExecutionSettings)
+    bash: BashSettings
+    code_execution: CodeExecutionSettings
     web_fetch: WebFetchSettings
     web_search: WebSearchSettings
     database_query: DatabaseQuerySettings
     brave: BraveSearchSettings
-    skills: SkillSettings = Field(default_factory=SkillSettings)
-    transformation: TransformationSettings = Field(
-        default_factory=TransformationSettings
-    )
-    semaphore: SemaphoreSettings = Field(
-        default_factory=SemaphoreSettings,
-        description="Settings for the semaphore manager",
-    )
+    skills: SkillSettings
+    transformation: TransformationSettings
+    semaphore: SemaphoreSettings
 
 
 """

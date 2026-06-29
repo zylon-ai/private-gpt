@@ -7,6 +7,7 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import suppress
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from functools import partial
 from typing import Any, Literal
@@ -21,6 +22,7 @@ from private_gpt.components.chat.models.chat_config_models import (
     ChatRequest,
     ResolvedChatRequest,
 )
+from private_gpt.components.container_registry import ContainerRegistry
 from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
     ChatRequestLoopInterceptor,
@@ -64,7 +66,9 @@ from private_gpt.components.llm.custom.base import StructuredOutputsParams, Zylo
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.models import ReasoningEffort
 from private_gpt.components.llm.priorities import DefinedPriorities
+from private_gpt.components.tools.processors.base import _session_id
 from private_gpt.events.models import (
+    Container,
     Event,
     InputJSONDelta,
     MessageOutputDelta,
@@ -182,6 +186,7 @@ class ChatLoopEngine:
         request_interceptors: list[ChatRequestLoopInterceptor] | None = None,
         response_interceptors: list[ChatResponseLoopInterceptor] | None = None,
         max_iterations: int = 40,
+        container_registry: ContainerRegistry | None = None,
     ) -> None:
         self._llm_component = llm_component
         self._request_interceptors = [
@@ -195,6 +200,7 @@ class ChatLoopEngine:
             EnsureTimestampInContentBlocksInterceptor(),
         ]
         self._max_iterations = max_iterations
+        self._container_registry = container_registry
 
     async def run(
         self,
@@ -425,7 +431,10 @@ class ChatLoopEngine:
             run.stopped = True
             handler.emit(
                 RawMessageDeltaEvent(
-                    delta=MessageOutputDelta(stop_reason=stop_reason),
+                    delta=MessageOutputDelta(
+                        stop_reason=stop_reason,
+                        container=self._build_container(run),
+                    ),
                     usage=self._build_total_usage(run),
                 )
             )
@@ -982,4 +991,23 @@ class ChatLoopEngine:
         return Usage(
             input_tokens=run.total_input_tokens if run.has_input_usage else None,
             output_tokens=run.total_output_tokens if run.has_output_usage else None,
+        )
+
+    def _build_container(self, run: _LoopRun) -> Container | None:
+        """Return a container handle if a persistent session was registered."""
+        if self._container_registry is None:
+            return None
+
+        request = run.state.input.request
+        if not isinstance(request, ResolvedChatRequest):
+            return None
+
+        session_id = _session_id(request)
+        ttl = self._container_registry.get_ttl(session_id)
+        if ttl is None:
+            return None
+
+        return Container(
+            id=session_id,
+            expires_at=datetime.now(tz=UTC) + timedelta(seconds=ttl),
         )

@@ -18,6 +18,7 @@ from private_gpt.events.models._content_blocks import (
     ContainerUploadBlock,
     DocumentBlock,
     ImageBlock,
+    LocalResourceBlock,
     MidConvSystemBlock,
     RedactedThinkingBlock,
     ResourceBlock,
@@ -57,6 +58,7 @@ from private_gpt.events.models._events import (
     RawMessageStopEvent,
 )
 from private_gpt.events.models._message import (
+    Container,
     Message,
     MessageOutputDelta,
     StopReasonEnum,
@@ -120,6 +122,7 @@ _types = [
     RawMessageStartEvent,
     RawMessageStopEvent,
     # Messages
+    Container,
     Message,
     MessageOutputDelta,
     StopReasonEnum,
@@ -128,6 +131,7 @@ _types = [
     ToolResultBlock,
     # Custom Zylon Elements
     BinaryBlock,
+    LocalResourceBlock,
     ResourceBlock,
     ResourceLinkBlock,
     SourceBlock,
@@ -142,6 +146,7 @@ __all__ = [
     "CacheControlEphemeral",
     "CacheableContentBlock",
     "CitationsDelta",
+    "Container",
     "ContainerUploadBlock",
     "ContentBlockDeltaType",
     "ContentBlockType",
@@ -153,6 +158,7 @@ __all__ = [
     "FatalError",
     "ImageBlock",
     "InputJSONDelta",
+    "LocalResourceBlock",
     "Message",
     "MessageOutputDelta",
     "MidConvSystemBlock",

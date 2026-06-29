@@ -612,6 +612,21 @@ class BinaryBlock(BaseContentBlock, ExtendedContentProtocol):
         return DocumentBlock.from_binary_block(self)
 
 
+class LocalResourceBlock(BaseContentBlock, StandardContentProtocol):
+    """Reference to a local file produced by code execution."""
+
+    type: Literal["local_resource"] = Field(default="local_resource")
+    file_path: str = Field(
+        description="Absolute path to the file inside the execution environment"
+    )
+    file_id: str | None = Field(
+        default=None,
+        description="Base64url-encoded storage file ID used to download the file via the files API",
+    )
+    name: str = Field(description="Human-readable file name (stem, without extension)")
+    mime_type: str = Field(description="MIME type of the file")
+
+
 class ResourceLinkBlock(BaseContentBlock, StandardContentProtocol):
     """Reference to an external resource by URI (not embedded)."""
 
@@ -657,6 +672,7 @@ BasicContentBlockType = (
     | ImageBlock
     | AudioBlock
     | BinaryBlock
+    | LocalResourceBlock
     | ResourceLinkBlock
     | ResourceBlock
     | SourceBlock

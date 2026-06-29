@@ -3,6 +3,13 @@ from typing import TypeVar
 T = TypeVar("T")
 
 
+def truncate_output(text: str, max_bytes: int) -> str:
+    encoded = text.encode("utf-8")
+    if len(encoded) <= max_bytes:
+        return text
+    return encoded[:max_bytes].decode("utf-8", errors="ignore") + "\n...[truncated]"
+
+
 def is_list_of(
     value: object,
     typ: type[T],

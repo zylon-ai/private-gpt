@@ -98,6 +98,13 @@ class PromptConfig(BaseModel):
         default=False,
         description="Enable thinking/reasoning guidelines when thinking is enabled.",
     )
+    code_execution: bool = Field(
+        default=False,
+        description=(
+            "Enable code execution environment instructions (filesystem layout, "
+            "available paths) when any code execution tool is present."
+        ),
+    )
     skills: bool = Field(
         default=False,
         description=(

@@ -12,7 +12,10 @@ from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from private_gpt.artifact_index.vector_artifact_index import VectorArtifactIndex
 from private_gpt.chat.extensions.context_filter import ContextFilter
 from private_gpt.chat.input_models import BlobVisibilityMode
-from private_gpt.components.chat.models.chat_config_models import ToolSpec
+from private_gpt.components.chat.models.chat_config_models import (
+    ToolRequirements,
+    ToolSpec,
+)
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import IngestComponent
 from private_gpt.components.ingest.parse_component import ParseComponent
@@ -315,7 +318,7 @@ class TabularDataToolBuilder:
             )
             return await asyncio.to_thread(
                 _sync_format_results,
-                result.content,
+                result.content,  # type: ignore[attr-defined]
             )
 
         if validate == ToolValidationMode.EAGER:
@@ -327,4 +330,5 @@ class TabularDataToolBuilder:
             runtime=runtime,
             description=description,
             async_fn=tabular_data_analysis,
+            requirements=[ToolRequirements.SANDBOX],
         )

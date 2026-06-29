@@ -117,6 +117,7 @@ class ChatInterceptorService:
                     skills_interceptor,
                     internal_tools_interceptor,
                     skill_tool_visibility_interceptor,
+                    platform_guidelines_interceptor,
                     tool_choice_interceptor,
                     configure_tool_interceptor,
                     platform_guidelines_interceptor,

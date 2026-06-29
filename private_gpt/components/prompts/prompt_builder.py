@@ -537,6 +537,36 @@ class PromptBuilderService:
             few_shots=few_shots,
         )
 
+    def create_code_execution_prompt(
+        self,
+        tools: list["ToolSpec"],
+        few_shots: bool = False,
+    ) -> BasePromptTemplate:
+        """Create the code execution environment instructions prompt.
+
+        Renders ``chat/tools/bash.j2`` with the canonical filesystem layout
+        sourced from ``DEFAULT_SESSION_LAYOUT`` (including access mode and
+        description) and the active tool namespace.
+        Returns an empty template when the template is missing or rendering fails.
+        """
+        from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
+        from private_gpt.components.skills.paths import SKILLS_MOUNT_ROOT
+
+        namespace = _build_tool_namespace(tools)
+        template_path = "chat/tools/bash.j2"
+        try:
+            template = self.template_service.get_template(template_path)
+            rendered = template.render(
+                namespace=namespace,
+                few_shots=str(few_shots),
+                layout=DEFAULT_SESSION_LAYOUT,
+                skills_prefix=SKILLS_MOUNT_ROOT,
+            )
+            return PromptTemplate(template=rendered.strip())
+        except Exception as exc:
+            logger.warning("PromptBuilder: failed to render %s: %s", template_path, exc)
+            return PromptTemplate(template="")
+
     def create_skills_prompt(
         self,
         tools: list["ToolSpec"],

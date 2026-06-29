@@ -1,4 +1,5 @@
 import builtins
+import enum
 import inspect
 import re
 from collections.abc import Awaitable, Callable
@@ -15,6 +16,7 @@ from private_gpt.chat.input_models import BlobVisibilityMode, PromptConfig
 from private_gpt.chat.schema_models import create_model_from_json_schema
 from private_gpt.components.engines.citations.types import Citation, Document
 from private_gpt.components.llm.llm_helper import TokenizerFn
+from private_gpt.components.sandbox.content_bundle import ContentBundle
 from private_gpt.components.tools.tool_names import resolve_internal_tool_name
 from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.server.mcp.config import McpServerConfig
@@ -105,6 +107,10 @@ async def _dummy_tool_async_fn(**kwargs: Any) -> Any:
     )
 
 
+class ToolRequirements(enum.StrEnum):
+    SANDBOX = "sandbox"
+
+
 class ToolSpec(BaseModel):
     name: str | None = Field(description="Unique name identifier for the tool")
     type: str | None = Field(
@@ -154,6 +160,10 @@ class ToolSpec(BaseModel):
             "a value here overrides that default. Set to an empty string to disable."
         ),
     )
+    requirements: list[ToolRequirements] = Field(
+        default_factory=list,
+        description="List of requirements for the tool, e.g., SANDBOX",
+    )
 
     def get_original_tool_name(self) -> str:
         """Get the original tool name without version suffix."""
@@ -179,6 +189,7 @@ class ToolSpec(BaseModel):
         async_callback: AsyncCallable | None = None,
         partial_params: dict[str, Any] | None = None,
         instructions: str | None = None,
+        requirements: list[ToolRequirements] | None = None,
     ) -> "ToolSpec":
         """Create a ToolSpec from default parameters."""
         if not input_schema and not async_fn:
@@ -202,6 +213,7 @@ class ToolSpec(BaseModel):
             async_callback=async_callback,
             partial_params=partial_params,
             instructions=instructions,
+            requirements=requirements or [],
         )
 
     @classmethod
@@ -335,6 +347,10 @@ class ContextConfig(BaseModel):
     user_id: str | None = Field(
         default=None,
         description="Opaque user identifier for the chat session.",
+    )
+    container: str | None = Field(
+        default=None,
+        description="Container identifier for reuse across requests.",
     )
     maximum_loaded_skills: int | None = Field(
         default=None,
@@ -490,14 +506,26 @@ class ResolvedToolConfig(ToolConfig):
 class ResolvedContextConfig(ContextConfig):
     """Consolidated version of ContextConfig."""
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     documents: list[Document] | None = Field(
         default=None,
         description="List of documents to use as context in the chat.",
+    )
+    content_bundles: list[ContentBundle] = Field(
+        default_factory=list,
+        description=(
+            "Content bundles transferred from ContentBundlesLayer. "
+            "Consumed by tool builders (e.g. BashToolBuilder) to mount skills."
+        ),
+        exclude=True,
     )
 
 
 class ResolvedChatRequest(ChatRequest):
     """Consolidated version of ChatRequest with flattened fields for easier access."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     system: ResolvedSystemConfig = Field(
         default_factory=ResolvedSystemConfig,

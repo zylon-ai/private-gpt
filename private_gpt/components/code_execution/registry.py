@@ -6,7 +6,7 @@ from private_gpt.components.code_execution.local import LocalCodeExecutionProvid
 from private_gpt.settings.settings import Settings
 
 _PROVIDERS: dict[str, CodeExecutionProviderFactory] = {
-    "local": LocalCodeExecutionProvider
+    "local": LocalCodeExecutionProvider,
 }
 
 

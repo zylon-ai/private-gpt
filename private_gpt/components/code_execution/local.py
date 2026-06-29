@@ -1,231 +1,91 @@
-import shutil
-from pathlib import Path
+from __future__ import annotations
 
-import anyio
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from injector import inject
 
 from private_gpt.components.code_execution.base import (
-    BashExecutionResult,
     CodeExecutionProvider,
-    CodeExecutionSession,
-    FileOperationResult,
 )
-from private_gpt.components.sandbox.base import SandboxExecOptions
-from private_gpt.components.sandbox.local import LocalSandboxSession
-from private_gpt.components.sandbox.registry import SandboxProviderRegistry
+from private_gpt.components.code_execution.sandbox_session import (
+    SandboxCodeExecutionSession,
+)
+from private_gpt.components.environment.content_mounter import (
+    FetchContentMounter,
+    InlineContentMounter,
+    LocalStorageContentMounter,
+)
+from private_gpt.components.environment.manager import EnvironmentManager
+from private_gpt.components.environment.mounter import LocalDirMounter
+from private_gpt.components.sandbox.local import LocalSandboxProvider
 from private_gpt.settings.settings import Settings
 
-
-class LocalCodeExecutionSession(CodeExecutionSession):
-    def __init__(self, sandbox_session: LocalSandboxSession, workspace: Path) -> None:
-        self._sandbox = sandbox_session
-        self._workspace = workspace.resolve()
-        self._workspace.mkdir(parents=True, exist_ok=True)
-
-    def _resolve_path(self, user_path: str) -> Path:
-        cleaned_path = user_path.lstrip("/")
-        candidate = (self._workspace / cleaned_path).resolve()
-        if candidate != self._workspace and self._workspace not in candidate.parents:
-            raise ValueError(f"Path '{user_path}' escapes the session workspace.")
-        return candidate
-
-    async def execute_bash(
-        self, command: str, timeout: int | None = None, restart: bool = False
-    ) -> BashExecutionResult:
-        if restart:
-            await anyio.to_thread.run_sync(
-                lambda: shutil.rmtree(self._workspace, ignore_errors=True)
-            )
-            await anyio.to_thread.run_sync(
-                lambda: self._workspace.mkdir(parents=True, exist_ok=True)
-            )
-
-        result = await anyio.to_thread.run_sync(
-            lambda: self._sandbox.exec(
-                command,
-                SandboxExecOptions(
-                    cwd=str(self._workspace),
-                    timeout=timeout,
-                ),
-            )
-        )
-        return BashExecutionResult(
-            success=result.success,
-            stdout=result.stdout,
-            stderr=result.stderr,
-            exit_code=result.exit_code,
-            execution_time_ms=result.execution_time_ms,
-        )
-
-    async def view(
-        self, path: str, view_range: tuple[int, int] | None = None
-    ) -> FileOperationResult:
-        try:
-            target = self._resolve_path(path)
-            if not await anyio.to_thread.run_sync(target.exists):
-                return FileOperationResult(
-                    success=False,
-                    error=f"File not found: {path}",
-                )
-
-            if await anyio.to_thread.run_sync(target.is_dir):
-                entries = await anyio.to_thread.run_sync(
-                    lambda: [
-                        (entry.name, entry.is_dir())
-                        for entry in sorted(
-                            target.iterdir(), key=lambda item: item.name
-                        )
-                    ]
-                )
-                lines = [
-                    f"[dir] {name}" if is_dir else f"[file] {name}"
-                    for name, is_dir in entries
-                ]
-                return FileOperationResult(success=True, output="\n".join(lines))
-
-            text = await anyio.to_thread.run_sync(
-                lambda: target.read_text(encoding="utf-8")
-            )
-            lines = text.splitlines()
-            base_line = 1
-            if view_range is not None:
-                start, end = view_range
-                start_index = max(start, 1) - 1
-                end_index = None if end == -1 else max(end, 0)
-                lines = lines[start_index:end_index]
-                base_line = start_index + 1
-
-            output = "\n".join(
-                f"{index}: {line}" for index, line in enumerate(lines, start=base_line)
-            )
-            return FileOperationResult(success=True, output=output)
-        except Exception as exc:
-            return FileOperationResult(success=False, error=str(exc))
-
-    async def str_replace(
-        self, path: str, old_str: str, new_str: str
-    ) -> FileOperationResult:
-        try:
-            target = self._resolve_path(path)
-            if not await anyio.to_thread.run_sync(target.exists):
-                return FileOperationResult(
-                    success=False,
-                    error=f"File not found: {path}",
-                )
-
-            text = await anyio.to_thread.run_sync(
-                lambda: target.read_text(encoding="utf-8")
-            )
-            occurrences = text.count(old_str)
-            if occurrences == 0:
-                return FileOperationResult(
-                    success=False,
-                    error="old_str was not found in the file.",
-                )
-            if occurrences > 1:
-                return FileOperationResult(
-                    success=False,
-                    error="old_str appears more than once in the file.",
-                )
-
-            updated = text.replace(old_str, new_str, 1)
-            await anyio.to_thread.run_sync(
-                lambda: target.write_text(updated, encoding="utf-8")
-            )
-            return FileOperationResult(success=True, output=f"Updated {path}")
-        except Exception as exc:
-            return FileOperationResult(success=False, error=str(exc))
-
-    async def create(self, path: str, file_text: str) -> FileOperationResult:
-        try:
-            target = self._resolve_path(path)
-            if await anyio.to_thread.run_sync(target.exists):
-                return FileOperationResult(
-                    success=False,
-                    error=f"File already exists: {path}",
-                )
-
-            await anyio.to_thread.run_sync(
-                lambda: target.parent.mkdir(parents=True, exist_ok=True)
-            )
-            await anyio.to_thread.run_sync(
-                lambda: target.write_text(file_text, encoding="utf-8")
-            )
-            return FileOperationResult(success=True, output=f"Created {path}")
-        except Exception as exc:
-            return FileOperationResult(success=False, error=str(exc))
-
-    async def insert(
-        self, path: str, insert_line: int, new_str: str
-    ) -> FileOperationResult:
-        try:
-            target = self._resolve_path(path)
-            if not await anyio.to_thread.run_sync(target.exists):
-                return FileOperationResult(
-                    success=False,
-                    error=f"File not found: {path}",
-                )
-
-            text = await anyio.to_thread.run_sync(
-                lambda: target.read_text(encoding="utf-8")
-            )
-            lines = text.splitlines()
-            if insert_line < 0 or insert_line > len(lines):
-                return FileOperationResult(
-                    success=False,
-                    error=f"insert_line {insert_line} is out of range.",
-                )
-
-            insertion = new_str.splitlines()
-            updated_lines = lines[:insert_line] + insertion + lines[insert_line:]
-            updated = "\n".join(updated_lines)
-            if text.endswith("\n") or new_str.endswith("\n"):
-                updated += "\n"
-            await anyio.to_thread.run_sync(
-                lambda: target.write_text(updated, encoding="utf-8")
-            )
-            return FileOperationResult(success=True, output=f"Updated {path}")
-        except Exception as exc:
-            return FileOperationResult(success=False, error=str(exc))
-
-    async def close(self) -> None:
-        await anyio.to_thread.run_sync(self._sandbox.close)
-
-    @property
-    def sandbox_session(self) -> LocalSandboxSession:
-        return self._sandbox
-
-    @property
-    def workspace(self) -> Path:
-        return self._workspace
+if TYPE_CHECKING:
+    from private_gpt.components.code_execution.base import CodeExecutionSession
+    from private_gpt.components.environment.content_mounter import ContentMounter
+    from private_gpt.components.environment.mounter import LayoutMounter
+    from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
 class LocalCodeExecutionProvider(CodeExecutionProvider):
+    """Code execution tool over locally managed environments.
+
+    A thin adapter: the EnvironmentManager owns session lifecycle, the
+    LocalDirMounter owns the host directories (which survive sandbox
+    restarts), and the local sandbox provider owns execution.
+    """
+
+    @inject
     def __init__(self, settings: Settings) -> None:
         super().__init__(settings)
-        self._sandbox_provider = SandboxProviderRegistry(settings).get_provider("local")
-        self._base_path = Path(
+        base = Path(
             settings.code_execution.workspace_path
             or Path(settings.data.local_data_folder) / "code_execution_workspaces"
         )
+        self._manager = EnvironmentManager(
+            sandbox_provider=LocalSandboxProvider(settings),
+            layout_mounter=self._make_layout_mounter(base),
+            content_mounters=self._make_content_mounters(),
+            ttl_seconds=settings.code_execution.session_ttl_seconds,
+        )
 
-    def create_session(self, session_id: str) -> CodeExecutionSession:
-        sandbox_session = self._sandbox_provider.create_session(
-            user_id=session_id,
-            timeout=self.settings.code_execution.timeout,
-        )
-        if not isinstance(sandbox_session, LocalSandboxSession):
-            raise TypeError("Local code execution requires a LocalSandboxSession.")
-        sandbox_session.start()
-        workspace = self._base_path / session_id
-        return LocalCodeExecutionSession(
-            sandbox_session=sandbox_session,
-            workspace=workspace,
-        )
+    def _make_layout_mounter(self, base: Path) -> LayoutMounter:
+        """Factory hook — subclasses override to inject cloud-backed storage.
+
+        When volume_root is set (Files API enabled), sessions are rooted there
+        so that files uploaded via the Files API are accessible to the sandbox
+        at the same host paths where LocalObjectStorage writes them.
+        """
+        volume_root = self.settings.code_execution.volume_root
+        if volume_root is not None:
+            return LocalDirMounter(Path(volume_root))
+        return LocalDirMounter(base)
+
+    def _make_content_mounters(self) -> list[ContentMounter]:
+        """Build the ordered content-mounter list for this deployment.
+
+        When skills are stored locally, LocalStorageContentMounter provides a
+        direct host-path volume (no fetch needed). FetchContentMounter is the
+        universal fallback for any StoredBundle. InlineContentMounter handles
+        plain ContentBundle instances whose files are already in memory.
+        """
+        mounters: list[ContentMounter] = []
+        if self.settings.skills.storage_provider == "local":
+            storage_root = Path(self.settings.data.local_data_folder) / "storage"
+            mounters.append(LocalStorageContentMounter(storage_root))
+        mounters.append(FetchContentMounter())
+        mounters.append(InlineContentMounter())
+        return mounters
+
+    async def create_session(
+        self,
+        session_id: str,
+        extra_bundles: list[ContentBundle] | None = None,
+    ) -> SandboxCodeExecutionSession:
+        env = await self._manager.acquire(session_id, extra_bundles)
+        return SandboxCodeExecutionSession(env)
 
     def delete_session(self, session: CodeExecutionSession) -> None:
-        if not isinstance(session, LocalCodeExecutionSession):
-            raise TypeError(
-                "Local code execution requires a LocalCodeExecutionSession."
-            )
-        self._sandbox_provider.delete_session(session.sandbox_session)
-        shutil.rmtree(session.workspace, ignore_errors=True)
+        if isinstance(session, SandboxCodeExecutionSession):
+            self._manager.release(session._id)

@@ -34,12 +34,12 @@ async def test_bash_tool_builder_executes_session_command() -> None:
     )
     builder = BashToolBuilder(
         code_execution_component=SimpleNamespace(
-            get_or_create_session=lambda _session_id: session
+            get_or_create_session=AsyncMock(return_value=session)
         ),
         settings=_settings(),
     )
 
-    tool = builder.build_tool("corr-1")
+    tool = await builder.build_tool("corr-1")
     result = await tool.async_fn(command="echo ok")
 
     session.execute_bash.assert_awaited_once_with(
@@ -68,15 +68,15 @@ async def test_text_editor_tool_builder_wraps_file_operations() -> None:
     )
     builder = TextEditorToolBuilder(
         code_execution_component=SimpleNamespace(
-            get_or_create_session=lambda _session_id: session
+            get_or_create_session=AsyncMock(return_value=session)
         ),
         settings=_settings(),
     )
 
-    view_tool = builder.build_view_tool("corr-2")
-    replace_tool = builder.build_str_replace_tool("corr-2")
-    create_tool = builder.build_create_tool("corr-2")
-    insert_tool = builder.build_insert_tool("corr-2")
+    view_tool = await builder.build_view_tool("corr-2")
+    replace_tool = await builder.build_str_replace_tool("corr-2")
+    create_tool = await builder.build_create_tool("corr-2")
+    insert_tool = await builder.build_insert_tool("corr-2")
 
     view_result = await view_tool.async_fn(path="file.txt", view_range=[1, 1])
     replace_result = await replace_tool.async_fn(

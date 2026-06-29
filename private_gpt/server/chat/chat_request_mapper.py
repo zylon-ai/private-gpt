@@ -1,4 +1,5 @@
 import re
+import uuid
 from typing import Any, Literal
 
 from injector import inject, singleton
@@ -210,7 +211,10 @@ class ChatRequestMapper:
             tool_context=body.tool_context or [],
             context=ResolvedContextConfig(
                 correlation_id=body.correlation_id,
-                user_id=body.metadata.user_id if body.metadata else None,
+                user_id=body.metadata.user_id
+                if body.metadata and body.metadata.user_id
+                else str(uuid.uuid4()),
+                container=body.container,
                 maximum_loaded_skills=(
                     body.maximum_loaded_skills
                     if body.maximum_loaded_skills is not None

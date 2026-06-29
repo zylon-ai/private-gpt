@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.context.models.layer_type import LayerType
 from private_gpt.components.engines.citations.types import Document
+from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
 class BaseContextLayer(BaseModel):
@@ -68,6 +69,15 @@ class SkillCatalogEntry(BaseModel):
     name: str = Field(description="Skill frontmatter name.")
     description: str = Field(description="Skill frontmatter description.")
     loading: Literal["eager", "lazy"] = Field(description="Skill loading mode.")
+    location: str = Field(
+        default="",
+        description="Path to the skill's SKILL.md inside the execution "
+        "environment, e.g. /mnt/skills/pdf/SKILL.md.",
+    )
+    resources: list[str] = Field(
+        default_factory=list,
+        description="Bundled file paths relative to the skill directory.",
+    )
 
 
 class SkillCatalogLayer(BaseContextLayer):
@@ -85,11 +95,23 @@ class SkillCatalogLayer(BaseContextLayer):
     def render(self) -> str:
         if not self.entries:
             return ""
-        lines = [
-            f'  <skill name="{entry.name}" description="{entry.description}" />'
-            for entry in self.entries
-        ]
-        return "<available_skills>\n" + "\n".join(lines) + "\n</available_skills>"
+        lines = ["<available_skills>"]
+        for entry in self.entries:
+            lines.append("  <skill>")
+            lines.append(f"    <name>{entry.name}</name>")
+            lines.append(f"    <description>{entry.description}</description>")
+            if entry.location:
+                lines.append(f"    <location>{entry.location}</location>")
+            if entry.resources:
+                lines.append("    <resources>")
+                lines.extend(
+                    f"      <resource>{resource}</resource>"
+                    for resource in entry.resources
+                )
+                lines.append("    </resources>")
+            lines.append("  </skill>")
+        lines.append("</available_skills>")
+        return "\n".join(lines)
 
 
 class SkillBodyLayer(BaseContextLayer):
@@ -103,10 +125,24 @@ class SkillBodyLayer(BaseContextLayer):
     name: str = Field(description="Skill frontmatter name.")
     version: str = Field(description="Skill version token.")
     instructions: str = Field(description="Skill instruction body content.")
+    location: str = Field(
+        default="",
+        description="Skill directory inside the execution environment, "
+        "e.g. /mnt/skills/pdf/.",
+    )
+    resources: list[str] = Field(
+        default_factory=list,
+        description="Bundled file paths relative to the skill directory.",
+    )
 
     def render(self) -> str:
         body = re.sub(r"^#{1,6}\s+.*$", "", self.instructions, flags=re.MULTILINE)
         body = re.sub(r"\n{3,}", "\n\n", body).strip()
+        if self.location:
+            footer = f"Skill directory: {self.location}"
+            if self.resources:
+                footer += " (resources: " + ", ".join(self.resources) + ")"
+            body = f"{body}\n\n{footer}" if body else footer
         return body
 
 
@@ -164,6 +200,21 @@ class ContextPromptLayer(BaseContextLayer):
         return self.text
 
 
+class ContentBundlesLayer(BaseContextLayer):
+    """Skill content bundles — consumed by tool builders, not rendered."""
+
+    type: Literal[LayerType.CONTENT_BUNDLES] = Field(
+        default=LayerType.CONTENT_BUNDLES, frozen=True
+    )
+    priority: int = Field(default=2000, frozen=True)
+    bundles: list[ContentBundle] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    def render(self) -> str:
+        return ""  # state layer — never in system prompt
+
+
 AnyContextLayer = Annotated[
     UserInstructionsLayer
     | RuntimeInstructionsLayer
@@ -172,6 +223,7 @@ AnyContextLayer = Annotated[
     | SkillBodyLayer
     | ToolInstructionsLayer
     | DocumentLayer
-    | ToolDefinitionsLayer,
+    | ToolDefinitionsLayer
+    | ContentBundlesLayer,
     Field(discriminator="type"),
 ]

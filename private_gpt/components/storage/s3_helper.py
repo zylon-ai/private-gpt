@@ -118,6 +118,39 @@ class S3Helper:
 
         s3_client.delete_object(Bucket=s3_bucket, Key=s3_key)
 
+    def head_object(self, bucket_name: str, key: str) -> dict[str, Any] | None:
+        """Return metadata for a single S3 object, or None if it doesn't exist."""
+        s3_client = self._s3_client
+        if not s3_client:
+            raise RuntimeError("Failed to create S3 client")
+        try:
+            response = s3_client.head_object(Bucket=bucket_name, Key=key)
+            return {
+                "content_length": response.get("ContentLength", 0),
+                "last_modified": response.get("LastModified"),
+                "content_type": response.get(
+                    "ContentType",
+                    response.get("Metadata", {}).get(
+                        "content_type", "application/octet-stream"
+                    ),
+                ),
+            }
+        except Exception as exc:
+            # botocore ClientError with 404 → not found
+            if hasattr(exc, "response") and exc.response.get("Error", {}).get("Code") in ("404", "NoSuchKey"):  # type: ignore[union-attr]
+                return None
+            raise
+
+    def delete_key(self, bucket_name: str, key: str) -> bool:
+        """Delete a single S3 object. Returns True if it existed, False if not."""
+        s3_client = self._s3_client
+        if not s3_client:
+            raise RuntimeError("Failed to create S3 client")
+        existed = self.head_object(bucket_name, key) is not None
+        if existed:
+            s3_client.delete_object(Bucket=bucket_name, Key=key)
+        return existed
+
     def list_objects_by_prefix(self, bucket_name: str, prefix: str) -> list[str]:
         s3_client = self._s3_client
         if not s3_client:

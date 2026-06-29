@@ -266,7 +266,7 @@ class PandasAIService(BaseModel):
             for dataframe in dataframes
         ]
 
-    def _resolve_sandbox(self, sandbox: Sandbox | None = None) -> Sandbox | None:
+    async def _resolve_sandbox(self, sandbox: Sandbox | None = None) -> Sandbox | None:
         """Resolve the sandbox used for execution.
 
         Priority:
@@ -277,7 +277,7 @@ class PandasAIService(BaseModel):
         if sandbox is not None:
             return sandbox
 
-        session = self._sandbox_component.create_session()
+        session = await self._sandbox_component.create_session()
         if session is None:
             return None
 
@@ -327,7 +327,7 @@ class PandasAIService(BaseModel):
         **kwargs: Any,
     ) -> PandasAIOutput:
         smart_dataframes = self._build_smart_dataframes(dataframes)
-        sandbox = self._resolve_sandbox(kwargs.get("sandbox"))
+        sandbox = await self._resolve_sandbox(kwargs.get("sandbox"))
 
         logger.debug(
             f"Running analysis with query: '{query}' using {len(smart_dataframes)} dataframes"
@@ -343,5 +343,8 @@ class PandasAIService(BaseModel):
             f"Type: {type(result.response)} "
             f"Last code executed: {result.response.last_code_executed}"
         )
+
+        if sandbox is not None:
+            await asyncio.to_thread(sandbox.stop)
 
         return result
