@@ -27,18 +27,15 @@ jobs:
           node-version: "24"
 
       - name: Install Fern
-        run: npm install -g fern-api
+        run: npm install -g fern-api@0.31.17
 
       - name: Generate Documentation Preview with Fern
         id: generate_docs
         env:
           FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
         run: |
-          output=$(fern generate --docs --preview --log-level debug)
-          echo "$output"
-          # Extract the URL
-          preview_url=$(echo "$output" | grep -oP '(?<=Published docs to )https://[^\s]*')
-          # Set the output for the step
+          fern generate --docs --preview --log-level debug | tee /tmp/fern-output.txt
+          preview_url=$(grep -oP '(?<=Published docs to )https://[^\s]*' /tmp/fern-output.txt || true)
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
       - name: Comment PR with URL using github-actions bot
         uses: actions/github-script@v9
