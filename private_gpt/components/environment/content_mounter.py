@@ -118,6 +118,7 @@ class LocalStorageContentMounter(ContentMounter):
 
         if not isinstance(descriptor, StoredBundle):
             return None
+
         host_path = self._root / descriptor.storage_prefix
         if not host_path.is_dir() or not any(host_path.iterdir()):
             # Local directory is absent or empty — fetch from the storage backend
@@ -129,6 +130,7 @@ class LocalStorageContentMounter(ContentMounter):
                 dest = host_path / f.path
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes(f.content)
+
         return VolumeSpec(
             name=_volume_name(descriptor.canonical_path, "stored"),
             host_path=host_path,
