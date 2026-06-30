@@ -82,8 +82,9 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
         self,
         session_id: str,
         extra_bundles: list[ContentBundle] | None = None,
+        bundles_to_remove: list[str] | None = None,
     ) -> SandboxCodeExecutionSession:
-        env = await self._manager.acquire(session_id, extra_bundles)
+        env = await self._manager.acquire(session_id, extra_bundles, bundles_to_remove)
         return SandboxCodeExecutionSession(env)
 
     def delete_session(self, session: CodeExecutionSession) -> None:

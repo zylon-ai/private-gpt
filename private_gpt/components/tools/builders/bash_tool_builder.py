@@ -37,6 +37,7 @@ class BashToolBuilder:
         self,
         session_id: str,
         bundles: list[ContentBundle] | None = None,
+        bundles_to_remove: list[str] | None = None,
         name: str = BASH_TOOL_NAME,
         type: str = BASH_TOOL_NAME + "_v1",
         description: str = BASH_TOOL_FN.metadata.description,
@@ -47,7 +48,9 @@ class BashToolBuilder:
             restart: bool = False,
         ) -> list[ResultContentBlockType]:
             session = await self._component.get_or_create_session(
-                session_id, extra_bundles=bundles or None
+                session_id,
+                extra_bundles=bundles or None,
+                bundles_to_remove=bundles_to_remove or None,
             )
             if session is None:
                 raise ValueError("code_execution provider is not configured.")

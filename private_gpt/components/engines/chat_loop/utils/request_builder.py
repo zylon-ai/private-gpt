@@ -54,6 +54,7 @@ def build_request_from_context_stack(
     request.tool_config.tools = list(context_stack.all_tools())
     request.context.documents = context_stack.all_documents() or None
     request.context.content_bundles = context_stack.all_bundles()
+    request.context.bundles_to_remove = context_stack.all_bundles_to_remove()
 
     request.messages = [m for m in request.messages if m.role != MessageRole.SYSTEM]
     request.system.prompt = _render_system_prompt_text(context_stack)

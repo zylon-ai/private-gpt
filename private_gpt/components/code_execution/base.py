@@ -77,6 +77,7 @@ class CodeExecutionProvider(ABC):
         self,
         session_id: str,
         extra_bundles: list[ContentBundle] | None = None,
+        bundles_to_remove: list[str] | None = None,
     ) -> CodeExecutionSession:
         """Create a code execution session, optionally mounting extra bundles."""
 

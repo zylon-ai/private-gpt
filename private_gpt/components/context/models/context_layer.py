@@ -208,6 +208,10 @@ class ContentBundlesLayer(BaseContextLayer):
     )
     priority: int = Field(default=2000, frozen=True)
     bundles: list[ContentBundle] = Field(default_factory=list)
+    to_remove: list[str] = Field(
+        default_factory=list,
+        description="Canonical paths of skill bundles to remove from the sandbox.",
+    )
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 

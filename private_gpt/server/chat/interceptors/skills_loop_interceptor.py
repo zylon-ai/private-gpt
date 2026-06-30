@@ -41,16 +41,18 @@ logger = logging.getLogger(__name__)
 _SKILL_TOOL_CALL_NAMES = {SKILL_LOAD_TOOL_NAME, SKILL_UNLOAD_TOOL_NAME}
 
 
-def _resolve_active_skill_names(
+def _resolve_skill_states(
     conversation: list[ChatMessage],
     maximum_loaded_skills: int | None = None,
-) -> set[str]:
-    """Scan conversation for load_skill/unload_skill tool results.
+) -> tuple[set[str], set[str]]:
+    """Scan tool call history and return (active, to_remove) skill name sets.
 
-    A skill is active if load_skill was called for it and unload_skill was NOT
-    called after the most recent load.
+    active: currently loaded skills (load_skill called, no subsequent unload).
+    to_remove: skills explicitly unloaded or evicted due to capacity limit.
+    Skills never interacted with appear in neither set.
     """
     loaded_order: list[str] = []
+    to_remove: set[str] = set()
     for msg in conversation:
         if msg.role != MessageRole.TOOL:
             continue
@@ -68,15 +70,26 @@ def _resolve_active_skill_names(
             if skill_name in loaded_order:
                 loaded_order.remove(skill_name)
             loaded_order.append(skill_name)
+            to_remove.discard(skill_name)
             if (
                 maximum_loaded_skills is not None
                 and len(loaded_order) > maximum_loaded_skills
             ):
-                loaded_order.pop(0)
+                evicted = loaded_order.pop(0)
+                to_remove.add(evicted)
         elif call_name == SKILL_UNLOAD_TOOL_NAME and data.get("unloaded"):
             if skill_name in loaded_order:
                 loaded_order.remove(skill_name)
-    return set(loaded_order)
+            to_remove.add(skill_name)
+    return set(loaded_order), to_remove
+
+
+def _resolve_active_skill_names(
+    conversation: list[ChatMessage],
+    maximum_loaded_skills: int | None = None,
+) -> set[str]:
+    active, _ = _resolve_skill_states(conversation, maximum_loaded_skills)
+    return active
 
 
 @singleton
@@ -116,11 +129,12 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
             context.set_state(state)
             return
 
-        active_from_tools = _resolve_active_skill_names(
+        active_skill_names, to_remove_names = _resolve_skill_states(
             state.input.request.messages,
             maximum_loaded_skills=state.input.request.context.maximum_loaded_skills,
         )
         active_versions: list[SkillVersionEntity] = []
+        mounted_versions: list[SkillVersionEntity] = []
         catalog_entries: list[SkillCatalogEntry] = []
 
         for entry in entries:
@@ -130,9 +144,10 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
             loading = skill.loading
             if loading == "eager":
                 active_versions.append(version)
-            elif name in active_from_tools:
+            elif name in active_skill_names:
                 if self._skill_injection_mode == "system_prompt":
                     active_versions.append(version)
+                mounted_versions.append(version)
             else:
                 catalog_entries.append(
                     SkillCatalogEntry(
@@ -140,8 +155,6 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
                         name=name,
                         description=version.frontmatter.description,
                         loading=loading,
-                        location=f"{skill_mount_path(version.skill_id)}SKILL.md",
-                        resources=resources.get(version.skill_id, []),
                     )
                 )
 
@@ -149,6 +162,8 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
             stack = stack.append_layer(
                 SkillCatalogLayer(entries=catalog_entries, source="skills")
             )
+
+        mounted_names = {v.frontmatter.name for v in mounted_versions}
 
         for version in active_versions:
             try:
@@ -158,25 +173,28 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
                     "Skills: unable to load body for %s: %s", version.skill_id, exc
                 )
                 continue
+            is_mounted = version.frontmatter.name in mounted_names
             stack = stack.append_layer(
                 SkillBodyLayer(
                     skill_id=version.skill_id,
                     name=version.frontmatter.name,
                     version=version.version,
                     instructions=instructions,
-                    location=skill_mount_path(version.skill_id),
-                    resources=resources.get(version.skill_id, []),
+                    location=skill_mount_path(version.frontmatter.name)
+                    if is_mounted
+                    else "",
+                    resources=resources.get(version.skill_id, []) if is_mounted else [],
                     source=f"skill:{version.frontmatter.name}",
                 )
             )
 
-        # Bundles for all skills in the cache — mounted regardless of active state
-        # so the agent can browse skill files even for lazy-loaded skills.
-        all_versions = [entry.version for entry in entries]
-        bundles = self._skill_loader.bundles_for_versions(all_versions)
-        if bundles:
+        to_remove_paths = [skill_mount_path(n) for n in to_remove_names]
+        bundles = self._skill_loader.bundles_for_versions(mounted_versions)
+        if bundles or to_remove_paths:
             stack = stack.append_layer(
-                ContentBundlesLayer(bundles=bundles, source="skills")
+                ContentBundlesLayer(
+                    bundles=bundles, to_remove=to_remove_paths, source="skills"
+                )
             )
 
         state.input.context_stack = stack

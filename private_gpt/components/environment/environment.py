@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import shlex
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -74,6 +75,12 @@ class Environment:
         except Exception:
             self._stale = True
             raise
+
+    async def remove_bundles(self, canonical_paths: list[str]) -> None:
+        for path in canonical_paths:
+            normalized = path.rstrip("/")
+            await self.sandbox.exec(f"rm -rf {shlex.quote(normalized)}")
+            self._mounted.discard(path)
 
     async def exec(
         self, command: str, opts: SandboxExecOptions | None = None

@@ -62,6 +62,7 @@ class EnvironmentManager:
         self,
         session_id: str,
         extra_bundles: list[ContentBundle] | None = None,
+        bundles_to_remove: list[str] | None = None,
     ) -> Environment:
         # Serialize per session_id so concurrent calls cannot race into
         # creating two backend sandboxes for the same session (one would leak).
@@ -84,12 +85,14 @@ class EnvironmentManager:
                     )
                 else:
                     env.touch()
+                    if bundles_to_remove:
+                        await env.remove_bundles(bundles_to_remove)
                     if extra_bundles:
                         # Zero network calls: bundles are registered as pending
                         # and materialized lazily before the next exec().
                         env.add_pending(extra_bundles)
                     return env
-            return await self._create(session_id, extra_bundles)
+            return await self._create(session_id, extra_bundles, bundles_to_remove)
 
     def release(self, session_id: str) -> None:
         """Drop the environment and release its backend resources."""
@@ -105,6 +108,7 @@ class EnvironmentManager:
         self,
         session_id: str,
         extra_bundles: list[ContentBundle] | None,
+        bundles_to_remove: list[str] | None = None,
     ) -> Environment:
         await asyncio.to_thread(self._layout.ensure_ready)
 
@@ -163,6 +167,9 @@ class EnvironmentManager:
             content_mounters=self._content_mounters,
         )
         env._mounted.update(pre_mounted)
+
+        if bundles_to_remove:
+            await env.remove_bundles(bundles_to_remove)
 
         # Deferred bundles: not volume-mounted, will be materialized on exec().
         deferred = [

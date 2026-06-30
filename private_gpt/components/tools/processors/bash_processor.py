@@ -28,6 +28,7 @@ class BashProcessor(ToolProcessor):
                 name=tool.name or BASH_TOOL_NAME,
                 type=tool.type or BASH_TOOL_NAME + "_v1",
                 bundles=request.context.content_bundles or None,
+                bundles_to_remove=request.context.bundles_to_remove or None,
             )
             return _replace_tool(request, tool, [resolved])
         return False
