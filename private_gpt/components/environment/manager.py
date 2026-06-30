@@ -127,13 +127,18 @@ class EnvironmentManager:
 
         # Bundles that support eager volume-mounting (e.g. local storage,
         # S3FS bind-mount). Pre-populate _mounted so they skip materialize().
+        # Deduplicate by volume name: multiple skills from the same collection
+        # return the same collection-level VolumeSpec; only the first is added.
         pre_mounted: set[str] = set()
+        seen_volume_names: set[str] = set()
         for bundle in extra_bundles or []:
             mounter = self._find_content_mounter(bundle)
             if mounter:
                 vol = await mounter.prepare_volume(bundle, session_id)
                 if vol:
-                    volumes.append(vol)
+                    if vol.name not in seen_volume_names:
+                        volumes.append(vol)
+                        seen_volume_names.add(vol.name)
                     pre_mounted.add(bundle.canonical_path)
 
         sandbox = await self._provider.restore_session(
