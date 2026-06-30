@@ -136,6 +136,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
         active_versions: list[SkillVersionEntity] = []
         mounted_versions: list[SkillVersionEntity] = []
         catalog_entries: list[SkillCatalogEntry] = []
+        eager_version_ids: set[str] = set()
 
         for entry in entries:
             skill = entry.skill
@@ -144,6 +145,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
             loading = skill.loading
             if loading == "eager":
                 active_versions.append(version)
+                eager_version_ids.add(version.id)
             elif name in active_skill_names:
                 if self._skill_injection_mode == "system_prompt":
                     active_versions.append(version)
@@ -174,6 +176,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
                 )
                 continue
             is_mounted = version.frontmatter.name in mounted_names
+            is_eager = version.id in eager_version_ids
             stack = stack.append_layer(
                 SkillBodyLayer(
                     skill_id=version.skill_id,
@@ -184,6 +187,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
                     if is_mounted
                     else "",
                     resources=resources.get(version.skill_id, []) if is_mounted else [],
+                    render_as_xml=not is_eager,
                     source=f"skill:{version.frontmatter.name}",
                 )
             )

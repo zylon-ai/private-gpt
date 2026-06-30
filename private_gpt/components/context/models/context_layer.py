@@ -1,4 +1,3 @@
-import re
 from typing import Annotated, Literal
 
 from llama_index.core.base.llms.types import TextBlock
@@ -134,16 +133,34 @@ class SkillBodyLayer(BaseContextLayer):
         default_factory=list,
         description="Bundled file paths relative to the skill directory.",
     )
+    render_as_xml: bool = Field(
+        default=True,
+        description="When True, wrap output in <skill_content> XML tags. "
+        "Eager skills render as plain text (False).",
+    )
 
     def render(self) -> str:
-        body = re.sub(r"^#{1,6}\s+.*$", "", self.instructions, flags=re.MULTILINE)
-        body = re.sub(r"\n{3,}", "\n\n", body).strip()
+        body = self.instructions.strip()
+        parts: list[str] = []
+
         if self.location:
-            footer = f"Skill directory: {self.location}"
-            if self.resources:
-                footer += " (resources: " + ", ".join(self.resources) + ")"
-            body = f"{body}\n\n{footer}" if body else footer
-        return body
+            parts.append(f"Skill directory: {self.location}")
+            parts.append(
+                "Relative paths in this skill are relative to the skill directory."
+            )
+
+        if self.resources:
+            resource_lines = ["<skill_resources>"]
+            resource_lines.extend(f"  <file>{r}</file>" for r in self.resources)
+            resource_lines.append("</skill_resources>")
+            parts.append("\n".join(resource_lines))
+
+        footer = "\n\n".join(parts)
+        inner = f"{body}\n\n{footer}" if body and footer else (body or footer)
+
+        if self.render_as_xml:
+            return f'<skill_content name="{self.name}">\n{inner}\n</skill_content>'
+        return inner
 
 
 class ToolInstructionsLayer(BaseContextLayer):

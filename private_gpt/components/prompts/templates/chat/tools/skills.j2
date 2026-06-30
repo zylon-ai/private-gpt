@@ -3,7 +3,7 @@
 {% set unload_tool = namespace.tools.get("unload_skill_tool_name") %}
 {% set mode = skill_injection_mode | default("system_prompt") %}
 <skills>
-Skills are curated instruction sets that give you specialised knowledge and workflows for specific domains. Use them whenever the user's request falls within a skill's area of expertise.
+Skills are curated instruction sets that give you specialised knowledge and workflows for specific domains. Skills may bundle files (scripts, references, data) accessible at the skill directory shown in the skill content.
 
 **When to use skills:**
 - The user's request mentions a topic or task that a skill might cover.
