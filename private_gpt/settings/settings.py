@@ -1458,6 +1458,17 @@ class SkillSettings(BaseModel):
             "If None (default), no size limit is enforced."
         ),
     )
+    volume_root: str | None = Field(
+        default=None,
+        description=(
+            "Host filesystem root for skill bundle volumes. "
+            "When set, VolumeContentMounter bind-mounts skill files from "
+            "{volume_root}/{storage_prefix}/ into the sandbox at /mnt/skills/{name}/. "
+            "In production this path should be backed by a FUSE/S3FS DaemonSet mount. "
+            "When absent or empty the mounter fetches files from the storage backend "
+            "and caches them locally before creating the bind-mount."
+        ),
+    )
 
     @field_validator("max_bundle_size_bytes", mode="before")
     @classmethod
