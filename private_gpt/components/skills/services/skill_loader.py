@@ -59,7 +59,7 @@ class SkillLoader:
         for v in versions:
             bundles.append(
                 StoredBundle(
-                    canonical_path=skill_mount_path(v.skill_id),
+                    canonical_path=skill_mount_path(v.frontmatter.name),
                     storage_prefix=v.storage_prefix,
                     writable=False,
                     fetch=self._fetcher(v.storage_prefix),
@@ -71,13 +71,13 @@ class SkillLoader:
         """Resolve active skills into by-reference bundles. No downloads here.
 
         Each bundle points at the skill version's storage prefix and is mounted
-        at canonical_path="/mnt/skills/{skill_id}/"; bytes are fetched lazily
+        at canonical_path="/mnt/skills/{name}/"; bytes are fetched lazily
         and only when the mounter cannot bind the storage path directly.
         """
         versions = await self._skill_service.recover_versions(skill_filter)
         return [
             StoredBundle(
-                canonical_path=skill_mount_path(item.skill.id),
+                canonical_path=skill_mount_path(item.version.frontmatter.name),
                 storage_prefix=item.version.storage_prefix,
                 writable=False,
                 fetch=self._fetcher(item.version.storage_prefix),
