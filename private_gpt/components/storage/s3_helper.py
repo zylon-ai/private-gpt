@@ -10,29 +10,6 @@ from private_gpt.settings.settings import settings
 
 logger = logging.getLogger(__name__)
 
-
-def _patch_urllib3_header_parsing() -> None:
-    """Suppress urllib3 HeaderParsingError for MinIO/S3-compatible endpoints.
-
-    urllib3 >=2.0 enforces strict HTTP header parsing that rejects certain
-    MinIO response headers (MissingHeaderBodySeparatorDefect).  The responses
-    are otherwise valid and functional, so we make assert_header_parsing a
-    no-op to avoid spurious warnings / retry storms.
-    """
-    try:
-        import urllib3.exceptions
-        import urllib3.util.response
-
-        _original = urllib3.util.response.assert_header_parsing
-
-        def _noop(headers: object) -> None:
-            return
-
-        urllib3.util.response.assert_header_parsing = _noop  # type: ignore[assignment]
-    except Exception:
-        logger.debug("Could not patch urllib3 header parsing", exc_info=True)
-
-
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
 
@@ -64,8 +41,6 @@ class S3Helper:
             return None
 
         import boto3  # type: ignore
-
-        _patch_urllib3_header_parsing()
 
         boto3.set_stream_logger(
             "botocore", logging.INFO if DEBUG_MODE else logging.ERROR

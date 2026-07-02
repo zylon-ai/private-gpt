@@ -1502,15 +1502,15 @@ class PrincipalSettings(BaseModel):
         default_factory=lambda: ["authorization", "anthropic-beta"],
         description="HTTP request headers to capture in the Principal. "
         "Supported values: 'authorization', 'anthropic-beta'. "
-        "When set via env var, use a JSON list string: "
-        '\'["authorization","anthropic-beta"]\'.',
+        "When set via env var, use a comma-separated string: "
+        "'authorization, anthropic-beta'.",
     )
 
     @field_validator("forwarded_headers", mode="before")
     @classmethod
     def _parse_headers(cls, value: object) -> list[str]:
         if isinstance(value, str):
-            value = json.loads(value)
+            return [h.strip().lower() for h in value.split(",") if h.strip()]
         if not isinstance(value, list):
             raise ValueError("forwarded_headers must be a list of header names")
         return [str(h).strip().lower() for h in value if h]
