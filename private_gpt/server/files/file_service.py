@@ -79,8 +79,16 @@ class FileService:
     def _require_storage(self) -> ObjectStorage:
         return self._storage
 
-    def _prefix(self, scope_id: str) -> str:
-        return f"{self._settings.code_execution.vfs_sessions_prefix}/{scope_id}"
+    def _uploads_prefix(self, scope_id: str) -> str:
+        return f"uploads/{scope_id}"
+
+    def _outputs_prefix(self, scope_id: str) -> str:
+        return f"outputs/{scope_id}"
+
+    def _prefix_for_path(self, storage_path: str, scope_id: str) -> str:
+        """Return the storage prefix for a given storage_path (e.g. 'uploads/file.csv')."""
+        folder = storage_path.split("/")[0]
+        return f"{folder}/{scope_id}"
 
     def _to_metadata(self, file_info: FileInfo, scope_id: str) -> FileMetadata:
         downloadable = not file_info.path.startswith("uploads/")
@@ -99,16 +107,17 @@ class FileService:
         storage = self._require_storage()
         content = await upload.read()
         filename = upload.filename or "upload"
-        path = f"uploads/{filename}"
         mime_type = _detect_mime_from_bytes(content)
 
-        await storage.write_file(self._prefix(scope_id), path, content, mime_type)
+        prefix = self._uploads_prefix(scope_id)
+        await storage.write_file(prefix, filename, content, mime_type)
 
-        file_info = await storage.stat_file(self._prefix(scope_id), path)
+        file_info = await storage.stat_file(prefix, filename)
         if file_info is None:
             raise HTTPException(
                 status_code=500, detail="File written but could not be read back."
             )
+        file_info = file_info.model_copy(update={"path": f"uploads/{filename}"})
         return self._to_metadata(file_info, scope_id)
 
     async def list_files(
@@ -119,10 +128,9 @@ class FileService:
         before_id: str | None = None,
     ) -> FileListResponse:
         storage = self._require_storage()
-        prefix = self._prefix(scope_id)
 
-        uploads = await storage.list_files_meta(f"{prefix}/uploads")
-        outputs = await storage.list_files_meta(f"{prefix}/outputs")
+        uploads = await storage.list_files_meta(self._uploads_prefix(scope_id))
+        outputs = await storage.list_files_meta(self._outputs_prefix(scope_id))
 
         all_infos = sorted(
             [
@@ -170,9 +178,12 @@ class FileService:
         canonical = _decode_file_id(file_id)
         storage_path = _canonical_to_storage_path(canonical)
         self._validate_file_id(storage_path)
-        file_info = await storage.stat_file(self._prefix(scope_id), storage_path)
+        folder, filename = storage_path.split("/", 1)
+        prefix = self._prefix_for_path(storage_path, scope_id)
+        file_info = await storage.stat_file(prefix, filename)
         if file_info is None:
             raise HTTPException(status_code=404, detail=f"File '{file_id}' not found.")
+        file_info = file_info.model_copy(update={"path": f"{folder}/{filename}"})
         return self._to_metadata(file_info, scope_id)
 
     async def get_file_content(
@@ -183,12 +194,14 @@ class FileService:
         canonical = _decode_file_id(file_id)
         storage_path = _canonical_to_storage_path(canonical)
         self._validate_file_id(storage_path)
-        file_info = await storage.stat_file(self._prefix(scope_id), storage_path)
+        _folder, filename = storage_path.split("/", 1)
+        prefix = self._prefix_for_path(storage_path, scope_id)
+        file_info = await storage.stat_file(prefix, filename)
         if file_info is None:
             raise HTTPException(status_code=404, detail=f"File '{file_id}' not found.")
-        content = await storage.read_file(self._prefix(scope_id), storage_path)
-        filename = canonical.split("/")[-1]
-        return content, file_info.mime_type, filename
+        content = await storage.read_file(prefix, filename)
+        display_name = canonical.split("/")[-1]
+        return content, file_info.mime_type, display_name
 
     async def delete_file(self, scope_id: str, file_id: str) -> DeletedFile:
         storage = self._require_storage()
@@ -200,7 +213,8 @@ class FileService:
                 status_code=404,
                 detail=f"File '{file_id}' not found or is a sandbox output (cannot be deleted).",
             )
-        deleted = await storage.delete_file(self._prefix(scope_id), storage_path)
+        _folder, filename = storage_path.split("/", 1)
+        deleted = await storage.delete_file(self._uploads_prefix(scope_id), filename)
         if not deleted:
             raise HTTPException(
                 status_code=404,

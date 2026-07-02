@@ -101,7 +101,7 @@ def test_download_uploaded_file(files_client: TestClient) -> None:
 
 def test_download_output_file(files_client: TestClient, volume_root: Path) -> None:
     """A sandbox output file can be downloaded via its absolute path ID."""
-    output_path = volume_root / "sessions" / _SESSION_ID / "outputs" / "result.csv"
+    output_path = volume_root / "outputs" / _SESSION_ID / "result.csv"
     output_path.write_bytes(_FILE_CONTENT)
 
     canonical = "/mnt/user-data/outputs/result.csv"
@@ -113,7 +113,7 @@ def test_download_output_file(files_client: TestClient, volume_root: Path) -> No
 
 
 def test_list_includes_outputs(files_client: TestClient, volume_root: Path) -> None:
-    output_path = volume_root / "sessions" / _SESSION_ID / "outputs" / "result.png"
+    output_path = volume_root / "outputs" / _SESSION_ID / "result.png"
     output_path.write_bytes(b"\x89PNG")
 
     canonical = "/mnt/user-data/outputs/result.png"
@@ -144,7 +144,7 @@ def test_delete_uploaded_file(files_client: TestClient) -> None:
 
 
 def test_delete_output_returns_404(files_client: TestClient, volume_root: Path) -> None:
-    output_path = volume_root / "sessions" / _SESSION_ID / "outputs" / "result.csv"
+    output_path = volume_root / "outputs" / _SESSION_ID / "result.csv"
     output_path.write_bytes(b"a,b\n1,2")
 
     canonical = "/mnt/user-data/outputs/result.csv"

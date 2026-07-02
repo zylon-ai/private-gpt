@@ -78,9 +78,10 @@ class SandboxDirMounter(LayoutMounter):
 class LocalDirMounter(LayoutMounter):
     """Host-directory backing under a local base path.
 
-    Layout dirs live under ``{base}/sessions/{session_id}/{name}`` and
-    survive sandbox restarts. Bundle content is handled by
-    LocalStorageContentMounter or FetchContentMounter, not here.
+    Layout dirs live under ``{base}/{name}/{session_id}`` so that each folder
+    type sits at a top-level prefix — enabling per-folder MinIO lifecycle rules.
+    Bundle content is handled by LocalStorageContentMounter or
+    FetchContentMounter, not here.
     """
 
     def __init__(
@@ -89,22 +90,21 @@ class LocalDirMounter(LayoutMounter):
         layout: Sequence[SessionMountDef] = DEFAULT_SESSION_LAYOUT,
     ) -> None:
         super().__init__(layout)
-        self._sessions = base / "sessions"
+        self._base = base
 
     def ensure_ready(self) -> None:
-        self._sessions.mkdir(parents=True, exist_ok=True)
+        self._base.mkdir(parents=True, exist_ok=True)
 
     def uploads_path(self, session_id: str) -> Path:
-        return self._sessions / session_id / "uploads"
+        return self._base / "uploads" / session_id
 
     def outputs_path(self, session_id: str) -> Path:
-        return self._sessions / session_id / "outputs"
+        return self._base / "outputs" / session_id
 
     def session_volumes(self, session_id: str) -> list[VolumeSpec] | None:
-        base = self._sessions / session_id
         volumes: list[VolumeSpec] = []
         for mount in self._layout:
-            host = base / mount.name
+            host = self._base / mount.name / session_id
             host.mkdir(parents=True, exist_ok=True)
             volumes.append(
                 VolumeSpec(
