@@ -64,18 +64,19 @@ logger = logging.getLogger(__name__)
 UI_DIRECTORY = PROJECT_ROOT_PATH / "ui"
 
 
-def _build_principal(request: Request, forwarded_headers: list[str]) -> Principal:
+def _build_principal(
+    request: Request,
+    forwarded_headers: list[str],
+    forwarded_cookies: list[str],
+) -> Principal:
     """Build a Principal from the current HTTP request.
 
-    Collects only the headers listed in ``forwarded_headers`` (all
-    lowercased) and all request cookies.
+    Collects only the headers listed in ``forwarded_headers`` and the
+    cookies listed in ``forwarded_cookies`` (all lowercased).
     """
-    headers = {
-        h: request.headers[h]
-        for h in forwarded_headers
-        if h in request.headers
-    }
-    return Principal(headers=headers, cookies=dict(request.cookies))
+    headers = {h: request.headers[h] for h in forwarded_headers if h in request.headers}
+    cookies = {c: request.cookies[c] for c in forwarded_cookies if c in request.cookies}
+    return Principal(headers=headers, cookies=cookies)
 
 
 def eager_loading(injector: Injector) -> None:
@@ -211,7 +212,9 @@ def create_app(root_injector: Injector) -> FastAPI:
 
         settings = injector.get(Settings)
         _build_principal(
-            request, settings.principal.forwarded_headers
+            request,
+            settings.principal.forwarded_headers,
+            settings.principal.forwarded_cookies,
         ).set_current()
 
         response = await call_next(request)

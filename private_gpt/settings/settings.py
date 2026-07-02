@@ -1504,14 +1504,20 @@ class PrincipalSettings(BaseModel):
         "When set via env var, use a comma-separated string: "
         "'authorization, x-custom-header'.",
     )
+    forwarded_cookies: list[str] = Field(
+        default_factory=list,
+        description="HTTP request cookies to capture in the Principal. "
+        "When set via env var, use a comma-separated string: "
+        "'session, csrf-token'.",
+    )
 
-    @field_validator("forwarded_headers", mode="before")
+    @field_validator("forwarded_headers", "forwarded_cookies", mode="before")
     @classmethod
-    def _parse_headers(cls, value: object) -> list[str]:
+    def _parse_list(cls, value: object) -> list[str]:
         if isinstance(value, str):
             return [h.strip().lower() for h in value.split(",") if h.strip()]
         if not isinstance(value, list):
-            raise ValueError("forwarded_headers must be a list of header names")
+            raise ValueError("must be a list or comma-separated string")
         return [str(h).strip().lower() for h in value if h]
 
 
