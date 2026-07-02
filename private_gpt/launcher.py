@@ -64,6 +64,20 @@ logger = logging.getLogger(__name__)
 UI_DIRECTORY = PROJECT_ROOT_PATH / "ui"
 
 
+def _build_principal(request: Request, forwarded_headers: list[str]) -> Principal:
+    """Build a Principal from the current HTTP request.
+
+    Collects only the headers listed in ``forwarded_headers`` (all
+    lowercased) and all request cookies.
+    """
+    headers = {
+        h: request.headers[h]
+        for h in forwarded_headers
+        if h in request.headers
+    }
+    return Principal(headers=headers, cookies=dict(request.cookies))
+
+
 def eager_loading(injector: Injector) -> None:
     """Eagerly load modules to avoid race conditions in multi-threaded environments."""
     logger.debug("Initializing mandatory dependencies")
@@ -196,25 +210,8 @@ def create_app(root_injector: Injector) -> FastAPI:
         request.state.injector = injector
 
         settings = injector.get(Settings)
-        forwarded = settings.principal.forwarded_headers
-        authorization = (
-            request.headers.get("authorization")
-            if "authorization" in forwarded
-            else None
-        )
-        anthropic_beta_raw = (
-            request.headers.get("anthropic-beta")
-            if "anthropic-beta" in forwarded
-            else None
-        )
-        anthropic_beta: list[str] | None = None
-        if anthropic_beta_raw:
-            anthropic_beta = [
-                f.strip() for f in anthropic_beta_raw.split(",") if f.strip()
-            ]
-        Principal(
-            authorization=authorization,
-            anthropic_beta=anthropic_beta,
+        _build_principal(
+            request, settings.principal.forwarded_headers
         ).set_current()
 
         response = await call_next(request)

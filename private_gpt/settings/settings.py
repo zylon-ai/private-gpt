@@ -1499,11 +1499,10 @@ class SandboxSettings(BaseModel):
 
 class PrincipalSettings(BaseModel):
     forwarded_headers: list[str] = Field(
-        default_factory=lambda: ["authorization", "anthropic-beta"],
+        default_factory=lambda: ["authorization"],
         description="HTTP request headers to capture in the Principal. "
-        "Supported values: 'authorization', 'anthropic-beta'. "
         "When set via env var, use a comma-separated string: "
-        "'authorization, anthropic-beta'.",
+        "'authorization, x-custom-header'.",
     )
 
     @field_validator("forwarded_headers", mode="before")

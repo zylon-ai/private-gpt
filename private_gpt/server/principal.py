@@ -4,61 +4,59 @@ from contextvars import ContextVar
 
 
 class Principal:
-    """Request-scoped principal with known, typed claims.
+    """Request-scoped principal carrying HTTP headers and cookies.
 
     Set once at the HTTP middleware layer and accessible from anywhere in the
     call tree via ``Principal.current()`` — no parameter threading needed.
 
     Usage::
 
-        api_key = Principal.current().api_key
-        features = Principal.current().anthropic_beta
+        auth = Principal.current().authorization
+        key = Principal.current().api_key
+        session = Principal.current().cookies.get("session")
+        custom = Principal.current().headers.get("x-custom-header")
     """
 
-    __slots__ = (
-        "_anthropic_beta",
-        "_api_key",
-        "_authorization",
-    )
+    __slots__ = ("_cookies", "_headers")
 
     _context: ContextVar[Principal | None] = ContextVar("principal", default=None)
 
     def __init__(
         self,
         *,
-        authorization: str | None = None,
-        api_key: str | None = None,
-        anthropic_beta: list[str] | None = None,
+        headers: dict[str, str] | None = None,
+        cookies: dict[str, str] | None = None,
     ) -> None:
-        self._authorization = authorization
-        self._api_key = api_key
-        self._anthropic_beta = anthropic_beta
+        self._headers: dict[str, str] = dict(headers) if headers else {}
+        self._cookies: dict[str, str] = dict(cookies) if cookies else {}
 
-    # -- Known claims ----------------------------------------------------------
+    # -- Typed claims ----------------------------------------------------------
+
+    @property
+    def headers(self) -> dict[str, str]:
+        """All captured HTTP request headers (lowercased names)."""
+        return self._headers
+
+    @property
+    def cookies(self) -> dict[str, str]:
+        """All captured HTTP request cookies."""
+        return self._cookies
 
     @property
     def authorization(self) -> str | None:
         """Full ``Authorization`` header value (e.g. ``Bearer sk-abc123``)."""
-        return self._authorization
+        return self._headers.get("authorization")
 
     @property
     def api_key(self) -> str | None:
         """Bearer token extracted from the Authorization header.
 
-        Returns the raw key without the ``Bearer `` prefix.  If an explicit
-        ``api_key`` was provided at construction time it takes precedence.
+        Returns the raw key without the ``Bearer `` prefix.
         """
-        if self._api_key is not None:
-            return self._api_key
-        auth = self._authorization
-        if auth and auth.startswith("Bearer "):
+        auth = self.authorization
+        if auth and auth.lower().startswith("bearer "):
             return auth[7:]
         return auth
-
-    @property
-    def anthropic_beta(self) -> list[str] | None:
-        """``anthropic-beta`` header feature flags (e.g. prompt-caching)."""
-        return self._anthropic_beta
 
     # -- Context management ----------------------------------------------------
 
@@ -87,29 +85,22 @@ class Principal:
     @property
     def anonymous(self) -> bool:
         """``True`` when no claims have been populated."""
-        return (
-            self._authorization is None
-            and self._api_key is None
-            and self._anthropic_beta is None
-        )
+        return not self._headers and not self._cookies
 
     def as_env(self, *, prefix: str = "ANTHROPIC") -> dict[str, str]:
-        """Return claims as ``{PREFIX_API_KEY: ..., ...}`` env vars."""
-        env: dict[str, str] = {}
+        """Return the API key as a ``{PREFIX_API_KEY: ...}`` env var."""
         key = self.api_key
         if key:
-            env[f"{prefix}_API_KEY"] = key
-        beta = self.anthropic_beta
-        if beta:
-            env[f"{prefix}_BETA"] = ",".join(beta)
-        return env
+            return {f"{prefix}_API_KEY": key}
+        return {}
 
     def __repr__(self) -> str:
         parts: list[str] = []
-        if self._authorization:
+        if "authorization" in self._headers:
             parts.append("authorization=***")
-        if self._api_key:
-            parts.append("api_key=***")
-        if self._anthropic_beta:
-            parts.append(f"anthropic_beta={self._anthropic_beta}")
+        other_headers = [k for k in self._headers if k != "authorization"]
+        if other_headers:
+            parts.append(f"headers=[{', '.join(other_headers)}]")
+        if self._cookies:
+            parts.append(f"cookies=[{', '.join(self._cookies.keys())}]")
         return f"Principal({', '.join(parts)})" if parts else "Principal(anonymous)"
