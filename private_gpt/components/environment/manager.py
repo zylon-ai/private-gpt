@@ -93,7 +93,9 @@ class EnvironmentManager:
                         # and materialized lazily before the next exec().
                         env.add_pending(extra_bundles)
                     return env
-            return await self._create(session_id, extra_bundles, bundles_to_remove, sandbox_env)
+            return await self._create(
+                session_id, extra_bundles, bundles_to_remove, sandbox_env
+            )
 
     def release(self, session_id: str) -> None:
         """Drop the environment and release its backend resources."""

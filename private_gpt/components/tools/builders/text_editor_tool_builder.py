@@ -28,8 +28,10 @@ from private_gpt.events.models import TextBlock
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
-    from private_gpt.components.code_execution.base import CodeExecutionSession
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
+    from private_gpt.components.code_execution.base import (
+        CodeExecutionSession,
+        CodeExecutionSessionConfig,
+    )
     from private_gpt.events.models import ResultContentBlockType
 
 
@@ -49,31 +51,19 @@ class TextEditorToolBuilder:
         self._settings = settings
 
     async def _session(
-        self,
-        session_id: str,
-        bundles: list[ContentBundle] | None = None,
-        bundles_to_remove: list[str] | None = None,
-        env: dict[str, str] | None = None,
+        self, config: CodeExecutionSessionConfig
     ) -> CodeExecutionSession:
-        session = await self._component.get_or_create_session(
-            session_id,
-            extra_bundles=bundles or None,
-            bundles_to_remove=bundles_to_remove or None,
-			env=env,
-        )
+        session = await self._component.get_or_create_session(config)
         if session is None:
             raise ValueError("code_execution provider is not configured.")
         return session
 
     async def build_view_tool(
         self,
-        session_id: str,
-        bundles: list[ContentBundle] | None = None,
-        bundles_to_remove: list[str] | None = None,
+        config: CodeExecutionSessionConfig,
         name: str = TEXT_EDITOR_VIEW_TOOL_NAME,
         type: str = TEXT_EDITOR_VIEW_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_VIEW_TOOL_FN.metadata.description,
-        env: dict[str, str] | None = None,
     ) -> ToolSpec:
         async def view(
             path: str,
@@ -88,7 +78,7 @@ class TextEditorToolBuilder:
                     )
                 resolved_view_range = (view_range[0], view_range[1])
 
-            session = await self._session(session_id, bundles, bundles_to_remove, env)
+            session = await self._session(config)
             result = await session.view(
                 path,
                 view_range=resolved_view_range,
@@ -110,20 +100,17 @@ class TextEditorToolBuilder:
 
     async def build_str_replace_tool(
         self,
-        session_id: str,
-        bundles: list[ContentBundle] | None = None,
-        bundles_to_remove: list[str] | None = None,
+        config: CodeExecutionSessionConfig,
         name: str = TEXT_EDITOR_STR_REPLACE_TOOL_NAME,
         type: str = TEXT_EDITOR_STR_REPLACE_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_STR_REPLACE_TOOL_FN.metadata.description,
-        env: dict[str, str] | None = None,
     ) -> ToolSpec:
         async def str_replace(
             path: str,
             old_str: str,
             new_str: str,
         ) -> list[ResultContentBlockType]:
-            session = await self._session(session_id, bundles, bundles_to_remove, env)
+            session = await self._session(config)
             result = await session.str_replace(path, old_str, new_str)
             output = result.output if result.success else f"Error: {result.error}"
             return _format_output(
@@ -142,19 +129,16 @@ class TextEditorToolBuilder:
 
     async def build_create_tool(
         self,
-        session_id: str,
-        bundles: list[ContentBundle] | None = None,
-        bundles_to_remove: list[str] | None = None,
+        config: CodeExecutionSessionConfig,
         name: str = TEXT_EDITOR_CREATE_TOOL_NAME,
         type: str = TEXT_EDITOR_CREATE_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_CREATE_TOOL_FN.metadata.description,
-        env: dict[str, str] | None = None,
     ) -> ToolSpec:
         async def create(
             path: str,
             file_text: str,
         ) -> list[ResultContentBlockType]:
-            session = await self._session(session_id, bundles, bundles_to_remove, env)
+            session = await self._session(config)
             result = await session.create(path, file_text)
             output = result.output if result.success else f"Error: {result.error}"
             return _format_output(
@@ -173,20 +157,17 @@ class TextEditorToolBuilder:
 
     async def build_insert_tool(
         self,
-        session_id: str,
-        bundles: list[ContentBundle] | None = None,
-        bundles_to_remove: list[str] | None = None,
+        config: CodeExecutionSessionConfig,
         name: str = TEXT_EDITOR_INSERT_TOOL_NAME,
         type: str = TEXT_EDITOR_INSERT_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_INSERT_TOOL_FN.metadata.description,
-        env: dict[str, str] | None = None,
     ) -> ToolSpec:
         async def insert(
             path: str,
             insert_line: int,
             new_str: str,
         ) -> list[ResultContentBlockType]:
-            session = await self._session(session_id, bundles, bundles_to_remove, env)
+            session = await self._session(config)
             result = await session.insert(path, insert_line, new_str)
             output = result.output if result.success else f"Error: {result.error}"
             return _format_output(

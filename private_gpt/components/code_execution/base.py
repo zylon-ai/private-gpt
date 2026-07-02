@@ -2,14 +2,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 
+from private_gpt.components.sandbox.content_bundle import ContentBundle
 from private_gpt.settings.settings import Settings
-
-if TYPE_CHECKING:
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
 class BashExecutionResult(BaseModel):
@@ -68,6 +65,15 @@ class CodeExecutionSession(ABC):
         """Close and release the backing execution session."""
 
 
+class CodeExecutionSessionConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    session_id: str
+    extra_bundles: list[ContentBundle] = []
+    bundles_to_remove: list[str] = []
+    env: dict[str, str] = {}
+
+
 class CodeExecutionProvider(ABC):
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -75,10 +81,7 @@ class CodeExecutionProvider(ABC):
     @abstractmethod
     async def create_session(
         self,
-        session_id: str,
-        extra_bundles: list[ContentBundle] | None = None,
-        bundles_to_remove: list[str] | None = None,
-        env: dict[str, str] | None = None,
+        config: CodeExecutionSessionConfig,
     ) -> CodeExecutionSession:
         """Create a code execution session, optionally mounting extra bundles."""
 

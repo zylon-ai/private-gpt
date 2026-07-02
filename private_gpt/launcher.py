@@ -197,11 +197,21 @@ def create_app(root_injector: Injector) -> FastAPI:
 
         settings = injector.get(Settings)
         forwarded = settings.principal.forwarded_headers
-        authorization = request.headers.get("authorization") if "authorization" in forwarded else None
-        anthropic_beta_raw = request.headers.get("anthropic-beta") if "anthropic-beta" in forwarded else None
+        authorization = (
+            request.headers.get("authorization")
+            if "authorization" in forwarded
+            else None
+        )
+        anthropic_beta_raw = (
+            request.headers.get("anthropic-beta")
+            if "anthropic-beta" in forwarded
+            else None
+        )
         anthropic_beta: list[str] | None = None
         if anthropic_beta_raw:
-            anthropic_beta = [f.strip() for f in anthropic_beta_raw.split(",") if f.strip()]
+            anthropic_beta = [
+                f.strip() for f in anthropic_beta_raw.split(",") if f.strip()
+            ]
         Principal(
             authorization=authorization,
             anthropic_beta=anthropic_beta,

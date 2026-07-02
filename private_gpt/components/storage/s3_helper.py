@@ -25,12 +25,13 @@ def _patch_urllib3_header_parsing() -> None:
 
         _original = urllib3.util.response.assert_header_parsing
 
-        def _noop(headers: object) -> None:  # noqa: ARG001
+        def _noop(headers: object) -> None:
             return
 
         urllib3.util.response.assert_header_parsing = _noop  # type: ignore[assignment]
     except Exception:
         logger.debug("Could not patch urllib3 header parsing", exc_info=True)
+
 
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client

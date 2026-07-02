@@ -1,6 +1,7 @@
 from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ResolvedChatRequest
+from private_gpt.components.code_execution.base import CodeExecutionSessionConfig
 from private_gpt.components.tools.builders.text_editor_tool_builder import (
     TextEditorToolBuilder,
 )
@@ -30,7 +31,6 @@ class TextEditorProcessor(ToolProcessor):
 
     async def intercept(self, request: ResolvedChatRequest) -> bool:
         session_id = _session_id(request)
-        env = Principal.current().as_env() or None
         for tool in request.tool_config.tools:
             if not _is_unresolved_tool(tool):
                 continue
@@ -46,20 +46,21 @@ class TextEditorProcessor(ToolProcessor):
                         _wrapper_tool(TEXT_EDITOR_INSERT_TOOL_NAME),
                     ],
                 )
-            bundles = request.context.content_bundles or None
-            bundles_to_remove = request.context.bundles_to_remove or None
+            config = CodeExecutionSessionConfig(
+                session_id=session_id,
+                extra_bundles=request.context.content_bundles or [],
+                bundles_to_remove=request.context.bundles_to_remove or [],
+                env=Principal.current().as_env() or {},
+            )
             if _tool_matches(tool, TEXT_EDITOR_VIEW_TOOL_NAME):
                 return _replace_tool(
                     request,
                     tool,
                     [
                         await self._builder.build_view_tool(
-                            session_id,
-                            bundles=bundles,
-                            bundles_to_remove=bundles_to_remove,
+                            config,
                             name=tool.name or TEXT_EDITOR_VIEW_TOOL_NAME,
                             type=tool.type or TEXT_EDITOR_VIEW_TOOL_NAME + "_v1",
-                            env=env,
                         )
                     ],
                 )
@@ -69,12 +70,9 @@ class TextEditorProcessor(ToolProcessor):
                     tool,
                     [
                         await self._builder.build_str_replace_tool(
-                            session_id,
-                            bundles=bundles,
-                            bundles_to_remove=bundles_to_remove,
+                            config,
                             name=tool.name or TEXT_EDITOR_STR_REPLACE_TOOL_NAME,
                             type=tool.type or TEXT_EDITOR_STR_REPLACE_TOOL_NAME + "_v1",
-                            env=env,
                         )
                     ],
                 )
@@ -84,12 +82,9 @@ class TextEditorProcessor(ToolProcessor):
                     tool,
                     [
                         await self._builder.build_create_tool(
-                            session_id,
-                            bundles=bundles,
-                            bundles_to_remove=bundles_to_remove,
+                            config,
                             name=tool.name or TEXT_EDITOR_CREATE_TOOL_NAME,
                             type=tool.type or TEXT_EDITOR_CREATE_TOOL_NAME + "_v1",
-                            env=env,
                         )
                     ],
                 )
@@ -99,12 +94,9 @@ class TextEditorProcessor(ToolProcessor):
                     tool,
                     [
                         await self._builder.build_insert_tool(
-                            session_id,
-                            bundles=bundles,
-                            bundles_to_remove=bundles_to_remove,
+                            config,
                             name=tool.name or TEXT_EDITOR_INSERT_TOOL_NAME,
                             type=tool.type or TEXT_EDITOR_INSERT_TOOL_NAME + "_v1",
-                            env=env,
                         )
                     ],
                 )

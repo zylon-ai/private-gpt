@@ -86,7 +86,7 @@ class FileService:
         return f"outputs/{scope_id}"
 
     def _prefix_for_path(self, storage_path: str, scope_id: str) -> str:
-        """Return the storage prefix for a given storage_path (e.g. 'uploads/file.csv')."""
+        """Return the storage prefix for a given storage_path."""
         folder = storage_path.split("/")[0]
         return f"{folder}/{scope_id}"
 

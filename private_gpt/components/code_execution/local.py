@@ -5,9 +5,7 @@ from typing import TYPE_CHECKING
 
 from injector import inject
 
-from private_gpt.components.code_execution.base import (
-    CodeExecutionProvider,
-)
+from private_gpt.components.code_execution.base import CodeExecutionProvider
 from private_gpt.components.code_execution.sandbox_session import (
     SandboxCodeExecutionSession,
 )
@@ -22,10 +20,12 @@ from private_gpt.components.sandbox.local import LocalSandboxProvider
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
-    from private_gpt.components.code_execution.base import CodeExecutionSession
+    from private_gpt.components.code_execution.base import (
+        CodeExecutionSession,
+        CodeExecutionSessionConfig,
+    )
     from private_gpt.components.environment.content_mounter import ContentMounter
     from private_gpt.components.environment.mounter import LayoutMounter
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
 class LocalCodeExecutionProvider(CodeExecutionProvider):
@@ -80,12 +80,14 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
 
     async def create_session(
         self,
-        session_id: str,
-        extra_bundles: list[ContentBundle] | None = None,
-        bundles_to_remove: list[str] | None = None,
-        env: dict[str, str] | None = None,
+        config: CodeExecutionSessionConfig,
     ) -> SandboxCodeExecutionSession:
-        env = await self._manager.acquire(session_id, extra_bundles, bundles_to_remove, env)
+        env = await self._manager.acquire(
+            config.session_id,
+            config.extra_bundles or None,
+            config.bundles_to_remove or None,
+            config.env or None,
+        )
         return SandboxCodeExecutionSession(env)
 
     def delete_session(self, session: CodeExecutionSession) -> None:

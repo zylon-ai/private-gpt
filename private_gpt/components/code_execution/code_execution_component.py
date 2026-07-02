@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from private_gpt.components.code_execution.base import (
         CodeExecutionProvider,
         CodeExecutionSession,  # noqa: TC004
+        CodeExecutionSessionConfig,
     )
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 
 @singleton
@@ -35,25 +35,17 @@ class CodeExecutionComponent:
 
     async def get_or_create_session(
         self,
-        session_id: str,
-        extra_bundles: list[ContentBundle] | None = None,
-        bundles_to_remove: list[str] | None = None,
-        env: dict[str, str] | None = None,
+        config: CodeExecutionSessionConfig,
     ) -> CodeExecutionSession | None:
         provider = self._get_code_execution_provider()
         if not provider:
             return None
 
         async with self._lock:
-            session = await provider.create_session(
-                session_id,
-                extra_bundles=extra_bundles,
-                bundles_to_remove=bundles_to_remove,
-                env=env,
-            )
-            self._sessions[session_id] = session
+            session = await provider.create_session(config)
+            self._sessions[config.session_id] = session
             self._container_registry.register(
-                session_id, self._settings.code_execution.session_ttl_seconds
+                config.session_id, self._settings.code_execution.session_ttl_seconds
             )
             return session
 

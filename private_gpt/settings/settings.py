@@ -1503,7 +1503,7 @@ class PrincipalSettings(BaseModel):
         description="HTTP request headers to capture in the Principal. "
         "Supported values: 'authorization', 'anthropic-beta'. "
         "When set via env var, use a JSON list string: "
-        "'[\"authorization\",\"anthropic-beta\"]'.",
+        '\'["authorization","anthropic-beta"]\'.',
     )
 
     @field_validator("forwarded_headers", mode="before")

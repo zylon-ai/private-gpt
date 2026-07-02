@@ -18,7 +18,7 @@ from private_gpt.events.models import TextBlock
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
+    from private_gpt.components.code_execution.base import CodeExecutionSessionConfig
     from private_gpt.events.models import ResultContentBlockType
 
 
@@ -35,25 +35,17 @@ class BashToolBuilder:
 
     async def build_tool(
         self,
-        session_id: str,
-        bundles: list[ContentBundle] | None = None,
-        bundles_to_remove: list[str] | None = None,
+        config: CodeExecutionSessionConfig,
         name: str = BASH_TOOL_NAME,
         type: str = BASH_TOOL_NAME + "_v1",
         description: str = BASH_TOOL_FN.metadata.description,
-        env: dict[str, str] | None = None,
     ) -> ToolSpec:
         async def run_bash(
             command: str,
             timeout: int | None = None,
             restart: bool = False,
         ) -> list[ResultContentBlockType]:
-            session = await self._component.get_or_create_session(
-                session_id,
-                extra_bundles=bundles or None,
-                bundles_to_remove=bundles_to_remove or None,
-				env=env,
-            )
+            session = await self._component.get_or_create_session(config)
             if session is None:
                 raise ValueError("code_execution provider is not configured.")
 
