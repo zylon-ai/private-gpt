@@ -5,26 +5,12 @@ from collections.abc import Callable
 
 from pydantic import BaseModel, ConfigDict
 
+from private_gpt.components.code_execution.results import (
+    BashExecutionResult,
+    FileOperationResult,
+)
 from private_gpt.components.sandbox.content_bundle import ContentBundle
 from private_gpt.settings.settings import Settings
-
-
-class BashExecutionResult(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    success: bool
-    stdout: str = ""
-    stderr: str = ""
-    exit_code: int = 0
-    execution_time_ms: int = 0
-
-
-class FileOperationResult(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    success: bool
-    output: str = ""
-    error: str | None = None
 
 
 class CodeExecutionSession(ABC):
