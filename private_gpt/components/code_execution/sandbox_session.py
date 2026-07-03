@@ -3,16 +3,16 @@ from __future__ import annotations
 import posixpath
 from typing import TYPE_CHECKING
 
-from private_gpt.components.code_execution.base import (
+from private_gpt.components.code_execution.base import CodeExecutionSession
+from private_gpt.components.code_execution.results import (
     BashExecutionResult,
-    CodeExecutionSession,
     FileOperationResult,
 )
 from private_gpt.components.sandbox.base import SandboxExecOptions
 
 if TYPE_CHECKING:
     from private_gpt.components.environment.environment import Environment
-    from private_gpt.components.sandbox.base import SandboxSession
+    from private_gpt.components.sandbox.base import SandboxLink, SandboxSession
 
 
 class SandboxCodeExecutionSession(CodeExecutionSession):
@@ -147,6 +147,9 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             return FileOperationResult(success=True, output=f"Updated {path}")
         except Exception as exc:
             return FileOperationResult(success=False, error=str(exc))
+
+    async def get_endpoint(self, port: int) -> SandboxLink | None:
+        return await self._sandbox.get_endpoint(port)
 
     async def read_file(self, path: str) -> bytes:
         path = self._resolve_path(path)

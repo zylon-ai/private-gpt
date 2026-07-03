@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         CodeExecutionSession,  # noqa: TC004
         CodeExecutionSessionConfig,
     )
+    from private_gpt.components.sandbox.base import SandboxLink
 
 
 @singleton
@@ -48,6 +49,18 @@ class CodeExecutionComponent:
                 config.session_id, self._settings.code_execution.session_ttl_seconds
             )
             return session
+
+    async def get_session_endpoint(
+        self, session_id: str, port: int
+    ) -> SandboxLink | None:
+        from private_gpt.components.code_execution.sandbox_session import (
+            SandboxCodeExecutionSession,
+        )
+
+        session = self._sessions.get(session_id)
+        if not isinstance(session, SandboxCodeExecutionSession):
+            return None
+        return await session.get_endpoint(port)
 
     async def delete_session(self, session_id: str) -> None:
         provider = self._get_code_execution_provider()

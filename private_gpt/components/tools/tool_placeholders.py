@@ -7,6 +7,7 @@ from private_gpt.components.tools.tool_names import (
     CODE_EXECUTION_TOOL_NAME,
     DATABASE_QUERY_TOOL_NAME,
     PRESENT_FILES_TOOL_NAME,
+    PRESENT_SERVER_TOOL_NAME,
     SEMANTIC_SEARCH_TOOL_NAME,
     SKILLS_TOOL_NAME,
     SUMMARIZE_TOOL_NAME,
@@ -114,6 +115,15 @@ TEXT_EDITOR_INSERT_TOOL_FN = _placeholder_tool(
 PRESENT_FILES_TOOL_FN = _placeholder_tool(
     PRESENT_FILES_TOOL_NAME,
     "Present one or more output files to the user after they have been created.",
+)
+
+PRESENT_SERVER_TOOL_FN = _placeholder_tool(
+    PRESENT_SERVER_TOOL_NAME,
+    (
+        "Expose an HTTP service running inside the sandbox on a given port and present "
+        "its URL to the user. Call this after starting a server (e.g. a web app, "
+        "Jupyter, Streamlit) so the user can open or interact with it."
+    ),
 )
 
 SKILLS_TOOL_FN = _placeholder_tool(

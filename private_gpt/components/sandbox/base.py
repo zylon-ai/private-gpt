@@ -50,6 +50,15 @@ class SandboxCodeOptions(SandboxExecOptions):
     )
 
 
+class SandboxLink(BaseModel):
+    """HTTP endpoint for a service running inside a sandbox."""
+
+    model_config = ConfigDict(frozen=True)
+
+    url: str
+    headers: dict[str, str] = {}
+
+
 class SandboxSession(ABC):
     """Async sandbox session with exec + file operations.
 
@@ -124,6 +133,13 @@ class SandboxSession(ABC):
     @abstractmethod
     async def initialize_mount(self, canonical: str, files: list[BundledFile]) -> None:
         """Write mount files during session setup. Bypasses writable check."""
+
+    async def get_endpoint(self, port: int) -> SandboxLink | None:
+        """Return a URL and headers to reach a service on the given port.
+
+        Returns None for backends that don't support HTTP ingress (e.g. local process).
+        """
+        return None
 
     @abstractmethod
     async def close(self) -> None:
