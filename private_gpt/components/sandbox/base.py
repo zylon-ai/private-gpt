@@ -135,9 +135,11 @@ class SandboxSession(ABC):
         """Write mount files during session setup. Bypasses writable check."""
 
     async def get_endpoint(self, port: int) -> SandboxLink | None:
-        """Return a URL and headers to reach a service on the given port.
+        """Return a browser-consumable URL for a service on the given port.
 
-        Returns None for backends that don't support HTTP ingress (e.g. local process).
+        URI-mode routing lives in the URL path so the link is usable directly via
+        href/iframe; ``headers`` is empty since browsers can't send routing headers.
+        Returns None for backends without HTTP ingress (e.g. local process).
         """
         return None
 
