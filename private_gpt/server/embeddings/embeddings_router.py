@@ -8,6 +8,7 @@ from private_gpt.server.embeddings.embeddings_service import (
     EmbeddingsService,
 )
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
 embeddings_router = APIRouter(
     prefix="/v1",
@@ -61,6 +62,40 @@ class EmbeddingsResponse(BaseModel):
     data: list[Embedding] = Field(
         ..., description="List of embeddings, one for each input text"
     )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "object": "list",
+                    "model": "private-gpt",
+                    "data": [
+                        {
+                            "index": 0,
+                            "object": "embedding",
+                            "embedding": [0.123, -0.456, 0.789, 0.234, -0.567, 0.891],
+                        },
+                    ],
+                },
+                {
+                    "object": "list",
+                    "model": "private-gpt",
+                    "data": [
+                        {
+                            "index": 0,
+                            "object": "embedding",
+                            "embedding": [0.234, -0.567, 0.123],
+                        },
+                        {
+                            "index": 1,
+                            "object": "embedding",
+                            "embedding": [-0.123, 0.456, -0.789],
+                        },
+                    ],
+                },
+            ]
+        }
+    }
 
 
 @embeddings_router.post(
@@ -201,6 +236,7 @@ class EmbeddingsResponse(BaseModel):
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid input format",
             "content": {
                 "application/json": {

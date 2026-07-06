@@ -8,6 +8,7 @@ from private_gpt.events.models import ResultContentBlockType
 from private_gpt.server.tools.tool_service import ToolService
 from private_gpt.server.utils.artifact_input import ArtifactType
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
 tool_router = APIRouter(
     prefix="/v1",
@@ -106,6 +107,31 @@ class ToolResponse(BaseModel):
         description="True if the tool encountered an error during execution.",
     )
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "The analysis shows that Q4 revenue increased by 25% compared to Q3.",
+                        }
+                    ],
+                    "is_error": False,
+                },
+                {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Unable to connect to the database.",
+                        }
+                    ],
+                    "is_error": True,
+                },
+            ]
+        }
+    }
+
 
 @tool_router.post(
     "/tools/semantic-search",
@@ -160,6 +186,7 @@ class ToolResponse(BaseModel):
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -281,6 +308,7 @@ async def semantic_search(
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -390,6 +418,7 @@ async def tabular_data_analysis(
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -477,6 +506,7 @@ async def database_query(
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -571,6 +601,7 @@ async def web_fetch(
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {

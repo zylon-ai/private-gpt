@@ -233,7 +233,7 @@ code_execution:
     present_files_enabled: ${PGPT_CODE_EXECUTION_PRESENT_FILES_ENABLED:true}
     present_server_enabled: ${PGPT_CODE_EXECUTION_PRESENT_SERVER_ENABLED:true}
   max_output_bytes: ${PGPT_CODE_EXECUTION_MAX_OUTPUT_BYTES:1048576}
-  volume_root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:./local_data/private_gpt/volumes}
+  volume_root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:local_data/private_gpt/volumes}
 
 bash:
   cpu_limit_seconds: ${PGPT_BASH_CPU_LIMIT_SECONDS:30}

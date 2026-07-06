@@ -192,3 +192,27 @@ class SkillValidationResponse(BaseModel):
         default_factory=list,
         description="Validation errors (when invalid).",
     )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "valid": True,
+                    "name": "sales-ops-helper",
+                    "description": "Helps sales reps draft outreach.",
+                    "errors": [],
+                },
+                {
+                    "valid": False,
+                    "name": None,
+                    "description": None,
+                    "errors": [
+                        {
+                            "code": "INVALID_FRONTMATTER",
+                            "message": "SKILL.md must start with YAML frontmatter",
+                        }
+                    ],
+                },
+            ]
+        }
+    }

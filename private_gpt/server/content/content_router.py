@@ -18,6 +18,7 @@ from private_gpt.components.readers.nodes.tree_node import TreeMetadataMode, Tre
 from private_gpt.events.models import ResultContentBlockType
 from private_gpt.server.content.content_service import ContentService
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
 NodeTypeName = Literal[
     "ImageNode",
@@ -184,6 +185,21 @@ class ContentResponse(BaseModel):
         ..., description="List of documents with their full content"
     )
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "data": [
+                        {
+                            "artifact_id": "annual_report_2023",
+                            "content": "ANNUAL REPORT 2023\n\nExecutive Summary\n\nFiscal year 2023 marked a transformative period...",
+                        },
+                    ]
+                },
+            ]
+        }
+    }
+
 
 class ChunkedContentDocumentResponse(BaseModel):
     """Response model for chunked document content."""
@@ -202,6 +218,26 @@ class ChunkedContentResponse(BaseModel):
         ...,
         description="List of documents with their content split into chunks for chat usage",
     )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "data": [
+                        {
+                            "artifact_id": "annual_report_2023",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": "ANNUAL REPORT 2023\n\nExecutive Summary\n\nFiscal year 2023 marked a transformative period...",
+                                },
+                            ],
+                        },
+                    ]
+                },
+            ]
+        }
+    }
 
 
 @content_router.post(
@@ -267,6 +303,7 @@ class ChunkedContentResponse(BaseModel):
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -448,6 +485,7 @@ def content_retrieval(request: Request, body: ContentBody) -> ContentResponse:
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
