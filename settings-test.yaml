@@ -78,7 +78,7 @@ node_store:
   node_store: qdrant
 
 principal:
-  forwarded_headers: ${PGPT_PRINCIPAL_FORWARDED_HEADERS:["authorization","anthropic-beta"]}
+  forwarded_headers: ${PGPT_PRINCIPAL_FORWARDED_HEADERS:authorization,anthropic-beta}
 
 sandbox:
   provider: null

@@ -93,11 +93,18 @@ class Principal:
         return not self._headers and not self._cookies
 
     def as_env(self, *, prefix: str = "ANTHROPIC") -> dict[str, str]:
-        """Return the API key as a ``{PREFIX_API_KEY: ...}`` env var."""
-        key = self.api_key
-        if key:
-            return {f"{prefix}_API_KEY": key}
-        return {}
+        """Return principal credentials as env vars for subprocess tools.
+
+        * ``x-api-key`` header → ``{PREFIX}_API_KEY``
+        * ``Authorization`` header → ``{PREFIX}_AUTH_TOKEN``
+        """
+        result: dict[str, str] = {}
+        if self.api_key_header:
+            result[f"{prefix}_API_KEY"] = self.api_key_header
+        if self.authorization:
+            result[f"{prefix}_AUTH_TOKEN"] = self.authorization
+
+        return result
 
     def resolve_env(self, env_vars: dict[str, str]) -> dict[str, str]:
         """Resolve ``$PRINCIPAL_*`` sentinels in *env_vars* against this principal.
@@ -108,21 +115,20 @@ class Principal:
         * ``$PRINCIPAL_BEARER`` → ``api_key`` (Bearer token without the prefix)
         * ``$PRINCIPAL_API_KEY`` → ``x-api-key`` header (API key sent as ``X-Api-Key``)
 
-        Anonymous principals return the original dict with empty values stripped.
+        ``$PRINCIPAL_*`` sentinels with no resolved value are omitted.
         """
-        if self.anonymous:
-            return {k: v for k, v in env_vars.items() if v}
+        sentinel_map: dict[str, str | None] = {
+            "$PRINCIPAL_AUTH_TOKEN": self.authorization,
+            "$PRINCIPAL_BEARER": self.api_key,
+            "$PRINCIPAL_API_KEY": self.api_key_header,
+        }
         result: dict[str, str] = {}
         for key, value in env_vars.items():
-            if not value:
-                continue
-            if value == "$PRINCIPAL_AUTH_TOKEN" and self.authorization:
-                result[key] = self.authorization
-            elif value == "$PRINCIPAL_BEARER" and self.api_key:
-                result[key] = self.api_key
-            elif value == "$PRINCIPAL_API_KEY" and self.api_key_header:
-                result[key] = self.api_key_header
-            else:
+            if value in sentinel_map:
+                resolved = sentinel_map[value]
+                if resolved:
+                    result[key] = resolved
+            elif value and not value.startswith("$PRINCIPAL_"):
                 result[key] = value
         return result
 

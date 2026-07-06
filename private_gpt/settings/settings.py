@@ -1488,6 +1488,7 @@ class SandboxSettings(BaseModel):
         default=60,
         description="Default sandbox operation timeout in seconds.",
     )
+
     @field_validator("provider", mode="before")
     @classmethod
     def normalize_empty_provider(cls, value: str | None) -> str | None:

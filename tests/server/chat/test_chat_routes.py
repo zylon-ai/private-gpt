@@ -2243,6 +2243,60 @@ async def test_chat_cancels_llm_astream_on_client_disconnection(
 
 
 @pytest.mark.anyio
+async def test_principal_is_propagated_to_background_task(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """Principal set by the HTTP middleware must reach the asyncio task that
+    processes the chat stream.
+
+    TaskManager.create_task() uses copy_context() before calling
+    asyncio.create_task(), which snapshots the ContextVar state (including
+    the Principal) at the moment the task is created — i.e. while the
+    middleware's principal is still active.  This test makes a request with a
+    specific Authorization header and asserts that Principal.current() inside
+    the spawned task returns the matching api_key.
+    """
+    from private_gpt.components.streaming.stream.stream_processor import StreamProcessor
+    from private_gpt.server.principal import Principal
+
+    captured: list[str | None] = []
+    stream_processor = injector.get(StreamProcessor)
+    original_process_stream = stream_processor.process_stream
+
+    async def capturing_process_stream(
+        correlation_id, stream_type, event_generator, event_handler, metadata=None
+    ):
+        # This coroutine runs inside the asyncio task spawned by TaskManager.
+        # The task was created with copy_context(), so Principal.current() here
+        # must return the principal that was active during the HTTP request.
+        captured.append(Principal.current().api_key)
+        await original_process_stream(
+            correlation_id, stream_type, event_generator, event_handler, metadata
+        )
+
+    stream_processor.process_stream = capturing_process_stream  # type: ignore[method-assign]
+    try:
+        body = ChatBody(
+            messages=[MessageInput(content="test", role="user")],
+            stream=False,
+        )
+        response = await async_test_client.post(
+            "/v1/messages",
+            json=body.model_dump(),
+            headers={"authorization": "Bearer sk-test-principal"},
+        )
+        assert response.status_code == 200
+    finally:
+        stream_processor.process_stream = original_process_stream  # type: ignore[method-assign]
+
+    assert len(captured) == 1, "process_stream must be called exactly once per request"
+    assert captured[0] == "sk-test-principal", (
+        f"Task saw api_key={captured[0]!r}, expected 'sk-test-principal' — "
+        "Principal was not propagated into the background task"
+    )
+
+
+@pytest.mark.anyio
 async def test_concurrent_requests_dont_share_state(
     async_test_client: AsyncClient, injector: MockInjector
 ) -> None:
