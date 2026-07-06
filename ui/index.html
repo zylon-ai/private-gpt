@@ -2407,6 +2407,11 @@
       color: rgba(200, 170, 255, 0.92);
     }
 
+    .code-exec-block .code-exec-tool-label.server {
+      background: rgba(112, 183, 255, 0.14);
+      color: rgba(140, 200, 255, 0.92);
+    }
+
     /* ── Code execution file downloads ──────────────────────────────────── */
     .code-exec-download {
       display: inline-flex;
@@ -2445,6 +2450,46 @@
       font-size: 11px;
       opacity: 0.6;
       flex: 0 0 auto;
+    }
+
+    /* ── Code execution server links (present_server) ──────────────────── */
+    .code-exec-server-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid rgba(112, 183, 255, 0.22);
+      border-radius: 10px;
+      background: rgba(112, 183, 255, 0.08);
+      color: rgba(140, 200, 255, 0.92);
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      text-decoration: none;
+      transition: background 150ms ease, border-color 150ms ease;
+      cursor: pointer;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .code-exec-server-link:hover {
+      background: rgba(112, 183, 255, 0.16);
+      border-color: rgba(112, 183, 255, 0.36);
+    }
+    .code-exec-server-link svg {
+      flex: 0 0 auto;
+      width: 14px;
+      height: 14px;
+    }
+    .code-exec-server-link .code-exec-server-name {
+      font-weight: 600;
+      flex: 0 0 auto;
+    }
+    .code-exec-server-link .code-exec-server-url {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      opacity: 0.85;
     }
 
     /* ── Modal backdrop blur ─────────────────────────────────────────────── */
@@ -5191,11 +5236,11 @@
     }
 
     function isCodeExecTool(name) {
-      return ["bash", "view", "str_replace", "create", "insert", "present_files"].includes(name);
+      return ["bash", "view", "str_replace", "create", "insert", "present_files", "present_server"].includes(name);
     }
 
     function codeExecToolLabel(name) {
-      const map = { bash: "Bash", view: "Read", str_replace: "Edit", create: "Create", insert: "Insert", present_files: "Present" };
+      const map = { bash: "Bash", view: "Read", str_replace: "Edit", create: "Create", insert: "Insert", present_files: "Present", present_server: "Server" };
       return map[name] || name;
     }
 
@@ -5205,6 +5250,7 @@
       if (name === "create") return "create";
       if (name === "str_replace") return "edit";
       if (name === "present_files") return "present";
+      if (name === "present_server") return "server";
       return "file";
     }
 
@@ -5231,6 +5277,11 @@
       } else if (name === "present_files") {
         const files = Array.isArray(input.files) ? input.files : [];
         detail = `<div class="code-exec-present-files">${files.map(f => `<div class="code-exec-present-file"><span class="file-icon">${icons.file}</span><span class="file-name">${escapeHtml(typeof f === "string" ? f : f.path || f.name || "")}</span></div>`).join("")}</div>`;
+      } else if (name === "present_server") {
+        const port = input.port != null ? `:${input.port}` : "";
+        const service = input.service_name || "App";
+        const initialPath = input.initial_path ? ` → ${input.initial_path}` : "";
+        detail = `<div class="code-exec-file-info">${icons.globe}<span class="code-exec-file-path">${escapeHtml(service)}${escapeHtml(port)}${escapeHtml(initialPath)}</span></div>`;
       }
 
       // If we have a result block, render the result content in the same body
@@ -5279,6 +5330,28 @@
           } else {
             resultHtml = rawText ? `<div class="code-exec-terminal">${escapeHtml(rawText)}</div>` : "";
           }
+        } else if (name === "present_server") {
+          const content = resultBlock.content;
+          if (Array.isArray(content)) {
+            const linkItems = content.filter(b => b?.type === "resource_link");
+            const textItems = content.filter(b => b?.type === "text" || typeof b === "string");
+            const textHtml = textItems.map(b => escapeHtml(typeof b === "string" ? b : (b.text || ""))).join(" ");
+            if (linkItems.length > 0) {
+              resultHtml = `<div class="code-exec-present-files">${linkItems.map(l => {
+                const url = l.uri || "";
+                const svc = l.name || "App";
+                const desc = l.description ? escapeHtml(l.description) : "";
+                if (url) {
+                  return `<a class="code-exec-server-link" href="${escapeAttr(url)}" target="_blank" rel="noreferrer">${icons.globe}<span class="code-exec-server-name">${escapeHtml(svc)}</span><span class="code-exec-server-url">${escapeHtml(url)}</span></a>${desc ? `<div class="code-exec-terminal" style="margin-top:6px">${desc}</div>` : ""}`;
+                }
+                return `<div class="code-exec-present-file"><span class="file-icon">${icons.globe}</span><span class="file-name">${escapeHtml(svc)}</span></div>`;
+              }).join("")}</div>${textHtml ? `<div class="code-exec-terminal" style="margin-top:8px">${textHtml}</div>` : ""}`;
+            } else {
+              resultHtml = textHtml ? `<div class="code-exec-terminal">${textHtml}</div>` : "";
+            }
+          } else {
+            resultHtml = rawText ? `<div class="code-exec-terminal">${escapeHtml(rawText)}</div>` : "";
+          }
         } else {
           resultHtml = renderFileView(rawText);
         }
@@ -5287,7 +5360,7 @@
         }
       }
 
-      const summaryLabel = name === "bash" ? (input.command ? input.command.split("\n")[0].slice(0, 60) + (input.command.length > 60 ? "…" : "") : "") : (input.path || "");
+      const summaryLabel = name === "bash" ? (input.command ? input.command.split("\n")[0].slice(0, 60) + (input.command.length > 60 ? "…" : "") : "") : name === "present_server" ? `${input.service_name || "App"}${input.port != null ? `:${input.port}` : ""}` : (input.path || "");
       return `<details class="code-exec-block"${resultBlock ? " open" : ""}><summary><span class="code-exec-tool-label ${labelClass}">${label}</span>${escapeHtml(summaryLabel)}</summary><div class="code-exec-body">${detail}</div></details>`;
     }
 

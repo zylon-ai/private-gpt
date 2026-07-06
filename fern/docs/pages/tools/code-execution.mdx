@@ -15,7 +15,7 @@ The code execution subsystem provides:
 
 | Type identifier | Role |
 |---|---|
-| `code_execution_v1` | Top-level wrapper — expands into `bash_v1`, `text_editor_v1`, and optionally `present_files_v1` |
+| `code_execution_v1` | Top-level wrapper — expands into `bash_v1`, `text_editor_v1`, and optionally `present_files_v1` and `present_server_v1` |
 | `bash_v1` | Run arbitrary bash commands in a sandboxed subprocess |
 | `text_editor_v1` | View, create, and edit files in the workspace |
 | `view_v1` | View file or directory contents |
@@ -23,11 +23,12 @@ The code execution subsystem provides:
 | `create_v1` | Create a new file |
 | `insert_v1` | Insert text after a given line |
 | `present_files_v1` | Expose generated files to the caller |
+| `present_server_v1` | Expose an HTTP service running in the sandbox to the caller |
 
 Standalone endpoints are not provided for code execution tools. Use them through `/v1/messages`.
 
 <Note>
-  `present_files_v1` is a server-only metadata tool that surfaces created files to API consumers. It is enabled automatically when `code_execution_v1` is used and does not require explicit configuration.
+  `present_files_v1` and `present_server_v1` are server-only metadata tools that surface generated artifacts and running services to API consumers. They are enabled automatically when `code_execution_v1` is used and do not require explicit configuration.
 </Note>
 
 ---
@@ -36,7 +37,7 @@ Standalone endpoints are not provided for code execution tools. Use them through
 
 When the model submits a `code_execution_v1` tool call, the server expands it into its constituent tools, creates or reuses a per-session sandbox, and executes the requested operations:
 
-1. **Tool expansion** — `code_execution_v1` expands into `bash_v1`, `text_editor_v1`, and optionally `present_files_v1`
+1. **Tool expansion** — `code_execution_v1` expands into `bash_v1`, `text_editor_v1`, and optionally `present_files_v1` and `present_server_v1`
 2. **Session management** — each chat session gets an isolated workspace on the host filesystem
 3. **Path translation** — canonical LLM-visible paths (`/home/agent/workspace/`) are transparently mapped to real host paths
 4. **Subprocess isolation** — bash commands run as child processes with OS-level resource limits (`setrlimit`)
@@ -189,3 +190,23 @@ Code execution sessions are managed automatically:
 | Windows | None | None | Subprocesses run without resource limits |
 
 All platforms support the same canonical path translation, output scrubbing, and session lifecycle management.
+
+---
+
+## `present_server` tool
+
+`present_server_v1` exposes an HTTP service running inside the sandbox to the caller. Call it after starting a server (for example a web app, Jupyter, or Streamlit) so the user can open or interact with it.
+
+The model invokes it with:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `port` | `int` | Yes | Port the service is listening on inside the sandbox. |
+| `service_name` | `str` | No | Human-readable name for the service (defaults to `"App"`). |
+| `initial_path` | `str \| null` | No | Optional path appended to the URL to deep-link to a specific route. |
+
+The tool result contains a `resource_link` block whose `uri` is the publicly reachable URL of the tunneled service, plus a `text` block describing the service. If the sandbox backend does not support HTTP ingress, the tool returns a `text` block explaining that no endpoint is available.
+
+<Note>
+  HTTP ingress support depends on the configured `code_execution.provider`. Only sandbox backends that support per-session endpoint tunneling can fulfill `present_server_v1` calls.
+</Note>
