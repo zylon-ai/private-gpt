@@ -1,3 +1,7 @@
+api:
+  specs:
+    - openapi: openapi/openapi.json
+
 groups:
   public:
     generators:

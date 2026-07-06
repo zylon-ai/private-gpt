@@ -11,6 +11,7 @@ from private_gpt.server.content.content_router import ContentFormat, ContentTree
 from private_gpt.server.ingest.convert_service import ConvertService
 from private_gpt.server.utils.artifact_input import IngestableArtifactType
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
 convert_router = APIRouter(
     prefix="/v1/artifacts",
@@ -78,6 +79,40 @@ class ConvertResponse(BaseModel):
         ..., description="Parsed file content in the requested format"
     )
     reader: str = Field(..., description="Reader that was used to parse the file")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "content": "# Annual Report 2023\n\nExecutive Summary\n\nFiscal year 2023 marked a transformative period...",
+                    "reader": "markitdown",
+                },
+                {
+                    "content": {
+                        "id": "root",
+                        "type": "document",
+                        "content": "",
+                        "children": [
+                            {
+                                "id": "section-1",
+                                "type": "SectionNode",
+                                "content": "Annual Report 2023",
+                                "children": [
+                                    {
+                                        "id": "text-1",
+                                        "type": "TextNode",
+                                        "content": "Executive Summary\n\nFiscal year 2023 marked a transformative period...",
+                                        "children": [],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    "reader": "docling",
+                },
+            ]
+        }
+    }
 
 
 class ReaderInfo(BaseModel):
@@ -173,6 +208,7 @@ def list_readers(request: Request) -> ReadersResponse:
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error",
             "content": {
                 "application/json": {

@@ -13,6 +13,7 @@ from private_gpt.server.chat.chat_models import ChatBody
 from private_gpt.server.chat.chat_request_mapper import ChatRequestMapper
 from private_gpt.server.chat_async.chat_async_service import ChatAsyncService
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
 
 class StreamMetadata(BaseModel):
@@ -20,7 +21,32 @@ class StreamMetadata(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "description": "Stream metadata and status information for asynchronous chat completions"
+            "description": "Stream metadata and status information for asynchronous chat completions",
+            "examples": [
+                {
+                    "message_id": "msg_async_12345",
+                    "status": "pending",
+                    "created_at": "2025-07-10T09:11:16.003615Z",
+                    "updated_at": "2025-07-10T09:11:16.003615Z",
+                    "completed_at": None,
+                    "error_message": None,
+                    "stream_type": "default",
+                    "metadata": {},
+                },
+                {
+                    "message_id": "msg_async_67890",
+                    "status": "processing",
+                    "created_at": "2025-07-10T09:11:16.003615Z",
+                    "updated_at": "2025-07-10T09:11:20.123456Z",
+                    "completed_at": None,
+                    "error_message": None,
+                    "stream_type": "default",
+                    "metadata": {
+                        "tokens_processed": 156,
+                        "tools_used": ["security_scanner"],
+                    },
+                },
+            ],
         }
     }
 
@@ -59,7 +85,19 @@ class ChatResponse(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "description": "Response model for initiated asynchronous chat completion streams"
+            "description": "Response model for initiated asynchronous chat completion streams",
+            "examples": [
+                {
+                    "message_id": "msg_async_12345",
+                    "status": "pending",
+                    "message": "Request initiated successfully",
+                },
+                {
+                    "message_id": "custom_msg_67890",
+                    "status": "pending",
+                    "message": "Request initiated successfully",
+                },
+            ],
         }
     }
 
@@ -78,7 +116,17 @@ class ChatCancellationResponse(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "description": "Response model for cancelled asynchronous chat streams"
+            "description": "Response model for cancelled asynchronous chat streams",
+            "examples": [
+                {
+                    "message": "Stream cancelled successfully",
+                    "message_id": "msg_async_12345",
+                },
+                {
+                    "message": "Stream cancelled successfully",
+                    "message_id": "msg_async_long_running",
+                },
+            ],
         }
     }
 
@@ -128,6 +176,7 @@ chat_router = APIRouter(
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -293,6 +342,7 @@ async def chat_messages(
             },
         },
         404: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Stream not found",
             "content": {
                 "application/json": {
@@ -429,6 +479,7 @@ async def observe_stream(
             },
         },
         404: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Stream not found",
             "content": {
                 "application/json": {
@@ -519,6 +570,7 @@ async def get_stream_status(
             },
         },
         404: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Stream not found",
             "content": {
                 "application/json": {
@@ -599,6 +651,7 @@ async def cancel_stream(
             "description": "Stream deleted successfully - no content returned",
         },
         404: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Stream not found",
             "content": {
                 "application/json": {
