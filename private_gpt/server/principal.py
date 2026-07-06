@@ -94,6 +94,30 @@ class Principal:
             return {f"{prefix}_API_KEY": key}
         return {}
 
+    def resolve_env(self, env_vars: dict[str, str]) -> dict[str, str]:
+        """Resolve ``$PRINCIPAL_*`` sentinels in *env_vars* against this principal.
+
+        Supported sentinels:
+
+        * ``$PRINCIPAL_AUTH_TOKEN`` → ``authorization`` header (e.g. ``Bearer sk-...``)
+        * ``$PRINCIPAL_BEARER`` → ``api_key`` (Bearer token without the prefix)
+
+        Anonymous principals return the original dict with empty values stripped.
+        """
+        if self.anonymous:
+            return {k: v for k, v in env_vars.items() if v}
+        result: dict[str, str] = {}
+        for key, value in env_vars.items():
+            if not value:
+                continue
+            if value == "$PRINCIPAL_AUTH_TOKEN" and self.authorization:
+                result[key] = self.authorization
+            elif value == "$PRINCIPAL_BEARER" and self.api_key:
+                result[key] = self.api_key
+            else:
+                result[key] = value
+        return result
+
     def __repr__(self) -> str:
         parts: list[str] = []
         if "authorization" in self._headers:
