@@ -131,6 +131,12 @@ navigation:
           - page: Observability
             slug: observability/observability
             path: ./docs/pages/observability/observability.mdx
+      - section: Community
+        skip-slug: true
+        contents:
+          - page: Community Forks
+            slug: community/forks
+            path: ./docs/pages/community/forks.mdx
       - section: Reference
         skip-slug: true
         contents:

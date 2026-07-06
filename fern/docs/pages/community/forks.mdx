@@ -1,0 +1,79 @@
+---
+title: "Community Forks"
+description: "Discover interesting community forks and derivatives of PrivateGPT."
+---
+
+## Community Forks
+
+PrivateGPT is an open-source project, and the community builds amazing things on top of it. This page collects forks and derivatives that add new features, explore novel ideas, or adapt PrivateGPT to specific use cases.
+
+Adding your fork here is a recognized way to contribute to the PrivateGPT ecosystem. Not every contribution needs to land in the main repo to be valuable. Forks that explore new directions, solve niche problems, or experiment with alternative approaches are just as much a part of the project's community as merged PRs.
+
+These projects are maintained independently by their authors and are not officially supported. If you find them interesting, show the authors some love by starring their repos.
+
+---
+
+## Why a forks page instead of merging?
+
+Not every contribution fits the upstream roadmap, but that doesn't mean it isn't valuable. Instead of closing PRs that don't align with the project direction, we encourage maintainers of such forks to add them here. This way:
+
+- The work stays visible and discoverable
+- Users can find and try alternative approaches
+- Authors get recognition for their work
+
+If you maintain a fork you'd like listed, open a PR adding it to this page.
+
+---
+
+## What kind of forks belong here?
+
+Anything that extends PrivateGPT in a way that doesn't fit the upstream roadmap. Here are some examples:
+
+### New providers
+
+- **Vector stores:** adding support for Milvus, Weaviate, Pinecone, Elasticsearch, Redis, or any other vector database not shipped upstream.
+- **LLM providers:** integrating a new inference backend like Groq, Together AI, Fireworks, AWS Bedrock, Azure OpenAI, or a self-hosted engine beyond the officially supported ones.
+- **Embedding providers:** plugging in a custom embedding service, local embedding model, or cloud embedding API.
+- **Object storage:** adding S3, MinIO, Azure Blob, GCS, or other storage backends for files and artifacts.
+
+### New tools and integrations
+
+- **Custom built-in tools:** new first-class tools beyond web search, web fetch, and code execution. For example: image generation, text-to-speech, email sending, or calendar integration.
+- **MCP server packs:** bundles of pre-configured MCP connectors for specific ecosystems (e.g., Jira, Notion, Slack).
+- **Workflow automation:** n8n nodes, LangChain wrappers, or other orchestration layers built around the PrivateGPT API.
+
+### Platform and deployment
+
+- **Auth providers:** OAuth, LDAP, SSO, or API key management layers.
+- **Multi-tenancy:** isolated namespaces, per-user vector stores, or team-based access control.
+- **Kubernetes Helm charts:** production-ready deployment configurations.
+- **Observability backends:** exporters for Grafana, Datadog, or other monitoring stacks beyond the built-in Phoenix support.
+
+### UI and developer experience
+
+- **Alternative UIs:** custom frontends, chat interfaces, or admin panels.
+- **SDKs and client libraries:** client wrappers for languages not officially supported.
+- **CLI tools:** specialized command-line utilities for ingestion, model management, or admin tasks.
+
+This list is not exhaustive. If your fork does something interesting that others might find useful, it belongs here.
+
+---
+
+## Forks
+
+*No community forks listed yet.*
+
+### Add your fork
+
+Know a fork that should be here? Open a pull request to add it. Each entry should include:
+
+- **Name:** the name of the fork or project
+- **URL:** link to the repository
+- **Description:** what it does differently or adds on top of PrivateGPT
+- **Author:** (optional) who maintains it
+
+Use this template when submitting:
+
+```markdown
+| [Project Name](https://github.com/user/repo) | What it does and how it differs from upstream | @username |
+```

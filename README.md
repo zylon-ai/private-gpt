@@ -274,5 +274,6 @@ Use **Zylon** if you need the full enterprise AI infrastructure around it: deplo
 - [Discord](https://discord.gg/F8KCFeZbkx) — questions, show-and-tell, and release discussions
 - [Documentation](https://docs.privategpt.dev/) — full reference, guides, and API docs
 - [Issues](https://github.com/zylon-ai/private-gpt/issues) — bug reports and feature requests
+- [Community Forks](https://docs.privategpt.dev/community/forks) — interesting forks and derivatives by the community
 
-Pull requests are welcome. 
+Pull requests are welcome. If your PR doesn't fit the upstream roadmap, you can [add your fork to the Community Forks page](https://docs.privategpt.dev/community/forks) instead.
