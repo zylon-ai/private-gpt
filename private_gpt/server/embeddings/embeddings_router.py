@@ -8,6 +8,7 @@ from private_gpt.server.embeddings.embeddings_service import (
     EmbeddingsService,
 )
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
 embeddings_router = APIRouter(
     prefix="/v1",
@@ -235,6 +236,7 @@ class EmbeddingsResponse(BaseModel):
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid input format",
             "content": {
                 "application/json": {

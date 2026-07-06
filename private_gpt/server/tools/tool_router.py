@@ -8,6 +8,7 @@ from private_gpt.events.models import ResultContentBlockType
 from private_gpt.server.tools.tool_service import ToolService
 from private_gpt.server.utils.artifact_input import ArtifactType
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
 tool_router = APIRouter(
     prefix="/v1",
@@ -185,6 +186,7 @@ class ToolResponse(BaseModel):
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -306,6 +308,7 @@ async def semantic_search(
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -415,6 +418,7 @@ async def tabular_data_analysis(
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -502,6 +506,7 @@ async def database_query(
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -596,6 +601,7 @@ async def web_fetch(
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {

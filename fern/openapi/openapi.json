@@ -644,6 +644,9 @@
                       ]
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
                 }
               }
             }
@@ -710,6 +713,9 @@
                       "detail": "Stream with message_id msg_nonexistent not found"
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
                 }
               }
             }
@@ -835,6 +841,9 @@
                       "detail": "Stream with message_id msg_nonexistent not found"
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
                 }
               }
             }
@@ -917,6 +926,9 @@
                       "detail": "Stream with message_id msg_nonexistent not found"
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
                 }
               }
             }
@@ -997,6 +1009,9 @@
                       "detail": "Stream with message_id msg_nonexistent not found"
                     }
                   }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
                 }
               }
             }
@@ -1177,6 +1192,9 @@
             "description": "Validation Error - Invalid input format",
             "content": {
               "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
+                },
                 "examples": {
                   "missing_input": {
                     "summary": "Missing input field",
@@ -2034,6 +2052,9 @@
             "description": "Validation Error",
             "content": {
               "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
+                },
                 "examples": {
                   "invalid_reader": {
                     "summary": "Reader not supported for file extension",
@@ -2152,6 +2173,9 @@
             "description": "Validation Error - Invalid request parameters",
             "content": {
               "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
+                },
                 "examples": {
                   "missing_context_filter": {
                     "summary": "Missing context filter",
@@ -2260,6 +2284,9 @@
             "description": "Validation Error - Invalid request parameters",
             "content": {
               "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
+                },
                 "examples": {
                   "missing_context_filter": {
                     "summary": "Missing context filter",
@@ -2724,6 +2751,9 @@
             "description": "Validation Error - Invalid request parameters",
             "content": {
               "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
+                },
                 "examples": {
                   "missing_query": {
                     "summary": "Missing query field",
@@ -2830,6 +2860,9 @@
             "description": "Validation Error - Invalid request parameters",
             "content": {
               "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
+                },
                 "examples": {
                   "missing_query": {
                     "summary": "Missing analysis query",
@@ -2939,6 +2972,9 @@
             "description": "Validation Error - Invalid request parameters",
             "content": {
               "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
+                },
                 "examples": {
                   "missing_query": {
                     "summary": "Missing query field",
@@ -3013,6 +3049,9 @@
             "description": "Validation Error - Invalid request parameters",
             "content": {
               "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
+                },
                 "examples": {
                   "missing_url": {
                     "summary": "Missing URL in the last user message",
@@ -3102,6 +3141,9 @@
             "description": "Validation Error - Invalid request parameters",
             "content": {
               "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAPIValidationErrorResponse"
+                },
                 "examples": {
                   "missing_query": {
                     "summary": "Missing required query field",
@@ -9098,6 +9140,32 @@
         ],
         "title": "ModelListOutput",
         "description": "Paginated model list payload."
+      },
+      "OpenAPIValidationErrorResponse": {
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Detail",
+            "description": "Error detail \u2014 a string message or a list of validation error objects."
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "OpenAPIValidationErrorResponse",
+        "description": "Standard 422 validation error response matching FastAPI's HTTPValidationError shape."
       },
       "OutputConfigInput": {
         "properties": {

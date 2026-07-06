@@ -207,7 +207,10 @@ class SkillValidationResponse(BaseModel):
                     "name": None,
                     "description": None,
                     "errors": [
-                        {"code": "INVALID_FRONTMATTER", "message": "SKILL.md must start with YAML frontmatter"}
+                        {
+                            "code": "INVALID_FRONTMATTER",
+                            "message": "SKILL.md must start with YAML frontmatter",
+                        }
                     ],
                 },
             ]

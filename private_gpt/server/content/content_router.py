@@ -18,6 +18,7 @@ from private_gpt.components.readers.nodes.tree_node import TreeMetadataMode, Tre
 from private_gpt.events.models import ResultContentBlockType
 from private_gpt.server.content.content_service import ContentService
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
 NodeTypeName = Literal[
     "ImageNode",
@@ -302,6 +303,7 @@ class ChunkedContentResponse(BaseModel):
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -483,6 +485,7 @@ def content_retrieval(request: Request, body: ContentBody) -> ContentResponse:
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {

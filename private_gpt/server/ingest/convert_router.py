@@ -11,6 +11,7 @@ from private_gpt.server.content.content_router import ContentFormat, ContentTree
 from private_gpt.server.ingest.convert_service import ConvertService
 from private_gpt.server.utils.artifact_input import IngestableArtifactType
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
 convert_router = APIRouter(
     prefix="/v1/artifacts",
@@ -207,6 +208,7 @@ def list_readers(request: Request) -> ReadersResponse:
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error",
             "content": {
                 "application/json": {

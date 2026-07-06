@@ -13,6 +13,7 @@ from private_gpt.server.chat.chat_models import ChatBody
 from private_gpt.server.chat.chat_request_mapper import ChatRequestMapper
 from private_gpt.server.chat_async.chat_async_service import ChatAsyncService
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
 
 class StreamMetadata(BaseModel):
@@ -175,6 +176,7 @@ chat_router = APIRouter(
             },
         },
         422: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Validation Error - Invalid request parameters",
             "content": {
                 "application/json": {
@@ -340,6 +342,7 @@ async def chat_messages(
             },
         },
         404: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Stream not found",
             "content": {
                 "application/json": {
@@ -476,6 +479,7 @@ async def observe_stream(
             },
         },
         404: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Stream not found",
             "content": {
                 "application/json": {
@@ -566,6 +570,7 @@ async def get_stream_status(
             },
         },
         404: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Stream not found",
             "content": {
                 "application/json": {
@@ -646,6 +651,7 @@ async def cancel_stream(
             "description": "Stream deleted successfully - no content returned",
         },
         404: {
+            "model": OpenAPIValidationErrorResponse,
             "description": "Stream not found",
             "content": {
                 "application/json": {
