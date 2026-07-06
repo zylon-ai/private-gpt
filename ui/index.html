@@ -2152,6 +2152,301 @@
       -webkit-backdrop-filter: blur(72px) saturate(1.6);
     }
 
+    /* ── Code execution blocks (bash, text_editor, view, str_replace, create, insert) ── */
+    .code-exec-block {
+      margin: 0;
+      padding: 0;
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.16);
+      overflow: hidden;
+    }
+
+    .code-exec-block summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      color: var(--muted-strong);
+      font-weight: 720;
+      font-size: 13px;
+      min-height: 40px;
+      user-select: none;
+      list-style: none;
+      transition: background 150ms ease;
+    }
+
+    .code-exec-block summary::-webkit-details-marker { display: none; }
+
+    .code-exec-block summary:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .code-exec-block summary::before {
+      content: "▶";
+      font-size: 8px;
+      opacity: 0.6;
+      transition: transform 0.15s ease;
+      flex: 0 0 auto;
+      margin-right: 2px;
+    }
+
+    .code-exec-block[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    .code-exec-block .code-exec-body {
+      padding: 0 12px 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .code-exec-block .code-exec-command {
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.22);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--muted-strong);
+    }
+
+    .code-exec-block .code-exec-command .prompt {
+      color: var(--accent);
+      margin-right: 6px;
+      user-select: none;
+    }
+
+    .code-exec-block .code-exec-terminal {
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.28);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      color: rgba(220, 220, 220, 0.92);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+
+    .code-exec-block .code-exec-terminal.is-stderr {
+      color: rgba(255, 159, 159, 0.92);
+      border-color: rgba(255, 159, 159, 0.16);
+    }
+
+    .code-exec-block .code-exec-result-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+
+    .code-exec-block .code-exec-result-meta .exit-code {
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 11px;
+    }
+
+    .code-exec-block .code-exec-result-meta .exit-code.ok {
+      background: rgba(145, 232, 189, 0.12);
+      color: var(--ok);
+    }
+
+    .code-exec-block .code-exec-result-meta .exit-code.error {
+      background: rgba(255, 159, 159, 0.12);
+      color: var(--danger);
+    }
+
+    .code-exec-block .code-exec-file-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .code-exec-block .code-exec-file-path {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--muted-strong);
+      font-size: 12px;
+    }
+
+    .code-exec-block .code-exec-file-content {
+      padding: 0;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.22);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      overflow: auto;
+      max-height: 420px;
+    }
+
+    .code-exec-block .code-exec-file-content table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: auto;
+    }
+
+    .code-exec-block .code-exec-file-content td {
+      padding: 2px 0;
+      vertical-align: top;
+    }
+
+    .code-exec-block .code-exec-file-content .line-number {
+      padding-right: 12px;
+      padding-left: 8px;
+      color: var(--faint);
+      text-align: right;
+      user-select: none;
+      white-space: nowrap;
+      min-width: 40px;
+      font-size: 11px;
+    }
+
+    .code-exec-block .code-exec-file-content .line-text {
+      padding-right: 8px;
+      color: rgba(220, 220, 220, 0.88);
+      white-space: pre;
+    }
+
+    .code-exec-block .code-exec-diff {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.22);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .code-exec-block .code-exec-diff .diff-removed {
+      color: rgba(255, 159, 159, 0.92);
+    }
+
+    .code-exec-block .code-exec-diff .diff-added {
+      color: rgba(145, 232, 189, 0.92);
+    }
+
+    .code-exec-block .code-exec-present-files {
+      display: grid;
+      gap: 6px;
+    }
+
+    .code-exec-block .code-exec-present-file {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 12px;
+    }
+
+    .code-exec-block .code-exec-present-file .file-icon {
+      flex: 0 0 auto;
+      opacity: 0.7;
+    }
+
+    .code-exec-block .code-exec-present-file .file-name {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--muted-strong);
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .code-exec-block .code-exec-tool-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .code-exec-block .code-exec-tool-label.bash {
+      background: rgba(100, 180, 120, 0.14);
+      color: rgba(145, 215, 155, 0.88);
+    }
+
+    .code-exec-block .code-exec-tool-label.file {
+      background: rgba(112, 183, 255, 0.14);
+      color: rgba(140, 200, 255, 0.88);
+    }
+
+    .code-exec-block .code-exec-tool-label.create {
+      background: rgba(145, 232, 189, 0.14);
+      color: var(--ok);
+    }
+
+    .code-exec-block .code-exec-tool-label.edit {
+      background: rgba(255, 209, 138, 0.14);
+      color: var(--warn);
+    }
+
+    .code-exec-block .code-exec-tool-label.present {
+      background: rgba(190, 150, 255, 0.14);
+      color: rgba(200, 170, 255, 0.92);
+    }
+
+    /* ── Code execution file downloads ──────────────────────────────────── */
+    .code-exec-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid rgba(112, 183, 255, 0.22);
+      border-radius: 10px;
+      background: rgba(112, 183, 255, 0.08);
+      color: rgba(140, 200, 255, 0.92);
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      text-decoration: none;
+      transition: background 150ms ease, border-color 150ms ease;
+      cursor: pointer;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .code-exec-download:hover {
+      background: rgba(112, 183, 255, 0.16);
+      border-color: rgba(112, 183, 255, 0.36);
+    }
+    .code-exec-download svg {
+      flex: 0 0 auto;
+      width: 14px;
+      height: 14px;
+    }
+    .code-exec-download .code-exec-file-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .code-exec-mime {
+      font-size: 11px;
+      opacity: 0.6;
+      flex: 0 0 auto;
+    }
+
     /* ── Modal backdrop blur ─────────────────────────────────────────────── */
     .modal-backdrop {
       backdrop-filter: blur(14px);
@@ -2902,6 +3197,27 @@
               </div>
               <div class="source-list" id="customToolsList"></div>
             </section>
+
+            <section class="context-panel" data-context-panel="codeExecution">
+              <div class="panel-head">
+                <div>
+                  <h2>Code Execution</h2>
+                  <p class="subtle">Manage files in the active chat's sandbox session. Enable Code Execution in the chat Tools menu to activate.</p>
+                </div>
+                <div class="panel-actions" id="codeExecPanelActions">
+                  <input class="hidden" id="sessionContextFileInput" type="file" multiple />
+                  <button class="ghost-button" id="refreshSessionFilesButton" type="button"><span data-icon="refresh"></span>Refresh</button>
+                  <button class="primary-button" id="uploadSessionContextButton" type="button"><span data-icon="upload"></span>Upload</button>
+                </div>
+              </div>
+              <div class="settings-card" id="codeExecInfo" style="display:none">
+                <div>
+                  <h3>No active code execution session</h3>
+                  <p class="subtle">Open a chat and enable Code Execution from the Tools menu, then return here to manage session files.</p>
+                </div>
+              </div>
+              <div class="source-list" id="sessionFilesList"></div>
+            </section>
           </div>
         </div>
       </section>
@@ -2974,6 +3290,10 @@
               <label class="toggle-row">
                 <span>Enable thinking</span>
                 <input id="enableThinking" type="checkbox" />
+              </label>
+              <label class="toggle-row">
+                <span>Code Execution</span>
+                <input id="enableCodeExecution" type="checkbox" />
               </label>
               <div class="field">
                 <label for="extensions">Extensions</label>
@@ -3297,7 +3617,8 @@
       'chevron-down': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg>',
       'check': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>',
       cpu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>',
-      sparkles: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/><path d="m5 14 .9 2.1L8 17l-2.1.9L5 20l-.9-2.1L2 17l2.1-.9L5 14Z"/></svg>'
+      sparkles: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/><path d="m5 14 .9 2.1L8 17l-2.1.9L5 20l-.9-2.1L2 17l2.1-.9L5 14Z"/></svg>',
+      download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>'
     };
 
     const DEFAULT_APPEARANCE = Object.freeze({
@@ -3362,6 +3683,7 @@
       useCitations: true,
       useDefaultPrompt: true,
       enableThinking: true,
+      enableCodeExecution: true,
       extensions: ["zylon"],
       selectedModel: null,
       models: [],
@@ -3451,6 +3773,7 @@
       merged.useCitations = value.useCitations !== false;
       merged.useDefaultPrompt = value.useDefaultPrompt !== false;
       merged.enableThinking = value.enableThinking !== false;
+      merged.enableCodeExecution = value.enableCodeExecution !== false;
       merged.extensions = Array.isArray(value.extensions) ? value.extensions : ["zylon"];
       const migratedCredentials =
         decodeBasicAuthHeader(value.privateGptAuthHeader) ||
@@ -3780,6 +4103,7 @@
         enabledDatabases: [],
         enabledWeb: false,
         enabledTabular: false,
+        enabledCodeExecution: false,
         enabledMcpServers: [],
         enabledSkills: [],
         enabledCustomTools: [],
@@ -3866,7 +4190,7 @@
       });
     }
 
-    const CONTEXT_TAB_IDS = new Set(["documents", "databases", "web", "mcp", "skills", "customTools"]);
+    const CONTEXT_TAB_IDS = new Set(["documents", "databases", "web", "mcp", "skills", "customTools", "codeExecution"]);
 
     function syncHash() {
       let hash;
@@ -4012,6 +4336,7 @@
       $("#useCitations").checked = state.useCitations !== false;
       $("#useDefaultPrompt").checked = state.useDefaultPrompt !== false;
       $("#enableThinking").checked = state.enableThinking !== false;
+      $("#enableCodeExecution").checked = state.enableCodeExecution !== false;
       $("#extensions").value = (state.extensions || []).join(", ");
       $("#defaultCollection").value = state.context.documents.defaultCollection || "pgpt_collection";
       $("#onboardingBaseUrl").value = state.privateGptBaseUrl || DEFAULT_BASE_URL;
@@ -4032,7 +4357,8 @@
         ...(featureEnabled("web") ? [["web", "Web", "globe"]] : []),
         ...(featureEnabled("mcp") ? [["mcp", "MCP", "layers"]] : []),
         ...(featureEnabled("skills") ? [["skills", "Skills", "zap"]] : []),
-        ...(featureEnabled("customTools") ? [["customTools", "Custom Tools", "sliders"]] : [])
+        ...(featureEnabled("customTools") ? [["customTools", "Custom Tools", "sliders"]] : []),
+        ...(state.enableCodeExecution !== false ? [["codeExecution", "Code Execution", "cpu"]] : [])
       ];
     }
 
@@ -4066,6 +4392,7 @@
       renderMcp();
       renderSkills();
       renderCustomTools();
+      renderCodeExecutionPanel();
     }
 
     function updateOnboardingPreview() {
@@ -4337,6 +4664,84 @@
       renderIcons(list);
     }
 
+    function renderCodeExecutionPanel() {
+      const chat = activeChat();
+      const enabled = Boolean(chat?.settings?.enabledCodeExecution);
+      const info = $("#codeExecInfo");
+      const list = $("#sessionFilesList");
+      const actions = $("#codeExecPanelActions");
+      if (!info || !list || !actions) return;
+      if (!enabled) {
+        info.style.display = "";
+        list.innerHTML = "";
+        actions.style.display = "none";
+        return;
+      }
+      info.style.display = "none";
+      actions.style.display = "";
+      if (runtime.contextTab === "codeExecution") {
+        refreshSessionFiles({ showToast: false });
+      }
+    }
+
+    async function refreshSessionFiles({ showToast: showT = true } = {}) {
+      const chat = activeChat();
+      if (!chat || !chat.settings.enabledCodeExecution) return;
+      const list = $("#sessionFilesList");
+      if (!list) return;
+      const progress = showT ? toast("Loading session files...", "loading", { persistent: true }) : null;
+      try {
+        const data = await apiFetch(`/v1/files?scope_id=${encodeURIComponent(chat.id)}`, {}, { label: "List session files" });
+        const files = data?.data || [];
+        list.innerHTML = "";
+        if (!files.length) {
+          list.innerHTML = `<div class="empty-state">No files in session. Upload files or run code that generates output.</div>`;
+          progress?.update("No session files.", "ok");
+          return;
+        }
+        const base = (state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
+        files.forEach(f => {
+          const row = document.createElement("div");
+          row.className = "source-row";
+          const isGenerated = f.downloadable;
+          const sizeLabel = f.size_bytes < 1024 ? `${f.size_bytes} B` : f.size_bytes < 1048576 ? `${(f.size_bytes / 1024).toFixed(1)} KB` : `${(f.size_bytes / 1048576).toFixed(1)} MB`;
+          const downloadUrl = `${base}/v1/files/${encodeURIComponent(f.id)}/content?scope_id=${encodeURIComponent(chat.id)}`;
+          row.innerHTML = `
+            <span class="source-icon">${icons.file}</span>
+            <span class="source-main">
+              <span class="source-title">${escapeHtml(f.filename)}</span>
+              <span class="source-meta">${escapeHtml(f.mime_type)} · ${sizeLabel}${isGenerated ? " · generated" : " · uploaded"}</span>
+            </span>
+            <span class="source-actions">
+              <a class="mini-button" href="${escapeAttr(downloadUrl)}" download="${escapeAttr(f.filename)}" target="_blank" title="Download">${icons.download}</a>
+              ${!isGenerated ? `<span class="mini-button" data-delete-session-file="${escapeAttr(f.id)}" title="Delete">${icons.trash}</span>` : ""}
+            </span>`;
+          list.appendChild(row);
+        });
+        renderIcons(list);
+        list.querySelectorAll("[data-delete-session-file]").forEach(btn => {
+          btn.addEventListener("click", () => deleteSessionFile(btn.dataset.deleteSessionFile));
+        });
+        progress?.update(`${files.length} file(s) in session.`, "ok");
+      } catch (error) {
+        list.innerHTML = `<div class="empty-state">Could not load session files: ${escapeHtml(error.message)}</div>`;
+        progress?.update(`Could not load files: ${error.message}`, "error");
+      }
+    }
+
+    async function deleteSessionFile(fileId) {
+      const chat = activeChat();
+      if (!chat || !confirm(`Delete ${fileId}?`)) return;
+      const progress = toast("Deleting file...", "loading", { persistent: true });
+      try {
+        await apiFetch(`/v1/files/${encodeURIComponent(fileId)}?scope_id=${encodeURIComponent(chat.id)}`, { method: "DELETE" }, { label: "Delete session file" });
+        progress.update("File deleted.", "ok");
+        await refreshSessionFiles({ showToast: false });
+      } catch (error) {
+        progress.update(`Delete failed: ${error.message}`, "error");
+      }
+    }
+
     function removeContextItem(bucket, id) {
       if (!confirm("Delete this item?")) return;
       state.context[bucket] = state.context[bucket].filter(item => item.id !== id);
@@ -4483,8 +4888,14 @@
           chat.settings.enabledWeb = checked; touchChat(chat); saveState();
         }));
       }
-      const simpleGroup = menuGroup("Knowledge", knowledgeRows);
-      menu.appendChild(simpleGroup);
+      menu.appendChild(menuGroup("Knowledge", knowledgeRows));
+      if (state.enableCodeExecution !== false) {
+        menu.appendChild(menuGroup("Code", [
+          toggleRow("Code Execution", Boolean(chat.settings.enabledCodeExecution), checked => {
+            chat.settings.enabledCodeExecution = checked; touchChat(chat); saveState();
+          })
+        ]));
+      }
       if (featureEnabled("databases")) menu.appendChild(selectableGroup("Databases", state.context.databases, chat.settings.enabledDatabases, ids => chat.settings.enabledDatabases = ids));
       if (featureEnabled("mcp")) menu.appendChild(selectableGroup("MCP", state.context.mcpServers, chat.settings.enabledMcpServers, ids => chat.settings.enabledMcpServers = ids));
       if (featureEnabled("skills")) menu.appendChild(selectableGroup("Skills", state.context.skills, chat.settings.enabledSkills, ids => chat.settings.enabledSkills = ids));
@@ -4779,44 +5190,241 @@
       }).join("");
     }
 
+    function isCodeExecTool(name) {
+      return ["bash", "view", "str_replace", "create", "insert", "present_files"].includes(name);
+    }
+
+    function codeExecToolLabel(name) {
+      const map = { bash: "Bash", view: "Read", str_replace: "Edit", create: "Create", insert: "Insert", present_files: "Present" };
+      return map[name] || name;
+    }
+
+    function codeExecToolLabelClass(name) {
+      if (name === "bash") return "bash";
+      if (name === "view" || name === "insert") return "file";
+      if (name === "create") return "create";
+      if (name === "str_replace") return "edit";
+      if (name === "present_files") return "present";
+      return "file";
+    }
+
+    function renderCodeExecToolUse(block, resultBlock) {
+      const name = block.name || "";
+      const input = block.input || {};
+      const label = codeExecToolLabel(name);
+      const labelClass = codeExecToolLabelClass(name);
+      let detail = "";
+
+      if (name === "bash") {
+        detail = `<div class="code-exec-command"><span class="prompt">$</span>${escapeHtml(input.command || "")}</div>`;
+      } else if (name === "view") {
+        const range = Array.isArray(input.view_range) && input.view_range.length === 2
+          ? ` (lines ${input.view_range[0] + 1}-${input.view_range[1]})`
+          : "";
+        detail = `<div class="code-exec-file-info">${icons.file}<span class="code-exec-file-path">${escapeHtml(input.path || "")}${range}</span></div>`;
+      } else if (name === "str_replace") {
+        detail = `<div class="code-exec-file-info">${icons.file}<span class="code-exec-file-path">${escapeHtml(input.path || "")}</span></div>`;
+      } else if (name === "create") {
+        detail = `<div class="code-exec-file-info">${icons.file}<span class="code-exec-file-path">Create: ${escapeHtml(input.path || "")}</span></div>`;
+      } else if (name === "insert") {
+        detail = `<div class="code-exec-file-info">${icons.file}<span class="code-exec-file-path">${escapeHtml(input.path || "")} at line ${input.insert_line}</span></div>`;
+      } else if (name === "present_files") {
+        const files = Array.isArray(input.files) ? input.files : [];
+        detail = `<div class="code-exec-present-files">${files.map(f => `<div class="code-exec-present-file"><span class="file-icon">${icons.file}</span><span class="file-name">${escapeHtml(typeof f === "string" ? f : f.path || f.name || "")}</span></div>`).join("")}</div>`;
+      }
+
+      // If we have a result block, render the result content in the same body
+      let resultHtml = "";
+      if (resultBlock) {
+        const rawText = extractToolResultText(resultBlock.content);
+        if (name === "bash") {
+          const result = parseBashResult(rawText);
+          const parts = [];
+          if (result.stdout) {
+            parts.push(`<div class="code-exec-terminal">${escapeHtml(result.stdout)}</div>`);
+          }
+          if (result.stderr) {
+            parts.push(`<div class="code-exec-terminal is-stderr">${escapeHtml(result.stderr)}</div>`);
+          }
+          if (result.exitCode != null || result.duration != null) {
+            parts.push(`<div class="code-exec-result-meta">
+              ${result.exitCode != null ? `<span class="exit-code ${result.exitCode === 0 ? "ok" : "error"}">Exit: ${result.exitCode}</span>` : ""}
+              ${result.duration != null ? `<span>${result.duration}ms</span>` : ""}
+            </div>`);
+          }
+          resultHtml = parts.join("");
+        } else if (name === "str_replace") {
+          resultHtml = renderDiffView(rawText);
+        } else if (name === "present_files") {
+          const content = resultBlock.content;
+          if (Array.isArray(content)) {
+            const fileItems = content.filter(b => b?.type === "local_resource");
+            const textItems = content.filter(b => b?.type === "text" || typeof b === "string");
+            const textHtml = textItems.map(b => escapeHtml(typeof b === "string" ? b : (b.text || ""))).join(" ");
+            if (fileItems.length > 0) {
+              const base = (state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
+              const chatId = activeChat()?.id;
+              resultHtml = `<div class="code-exec-present-files">${fileItems.map(f => {
+                const ext = f.file_path ? "." + f.file_path.split(".").pop() : "";
+                const fileName = f.name + ext;
+                if (f.file_id && chatId) {
+                  const url = `${base}/v1/files/${encodeURIComponent(f.file_id)}/content?scope_id=${encodeURIComponent(chatId)}`;
+                  return `<a class="code-exec-download" href="${escapeAttr(url)}" download="${escapeAttr(fileName)}" target="_blank">${icons.download}<span class="code-exec-file-name">${escapeHtml(fileName)}</span><span class="code-exec-mime">${escapeHtml(f.mime_type || "")}</span></a>`;
+                }
+                return `<div class="code-exec-present-file"><span class="file-icon">${icons.file}</span><span class="file-name">${escapeHtml(fileName)}</span></div>`;
+              }).join("")}</div>${textHtml ? `<div class="code-exec-terminal" style="margin-top:8px">${textHtml}</div>` : ""}`;
+            } else {
+              resultHtml = textHtml ? `<div class="code-exec-terminal">${textHtml}</div>` : "";
+            }
+          } else {
+            resultHtml = rawText ? `<div class="code-exec-terminal">${escapeHtml(rawText)}</div>` : "";
+          }
+        } else {
+          resultHtml = renderFileView(rawText);
+        }
+        if (resultHtml) {
+          detail += `<div style="border-top:1px solid rgba(255,255,255,0.06);margin-top:10px;padding-top:10px;">${resultHtml}</div>`;
+        }
+      }
+
+      const summaryLabel = name === "bash" ? (input.command ? input.command.split("\n")[0].slice(0, 60) + (input.command.length > 60 ? "…" : "") : "") : (input.path || "");
+      return `<details class="code-exec-block"${resultBlock ? " open" : ""}><summary><span class="code-exec-tool-label ${labelClass}">${label}</span>${escapeHtml(summaryLabel)}</summary><div class="code-exec-body">${detail}</div></details>`;
+    }
+
+    function extractToolResultText(content) {
+      if (typeof content === "string") return content;
+      if (Array.isArray(content)) {
+        return content.map(item => {
+          if (typeof item === "string") return item;
+          if (item?.type === "text") return item.text || "";
+          return "";
+        }).filter(Boolean).join("");
+      }
+      return JSON.stringify(content, null, 2);
+    }
+
+    function parseBashResult(text) {
+      const exitMatch = text.match(/exit_code:\s*(\d+)/);
+      const stdoutMatch = text.match(/stdout:\s*([\s\S]*?)(?:\n(?:stderr:|exit_code:|execution_time)|$)/);
+      const stderrMatch = text.match(/stderr:\s*([\s\S]*?)(?:\n(?:exit_code:|execution_time:|$)|$)/);
+      const timeMatch = text.match(/execution_time_ms:\s*(\d+)/);
+      return {
+        exitCode: exitMatch ? parseInt(exitMatch[1]) : null,
+        stdout: stdoutMatch ? stdoutMatch[1].trim() : "",
+        stderr: stderrMatch ? stderrMatch[1].trim() : "",
+        duration: timeMatch ? parseInt(timeMatch[1]) : null
+      };
+    }
+
+    function renderFileView(text) {
+      if (!text || !text.trim()) return `<div class="code-exec-terminal">(empty)</div>`;
+      const lines = text.split("\n");
+      let hasLineNumbers = false;
+      for (let i = 0; i < Math.min(lines.length, 5); i++) {
+        if (/^\s*\d+[\s|:]\t/.test(lines[i]) || /^\s*\d+\s{2,}/.test(lines[i])) {
+          hasLineNumbers = true;
+          break;
+        }
+      }
+      if (hasLineNumbers) {
+        const rows = lines.map(line => {
+          const match = line.match(/^(\s*\d+)\s+(.*)/);
+          if (match) {
+            return `<tr><td class="line-number">${escapeHtml(match[1])}</td><td class="line-text">${escapeHtml(match[2])}</td></tr>`;
+          }
+          return `<tr><td class="line-number"></td><td class="line-text">${escapeHtml(line)}</td></tr>`;
+        });
+        return `<div class="code-exec-file-content"><table>${rows.join("")}</table></div>`;
+      }
+      return `<div class="code-exec-terminal">${escapeHtml(text)}</div>`;
+    }
+
+    function renderDiffView(text) {
+      if (!text || !text.trim()) return `<div class="code-exec-terminal">(no changes)</div>`;
+      const lines = text.split("\n");
+      const html = lines.map(line => {
+        if (line.startsWith("---") || line.startsWith("+++") || line.startsWith("@@")) {
+          return `<span style="color:var(--blue)">${escapeHtml(line)}</span>`;
+        }
+        if (line.startsWith("-")) {
+          return `<span class="diff-removed">${escapeHtml(line)}</span>`;
+        }
+        if (line.startsWith("+")) {
+          return `<span class="diff-added">${escapeHtml(line)}</span>`;
+        }
+        return escapeHtml(line);
+      }).join("\n");
+      return `<div class="code-exec-diff">${html}</div>`;
+    }
+
     function blocksToHtml(blocks, fallback = "", citationContext = buildCitationContext(blocks), { streaming = false } = {}) {
       if (!Array.isArray(blocks)) return renderMarkdownWithCitations(fallback || "", citationContext);
-      const parts = blocks.map((block, i) => {
-        if (typeof block === "string") return renderMarkdownWithCitations(block, citationContext);
-        if (block.type === "text") {
-          return renderMarkdownWithCitations(block.text || "", citationContext, block.citations || []);
+
+      // Pair code exec tool_use blocks with their subsequent tool_result for combined rendering
+      const paired = [];
+      let i = 0;
+      while (i < blocks.length) {
+        const block = blocks[i];
+        if ((block?.type === "tool_use" || block?.type === "server_tool_use") && isCodeExecTool(block.name)) {
+          const nextBlock = i + 1 < blocks.length ? blocks[i + 1] : null;
+          if (nextBlock?.type === "tool_result" && nextBlock.tool_use_id === block.id) {
+            paired.push({ toolUse: block, toolResult: nextBlock });
+            i += 2;
+            continue;
+          }
         }
-        if (block.type === "thinking") {
-          const thinking = block.thinking || "";
-          const isLast = i === blocks.length - 1;
-          const isActiveStream = streaming && isLast;
-          // Open while actively streaming this block; stay closed once streaming ends
-          const openAttr = isActiveStream ? " open" : "";
-          const label = isActiveStream ? "Thinking…" : "Thinking";
-          // During active streaming: wrap pre to limit to ~3 lines with fade at top
-          const preHtml = isActiveStream
-            ? `<div class="thinking-pre-wrap"><pre>${escapeHtml(thinking)}</pre></div>`
-            : `<pre>${escapeHtml(thinking)}</pre>`;
-          return `<details class="thinking-block"${openAttr}><summary>${label}</summary>${preHtml}</details>`;
+        paired.push({ block, index: i });
+        i += 1;
+      }
+
+      const parts = paired.map(item => {
+        if (item.block) {
+          const block = item.block;
+          const idx = item.index;
+          if (typeof block === "string") return renderMarkdownWithCitations(block, citationContext);
+          if (block.type === "text") {
+            return renderMarkdownWithCitations(block.text || "", citationContext, block.citations || []);
+          }
+          if (block.type === "thinking") {
+            const thinking = block.thinking || "";
+            const isLast = idx === blocks.length - 1;
+            const isActiveStream = streaming && isLast;
+            const openAttr = isActiveStream ? " open" : "";
+            const label = isActiveStream ? "Thinking…" : "Thinking";
+            const preHtml = isActiveStream
+              ? `<div class="thinking-pre-wrap"><pre>${escapeHtml(thinking)}</pre></div>`
+              : `<pre>${escapeHtml(thinking)}</pre>`;
+            return `<details class="thinking-block"${openAttr}><summary>${label}</summary>${preHtml}</details>`;
+          }
+          if (block.type === "image") {
+            return renderImageSource(block.source);
+          }
+          if (block.type === "tool_use" || block.type === "server_tool_use") {
+            if (isCodeExecTool(block.name)) {
+              return renderCodeExecToolUse(block);
+            }
+            return `<details class="tool-call"><summary>Tool requested: ${escapeHtml(block.name)}</summary><pre>${escapeHtml(JSON.stringify(block.input || {}, null, 2))}</pre></details>`;
+          }
+          if (block.type === "tool_result") {
+            const body = renderToolResultContent(block.content);
+            return `<details class="tool-call"><summary>Tool result</summary>${body}</details>`;
+          }
+          if (block.type === "search_result") {
+            return `<details class="tool-call"><summary>${escapeHtml(block.title || "Search result")}</summary><pre>${escapeHtml(block.source || JSON.stringify(block, null, 2))}</pre></details>`;
+          }
+          if (block.type === "source") {
+            return `<details class="tool-call"><summary>Source context</summary><pre>${escapeHtml(JSON.stringify(block, null, 2))}</pre></details>`;
+          }
+          return `<details class="tool-call"><summary>${escapeHtml(block.type || "Block")}</summary><pre>${escapeHtml(JSON.stringify(block, null, 2))}</pre></details>`;
         }
-        if (block.type === "image") {
-          return renderImageSource(block.source);
+
+        // Combined tool_use + tool_result for code exec tools
+        if (item.toolUse && item.toolResult) {
+          return renderCodeExecToolUse(item.toolUse, item.toolResult);
         }
-        if (block.type === "tool_use" || block.type === "server_tool_use") {
-          return `<details class="tool-call"><summary>Tool requested: ${escapeHtml(block.name)}</summary><pre>${escapeHtml(JSON.stringify(block.input || {}, null, 2))}</pre></details>`;
-        }
-        if (block.type === "tool_result") {
-          const body = renderToolResultContent(block.content);
-          return `<details class="tool-call"><summary>Tool result</summary>${body}</details>`;
-        }
-        if (block.type === "search_result") {
-          return `<details class="tool-call"><summary>${escapeHtml(block.title || "Search result")}</summary><pre>${escapeHtml(block.source || JSON.stringify(block, null, 2))}</pre></details>`;
-        }
-        if (block.type === "source") {
-          return `<details class="tool-call"><summary>Source context</summary><pre>${escapeHtml(JSON.stringify(block, null, 2))}</pre></details>`;
-        }
-        return `<details class="tool-call"><summary>${escapeHtml(block.type || "Block")}</summary><pre>${escapeHtml(JSON.stringify(block, null, 2))}</pre></details>`;
+        return "";
       });
+
       if (streaming && blocks.length > 0) {
         const lastType = blocks.at(-1)?.type;
         if (lastType !== "text" && lastType !== "thinking") {
@@ -5607,6 +6215,37 @@
       }
     }
 
+    async function uploadToSession(files) {
+      if (!files.length) return;
+      const chat = activeChat();
+      if (!chat || !chat.settings.enabledCodeExecution) return;
+      const base = (state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
+      const progress = toast(`Uploading ${files.length} file${files.length === 1 ? "" : "s"} to session...`, "loading", { persistent: true });
+      let uploaded = 0, failed = 0;
+      for (const file of files) {
+        try {
+          progress.update(`Uploading ${file.name}...`, "loading", { autoClose: false });
+          const formData = new FormData();
+          formData.append("file", file);
+          const headers = {};
+          const authHeader = createBasicAuthHeader(state.privateGptUsername, state.privateGptPassword);
+          if (authHeader) headers.Authorization = authHeader;
+          const res = await fetch(`${base}/v1/files?scope_id=${encodeURIComponent(chat.id)}`, {
+            method: "POST",
+            headers,
+            body: formData
+          });
+          if (!res.ok) { failed++; continue; }
+          uploaded++;
+        } catch { failed++; }
+      }
+      if (failed > 0) {
+        progress.update(`Uploaded ${uploaded} file(s); ${failed} failed.`, "error");
+      } else {
+        progress.update(`Uploaded ${uploaded} file(s) to session. The model can access them in the workspace.`, "ok");
+      }
+    }
+
     async function deleteDocument(artifact) {
       if (!confirm(`Delete ${artifact}?`)) return;
       const progress = toast("Deleting document...", "loading", { persistent: true });
@@ -5883,6 +6522,9 @@
           });
         }
       }
+      if (chat.settings.enabledCodeExecution) {
+        tools.push({ name: "code_execution", type: "code_execution_v1" });
+      }
       if (featureEnabled("web") && chat.settings.enabledWeb) {
         tools.push({ name: "web_search", type: "web_search_v1" });
         tools.push({ name: "web_fetch", type: "web_fetch_v1" });
@@ -5946,6 +6588,9 @@
         max_tokens: 4096,
         thinking: { enabled: state.enableThinking !== false && Boolean(chat.settings.enabledThinking) }
       };
+      if (chat.settings.enabledCodeExecution) {
+        body.container = chat.id;
+      }
       const citationsEnabled = Boolean(documentsEnabled && state.useCitations !== false);
       const extensions = state.extensions || [];
       const hasBuiltinTools = tools.some(t => t.type);
@@ -6337,6 +6982,7 @@
         useCitations: $("#useCitations").checked,
         useDefaultPrompt: $("#useDefaultPrompt").checked,
         enableThinking: $("#enableThinking").checked,
+        enableCodeExecution: $("#enableCodeExecution").checked,
         extensions: $("#extensions").value.split(",").map(s => s.trim()).filter(Boolean),
         collection: $("#defaultCollection").value.trim() || "pgpt_collection"
       };
@@ -6368,6 +7014,7 @@
       if (typeof values.useCitations === "boolean") state.useCitations = values.useCitations;
       if (typeof values.useDefaultPrompt === "boolean") state.useDefaultPrompt = values.useDefaultPrompt;
       if (typeof values.enableThinking === "boolean") state.enableThinking = values.enableThinking;
+      if (typeof values.enableCodeExecution === "boolean") state.enableCodeExecution = values.enableCodeExecution;
       if (Array.isArray(values.extensions)) state.extensions = values.extensions;
       if (typeof values.collection === "string") state.context.documents.defaultCollection = values.collection || "pgpt_collection";
     }
@@ -6578,6 +7225,13 @@
       $("#fileUploadInput").addEventListener("change", event => {
         uploadFiles(Array.from(event.target.files || []));
         event.target.value = "";
+      });
+      $("#refreshSessionFilesButton").addEventListener("click", () => refreshSessionFiles());
+      $("#uploadSessionContextButton").addEventListener("click", () => $("#sessionContextFileInput").click());
+      $("#sessionContextFileInput").addEventListener("change", async event => {
+        await uploadToSession(Array.from(event.target.files || []));
+        event.target.value = "";
+        refreshSessionFiles({ showToast: false });
       });
       $$("[data-open-modal]").forEach(button => {
         button.addEventListener("click", () => {
