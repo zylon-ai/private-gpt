@@ -216,7 +216,7 @@ wheels = [
 
 [[package]]
 name = "banks"
-version = "2.4.0"
+version = "2.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecated" },
@@ -226,9 +226,9 @@ dependencies = [
     { name = "platformdirs" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/99/8e/ef996d30de06a431c8b310441000b510cf4ad7ce4e889e178e7111e2b5d2/banks-2.4.0.tar.gz", hash = "sha256:62cb845a1a0f93dcc8553f940d1e07f5f69bbde425dc4d52c487d664c02965db", size = 188029, upload-time = "2026-02-06T15:05:59.595Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/7d/f60364ed2b04310f21a031ff104e0ca221894707fb7b295e0aa56d992259/banks-2.4.4.tar.gz", hash = "sha256:b3628ac72356396693068fdc6ff8bb5fa63290fad65b9544a06f72cf7fab1d99", size = 190133, upload-time = "2026-06-26T14:46:38.642Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5c/0e/a704da209c5dd6687ec5751b8a3d02e59d0586363128110074240bd8b859/banks-2.4.0-py3-none-any.whl", hash = "sha256:e9b21226438567f678fc0d5ac41ae4fd5be93cda93fc3fd571e3ba3ac89a1a47", size = 34958, upload-time = "2026-02-06T15:05:58.058Z" },
+    { url = "https://files.pythonhosted.org/packages/62/3b/93afe96adf058b4dc9d46fcf03dbdee4565c6a84515bc6ff52297b4e670e/banks-2.4.4-py3-none-any.whl", hash = "sha256:643109e26eef65c044c64362e9ff91efbd88f9d8454d61f1633db217ff5c9742", size = 35894, upload-time = "2026-06-26T14:46:39.74Z" },
 ]
 
 [[package]]
