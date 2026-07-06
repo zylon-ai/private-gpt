@@ -1498,7 +1498,7 @@ class SandboxSettings(BaseModel):
 
 class PrincipalSettings(BaseModel):
     forwarded_headers: list[str] = Field(
-        default_factory=lambda: ["authorization"],
+        default_factory=lambda: ["authorization", "x-api-key"],
         description="HTTP request headers to capture in the Principal. "
         "When set via env var, use a comma-separated string: "
         "'authorization, x-custom-header'.",

@@ -58,6 +58,11 @@ class Principal:
             return auth[7:]
         return auth
 
+    @property
+    def api_key_header(self) -> str | None:
+        """Raw ``x-api-key`` header value (used by Anthropic SDK for API key auth)."""
+        return self._headers.get("x-api-key")
+
     # -- Context management ----------------------------------------------------
 
     @classmethod
@@ -101,6 +106,7 @@ class Principal:
 
         * ``$PRINCIPAL_AUTH_TOKEN`` → ``authorization`` header (e.g. ``Bearer sk-...``)
         * ``$PRINCIPAL_BEARER`` → ``api_key`` (Bearer token without the prefix)
+        * ``$PRINCIPAL_API_KEY`` → ``x-api-key`` header (API key sent as ``X-Api-Key``)
 
         Anonymous principals return the original dict with empty values stripped.
         """
@@ -114,6 +120,8 @@ class Principal:
                 result[key] = self.authorization
             elif value == "$PRINCIPAL_BEARER" and self.api_key:
                 result[key] = self.api_key
+            elif value == "$PRINCIPAL_API_KEY" and self.api_key_header:
+                result[key] = self.api_key_header
             else:
                 result[key] = value
         return result
