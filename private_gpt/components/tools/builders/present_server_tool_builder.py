@@ -64,9 +64,7 @@ class PresentServerToolBuilder:
                     mime_type="text/html",
                     metadata={"headers": link.headers} if link.headers else {},
                 ),
-                TextBlock(
-                    text=f"The service '{service_name}' is available at {url}."
-                ),
+                TextBlock(text=f"The service '{service_name}' is available at {url}."),
             ]
 
             return blocks
