@@ -1488,7 +1488,6 @@ class SandboxSettings(BaseModel):
         default=60,
         description="Default sandbox operation timeout in seconds.",
     )
-
     @field_validator("provider", mode="before")
     @classmethod
     def normalize_empty_provider(cls, value: str | None) -> str | None:
@@ -1544,6 +1543,17 @@ class BashSettings(BaseModel):
     )
 
 
+class CodeExecutionToolsSettings(BaseModel):
+    present_files_enabled: bool = Field(
+        default=True,
+        description="Feature flag to enable the present_files tool.",
+    )
+    present_server_enabled: bool = Field(
+        default=True,
+        description="Feature flag to enable the present_server tool.",
+    )
+
+
 class CodeExecutionSettings(BaseModel):
     provider: str | None = Field(
         default="local",
@@ -1583,6 +1593,10 @@ class CodeExecutionSettings(BaseModel):
         default="local",
         description="Storage backend for session files (Files API). "
         "Use 'local' with volume_root set, or 's3' with s3.durable_bucket_name set.",
+    )
+    tools: CodeExecutionToolsSettings = Field(
+        default_factory=lambda: CodeExecutionToolsSettings(),
+        description="Feature flags for code execution tools.",
     )
 
     @field_validator("provider", mode="before")

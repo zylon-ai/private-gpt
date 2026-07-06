@@ -36,6 +36,7 @@ class PresentServerToolBuilder:
         async def present_server(
             port: int,
             service_name: str = "App",
+            initial_path: str | None = None,
         ) -> list[ResultContentBlockType]:
             link = await self._component.get_session_endpoint(session_id, port)
 
@@ -47,20 +48,24 @@ class PresentServerToolBuilder:
                     )
                 ]
 
+            url = link.url
+            if initial_path:
+                url = url.rstrip("/") + "/" + initial_path.lstrip("/")
+
             link_description = (
                 json.dumps({"headers": link.headers}) if link.headers else None
             )
 
             blocks: list[ResultContentBlockType] = [
                 ResourceLinkBlock(
-                    uri=link.url,
+                    uri=url,
                     name=service_name,
                     description=link_description,
                     mime_type="text/html",
                     metadata={"headers": link.headers} if link.headers else {},
                 ),
                 TextBlock(
-                    text=f"The service '{service_name}' is available at {link.url}."
+                    text=f"The service '{service_name}' is available at {url}."
                 ),
             ]
 

@@ -12,20 +12,28 @@ from private_gpt.components.tools.processors.base import (
     _tool_matches,
 )
 from private_gpt.components.tools.tool_names import PRESENT_FILES_TOOL_NAME
+from private_gpt.settings.settings import Settings
 
 
 @singleton
 class PresentFilesProcessor(ToolProcessor):
     @inject
-    def __init__(self, present_files_tool_builder: PresentFilesToolBuilder) -> None:
+    def __init__(
+        self,
+        present_files_tool_builder: PresentFilesToolBuilder,
+        settings: Settings,
+    ) -> None:
         self._builder = present_files_tool_builder
+        self._enabled = settings.code_execution.tools.present_files_enabled
 
     async def intercept(self, request: ResolvedChatRequest) -> bool:
-        session_id = _session_id(request)
         for tool in request.tool_config.tools:
             if not _is_unresolved_tool(tool):
                 continue
             if _tool_matches(tool, PRESENT_FILES_TOOL_NAME):
+                if not self._enabled:
+                    return _replace_tool(request, tool, [])
+                session_id = _session_id(request)
                 return _replace_tool(
                     request,
                     tool,

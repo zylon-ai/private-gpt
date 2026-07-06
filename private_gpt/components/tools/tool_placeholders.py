@@ -122,7 +122,8 @@ PRESENT_SERVER_TOOL_FN = _placeholder_tool(
     (
         "Expose an HTTP service running inside the sandbox on a given port and present "
         "its URL to the user. Call this after starting a server (e.g. a web app, "
-        "Jupyter, Streamlit) so the user can open or interact with it."
+        "Jupyter, Streamlit) so the user can open or interact with it. "
+        "Optionally pass an initial_path to deep-link to a specific route."
     ),
 )
 
