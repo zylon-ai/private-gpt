@@ -117,8 +117,9 @@ def create_app(root_injector: Injector) -> FastAPI:
 
         # Set default thread pool limit
         cpu_count = os.cpu_count() or 1
+        max_workers = settings.server.max_workers or min(64, cpu_count * 5)
         executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=min(500, cpu_count * 50), thread_name_prefix="Stream-Pool"
+            max_workers=max_workers, thread_name_prefix="Stream-Pool"
         )
         asyncio.get_event_loop().set_default_executor(executor)
 

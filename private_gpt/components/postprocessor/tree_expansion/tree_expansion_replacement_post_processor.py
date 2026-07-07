@@ -1,7 +1,7 @@
+import asyncio
 import logging
 from abc import ABC
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import (
@@ -27,9 +27,6 @@ from private_gpt.components.readers.nodes.partial_node import PartialNode
 from private_gpt.components.readers.nodes.tree_node import TreeNode
 from private_gpt.settings.settings import settings
 from private_gpt.utils.random import generate_deterministic_uuid_from_seed
-
-if TYPE_CHECKING:
-    from concurrent.futures import Future
 
 config = settings()
 debug_mode = config.server.debug_mode
@@ -101,40 +98,43 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
     def _postprocess_nodes(
         self, nodes: list[NodeWithScore], query_bundle: QueryBundle | None = None
     ) -> list[NodeWithScore]:
-        """Create a expansion pipeline trying to maximize the content and relevance.
+        raise NotImplementedError(
+            "TreeExpansionReplacementPostProcessor is async-only; "
+            "use apostprocess_nodes instead."
+        )
 
-        Steps:
-        1. Find optimal set of nodes using a greedy algorithm
-        2. Process the optimal set of nodes
-        3. Generate final result nodes
-        """
+    async def apostprocess_nodes(
+        self,
+        nodes: list[NodeWithScore],
+        query_bundle: QueryBundle | None = None,
+        query_str: str | None = None,
+    ) -> list[NodeWithScore]:
         if not nodes:
             return []
 
-        # Initialize setup
-        absolute_token_limit = self.token_limit or 0
-        logger.debug(f"Processing nodes with token limit: {absolute_token_limit}")
+        if query_str is not None and query_bundle is not None:
+            raise ValueError("Cannot specify both query_str and query_bundle")
+        elif query_str is not None:
+            query_bundle = QueryBundle(query_str)
 
-        # =====================================================================
-        # STEP 1: Find optimal set of nodes through search
-        # =====================================================================
-        node_selection = self._find_optimal_nodes(nodes, absolute_token_limit)
+        absolute_token_limit = self.token_limit or 0
+        all_hit_nodes = self._prepare_hit_nodes(nodes)
+
+        if all_hit_nodes:
+            await self._aload_root_nodes(all_hit_nodes)
+
+        node_selection = await asyncio.to_thread(
+            self._find_optimal_nodes, nodes, absolute_token_limit
+        )
         logger.debug(
             f"Optimal set found: {len(node_selection.hit_nodes)} nodes selected"
         )
 
-        # =====================================================================
-        # STEP 2: Process the expanded nodes from optimal set
-        # =====================================================================
-        processed_nodes = self._process_expanded_nodes(node_selection)
+        processed_nodes = await self._aprocess_expanded_nodes(node_selection)
         logger.debug(f"Processed {len(processed_nodes.filtered_items)} expanded nodes")
 
-        # =====================================================================
-        # STEP 3: Generate final result nodes
-        # =====================================================================
-        result_nodes = self._generate_result_nodes(processed_nodes)
+        result_nodes = await self._generate_result_nodes(processed_nodes)
         logger.debug(f"Generated {len(result_nodes)} final result nodes")
-
         return result_nodes
 
     # ===========================================================================
@@ -151,9 +151,6 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
         # Filter and sort nodes
         all_hit_nodes = self._prepare_hit_nodes(nodes)
 
-        # Load root nodes once for efficiency
-        self._root_nodes = self._root_nodes or self._load_root_nodes(all_hit_nodes)
-
         # Run greedy search to find optimal nodes
         return self._greedy_search(all_hit_nodes, absolute_token_limit)
 
@@ -162,23 +159,22 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
         hit_nodes = [node for node in nodes if isinstance(node.node, TreeNode)]
         return sorted(hit_nodes, key=lambda x: float(x.score or 0), reverse=True)
 
-    def _load_root_nodes(
+    async def _aload_root_nodes(
         self, hit_nodes: list[NodeWithScore]
     ) -> dict[str, DocumentRootNode]:
-        """Load root nodes for the hit nodes."""
+        """Async load root nodes for the hit nodes into the cache."""
         root_ids = [
             node.node.root_id for node in hit_nodes if hasattr(node.node, "root_id")
         ]
         unique_root_ids = {root_id for root_id in root_ids if root_id}
 
-        root_nodes_map = {
-            node.node_id: cast(DocumentRootNode, node)
-            for node in self.node_component.get_sorted_nodes(
-                collection=self.collection,
-                node_ids=list(unique_root_ids),
-                limit=len(unique_root_ids),
-            )
-        }
+        nodes = await self.node_component.aget_sorted_nodes(
+            collection=self.collection,
+            node_ids=list(unique_root_ids),
+            limit=len(unique_root_ids),
+        )
+        root_nodes_map = {node.node_id: cast(DocumentRootNode, node) for node in nodes}
+        self._root_nodes.update(root_nodes_map)
         logger.debug(f"Loaded {len(root_nodes_map)} root nodes")
         return root_nodes_map
 
@@ -317,28 +313,11 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
     def _get_or_load_root_nodes(
         self, node_ids: list[str]
     ) -> dict[str, DocumentRootNode]:
-        """Get root nodes from cache or load missing ones from node store.
+        """Get root nodes from the prefetched cache.
 
-        Args:
-            node_ids: List of root node IDs to retrieve
-
-        Returns:
-            dict[str, DocumentRootNode]: Dictionary mapping node IDs to root nodes
+        Root nodes are prefetched asynchronously before the greedy search runs;
+        a cache miss here indicates the prefetch did not cover these ids.
         """
-        missing_ids = [
-            node_id for node_id in node_ids if node_id not in self._root_nodes
-        ]
-        if missing_ids:
-            logger.debug(f"Loading {len(missing_ids)} missing root nodes")
-            loaded_nodes = {
-                node.node_id: cast(DocumentRootNode, node)
-                for node in self.node_component.get_sorted_nodes(
-                    collection=self.collection,
-                    node_ids=missing_ids,
-                    limit=len(missing_ids),
-                )
-            }
-            self._root_nodes.update(loaded_nodes)
         return {
             node_id: self._root_nodes[node_id]
             for node_id in node_ids
@@ -373,24 +352,23 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
         Returns:
             list[ExpansionResult]: List of expansion results
         """
-        with ThreadPoolExecutor() as executor:
-            work_items = list(zip(hit_nodes, root_nodes, token_limits, strict=False))
+        work_items = list(zip(hit_nodes, root_nodes, token_limits, strict=False))
 
-            def process_node(
-                work_item: tuple[NodeWithScore, TreeNode, int]
-            ) -> ExpansionResult:
-                hit_node, root_node, token_limit = work_item
-                partial_hit_node = root_node.find_self_or_child_by_id(hit_node.node.id_)
+        def process_node(
+            work_item: tuple[NodeWithScore, TreeNode, int]
+        ) -> ExpansionResult:
+            hit_node, root_node, token_limit = work_item
+            partial_hit_node = root_node.find_self_or_child_by_id(hit_node.node.id_)
 
-                if partial_hit_node:
-                    expansion_result = self._expand(
-                        hit_node=partial_hit_node, token_limit=token_limit
-                    )
-                    return expansion_result
+            if partial_hit_node:
+                expansion_result = self._expand(
+                    hit_node=partial_hit_node, token_limit=token_limit
+                )
+                return expansion_result
 
-                return ExpansionResult(node_ids=set(), token_count=0)
+            return ExpansionResult(node_ids=set(), token_count=0)
 
-            return list(executor.map(process_node, work_items))
+        return [process_node(item) for item in work_items]
 
     def _calculate_configuration_score(
         self, node_selection: NodeSelection, absolute_token_limit: int
@@ -539,16 +517,10 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
     # ===========================================================================
     # STEP 2 METHODS: Processing expanded nodes
     # ===========================================================================
-    def _process_expanded_nodes(self, node_selection: NodeSelection) -> ProcessedNodes:
-        """Process expanded nodes by loading them from storage.
-
-        Args:
-            node_selection: Selected nodes and their expansions
-
-        Returns:
-            ProcessedNodes: Processed node data
-        """
-        # Prepare the list of all nodes to load
+    async def _aprocess_expanded_nodes(
+        self, node_selection: NodeSelection
+    ) -> ProcessedNodes:
+        """Async variant of _process_expanded_nodes."""
         active_subtrees = [s for s in node_selection.subtrees if s.node_ids]
         all_nodes_to_load = {
             id_ for subtree in active_subtrees for id_ in subtree.node_ids
@@ -556,17 +528,13 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
 
         logger.debug(f"Loading {len(all_nodes_to_load)} expanded nodes")
 
-        # Load all nodes
-        loaded_nodes = {
-            n.id_: cast(TreeNode, n)
-            for n in self.node_component.get_nodes(
-                collection=self.collection,
-                node_ids=list(all_nodes_to_load),
-                limit=len(all_nodes_to_load),
-            )
-        }
+        nodes = await self.node_component.aget_nodes(
+            collection=self.collection,
+            node_ids=list(all_nodes_to_load),
+            limit=len(all_nodes_to_load),
+        )
+        loaded_nodes = {n.id_: cast(TreeNode, n) for n in nodes}
 
-        # Filter out hit nodes/root nodes with empty subtrees
         filtered_items = []
         for i, (hit_node, root_node) in enumerate(
             zip(node_selection.hit_nodes, node_selection.root_nodes, strict=False)
@@ -581,70 +549,67 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
     # ===========================================================================
     # STEP 3 METHODS: Generating final result nodes
     # ===========================================================================
-    def _generate_result_nodes(
+    async def _generate_result_nodes(
         self, processed_nodes: ProcessedNodes
     ) -> list[NodeWithScore]:
         """Generate final result nodes by processing loaded nodes.
 
-        Args:
-            processed_nodes: Output from _process_expanded_nodes
-
-        Returns:
-            list[NodeWithScore]: Final result nodes
+        Parallelizes across filtered items via asyncio.gather; each item's
+        rebuild/prune/split runs in worker threads so GIL-releasing
+        clone/serialize work (pydantic-core) gets real parallelism.
         """
-        result_nodes: list[NodeWithScore] = []
         logger.debug(
             f"Processing {len(processed_nodes.filtered_items)} items for final results"
         )
 
-        with ThreadPoolExecutor() as executor:
-            futures: list[Future[list[NodeWithScore]]] = [
-                executor.submit(
-                    self._process_node,
+        if not processed_nodes.filtered_items:
+            return []
+
+        results = await asyncio.gather(
+            *(
+                self._aprocess_node(
                     hit_node,
                     root_node,
                     subtree,
                     processed_nodes.loaded_nodes,
                 )
                 for hit_node, root_node, subtree in processed_nodes.filtered_items
-            ]
+            )
+        )
 
-            for future in as_completed(futures):
-                result_nodes.extend(future.result())
+        result_nodes: list[NodeWithScore] = []
+        for batch in results:
+            result_nodes.extend(batch)
 
-        # Sort by score
         return sorted(result_nodes, key=lambda x: float(x.score or 0), reverse=True)
 
-    def _process_node(
+    async def _aprocess_node(
         self,
         hit_node: NodeWithScore,
         root_node: DocumentRootNode,
         current_subtree: set[str],
         loaded_nodes: dict[str, TreeNode],
     ) -> list[NodeWithScore]:
-        if not current_subtree or len(current_subtree) == 0:
-            # This tree was merged with another
+        if not current_subtree:
             return []
 
-        # Sort the nodes by their absolute index
         sorted_nodes = sorted(
             [loaded_nodes[node_id] for node_id in current_subtree],
             key=lambda x: x.abs_idx,
         )
 
-        # Post-process the nodes to remove irrelevant content and add diffs
-        final_nodes = [n for n in self._rebuild_tree(root_node, sorted_nodes) if n]
+        final_nodes = await asyncio.to_thread(
+            self._rebuild_tree, root_node, sorted_nodes
+        )
+        final_nodes = [n for n in final_nodes if n]
 
-        # Prune the content of the final node
-        final_nodes = [n for n in self._prune_content(final_nodes) if n]
+        final_nodes = await asyncio.to_thread(self._prune_content, final_nodes)
+        final_nodes = [n for n in final_nodes if n]
 
-        # Split the final node into smaller subtrees
-        final_nodes = [n for n in self._split_subtrees(final_nodes) if n]
+        final_nodes = await self._asplit_subtrees(final_nodes)
+        final_nodes = [n for n in final_nodes if n]
 
-        # Update metadata for the final node
         final_nodes = [self._update_node(hit_node.node, n) for n in final_nodes if n]
-
-        # Frozen and deduplicate the final nodes
         final_nodes = self._deduplicate_subtrees(final_nodes)
 
         return [
@@ -655,6 +620,11 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
             for final_node in final_nodes
             if final_node
         ]
+
+    async def _asplit_subtrees(self, nodes: list[TreeNode]) -> list[TreeNode]:
+        alg = SplitSubtreeAlg()
+        results = await asyncio.gather(*(alg.asplit_subtree(n) for n in nodes if n))
+        return [s for subtrees in results for s in subtrees]
 
     def _expand(
         self,
@@ -685,11 +655,6 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
     def _prune_content(self, nodes: list[TreeNode]) -> list[TreeNode]:
         result = [node.prune() for node in nodes]
         return [node for node in result if node]
-
-    def _split_subtrees(self, nodes: list[TreeNode]) -> list[TreeNode]:
-        alg: SplitSubtreeAlg = SplitSubtreeAlg()
-        subtrees = [alg.split_subtree(node) for node in nodes if node]
-        return [subtree for subtrees in subtrees for subtree in subtrees]
 
     def _deduplicate_subtrees(self, nodes: list[TreeNode]) -> list[TreeNode]:
         # Convert into frozen elements

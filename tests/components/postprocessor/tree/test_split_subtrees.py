@@ -160,7 +160,7 @@ def create_mixed_depth_sections() -> DocumentRootNode:
         (create_multilevel_sections, 3, "Multilevel nested sections"),
     ],
 )
-def test_various_tree_structures(
+async def test_various_tree_structures(
     tree_setup,
     expected_min_subtrees: int,
     description: str,
@@ -169,7 +169,7 @@ def test_various_tree_structures(
     alg = SplitSubtreeAlg()
     tree = tree_setup()
     tree.print_tree()  # For debugging
-    subtrees = alg.split_subtree(tree)
+    subtrees = await alg.asplit_subtree(tree)
 
     print(f"\nTesting: {description}")
     print(f"Generated {len(subtrees)} subtrees")
@@ -192,12 +192,12 @@ def test_various_tree_structures(
         assert len(subtree.children) > 0, "Subtree should not be empty"
 
 
-def test_multilevel_section_hierarchy() -> None:
+async def test_multilevel_section_hierarchy() -> None:
     """Detailed test for multilevel section hierarchy preservation."""
     alg = SplitSubtreeAlg()
     tree = create_multilevel_sections()
     tree.print_tree()  # For debugging
-    subtrees = alg.split_subtree(tree)
+    subtrees = await alg.asplit_subtree(tree)
 
     print("\nTesting: Multilevel section hierarchy")
     print(f"Generated {len(subtrees)} subtrees")
@@ -219,12 +219,12 @@ def test_multilevel_section_hierarchy() -> None:
                         ), "Parent-child relationship broken"
 
 
-def test_no_sections_integrity() -> None:
+async def test_no_sections_integrity() -> None:
     """Detailed test for trees without sections."""
     alg = SplitSubtreeAlg()
     tree = create_no_sections()
     tree.print_tree()  # For debugging
-    subtrees = alg.split_subtree(tree)
+    subtrees = await alg.asplit_subtree(tree)
 
     print("\nTesting: No sections")
     print(f"Generated {len(subtrees)} subtrees")
@@ -250,12 +250,12 @@ def test_no_sections_integrity() -> None:
     assert original_types == result_types, "Node types changed in no-sections tree"
 
 
-def test_multiple_sections_relationships() -> None:
+async def test_multiple_sections_relationships() -> None:
     """Detailed test for multiple sections at the same level."""
     alg = SplitSubtreeAlg()
     tree = create_multiple_sections_same_level()
     tree.print_tree()  # For debugging
-    subtrees = alg.split_subtree(tree)
+    subtrees = await alg.asplit_subtree(tree)
 
     print("\nTesting: Multiple sections at same level")
     print(f"Generated {len(subtrees)} subtrees")
