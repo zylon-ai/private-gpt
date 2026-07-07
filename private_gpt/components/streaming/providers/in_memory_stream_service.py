@@ -25,6 +25,8 @@ class InMemoryStreamService(StreamService):
         ] = {}  # Like Redis stream: [(id, data)]
         self._event_counters: dict[str, int] = {}
         self._lock = asyncio.Lock()
+        # Per-stream waiters: readers park here instead of sleeping
+        self._waiters: dict[str, set[asyncio.Event]] = defaultdict(set)
 
     async def create_stream(
         self,
@@ -106,6 +108,8 @@ class InMemoryStreamService(StreamService):
             message_id = f"{int(datetime.now(UTC).timestamp() * 1000)}-{self._event_counters[correlation_id]}"
 
             self._events[correlation_id].append((message_id, event_data))
+            for waiter in list(self._waiters.get(correlation_id, set())):
+                waiter.set()
             return message_id
 
     async def push_event_batch(self, events: list[Event]) -> dict[str, str]:
@@ -161,13 +165,26 @@ class InMemoryStreamService(StreamService):
 
             return event_data, next_last_id
 
+        waiter: asyncio.Event | None = None
         async with self._lock:
             event_data, next_last_id = _read_available()
+            if not event_data and block_ms:
+                # Register waiter atomically with the "no events" check so we
+                # cannot miss a push_event that fires between check and wait.
+                waiter = asyncio.Event()
+                self._waiters[correlation_id].add(waiter)
 
-        if not event_data:
-            # Honour block_ms the same way Redis does: park until the timeout
-            # expires (no events available).  block_ms=None → non-blocking (0 s).
-            await asyncio.sleep((block_ms / 1000) if block_ms else 0)
+        if waiter is not None:
+            try:
+                await asyncio.wait_for(waiter.wait(), timeout=block_ms / 1000)
+            except TimeoutError:
+                pass
+            finally:
+                async with self._lock:
+                    self._waiters[correlation_id].discard(waiter)
+            async with self._lock:
+                event_data, next_last_id = _read_available()
+
         return event_data, next_last_id
 
     async def stream_exists(self, correlation_id: str) -> bool:
@@ -186,6 +203,8 @@ class InMemoryStreamService(StreamService):
             del self._metadata[correlation_id]
             del self._events[correlation_id]
             del self._event_counters[correlation_id]
+            for waiter in self._waiters.pop(correlation_id, set()):
+                waiter.set()
 
     async def list_streams(
         self,
@@ -219,6 +238,10 @@ class InMemoryStreamService(StreamService):
     async def close(self) -> None:
         """Close any open connections and clean up resources."""
         async with self._lock:
+            for waiters in self._waiters.values():
+                for waiter in waiters:
+                    waiter.set()
+            self._waiters.clear()
             self._metadata.clear()
             self._events.clear()
             self._event_counters.clear()

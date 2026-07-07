@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_BLOCK_MS: Final[int] = 1000
 BATCH_SIZE: Final[int] = 5
+STATUS_CHECK_INTERVAL: Final[float] = 5.0
 TERMINAL_STATUSES: Final[set[StreamStatus]] = {
     StreamStatus.COMPLETED,
     StreamStatus.CANCELLED,
@@ -50,20 +51,13 @@ class StreamState:
 
     def __init__(self, last_id: str = "0"):
         self.last_id = last_id
-        self.last_flush_time = asyncio.get_event_loop().time()
         self.cached_events: list[BaseModel] | None = None
+        self.last_status_check: float = 0.0
 
 
 @singleton
 class StreamReader:
-    """Reads events from the backend (Redis or in-memory) and deserializes them.
-
-    On Redis, ``read_events`` with ``block_ms > 0`` issues ``XREAD BLOCK`` which
-    parks the connection — the event loop stays free.  On the in-memory backend
-    there is no real blocking primitive, so ``block_ms > 0`` is approximated
-    with ``asyncio.sleep`` to yield control.
-    ``block_ms=None`` is always non-blocking (used for catch-up / drain reads).
-    """
+    """Reads events from the backend (Redis or in-memory) and deserializes them."""
 
     @inject
     def __init__(self, stream_component: StreamComponent):
@@ -97,13 +91,14 @@ class StreamReader:
         correlation_id: str,
         event_handler: EventHandler,
         cached_events: list[BaseModel] | None,
-        last_flush_time: float,
-        cache_flush_interval: int,
     ) -> bool:
-        """Return True when the stream has reached a terminal status."""
-        current_time = asyncio.get_event_loop().time()
+        """Return True when the stream has reached a terminal status.
 
-        if cached_events and (current_time - last_flush_time) >= cache_flush_interval:
+        Tries the last cached event first; only hits Redis when that check is
+        inconclusive, avoiding a round-trip when the cached event already
+        carries terminal state.
+        """
+        if cached_events:
             try:
                 status = await event_handler.get_current_status(cached_events[-1])
                 if status in TERMINAL_STATUSES:
@@ -140,13 +135,12 @@ class StreamReader:
         """
         stop_event = stop_event or asyncio.Event()
         block_ms = block_ms if block_ms is not None else DEFAULT_BLOCK_MS
-        cache_flush_interval: Final[int] = 5 * block_ms
         event_queue: asyncio.Queue[list[BaseModel] | None] = asyncio.Queue()
 
         async def produce_events(current_last_id: str) -> None:
             try:
                 cached_events: list[BaseModel] | None = None
-                last_flush = asyncio.get_event_loop().time()
+                last_status_check: float = 0.0
 
                 while not stop_event.is_set():
                     events, current_last_id = await self.read_events(
@@ -158,16 +152,17 @@ class StreamReader:
 
                     if events:
                         cached_events = events
-                        last_flush = asyncio.get_event_loop().time()
                         await event_queue.put(events)
-                    elif await self.check_terminal_status(
-                        correlation_id,
-                        event_handler,
-                        cached_events,
-                        last_flush,
-                        cache_flush_interval,
-                    ):
-                        break
+                    else:
+                        current_time = asyncio.get_event_loop().time()
+                        if (current_time - last_status_check) >= STATUS_CHECK_INTERVAL:
+                            if await self.check_terminal_status(
+                                correlation_id,
+                                event_handler,
+                                cached_events,
+                            ):
+                                break
+                            last_status_check = current_time
 
                 events, _ = await self.read_events(
                     event_handler=event_handler,
@@ -234,7 +229,6 @@ class StreamMultiplexer:
         self.worker_task: asyncio.Task[None] | None = None
         self.shutdown_event = asyncio.Event()
         self._lock = asyncio.Lock()
-        self._cache_flush_interval = 5 * DEFAULT_BLOCK_MS
 
     async def start(self) -> None:
         if self.worker_task is None or self.worker_task.done():
@@ -351,29 +345,29 @@ class StreamMultiplexer:
                     correlation_id, state, events, new_last_id, current_time
                 )
 
-            elif await self.stream_reader.check_terminal_status(
-                correlation_id,
-                consumer_list[0].event_handler,
-                state.cached_events,
-                state.last_flush_time,
-                self._cache_flush_interval,
-            ):
-                drain_events, drain_last_id = await self.stream_reader.read_events(
-                    event_handler=consumer_list[0].event_handler,
-                    correlation_id=correlation_id,
-                    last_id=state.last_id,
-                    block_ms=None,
-                )
-                if drain_events:
-                    await self._dispatch(
-                        correlation_id, state, drain_events, drain_last_id, current_time
+            elif (current_time - state.last_status_check) >= STATUS_CHECK_INTERVAL:
+                state.last_status_check = current_time
+                if await self.stream_reader.check_terminal_status(
+                    correlation_id,
+                    consumer_list[0].event_handler,
+                    state.cached_events,
+                ):
+                    drain_events, drain_last_id = await self.stream_reader.read_events(
+                        event_handler=consumer_list[0].event_handler,
+                        correlation_id=correlation_id,
+                        last_id=state.last_id,
+                        block_ms=None,
                     )
-                await self._close_all_consumers(correlation_id)
-                logger.info(f"Stream {correlation_id} reached terminal status")
-            else:
-                async with self._lock:
-                    if correlation_id in self.states:
-                        self.states[correlation_id].last_flush_time = current_time
+                    if drain_events:
+                        await self._dispatch(
+                            correlation_id,
+                            state,
+                            drain_events,
+                            drain_last_id,
+                            current_time,
+                        )
+                    await self._close_all_consumers(correlation_id)
+                    logger.info(f"Stream {correlation_id} reached terminal status")
 
         except Exception as e:
             logger.error(f"Error processing {correlation_id}: {e}", exc_info=True)
@@ -403,8 +397,8 @@ class StreamMultiplexer:
                 for event in events:
                     consumer.queue.put_nowait(event)
             state.last_id = new_last_id
-            state.last_flush_time = current_time
             state.cached_events = events
+            state.last_status_check = current_time
 
     async def _close_all_consumers(self, correlation_id: str) -> None:
         async with self._lock:
