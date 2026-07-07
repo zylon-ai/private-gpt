@@ -487,6 +487,76 @@ async def test_multiple_consumers_all_receive(
     assert [e.n for e in recv2] == [1, 2]  # type: ignore[attr-defined]
 
 
+async def test_late_joiner_gets_full_history(
+    service: StreamService,
+    stream_reader: StreamReader,
+    multiplexer: StreamMultiplexer,
+    handler: SimpleEventHandler,
+    handler2: SimpleEventHandler2,
+) -> None:
+    """A consumer that joins AFTER the first batch has already been dispatched
+    must still receive every event from the beginning (last_id='0').
+
+    This is the 'Delta without start' bug: if a content_block_start event is
+    in batch 0 and a second consumer only sees batch 1 onwards, the client
+    receives content_block_delta with no preceding start.
+    """
+    cid = await service.create_stream("test")
+
+    # Patch read_events so that after the first successful dispatch we can
+    # confirm the broadcast already has batch 0, then add a second consumer.
+    original_read = stream_reader.read_events
+    second_consumer_box: dict[str, Any] = {}
+    dispatch_count = 0
+
+    async def read_after_first_dispatch(
+        event_handler: Any,
+        correlation_id: str,
+        last_id: str = "0",
+        count: int | None = None,
+        block_ms: int | None = None,
+    ) -> tuple[list[BaseModel], str]:
+        nonlocal dispatch_count
+        result = await original_read(
+            event_handler=event_handler,
+            correlation_id=correlation_id,
+            last_id=last_id,
+            count=count,
+            block_ms=block_ms,
+        )
+        # After the first batch is returned (and will be dispatched), add c2.
+        # At this point broadcast._batches is still empty (dispatch hasn't run),
+        # but after dispatch it will have 1 batch — c2 must still see it.
+        if result[0] and dispatch_count == 0 and "c2" not in second_consumer_box:
+            dispatch_count += 1
+            # Wait one event-loop tick so _dispatch runs and pushes batch 0.
+            await asyncio.sleep(0)
+            second_consumer_box["c2"] = await multiplexer.add_consumer(
+                cid, handler2, last_id="0"
+            )
+        return result
+
+    stream_reader.read_events = read_after_first_dispatch  # type: ignore[method-assign]
+
+    await multiplexer.start()
+    c1 = await multiplexer.add_consumer(cid, handler, last_id="0")
+
+    await service.push_event(cid, json.dumps({"n": 1}))
+    await service.push_event(cid, json.dumps({"n": 2}))
+    await service.update_stream_status(cid, StreamStatus.COMPLETED)
+
+    try:
+        recv1 = await collect_from_consumer(c1)
+        c2 = second_consumer_box["c2"]
+        recv2 = await collect_from_consumer(c2)
+    finally:
+        await multiplexer.stop()
+        stream_reader.read_events = original_read  # type: ignore[method-assign]
+
+    assert [e.n for e in recv1] == [1, 2], "consumer 1 must receive all events"  # type: ignore[attr-defined]
+    assert [e.n for e in recv2] == [1, 2], "late joiner must not miss batch 0"  # type: ignore[attr-defined]
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 3. Terminal detection — events in the gap are drained
 # ═══════════════════════════════════════════════════════════════════════════════

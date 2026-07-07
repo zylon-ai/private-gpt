@@ -351,7 +351,12 @@ class StreamMultiplexer:
                 self.states[correlation_id] = StreamState(last_id=last_id)
 
             state = self.states[correlation_id]
-            cursor = state.broadcast.next_cursor()
+            # last_id="0" means "from the start" — replay every batch already in
+            # the broadcast so a late joiner never misses history (e.g. the
+            # content_block_start that arrived before it connected).
+            # A specific last_id means the consumer is already caught up to that
+            # position, so start at the current end and receive only new batches.
+            cursor = 0 if last_id == "0" else state.broadcast.next_cursor()
             consumer = StreamConsumer(
                 correlation_id, event_handler, state.broadcast, cursor
             )
