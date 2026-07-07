@@ -38,6 +38,7 @@ from private_gpt.components.streaming.providers.redis_stream_service import (
 from private_gpt.components.streaming.providers.stream_service import StreamService
 from private_gpt.components.streaming.stream.stream_reader import (
     DEFAULT_BLOCK_MS,
+    StreamConsumer,
     StreamMultiplexer,
     StreamReader,
 )
@@ -76,16 +77,18 @@ class MockStreamComponent:
         self.stream = service
 
 
-async def collect_until_closed(
-    queue: asyncio.Queue[BaseModel | None],
+async def collect_from_consumer(
+    consumer: StreamConsumer,
     timeout: float = 10.0,
 ) -> list[BaseModel]:
+    """Collect all events from a consumer's broadcast until it is closed."""
     events: list[BaseModel] = []
-    while True:
-        event = await asyncio.wait_for(queue.get(), timeout=timeout)
-        if event is None:
-            break
-        events.append(event)
+
+    async def drain() -> None:
+        async for event in consumer.broadcast.read_from(cursor=consumer.cursor):
+            events.append(event)
+
+    await asyncio.wait_for(drain(), timeout=timeout)
     return events
 
 
@@ -113,7 +116,7 @@ async def run_multiplexed(
     last_id: str = "0",
 ) -> list[BaseModel]:
     consumer = await multiplexer.add_consumer(cid, handler, last_id=last_id)
-    return await collect_until_closed(consumer.queue, timeout=30.0)
+    return await collect_from_consumer(consumer, timeout=30.0)
 
 
 async def push_n_and_complete(
@@ -396,9 +399,9 @@ async def test_late_joiner_receives_inflight_batch(
     await service.update_stream_status(cid, StreamStatus.COMPLETED)
 
     try:
-        recv1 = await collect_until_closed(c1.queue, timeout=10.0)
+        recv1 = await collect_from_consumer(c1, timeout=10.0)
         c2 = late_box["c2"]
-        recv2 = await collect_until_closed(c2.queue, timeout=10.0)
+        recv2 = await collect_from_consumer(c2, timeout=10.0)
     finally:
         await multiplexer.stop()
         stream_reader.read_events = original_read  # type: ignore[method-assign]
@@ -450,7 +453,7 @@ async def test_concurrent_remove_preserves_delivery(
     await service.update_stream_status(cid, StreamStatus.COMPLETED)
 
     try:
-        recv1 = await collect_until_closed(c1.queue, timeout=5.0)
+        recv1 = await collect_from_consumer(c1, timeout=5.0)
     finally:
         await multiplexer.stop()
         stream_reader.read_events = original_read  # type: ignore[method-assign]
@@ -475,8 +478,8 @@ async def test_multiple_consumers_all_receive(
     c1 = await multiplexer.add_consumer(cid, handler)
     c2 = await multiplexer.add_consumer(cid, handler2)
     try:
-        recv1 = await collect_until_closed(c1.queue, timeout=10.0)
-        recv2 = await collect_until_closed(c2.queue, timeout=10.0)
+        recv1 = await collect_from_consumer(c1, timeout=10.0)
+        recv2 = await collect_from_consumer(c2, timeout=10.0)
     finally:
         await multiplexer.stop()
 
@@ -505,8 +508,6 @@ async def test_events_in_terminal_gap_drained(
         correlation_id: str,
         event_handler: Any,
         cached_events: Any,
-        last_flush_time: Any,
-        cache_flush_interval: Any,
     ) -> bool:
         await service.push_event(correlation_id, json.dumps({"n": 1}))
         await service.push_event(correlation_id, json.dumps({"n": 2}))
@@ -518,7 +519,7 @@ async def test_events_in_terminal_gap_drained(
     await multiplexer.start()
     consumer = await multiplexer.add_consumer(cid, handler)
     try:
-        received = await collect_until_closed(consumer.queue, timeout=10.0)
+        received = await collect_from_consumer(consumer, timeout=10.0)
     finally:
         await multiplexer.stop()
         stream_reader.check_terminal_status = original_check  # type: ignore[method-assign]
@@ -542,17 +543,19 @@ async def test_stop_clears_state_and_closes_consumers(
 
     await multiplexer.start()
     consumer = await multiplexer.add_consumer(cid, handler)
-    await asyncio.wait_for(consumer.queue.get(), timeout=5.0)
+
+    # Wait until the worker has pushed at least one batch to the broadcast.
+    async def get_one() -> None:
+        async for _ in consumer.broadcast.read_from(cursor=consumer.cursor):
+            break
+
+    await asyncio.wait_for(get_one(), timeout=5.0)
 
     await multiplexer.stop()
 
     assert not multiplexer.consumers, "consumers dict must be empty after stop()"
     assert not multiplexer.states, "states dict must be empty after stop()"
-
-    remaining: list[Any] = []
-    while not consumer.queue.empty():
-        remaining.append(consumer.queue.get_nowait())
-    assert None in remaining, "consumer queue must have a None sentinel"
+    assert consumer.broadcast.is_closed, "broadcast must be closed after stop()"
 
 
 async def test_restart_after_stop(
@@ -577,7 +580,7 @@ async def test_restart_after_stop(
     await multiplexer.start()
     try:
         consumer = await multiplexer.add_consumer(cid2, handler)
-        received = await collect_until_closed(consumer.queue, timeout=10.0)
+        received = await collect_from_consumer(consumer, timeout=10.0)
     finally:
         await multiplexer.stop()
 

@@ -175,6 +175,7 @@ class InMemoryStreamService(StreamService):
                 self._waiters[correlation_id].add(waiter)
 
         if waiter is not None:
+            assert block_ms is not None
             try:
                 await asyncio.wait_for(waiter.wait(), timeout=block_ms / 1000)
             except TimeoutError:
