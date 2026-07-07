@@ -165,7 +165,9 @@ class InMemoryStreamService(StreamService):
             event_data, next_last_id = _read_available()
 
         if not event_data:
-            await asyncio.sleep(0.1)  # simulate async context switch
+            # Honour block_ms the same way Redis does: park until the timeout
+            # expires (no events available).  block_ms=None → non-blocking (0 s).
+            await asyncio.sleep((block_ms / 1000) if block_ms else 0)
         return event_data, next_last_id
 
     async def stream_exists(self, correlation_id: str) -> bool:

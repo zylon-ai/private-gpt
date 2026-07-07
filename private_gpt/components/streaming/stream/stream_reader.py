@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-
 DEFAULT_BLOCK_MS: Final[int] = 1000
 BATCH_SIZE: Final[int] = 5
 TERMINAL_STATUSES: Final[set[StreamStatus]] = {
@@ -29,27 +28,25 @@ TERMINAL_STATUSES: Final[set[StreamStatus]] = {
 
 
 class StreamConsumer:
-    """Consumer that receives events for a specific stream."""
+    """A single consumer receiving events for one correlation id.
 
-    def __init__(
-        self,
-        correlation_id: str,
-        event_handler: EventHandler,
-    ):
+    Events are buffered in an unbounded ``asyncio.Queue``.  A ``None`` entry
+    is the sentinel that signals the consumer the stream is finished.
+    """
+
+    def __init__(self, correlation_id: str, event_handler: EventHandler):
         self.correlation_id = correlation_id
         self.event_handler = event_handler
         self.queue: asyncio.Queue[BaseModel | None] = asyncio.Queue()
         self.ref_count = 1
 
-    async def send(self, event: BaseModel) -> None:
-        self.queue.put_nowait(event)
-
-    async def close(self) -> None:
-        await self.queue.put(None)
+    def close(self) -> None:
+        """Signal the consumer that no more events will arrive."""
+        self.queue.put_nowait(None)
 
 
 class StreamState:
-    """Tracks state for a multiplexed stream."""
+    """Read position and cache for a single multiplexed stream."""
 
     def __init__(self, last_id: str = "0"):
         self.last_id = last_id
@@ -59,7 +56,14 @@ class StreamState:
 
 @singleton
 class StreamReader:
-    """Reads events from Redis and deserializes them."""
+    """Reads events from the backend (Redis or in-memory) and deserializes them.
+
+    On Redis, ``read_events`` with ``block_ms > 0`` issues ``XREAD BLOCK`` which
+    parks the connection — the event loop stays free.  On the in-memory backend
+    there is no real blocking primitive, so ``block_ms > 0`` is approximated
+    with ``asyncio.sleep`` to yield control.
+    ``block_ms=None`` is always non-blocking (used for catch-up / drain reads).
+    """
 
     @inject
     def __init__(self, stream_component: StreamComponent):
@@ -73,7 +77,6 @@ class StreamReader:
         count: int | None = None,
         block_ms: int | None = None,
     ) -> tuple[list[BaseModel], str]:
-        """Read events from Redis and deserialize them."""
         raw_events, next_last_id = await self.stream_service.read_events(
             correlation_id=correlation_id,
             last_id=last_id,
@@ -81,19 +84,13 @@ class StreamReader:
             block_ms=block_ms,
         )
 
-        def sync_deserialization() -> list[BaseModel]:
-            events = []
-            for raw_data in raw_events:
-                try:
-                    event = event_handler.deserialize(raw_data)
-                    events.append(event)
-                except Exception as e:
-                    logger.error(f"Error deserializing event: {e}")
-                    continue
-            return events
-
-        final_events = sync_deserialization()
-        return final_events, next_last_id
+        events: list[BaseModel] = []
+        for raw_data in raw_events:
+            try:
+                events.append(event_handler.deserialize(raw_data))
+            except Exception as e:
+                logger.error(f"Error deserializing event: {e}")
+        return events, next_last_id
 
     async def check_terminal_status(
         self,
@@ -103,7 +100,7 @@ class StreamReader:
         last_flush_time: float,
         cache_flush_interval: int,
     ) -> bool:
-        """Check if stream has reached terminal status."""
+        """Return True when the stream has reached a terminal status."""
         current_time = asyncio.get_event_loop().time()
 
         if cached_events and (current_time - last_flush_time) >= cache_flush_interval:
@@ -115,9 +112,9 @@ class StreamReader:
                 logger.error(f"Error checking cached status for {correlation_id}: {e}")
 
         try:
-            metadata: StreamMetadata | None = (
-                await self.stream_service.get_stream_metadata(correlation_id)
-            )
+            metadata: (
+                StreamMetadata | None
+            ) = await self.stream_service.get_stream_metadata(correlation_id)
             if metadata and metadata.status in TERMINAL_STATUSES:
                 return True
         except Exception as e:
@@ -133,7 +130,14 @@ class StreamReader:
         block_ms: int | None = None,
         stop_event: asyncio.Event | None = None,
     ) -> AsyncGenerator[BaseModel, None]:
-        """Stream events as an async generator."""
+        """Stream events as an async generator (direct, non-multiplexed path).
+
+        A producer task reads from the backend in blocking mode and feeds an
+        internal queue; the generator drains the queue and yields individual
+        events.  After the terminal status is detected a final non-blocking
+        drain read is performed so no event published between the last read
+        and the terminal signal is lost.
+        """
         stop_event = stop_event or asyncio.Event()
         block_ms = block_ms if block_ms is not None else DEFAULT_BLOCK_MS
         cache_flush_interval: Final[int] = 5 * block_ms
@@ -141,7 +145,7 @@ class StreamReader:
 
         async def produce_events(current_last_id: str) -> None:
             try:
-                cached_events: list[Any] | None = None
+                cached_events: list[BaseModel] | None = None
                 last_flush = asyncio.get_event_loop().time()
 
                 while not stop_event.is_set():
@@ -170,7 +174,6 @@ class StreamReader:
                     correlation_id=correlation_id,
                     last_id=current_last_id,
                 )
-
                 if events:
                     await event_queue.put(events)
 
@@ -189,7 +192,6 @@ class StreamReader:
                         break
                     for event in events:
                         yield event
-
             finally:
                 producer_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -206,7 +208,24 @@ class StreamReader:
 
 
 class StreamMultiplexer:
-    """Multiplexes multiple stream consumers onto a single worker."""
+    """Multiplexes many stream consumers onto a single worker task.
+
+    Each correlation id has one ``StreamState`` (read position) shared by all
+    consumers on that stream.  The worker loops over every active stream,
+    issues a blocking ``read_events`` and dispatches the batch to every
+    current consumer.
+
+    Key invariants
+    ---------------
+    * Dispatch and ``last_id`` advance happen atomically under the lock, and
+      the consumer list is re-fetched immediately before dispatch.  This means
+      a consumer that joins while the worker is blocked inside ``read_events``
+      still receives the batch about to be dispatched.
+    * ``add_consumer`` accepts a ``last_id`` and initialises the stream state
+      from it, so a reconnecting consumer never receives a replay from ``"0"``.
+    * ``stop`` cancels the worker, clears all state and closes every consumer;
+      a subsequent ``start`` begins from a clean slate.
+    """
 
     def __init__(self, stream_reader: StreamReader):
         self.stream_reader = stream_reader
@@ -224,21 +243,38 @@ class StreamMultiplexer:
             logger.info("Stream multiplexer started")
 
     async def stop(self) -> None:
+        """Cancel the worker, clear all state, and close every consumer."""
         self.shutdown_event.set()
-        if self.worker_task:
-            await self.worker_task
-        logger.info("Stream multiplexer stopped")
+        task = self.worker_task
+        self.worker_task = None
+        if task is not None and not task.done():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+        async with self._lock:
+            all_consumers = [c for cl in self.consumers.values() for c in cl]
+            self.consumers.clear()
+            self.states.clear()
+        for consumer in all_consumers:
+            consumer.close()
 
     async def add_consumer(
         self,
         correlation_id: str,
         event_handler: EventHandler,
+        last_id: str = "0",
     ) -> StreamConsumer:
-        async with self._lock:
-            existing_consumers = self.consumers.get(correlation_id, [])
+        """Register a consumer for *correlation_id*.
 
-            for consumer in existing_consumers:
-                if isinstance(consumer.event_handler, type(event_handler)):
+        If a consumer with the same handler type already exists its ref-count
+        is incremented and the existing consumer is returned (reconnect case).
+        Otherwise a new consumer is created.  When this is the first consumer
+        for the stream, the read position is initialised to *last_id*.
+        """
+        async with self._lock:
+            for consumer in self.consumers.get(correlation_id, []):
+                if type(consumer.event_handler) is type(event_handler):
                     consumer.ref_count += 1
                     return consumer
 
@@ -246,25 +282,30 @@ class StreamMultiplexer:
             self.consumers[correlation_id].append(consumer)
 
             if correlation_id not in self.states:
-                self.states[correlation_id] = StreamState()
+                self.states[correlation_id] = StreamState(last_id=last_id)
 
             return consumer
 
     async def remove_consumer(self, consumer: StreamConsumer) -> None:
+        should_close = False
         async with self._lock:
             correlation_id = consumer.correlation_id
             consumer.ref_count -= 1
 
             if consumer.ref_count <= 0:
-                if correlation_id in self.consumers:
-                    self.consumers[correlation_id].remove(consumer)
+                cl = self.consumers.get(correlation_id)
+                if cl and consumer in cl:
+                    cl.remove(consumer)
+                if (
+                    correlation_id in self.consumers
+                    and not self.consumers[correlation_id]
+                ):
+                    del self.consumers[correlation_id]
+                    self.states.pop(correlation_id, None)
+                should_close = True
 
-                    if not self.consumers[correlation_id]:
-                        del self.consumers[correlation_id]
-                        if correlation_id in self.states:
-                            del self.states[correlation_id]
-
-                await consumer.close()
+        if should_close:
+            consumer.close()
 
     async def _run_worker(self) -> None:
         try:
@@ -273,23 +314,18 @@ class StreamMultiplexer:
                     correlation_ids = list(self.states.keys())
 
                 if not correlation_ids:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.5)
                     continue
 
-                tasks = [
-                    self._process_stream(correlation_id)
-                    for correlation_id in correlation_ids
-                ]
+                tasks = [self._process_stream(cid) for cid in correlation_ids]
                 await asyncio.gather(*tasks, return_exceptions=True)
                 await asyncio.sleep(0)
-
         except Exception as e:
             logger.error(f"Worker error: {e}", exc_info=True)
         finally:
-            async with self._lock:
-                for consumer_list in self.consumers.values():
-                    for consumer in consumer_list:
-                        await consumer.close()
+            for cl in list(self.consumers.values()):
+                for consumer in cl:
+                    consumer.close()
 
     async def _process_stream(self, correlation_id: str) -> None:
         try:
@@ -297,7 +333,7 @@ class StreamMultiplexer:
                 if correlation_id not in self.states:
                     return
                 state = self.states[correlation_id]
-                consumer_list = self.consumers.get(correlation_id, [])
+                consumer_list = list(self.consumers.get(correlation_id, []))
                 if not consumer_list:
                     return
 
@@ -305,22 +341,15 @@ class StreamMultiplexer:
                 event_handler=consumer_list[0].event_handler,
                 correlation_id=correlation_id,
                 last_id=state.last_id,
+                block_ms=DEFAULT_BLOCK_MS,
             )
 
             current_time = asyncio.get_event_loop().time()
 
             if events:
-                async with self._lock:
-                    state.last_id = new_last_id
-                    state.last_flush_time = current_time
-                    state.cached_events = events
-
-                send_tasks = []
-                for consumer in consumer_list:
-                    for event in events:
-                        send_tasks.append(consumer.send(event))
-
-                await asyncio.gather(*send_tasks)
+                await self._dispatch(
+                    correlation_id, state, events, new_last_id, current_time
+                )
 
             elif await self.stream_reader.check_terminal_status(
                 correlation_id,
@@ -329,30 +358,72 @@ class StreamMultiplexer:
                 state.last_flush_time,
                 self._cache_flush_interval,
             ):
+                drain_events, drain_last_id = await self.stream_reader.read_events(
+                    event_handler=consumer_list[0].event_handler,
+                    correlation_id=correlation_id,
+                    last_id=state.last_id,
+                    block_ms=None,
+                )
+                if drain_events:
+                    await self._dispatch(
+                        correlation_id, state, drain_events, drain_last_id, current_time
+                    )
                 await self._close_all_consumers(correlation_id)
                 logger.info(f"Stream {correlation_id} reached terminal status")
             else:
                 async with self._lock:
-                    state.last_flush_time = current_time
+                    if correlation_id in self.states:
+                        self.states[correlation_id].last_flush_time = current_time
 
         except Exception as e:
             logger.error(f"Error processing {correlation_id}: {e}", exc_info=True)
 
+    async def _dispatch(
+        self,
+        correlation_id: str,
+        state: StreamState,
+        events: list[BaseModel],
+        new_last_id: str,
+        current_time: float,
+    ) -> None:
+        """Dispatch *events* to every current consumer and advance ``last_id``.
+
+        The consumer list is re-fetched under the lock so that consumers that
+        joined or left during the preceding blocking ``read_events`` are
+        reflected.  Dispatch and ``last_id`` advance are atomic: no consumer
+        can join between the two and miss the batch.
+        """
+        async with self._lock:
+            if correlation_id not in self.states:
+                return
+            consumer_list = list(self.consumers.get(correlation_id, []))
+            if not consumer_list:
+                return
+            for consumer in consumer_list:
+                for event in events:
+                    consumer.queue.put_nowait(event)
+            state.last_id = new_last_id
+            state.last_flush_time = current_time
+            state.cached_events = events
+
     async def _close_all_consumers(self, correlation_id: str) -> None:
         async with self._lock:
-            consumer_list = self.consumers.get(correlation_id, [])
-            for consumer in consumer_list:
-                await consumer.close()
-
-            if correlation_id in self.consumers:
-                del self.consumers[correlation_id]
-            if correlation_id in self.states:
-                del self.states[correlation_id]
+            consumer_list = list(self.consumers.get(correlation_id, []))
+            self.consumers.pop(correlation_id, None)
+            self.states.pop(correlation_id, None)
+        for consumer in consumer_list:
+            consumer.close()
 
 
 @singleton
 class AdaptiveStreamReader:
-    """Adaptively switches between direct and multiplexed streaming based on load."""
+    """Switches between the direct reader and the multiplexer based on load.
+
+    When the number of concurrently active streams reaches
+    ``multiplexing_threshold`` the multiplexed path is used; otherwise the
+    direct ``StreamReader.stream_events`` path is used.  Both paths must
+    produce identical results for the same stream and ``last_id``.
+    """
 
     @inject
     def __init__(
@@ -431,17 +502,10 @@ class AdaptiveStreamReader:
                 logger.info("Multiplexed streaming activated")
 
             consumer = await self.multiplexer.add_consumer(
-                correlation_id, event_handler
+                correlation_id, event_handler, last_id=last_id
             )
 
             try:
-                if last_id != "0":
-                    initial_events, _ = await self.read_events(
-                        event_handler, correlation_id, "0", None, 0
-                    )
-                    for initial_event in initial_events:
-                        yield initial_event
-
                 events_processed = 0
                 while True:
                     if stop_event and stop_event.is_set():
@@ -461,7 +525,6 @@ class AdaptiveStreamReader:
 
                     except TimeoutError:
                         continue
-
             finally:
                 await self.multiplexer.remove_consumer(consumer)
 
