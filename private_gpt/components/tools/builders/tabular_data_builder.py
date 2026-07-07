@@ -222,7 +222,9 @@ class TabularDataToolBuilder:
         _, tabular_data_analysis_workflow_cls = _load_tabular_workflow_dependencies()
         llm = llm or self.llm_component.get_llm(model_id)
         context_filter = await self._validate_context(context_filter)
-        retriever = self._create_vector_index_retriever(context_filter, embed_model_id)
+        retriever = await asyncio.to_thread(
+            self._create_vector_index_retriever, context_filter, embed_model_id
+        )
         pandas_ai = self._create_pandas_ai_service()
 
         def node_postprocessors_fn(

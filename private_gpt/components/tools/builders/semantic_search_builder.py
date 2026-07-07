@@ -185,7 +185,9 @@ class SemanticSearchToolBuilder:
         tokenizer: TokenizerBase | None = None,
     ) -> SemanticSearchWorkflow:
         context_filter = await self._validate_context(context_filter)
-        retriever = self._create_vector_index_retriever(context_filter, embed_model_id)
+        retriever = await asyncio.to_thread(
+            self._create_vector_index_retriever, context_filter, embed_model_id
+        )
 
         if not llm:
             llm = self.llm_component.get_llm(model_id)
