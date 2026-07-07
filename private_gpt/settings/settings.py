@@ -528,10 +528,6 @@ class ChatSettings(BaseModel):
         None,
         description="The threshold for the number of context items to switch to multiplexing mode.",
     )
-    maximum_concurrent_requests: int | None = Field(
-        None,
-        description="The maximum number of concurrent requests that can be handled by the chat engine.",
-    )
     maximum_blob_size: int = Field(
         25 * 1024 * 1024,
         description="The maximum size in bytes of a blob that can be processed by the chat engine.",

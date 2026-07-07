@@ -5,25 +5,16 @@ from collections.abc import Coroutine
 from contextvars import copy_context
 from typing import Any
 
-from injector import inject, singleton
-
-from private_gpt.settings.settings import Settings
+from injector import singleton
 
 logger = logging.getLogger(__name__)
 
 
 @singleton
 class TaskManager:
-    """Manages asyncio tasks with concurrency control and cancellation support."""
+    """Manages asyncio tasks with cancellation support."""
 
-    @inject
-    def __init__(self, settings: Settings) -> None:
-        max_concurrent_tasks = settings.chat.maximum_concurrent_requests or None
-        self._semaphore = (
-            asyncio.Semaphore(max_concurrent_tasks)
-            if max_concurrent_tasks is not None
-            else None
-        )
+    def __init__(self) -> None:
         self._active_tasks: dict[str, asyncio.Task[Any | None]] = {}
         self._cancellation_tokens: dict[str, asyncio.Event] = {}
 
@@ -33,31 +24,16 @@ class TaskManager:
         coro: Coroutine[Any, Any, None],
         name: str | None = None,
     ) -> asyncio.Task[Any]:
-        """Create and register a new task with concurrency control."""
+        """Create and register a new task."""
         if correlation_id in self._active_tasks:
             logger.warning(f"Task {correlation_id} already exists")
             return self._active_tasks[correlation_id]
-
-        async def wrapped_coro() -> None:
-            try:
-                if self._semaphore is not None:
-                    await self._semaphore.acquire()
-                    logger.debug(
-                        f"Acquired slot for {correlation_id} "
-                        f"(active: {len(self._active_tasks)})"
-                    )
-
-                await coro
-            finally:
-                if self._semaphore is not None:
-                    self._semaphore.release()
-                    logger.debug(f"Released slot for {correlation_id}")
 
         cancellation_token = asyncio.Event()
         self._cancellation_tokens[correlation_id] = cancellation_token
 
         ctx = copy_context()
-        task = asyncio.create_task(wrapped_coro(), name=name, context=ctx)
+        task = asyncio.create_task(coro, name=name, context=ctx)
         self._active_tasks[correlation_id] = task
         task.add_done_callback(lambda _: self._cleanup_task(correlation_id))
 
