@@ -10,8 +10,7 @@ from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor
     ChatResponseLoopInterceptor,
 )
 
-if TYPE_CHECKING:
-    from private_gpt.components.tools.remote_execution import ToolExecutionInterceptor
+from private_gpt.components.tools.remote_execution import ToolExecutionInterceptor
 
 Condition = bool | Callable[[], bool]
 
