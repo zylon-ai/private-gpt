@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
+import time
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 from injector import inject, singleton
-from pydantic import BaseModel, ConfigDict
 
 from private_gpt.components.tools.tool_names import (
     BASH_TOOL_NAME,
@@ -64,9 +67,8 @@ class ImmediateToolScheduler(BaseToolScheduler):
         return await func()
 
 
-class _PendingCall(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
+@dataclasses.dataclass
+class _PendingCall:
     score: float
     counter: int
     entry_id: str
@@ -187,3 +189,69 @@ class QueuedToolScheduler(BaseToolScheduler):
             if not future.done():
                 future.cancel()
             raise
+
+
+@singleton
+class AdaptiveToolScheduler(BaseToolScheduler):
+    @inject
+    def __init__(
+        self,
+        immediate: ImmediateToolScheduler,
+        queued: QueuedToolScheduler,
+        settings: Settings,
+    ) -> None:
+        cfg = settings.tool_scheduler.adaptive
+        self._immediate = immediate
+        self._queued = queued
+        self._threshold_ms: float = cfg.threshold_ms
+        self._recovery_ms: float = cfg.threshold_ms * cfg.recovery_ratio
+        self._alpha: float = cfg.ewma_alpha
+        self._ewma_ms: float | None = None
+        self._use_queue: bool = False
+
+    def _update(self, elapsed_ms: float) -> None:
+        self._ewma_ms = (
+            elapsed_ms
+            if self._ewma_ms is None
+            else self._alpha * elapsed_ms + (1 - self._alpha) * self._ewma_ms
+        )
+        if not self._use_queue and self._ewma_ms > self._threshold_ms:
+            self._use_queue = True
+            logger.info("AdaptiveToolScheduler: -> queued (ewma=%.0fms)", self._ewma_ms)
+        elif self._use_queue and self._ewma_ms < self._recovery_ms:
+            self._use_queue = False
+            logger.info(
+                "AdaptiveToolScheduler: -> immediate (ewma=%.0fms)", self._ewma_ms
+            )
+
+    async def execute(
+        self,
+        tool_name: str,
+        chat_priority: int | None,
+        func: Callable[[], Awaitable[Any]],
+    ) -> Any:
+        scheduler = self._queued if self._use_queue else self._immediate
+        start = time.monotonic()
+        try:
+            return await scheduler.execute(tool_name, chat_priority, func)
+        finally:
+            self._update((time.monotonic() - start) * 1000)
+
+
+@singleton
+class ToolSchedulerFactory:
+    @inject
+    def __init__(
+        self,
+        settings: Settings,
+        queued: QueuedToolScheduler,
+        adaptive: AdaptiveToolScheduler,
+    ) -> None:
+        self._scheduler: BaseToolScheduler = {
+            "immediate": ImmediateToolScheduler(),
+            "queued": queued,
+            "adaptive": adaptive,
+        }[settings.tool_scheduler.mode]
+
+    def get(self) -> BaseToolScheduler:
+        return self._scheduler

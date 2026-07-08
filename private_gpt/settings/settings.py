@@ -1639,41 +1639,56 @@ class ToolSchedulerWeightsSettings(BaseModel):
         default=0.4,
         description="Weight given to the chat request priority signal (0-1).",
     )
-    age: float = Field(
-        default=0.4,
-        description=(
-            "Weight given to wait time in the queue. "
-            "Higher values reduce starvation of long-waiting calls."
-        ),
-    )
     complexity: float = Field(
         default=0.2,
         description="Weight given to the estimated tool complexity (0-1).",
     )
 
 
-class ToolSchedulerSettings(BaseModel):
-    enabled: bool = Field(
-        default=False,
+class AdaptiveToolSchedulerSettings(BaseModel):
+    threshold_ms: float = Field(
+        default=2000.0,
         description=(
-            "When True, all tool executions are routed through a shared priority queue "
-            "that limits global concurrency and orders calls by urgency."
+            "EWMA of tool execution time (ms) above which the adaptive scheduler "
+            "switches from immediate to queued mode."
+        ),
+    )
+    recovery_ratio: float = Field(
+        default=0.7,
+        description=(
+            "Fraction of threshold_ms at which the adaptive scheduler switches back "
+            "to immediate mode. Must be < 1 to provide hysteresis."
+        ),
+    )
+    ewma_alpha: float = Field(
+        default=0.3,
+        description=(
+            "Smoothing factor for the exponentially weighted moving average. "
+            "Higher values react faster to load changes."
+        ),
+    )
+
+
+class ToolSchedulerSettings(BaseModel):
+    mode: Literal["immediate", "queued", "adaptive"] = Field(
+        default="immediate",
+        description=(
+            "'immediate' runs tools without queuing; "
+            "'queued' routes all calls through a shared priority queue; "
+            "'adaptive' switches between the two based on measured execution time."
         ),
     )
     max_concurrent_tools: int = Field(
         default=5,
-        description="Maximum number of tool calls executed simultaneously across all chats.",
-    )
-    max_age_seconds: float = Field(
-        default=60.0,
-        description=(
-            "Time (seconds) after which a queued tool call reaches maximum age urgency. "
-            "Prevents starvation by boosting priority of long-waiting calls."
-        ),
+        description="Maximum simultaneous tool calls (used by 'queued' and 'adaptive' modes).",
     )
     weights: ToolSchedulerWeightsSettings = Field(
         default_factory=ToolSchedulerWeightsSettings,
-        description="Relative weights for the three priority signals.",
+        description="Priority weights for the queued scheduler.",
+    )
+    adaptive: AdaptiveToolSchedulerSettings = Field(
+        default_factory=AdaptiveToolSchedulerSettings,
+        description="Settings for the adaptive scheduler.",
     )
 
 

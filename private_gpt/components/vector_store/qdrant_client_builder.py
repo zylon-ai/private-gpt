@@ -11,7 +11,6 @@ from qdrant_client import (  # type: ignore[import-not-found]
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class QdrantClients:

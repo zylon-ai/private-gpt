@@ -290,13 +290,15 @@ semaphore:
   mode: ${PGPT_SEMAPHORE_MODE:memory}
 
 tool_scheduler:
-  enabled: ${PGPT_TOOL_SCHEDULER_ENABLED:false}
-  max_concurrent_tools: ${PGPT_TOOL_SCHEDULER_MAX_CONCURRENT_TOOLS:5}
-  max_age_seconds: ${PGPT_TOOL_SCHEDULER_MAX_AGE_SECONDS:60}
+  mode: ${PGPT_TOOL_SCHEDULER_MODE:adaptive}
+  max_concurrent_tools: ${PGPT_TOOL_SCHEDULER_MAX_CONCURRENT_TOOLS:4}
   weights:
     chat_priority: ${PGPT_TOOL_SCHEDULER_WEIGHT_PRIORITY:0.4}
-    age: ${PGPT_TOOL_SCHEDULER_WEIGHT_AGE:0.4}
     complexity: ${PGPT_TOOL_SCHEDULER_WEIGHT_COMPLEXITY:0.2}
+  adaptive:
+    threshold_ms: ${PGPT_TOOL_SCHEDULER_ADAPTIVE_THRESHOLD_MS:800}
+    recovery_ratio: ${PGPT_TOOL_SCHEDULER_ADAPTIVE_RECOVERY_RATIO:0.7}
+    ewma_alpha: ${PGPT_TOOL_SCHEDULER_ADAPTIVE_EWMA_ALPHA:0.5}
 
 transformation:
   pptx:
