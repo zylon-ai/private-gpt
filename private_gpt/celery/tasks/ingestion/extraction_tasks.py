@@ -18,6 +18,9 @@ from private_gpt.settings.settings import settings
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
 
+VECTOR_INDEX_TASK_NAME = "private_gpt.ingestion.vector_index"
+VECTOR_INDEX_CALLBACK_TASK_NAME = "vector_index_task"
+
 
 T = TypeVar("T")
 
@@ -45,7 +48,7 @@ def cleanup_temporal_files(func: Callable[..., T]) -> Callable[..., T]:
 
 
 @celery_app.task(
-    name="vector_index_task",
+    name=VECTOR_INDEX_TASK_NAME,
     base=StatelessBackgroundTask,
     autoretry_for=AUTORETRY_EXCEPTIONS,
 )
@@ -133,6 +136,9 @@ def vector_index_task(body: IngestAsyncBody) -> Any:
         model="private-gpt",
         data=ingested_documents,
     )
+
+
+vector_index_task.callback_task_name = VECTOR_INDEX_CALLBACK_TASK_NAME  # type: ignore[attr-defined]
 
 
 def ensure_to_remove_temporal_files(body: IngestAsyncBody) -> None:

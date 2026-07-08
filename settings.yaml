@@ -290,6 +290,8 @@ semaphore:
   mode: ${PGPT_SEMAPHORE_MODE:memory}
 
 scheduler:
+  ingestion:
+    celery_queue: ${PGPT_INGESTION_CELERY_QUEUE:ingestion}
   chat:
     mode: ${PGPT_CHAT_SCHEDULER_MODE:local}
     celery_queue: ${PGPT_CHAT_CELERY_QUEUE:chat}

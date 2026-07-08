@@ -69,7 +69,11 @@ class IngestionTaskHelper:
     def is_ingestion_cancel_task_scheduled(
         celery_app: Any, collection: str, artifact: str
     ) -> bool:
-        for task in find_tasks(celery_app, task_name="delete_ingested_task"):
+        from private_gpt.celery.tasks.ingestion.delete_tasks import (
+            DELETE_INGESTED_TASK_NAME,
+        )
+
+        for task in find_tasks(celery_app, task_name=DELETE_INGESTED_TASK_NAME):
             if not task.args or not isinstance(
                 task.args[0], DeleteIngestedDocumentAsyncBody
             ):
@@ -86,9 +90,12 @@ class IngestionTaskHelper:
 
     @staticmethod
     def revoke_ingestion_task(celery_app: Any, collection: str, artifact: str) -> bool:
+        from private_gpt.celery.tasks.ingestion.extraction_tasks import (
+            VECTOR_INDEX_TASK_NAME,
+        )
         from private_gpt.server.ingest.ingest_router import IngestAsyncBody
 
-        for task in find_tasks(celery_app, task_name="vector_index_task"):
+        for task in find_tasks(celery_app, task_name=VECTOR_INDEX_TASK_NAME):
             if not task.args or not isinstance(task.args[0], IngestAsyncBody):
                 continue
 
@@ -97,7 +104,6 @@ class IngestionTaskHelper:
                 task_body.ingest_body.collection == collection
                 and task_body.ingest_body.artifact == artifact
             ):
-
                 revoke_task(celery_app, task.task_id)
                 return True
 
@@ -105,7 +111,11 @@ class IngestionTaskHelper:
 
     @staticmethod
     def revoke_deletion_task(celery_app: Any, collection: str, artifact: str) -> bool:
-        for task in find_tasks(celery_app, task_name="delete_ingested_task"):
+        from private_gpt.celery.tasks.ingestion.delete_tasks import (
+            DELETE_INGESTED_TASK_NAME,
+        )
+
+        for task in find_tasks(celery_app, task_name=DELETE_INGESTED_TASK_NAME):
             if not task.args or not isinstance(
                 task.args[0], DeleteIngestedDocumentAsyncBody
             ):

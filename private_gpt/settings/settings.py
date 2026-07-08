@@ -473,6 +473,10 @@ class SchedulerSettings(BaseModel):
 
 
 class SchedulerConfig(BaseModel):
+    ingestion: SchedulerSettings = Field(
+        default_factory=lambda: SchedulerSettings(celery_queue="ingestion"),
+        description="Ingestion worker scheduler configuration.",
+    )
     chat: SchedulerSettings = Field(
         default_factory=lambda: SchedulerSettings(celery_queue="chat"),
         description="Chat worker scheduler configuration.",

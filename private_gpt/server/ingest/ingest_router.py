@@ -17,7 +17,14 @@ from private_gpt.settings.settings import settings
 
 try:
     from private_gpt.celery.celery import celery_app
+    from private_gpt.celery.dispatch import dispatch_task
     from private_gpt.celery.model import Task, TaskStatus
+    from private_gpt.celery.tasks.ingestion.delete_tasks import (
+        DELETE_INGESTED_TASK_NAME,
+    )
+    from private_gpt.celery.tasks.ingestion.extraction_tasks import (
+        VECTOR_INDEX_TASK_NAME,
+    )
 
     if TYPE_CHECKING:
         from celery.result import AsyncResult
@@ -666,9 +673,10 @@ if _CELERY_AVAILABLE:
                 body.ingest_body.input = UriArtifact(value=s3_url)
 
         # Enqueue ingestion tasks (index population)
-        async_result = celery_app.send_task(
-            "vector_index_task",
+        async_result = dispatch_task(
+            task_name=VECTOR_INDEX_TASK_NAME,
             args=(body,),
+            queue=config.scheduler.ingestion.celery_queue,
         )
 
         return Task(task_id=async_result.task_id)
@@ -966,9 +974,10 @@ if _CELERY_AVAILABLE:
             return Task(task_id="revoked")
 
         # Enqueue deletion task
-        async_result: AsyncResult[None] = celery_app.send_task(
-            "delete_ingested_task",
+        async_result: AsyncResult[None] = dispatch_task(
+            task_name=DELETE_INGESTED_TASK_NAME,
             args=(body,),
+            queue=settings().scheduler.ingestion.celery_queue,
         )
         return Task(task_id=async_result.task_id)
 
@@ -1033,7 +1042,7 @@ if _CELERY_AVAILABLE:
                 description="Unique identifier of the deletion task to check status for",
                 examples=["123e4567-e89b-12d3-a456-426614174000"],
             ),
-        ]
+        ],
     ) -> TaskStatus[None]:
         """Retrieves the current status of an asynchronous deletion task.
 

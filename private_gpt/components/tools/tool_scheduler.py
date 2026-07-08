@@ -7,11 +7,14 @@ from typing import TYPE_CHECKING
 
 from injector import inject, singleton
 
+from private_gpt.celery.dispatch import dispatch_task
 from private_gpt.components.tools.remote_execution import (
     ToolExecutionResponse,
     execute_tool_request,
 )
 from private_gpt.settings.settings import Settings
+
+TOOL_TASK_NAME = "private_gpt.tools.run"
 
 if TYPE_CHECKING:
     from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
@@ -57,10 +60,7 @@ class CeleryToolScheduler(BaseToolScheduler):
 
     @inject
     def __init__(self, settings: Settings) -> None:
-        from private_gpt.celery.celery import celery_app
-
-        self._celery_app = celery_app
-        self._tools_queue = settings.scheduler.tools.celery_queue
+        self._settings = settings
 
     async def execute(
         self,
@@ -70,10 +70,10 @@ class CeleryToolScheduler(BaseToolScheduler):
     ) -> ToolExecutionResponse:
         del state_ctx, interceptors
 
-        result = self._celery_app.send_task(
-            "private_gpt.tools.run",
-            kwargs=request.model_dump(mode="json"),
-            queue=self._tools_queue,
+        result = dispatch_task(
+            task_name=TOOL_TASK_NAME,
+            args=(request,),
+            queue=self._settings.scheduler.tools.celery_queue,
         )
 
         while not result.ready():

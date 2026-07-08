@@ -3,6 +3,7 @@ from typing import Any
 
 from injector import inject, singleton
 
+from private_gpt.celery.dispatch import dispatch_task
 from private_gpt.components.streaming.providers.models import (
     StreamMetadata,
     StreamStatus,
@@ -14,6 +15,8 @@ from private_gpt.server.chat.chat_facade import ChatFacadeService
 from private_gpt.server.chat.chat_models import ChatBody
 from private_gpt.server.chat.chat_request_mapper import ChatRequestMapper
 from private_gpt.settings.settings import settings as _settings
+
+CHAT_TASK_NAME = "private_gpt.chat.run"
 
 
 @singleton
@@ -93,8 +96,6 @@ class ChatAsyncService:
         using its own warm injector so tool implementations and output schemas
         are built fresh in-process.
         """
-        from private_gpt.celery.celery import celery_app
-
         stream_service = self.stream_manager.stream_service
 
         correlation_id = await stream_service.create_stream(
@@ -109,13 +110,12 @@ class ChatAsyncService:
             "message_count": len(body.messages),
         }
 
-        body_data = body.model_dump(mode="json")
         try:
             # Use the correlation_id as the Celery task id so revocation is trivial.
-            celery_app.send_task(
-                "private_gpt.chat.run",
-                args=[body_data, correlation_id, "chat_completion", metadata],
-                queue="chat",
+            dispatch_task(
+                task_name=CHAT_TASK_NAME,
+                args=[body, correlation_id, "chat_completion", metadata],
+                queue=_settings().scheduler.chat.celery_queue,
                 task_id=correlation_id,
             )
         except Exception as e:

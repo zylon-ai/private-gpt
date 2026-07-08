@@ -59,7 +59,7 @@ async def test_worker_handoff_sends_json_safe_body(
     assert sent["name"] == "private_gpt.chat.run"
     assert sent["kwargs"]["queue"] == "chat"
     assert sent["kwargs"]["task_id"] == "msg-1"
-    assert isinstance(sent["args"][0], dict)
+    assert sent["args"][0] == _chat_body()
     assert sent["args"][1] == "msg-1"
 
 

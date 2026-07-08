@@ -18,6 +18,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _callback_task_name(task: Any) -> str:
+    name: str = getattr(task, "callback_task_name", task.name)
+    return name
+
+
 def _publish_callback(
     exchange: str,
     routing_key: str,
@@ -47,18 +52,20 @@ def run_callback(
     final = False
 
     if state == states.SUCCESS:
+        task_name = _callback_task_name(task)
         async_response = AsyncResponse(
             data=result,
-            type=f"pgpt.{task.name}.done",
+            type=f"pgpt.{task_name}.done",
             error=None,
             callback_properties=callback.properties,
         )
         routing_key = callback_amqp.routing_key_done or async_response.type
         final = True
     elif state == custom_states.PROGRESS:
+        task_name = _callback_task_name(task)
         async_response = AsyncResponse(
             data=result.model_dump(),
-            type=f"pgpt.{task.name}.progress",
+            type=f"pgpt.{task_name}.progress",
             error=None,
             callback_properties=callback.properties,
         )
@@ -77,7 +84,7 @@ def run_callback(
 
         async_response = AsyncResponse(
             data=None,
-            type=f"pgpt.{task.name}.error",
+            type=f"pgpt.{_callback_task_name(task)}.error",
             error=error_result.dict(),
             callback_properties=callback.properties,
         )

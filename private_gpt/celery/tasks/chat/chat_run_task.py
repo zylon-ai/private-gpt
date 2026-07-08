@@ -7,7 +7,6 @@ API becomes a pure Redis -> SSE proxy and its event loop never contends with
 CPU-bound work (LLM calls, tools, semantic search, retrieval, tokenization).
 """
 import logging
-from typing import Any
 
 from private_gpt.celery.base import StatefulBackgroundTask
 from private_gpt.celery.celery import celery_app
@@ -26,19 +25,17 @@ logger = logging.getLogger(__name__)
     base=StatefulBackgroundTask,
 )
 async def chat_run_task(
-    body: dict[str, Any],
+    body: ChatBody,
     correlation_id: str,
     stream_type: str,
-    metadata: dict[str, Any],
+    metadata: dict[str, object],
 ) -> None:
     """Run a chat completion loop and push events to the stream.
 
     Args:
-        body: JSON-safe :class:`ChatBody` data received by the API. It is re-mapped
-            to a :class:`ChatRequest` inside the worker so that tool
-            implementations and output schemas are built from the worker's
-            warm dependency injector (no closures or dynamic classes cross
-            the process boundary).
+        body: :class:`ChatBody` received by the API. It is re-mapped to a
+            :class:`ChatRequest` inside the worker so that tool implementations
+            and output schemas are built from the worker's warm dependency injector.
         correlation_id: The Redis stream correlation ID already created by the
             API via ``StreamService.create_stream``.
         stream_type: The stream type (e.g. ``"chat_completion"``).
@@ -57,8 +54,7 @@ async def chat_run_task(
     event_handler = StreamingEventHandler()
 
     try:
-        chat_body = ChatBody.model_validate(body)
-        request = await chat_request_mapper.create_request_from_body(chat_body)
+        request = await chat_request_mapper.create_request_from_body(body)
         completion_gen = await chat_service.stream_chat(request)
     except Exception as e:
         error_event = event_handler.error_event(correlation_id, e)
