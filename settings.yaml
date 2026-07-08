@@ -289,6 +289,15 @@ skills:
 semaphore:
   mode: ${PGPT_SEMAPHORE_MODE:memory}
 
+tool_scheduler:
+  enabled: ${PGPT_TOOL_SCHEDULER_ENABLED:false}
+  max_concurrent_tools: ${PGPT_TOOL_SCHEDULER_MAX_CONCURRENT_TOOLS:5}
+  max_age_seconds: ${PGPT_TOOL_SCHEDULER_MAX_AGE_SECONDS:60}
+  weights:
+    chat_priority: ${PGPT_TOOL_SCHEDULER_WEIGHT_PRIORITY:0.4}
+    age: ${PGPT_TOOL_SCHEDULER_WEIGHT_AGE:0.4}
+    complexity: ${PGPT_TOOL_SCHEDULER_WEIGHT_COMPLEXITY:0.2}
+
 transformation:
   pptx:
     vision:

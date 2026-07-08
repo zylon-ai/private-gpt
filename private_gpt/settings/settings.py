@@ -1634,6 +1634,49 @@ class SemaphoreSettings(BaseModel):
     )
 
 
+class ToolSchedulerWeightsSettings(BaseModel):
+    chat_priority: float = Field(
+        default=0.4,
+        description="Weight given to the chat request priority signal (0-1).",
+    )
+    age: float = Field(
+        default=0.4,
+        description=(
+            "Weight given to wait time in the queue. "
+            "Higher values reduce starvation of long-waiting calls."
+        ),
+    )
+    complexity: float = Field(
+        default=0.2,
+        description="Weight given to the estimated tool complexity (0-1).",
+    )
+
+
+class ToolSchedulerSettings(BaseModel):
+    enabled: bool = Field(
+        default=False,
+        description=(
+            "When True, all tool executions are routed through a shared priority queue "
+            "that limits global concurrency and orders calls by urgency."
+        ),
+    )
+    max_concurrent_tools: int = Field(
+        default=5,
+        description="Maximum number of tool calls executed simultaneously across all chats.",
+    )
+    max_age_seconds: float = Field(
+        default=60.0,
+        description=(
+            "Time (seconds) after which a queued tool call reaches maximum age urgency. "
+            "Prevents starvation by boosting priority of long-waiting calls."
+        ),
+    )
+    weights: ToolSchedulerWeightsSettings = Field(
+        default_factory=ToolSchedulerWeightsSettings,
+        description="Relative weights for the three priority signals.",
+    )
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -1670,6 +1713,10 @@ class Settings(BaseModel):
     skills: SkillSettings
     transformation: TransformationSettings
     semaphore: SemaphoreSettings
+    tool_scheduler: ToolSchedulerSettings = Field(
+        default_factory=ToolSchedulerSettings,
+        description="Settings for the global tool execution priority scheduler.",
+    )
 
 
 """

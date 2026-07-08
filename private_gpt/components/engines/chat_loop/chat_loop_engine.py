@@ -67,6 +67,10 @@ from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.models import ReasoningEffort
 from private_gpt.components.llm.priorities import DefinedPriorities
 from private_gpt.components.tools.processors.base import _session_id
+from private_gpt.components.tools.tool_scheduler import (
+    BaseToolScheduler,
+    ImmediateToolScheduler,
+)
 from private_gpt.events.models import (
     Container,
     Event,
@@ -187,6 +191,7 @@ class ChatLoopEngine:
         response_interceptors: list[ChatResponseLoopInterceptor] | None = None,
         max_iterations: int = 40,
         container_registry: ContainerRegistry | None = None,
+        tool_scheduler: BaseToolScheduler | None = None,
     ) -> None:
         self._llm_component = llm_component
         self._request_interceptors = [
@@ -201,6 +206,9 @@ class ChatLoopEngine:
         ]
         self._max_iterations = max_iterations
         self._container_registry = container_registry
+        self._tool_scheduler: BaseToolScheduler = (
+            tool_scheduler or ImmediateToolScheduler()
+        )
 
     async def run(
         self,
@@ -895,12 +903,17 @@ class ChatLoopEngine:
             )
 
         async with semaphore if semaphore is not None else contextlib.nullcontext():
-            result, tool_message = await execute_tool_call(
-                tool=tool,
-                tool_name=tool_call.tool_name,
-                tool_id=call_id,
-                tool_kwargs=tool_call.tool_kwargs,
-                state_ctx=run.state,
+            result, tool_message = await self._tool_scheduler.execute(
+                tool_call.tool_name or "",
+                run.state.input.request.system.priority,
+                partial(
+                    execute_tool_call,
+                    tool=tool,
+                    tool_name=tool_call.tool_name,
+                    tool_id=call_id,
+                    tool_kwargs=tool_call.tool_kwargs,
+                    state_ctx=run.state,
+                ),
             )
 
         async with lock:

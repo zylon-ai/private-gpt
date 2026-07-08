@@ -23,6 +23,11 @@ from private_gpt.components.llm.custom.base import ZylonLLM
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.models import ReasoningEffort
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
+from private_gpt.components.tools.tool_scheduler import (
+    BaseToolScheduler,
+    ImmediateToolScheduler,
+    QueuedToolScheduler,
+)
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
@@ -150,6 +155,7 @@ class ChatService:
         chat_interceptor_service: ChatInterceptorService,
         models_service: ModelsService,
         container_registry: ContainerRegistry,
+        tool_scheduler: QueuedToolScheduler,
     ) -> None:
         self.settings = settings
         self.llm_component = llm_component
@@ -160,6 +166,11 @@ class ChatService:
         self.chat_interceptor_service = chat_interceptor_service
         self.models_service = models_service
         self.container_registry = container_registry
+        self._tool_scheduler: BaseToolScheduler = (
+            tool_scheduler
+            if settings.tool_scheduler.enabled
+            else ImmediateToolScheduler()
+        )
 
     def _build_loop_engine(self) -> ChatLoopEngine:
         # Don't build a singleton since the interceptors
@@ -172,6 +183,7 @@ class ChatService:
             response_interceptors=chain.response_interceptors,
             max_iterations=40,
             container_registry=self.container_registry,
+            tool_scheduler=self._tool_scheduler,
         )
 
     async def stream_chat(
