@@ -435,7 +435,9 @@ class DatabaseQueryGenerator:
         """
         try:
             conn = self._ensure_connected()
-            dialect = classify_dialect(self._engine.dialect.name if self._engine else None)
+            dialect = classify_dialect(
+                self._engine.dialect.name if self._engine else None
+            )
             if dialect == DatabaseDialect.DB2:
                 conn.execute(text("SELECT 1 FROM SYSIBM.SYSDUMMY1"))
             else:
