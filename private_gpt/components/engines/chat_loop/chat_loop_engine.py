@@ -21,6 +21,7 @@ from llama_index.core.tools import AsyncBaseTool, ToolSelection, adapt_to_async_
 from private_gpt.components.chat.models.chat_config_models import (
     ChatRequest,
     ResolvedChatRequest,
+    ToolSpec,
 )
 from private_gpt.components.container_registry import ContainerRegistry
 from private_gpt.components.context.models.context_stack import ContextStack
@@ -59,7 +60,6 @@ from private_gpt.components.engines.chat_loop.utils.request_builder import (
     build_request_from_context_stack,
 )
 from private_gpt.components.engines.chat_loop.utils.tool_utils import (
-    execute_tool_call,
     select_tool_names,
 )
 from private_gpt.components.llm.custom.base import StructuredOutputsParams, ZylonLLM
@@ -67,6 +67,10 @@ from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.models import ReasoningEffort
 from private_gpt.components.llm.priorities import DefinedPriorities
 from private_gpt.components.tools.processors.base import _session_id
+from private_gpt.components.tools.remote_execution import (
+    ToolExecutionRequest,
+    build_tool_execution_context,
+)
 from private_gpt.components.tools.tool_scheduler import (
     BaseToolScheduler,
     LocalToolScheduler,
@@ -89,7 +93,6 @@ from private_gpt.events.models import (
     ToolResultBlock,
     ToolUseBlock,
     Usage,
-    from_tool_output,
 )
 from private_gpt.server.chat.interceptors.schema_coercing_tool_interceptor import (
     _coerce_kwargs,
@@ -354,7 +357,11 @@ class ChatLoopEngine:
         run.state = self._snapshot(run.state, TimelinePhase.BEFORE_LLM)
 
         llm_tools = self._build_tools(run.state)
-        tool_by_name = {tool.metadata.name: tool for tool in llm_tools}
+        tool_specs_by_name = {
+            tool.name: tool
+            for tool in run.state.input.context_stack.all_tools()
+            if tool.name
+        }
         schema_by_name: dict[str, dict[str, Any]] = {
             tool.name: tool.input_schema or {}
             for tool in run.state.input.context_stack.all_tools()
@@ -388,7 +395,7 @@ class ChatLoopEngine:
                 current_response=llm_response,
                 stream_delta_state=stream_delta_state,
                 handler=handler,
-                tool_by_name=tool_by_name,
+                tool_specs_by_name=tool_specs_by_name,
                 schema_by_name=schema_by_name,
                 lock=lock,
             )
@@ -397,7 +404,7 @@ class ChatLoopEngine:
             run=run,
             stream_delta_state=stream_delta_state,
             handler=handler,
-            tool_by_name=tool_by_name,
+            tool_specs_by_name=tool_specs_by_name,
             schema_by_name=schema_by_name,
             lock=lock,
         )
@@ -496,7 +503,7 @@ class ChatLoopEngine:
         current_response: ChatResponse,
         stream_delta_state: _StreamDeltaState,
         handler: _LoopEventHandler,
-        tool_by_name: dict[str | None, AsyncBaseTool],
+        tool_specs_by_name: dict[str, ToolSpec],
         schema_by_name: dict[str, dict[str, Any]],
         lock: asyncio.Lock,
     ) -> ChatResponse:
@@ -559,7 +566,7 @@ class ChatLoopEngine:
                             run=run,
                             stream_delta_state=stream_delta_state,
                             handler=handler,
-                            tool_by_name=tool_by_name,
+                            tool_specs_by_name=tool_specs_by_name,
                             schema_by_name=schema_by_name,
                             lock=lock,
                         )
@@ -643,14 +650,19 @@ class ChatLoopEngine:
         run: _LoopRun,
         stream_delta_state: _StreamDeltaState,
         handler: _LoopEventHandler,
-        tool_by_name: dict[str | None, AsyncBaseTool],
+        tool_specs_by_name: dict[str, ToolSpec],
         schema_by_name: dict[str, dict[str, Any]],
         lock: asyncio.Lock,
     ) -> None:
         """Close all active streaming blocks and spawn the last tool task."""
         if stream_delta_state.tool_state.active_tool_block is not None:
             self._close_active_tool_block(
-                run, stream_delta_state, handler, tool_by_name, schema_by_name, lock
+                run,
+                stream_delta_state,
+                handler,
+                tool_specs_by_name,
+                schema_by_name,
+                lock,
             )
         self._close_active_block(stream_delta_state, handler)
 
@@ -659,7 +671,7 @@ class ChatLoopEngine:
         run: _LoopRun,
         stream_delta_state: _StreamDeltaState,
         handler: _LoopEventHandler,
-        tool_by_name: dict[str | None, AsyncBaseTool],
+        tool_specs_by_name: dict[str, ToolSpec],
         schema_by_name: dict[str, dict[str, Any]],
         lock: asyncio.Lock,
     ) -> None:
@@ -698,7 +710,7 @@ class ChatLoopEngine:
             self._handle_tool_use(
                 run=run,
                 tool_call=tool_call,
-                tool_by_name=tool_by_name,
+                tool_specs_by_name=tool_specs_by_name,
                 handler=handler,
                 tool_id_map=tool_state.tool_id_map,
                 lock=lock,
@@ -841,7 +853,7 @@ class ChatLoopEngine:
         self,
         run: _LoopRun,
         tool_call: ToolSelection,
-        tool_by_name: dict[str | None, AsyncBaseTool],
+        tool_specs_by_name: dict[str, ToolSpec],
         handler: _LoopEventHandler,
         tool_id_map: dict[str, str],
         lock: asyncio.Lock,
@@ -854,9 +866,9 @@ class ChatLoopEngine:
                 f"Missing tool ID mapping for '{tool_call.tool_name}' with raw ID '{raw_id}'"
             )
 
-        tool = tool_by_name.get(tool_call.tool_name)
+        tool_spec = tool_specs_by_name.get(tool_call.tool_name or "")
 
-        if tool is None:
+        if tool_spec is None:
             error_content = f"Tool '{tool_call.tool_name}' not found."
             async with lock:
                 error_start = RawContentBlockStartEvent(
@@ -890,7 +902,7 @@ class ChatLoopEngine:
 
             return ToolExecutionResult(status=ToolExecutionStatus.NOT_FOUND)
 
-        if tool.metadata.return_direct:
+        if tool_spec.runtime != "server":
             return ToolExecutionResult(
                 status=ToolExecutionStatus.NOT_EXECUTED,
                 tool_selection=ToolSelection(
@@ -901,31 +913,25 @@ class ChatLoopEngine:
             )
 
         async with semaphore if semaphore is not None else contextlib.nullcontext():
-            result, tool_message = await self._tool_scheduler.execute(
-                tool_call.tool_name or "",
-                run.state.input.request.system.priority,
-                partial(
-                    execute_tool_call,
-                    tool=tool,
-                    tool_name=tool_call.tool_name,
+            response = await self._tool_scheduler.execute(
+                ToolExecutionRequest(
                     tool_id=call_id,
+                    tool_name=tool_call.tool_name or "",
                     tool_kwargs=tool_call.tool_kwargs,
-                    state_ctx=run.state,
+                    tool_spec=tool_spec,
+                    context=build_tool_execution_context(run.state),
                 ),
+                state_ctx=run.state,
             )
 
         async with lock:
             run.state = run.state.model_copy(deep=True)
             run.state.input.request.messages = [
                 *run.state.input.request.messages,
-                tool_message,
+                response.tool_message,
             ]
 
-        result_content = (
-            from_tool_output(result.tool_output.raw_output)
-            if result.tool_output.raw_output is not None
-            else result.tool_output.content
-        )
+        result_content = response.result_content
 
         async with lock:
             result_start = RawContentBlockStartEvent(
@@ -934,7 +940,7 @@ class ChatLoopEngine:
                 content_block=ToolResultBlock(
                     tool_use_id=call_id,
                     content=result_content,
-                    is_error=result.tool_output.is_error,
+                    is_error=response.is_error,
                 ),
             )
 

@@ -3,14 +3,21 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from injector import inject, singleton
 
-if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
-
+from private_gpt.components.tools.remote_execution import (
+    ToolExecutionResponse,
+    execute_tool_request,
+)
 from private_gpt.settings.settings import Settings
+
+if TYPE_CHECKING:
+    from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
+        ChatLoopState,
+    )
+    from private_gpt.components.tools.remote_execution import ToolExecutionRequest
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +26,9 @@ class BaseToolScheduler(ABC):
     @abstractmethod
     async def execute(
         self,
-        tool_name: str,
-        chat_priority: int | None,
-        func: Callable[[], Awaitable[Any]],
-    ) -> Any:
+        request: ToolExecutionRequest,
+        state_ctx: ChatLoopState | None = None,
+    ) -> ToolExecutionResponse:
         ...
 
 
@@ -32,20 +38,15 @@ class LocalToolScheduler(BaseToolScheduler):
 
     async def execute(
         self,
-        tool_name: str,
-        chat_priority: int | None,
-        func: Callable[[], Awaitable[Any]],
-    ) -> Any:
-        return await func()
+        request: ToolExecutionRequest,
+        state_ctx: ChatLoopState | None = None,
+    ) -> ToolExecutionResponse:
+        return await execute_tool_request(request, state_ctx=state_ctx)
 
 
 @singleton
 class CeleryToolScheduler(BaseToolScheduler):
-    """Dispatch tool calls to a dedicated Celery tools worker.
-
-    When ``scheduler.tools.mode`` is ``"celery"``, the chat worker sends tool
-    calls to the ``tools`` queue instead of executing them in-process.
-    """
+    """Dispatch tool calls to a dedicated Celery tools worker."""
 
     @inject
     def __init__(self, settings: Settings) -> None:
@@ -56,17 +57,14 @@ class CeleryToolScheduler(BaseToolScheduler):
 
     async def execute(
         self,
-        tool_name: str,
-        chat_priority: int | None,
-        func: Callable[[], Awaitable[Any]],
-    ) -> Any:
-        keywords = getattr(func, "keywords", {})
-        tool_id = keywords.get("tool_id", "")
-        tool_kwargs = keywords.get("tool_kwargs", {})
+        request: ToolExecutionRequest,
+        state_ctx: ChatLoopState | None = None,
+    ) -> ToolExecutionResponse:
+        del state_ctx
 
         result = self._celery_app.send_task(
             "private_gpt.tools.run",
-            args=[tool_name, chat_priority, tool_id, tool_kwargs],
+            kwargs=request.model_dump(mode="json"),
             queue=self._tools_queue,
         )
 
@@ -76,7 +74,7 @@ class CeleryToolScheduler(BaseToolScheduler):
         if result.failed():
             raise result.result
 
-        return result.result
+        return ToolExecutionResponse.model_validate(result.result)
 
 
 @singleton

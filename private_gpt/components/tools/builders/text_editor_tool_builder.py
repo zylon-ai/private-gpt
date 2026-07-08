@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from injector import inject, singleton
 
@@ -11,6 +11,7 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import (
     TEXT_EDITOR_CREATE_TOOL_NAME,
     TEXT_EDITOR_INSERT_TOOL_NAME,
@@ -24,6 +25,7 @@ from private_gpt.components.tools.tool_placeholders import (
     TEXT_EDITOR_VIEW_TOOL_FN,
 )
 from private_gpt.components.tools.utils import truncate_output
+from private_gpt.di import get_global_injector
 from private_gpt.events.models import TextBlock
 from private_gpt.settings.settings import Settings
 
@@ -99,6 +101,16 @@ class TextEditorToolBuilder:
             description=description,
             async_fn=view,
             requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_text_editor_view_tool,
+                {
+                    "session_id": session_id,
+                    "bundles": bundles,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                },
+            ),
         )
 
     async def build_str_replace_tool(
@@ -129,6 +141,16 @@ class TextEditorToolBuilder:
             description=description,
             async_fn=str_replace,
             requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_text_editor_str_replace_tool,
+                {
+                    "session_id": session_id,
+                    "bundles": bundles,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                },
+            ),
         )
 
     async def build_create_tool(
@@ -158,6 +180,16 @@ class TextEditorToolBuilder:
             description=description,
             async_fn=create,
             requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_text_editor_create_tool,
+                {
+                    "session_id": session_id,
+                    "bundles": bundles,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                },
+            ),
         )
 
     async def build_insert_tool(
@@ -188,4 +220,34 @@ class TextEditorToolBuilder:
             description=description,
             async_fn=insert,
             requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_text_editor_insert_tool,
+                {
+                    "session_id": session_id,
+                    "bundles": bundles,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                },
+            ),
         )
+
+
+async def rebuild_text_editor_view_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(TextEditorToolBuilder)
+    return await builder.build_view_tool(**cast(Any, kwargs))
+
+
+async def rebuild_text_editor_str_replace_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(TextEditorToolBuilder)
+    return await builder.build_str_replace_tool(**cast(Any, kwargs))
+
+
+async def rebuild_text_editor_create_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(TextEditorToolBuilder)
+    return await builder.build_create_tool(**cast(Any, kwargs))
+
+
+async def rebuild_text_editor_insert_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(TextEditorToolBuilder)
+    return await builder.build_insert_tool(**cast(Any, kwargs))

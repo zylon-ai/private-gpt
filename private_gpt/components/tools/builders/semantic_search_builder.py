@@ -24,6 +24,7 @@ from private_gpt.components.postprocessor.tree_expansion.tree_expansion_replacem
     TreeExpansionReplacementPostProcessor,
 )
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
+from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import SEMANTIC_SEARCH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import SEMANTIC_SEARCH_TOOL_FN
 from private_gpt.components.tools.types import ToolValidationMode
@@ -34,6 +35,7 @@ from private_gpt.components.workflows.retrieval.semantic_search import (
     SemanticSearchInputEvent,
     SemanticSearchWorkflow,
 )
+from private_gpt.di import get_global_injector
 from private_gpt.events.models import (
     ResultContentBlockType,
     SourceBlock,
@@ -328,4 +330,25 @@ class SemanticSearchToolBuilder:
             description=description,
             async_fn=semantic_search,
             async_callback=format_result,
+            execution_metadata=build_rebuild_metadata(
+                rebuild_semantic_search_tool,
+                {
+                    "context_filter": context_filter,
+                    "model_id": model_id,
+                    "embed_model_id": embed_model_id,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                    "validate": validate,
+                    "runtime": runtime,
+                    **kwargs,
+                    "generate_citations": generate_citations,
+                    "token_limit": token_limit,
+                },
+            ),
         )
+
+
+async def rebuild_semantic_search_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(SemanticSearchToolBuilder)
+    return await builder.build_tool(**kwargs)

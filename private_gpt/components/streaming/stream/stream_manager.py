@@ -30,7 +30,7 @@ class StreamManager:
     ):
         self.stream_service = stream_component.stream
         self.processor = stream_processor
-        self.reader = stream_reader
+        self.reader: StreamReader | AdaptiveStreamReader = stream_reader
         if settings.chat.multiplexing_threshold:
             self.reader = AdaptiveStreamReader(settings, stream_reader)
 

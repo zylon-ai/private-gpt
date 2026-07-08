@@ -111,6 +111,16 @@ class ToolRequirements(enum.StrEnum):
     SANDBOX = "sandbox"
 
 
+class ToolExecutionMetadata(BaseModel):
+    rebuild_callable: str = Field(
+        description="Import path to the callable that rebuilds the server tool."
+    )
+    rebuild_kwargs: dict[str, Any] = Field(
+        default_factory=dict,
+        description="JSON-serializable kwargs used to rebuild the server tool.",
+    )
+
+
 class ToolSpec(BaseModel):
     name: str | None = Field(description="Unique name identifier for the tool")
     type: str | None = Field(
@@ -164,6 +174,12 @@ class ToolSpec(BaseModel):
         default_factory=list,
         description="List of requirements for the tool, e.g., SANDBOX",
     )
+    execution_metadata: ToolExecutionMetadata | None = Field(
+        default=None,
+        description=(
+            "Optional metadata used to rebuild this server tool in another process."
+        ),
+    )
 
     def get_original_tool_name(self) -> str:
         """Get the original tool name without version suffix."""
@@ -190,6 +206,7 @@ class ToolSpec(BaseModel):
         partial_params: dict[str, Any] | None = None,
         instructions: str | None = None,
         requirements: list[ToolRequirements] | None = None,
+        execution_metadata: ToolExecutionMetadata | None = None,
     ) -> "ToolSpec":
         """Create a ToolSpec from default parameters."""
         if not input_schema and not async_fn:
@@ -214,6 +231,7 @@ class ToolSpec(BaseModel):
             partial_params=partial_params,
             instructions=instructions,
             requirements=requirements or [],
+            execution_metadata=execution_metadata,
         )
 
     @classmethod
@@ -246,6 +264,7 @@ class ToolSpec(BaseModel):
             partial_params=tool.partial_params
             if hasattr(tool, "partial_params")
             else None,
+            execution_metadata=None,
         )
 
     def to_function_tool(self) -> "FunctionTool":

@@ -28,12 +28,14 @@ from private_gpt.components.sandbox import SandboxComponent
 from private_gpt.components.tools.binary_block_decorators import (
     auto_resolve_media_blocks,
 )
+from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import TABULAR_DATA_ANALYSIS
 from private_gpt.components.tools.tool_placeholders import TABULAR_DATA_TOOL_FN
 from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
+from private_gpt.di import get_global_injector
 from private_gpt.events.models import (
     ResultContentBlockType,
     from_tool_output,
@@ -333,4 +335,24 @@ class TabularDataToolBuilder:
             description=description,
             async_fn=tabular_data_analysis,
             requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_tabular_data_tool,
+                {
+                    "context_filter": context_filter,
+                    "model_id": model_id,
+                    "embed_model_id": embed_model_id,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                    "validate": validate,
+                    "runtime": runtime,
+                    "blob_visibility": blob_visibility,
+                    **kwargs,
+                },
+            ),
         )
+
+
+async def rebuild_tabular_data_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(TabularDataToolBuilder)
+    return await builder.build_tool(**kwargs)
