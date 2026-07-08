@@ -2,7 +2,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from private_gpt.artifact_index.base_artifact_index import IndexNotReadyException
-from private_gpt.celery.base import AsyncBackgroundTask
+from private_gpt.celery.base import StatelessBackgroundTask
 from private_gpt.celery.celery import celery_app
 from private_gpt.celery.task_helper import IngestionTaskHelper
 from private_gpt.di import get_global_injector
@@ -19,7 +19,7 @@ logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
 
 @celery_app.task(
     name="delete_ingested_task",
-    base=AsyncBackgroundTask,
+    base=StatelessBackgroundTask,
     # Retry on ValueError and IndexNotReadyException.
     # ValueError is thrown when the index is not initialized
     #   and we cannot guarantee that the index will not be ready.

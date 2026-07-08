@@ -3,13 +3,13 @@
 When ``chat.use_chat_worker`` is enabled, the FastAPI server dispatches chat
 requests here instead of running the chat loop on its own event loop. The
 worker pushes events to the same Redis stream the API reads from, so the
-API becomes a pure Redis → SSE proxy and its event loop never contends with
+API becomes a pure Redis -> SSE proxy and its event loop never contends with
 CPU-bound work (LLM calls, tools, semantic search, retrieval, tokenization).
 """
 import logging
 from typing import Any
 
-from private_gpt.celery.base import ChatBackgroundTask
+from private_gpt.celery.base import StatefulBackgroundTask
 from private_gpt.celery.celery import celery_app
 from private_gpt.components.streaming.providers.models import StreamStatus
 from private_gpt.di import get_global_injector
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @celery_app.task(
     name="private_gpt.chat.run",
-    base=ChatBackgroundTask,
+    base=StatefulBackgroundTask,
 )
 async def chat_run_task(
     body: dict[str, Any],

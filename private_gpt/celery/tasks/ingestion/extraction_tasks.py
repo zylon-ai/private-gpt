@@ -5,7 +5,7 @@ from typing import Any, TypeVar
 
 from private_gpt.artifact_index.base_artifact_index import IndexNotReadyException
 from private_gpt.celery import states as custom_states
-from private_gpt.celery.base import AsyncBackgroundTask
+from private_gpt.celery.base import StatelessBackgroundTask
 from private_gpt.celery.celery import celery_app
 from private_gpt.components.ingest.utils import get_extension, get_file_name
 from private_gpt.components.storage.s3_helper import S3Helper
@@ -46,7 +46,7 @@ def cleanup_temporal_files(func: Callable[..., T]) -> Callable[..., T]:
 
 @celery_app.task(
     name="vector_index_task",
-    base=AsyncBackgroundTask,
+    base=StatelessBackgroundTask,
     autoretry_for=AUTORETRY_EXCEPTIONS,
 )
 @cleanup_temporal_files

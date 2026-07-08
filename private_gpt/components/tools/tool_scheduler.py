@@ -6,10 +6,8 @@ import logging
 import time
 import uuid
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from injector import inject, singleton
 
@@ -57,6 +55,7 @@ class BaseToolScheduler(ABC):
         ...
 
 
+@singleton
 class ImmediateToolScheduler(BaseToolScheduler):
     async def execute(
         self,
@@ -239,16 +238,61 @@ class AdaptiveToolScheduler(BaseToolScheduler):
 
 
 @singleton
+class CeleryToolScheduler(BaseToolScheduler):
+    """Dispatch tool calls to a dedicated Celery tools worker.
+
+    When ``tool_scheduler.mode`` is ``"celery"``, the chat worker sends tool
+    calls to the ``tools`` queue instead of executing them in-process. The
+    tools worker runs on its own prefork pool, isolating CPU-bound tool
+    work from the chat loop.
+    """
+
+    @inject
+    def __init__(self, settings: Settings) -> None:
+        from private_gpt.celery.celery import celery_app
+
+        self._celery_app = celery_app
+        self._tools_queue = settings.tool_scheduler.celery_tools_queue
+
+    async def execute(
+        self,
+        tool_name: str,
+        chat_priority: int | None,
+        func: Callable[[], Awaitable[Any]],
+    ) -> Any:
+        keywords = getattr(func, "keywords", {})
+        tool_id = keywords.get("tool_id", "")
+        tool_kwargs = keywords.get("tool_kwargs", {})
+
+        result = self._celery_app.send_task(
+            "private_gpt.tools.run",
+            args=[tool_name, chat_priority, tool_id, tool_kwargs],
+            queue=self._tools_queue,
+        )
+
+        while not result.ready():
+            await asyncio.sleep(0.1)
+
+        if result.failed():
+            raise result.result
+
+        return result.get()
+
+
+@singleton
 class ToolSchedulerFactory:
     @inject
     def __init__(
         self,
         settings: Settings,
+        immediate: ImmediateToolScheduler,
+        celery: CeleryToolScheduler,
         queued: QueuedToolScheduler,
         adaptive: AdaptiveToolScheduler,
     ) -> None:
         self._scheduler: BaseToolScheduler = {
-            "immediate": ImmediateToolScheduler(),
+            "immediate": immediate,
+            "celery": celery,
             "queued": queued,
             "adaptive": adaptive,
         }[settings.tool_scheduler.mode]

@@ -14,7 +14,7 @@
 : "${PGPT_CELERY_CONCURRENCY:=}"
 : "${PGPT_CELERY_TIME_LIMIT:=}"
 : "${PGPT_WORKER_APP_MODULE:=private_gpt}"
-: "${PGPT_CHAT_WORKER_ENABLED:=false}"
+: "${PGPT_STATEFUL_WORKER_TYPE:=}"
 : "${PGPT_MAX_WORKERS:=}"
 : "${API_ENABLED:=true}"
 : "${API_PORT:=8090}"
@@ -67,35 +67,31 @@ if [[ "$PGPT_WORKER_MODE" == "flower" || "$PGPT_WORKER_MODE" == "mixed" ]]; then
     python -m celery --app "$CELERY_APP_MODULE" flower "${FLOWER_ARGS[@]}" &
 fi
 
-# Run celery worker using the config. When PGPT_CHAT_WORKER_ENABLED=true this
-# entrypoint starts a dedicated chat worker (queue ``chat`` by default) and
-# overrides max-tasks-per-child to 0 so the warm chat runtime survives across
-# requests. Keep ingestion workers in a separate deployment if they need the
-# default per-task process recycling behaviour.
+# Run celery worker using the config.
+# Stateful workers (PGPT_STATEFUL_WORKER_TYPE set) keep warm DI/runtime state
+# for the worker child lifetime (--max-tasks-per-child=0). Ingestion workers
+# use the default per-task process recycling (--max-tasks-per-child=1).
 if [[ "$PGPT_WORKER_MODE" == "worker" || "$PGPT_WORKER_MODE" == "mixed" ]]; then
   WORKER_ARGS=()
   if [[ -n "$PGPT_CELERY_LOG_LEVEL" ]]; then
       WORKER_ARGS+=("--loglevel=$PGPT_CELERY_LOG_LEVEL")
   fi
 
-  # Build the queue list. Chat workers are dedicated by default.
   QUEUES="$PGPT_CELERY_QUEUES"
-  if [[ "$PGPT_CHAT_WORKER_ENABLED" == "true" ]]; then
-      if [[ -z "$QUEUES" ]]; then
-          QUEUES="chat"
-      fi
-      if [[ "$PGPT_CELERY_HOSTNAME" == "default" ]]; then
-          PGPT_CELERY_HOSTNAME="chat"
-      fi
+  HOSTNAME="${PGPT_CELERY_HOSTNAME}"
+
+  # If stateful worker type is set, derive defaults.
+  if [[ -n "$PGPT_STATEFUL_WORKER_TYPE" ]]; then
+      QUEUES="${QUEUES:-$PGPT_STATEFUL_WORKER_TYPE}"
+      HOSTNAME="${HOSTNAME:-$PGPT_STATEFUL_WORKER_TYPE}"
+      WORKER_ARGS+=("--max-tasks-per-child=1000000")
   fi
+
   if [[ -n "$QUEUES" ]]; then
       WORKER_ARGS+=("--queues=$QUEUES")
-      if [[ -n "$PGPT_CELERY_HOSTNAME" ]]; then
-        PGPT_CELERY_HOSTNAME="$QUEUES"
-      fi
   fi
-  if [[ -n "$PGPT_CELERY_HOSTNAME" ]]; then
-      WORKER_ARGS+=("--hostname=${PGPT_CELERY_HOSTNAME}%h")
+  if [[ -n "$HOSTNAME" ]]; then
+      WORKER_ARGS+=("--hostname=${HOSTNAME}%h")
   fi
   if [[ -n "$PGPT_CELERY_POOL" ]]; then
       WORKER_ARGS+=("--pool=$PGPT_CELERY_POOL")
@@ -103,20 +99,12 @@ if [[ "$PGPT_WORKER_MODE" == "worker" || "$PGPT_WORKER_MODE" == "mixed" ]]; then
   if [[ -n "$PGPT_CELERY_CONCURRENCY" ]]; then
       WORKER_ARGS+=("--concurrency=$PGPT_CELERY_CONCURRENCY")
   fi
-  # Chat workers keep warm DI/runtime state for the worker child lifetime.
-#   if [[ "$PGPT_CHAT_WORKER_ENABLED" == "true" ]]; then
-#       WORKER_ARGS+=("--max-tasks-per-child=0")
-#   fi
   if [[ -n "$PGPT_CELERY_TIME_LIMIT" ]]; then
       WORKER_ARGS+=("--time-limit=$PGPT_CELERY_TIME_LIMIT")
   fi
 
   echo "Starting celery worker with args: ${WORKER_ARGS[*]}"
-  if [[ "$PGPT_CHAT_WORKER_ENABLED" == "true" ]]; then
-      PGPT_CHAT_WORKER=true python -m celery --app "$CELERY_APP_MODULE" worker "${WORKER_ARGS[@]}" &
-  else
-      python -m celery --app "$CELERY_APP_MODULE" worker "${WORKER_ARGS[@]}" &
-  fi
+  python -m celery --app "$CELERY_APP_MODULE" worker "${WORKER_ARGS[@]}" &
 fi
 
 # Start the Healthcheck server

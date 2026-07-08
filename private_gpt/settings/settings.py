@@ -1689,12 +1689,19 @@ class AdaptiveToolSchedulerSettings(BaseModel):
 
 
 class ToolSchedulerSettings(BaseModel):
-    mode: Literal["immediate", "queued", "adaptive"] = Field(
+    mode: Literal["immediate", "queued", "adaptive", "celery"] = Field(
         default="immediate",
         description=(
             "'immediate' runs tools without queuing; "
             "'queued' routes all calls through a shared priority queue; "
-            "'adaptive' switches between the two based on measured execution time."
+            "'adaptive' switches between the two based on measured execution time; "
+            "'celery' dispatches tool calls to a dedicated Celery tools worker."
+        ),
+    )
+    celery_tools_queue: str = Field(
+        default="tools",
+        description=(
+            "The Celery queue name for the tools worker when mode is 'celery'."
         ),
     )
     max_concurrent_tools: int = Field(

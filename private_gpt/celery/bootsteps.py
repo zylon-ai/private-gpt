@@ -1,3 +1,4 @@
+import fcntl
 import logging
 import os
 from pathlib import Path
@@ -16,6 +17,8 @@ logger = logging.getLogger(__name__)
 # Files for health checks
 READINESS_FILE = Path("/tmp/celery_ready")
 HEARTBEAT_FILE = Path("/tmp/celery_worker_heartbeat")
+
+STATEFUL_WARMUP_LOCK = Path("/tmp/stateful_warmup.lock")
 
 
 class LivenessProbe(bootsteps.StartStopStep):  # type: ignore
@@ -43,54 +46,71 @@ class LivenessProbe(bootsteps.StartStopStep):  # type: ignore
         HEARTBEAT_FILE.touch()
 
 
-def _warm_chat_worker() -> None:
-    """Eagerly warm the full DI for a long-lived chat worker.
+def _is_stateful() -> bool:
+    return bool(os.getenv("PGPT_STATEFUL_WORKER_TYPE", "").strip())
 
-    Only runs when ``PGPT_CHAT_WORKER=true`` is set in the environment (the
-    chat worker entrypoint sets it). The components are singletons, so they
-    are resolved once here and reused for the entire worker lifetime
-    (``--max-tasks-per-child=None``).
-    """
-    if os.getenv("PGPT_CHAT_WORKER", "false").lower() != "true":
+
+def _warm_stateful_worker() -> None:
+    worker_type = os.getenv("PGPT_STATEFUL_WORKER_TYPE", "").strip()
+    if not worker_type:
         return
 
-    from private_gpt.celery.base import ChatBackgroundTask
+    from private_gpt.celery.base import StatefulBackgroundTask
 
-    logger.info("PGPT_CHAT_WORKER=true: eagerly warming chat worker runtime")
-    ChatBackgroundTask.warm_up()
-    logger.info("Chat worker DI warmed successfully")
+    logger.info(
+        "STATEFUL_WORKER_TYPE=%s: eagerly warming StatefulBackgroundTask",
+        worker_type,
+    )
+
+    STATEFUL_WARMUP_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    lock_fd = os.open(str(STATEFUL_WARMUP_LOCK), os.O_CREAT | os.O_RDWR)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        StatefulBackgroundTask.warm_up()
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        os.close(lock_fd)
+
+    logger.info("StatefulBackgroundTask DI warmed successfully")
+
+
+def _shutdown_stateful_worker() -> None:
+    worker_type = os.getenv("PGPT_STATEFUL_WORKER_TYPE", "").strip()
+    if not worker_type:
+        return
+
+    from private_gpt.celery.base import StatefulBackgroundTask
+
+    StatefulBackgroundTask.shutdown_runtime()
 
 
 @worker_ready.connect
 def handle_worker_ready(**kwargs: dict[str, Any]) -> None:
     """Signal handler for worker ready event."""
-    is_chat_worker = os.getenv("PGPT_CHAT_WORKER", "false").lower() == "true"
-    if is_chat_worker and os.getenv("PGPT_CELERY_POOL", "prefork") != "solo":
-        return
-
-    if is_chat_worker:
-        _warm_chat_worker()
+    if _is_stateful():
+        _warm_stateful_worker()
 
     READINESS_FILE.touch()
 
 
 @worker_process_init.connect
 def handle_worker_process_init(**kwargs: dict[str, Any]) -> None:
-    """Warm each prefork child that will execute chat tasks."""
-    _warm_chat_worker()
-    if os.getenv("PGPT_CHAT_WORKER", "false").lower() == "true":
-        READINESS_FILE.touch()
+    """Warm each prefork child that will execute stateful tasks.
+
+    The warm-up is serialized via a file lock so children load models
+    one at a time, avoiding OOM from simultaneous loading.
+    """
+    if _is_stateful():
+        _warm_stateful_worker()
 
 
 @worker_process_shutdown.connect
 def handle_worker_process_shutdown(**kwargs: dict[str, Any]) -> None:
-    """Clean up chat worker loop resources on child shutdown."""
-    if os.getenv("PGPT_CHAT_WORKER", "false").lower() != "true":
+    """Clean up stateful worker loop resources on child shutdown."""
+    if not _is_stateful():
         return
 
-    from private_gpt.celery.base import ChatBackgroundTask
-
-    ChatBackgroundTask.shutdown_runtime()
+    _shutdown_stateful_worker()
 
 
 @worker_shutdown.connect

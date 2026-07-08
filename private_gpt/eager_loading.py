@@ -1,11 +1,11 @@
-"""Shared eager-loading of injector-bound components.
+"""Profile-based eager-loading of injector-bound components.
 
-Used by both the FastAPI server (``launcher.py``) and the long-lived Celery
-chat worker so that both processes warm the exact same dependency graph.
-Keeping this in one place guarantees the chat worker mirrors the server's DI
-state instead of drifting.
+A single entry point ``warm(injector, profile)`` dispatches to the right
+component groups based on the role. New worker types only need a new
+profile entry — no changes anywhere else.
 """
 import logging
+from collections.abc import Callable, Sequence
 
 from injector import Injector
 
@@ -26,42 +26,36 @@ from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
 
+_Warmer = Callable[[Injector], None]
 
-def eager_loading(injector: Injector) -> None:
-    """Eagerly load modules to avoid race conditions in multi-threaded environments."""
-    logger.debug("Initializing mandatory dependencies")
+
+def _warm_base(injector: Injector) -> None:
+    logger.debug("Warming base (settings + models)")
     injector.get(Settings)
-
-    # Models
-    logger.debug("Initializing models")
     injector.get(LLMComponent)
     injector.get(EmbeddingComponent)
 
-    # Stores
-    logger.debug("Initializing stores")
+
+def _warm_stores(injector: Injector) -> None:
+    logger.debug("Warming stores")
     injector.get(NodeStoreComponent)
     injector.get(VectorStoreComponent)
 
-    # Streaming components
-    logger.debug("Initializing streaming components")
+
+def _warm_streaming(injector: Injector) -> None:
+    logger.debug("Warming streaming components")
     injector.get(StreamComponent)
     injector.get(StreamManager)
 
-    # Auxiliar
-    logger.debug("Initializing auxiliar services")
+
+def _warm_tools(injector: Injector) -> None:
+    logger.debug("Warming tools")
     injector.get(PromptBuilderService)
     injector.get(ToolService)
     injector.get(CodeExecutionComponent)
 
 
-def warm_chat_components(injector: Injector) -> None:
-    """Resolve chat-path singletons so the first chat task is not cold.
-
-    Called by the chat worker on startup (after ``eager_loading``) to make the
-    first request pay no warm-up cost. ``ChatService`` and friends are
-    singletons, so this resolves them once and they are reused for the whole
-    worker lifetime.
-    """
+def _warm_chat(injector: Injector) -> None:
     from private_gpt.components.streaming.stream.stream_processor import (
         StreamProcessor,
     )
@@ -70,3 +64,39 @@ def warm_chat_components(injector: Injector) -> None:
     logger.debug("Warming chat-path components")
     injector.get(ChatService)
     injector.get(StreamProcessor)
+
+
+_GROUPS: dict[str, _Warmer] = {
+    "base": _warm_base,
+    "stores": _warm_stores,
+    "streaming": _warm_streaming,
+    "tools": _warm_tools,
+    "chat": _warm_chat,
+}
+
+_PROFILES: dict[str, Sequence[str]] = {
+    "chat": ("base", "stores", "streaming", "tools", "chat"),
+    "tools": ("base", "tools"),
+    "full": ("base", "stores", "streaming", "tools"),
+}
+
+
+def warm(injector: Injector, profile: str = "full") -> None:
+    """Eager-resolve all DI singletons for the given worker profile.
+
+    ``profile`` is one of ``chat``, ``tools``, or ``full`` (API server).
+    """
+    groups = _PROFILES.get(profile)
+    if groups is None:
+        raise ValueError(
+            f"Unknown warm-up profile {profile!r}. "
+            f"Available: {', '.join(sorted(_PROFILES))}"
+        )
+    logger.info("Warming profile=%s (groups: %s)", profile, ", ".join(groups))
+    for group in groups:
+        _GROUPS[group](injector)
+
+
+def eager_loading(injector: Injector) -> None:
+    """Full warm-up: everything. Kept for API server backward compat."""
+    warm(injector, "full")

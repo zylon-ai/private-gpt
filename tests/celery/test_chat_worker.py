@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any
 
-from private_gpt.celery.base import ChatBackgroundTask
+from private_gpt.celery.base import StatefulBackgroundTask
 from private_gpt.celery.celery import celery_app
 
 
@@ -11,8 +11,8 @@ def test_chat_task_is_registered_by_default_imports() -> None:
     assert "private_gpt.chat.run" in celery_app.tasks
 
 
-def test_chat_background_task_reuses_one_event_loop() -> None:
-    class LoopIdTask(ChatBackgroundTask):
+def test_stateful_task_reuses_one_event_loop() -> None:
+    class LoopIdTask(StatefulBackgroundTask):
         name = "test_chat_loop_id_task"
 
         @classmethod
