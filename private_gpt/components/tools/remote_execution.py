@@ -39,6 +39,20 @@ class ToolExecutionRequest(BaseModel):
     context: dict[str, Any] = Field(default_factory=dict)
 
 
+
+def deserialize_rebuild_kwarg(value: Any, model_cls: type[BaseModel]) -> Any:
+    """Convert a dict back to a Pydantic model after JSON deserialization.
+    
+    ToolSpec.rebuild_kwargs travels through Celery as JSON, which turns
+    Pydantic models into plain dicts. Call this in rebuild functions to
+    restore the expected type.
+    """
+    if value is None or isinstance(value, model_cls):
+        return value
+    if isinstance(value, dict):
+        return model_cls.model_validate(value)
+    return value
+
 class ToolExecutionResponse(BaseModel):
     tool_name: str
     tool_id: str
