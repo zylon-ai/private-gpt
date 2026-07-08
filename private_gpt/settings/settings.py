@@ -461,6 +461,28 @@ class PreprocessSettings(BaseModel):
     )
 
 
+class SchedulerSettings(BaseModel):
+    mode: Literal["local", "celery"] = Field(
+        default="local",
+        description="``'local'`` runs in-process. ``'celery'`` dispatches to a dedicated Celery worker.",
+    )
+    celery_queue: str = Field(
+        default="",
+        description="Celery queue name when mode is 'celery'.",
+    )
+
+
+class SchedulerConfig(BaseModel):
+    chat: SchedulerSettings = Field(
+        default_factory=lambda: SchedulerSettings(celery_queue="chat"),
+        description="Chat worker scheduler configuration.",
+    )
+    tools: SchedulerSettings = Field(
+        default_factory=lambda: SchedulerSettings(celery_queue="tools"),
+        description="Tool worker scheduler configuration.",
+    )
+
+
 class ChatSettings(BaseModel):
     allow_use_default_prompt: bool = Field(
         True,
@@ -534,18 +556,6 @@ class ChatSettings(BaseModel):
     multiplexing_threshold: int | None = Field(
         None,
         description="The threshold for the number of context items to switch to multiplexing mode.",
-    )
-    use_chat_worker: bool = Field(
-        default=False,
-        description=(
-            "When enabled, the chat loop is dispatched to a long-lived Celery "
-            "worker (queue ``chat``) instead of running on the FastAPI event "
-            "loop. This isolates all CPU-bound work (LLM calls, tools, semantic "
-            "search, retrieval, tokenization) in a separate process so the API "
-            "event loop stays responsive to /health under parallel load. "
-            "Requires a Celery chat worker running with "
-            "PGPT_CHAT_WORKER_ENABLED=true and --max-tasks-per-child=None."
-        ),
     )
     maximum_blob_size: int = Field(
         25 * 1024 * 1024,
@@ -1653,71 +1663,6 @@ class SemaphoreSettings(BaseModel):
     )
 
 
-class ToolSchedulerWeightsSettings(BaseModel):
-    chat_priority: float = Field(
-        default=0.4,
-        description="Weight given to the chat request priority signal (0-1).",
-    )
-    complexity: float = Field(
-        default=0.2,
-        description="Weight given to the estimated tool complexity (0-1).",
-    )
-
-
-class AdaptiveToolSchedulerSettings(BaseModel):
-    threshold_ms: float = Field(
-        default=2000.0,
-        description=(
-            "EWMA of tool execution time (ms) above which the adaptive scheduler "
-            "switches from immediate to queued mode."
-        ),
-    )
-    recovery_ratio: float = Field(
-        default=0.7,
-        description=(
-            "Fraction of threshold_ms at which the adaptive scheduler switches back "
-            "to immediate mode. Must be < 1 to provide hysteresis."
-        ),
-    )
-    ewma_alpha: float = Field(
-        default=0.3,
-        description=(
-            "Smoothing factor for the exponentially weighted moving average. "
-            "Higher values react faster to load changes."
-        ),
-    )
-
-
-class ToolSchedulerSettings(BaseModel):
-    mode: Literal["immediate", "queued", "adaptive", "celery"] = Field(
-        default="immediate",
-        description=(
-            "'immediate' runs tools without queuing; "
-            "'queued' routes all calls through a shared priority queue; "
-            "'adaptive' switches between the two based on measured execution time; "
-            "'celery' dispatches tool calls to a dedicated Celery tools worker."
-        ),
-    )
-    celery_tools_queue: str = Field(
-        default="tools",
-        description=(
-            "The Celery queue name for the tools worker when mode is 'celery'."
-        ),
-    )
-    max_concurrent_tools: int = Field(
-        default=5,
-        description="Maximum simultaneous tool calls (used by 'queued' and 'adaptive' modes).",
-    )
-    weights: ToolSchedulerWeightsSettings = Field(
-        default_factory=ToolSchedulerWeightsSettings,
-        description="Priority weights for the queued scheduler.",
-    )
-    adaptive: AdaptiveToolSchedulerSettings = Field(
-        default_factory=AdaptiveToolSchedulerSettings,
-        description="Settings for the adaptive scheduler.",
-    )
-
-
 class Settings(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -1754,25 +1699,25 @@ class Settings(BaseModel):
     skills: SkillSettings
     transformation: TransformationSettings
     semaphore: SemaphoreSettings
-    tool_scheduler: ToolSchedulerSettings = Field(
-        default_factory=ToolSchedulerSettings,
-        description="Settings for the global tool execution priority scheduler.",
+    scheduler: SchedulerConfig = Field(
+        default_factory=SchedulerConfig,
+        description="Scheduler configuration for chat and tool workers.",
     )
 
     @model_validator(mode="after")
     def validate_chat_worker_configuration(self) -> "Settings":
-        if not self.chat.use_chat_worker:
+        if self.scheduler.chat.mode != "celery":
             return self
 
         if not self.celery.use_workers:
             raise ValueError(
-                "chat.use_chat_worker requires celery.use_workers=true so chat "
+                "scheduler.chat.mode=celery requires celery.use_workers=true so chat "
                 "requests are executed by a real worker process."
             )
 
         if self.stream.broker != "redis":
             raise ValueError(
-                "chat.use_chat_worker requires stream.broker=redis because API "
+                "scheduler.chat.mode=celery requires stream.broker=redis because API "
                 "and chat worker processes must share stream state."
             )
 

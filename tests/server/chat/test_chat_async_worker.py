@@ -99,7 +99,9 @@ async def test_worker_cancel_marks_stream_cancelled(
     monkeypatch.setattr(
         chat_async_service_module,
         "_settings",
-        lambda: SimpleNamespace(chat=SimpleNamespace(use_chat_worker=True)),
+        lambda: SimpleNamespace(
+            scheduler=SimpleNamespace(chat=SimpleNamespace(mode="celery"))
+        ),
     )
     monkeypatch.setattr(
         "private_gpt.celery.task_helper.revoke_task",

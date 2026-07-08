@@ -69,7 +69,7 @@ from private_gpt.components.llm.priorities import DefinedPriorities
 from private_gpt.components.tools.processors.base import _session_id
 from private_gpt.components.tools.tool_scheduler import (
     BaseToolScheduler,
-    ImmediateToolScheduler,
+    LocalToolScheduler,
 )
 from private_gpt.events.models import (
     Container,
@@ -206,9 +206,7 @@ class ChatLoopEngine:
         ]
         self._max_iterations = max_iterations
         self._container_registry = container_registry
-        self._tool_scheduler: BaseToolScheduler = (
-            tool_scheduler or ImmediateToolScheduler()
-        )
+        self._tool_scheduler: BaseToolScheduler = tool_scheduler or LocalToolScheduler()
 
     async def run(
         self,

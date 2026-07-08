@@ -1,6 +1,6 @@
 """Celery task that executes a single tool call on a dedicated tools worker.
 
-When ``tool_scheduler.mode`` is ``"celery"``, the chat worker dispatches tool
+When ``scheduler.tools.mode`` is ``"celery"``, the chat worker dispatches tool
 calls to this task on the ``tools`` queue instead of running them in-process.
 """
 from __future__ import annotations

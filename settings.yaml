@@ -80,7 +80,6 @@ chat:
   tldr_timeout: ${PGPT_TLDR_TIMEOUT:300}
   tldr_minimum_threshold_seconds: ${PGPT_TLDR_MINIMUM_THRESHOLD_SECONDS:1.5}
   multiplexing_threshold: ${PGPT_MULTIPLEXING_THRESHOLD:10}
-  use_chat_worker: ${PGPT_CHAT_WORKER_ENABLED:false}
   maximum_blob_size: ${PGPT_MAXIMUM_BLOB_SIZE:26214400}
   preprocess:
     documents:
@@ -290,16 +289,13 @@ skills:
 semaphore:
   mode: ${PGPT_SEMAPHORE_MODE:memory}
 
-tool_scheduler:
-  mode: ${PGPT_TOOL_SCHEDULER_MODE:adaptive}
-  max_concurrent_tools: ${PGPT_TOOL_SCHEDULER_MAX_CONCURRENT_TOOLS:4}
-  weights:
-    chat_priority: ${PGPT_TOOL_SCHEDULER_WEIGHT_PRIORITY:0.4}
-    complexity: ${PGPT_TOOL_SCHEDULER_WEIGHT_COMPLEXITY:0.2}
-  adaptive:
-    threshold_ms: ${PGPT_TOOL_SCHEDULER_ADAPTIVE_THRESHOLD_MS:800}
-    recovery_ratio: ${PGPT_TOOL_SCHEDULER_ADAPTIVE_RECOVERY_RATIO:0.7}
-    ewma_alpha: ${PGPT_TOOL_SCHEDULER_ADAPTIVE_EWMA_ALPHA:0.5}
+scheduler:
+  chat:
+    mode: ${PGPT_CHAT_SCHEDULER_MODE:local}
+    celery_queue: ${PGPT_CHAT_CELERY_QUEUE:chat}
+  tools:
+    mode: ${PGPT_TOOLS_SCHEDULER_MODE:local}
+    celery_queue: ${PGPT_TOOLS_CELERY_QUEUE:tools}
 
 transformation:
   pptx:

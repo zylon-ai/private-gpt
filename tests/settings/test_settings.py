@@ -20,7 +20,7 @@ def test_chat_worker_requires_redis_stream_backend() -> None:
         [
             unsafe_settings,
             {
-                "chat": {"use_chat_worker": True},
+                "scheduler": {"chat": {"mode": "celery"}},
                 "stream": {"broker": "memory"},
                 "celery": {"use_workers": True},
             },
@@ -36,7 +36,7 @@ def test_chat_worker_requires_real_celery_worker() -> None:
         [
             unsafe_settings,
             {
-                "chat": {"use_chat_worker": True},
+                "scheduler": {"chat": {"mode": "celery"}},
                 "stream": {"broker": "redis"},
                 "celery": {"use_workers": False},
             },

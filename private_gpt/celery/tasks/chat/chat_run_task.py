@@ -1,6 +1,6 @@
 """Celery task that runs the entire chat loop in a long-lived worker process.
 
-When ``chat.use_chat_worker`` is enabled, the FastAPI server dispatches chat
+When ``scheduler.chat.mode`` is ``"celery"``, the FastAPI server dispatches chat
 requests here instead of running the chat loop on its own event loop. The
 worker pushes events to the same Redis stream the API reads from, so the
 API becomes a pure Redis -> SSE proxy and its event loop never contends with

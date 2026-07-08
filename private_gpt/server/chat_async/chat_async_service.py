@@ -43,7 +43,7 @@ class ChatAsyncService:
     ) -> str:
         """Initiate a chat completion stream from a :class:`ChatBody`.
 
-        When ``chat.use_chat_worker`` is enabled, the chat loop is dispatched
+        When ``scheduler.chat.mode`` is ``"celery"``, the chat loop is dispatched
         to a long-lived Celery worker (queue ``chat``) and the API becomes a
         pure Redis → SSE proxy. The Redis stream is created on the API side
         so the client can start reading immediately; the worker pushes events
@@ -58,7 +58,7 @@ class ChatAsyncService:
         if message_id and await self.stream_manager.stream_exists(message_id):
             raise ValueError("Stream with this message_id already exists")
 
-        if _settings().chat.use_chat_worker:
+        if _settings().scheduler.chat.mode == "celery":
             return await self._initiate_chat_stream_worker(
                 body=body,
                 message_id=message_id,
@@ -153,7 +153,7 @@ class ChatAsyncService:
         from private_gpt.celery.task_helper import revoke_task
 
         await self.stream_manager.stream_service.set_cancel_flag(message_id)
-        if _settings().chat.use_chat_worker:
+        if _settings().scheduler.chat.mode == "celery":
             await self.stream_manager.stream_service.update_stream_status(
                 message_id,
                 StreamStatus.CANCELLED,
