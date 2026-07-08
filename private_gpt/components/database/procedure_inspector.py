@@ -1,6 +1,7 @@
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from private_gpt.components.database.connection_factory import DatabaseDialect
 from private_gpt.components.database.inspected_schema import (
     InspectedProcedure,
     InspectedProcedureParams,
@@ -17,12 +18,12 @@ class DatabaseProcedureInspector(DatabaseObjectInspector):
 
     def get_objects(self, schema: str) -> list[InspectedProcedure]:  # type: ignore[override]
         try:
-            if self._db_type in ["mssql", "microsoft"]:
+            if self.dialect == DatabaseDialect.MSSQL:
                 return self._get_sqlserver_procedures(schema)
-            if self._db_type in ["db2", "ibm_db_sa"]:
+            if self.dialect == DatabaseDialect.DB2:
                 return self._get_db2_procedures(schema)
                 # TODO: postgres support is not complete
-            # elif self._db_type == "postgresql":
+            # elif self.dialect == DatabaseDialect.POSTGRES:
             #    return self._get_postgresql_procedures(schema)
             else:
                 return []

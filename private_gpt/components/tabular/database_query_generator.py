@@ -16,7 +16,7 @@ from Levenshtein import distance
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from pandas import DataFrame
 from pydantic import BaseModel, Field
-from sqlalchemy import Connection, Engine, create_engine, inspect, text
+from sqlalchemy import Connection, Engine, inspect, text
 from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 
 from private_gpt.components.chat.models.chat_config_models import (
@@ -26,6 +26,13 @@ from private_gpt.components.chat.models.chat_config_models import (
 )
 from private_gpt.components.chat.processors.chat_history.memory.utils.content import (
     messages_to_history_str,
+)
+from private_gpt.components.database.connection_factory import (
+    DatabaseDialect,
+    build_db2_native_connection_string,
+    classify_dialect,
+    create_engine_for_connection_string,
+    mask_connection_secrets,
 )
 from private_gpt.components.database.function_inspector import (
     DatabaseFunctionsInspector,
@@ -428,17 +435,17 @@ class DatabaseQueryGenerator:
         """
         try:
             conn = self._ensure_connected()
-            match self._engine.dialect.name.lower() if self._engine else "unknown":
-                case "db2" | "ibm_db_sa":
-                    conn.execute(text("SELECT 1 FROM SYSIBM.SYSDUMMY1"))
-                case _:
-                    conn.execute(text("SELECT 1"))
+            dialect = classify_dialect(self._engine.dialect.name if self._engine else None)
+            if dialect == DatabaseDialect.DB2:
+                conn.execute(text("SELECT 1 FROM SYSIBM.SYSDUMMY1"))
+            else:
+                conn.execute(text("SELECT 1"))
             return None
         except (SQLAlchemyError, ProgrammingError) as e:
-            logging.error(e)
+            logging.error(mask_connection_secrets(str(e)))
             return f"Failed to connect to database '{self._extract_database_name()}'"
         except Exception as e:
-            logging.error(e)
+            logging.error(mask_connection_secrets(str(e)))
             return f"Failed to connect to database '{self._extract_database_name()}'"
         finally:
             self._disconnect()
@@ -704,7 +711,7 @@ class DatabaseQueryGenerator:
         if self._connection and not self._connection.closed:
             return self._connection
 
-        self._engine = create_engine(
+        self._engine = create_engine_for_connection_string(
             self.connection_string
             # TODO: SSL Certificates
         )
@@ -724,12 +731,11 @@ class DatabaseQueryGenerator:
         value = self._engine.dialect.name.lower() if self._engine else self._dialect
         system_prompt = f"The database SQL dialect is: {value}."
 
-        match value:
-            case "db2" | "ibm_db_sa":
-                system_prompt += (
-                    " For DB2 procedures: input parameters (Params) use literal values, output parameters (Returns) use '?' placeholders."
-                    " Example with 1 input + 3 outputs: CALL schema.procedure_name('value1', ?, ?, ?);"
-                )
+        if classify_dialect(value) == DatabaseDialect.DB2:
+            system_prompt += (
+                " For DB2 procedures: input parameters (Params) use literal values, output parameters (Returns) use '?' placeholders."
+                " Example with 1 input + 3 outputs: CALL schema.procedure_name('value1', ?, ?, ?);"
+            )
         return system_prompt
 
     async def generate_sql_query(
@@ -1200,7 +1206,7 @@ class DatabaseQueryGenerator:
             return QueryResult(
                 query=call_statement,
                 error=ErrorQueryResult(
-                    description=f"DB2 procedure execution failed: {e!s}",
+                    description=f"DB2 procedure execution failed: {mask_connection_secrets(str(e))}",
                     type=ErrorType.UNKNOWN,
                 ),
                 row_count=-1,
@@ -1232,21 +1238,7 @@ class DatabaseQueryGenerator:
         return proc_name, param_values, out_indices
 
     def _create_db2_connection(self) -> Any:
-        conn_str = self.connection_string.split("://")[1]
-        user_pass, host_db = conn_str.split("@")
-        user, password = user_pass.split(":")
-        host_port, database = host_db.split("/")
-        host, port = host_port.split(":")
-
-        db2_conn_str = (
-            f"DATABASE={database};"
-            f"HOSTNAME={host};"
-            f"PORT={port};"
-            f"PROTOCOL=TCPIP;"
-            f"UID={user};"
-            f"PWD={password};"
-        )
-
+        db2_conn_str = build_db2_native_connection_string(self.connection_string)
         return _load_ibm_db().connect(db2_conn_str, "", "")
 
     def _execute_procedure(
