@@ -6,7 +6,9 @@ class InterceptorPhase(StrEnum):
 
     VALIDATION = "validation"
     BEFORE_ITERATION = "before_iteration"
+    BEFORE_TOOL = "before_tool"
     STREAMING = "streaming"
+    AFTER_TOOL = "after_tool"
     AFTER_ITERATION = "after_iteration"
 
 

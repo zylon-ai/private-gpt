@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import importlib
 import inspect
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from injector import inject, singleton
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.tools import adapt_to_async_tool
 from pydantic import BaseModel, Field
@@ -11,6 +13,9 @@ from pydantic import BaseModel, Field
 from private_gpt.components.chat.models.chat_config_models import (
     ToolExecutionMetadata,
     ToolSpec,
+)
+from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+    InterceptorPhase,
 )
 from private_gpt.components.engines.chat_loop.utils.tool_utils import execute_tool_call
 from private_gpt.events.models import (
@@ -24,6 +29,9 @@ if TYPE_CHECKING:
 
     from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
         ChatLoopState,
+    )
+    from private_gpt.server.chat.interceptors.configure_tool_execution_interceptor import (
+        ConfigureToolExecutionInterceptor,
     )
 
 
@@ -41,6 +49,81 @@ class ToolExecutionResponse(BaseModel):
     result_content: list[ResultContentBlockType] = Field(default_factory=list)
     is_error: bool = False
     tool_message: ChatMessage
+
+
+class ToolExecutionInterceptorContext(BaseModel):
+    phase: InterceptorPhase
+    request: ToolExecutionRequest
+    tool_kwargs: dict[str, Any]
+    response: ToolExecutionResponse | None = None
+
+    def set_tool_kwargs(self, tool_kwargs: dict[str, Any]) -> None:
+        self.tool_kwargs = tool_kwargs
+
+    def set_response(self, response: ToolExecutionResponse) -> None:
+        self.response = response
+
+
+class ToolExecutionInterceptor(ABC):
+    @abstractmethod
+    async def intercept(self, context: ToolExecutionInterceptorContext) -> None:
+        """Mutate tool execution context before/after tool invocation."""
+
+
+@singleton
+class ToolExecutor:
+    @inject
+    def __init__(
+        self,
+        configure_tool_execution_interceptor: "ConfigureToolExecutionInterceptor",
+    ) -> None:
+        self._configure_tool_execution_interceptor = (
+            configure_tool_execution_interceptor
+        )
+
+    async def execute(
+        self,
+        request: ToolExecutionRequest,
+        state_ctx: ChatLoopState | None = None,
+    ) -> ToolExecutionResponse:
+        tool = await rebuild_tool_from_spec(request.tool_spec)
+
+        before_context = ToolExecutionInterceptorContext(
+            phase=InterceptorPhase.BEFORE_TOOL,
+            request=request,
+            tool_kwargs=dict(request.tool_kwargs),
+        )
+        await self._configure_tool_execution_interceptor.intercept(before_context)
+
+        result, tool_message = await execute_tool_call(
+            tool=tool,
+            tool_name=request.tool_name,
+            tool_id=request.tool_id,
+            tool_kwargs=before_context.tool_kwargs,
+            state_ctx=state_ctx,
+        )
+        response = ToolExecutionResponse(
+            tool_name=request.tool_name,
+            tool_id=request.tool_id,
+            result_content=(
+                from_tool_output(result.tool_output.raw_output)
+                if result.tool_output.raw_output is not None
+                else [TextBlock(text=result.tool_output.content or "")]
+            ),
+            is_error=result.tool_output.is_error,
+            tool_message=tool_message,
+        )
+
+        after_context = ToolExecutionInterceptorContext(
+            phase=InterceptorPhase.AFTER_TOOL,
+            request=request,
+            tool_kwargs=before_context.tool_kwargs,
+            response=response,
+        )
+        await self._configure_tool_execution_interceptor.intercept(after_context)
+
+        assert after_context.response is not None
+        return after_context.response
 
 
 def build_rebuild_metadata(
@@ -66,26 +149,10 @@ async def execute_tool_request(
     request: ToolExecutionRequest,
     state_ctx: ChatLoopState | None = None,
 ) -> ToolExecutionResponse:
-    tool = await rebuild_tool_from_spec(request.tool_spec)
-    result, tool_message = await execute_tool_call(
-        tool=tool,
-        tool_name=request.tool_name,
-        tool_id=request.tool_id,
-        tool_kwargs=request.tool_kwargs,
-        state_ctx=state_ctx,
-    )
-    result_content = (
-        from_tool_output(result.tool_output.raw_output)
-        if result.tool_output.raw_output is not None
-        else [TextBlock(text=result.tool_output.content or "")]
-    )
-    return ToolExecutionResponse(
-        tool_name=request.tool_name,
-        tool_id=request.tool_id,
-        result_content=result_content,
-        is_error=result.tool_output.is_error,
-        tool_message=tool_message,
-    )
+    from private_gpt.di import get_global_injector
+
+    executor = get_global_injector().get(ToolExecutor)
+    return await executor.execute(request, state_ctx=state_ctx)
 
 
 def build_tool_execution_context(state: ChatLoopState) -> dict[str, Any]:
