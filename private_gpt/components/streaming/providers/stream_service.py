@@ -95,6 +95,26 @@ class StreamService(ABC):
         pass
 
     @abstractmethod
+    async def set_cancel_flag(self, correlation_id: str) -> None:
+        """Set a cancellation flag for a stream.
+
+        Used by the API process to signal a long-running chat worker that the
+        stream should be cancelled. The worker polls :meth:`is_cancelled` inside
+        its event loop.
+        """
+        pass
+
+    @abstractmethod
+    async def is_cancelled(self, correlation_id: str) -> bool:
+        """Check whether a cancellation flag has been set for a stream."""
+        pass
+
+    @abstractmethod
+    async def clear_cancel_flag(self, correlation_id: str) -> None:
+        """Remove the cancellation flag for a stream (e.g. on cleanup)."""
+        pass
+
+    @abstractmethod
     async def close(self) -> None:
         """Close any open connections."""
         pass

@@ -1,8 +1,17 @@
+import logging
+import os
 from pathlib import Path
 from typing import Any, ClassVar
 
 from celery import bootsteps  # type: ignore
-from celery.signals import worker_ready, worker_shutdown
+from celery.signals import (
+    worker_process_init,
+    worker_process_shutdown,
+    worker_ready,
+    worker_shutdown,
+)
+
+logger = logging.getLogger(__name__)
 
 # Files for health checks
 READINESS_FILE = Path("/tmp/celery_ready")
@@ -34,10 +43,54 @@ class LivenessProbe(bootsteps.StartStopStep):  # type: ignore
         HEARTBEAT_FILE.touch()
 
 
+def _warm_chat_worker() -> None:
+    """Eagerly warm the full DI for a long-lived chat worker.
+
+    Only runs when ``PGPT_CHAT_WORKER=true`` is set in the environment (the
+    chat worker entrypoint sets it). The components are singletons, so they
+    are resolved once here and reused for the entire worker lifetime
+    (``--max-tasks-per-child=None``).
+    """
+    if os.getenv("PGPT_CHAT_WORKER", "false").lower() != "true":
+        return
+
+    from private_gpt.celery.base import ChatBackgroundTask
+
+    logger.info("PGPT_CHAT_WORKER=true: eagerly warming chat worker runtime")
+    ChatBackgroundTask.warm_up()
+    logger.info("Chat worker DI warmed successfully")
+
+
 @worker_ready.connect
 def handle_worker_ready(**kwargs: dict[str, Any]) -> None:
     """Signal handler for worker ready event."""
+    is_chat_worker = os.getenv("PGPT_CHAT_WORKER", "false").lower() == "true"
+    if is_chat_worker and os.getenv("PGPT_CELERY_POOL", "prefork") != "solo":
+        return
+
+    if is_chat_worker:
+        _warm_chat_worker()
+
     READINESS_FILE.touch()
+
+
+@worker_process_init.connect
+def handle_worker_process_init(**kwargs: dict[str, Any]) -> None:
+    """Warm each prefork child that will execute chat tasks."""
+    _warm_chat_worker()
+    if os.getenv("PGPT_CHAT_WORKER", "false").lower() == "true":
+        READINESS_FILE.touch()
+
+
+@worker_process_shutdown.connect
+def handle_worker_process_shutdown(**kwargs: dict[str, Any]) -> None:
+    """Clean up chat worker loop resources on child shutdown."""
+    if os.getenv("PGPT_CHAT_WORKER", "false").lower() != "true":
+        return
+
+    from private_gpt.celery.base import ChatBackgroundTask
+
+    ChatBackgroundTask.shutdown_runtime()
 
 
 @worker_shutdown.connect

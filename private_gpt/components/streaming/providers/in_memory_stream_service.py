@@ -24,6 +24,7 @@ class InMemoryStreamService(StreamService):
             str, list[tuple[str, str]]
         ] = {}  # Like Redis stream: [(id, data)]
         self._event_counters: dict[str, int] = {}
+        self._cancel_flags: set[str] = set()
         self._lock = asyncio.Lock()
         # Per-stream waiters: readers park here instead of sleeping
         self._waiters: dict[str, set[asyncio.Event]] = defaultdict(set)
@@ -235,6 +236,19 @@ class InMemoryStreamService(StreamService):
     async def clean_up_stream(self, correlation_id: str) -> None:
         """Clean up a stream by deleting it and its events."""
         await self.delete_stream(correlation_id)
+        await self.clear_cancel_flag(correlation_id)
+
+    async def set_cancel_flag(self, correlation_id: str) -> None:
+        """Set a cancellation flag for the stream."""
+        self._cancel_flags.add(correlation_id)
+
+    async def is_cancelled(self, correlation_id: str) -> bool:
+        """Check whether the cancellation flag has been set."""
+        return correlation_id in self._cancel_flags
+
+    async def clear_cancel_flag(self, correlation_id: str) -> None:
+        """Remove the cancellation flag."""
+        self._cancel_flags.discard(correlation_id)
 
     async def close(self) -> None:
         """Close any open connections and clean up resources."""
@@ -246,3 +260,4 @@ class InMemoryStreamService(StreamService):
             self._metadata.clear()
             self._events.clear()
             self._event_counters.clear()
+            self._cancel_flags.clear()

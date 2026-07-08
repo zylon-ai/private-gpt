@@ -40,9 +40,18 @@ def _build_worker_args() -> list[str]:
     pool = os.environ.get("PGPT_CELERY_POOL", "prefork")
     concurrency = os.environ.get("PGPT_CELERY_CONCURRENCY", "")
     time_limit = os.environ.get("PGPT_CELERY_TIME_LIMIT", "")
+    chat_enabled = (
+        os.environ.get("PGPT_CHAT_WORKER_ENABLED", "false").lower() == "true"
+    )
 
     if log_level:
         args.append(f"--loglevel={log_level}")
+
+    # Chat workers are dedicated by default so ingestion can keep its normal
+    # per-task process recycling behaviour in a separate worker deployment.
+    if chat_enabled:
+        queues = queues or "chat"
+        hostname = os.environ.get("PGPT_CELERY_HOSTNAME", "chat")
     if queues:
         args.append(f"--queues={queues}")
         hostname = queues
@@ -50,6 +59,9 @@ def _build_worker_args() -> list[str]:
         args.append(f"--hostname={hostname}%h")
     if pool:
         args.append(f"--pool={pool}")
+    # Chat workers keep warm DI/runtime state for the worker child lifetime.
+    if chat_enabled:
+        args.append("--max-tasks-per-child=0")
     if concurrency:
         args.append(f"--concurrency={concurrency}")
     if time_limit:
@@ -105,6 +117,13 @@ def worker_command() -> None:
     if mode in ("worker", "mixed"):
         worker_args = _build_worker_args()
         typer.echo(f"Starting celery worker with args: {' '.join(worker_args)}")
+        chat_enabled = (
+            os.environ.get("PGPT_CHAT_WORKER_ENABLED", "false").lower() == "true"
+        )
+        worker_env = os.environ.copy()
+        if chat_enabled:
+            # Triggers eager warm-up in the chat worker process.
+            worker_env["PGPT_CHAT_WORKER"] = "true"
         procs.append(
             subprocess.Popen(
                 [
@@ -115,7 +134,8 @@ def worker_command() -> None:
                     celery_app,
                     "worker",
                     *worker_args,
-                ]
+                ],
+                env=worker_env,
             )
         )
 

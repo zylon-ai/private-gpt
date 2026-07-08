@@ -2,7 +2,14 @@ import inspect
 import json
 from typing import Annotated, Any, Literal
 
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    AnyUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from private_gpt.settings.settings_loader import load_active_settings
 
@@ -527,6 +534,18 @@ class ChatSettings(BaseModel):
     multiplexing_threshold: int | None = Field(
         None,
         description="The threshold for the number of context items to switch to multiplexing mode.",
+    )
+    use_chat_worker: bool = Field(
+        default=False,
+        description=(
+            "When enabled, the chat loop is dispatched to a long-lived Celery "
+            "worker (queue ``chat``) instead of running on the FastAPI event "
+            "loop. This isolates all CPU-bound work (LLM calls, tools, semantic "
+            "search, retrieval, tokenization) in a separate process so the API "
+            "event loop stays responsive to /health under parallel load. "
+            "Requires a Celery chat worker running with "
+            "PGPT_CHAT_WORKER_ENABLED=true and --max-tasks-per-child=None."
+        ),
     )
     maximum_blob_size: int = Field(
         25 * 1024 * 1024,
@@ -1732,6 +1751,25 @@ class Settings(BaseModel):
         default_factory=ToolSchedulerSettings,
         description="Settings for the global tool execution priority scheduler.",
     )
+
+    @model_validator(mode="after")
+    def validate_chat_worker_configuration(self) -> "Settings":
+        if not self.chat.use_chat_worker:
+            return self
+
+        if not self.celery.use_workers:
+            raise ValueError(
+                "chat.use_chat_worker requires celery.use_workers=true so chat "
+                "requests are executed by a real worker process."
+            )
+
+        if self.stream.broker != "redis":
+            raise ValueError(
+                "chat.use_chat_worker requires stream.broker=redis because API "
+                "and chat worker processes must share stream state."
+            )
+
+        return self
 
 
 """

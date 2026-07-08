@@ -47,6 +47,15 @@ class StreamProcessor:
                         f"Stream processing for {correlation_id} has been cancelled."
                     )
 
+                # Also check the stream-service cancel flag so that cancellation
+                # requests from the API process propagate to a chat worker
+                # running in a separate Celery process.
+                if await self.stream_service.is_cancelled(correlation_id):
+                    raise asyncio.CancelledError(
+                        f"Stream processing for {correlation_id} has been cancelled "
+                        "via stream-service flag."
+                    )
+
                 if not is_processing:
                     # Do a lazy initialization of processing status.
                     current_status = await event_handler.get_current_status(event)
@@ -72,12 +81,14 @@ class StreamProcessor:
                 correlation_id,
                 StreamStatus.COMPLETED,
             )
+            await self.stream_service.clear_cancel_flag(correlation_id)
 
         except asyncio.CancelledError:
             await self.stream_service.update_stream_status(
                 correlation_id,
                 StreamStatus.CANCELLED,
             )
+            await self.stream_service.clear_cancel_flag(correlation_id)
             await self._handle_cancellation(correlation_id, event_generator)
             raise
         except Exception as e:
@@ -97,6 +108,7 @@ class StreamProcessor:
                     StreamStatus.ERROR,
                     error_message=str(e),
                 )
+                await self.stream_service.clear_cancel_flag(correlation_id)
             raise
 
     async def _handle_cancellation(
@@ -136,7 +148,15 @@ class StreamProcessor:
         return task
 
     async def cancel_stream_processing(self, correlation_id: str) -> bool:
-        """Cancel stream processing."""
+        """Cancel stream processing.
+
+        Signals cancellation through two channels:
+        1. The in-process ``TaskManager`` cancellation token + asyncio task
+           cancel (works when the chat loop runs on the API event loop).
+        2. The stream-service cancel flag (works when the chat loop runs in a
+           separate Celery worker process that polls the flag).
+        """
+        await self.stream_service.set_cancel_flag(correlation_id)
         success = await self.task_manager.cancel_task(correlation_id)
         if success:
             await self.stream_service.update_stream_status(

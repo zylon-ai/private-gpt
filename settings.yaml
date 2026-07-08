@@ -80,6 +80,7 @@ chat:
   tldr_timeout: ${PGPT_TLDR_TIMEOUT:300}
   tldr_minimum_threshold_seconds: ${PGPT_TLDR_MINIMUM_THRESHOLD_SECONDS:1.5}
   multiplexing_threshold: ${PGPT_MULTIPLEXING_THRESHOLD:10}
+  use_chat_worker: ${PGPT_CHAT_WORKER_ENABLED:false}
   maximum_blob_size: ${PGPT_MAXIMUM_BLOB_SIZE:26214400}
   preprocess:
     documents:

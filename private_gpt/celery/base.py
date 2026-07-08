@@ -272,3 +272,110 @@ class AsyncBackgroundTask(_BackgroundTask):
 
             if loop:
                 clean_global_injector(loop)
+
+
+class ChatBackgroundTask(AsyncBackgroundTask):
+    """Long-lived task base for chat execution in a dedicated Celery worker.
+
+    The chat path keeps one asyncio loop alive for the whole Celery worker
+    child. Async clients and DI singletons are created and reused on that loop,
+    avoiding cross-loop resource reuse while still isolating chat CPU work from
+    the API process.
+    """
+
+    abstract = True
+    _loop: asyncio.AbstractEventLoop | None = None
+    _thread: threading.Thread | None = None
+    _lock = threading.RLock()
+    _warmed = False
+
+    @classmethod
+    def _ensure_runtime(cls) -> asyncio.AbstractEventLoop:
+        runtime = ChatBackgroundTask
+        with runtime._lock:
+            if runtime._loop is not None and runtime._thread is not None:
+                if runtime._thread.is_alive() and not runtime._loop.is_closed():
+                    return runtime._loop
+
+            loop = asyncio.new_event_loop()
+            nest_asyncio.apply(loop)
+
+            def run_loop() -> None:
+                asyncio.set_event_loop(loop)
+                loop.run_forever()
+
+            thread = threading.Thread(
+                target=run_loop,
+                daemon=True,
+                name="ChatBackgroundTaskLoop",
+            )
+            thread.start()
+            runtime._loop = loop
+            runtime._thread = thread
+            runtime._warmed = False
+            return loop
+
+    @classmethod
+    def run_coroutine(cls, coro: Any) -> Any:
+        loop = ChatBackgroundTask._ensure_runtime()
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        return future.result()
+
+    @classmethod
+    async def _warm_async(cls) -> None:
+        from private_gpt.eager_loading import eager_loading, warm_chat_components
+
+        injector = get_global_injector(allow_to_generate_new_injectors=True)
+        eager_loading(injector)
+        warm_chat_components(injector)
+
+    @classmethod
+    def warm_up(cls) -> None:
+        runtime = ChatBackgroundTask
+        with runtime._lock:
+            if runtime._warmed:
+                return
+
+        runtime.run_coroutine(runtime._warm_async())
+        with runtime._lock:
+            runtime._warmed = True
+
+    @classmethod
+    async def _shutdown_async(cls) -> None:
+        clean_global_injector()
+
+    @classmethod
+    def shutdown_runtime(cls) -> None:
+        runtime = ChatBackgroundTask
+        with runtime._lock:
+            loop = runtime._loop
+            thread = runtime._thread
+            runtime._loop = None
+            runtime._thread = None
+            runtime._warmed = False
+
+        if loop is None:
+            return
+
+        if not loop.is_closed():
+            with contextlib.suppress(Exception):
+                asyncio.run_coroutine_threadsafe(
+                    runtime._shutdown_async(), loop
+                ).result(timeout=10)
+            with contextlib.suppress(RuntimeError):
+                loop.call_soon_threadsafe(loop.stop)
+
+        if thread is not None:
+            thread.join(timeout=5.0)
+
+        with contextlib.suppress(RuntimeError):
+            loop.close()
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        try:
+            self.warm_up()
+            return self.run_coroutine(self._run(*args, **kwargs))
+        except Exception as e:
+            if self.rollback_fn:
+                self.rollback_fn(*args, **kwargs)
+            raise e
