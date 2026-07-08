@@ -1,33 +1,23 @@
 import logging
-import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body, Depends, Request
 from pydantic import BaseModel, Field
 
-from private_gpt.components.ingest.utils import get_extension, get_file_name
-from private_gpt.components.storage.s3_helper import S3Helper
+from private_gpt.components.ingestion.ingestion_scheduler import (
+    IngestionSchedulerFactory,
+)
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.server.ingest.model import IngestedDoc
-from private_gpt.server.utils.artifact_input import IngestableArtifactType, UriArtifact
+from private_gpt.server.utils.artifact_input import IngestableArtifactType
 from private_gpt.server.utils.auth import authenticated
 from private_gpt.server.utils.callback import BaseCallbackInput
 from private_gpt.settings.settings import settings
 
 try:
     from private_gpt.celery.celery import celery_app
-    from private_gpt.celery.dispatch import dispatch_task
     from private_gpt.celery.model import Task, TaskStatus
-    from private_gpt.celery.tasks.ingestion.delete_tasks import (
-        DELETE_INGESTED_TASK_NAME,
-    )
-    from private_gpt.celery.tasks.ingestion.extraction_tasks import (
-        VECTOR_INDEX_TASK_NAME,
-    )
-
-    if TYPE_CHECKING:
-        from celery.result import AsyncResult
 
     _CELERY_AVAILABLE = True
 except ImportError:
@@ -436,25 +426,16 @@ def ingest_content(
 
     The ingested content becomes immediately available for use in other API
     endpoints like /messages, /artifacts/search, and /artifacts/content.
+
+    When ``scheduler.ingestion.mode=celery`` the ingestion is dispatched
+    to a dedicated worker; otherwise it runs in-process.
     """
-    service: IngestService = request.state.injector.get(IngestService)
-
-    content = body.input.to_binary_content(get_file_name(body.metadata))
-    with service.temporary_file(
-        lambda: service.data_path_from_bin_data(
-            content.data, get_extension(content.filename)
-        )
-    ) as data_path:
-        return ingest_data_sync(
-            collection=body.collection,
-            artifact=body.artifact,
-            data_path=data_path,
-            service=service,
-            metadata={**(body.metadata or {}), "file_name": content.filename},
-        )
+    scheduler = request.state.injector.get(IngestionSchedulerFactory).get()
+    result: IngestResponse = scheduler.ingest(body)
+    return result
 
 
-if _CELERY_AVAILABLE:
+if _CELERY_AVAILABLE and settings().scheduler.ingestion.mode == "celery":
 
     @ingest_router.post(
         "/ingest/async",
@@ -636,50 +617,17 @@ if _CELERY_AVAILABLE:
           the file from S3 for processing. This can incur additional time.
 
         """
-        service = request.state.injector.get(IngestService)
-        config = settings()
-        s3_helper = request.state.injector.get(S3Helper)
+        mode = settings().scheduler.ingestion.mode
+        if mode != "celery":
+            from fastapi import HTTPException
 
-        # Initialize ingestion
-        service.initialize_artifact_indices(
-            collection=body.ingest_body.collection,
-            artifact=body.ingest_body.artifact,
-        )
-
-        # Since we cannot store in the Celery task args the actual binary data,
-        # we upload the file to a temporary S3 bucket and pass the S3 URI instead.
-        if body.ingest_body.input:
-            should_upload = (
-                # If it's not a URI, we need to upload
-                not isinstance(body.ingest_body.input, UriArtifact)
-                # It's a URI in Base64, we need to upload
-                or body.ingest_body.input.is_base64()
+            raise HTTPException(
+                status_code=501,
+                detail="Async ingestion requires scheduler.ingestion.mode=celery",
             )
-
-            if should_upload:
-                content = body.ingest_body.input.to_binary_content()
-                object_name = str(uuid.uuid4())
-
-                s3_url = s3_helper.upload_file_to_s3(
-                    filename=content.filename,
-                    bytes_data=content.data.read(),
-                    bucket_name=config.s3.temporary_bucket_name,
-                    object_name=object_name,
-                )
-
-                if not s3_url:
-                    raise ValueError("Failed to upload file to S3 for async ingestion")
-
-                body.ingest_body.input = UriArtifact(value=s3_url)
-
-        # Enqueue ingestion tasks (index population)
-        async_result = dispatch_task(
-            task_name=VECTOR_INDEX_TASK_NAME,
-            args=(body,),
-            queue=config.scheduler.ingestion.celery_queue,
-        )
-
-        return Task(task_id=async_result.task_id)
+        scheduler = request.state.injector.get(IngestionSchedulerFactory).get()
+        task_id = scheduler.ingest_async(body)
+        return Task(task_id=task_id)
 
 
 def ingest_data_sync(
@@ -713,7 +661,7 @@ def ingest_data_sync(
     )
 
 
-if _CELERY_AVAILABLE:
+if _CELERY_AVAILABLE and settings().scheduler.ingestion.mode == "celery":
 
     @ingest_router.get(
         "/ingest/async/{task_id}",
@@ -908,14 +856,11 @@ def delete_ingested(request: Request, body: DeleteIngestedDocumentBody) -> None:
     and all related chunks from the specified collection. The deletion is
     immediate and cannot be undone.
     """
-    service = request.state.injector.get(IngestService)
-    service.delete(
-        collection=body.collection,
-        artifact=body.artifact,
-    )
+    scheduler = request.state.injector.get(IngestionSchedulerFactory).get()
+    scheduler.delete(collection=body.collection, artifact=body.artifact)
 
 
-if _CELERY_AVAILABLE:
+if _CELERY_AVAILABLE and settings().scheduler.ingestion.mode == "celery":
 
     @ingest_router.post(
         "/delete/async",
@@ -950,7 +895,9 @@ if _CELERY_AVAILABLE:
             }
         },
     )
-    def delete_ingested_async(body: DeleteIngestedDocumentAsyncBody) -> Task:
+    def delete_ingested_async(
+        request: Request, body: DeleteIngestedDocumentAsyncBody
+    ) -> Task:
         """Initiates asynchronous deletion of a document and all associated data.
 
         This endpoint queues a deletion task for background processing, making it
@@ -960,29 +907,20 @@ if _CELERY_AVAILABLE:
         If an ingestion task is currently running for the same document, it will
         be automatically revoked before initiating the deletion.
         """
-        # First we try to revoke the running task if it's already running.
-        # In case that yes, we return a task_id with status "revoked"
-        from private_gpt.celery.task_helper import IngestionTaskHelper
+        mode = settings().scheduler.ingestion.mode
+        if mode != "celery":
+            from fastapi import HTTPException
 
-        revoked = IngestionTaskHelper.revoke_ingestion_task(
-            celery_app=celery_app,
-            collection=body.delete_body.collection,
-            artifact=body.delete_body.artifact,
-        )
-        if revoked:
-            logger.info(f"Revoked ingestion task for {body.delete_body.artifact}")
-            return Task(task_id="revoked")
-
-        # Enqueue deletion task
-        async_result: AsyncResult[None] = dispatch_task(
-            task_name=DELETE_INGESTED_TASK_NAME,
-            args=(body,),
-            queue=settings().scheduler.ingestion.celery_queue,
-        )
-        return Task(task_id=async_result.task_id)
+            raise HTTPException(
+                status_code=501,
+                detail="Async deletion requires scheduler.ingestion.mode=celery",
+            )
+        scheduler = request.state.injector.get(IngestionSchedulerFactory).get()
+        task_id = scheduler.delete_async(body)
+        return Task(task_id=task_id)
 
 
-if _CELERY_AVAILABLE:
+if _CELERY_AVAILABLE and settings().scheduler.ingestion.mode == "celery":
 
     @ingest_router.get(
         "/delete/async/{task_id}",
