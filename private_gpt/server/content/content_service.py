@@ -359,7 +359,10 @@ class ContentService:
         ):
             # Split the tree into subtrees
             alg: SplitSubtreeAlg = SplitSubtreeAlg()
-            subtrees = await alg.asplit_subtree(root_node)
+            subtrees = await asyncio.to_thread(
+                alg.split_subtree,
+                root_node,
+            )
 
             # Concat the content of each subtree until the maximum chunk size is reached
             current_chunk: list[BaseNode] = []

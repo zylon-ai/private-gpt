@@ -82,9 +82,8 @@ def create_app(root_injector: Injector) -> FastAPI:
         # ``scheduler.chat.mode=celery`` is enabled, so a small I/O-only pool is enough
         # and stops the GIL from being contended with the event loop.
         cpu_count = os.cpu_count() or 1
-        max_workers = settings.server.max_workers or min(64, cpu_count * 5)
         executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=max_workers, thread_name_prefix="Stream-Pool"
+            max_workers=min(500, cpu_count * 50), thread_name_prefix="Stream-Pool"
         )
         asyncio.get_running_loop().set_default_executor(executor)
 

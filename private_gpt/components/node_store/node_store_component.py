@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import re
 import typing
@@ -117,49 +116,6 @@ class NodeStoreComponent:
                 f"Vector store for collection {collection} does not support get_nodes"
             )
 
-        filters, limit = self._resolve_get_args(artifacts, node_ids, filters, limit)
-
-        return vector_store.get_nodes(node_ids=node_ids, filters=filters, limit=limit)  # type: ignore
-
-    async def aget_nodes(
-        self,
-        collection: str,
-        artifacts: list[str] | None = None,
-        node_ids: list[str] | None = None,
-        filters: MetadataFilters | None = None,
-        limit: int | None = None,
-    ) -> list[BaseNode]:
-        """Async variant of get_nodes.
-
-        Falls back to the sync implementation via asyncio.to_thread when the
-        vector store does not expose an async aget_nodes method.
-        """
-        vector_store = self._vector_store_component.vector_store(collection)
-        if vector_store is None:
-            raise ValueError(f"Vector store for collection {collection} not found")
-        if not hasattr(vector_store, "aget_nodes"):
-            return await asyncio.to_thread(
-                self.get_nodes,
-                collection,
-                artifacts,
-                node_ids,
-                filters,
-                limit,
-            )
-
-        filters, limit = self._resolve_get_args(artifacts, node_ids, filters, limit)
-
-        return await vector_store.aget_nodes(  # type: ignore
-            node_ids=node_ids, filters=filters, limit=limit
-        )
-
-    def _resolve_get_args(
-        self,
-        artifacts: list[str] | None,
-        node_ids: list[str] | None,
-        filters: MetadataFilters | None,
-        limit: int | None,
-    ) -> tuple[MetadataFilters | None, int | None]:
         if artifacts:
             artifact_filters = MetadataFilters(
                 filters=[
@@ -186,7 +142,7 @@ class NodeStoreComponent:
         if limit is None:
             limit = self.max_nodes
 
-        return filters, limit
+        return vector_store.get_nodes(node_ids=node_ids, filters=filters, limit=limit)  # type: ignore
 
     def get_sorted_nodes(
         self,
@@ -201,24 +157,6 @@ class NodeStoreComponent:
         This function sorts the nodes based on the order of the node_ids.
         """
         unsorted_nodes = self.get_nodes(collection, artifacts, node_ids, filters, limit)
-        index = {node.id_: node for node in unsorted_nodes}
-        sorted_nodes = [
-            index[node_id] for node_id in node_ids if node_id in index  # type: ignore
-        ]
-        return sorted_nodes
-
-    async def aget_sorted_nodes(
-        self,
-        collection: str,
-        artifacts: list[str] | None = None,
-        node_ids: list[str] | None = None,
-        filters: MetadataFilters | None = None,
-        limit: int | None = None,
-    ) -> list[BaseNode]:
-        """Async variant of get_sorted_nodes."""
-        unsorted_nodes = await self.aget_nodes(
-            collection, artifacts, node_ids, filters, limit
-        )
         index = {node.id_: node for node in unsorted_nodes}
         sorted_nodes = [
             index[node_id] for node_id in node_ids if node_id in index  # type: ignore

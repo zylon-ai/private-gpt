@@ -18,24 +18,8 @@ class TableExpansionPostProcessor(BaseNodePostprocessor):
     def _postprocess_nodes(
         self, nodes: list[NodeWithScore], query_bundle: QueryBundle | None = None
     ) -> list[NodeWithScore]:
-        raise RuntimeError(
-            "TableExpansionPostProcessor is async-only; "
-            "use apostprocess_nodes instead."
-        )
-
-    async def apostprocess_nodes(
-        self,
-        nodes: list[NodeWithScore],
-        query_bundle: QueryBundle | None = None,
-        query_str: str | None = None,
-    ) -> list[NodeWithScore]:
         if not nodes:
             return []
-
-        if query_str is not None and query_bundle is not None:
-            raise ValueError("Cannot specify both query_str and query_bundle")
-        elif query_str is not None:
-            query_bundle = QueryBundle(query_str)
 
         expanded_nodes = []
         table_root_ids = set()
@@ -62,7 +46,7 @@ class TableExpansionPostProcessor(BaseNodePostprocessor):
         if not table_root_ids:
             return nodes
 
-        table_nodes = await self.node_component.aget_nodes(
+        table_nodes = self.node_component.get_nodes(
             collection=self.collection,
             node_ids=list(table_root_ids),
             limit=len(table_root_ids),
