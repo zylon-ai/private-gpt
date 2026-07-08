@@ -6,10 +6,12 @@ import logging
 import time
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from injector import inject, singleton
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 from private_gpt.components.tools.tool_names import (
     BASH_TOOL_NAME,

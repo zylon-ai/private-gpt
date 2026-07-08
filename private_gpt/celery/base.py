@@ -387,9 +387,9 @@ class StatefulBackgroundTask(_BackgroundTask):
 
         if not loop.is_closed():
             with contextlib.suppress(Exception):
-                asyncio.run_coroutine_threadsafe(
-                    cls._shutdown_async(), loop
-                ).result(timeout=10)
+                asyncio.run_coroutine_threadsafe(cls._shutdown_async(), loop).result(
+                    timeout=10
+                )
             with contextlib.suppress(RuntimeError):
                 loop.call_soon_threadsafe(loop.stop)
 
@@ -408,4 +408,3 @@ class StatefulBackgroundTask(_BackgroundTask):
             if self.rollback_fn:
                 self.rollback_fn(*args, **kwargs)
             raise e
-

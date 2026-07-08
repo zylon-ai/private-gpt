@@ -35,7 +35,9 @@ def _chat_body() -> ChatBody:
 
 
 @pytest.mark.anyio
-async def test_worker_handoff_sends_json_safe_body(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_worker_handoff_sends_json_safe_body(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     stream_service = InMemoryStreamService()
     sent: dict[str, Any] = {}
 

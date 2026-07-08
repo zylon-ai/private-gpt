@@ -3,12 +3,17 @@
 When ``tool_scheduler.mode`` is ``"celery"``, the chat worker dispatches tool
 calls to this task on the ``tools`` queue instead of running them in-process.
 """
+from __future__ import annotations
+
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from private_gpt.celery.base import StatefulBackgroundTask
 from private_gpt.celery.celery import celery_app
 from private_gpt.di import get_global_injector
+
+if TYPE_CHECKING:
+    from private_gpt.server.tools.tool_service import ToolService
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +66,7 @@ async def tool_run_task(
 
 
 async def _execute_by_name(
-    tool_service: "ToolService",
+    tool_service: ToolService,
     tool_name: str,
     kwargs: dict[str, Any],
 ) -> Any:
