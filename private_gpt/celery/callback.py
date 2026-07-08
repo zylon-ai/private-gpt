@@ -112,7 +112,7 @@ def task_after_return(
     """
     # If the input is not a subclass of BaseCallbackInput, then we don't need to
     # send a callback
-    if not issubclass(args[0].__class__, BaseCallbackInput):
+    if not args or not issubclass(args[0].__class__, BaseCallbackInput):
         return
 
     # If the input is a subclass of BaseCallbackInput, it needs to be the only input

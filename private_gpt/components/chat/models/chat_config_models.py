@@ -10,7 +10,7 @@ from llama_index.core.llms import LLM
 from llama_index.core.tools import BaseTool, FunctionTool
 from llama_index.core.tools.function_tool import AsyncCallable, _is_context_param
 from llama_index.core.tools.utils import create_schema_from_function
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from private_gpt.chat.input_models import BlobVisibilityMode, PromptConfig
 from private_gpt.chat.schema_models import create_model_from_json_schema
@@ -184,6 +184,12 @@ class ToolSpec(BaseModel):
     @field_serializer("async_fn", "async_callback", when_used="json")
     def _serialize_callable(self, _v: Any) -> None:
         return None
+
+    @field_validator("async_fn", mode="before")
+    @classmethod
+    def _deserialize_callable(cls, v: Any) -> Any:
+        """Restore callable after JSON deserialization."""
+        return _dummy_tool_async_fn if v is None else v
 
     def get_original_tool_name(self) -> str:
         """Get the original tool name without version suffix."""
