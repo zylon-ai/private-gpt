@@ -53,6 +53,23 @@ class BashExecutorSandbox(SandboxSession):
         self._default_cwd = next((m.canonical for m in mounts if m.writable), "/")
         self._env = env
 
+    def add_local_mount(
+        self, canonical: str, host_path: Path, writable: bool = False
+    ) -> None:
+        """Register a new host-path mount after session creation."""
+        self._translator.register(canonical, host_path, writable)
+        if not writable and canonical not in self._readonly:
+            self._readonly.append(canonical)
+
+    def remove_local_mount(self, canonical: str) -> None:
+        """Unregister a mount — does not delete files from host storage."""
+        self._translator.unregister(canonical)
+        self._readonly = [p for p in self._readonly if p != canonical]
+
+    async def remove_mount(self, canonical_path: str) -> None:
+        """Unregister a local mount without touching host-backed storage files."""
+        self.remove_local_mount(canonical_path)
+
     def _assert_writable(self, path: str) -> None:
         for prefix in self._readonly:
             if path.startswith(prefix):

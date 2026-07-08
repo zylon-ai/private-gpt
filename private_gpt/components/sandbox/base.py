@@ -134,6 +134,18 @@ class SandboxSession(ABC):
     async def initialize_mount(self, canonical: str, files: list[BundledFile]) -> None:
         """Write mount files during session setup. Bypasses writable check."""
 
+    async def remove_mount(self, canonical_path: str) -> None:
+        """Remove a mounted directory from the sandbox.
+
+        Default: run ``rm -rf`` inside the sandbox, suitable for copy-based
+        mounts (e.g. Docker). Override when deleting host-backed storage files
+        would be destructive (e.g. ``BashExecutorSandbox``).
+        """
+        import shlex
+
+        normalized = canonical_path.rstrip("/")
+        await self.exec(f"rm -rf {shlex.quote(normalized)}")
+
     async def get_endpoint(self, port: int) -> SandboxLink | None:
         """Return a browser-consumable URL for a service on the given port.
 

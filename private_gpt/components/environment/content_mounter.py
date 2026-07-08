@@ -142,8 +142,26 @@ class LocalStorageContentMounter(ContentMounter):
         self, descriptor: ContentBundle, sandbox: SandboxSession
     ) -> None:
         from private_gpt.components.sandbox.content_bundle import StoredBundle
+        from private_gpt.components.sandbox.local import BashExecutorSandbox
 
-        if isinstance(descriptor, StoredBundle):
+        if not isinstance(descriptor, StoredBundle):
+            return
+
+        if isinstance(sandbox, BashExecutorSandbox):
+            # Ensure skill files exist locally (fetch from backend if absent),
+            # then register the host-path mapping in the path translator so
+            # that subsequent exec() calls can resolve the canonical path.
+            host_path = self._root / descriptor.storage_prefix
+            if not host_path.is_dir() or not any(host_path.iterdir()):
+                files = await descriptor.fetch()
+                if not files:
+                    return
+                for f in files:
+                    dest = host_path / f.path
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_bytes(f.content)
+            sandbox.add_local_mount(descriptor.canonical_path, host_path, writable=descriptor.writable)
+        else:
             files = await descriptor.fetch()
             if files:
                 await sandbox.initialize_mount(descriptor.canonical_path, files)

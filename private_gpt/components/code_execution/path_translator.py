@@ -20,7 +20,9 @@ class PathTranslator:
     def __init__(self, mounts: list[tuple[str, Path, bool]]) -> None:
         # mounts: list of (canonical_prefix, real_path, writable)
         self._mounts = sorted(mounts, key=lambda m: len(m[0]), reverse=True)
+        self._rebuild_regex()
 
+    def _rebuild_regex(self) -> None:
         # Pre-compile a regex that matches any canonical prefix in a string.
         # Patterns are sorted longest-first so the leftmost-longest rule applies.
         escaped = [re.escape(canonical) for canonical, _, _ in self._mounts]
@@ -35,6 +37,18 @@ class PathTranslator:
             self._real_re = re.compile("|".join(real_escaped))
         else:
             self._real_re = re.compile(r"(?!)")
+
+    def register(self, canonical: str, real_path: Path, writable: bool) -> None:
+        """Add or update a mount mapping and rebuild the internal regex."""
+        self._mounts = [(c, r, w) for c, r, w in self._mounts if c != canonical]
+        self._mounts.append((canonical, real_path, writable))
+        self._mounts.sort(key=lambda m: len(m[0]), reverse=True)
+        self._rebuild_regex()
+
+    def unregister(self, canonical: str) -> None:
+        """Remove a mount mapping and rebuild the internal regex."""
+        self._mounts = [(c, r, w) for c, r, w in self._mounts if c != canonical]
+        self._rebuild_regex()
 
     # ------------------------------------------------------------------
     # Path translation helpers

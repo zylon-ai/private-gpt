@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import shlex
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -27,10 +26,13 @@ class Environment:
     Delegated calls refresh the idle clock the manager's reaper watches, so
     any tool activity keeps the environment alive.
 
-    ContentBundles (skills, tools, ...) are registered lazily via add_pending()
-    and materialized just before the first exec() that follows — no network
-    calls at registration time. The _stale flag is set on any flush failure so
-    the EnvironmentManager can evict and recreate on the next acquire().
+    ContentBundles (skills, tools, ...) are registered via add_pending() and
+    materialized by _flush_pending(). When the sandbox is being created for
+    the first time, bundles that couldn't be volume-mounted are deferred and
+    flushed before the first exec(). When the sandbox is already running,
+    the manager flushes immediately so bundles are available right away.
+    The _stale flag is set on any flush failure so the EnvironmentManager
+    can evict and recreate on the next acquire().
     """
 
     id: str
@@ -51,10 +53,11 @@ class Environment:
         return now - self.last_accessed
 
     def add_pending(self, bundles: list[ContentBundle]) -> None:
-        """Register bundles to be materialized before the next exec().
+        """Stage bundles for materialization, skipping already-mounted paths.
 
-        Bundles already confirmed materialized in this process lifetime are
-        skipped — no duplicate work. Zero network calls.
+        When the container is already running, the caller is responsible for
+        calling _flush_pending() immediately after. When the container is being
+        created, deferred bundles are flushed before the first exec().
         """
         for bundle in bundles:
             if bundle.canonical_path not in self._mounted:
@@ -78,8 +81,7 @@ class Environment:
 
     async def remove_bundles(self, canonical_paths: list[str]) -> None:
         for path in canonical_paths:
-            normalized = path.rstrip("/")
-            await self.sandbox.exec(f"rm -rf {shlex.quote(normalized)}")
+            await self.sandbox.remove_mount(path)
             self._mounted.discard(path)
 
     async def exec(

@@ -89,9 +89,10 @@ class EnvironmentManager:
                     if bundles_to_remove:
                         await env.remove_bundles(bundles_to_remove)
                     if extra_bundles:
-                        # Zero network calls: bundles are registered as pending
-                        # and materialized lazily before the next exec().
+                        # Container is already running — push bundles immediately
+                        # so skills are accessible before the next exec().
                         env.add_pending(extra_bundles)
+                        await env._flush_pending()
                     return env
             return await self._create(
                 session_id, extra_bundles, bundles_to_remove, sandbox_env
