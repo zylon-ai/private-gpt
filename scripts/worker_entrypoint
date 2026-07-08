@@ -104,9 +104,9 @@ if [[ "$PGPT_WORKER_MODE" == "worker" || "$PGPT_WORKER_MODE" == "mixed" ]]; then
       WORKER_ARGS+=("--concurrency=$PGPT_CELERY_CONCURRENCY")
   fi
   # Chat workers keep warm DI/runtime state for the worker child lifetime.
-  if [[ "$PGPT_CHAT_WORKER_ENABLED" == "true" ]]; then
-      WORKER_ARGS+=("--max-tasks-per-child=0")
-  fi
+#   if [[ "$PGPT_CHAT_WORKER_ENABLED" == "true" ]]; then
+#       WORKER_ARGS+=("--max-tasks-per-child=0")
+#   fi
   if [[ -n "$PGPT_CELERY_TIME_LIMIT" ]]; then
       WORKER_ARGS+=("--time-limit=$PGPT_CELERY_TIME_LIMIT")
   fi
