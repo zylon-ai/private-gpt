@@ -5,7 +5,6 @@ import inspect
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
-from injector import inject, singleton
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.tools import adapt_to_async_tool
 from pydantic import BaseModel, Field
@@ -29,9 +28,6 @@ if TYPE_CHECKING:
 
     from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
         ChatLoopState,
-    )
-    from private_gpt.server.chat.interceptors.configure_tool_execution_interceptor import (
-        ConfigureToolExecutionInterceptor,
     )
 
 
@@ -70,16 +66,12 @@ class ToolExecutionInterceptor(ABC):
         """Mutate tool execution context before/after tool invocation."""
 
 
-@singleton
 class ToolExecutor:
-    @inject
     def __init__(
         self,
-        configure_tool_execution_interceptor: "ConfigureToolExecutionInterceptor",
+        interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> None:
-        self._configure_tool_execution_interceptor = (
-            configure_tool_execution_interceptor
-        )
+        self._interceptors = interceptors or []
 
     async def execute(
         self,
@@ -93,7 +85,8 @@ class ToolExecutor:
             request=request,
             tool_kwargs=dict(request.tool_kwargs),
         )
-        await self._configure_tool_execution_interceptor.intercept(before_context)
+        for interceptor in self._interceptors:
+            await interceptor.intercept(before_context)
 
         result, tool_message = await execute_tool_call(
             tool=tool,
@@ -120,7 +113,8 @@ class ToolExecutor:
             tool_kwargs=before_context.tool_kwargs,
             response=response,
         )
-        await self._configure_tool_execution_interceptor.intercept(after_context)
+        for interceptor in self._interceptors:
+            await interceptor.intercept(after_context)
 
         assert after_context.response is not None
         return after_context.response
@@ -148,10 +142,9 @@ async def rebuild_tool_from_spec(tool_spec: ToolSpec) -> AsyncBaseTool:
 async def execute_tool_request(
     request: ToolExecutionRequest,
     state_ctx: ChatLoopState | None = None,
+    interceptors: list[ToolExecutionInterceptor] | None = None,
 ) -> ToolExecutionResponse:
-    from private_gpt.di import get_global_injector
-
-    executor = get_global_injector().get(ToolExecutor)
+    executor = ToolExecutor(interceptors=interceptors)
     return await executor.execute(request, state_ctx=state_ctx)
 
 

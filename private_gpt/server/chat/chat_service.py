@@ -173,6 +173,7 @@ class ChatService:
             llm_component=self.llm_component,
             request_interceptors=chain.request_interceptors,
             response_interceptors=chain.response_interceptors,
+            tool_interceptors=chain.tool_interceptors,
             max_iterations=40,
             container_registry=self.container_registry,
             tool_scheduler=self._tool_scheduler,

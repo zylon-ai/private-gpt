@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Mapping
-from typing import Any, Self, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -7,6 +9,9 @@ from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor
     ChatRequestLoopInterceptor,
     ChatResponseLoopInterceptor,
 )
+
+if TYPE_CHECKING:
+    from private_gpt.components.tools.remote_execution import ToolExecutionInterceptor
 
 Condition = bool | Callable[[], bool]
 
@@ -16,11 +21,12 @@ def _evaluate(condition: Condition) -> bool:
 
 
 class InterceptorChainEntry(BaseModel):
-    """One named group in the chain holding N request and/or response interceptors."""
+    """One named group in the chain holding N request, response, and/or tool interceptors."""
 
     name: str
     requests: list[ChatRequestLoopInterceptor] = Field(default_factory=list)
     responses: list[ChatResponseLoopInterceptor] = Field(default_factory=list)
+    tools: list[ToolExecutionInterceptor] = Field(default_factory=list)
     condition: Condition = True
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -39,6 +45,7 @@ class InterceptorChainEntry(BaseModel):
             name=str(self.name),
             requests=[r.model_copy(deep=True) for r in self.requests],
             responses=[r.model_copy(deep=True) for r in self.responses],
+            tools=list(self.tools),  # tool interceptors are stateless singletons
             condition=self.condition,  # shared — callable/bool are stateless
         )
         return cast(Self, deep_copy)
@@ -76,19 +83,22 @@ class ChatLoopInterceptorChain(BaseModel):
         *,
         requests: list[ChatRequestLoopInterceptor] | None = None,
         responses: list[ChatResponseLoopInterceptor] | None = None,
+        tools: list[ToolExecutionInterceptor] | None = None,
         condition: Condition = True,
     ) -> "ChatLoopInterceptorChain":
         resolved_requests = requests or []
         resolved_responses = responses or []
-        if not resolved_requests and not resolved_responses:
+        resolved_tools = tools or []
+        if not resolved_requests and not resolved_responses and not resolved_tools:
             raise ValueError(
-                f"Group '{name}' must provide at least one request or response interceptor."
+                f"Group '{name}' must provide at least one request, response, or tool interceptor."
             )
         self.entries.append(
             InterceptorChainEntry(
                 name=name,
                 requests=resolved_requests,
                 responses=resolved_responses,
+                tools=resolved_tools,
                 condition=condition,
             )
         )
@@ -106,3 +116,7 @@ class ChatLoopInterceptorChain(BaseModel):
     @property
     def response_interceptors(self) -> list[ChatResponseLoopInterceptor]:
         return [r for e in self.entries if e.is_active for r in e.responses]
+
+    @property
+    def tool_interceptors(self) -> list[ToolExecutionInterceptor]:
+        return [t for e in self.entries if e.is_active for t in e.tools]

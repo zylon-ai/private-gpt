@@ -68,6 +68,7 @@ from private_gpt.components.llm.models import ReasoningEffort
 from private_gpt.components.llm.priorities import DefinedPriorities
 from private_gpt.components.tools.processors.base import _session_id
 from private_gpt.components.tools.remote_execution import (
+    ToolExecutionInterceptor,
     ToolExecutionRequest,
     build_tool_execution_context,
 )
@@ -195,6 +196,7 @@ class ChatLoopEngine:
         max_iterations: int = 40,
         container_registry: ContainerRegistry | None = None,
         tool_scheduler: BaseToolScheduler | None = None,
+        tool_interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> None:
         self._llm_component = llm_component
         self._request_interceptors = [
@@ -210,6 +212,7 @@ class ChatLoopEngine:
         self._max_iterations = max_iterations
         self._container_registry = container_registry
         self._tool_scheduler: BaseToolScheduler = tool_scheduler or LocalToolScheduler()
+        self._tool_interceptors = tool_interceptors or []
 
     async def run(
         self,
@@ -922,6 +925,7 @@ class ChatLoopEngine:
                     context=build_tool_execution_context(run.state),
                 ),
                 state_ctx=run.state,
+                interceptors=self._tool_interceptors,
             )
 
         async with lock:

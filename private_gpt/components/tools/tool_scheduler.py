@@ -17,7 +17,10 @@ if TYPE_CHECKING:
     from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
         ChatLoopState,
     )
-    from private_gpt.components.tools.remote_execution import ToolExecutionRequest
+    from private_gpt.components.tools.remote_execution import (
+        ToolExecutionInterceptor,
+        ToolExecutionRequest,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +31,7 @@ class BaseToolScheduler(ABC):
         self,
         request: ToolExecutionRequest,
         state_ctx: ChatLoopState | None = None,
+        interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
         ...
 
@@ -40,8 +44,9 @@ class LocalToolScheduler(BaseToolScheduler):
         self,
         request: ToolExecutionRequest,
         state_ctx: ChatLoopState | None = None,
+        interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
-        return await execute_tool_request(request, state_ctx=state_ctx)
+        return await execute_tool_request(request, state_ctx=state_ctx, interceptors=interceptors)
 
 
 @singleton
@@ -59,8 +64,9 @@ class CeleryToolScheduler(BaseToolScheduler):
         self,
         request: ToolExecutionRequest,
         state_ctx: ChatLoopState | None = None,
+        interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
-        del state_ctx
+        del state_ctx, interceptors
 
         result = self._celery_app.send_task(
             "private_gpt.tools.run",
