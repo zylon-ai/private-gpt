@@ -10,7 +10,7 @@ from private_gpt.components.skills.models.skill_entities import (
     SkillVersionEntity,
 )
 from private_gpt.components.skills.services.skill_service import SkillService
-from private_gpt.components.tools.remote_execution import build_rebuild_metadata, deserialize_rebuild_kwarg
+from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import (
     SKILL_LIST_TOOL_NAME,
     SKILL_LOAD_TOOL_NAME,
@@ -178,7 +178,6 @@ def rebuild_load_skill_tool(
     name: str = SKILL_LOAD_TOOL_NAME,
     type: str = SKILL_LOAD_TOOL_NAME + "_v1",
 ) -> ToolSpec:
-    skill_filter = deserialize_rebuild_kwarg(skill_filter, SkillFilter)
     return _builder(skill_filter, skill_injection_mode).build_load_skill(
         name=name,
         type=type,
@@ -191,7 +190,6 @@ def rebuild_unload_skill_tool(
     name: str = SKILL_UNLOAD_TOOL_NAME,
     type: str = SKILL_UNLOAD_TOOL_NAME + "_v1",
 ) -> ToolSpec:
-    skill_filter = deserialize_rebuild_kwarg(skill_filter, SkillFilter)
     return _builder(skill_filter, skill_injection_mode).build_unload_skill(
         name=name,
         type=type,
@@ -204,7 +202,6 @@ def rebuild_list_skills_tool(
     name: str = SKILL_LIST_TOOL_NAME,
     type: str = SKILL_LIST_TOOL_NAME + "_v1",
 ) -> ToolSpec:
-    skill_filter = deserialize_rebuild_kwarg(skill_filter, SkillFilter)
     return _builder(skill_filter, skill_injection_mode).build_list_skills(
         name=name,
         type=type,

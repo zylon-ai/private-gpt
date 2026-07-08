@@ -3,14 +3,20 @@ import enum
 import inspect
 import re
 from collections.abc import Awaitable, Callable
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock
 from llama_index.core.llms import LLM
 from llama_index.core.tools import BaseTool, FunctionTool
 from llama_index.core.tools.function_tool import AsyncCallable, _is_context_param
 from llama_index.core.tools.utils import create_schema_from_function
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+)
 
 from private_gpt.chat.input_models import BlobVisibilityMode, PromptConfig
 from private_gpt.chat.schema_models import create_model_from_json_schema
@@ -119,6 +125,41 @@ class ToolExecutionMetadata(BaseModel):
         default_factory=dict,
         description="JSON-serializable kwargs used to rebuild the server tool.",
     )
+
+    MODEL_TAG_KEY: ClassVar[str] = "__pgpt_model__"
+
+    @field_serializer("rebuild_kwargs", when_used="json")
+    def _serialize_kwargs(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Tag BaseModel values so they survive the JSON roundtrip."""
+        result: dict[str, Any] = {}
+        for key, value in kwargs.items():
+            if isinstance(value, BaseModel):
+                result[key] = {
+                    self.MODEL_TAG_KEY: f"{type(value).__module__}:{type(value).__qualname__}",
+                    "data": value.model_dump(mode="json"),
+                }
+            else:
+                result[key] = value
+        return result
+
+    @field_validator("rebuild_kwargs", mode="before")
+    @classmethod
+    def _deserialize_kwargs(cls, kwargs: Any) -> Any:
+        """Untag BaseModel values after JSON roundtrip."""
+        if not isinstance(kwargs, dict):
+            return kwargs
+        import importlib
+
+        result: dict[str, Any] = {}
+        for key, value in kwargs.items():
+            if isinstance(value, dict) and cls.MODEL_TAG_KEY in value:
+                module_path, qualname = value[cls.MODEL_TAG_KEY].rsplit(":", 1)
+                module = importlib.import_module(module_path)
+                model_cls = getattr(module, qualname)
+                result[key] = model_cls.model_validate(value["data"])
+            else:
+                result[key] = value
+        return result
 
 
 class ToolSpec(BaseModel):

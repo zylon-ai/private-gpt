@@ -350,8 +350,5 @@ class SemanticSearchToolBuilder:
 
 
 async def rebuild_semantic_search_tool(**kwargs: Any) -> ToolSpec:
-    from private_gpt.components.tools.remote_execution import deserialize_rebuild_kwarg
-    from private_gpt.chat.extensions.context_filter import ContextFilter
     builder = get_global_injector().get(SemanticSearchToolBuilder)
-    kwargs["context_filter"] = deserialize_rebuild_kwarg(kwargs.get("context_filter"), ContextFilter)
     return await builder.build_tool(**kwargs)

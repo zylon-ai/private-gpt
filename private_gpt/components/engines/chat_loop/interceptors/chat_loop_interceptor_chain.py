@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Self, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,7 +12,6 @@ from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor
     ChatRequestLoopInterceptor,
     ChatResponseLoopInterceptor,
 )
-
 from private_gpt.components.tools.remote_execution import ToolExecutionInterceptor
 
 Condition = bool | Callable[[], bool]
@@ -20,7 +22,7 @@ def _evaluate(condition: Condition) -> bool:
 
 
 class InterceptorChainEntry(BaseModel):
-    """One named group in the chain holding N request, response, and/or tool interceptors."""
+    """One named group holding request, response, and/or tool interceptors."""
 
     name: str
     requests: list[ChatRequestLoopInterceptor] = Field(default_factory=list)
@@ -61,7 +63,7 @@ class ChatLoopInterceptorChain(BaseModel):
         request: ChatRequestLoopInterceptor | None = None,
         response: ChatResponseLoopInterceptor | None = None,
         condition: Condition = True,
-    ) -> "ChatLoopInterceptorChain":
+    ) -> ChatLoopInterceptorChain:
         if request is None and response is None:
             raise ValueError(
                 f"Group '{name}' must provide at least one of request or response interceptor."
@@ -84,7 +86,7 @@ class ChatLoopInterceptorChain(BaseModel):
         responses: list[ChatResponseLoopInterceptor] | None = None,
         tools: list[ToolExecutionInterceptor] | None = None,
         condition: Condition = True,
-    ) -> "ChatLoopInterceptorChain":
+    ) -> ChatLoopInterceptorChain:
         resolved_requests = requests or []
         resolved_responses = responses or []
         resolved_tools = tools or []
@@ -103,7 +105,7 @@ class ChatLoopInterceptorChain(BaseModel):
         )
         return self
 
-    def clone(self) -> "ChatLoopInterceptorChain":
+    def clone(self) -> ChatLoopInterceptorChain:
         return ChatLoopInterceptorChain(
             entries=[entry.model_copy(deep=True) for entry in self.entries]
         )

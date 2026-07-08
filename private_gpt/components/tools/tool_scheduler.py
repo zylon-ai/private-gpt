@@ -46,7 +46,9 @@ class LocalToolScheduler(BaseToolScheduler):
         state_ctx: ChatLoopState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
-        return await execute_tool_request(request, state_ctx=state_ctx, interceptors=interceptors)
+        return await execute_tool_request(
+            request, state_ctx=state_ctx, interceptors=interceptors
+        )
 
 
 @singleton
