@@ -76,7 +76,7 @@ class CeleryToolScheduler(BaseToolScheduler):
         if result.failed():
             raise result.result
 
-        return result.get()
+        return result.result
 
 
 @singleton
