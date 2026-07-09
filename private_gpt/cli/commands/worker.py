@@ -5,7 +5,21 @@ import sys
 
 import typer
 
-from private_gpt.cli.commands.arq_worker import arq_worker_command
+from private_gpt.arq.runner import run_arq_worker
+from private_gpt.settings.settings import settings
+
+
+def _resolve_worker_mode() -> str:
+    env_mode = os.environ.get("PGPT_WORKER_MODE", "").strip().lower()
+    if env_mode:
+        if env_mode == "worker":
+            return "celery"
+        return env_mode
+
+    current_settings = settings()
+    if current_settings.scheduler.chat.mode == "arq":
+        return "arq"
+    return "celery"
 
 
 def _build_flower_args(mode: str) -> list[str]:
@@ -70,10 +84,10 @@ def worker_command() -> None:
 
     Behaviour is fully controlled through environment variables.
     """
-    mode = os.environ.get("PGPT_WORKER_MODE", "mixed").strip().lower()
+    mode = _resolve_worker_mode()
 
     if mode == "arq":
-        arq_worker_command()
+        run_arq_worker()
         return
 
     app_module = os.environ.get("PGPT_WORKER_APP_MODULE", "private_gpt")
@@ -114,7 +128,7 @@ def worker_command() -> None:
             )
         )
 
-    if mode in ("worker", "mixed"):
+    if mode in ("celery", "mixed"):
         worker_args = _build_worker_args()
         typer.echo(f"Starting celery worker with args: {' '.join(worker_args)}")
         # The PGPT_STATEFUL_WORKER_TYPE env var triggers eager warm-up in the
@@ -155,7 +169,10 @@ def worker_command() -> None:
         )
 
     if not procs:
-        typer.echo(f"No processes started. Check PGPT_WORKER_MODE={mode!r}", err=True)
+        typer.echo(
+            f"No processes started. Check PGPT_WORKER_MODE={mode!r}. Supported: mixed, arq, celery",
+            err=True,
+        )
         raise SystemExit(1)
 
     try:

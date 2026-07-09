@@ -5,7 +5,6 @@ import signal
 import subprocess
 import sys
 
-import typer
 from arq.worker import Worker
 
 from private_gpt.arq.settings import (
@@ -23,7 +22,7 @@ def _default_concurrency() -> int:
     return 1 << (cpu_count.bit_length() - 1)
 
 
-def arq_worker_command() -> None:
+def run_arq_worker() -> None:
     app_module = os.environ.get("PGPT_WORKER_APP_MODULE", "private_gpt")
     worker_module = importlib.import_module(f"{app_module}.arq.worker")
     settings_module = importlib.import_module(f"{app_module}.settings.settings")
@@ -52,7 +51,7 @@ def arq_worker_command() -> None:
     signal.signal(signal.SIGINT, _cleanup)
 
     if api_enabled:
-        typer.echo(f"Starting arq worker healthcheck on port {api_port}")
+        print(f"Starting arq worker healthcheck on port {api_port}")
         procs.append(
             subprocess.Popen(
                 [
@@ -105,10 +104,14 @@ def arq_worker_command() -> None:
         for task in pending:
             task.cancel()
 
-    typer.echo(
+    print(
         f"Starting arq worker queue={get_queue_name(current_settings)} max_jobs={max_jobs} job_timeout={job_timeout}"
     )
     try:
         asyncio.run(_main())
     finally:
         _cleanup()
+
+
+if __name__ == "__main__":
+    run_arq_worker()

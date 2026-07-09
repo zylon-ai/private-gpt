@@ -24,7 +24,7 @@ HEALTHCHECK_APP_MODULE="${PGPT_WORKER_APP_MODULE}.celery.healthcheck:app"
 ARQ_HEALTHCHECK_APP_MODULE="${PGPT_WORKER_APP_MODULE}.arq.healthcheck:app"
 
 if [[ "$PGPT_WORKER_MODE" == "arq" ]]; then
-  exec uv run private-gpt worker
+  exec python -m private_gpt.arq.runner
 fi
 
 # Create directory for PID files
