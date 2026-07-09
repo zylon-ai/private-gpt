@@ -26,6 +26,7 @@ from private_gpt.components.chat.processors.chat_history.memory.utils.splitting 
 )
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import TokenizerFn
+from private_gpt.utils.tokens import async_tokenizer
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
 from private_gpt.components.tools.builders.summary_builder import (
     SummarizeWorkflowBuilder,
@@ -109,7 +110,11 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
 
         async def stop_condition(text: str) -> bool:
             if max_tokens is not None:
-                token_count = tokenizer_fn(text) if tokenizer_fn else None
+                token_count = (
+                    await async_tokenizer(text, tokenizer_fn=tokenizer_fn)
+                    if tokenizer_fn
+                    else None
+                )
                 if token_count is not None:
                     return len(token_count) <= max_tokens
 

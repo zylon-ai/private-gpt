@@ -12,6 +12,8 @@ from llama_index.core.memory.types import (
 )
 from llama_index.core.storage.chat_store import BaseChatStore, SimpleChatStore
 
+from private_gpt.utils.tokens import async_tokenizer
+
 DEFAULT_TOKEN_LIMIT_RATIO = 0.75
 DEFAULT_TOKEN_LIMIT = 3000
 
@@ -331,7 +333,7 @@ class TrimmingMemory(BaseChatStoreMemory):
 
         # Convert messages to string representation for token counting
         msg_str = " ".join(str(m.content) for m in messages)
-        return len(await self.tokenizer_fn(msg_str))
+        return len(await async_tokenizer(msg_str, tokenizer_fn=self.tokenizer_fn))
 
     def to_string(self) -> str:
         """Convert memory to string."""
