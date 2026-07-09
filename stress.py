@@ -25,7 +25,7 @@ ARTIFACT_IDS = [
     "019f3c30-d7a3-7d75-800b-c0c9980cd573",
     "019f3c36-c0f5-7862-800b-ec8f4629fc3a",
     "019f3c37-2d0a-7613-800b-5bbbf7c4b8f2",
-    "019f3c37-2d12-7979-800b-60ce1902922b"
+    "019f3c37-2d12-7979-800b-60ce1902922b",
 ]
 
 TOOLS = [
@@ -158,10 +158,18 @@ async def send_msg(
         "thread_id": "new" if is_first else thread_id,
         "artifacts": {
             "document": [
-                {"scope": "project", "all_artifacts": False, "artifacts_ids": ARTIFACT_IDS},
+                {
+                    "scope": "project",
+                    "all_artifacts": False,
+                    "artifacts_ids": ARTIFACT_IDS,
+                },
             ],
-            "connector": [{"scope": "project", "all_artifacts": False, "artifacts_ids": []}],
-            "skill": [{"scope": "project", "all_artifacts": False, "artifacts_ids": []}],
+            "connector": [
+                {"scope": "project", "all_artifacts": False, "artifacts_ids": []}
+            ],
+            "skill": [
+                {"scope": "project", "all_artifacts": False, "artifacts_ids": []}
+            ],
         },
         "pgpt": {
             "stream": True,
