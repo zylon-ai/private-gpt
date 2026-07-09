@@ -11,7 +11,7 @@ TEST_LOCAL_DATA_DIR ?= $(TEST_PGPT_HOME)/local_data/tests
 WIPE_PGPT_HOME := $(if $(PGPT_HOME),$(PGPT_HOME),$(HOME)/.local/share/private-gpt)
 WIPE_LOCAL_DATA_DIR := $(WIPE_PGPT_HOME)/local_data
 
-.PHONY: test test-coverage black ruff format mypy check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower
+.PHONY: test test-coverage black ruff format mypy check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower celery-worker arq-worker
 
 ########################################################################################################################
 # Quality checks
@@ -107,3 +107,9 @@ celery:
 
 flower:
 	PGPT_WORKER_MODE=flower uv run private-gpt worker
+
+celery-worker:
+	PGPT_WORKER_MODE=worker uv run private-gpt worker
+
+arq-worker:
+	PGPT_WORKER_MODE=arq uv run private-gpt worker

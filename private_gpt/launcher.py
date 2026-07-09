@@ -78,8 +78,9 @@ def create_app(root_injector: Injector) -> FastAPI:
 
         # Set default thread pool limit. This executor now only serves genuine
         # blocking-I/O offloads (broker waits, sync HTTP, sync file reads); all
-        # CPU-bound work is routed to the long-lived Celery chat worker when
-        # ``scheduler.chat.mode=celery`` is enabled, so a small I/O-only pool is enough
+        # CPU-bound work is routed to dedicated workers, and chat can be routed
+        # to a long-lived external worker when ``scheduler.chat.mode`` is enabled,
+        # so a small I/O-only pool is enough
         # and stops the GIL from being contended with the event loop.
         cpu_count = os.cpu_count() or 1
         executor = concurrent.futures.ThreadPoolExecutor(

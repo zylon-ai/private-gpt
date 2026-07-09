@@ -5,6 +5,8 @@ import sys
 
 import typer
 
+from private_gpt.cli.commands.arq_worker import arq_worker_command
+
 
 def _build_flower_args(mode: str) -> list[str]:
     args: list[str] = []
@@ -68,11 +70,15 @@ def worker_command() -> None:
 
     Behaviour is fully controlled through environment variables.
     """
+    mode = os.environ.get("PGPT_WORKER_MODE", "mixed").strip().lower()
+
+    if mode == "arq":
+        arq_worker_command()
+        return
+
     app_module = os.environ.get("PGPT_WORKER_APP_MODULE", "private_gpt")
     celery_app = f"{app_module}.celery"
     healthcheck_app = f"{app_module}.celery.healthcheck:app"
-    mode = os.environ.get("PGPT_WORKER_MODE", "mixed")
-
     procs: list[subprocess.Popen[bytes]] = []
 
     def _cleanup(signum: int = 0, frame: object = None) -> None:

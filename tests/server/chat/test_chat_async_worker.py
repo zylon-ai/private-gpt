@@ -114,3 +114,58 @@ async def test_worker_cancel_marks_stream_cancelled(
     assert metadata is not None
     assert metadata.status == StreamStatus.CANCELLED
     assert revoked == ["msg-3"]
+
+
+@pytest.mark.anyio
+async def test_arq_handoff_enqueues_chat_job(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stream_service = InMemoryStreamService()
+    sent: dict[str, Any] = {}
+
+    async def fake_enqueue_chat_job(**kwargs: Any) -> None:
+        sent.update(kwargs)
+
+    monkeypatch.setattr(
+        chat_async_service_module,
+        "enqueue_chat_job",
+        fake_enqueue_chat_job,
+    )
+
+    correlation_id = await _service(stream_service)._initiate_chat_stream_arq(
+        body=_chat_body(),
+        message_id="msg-arq-1",
+    )
+
+    assert correlation_id == "msg-arq-1"
+    assert sent["correlation_id"] == "msg-arq-1"
+    assert sent["stream_type"] == "chat_completion"
+    assert sent["body"] == _chat_body().model_dump(mode="json")
+
+
+@pytest.mark.anyio
+async def test_arq_cancel_marks_stream_cancelled_without_revoke(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stream_service = InMemoryStreamService()
+    await stream_service.create_stream("chat_completion", correlation_id="msg-4")
+    revoke_calls: list[str] = []
+
+    monkeypatch.setattr(
+        chat_async_service_module,
+        "_settings",
+        lambda: SimpleNamespace(
+            scheduler=SimpleNamespace(chat=SimpleNamespace(mode="arq"))
+        ),
+    )
+    monkeypatch.setattr(
+        "private_gpt.celery.task_helper.revoke_task",
+        lambda celery_app, task_id: revoke_calls.append(task_id),
+    )
+
+    await _service(stream_service).cancel_stream("msg-4")
+
+    metadata = await stream_service.get_stream_metadata("msg-4")
+    assert metadata is not None
+    assert metadata.status == StreamStatus.CANCELLED
+    assert revoke_calls == []

@@ -3,6 +3,7 @@ from typing import Any
 
 from injector import inject, singleton
 
+from private_gpt.arq.enqueue import enqueue_chat_job
 from private_gpt.celery.dispatch import dispatch_task
 from private_gpt.components.streaming.providers.models import (
     StreamMetadata,
@@ -46,8 +47,8 @@ class ChatAsyncService:
     ) -> str:
         """Initiate a chat completion stream from a :class:`ChatBody`.
 
-        When ``scheduler.chat.mode`` is ``"celery"``, the chat loop is dispatched
-        to a long-lived Celery worker (queue ``chat``) and the API becomes a
+        When ``scheduler.chat.mode`` is ``"celery"`` or ``"arq"``,
+        the chat loop is dispatched to a dedicated worker process and the API becomes a
         pure Redis → SSE proxy. The Redis stream is created on the API side
         so the client can start reading immediately; the worker pushes events
         to that same stream.
@@ -63,6 +64,11 @@ class ChatAsyncService:
 
         if _settings().scheduler.chat.mode == "celery":
             return await self._initiate_chat_stream_worker(
+                body=body,
+                message_id=message_id,
+            )
+        if _settings().scheduler.chat.mode == "arq":
+            return await self._initiate_chat_stream_arq(
                 body=body,
                 message_id=message_id,
             )
@@ -129,6 +135,43 @@ class ChatAsyncService:
 
         return correlation_id
 
+    async def _initiate_chat_stream_arq(
+        self,
+        body: ChatBody,
+        message_id: str | None,
+    ) -> str:
+        stream_service = self.stream_manager.stream_service
+
+        correlation_id = await stream_service.create_stream(
+            stream_type="chat_completion",
+            correlation_id=message_id,
+            metadata={
+                "message_count": len(body.messages),
+            },
+        )
+
+        metadata: dict[str, Any] = {
+            "message_count": len(body.messages),
+        }
+
+        try:
+            await enqueue_chat_job(
+                body=body.model_dump(mode="json"),
+                correlation_id=correlation_id,
+                stream_type="chat_completion",
+                metadata=metadata,
+            )
+        except Exception as e:
+            await stream_service.update_stream_status(
+                correlation_id,
+                StreamStatus.ERROR,
+                error_message=str(e),
+                metadata=metadata,
+            )
+            raise
+
+        return correlation_id
+
     async def get_stream_events(
         self, message_id: str
     ) -> AsyncGenerator[Event, None] | None:
@@ -153,12 +196,14 @@ class ChatAsyncService:
         from private_gpt.celery.task_helper import revoke_task
 
         await self.stream_manager.stream_service.set_cancel_flag(message_id)
-        if _settings().scheduler.chat.mode == "celery":
+        if _settings().scheduler.chat.mode in {"celery", "arq"}:
             await self.stream_manager.stream_service.update_stream_status(
                 message_id,
                 StreamStatus.CANCELLED,
             )
-        revoke_task(celery_app, message_id)
+
+        if _settings().scheduler.chat.mode == "celery":
+            revoke_task(celery_app, message_id)
 
         return await self.stream_manager.cancel_stream(message_id)
 

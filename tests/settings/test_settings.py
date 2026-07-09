@@ -15,7 +15,7 @@ def test_settings_can_be_overriden(injector: MockInjector) -> None:
     assert mocked_settings.server.env_name == "overriden"
 
 
-def test_chat_worker_requires_redis_stream_backend() -> None:
+def test_chat_scheduler_requires_redis_stream_backend() -> None:
     merged = merge_settings(
         [
             unsafe_settings,
@@ -31,7 +31,7 @@ def test_chat_worker_requires_redis_stream_backend() -> None:
         Settings(**merged)
 
 
-def test_chat_worker_requires_real_celery_worker() -> None:
+def test_chat_scheduler_requires_real_celery_worker() -> None:
     merged = merge_settings(
         [
             unsafe_settings,

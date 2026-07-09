@@ -21,6 +21,7 @@ dependencies = [
     "retry-async>=0.1.4,<0.2",
     "nest-asyncio>=1.6.0",
     "nltk>=3.9.1,<4",
+    "arq>=0.26,<0.27",
 ]
 
 [project.scripts]
