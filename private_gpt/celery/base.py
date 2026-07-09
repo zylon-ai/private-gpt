@@ -271,7 +271,11 @@ class StatelessBackgroundTask(_BackgroundTask):
             raise e
         finally:
             if loop:
-                clean_global_injector(loop)
+                if not loop.is_closed():
+                    try:
+                        asyncio.run_coroutine_threadsafe(clean_global_injector(loop), loop).result(timeout=10)
+                    except Exception:
+                        pass
                 with contextlib.suppress(RuntimeError):
                     loop.call_soon_threadsafe(loop.stop)
             if thr:
@@ -369,7 +373,7 @@ class StatefulBackgroundTask(_BackgroundTask):
 
     @classmethod
     async def _shutdown_async(cls) -> None:
-        clean_global_injector()
+        await clean_global_injector()
 
     @classmethod
     def shutdown_runtime(cls) -> None:

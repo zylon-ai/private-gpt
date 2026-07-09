@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import inspect
 import logging
 import threading
 from asyncio import AbstractEventLoop
@@ -97,7 +98,7 @@ def set_injector(injector: Injector) -> None:
             _global_injector = injector
 
 
-def clean_global_injector(loop: AbstractEventLoop | None = None) -> None:
+async def clean_global_injector(loop: AbstractEventLoop | None = None) -> None:
     try:
         loop = loop or asyncio.get_running_loop()
         if not hasattr(loop, _INJECTOR_KEY):
@@ -111,9 +112,12 @@ def clean_global_injector(loop: AbstractEventLoop | None = None) -> None:
             with contextlib.suppress(Exception):
                 impl: Any = injector.get(interface)
                 if hasattr(impl, "close"):
-                    impl.close()
+                    res = impl.close()
+                    if inspect.isawaitable(res):
+                        await res
         with _loop_injector_lock:
-            delattr(loop, _INJECTOR_KEY)
+            if hasattr(loop, _INJECTOR_KEY):
+                delattr(loop, _INJECTOR_KEY)
     except RuntimeError:
         pass
 

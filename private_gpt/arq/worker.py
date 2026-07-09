@@ -33,7 +33,7 @@ async def startup(ctx: dict[Any, Any]) -> None:
 
 async def shutdown(ctx: dict[Any, Any]) -> None:
     del ctx
-    clean_global_injector()
+    await clean_global_injector()
 
 
 async def run_chat_job(
