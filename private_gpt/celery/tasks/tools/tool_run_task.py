@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from private_gpt.celery.base import StatefulBackgroundTask
 from private_gpt.celery.celery import celery_app
 from private_gpt.components.tools.remote_execution import (
+    ToolExecutionRequest,
     ToolExecutionResponse,
     execute_tool_request,
 )
 from private_gpt.events.models import TextBlock
-
-if TYPE_CHECKING:
-    from private_gpt.components.tools.remote_execution import ToolExecutionRequest
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +21,8 @@ logger = logging.getLogger(__name__)
     name="private_gpt.tools.run",
     base=StatefulBackgroundTask,
 )
-async def tool_run_task(request: ToolExecutionRequest) -> dict[str, Any]:
+async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
+    request = ToolExecutionRequest.model_validate(request_data)
     try:
         response = await execute_tool_request(request)
         return response.model_dump(mode="json")

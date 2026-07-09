@@ -72,7 +72,7 @@ class CeleryToolScheduler(BaseToolScheduler):
 
         result = dispatch_task(
             task_name=TOOL_TASK_NAME,
-            args=(request,),
+            kwargs={"request_data": request.model_dump(mode="json")},
             queue=self._settings.scheduler.tools.celery_queue,
         )
 
