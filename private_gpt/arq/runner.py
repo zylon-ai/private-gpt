@@ -4,6 +4,7 @@ import os
 import signal
 import subprocess
 import sys
+from typing import TYPE_CHECKING
 
 from arq.worker import Worker
 
@@ -12,7 +13,10 @@ from private_gpt.arq.settings import (
     get_queue_name,
     get_redis_settings,
 )
-from private_gpt.settings.settings import Settings, settings
+from private_gpt.settings.settings import settings
+
+if TYPE_CHECKING:
+    from private_gpt.settings.settings import Settings
 
 
 def _default_concurrency() -> int:
