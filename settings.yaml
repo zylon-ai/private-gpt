@@ -291,6 +291,7 @@ semaphore:
 
 scheduler:
   ingestion:
+    mode: ${PGPT_INGESTION_SCHEDULER_MODE:local}
     celery_queue: ${PGPT_INGESTION_CELERY_QUEUE:ingestion}
   chat:
     mode: ${PGPT_CHAT_SCHEDULER_MODE:local}
@@ -329,4 +330,3 @@ transformation:
         max_iterations: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MAX_ITERATIONS:2}
         enable_semaphore: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_ENABLE_SEMAPHORE:false}
         mode: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MODE:none}
-
