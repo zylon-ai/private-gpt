@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from injector import inject, singleton
 
 from private_gpt.celery.dispatch import dispatch_task
-from private_gpt.components.streaming.stream.stream_manager import StreamManager
+from private_gpt.components.streaming.stream_component import StreamComponent
 from private_gpt.components.tools.remote_execution import (
     ToolExecutionResponse,
     execute_tool_request,
@@ -76,9 +76,9 @@ class CeleryToolScheduler(BaseToolScheduler):
     """Dispatch tool calls to a dedicated Celery tools worker."""
 
     @inject
-    def __init__(self, settings: Settings, stream_manager: StreamManager) -> None:
+    def __init__(self, settings: Settings, stream_component: StreamComponent) -> None:
         self._settings = settings
-        self._stream_manager = stream_manager
+        self._stream_service = stream_component.stream
 
     async def execute(
         self,
@@ -103,7 +103,7 @@ class CeleryToolScheduler(BaseToolScheduler):
 
         try:
             while not result.ready():
-                if correlation_id and await self._stream_manager.stream_service.is_cancelled(
+                if correlation_id and await self._stream_service.is_cancelled(
                     correlation_id
                 ):
                     await self.cancel(request, result.id)

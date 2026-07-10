@@ -72,7 +72,6 @@ def get_injector(
             )
         return get_injector()
     except RuntimeError:
-        # Not in an asyncio loop, use global injector
         if _global_injector is None:
             with _global_injector_lock:
                 global_injector = create_application_injector()
@@ -92,7 +91,6 @@ def set_injector(injector: Injector) -> None:
             loop = asyncio.get_running_loop()
             setattr(loop, _INJECTOR_KEY, injector)
     except RuntimeError:
-        # Not in an asyncio loop, set global injector
         with _global_injector_lock:
             global _global_injector
             _global_injector = injector

@@ -1,10 +1,13 @@
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
+
 from private_gpt.components.llm.llm_helper import get_tokenizer_fn
-from private_gpt.components.llm.tokenizers.tokenizer_base import TokenizedInput, TokenizerBase
+from private_gpt.components.llm.tokenizers.tokenizer_base import (
+    TokenizedInput,
+    TokenizerBase,
+)
 from private_gpt.utils.tokens import async_tokenizer, estimate_token_count
 
 

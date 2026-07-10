@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -16,7 +17,11 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedToolConfig,
     ToolSpec,
 )
-from private_gpt.components.engines.chat_loop.chat_loop_engine import ChatLoopEngine
+from private_gpt.components.engines.chat_loop.chat_loop_engine import (
+    ChatLoopEngine,
+    _LoopEventHandler,
+    _StreamDeltaState,
+)
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.events.models import (
     RawContentBlockDeltaEvent,
@@ -375,3 +380,86 @@ async def test_loop_preserves_tool_calls_when_last_chunk_has_empty_tool_calls(
         and isinstance(event.content_block, ToolUseBlock)
         for event in events
     )
+
+
+@pytest.mark.asyncio
+async def test_handle_stream_chunk_accumulates_token_ids_delta(
+    base_request: ResolvedChatRequest,
+) -> None:
+    mock_llm = MagicMock(spec=FunctionCallingLLM)
+    mock_llm.metadata.context_window = 4096
+    mock_llm.metadata.num_output = 1024
+    mock_llm.metadata.is_function_calling_model = True
+    mock_llm.callback_manager = MagicMock()
+    mock_llm.completion_to_prompt = lambda prompt, **kwargs: prompt
+    mock_llm.messages_to_prompt = lambda messages, **kwargs: "\n".join(
+        [message.content for message in messages or [] if message and message.content]
+    )
+    mock_llm.get_tool_calls_from_response = lambda *args, **kwargs: []
+
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine = ChatLoopEngine(
+        llm_component=llm_component,
+        request_interceptors=[],
+        response_interceptors=[],
+        max_iterations=2,
+    )
+
+    run = engine.initialize_run(base_request)
+    current_response = ChatResponse(
+        message=ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content=None,
+            additional_kwargs={},
+        ),
+        additional_kwargs={},
+    )
+    handler = _LoopEventHandler(queue=asyncio.Queue())
+    stream_delta_state = _StreamDeltaState()
+    lock = asyncio.Lock()
+
+    first = ChatResponse(
+        message=ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="he",
+            additional_kwargs={"token_ids_delta": [11, 12]},
+        ),
+        delta="he",
+        additional_kwargs={"token_ids_delta": [11, 12]},
+    )
+    second = ChatResponse(
+        message=ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="llo",
+            additional_kwargs={"token_ids_delta": [13]},
+        ),
+        delta="llo",
+        additional_kwargs={"token_ids_delta": [13]},
+    )
+
+    current_response = await engine._handle_stream_chunk(
+        run=run,
+        llm=mock_llm,
+        chunk=first,
+        current_response=current_response,
+        stream_delta_state=stream_delta_state,
+        handler=handler,
+        tool_specs_by_name={},
+        schema_by_name={},
+        lock=lock,
+    )
+    current_response = await engine._handle_stream_chunk(
+        run=run,
+        llm=mock_llm,
+        chunk=second,
+        current_response=current_response,
+        stream_delta_state=stream_delta_state,
+        handler=handler,
+        tool_specs_by_name={},
+        schema_by_name={},
+        lock=lock,
+    )
+
+    assert current_response.message.additional_kwargs["token_ids_delta"] == [11, 12, 13]

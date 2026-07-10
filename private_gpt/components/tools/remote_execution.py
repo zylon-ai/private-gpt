@@ -154,7 +154,7 @@ def build_tool_execution_context(state: ChatLoopState) -> dict[str, Any]:
         "messages": [
             msg.model_dump(mode="json", exclude_none=True)
             for msg in state.input.request.messages
-        ]
+        ],
     }
 
 

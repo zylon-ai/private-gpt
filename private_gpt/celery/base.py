@@ -272,10 +272,10 @@ class StatelessBackgroundTask(_BackgroundTask):
         finally:
             if loop:
                 if not loop.is_closed():
-                    try:
-                        asyncio.run_coroutine_threadsafe(clean_global_injector(loop), loop).result(timeout=10)
-                    except Exception:
-                        pass
+                    with contextlib.suppress(Exception):
+                        asyncio.run_coroutine_threadsafe(
+                            clean_global_injector(loop), loop
+                        ).result(timeout=10)
                 with contextlib.suppress(RuntimeError):
                     loop.call_soon_threadsafe(loop.stop)
             if thr:

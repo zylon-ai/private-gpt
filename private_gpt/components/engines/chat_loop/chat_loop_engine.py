@@ -530,6 +530,14 @@ class ChatLoopEngine:
                         previous if isinstance(previous, str) else ""
                     ) + value
                     continue
+                if key == "token_ids_delta" and isinstance(value, list):
+                    previous = assistant_message.additional_kwargs.get(
+                        "token_ids_delta"
+                    )
+                    assistant_message.additional_kwargs["token_ids_delta"] = (
+                        previous if isinstance(previous, list) else []
+                    ) + value
+                    continue
                 if key == "tool_calls":
                     if isinstance(value, list) and value:
                         assistant_message.additional_kwargs["tool_calls"] = value

@@ -26,7 +26,6 @@ from private_gpt.components.chat.processors.chat_history.memory.utils.splitting 
 )
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import TokenizerFn
-from private_gpt.utils.tokens import async_tokenizer
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
 from private_gpt.components.tools.builders.summary_builder import (
     SummarizeWorkflowBuilder,
@@ -35,6 +34,7 @@ from private_gpt.di import get_global_injector
 from private_gpt.utils.batches import aiter_batch
 from private_gpt.utils.tokens import (
     MessageInputProtocol,
+    async_tokenizer,
     estimate_token_count,
 )
 

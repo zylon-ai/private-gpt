@@ -1,6 +1,6 @@
 import enum
 import json
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from typing import Any, Literal
 
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
@@ -12,6 +12,7 @@ from llama_index.core.memory.types import (
 )
 from llama_index.core.storage.chat_store import BaseChatStore, SimpleChatStore
 
+from private_gpt.components.llm.llm_helper import TokenizerFn
 from private_gpt.utils.tokens import async_tokenizer
 
 DEFAULT_TOKEN_LIMIT_RATIO = 0.75
@@ -60,7 +61,7 @@ class TrimmingMemory(BaseChatStoreMemory):
         default_factory=lambda: _default_text_splitter,
         exclude=True,
     )
-    tokenizer_fn: Callable[[str], Awaitable[list[int]]] = Field(
+    tokenizer_fn: TokenizerFn = Field(
         exclude=True,
     )
 
@@ -115,7 +116,7 @@ class TrimmingMemory(BaseChatStoreMemory):
         allow_partial: bool = False,
         start_on: MessageRole | list[MessageRole] | None = None,
         end_on: MessageRole | list[MessageRole] | None = None,
-        tokenizer_fn: Callable[[str], Awaitable[list[int]]] | None = None,
+        tokenizer_fn: TokenizerFn | None = None,
         text_splitter: Callable[[str], list[str]] | None = None,
         **kwargs: Any,
     ) -> "TrimmingMemory":
