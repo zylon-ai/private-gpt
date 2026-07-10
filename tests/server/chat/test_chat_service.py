@@ -9,11 +9,11 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedChatRequest,
     ResolvedSystemConfig,
 )
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
 from private_gpt.events.models import (
     Event,
@@ -36,7 +36,7 @@ class _PromptInterceptorRequest(ChatRequestLoopInterceptor):
     def __init__(self, label: str) -> None:
         self._label = label
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         state = context.state.model_copy(deep=True)
         current = state.input.request.system.prompt or ""
         state.input.request.system.prompt = f"{current}{self._label}"
@@ -74,7 +74,7 @@ def _mock_engine_for(stream: AsyncGenerator[Event, None]) -> MagicMock:
 async def test_chat_folds_loop_events(injector: MockInjector) -> None:
     service: ChatService = injector.get(ChatService)
     mock_engine = _mock_engine_for(_basic_event_stream())
-    service._build_loop_engine = MagicMock(return_value=mock_engine)
+    service._build_engine = MagicMock(return_value=mock_engine)
 
     request = ResolvedChatRequest(
         messages=[ChatMessage(content="hi", role=MessageRole.USER)],
@@ -96,7 +96,7 @@ async def test_chat_folds_loop_events(injector: MockInjector) -> None:
 async def test_stream_chat_returns_loop_generator(injector: MockInjector) -> None:
     service: ChatService = injector.get(ChatService)
     mock_engine = _mock_engine_for(_basic_event_stream())
-    service._build_loop_engine = MagicMock(return_value=mock_engine)
+    service._build_engine = MagicMock(return_value=mock_engine)
 
     request = ResolvedChatRequest(
         messages=[ChatMessage(content="hi", role=MessageRole.USER)],
@@ -138,7 +138,7 @@ async def test_chat_propagates_fatal_error_to_completion(
 ) -> None:
     service: ChatService = injector.get(ChatService)
     mock_engine = _mock_engine_for(_fatal_event_stream())
-    service._build_loop_engine = MagicMock(return_value=mock_engine)
+    service._build_engine = MagicMock(return_value=mock_engine)
 
     request = ResolvedChatRequest(
         messages=[ChatMessage(content="hi", role=MessageRole.USER)],

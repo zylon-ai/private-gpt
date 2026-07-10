@@ -7,13 +7,13 @@ from llama_index.core.base.llms.types import (
     TextBlock,
 )
 
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.components.llm.custom.base import ZylonLLM
@@ -33,7 +33,7 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
     def __init__(self, llm_component: LLMComponent) -> None:
         self._llm_component = llm_component
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         if context.phase != InterceptorPhase.VALIDATION:
             return
 

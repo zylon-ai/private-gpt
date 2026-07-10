@@ -13,13 +13,13 @@ from private_gpt.components.chat.models.chat_config_models import (
     ToolExecutionMetadata,
     ToolSpec,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
-from private_gpt.components.engines.chat_loop.models.execution_hooks import (
+from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
 )
-from private_gpt.components.engines.chat_loop.utils.tool_utils import execute_tool_call
+from private_gpt.components.engines.chat.utils.tool_utils import execute_tool_call
 from private_gpt.events.models import (
     ResultContentBlockType,
     TextBlock,
@@ -29,10 +29,10 @@ from private_gpt.events.models import (
 if TYPE_CHECKING:
     from llama_index.core.tools import AsyncBaseTool
 
-    from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
-        ChatLoopState,
+    from private_gpt.components.engines.chat.models.chat_state import (
+        ChatState,
     )
-    from private_gpt.components.engines.chat_loop.models.execution_hooks import (
+    from private_gpt.components.engines.chat.models.execution_hooks import (
         ToolExecutionHook,
     )
 
@@ -94,7 +94,7 @@ class ToolExecutor:
     async def execute(
         self,
         request: ToolExecutionRequest,
-        state_ctx: ChatLoopState | None = None,
+        state_ctx: ChatState | None = None,
     ) -> ToolExecutionResponse:
         tool = await rebuild_tool_from_spec(request.tool_spec)
 
@@ -151,7 +151,7 @@ def build_rebuild_metadata(
 async def rebuild_tool_from_spec(tool_spec: ToolSpec) -> AsyncBaseTool:
     metadata = tool_spec.execution_metadata
     if metadata is None:
-        raise ValueError(f"Tool '{tool_spec.name}' is missing execution metadata.")
+        return adapt_to_async_tool(tool_spec.to_function_tool())
 
     rebuilt = await _invoke_rebuild(metadata)
     return adapt_to_async_tool(rebuilt.to_function_tool())
@@ -159,14 +159,14 @@ async def rebuild_tool_from_spec(tool_spec: ToolSpec) -> AsyncBaseTool:
 
 async def execute_tool_request(
     request: ToolExecutionRequest,
-    state_ctx: ChatLoopState | None = None,
+    state_ctx: ChatState | None = None,
     interceptors: list[ToolExecutionInterceptor] | None = None,
 ) -> ToolExecutionResponse:
     executor = ToolExecutor(interceptors=interceptors)
     return await executor.execute(request, state_ctx=state_ctx)
 
 
-def build_tool_execution_context(state: ChatLoopState) -> dict[str, Any]:
+def build_tool_execution_context(state: ChatState) -> dict[str, Any]:
     return {
         "correlation_id": state.input.request.context.correlation_id,
         "messages": [

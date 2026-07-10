@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 
 from injector import singleton
 
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.components.tools.remote_execution import (
@@ -16,8 +16,8 @@ from private_gpt.components.tools.remote_execution import (
 )
 
 if TYPE_CHECKING:
-    from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-        ChatLoopInterceptorContext,
+    from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+        ChatInterceptorContext,
     )
 
 
@@ -30,7 +30,7 @@ class NullToolValuesRequestInterceptor(
 
     async def intercept(
         self,
-        context: ChatLoopInterceptorContext | ToolExecutionInterceptorContext,
+        context: ChatInterceptorContext | ToolExecutionInterceptorContext,
     ) -> None:
         if not isinstance(context, ToolExecutionInterceptorContext):
             return

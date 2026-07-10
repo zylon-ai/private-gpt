@@ -25,46 +25,46 @@ from private_gpt.components.chat.models.chat_config_models import (
 )
 from private_gpt.components.container_registry import ContainerRegistry
 from private_gpt.components.context.models.context_stack import ContextStack
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
     ChatResponseLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.interceptors.ensure_index_is_refreshed_interceptor import (
+from private_gpt.components.engines.chat.interceptors.ensure_index_is_refreshed_interceptor import (
     EnsureIndexIsRefreshedInterceptor,
 )
-from private_gpt.components.engines.chat_loop.interceptors.ensure_timestamp_in_content_blocks_interceptors import (
+from private_gpt.components.engines.chat.interceptors.ensure_timestamp_in_content_blocks_interceptors import (
     EnsureTimestampInContentBlocksInterceptor,
 )
-from private_gpt.components.engines.chat_loop.interceptors.ensure_tools_are_flatten_interceptor import (
+from private_gpt.components.engines.chat.interceptors.ensure_tools_are_flatten_interceptor import (
     EnsureToolAreFlattenInterceptor,
 )
-from private_gpt.components.engines.chat_loop.interceptors.restore_stateless_input_interceptor import (
+from private_gpt.components.engines.chat.interceptors.restore_stateless_input_interceptor import (
     RestoreStatelessInputInterceptorRequest,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
     TimelinePhase,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
-    ChatLoopInputState,
-    ChatLoopOutputState,
-    ChatLoopRuntimeState,
-    ChatLoopState,
-    ChatLoopStatus,
-    ChatLoopTimelineEntry,
+from private_gpt.components.engines.chat.models.chat_state import (
+    ChatInputState,
+    ChatOutputState,
+    ChatRuntimeState,
+    ChatState,
+    ChatStatus,
+    ChatTimelineEntry,
 )
-from private_gpt.components.engines.chat_loop.models.execution_hooks import (
+from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
     ToolExecutionHook,
 )
-from private_gpt.components.engines.chat_loop.utils.request_builder import (
+from private_gpt.components.engines.chat.utils.request_builder import (
     build_initial_context_stack,
     build_request_from_context_stack,
 )
-from private_gpt.components.engines.chat_loop.utils.tool_utils import (
+from private_gpt.components.engines.chat.utils.tool_utils import (
     select_tool_names,
 )
 from private_gpt.components.llm.custom.base import StructuredOutputsParams, ZylonLLM
@@ -124,14 +124,14 @@ class ToolExecutionResult:
 @dataclass
 class LoopExecution:
     events: AsyncGenerator[Event, None]
-    final_state_task: asyncio.Task[ChatLoopState]
+    final_state_task: asyncio.Task[ChatState]
 
 
 @dataclass
 class _LoopRun:
     """Hold mutable runtime references for one run invocation."""
 
-    state: ChatLoopState
+    state: ChatState
     llm: FunctionCallingLLM
     stopped: bool = False
     total_input_tokens: int = 0
@@ -264,7 +264,7 @@ class ChatLoopEngine:
         context_stack: ContextStack | None,
         handler: _LoopEventHandler,
         hooks: list[ToolExecutionHook] | None = None,
-    ) -> ChatLoopState:
+    ) -> ChatState:
         try:
             run = self.initialize_run(
                 request,
@@ -309,7 +309,7 @@ class ChatLoopEngine:
                 )
             )
             handler.emit(RawMessageStopEvent.from_defaults())
-            run.state.output.status = ChatLoopStatus.COMPLETED
+            run.state.output.status = ChatStatus.COMPLETED
             run.state = self._snapshot(run.state, TimelinePhase.STOP)
 
     async def _run_intercepted_iteration(
@@ -319,8 +319,8 @@ class ChatLoopEngine:
     ) -> None:
         iter_handler = _LoopEventHandler(queue=asyncio.Queue())
 
-        def current_context() -> ChatLoopInterceptorContext:
-            return ChatLoopInterceptorContext(
+        def current_context() -> ChatInterceptorContext:
+            return ChatInterceptorContext(
                 state=run.state,
                 llm=run.llm,
                 phase=InterceptorPhase.STREAMING,
@@ -443,6 +443,9 @@ class ChatLoopEngine:
             lock=lock,
         )
 
+        for key, value in llm_response.additional_kwargs.items():
+            llm_response.message.additional_kwargs.setdefault(key, value)
+
         # The order is important:
         # OpenAI returns a custom model instead of ToolSelection
         # We have to extract, and override before to add the history again
@@ -475,7 +478,7 @@ class ChatLoopEngine:
             stop_reason = assistant_message.additional_kwargs.get("stop_reason")
             run.state = run.state.model_copy(deep=True)
             run.state.output.stop_reason = stop_reason
-            run.state.output.status = ChatLoopStatus.COMPLETED
+            run.state.output.status = ChatStatus.COMPLETED
             run.stopped = True
             handler.emit(
                 RawMessageDeltaEvent(
@@ -516,7 +519,7 @@ class ChatLoopEngine:
 
         if has_pending_tool:
             run.state = run.state.model_copy(deep=True)
-            run.state.output.status = ChatLoopStatus.WAITING
+            run.state.output.status = ChatStatus.WAITING
             run.state.output.pending_async_tools = pending_async
             run.stopped = True
             run.state = self._snapshot(run.state, TimelinePhase.STOP)
@@ -534,7 +537,7 @@ class ChatLoopEngine:
                 )
             )
             handler.emit(RawMessageStopEvent.from_defaults())
-            run.state.output.status = ChatLoopStatus.COMPLETED
+            run.state.output.status = ChatStatus.COMPLETED
             run.state = self._snapshot(run.state, TimelinePhase.STOP)
             return
 
@@ -583,9 +586,15 @@ class ChatLoopEngine:
                     previous = assistant_message.additional_kwargs.get(
                         "token_ids_delta"
                     )
-                    assistant_message.additional_kwargs["token_ids_delta"] = (
-                        previous if isinstance(previous, list) else []
-                    ) + value
+                    existing = previous if isinstance(previous, list) else []
+                    if not (
+                        value
+                        and len(existing) >= len(value)
+                        and existing[-len(value) :] == value
+                    ):
+                        assistant_message.additional_kwargs["token_ids_delta"] = (
+                            existing + value
+                        )
                     continue
                 if key == "tool_calls":
                     if isinstance(value, list) and value:
@@ -850,18 +859,18 @@ class ChatLoopEngine:
             if structured is not None:
                 llm_kwargs["structured_outputs"] = structured
 
-        state = ChatLoopState(
-            input=ChatLoopInputState(
+        state = ChatState(
+            input=ChatInputState(
                 request=request,
                 context_stack=context_stack or build_initial_context_stack(request),
                 sampling_params=dict(request.sampling_params),
                 llm_kwargs=llm_kwargs,
             ),
-            runtime=ChatLoopRuntimeState(
+            runtime=ChatRuntimeState(
                 iteration=0,
                 max_iterations=self._max_iterations,
             ),
-            output=ChatLoopOutputState(),
+            output=ChatOutputState(),
             timeline=[],
         )
         state.original_input = state.input.model_copy(deep=True)
@@ -890,7 +899,7 @@ class ChatLoopEngine:
         run.state = self._snapshot(run.state, phase_marker)
 
         for interceptor in interceptors:
-            context = ChatLoopInterceptorContext(
+            context = ChatInterceptorContext(
                 state=run.state,
                 llm=run.llm,
                 phase=phase,
@@ -899,7 +908,7 @@ class ChatLoopEngine:
             await interceptor.intercept(context)
             run.state = context.state
 
-    def _build_tools(self, state: ChatLoopState) -> list[AsyncBaseTool]:
+    def _build_tools(self, state: ChatState) -> list[AsyncBaseTool]:
         """Resolve tool specs into async llama-index tools for current state."""
         tool_specs = state.input.context_stack.all_tools()
         if not tool_specs:
@@ -1040,11 +1049,11 @@ class ChatLoopEngine:
 
         return ToolExecutionResult(status=ToolExecutionStatus.EXECUTED)
 
-    def _snapshot(self, state: ChatLoopState, phase: TimelinePhase) -> ChatLoopState:
+    def _snapshot(self, state: ChatState, phase: TimelinePhase) -> ChatState:
         """Append one immutable timeline entry."""
         new_state = state.model_copy(deep=True)
         new_state.timeline.append(
-            ChatLoopTimelineEntry(
+            ChatTimelineEntry(
                 iteration=new_state.runtime.iteration,
                 phase=phase,
                 conversation_size=len(new_state.input.request.to_messages()),

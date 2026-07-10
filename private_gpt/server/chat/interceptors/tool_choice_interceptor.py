@@ -6,13 +6,13 @@ from private_gpt.components.chat.processors.chat_history.tools.tool_choices impo
 )
 from private_gpt.components.context.models.context_layer import ToolDefinitionsLayer
 from private_gpt.components.context.models.layer_type import LayerType
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 
@@ -21,14 +21,14 @@ from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
 class ToolChoiceRequestInterceptor(ChatRequestLoopInterceptor):
     """Filter tools and update user message hint for forced tool choice."""
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         """Apply tool choice policy to history and available tools."""
         if context.phase == InterceptorPhase.BEFORE_ITERATION:
             await self.intercept_before(context)
         elif context.phase == InterceptorPhase.AFTER_ITERATION:
             await self.intercept_after(context)
 
-    async def intercept_before(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept_before(self, context: ChatInterceptorContext) -> None:
         state = context.state
         history, tools, new_tool_choice = await process_tool_choices(
             chat_history=state.input.request.messages,
@@ -50,7 +50,7 @@ class ToolChoiceRequestInterceptor(ChatRequestLoopInterceptor):
 
         context.set_state(new_state)
 
-    async def intercept_after(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept_after(self, context: ChatInterceptorContext) -> None:
         state = context.state
         tool_choices = state.input.request.tool_config.tool_choices
 

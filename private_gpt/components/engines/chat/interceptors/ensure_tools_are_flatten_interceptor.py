@@ -1,19 +1,19 @@
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from llama_index.core.llms.llm import ToolSelection
 
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 
 
 class EnsureToolAreFlattenInterceptor(ChatRequestLoopInterceptor):
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         if context.phase != InterceptorPhase.AFTER_ITERATION:
             return
 

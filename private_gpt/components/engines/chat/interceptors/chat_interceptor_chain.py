@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
     ChatResponseLoopInterceptor,
 )

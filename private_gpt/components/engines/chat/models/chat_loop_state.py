@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from private_gpt.components.chat.models.chat_config_models import ChatRequest
 from private_gpt.components.context.models.context_stack import ContextStack
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     TimelinePhase,
 )
 from private_gpt.components.llm.llm_helper import AsyncTokenizerFn, TokenizerFn
@@ -16,7 +16,7 @@ from private_gpt.components.skills.models.skill_entities import (
 )
 
 
-class ChatLoopInputState(BaseModel):
+class ChatInputState(BaseModel):
     """Request-scoped inputs for one loop run.
 
     ``request``       — the original immutable ChatRequest (restored each iteration).
@@ -36,7 +36,7 @@ class ChatLoopInputState(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class ChatLoopRuntimeState(BaseModel):
+class ChatRuntimeState(BaseModel):
     """Store runtime counters."""
 
     effective_token_limit: int | None = None
@@ -44,27 +44,32 @@ class ChatLoopRuntimeState(BaseModel):
 
     iteration: int = 0
     max_iterations: int = 40
-    cache: "ChatLoopRuntimeCache" = Field(
-        default_factory=lambda: ChatLoopRuntimeCache()
-    )
+    cache: "ChatRuntimeCache" = Field(default_factory=lambda: ChatRuntimeCache())
+    next_block_count: int = 0
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    has_input_usage: bool = False
+    has_output_usage: bool = False
 
 
-class ChatLoopStatus(StrEnum):
+class ChatStatus(StrEnum):
     RUNNING = "running"
     WAITING = "waiting"
     COMPLETED = "completed"
+    CONTINUE = "continue"
 
 
-class ChatLoopOutputState(BaseModel):
+class ChatOutputState(BaseModel):
     """Store loop outputs and pending external handoffs."""
 
     stop_reason: str | None = None
     pending_external_tool_calls: list[ToolSelection] = Field(default_factory=list)
-    status: ChatLoopStatus = ChatLoopStatus.RUNNING
+    status: ChatStatus = ChatStatus.RUNNING
     pending_async_tools: dict[str, str] = Field(default_factory=dict)
+    pause_type: str = "after_tool"
 
 
-class ChatLoopTimelineEntry(BaseModel):
+class ChatTimelineEntry(BaseModel):
     """Capture one immutable timeline snapshot for debugging."""
 
     iteration: int
@@ -85,21 +90,21 @@ class SkillsRuntimeCache(BaseModel):
     )
 
 
-class ChatLoopRuntimeCache(BaseModel):
+class ChatRuntimeCache(BaseModel):
     """Runtime cache buckets for interceptors."""
 
     skill: SkillsRuntimeCache | None = None
 
 
-class ChatLoopState(BaseModel):
+class ChatState(BaseModel):
     """Aggregate clonable loop state sections and history timeline."""
 
-    input: ChatLoopInputState
-    runtime: ChatLoopRuntimeState
-    output: ChatLoopOutputState
+    input: ChatInputState
+    runtime: ChatRuntimeState
+    output: ChatOutputState
 
-    original_input: ChatLoopInputState | None = Field(default=None)
-    timeline: list[ChatLoopTimelineEntry] = Field(default_factory=list)
+    original_input: ChatInputState | None = Field(default=None)
+    timeline: list[ChatTimelineEntry] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

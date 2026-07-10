@@ -1,9 +1,9 @@
 from injector import inject, singleton
 
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor_chain import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor_chain import (
     ChatLoopInterceptorChain,
 )
-from private_gpt.components.engines.chat_loop.interceptors.restore_stateless_input_interceptor import (
+from private_gpt.components.engines.chat.interceptors.restore_stateless_input_interceptor import (
     RestoreStatelessInputInterceptorRequest,
 )
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService

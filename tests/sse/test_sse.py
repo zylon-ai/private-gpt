@@ -28,9 +28,9 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedToolConfig,
     ToolSpec,
 )
-from private_gpt.components.engines.chat_loop.chat_loop_engine import ChatLoopEngine
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.chat_engine import ChatLoopEngine
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.events.models import (
@@ -59,7 +59,7 @@ from private_gpt.server.chat.interceptors.ping_loop_interceptor import PingInter
 from tests.fixtures.mock_function_llm import get_mock_function_calling_llm
 
 if TYPE_CHECKING:
-    from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+    from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
         ChatResponseLoopInterceptor,
     )
 
@@ -87,7 +87,7 @@ async def _collect_from_gen(
     queue: asyncio.Queue = asyncio.Queue()
     sentinel = object()
 
-    ctx = MagicMock(spec=ChatLoopInterceptorContext)
+    ctx = MagicMock(spec=ChatInterceptorContext)
     ctx.state = MagicMock()
     ctx.state.input = MagicMock()
     ctx.state.input.request = MagicMock()

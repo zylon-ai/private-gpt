@@ -2,11 +2,11 @@ import asyncio
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatResponseLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
 from private_gpt.components.engines.citations.utils import (
     extract_citations_by_original_text,
@@ -31,12 +31,12 @@ class ExtractCitationInterceptor(ChatResponseLoopInterceptor):
         self._documents: list[Document] = []
         self._citation_indices: dict[str, int] = {}
 
-    async def on_iteration_start(self, context: ChatLoopInterceptorContext) -> None:
+    async def on_iteration_start(self, context: ChatInterceptorContext) -> None:
         self._send_text = ""
         self._send_citations = []
         self._current_text = ""
 
-    async def on_iteration_end(self, context: ChatLoopInterceptorContext) -> None:
+    async def on_iteration_end(self, context: ChatInterceptorContext) -> None:
         # Mutate the context state to include the final citations for this iteration
         if self._send_citations:
             new_state = context.state.model_copy(deep=True)
@@ -52,7 +52,7 @@ class ExtractCitationInterceptor(ChatResponseLoopInterceptor):
     async def intercept_event(
         self,
         event: Event,
-        context: ChatLoopInterceptorContext,
+        context: ChatInterceptorContext,
     ) -> Event | None:
         citations_is_enabled = context.state.input.request.citation.enabled
         documents = self._documents or context.state.input.context_stack.all_documents()

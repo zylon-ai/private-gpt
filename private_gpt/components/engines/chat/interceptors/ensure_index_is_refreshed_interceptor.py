@@ -1,11 +1,11 @@
 from collections.abc import Mapping
 from typing import Any
 
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatResponseLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
 from private_gpt.events.models import (
     Event,
@@ -20,11 +20,12 @@ class EnsureIndexIsRefreshedInterceptor(ChatResponseLoopInterceptor):
     _current_index: int = 0
     _block_id_map: dict[str, int] | None = None
 
-    async def on_iteration_start(self, context: ChatLoopInterceptorContext) -> None:
+    async def on_iteration_start(self, context: ChatInterceptorContext) -> None:
         self._block_id_map = {}
+        self._current_index = context.state.runtime.next_block_count
 
     async def intercept_event(
-        self, event: Event, context: ChatLoopInterceptorContext
+        self, event: Event, context: ChatInterceptorContext
     ) -> Event | None:
         if self._block_id_map is None:
             raise ValueError("Block ID map is not initialized. This should not happen.")
@@ -36,6 +37,7 @@ class EnsureIndexIsRefreshedInterceptor(ChatResponseLoopInterceptor):
                     )
                 self._block_id_map[block_id] = self._current_index
                 self._current_index += 1
+                context.state.runtime.next_block_count = self._current_index
                 return event.model_copy(update={"index": self._block_id_map[block_id]})
 
             case RawContentBlockDeltaEvent(

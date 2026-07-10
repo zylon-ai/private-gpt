@@ -16,8 +16,8 @@ from private_gpt.settings.settings import Settings
 TOOL_TASK_NAME = "private_gpt.tools.run"
 
 if TYPE_CHECKING:
-    from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
-        ChatLoopState,
+    from private_gpt.components.engines.chat.models.chat_state import (
+        ChatState,
     )
     from private_gpt.components.tools.remote_execution import (
         ToolExecutionInterceptor,
@@ -37,7 +37,7 @@ class BaseToolScheduler(ABC):
     async def execute(
         self,
         request: ToolExecutionRequest,
-        state_ctx: ChatLoopState | None = None,
+        state_ctx: ChatState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
         ...
@@ -45,7 +45,7 @@ class BaseToolScheduler(ABC):
     async def async_execute(
         self,
         request: ToolExecutionRequest,
-        state_ctx: ChatLoopState | None = None,
+        state_ctx: ChatState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> str:
         del request, state_ctx, interceptors
@@ -75,7 +75,7 @@ class LocalToolScheduler(BaseToolScheduler):
     async def execute(
         self,
         request: ToolExecutionRequest,
-        state_ctx: ChatLoopState | None = None,
+        state_ctx: ChatState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
         return await execute_tool_request(
@@ -106,7 +106,7 @@ class CeleryToolScheduler(BaseToolScheduler):
     async def execute(
         self,
         request: ToolExecutionRequest,
-        state_ctx: ChatLoopState | None = None,
+        state_ctx: ChatState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
         del request, state_ctx, interceptors
@@ -131,7 +131,7 @@ class CeleryToolScheduler(BaseToolScheduler):
     async def async_execute(
         self,
         request: ToolExecutionRequest,
-        state_ctx: ChatLoopState | None = None,
+        state_ctx: ChatState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> str:
         del state_ctx, interceptors

@@ -2,11 +2,11 @@ import datetime
 from collections.abc import Mapping
 from typing import Any
 
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatResponseLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
 from private_gpt.events.models import (
     Event,
@@ -17,7 +17,7 @@ from private_gpt.events.models import (
 
 class EnsureTimestampInContentBlocksInterceptor(ChatResponseLoopInterceptor):
     async def intercept_event(
-        self, event: Event, context: ChatLoopInterceptorContext
+        self, event: Event, context: ChatInterceptorContext
     ) -> Event | None:
         match event:
             case RawContentBlockStartEvent():

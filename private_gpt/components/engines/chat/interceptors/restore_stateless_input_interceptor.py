@@ -4,13 +4,13 @@ from pydantic import Field
 
 from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.context.models.layer_type import LayerType
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 
@@ -72,7 +72,7 @@ class RestoreStatelessInputInterceptorRequest(ChatRequestLoopInterceptor):
 
         return ContextStack(layers=merged_layers)
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         """Copy stateless fields from original_input into the current input state."""
         if context.phase != InterceptorPhase.BEFORE_ITERATION:
             return

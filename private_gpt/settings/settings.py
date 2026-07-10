@@ -462,11 +462,11 @@ class PreprocessSettings(BaseModel):
 
 
 class SchedulerSettings(BaseModel):
-    mode: Literal["local", "celery", "arq"] = Field(
+    mode: Literal["local", "arq", "celery"] = Field(
         default="local",
         description=(
-            "``'local'`` runs in-process. ``'celery'`` dispatches to a dedicated "
-            "Celery worker. ``'arq'`` dispatches to a dedicated arq async worker process."
+            "``'local'`` runs in-process. ``'arq'`` dispatches to a dedicated "
+            "arq async worker process. ``'celery'`` dispatches to a Celery worker."
         ),
     )
     celery_queue: str = Field(
@@ -1718,14 +1718,8 @@ class Settings(BaseModel):
 
         if self.stream.broker != "redis":
             raise ValueError(
-                "scheduler.chat.mode in {'celery','arq'} requires stream.broker=redis "
+                "scheduler.chat.mode='arq' requires stream.broker=redis "
                 "because API and chat worker processes must share stream state."
-            )
-
-        if self.scheduler.chat.mode == "celery" and not self.celery.use_workers:
-            raise ValueError(
-                "scheduler.chat.mode=celery requires celery.use_workers=true so chat "
-                "requests are executed by a real worker process."
             )
 
         return self

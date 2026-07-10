@@ -10,6 +10,7 @@ from private_gpt.components.streaming.providers.models import (
 )
 from private_gpt.events.utils import to_sse_stream
 from private_gpt.server.chat.chat_models import ChatBody
+from private_gpt.server.chat.chat_request_mapper import ChatRequestMapper
 from private_gpt.server.chat_async.chat_async_service import ChatAsyncService
 from private_gpt.server.utils.auth import authenticated
 from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
@@ -273,8 +274,10 @@ async def chat_messages(
     * Stream status can be monitored via status endpoint
     """
     chat_service: ChatAsyncService = request.state.injector.get(ChatAsyncService)
+    request_mapper: ChatRequestMapper = request.state.injector.get(ChatRequestMapper)
+    chat_request = await request_mapper.create_request_from_body(body)
     message_id = await chat_service.initiate_chat_stream(
-        body=body,
+        request=chat_request,
         message_id=message_id,
     )
 

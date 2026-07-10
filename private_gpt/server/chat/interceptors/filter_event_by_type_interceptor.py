@@ -1,11 +1,11 @@
 from collections.abc import Mapping
 from typing import Any, Literal
 
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatResponseLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
 from private_gpt.events.models import (
     Event,
@@ -18,16 +18,16 @@ class FilterZylonInterceptor(ChatResponseLoopInterceptor):
     def __init__(self) -> None:
         self._active_blocks: set[str] = set()
 
-    async def on_iteration_start(self, context: ChatLoopInterceptorContext) -> None:
+    async def on_iteration_start(self, context: ChatInterceptorContext) -> None:
         self._active_blocks.clear()
 
-    async def on_iteration_end(self, context: ChatLoopInterceptorContext) -> None:
+    async def on_iteration_end(self, context: ChatInterceptorContext) -> None:
         self._active_blocks.clear()
 
     async def intercept_event(
         self,
         event: Event,
-        context: ChatLoopInterceptorContext,
+        context: ChatInterceptorContext,
     ) -> Event | None:
         response_format: Literal["zylon", "anthropic"] = (
             "zylon"

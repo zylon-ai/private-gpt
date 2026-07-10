@@ -10,6 +10,7 @@ from private_gpt.events.event_folding import fold
 from private_gpt.events.models import Event, FatalError, Message
 from private_gpt.events.utils import to_message, to_sse_stream
 from private_gpt.server.chat.chat_models import ChatBody
+from private_gpt.server.chat.chat_request_mapper import ChatRequestMapper
 from private_gpt.server.chat_async.chat_async_service import ChatAsyncService
 
 logger = logging.getLogger(__name__)
@@ -24,28 +25,24 @@ class ChatAsyncFacadeService:
     def __init__(
         self,
         chat_async_service: ChatAsyncService,
+        chat_request_mapper: ChatRequestMapper,
     ) -> None:
         self._chat_async_service = chat_async_service
+        self._chat_request_mapper = chat_request_mapper
 
     async def chat(
-        self,
-        http_request: Request,
-        body: ChatBody,
-        message_id: str | None = None,
+        self, http_request: Request, body: ChatBody, message_id: str | None = None
     ) -> Message | FatalError | StreamingResponse:
         """Handle chat with proper cancellation support for FastAPI.
-
-        Accepts only :class:`ChatBody` (the API model). The mapping to the
-        internal :class:`ChatRequest` is handled inside
-        :class:`ChatAsyncService`.
 
         When FastAPI request is cancelled (client disconnects), this ensures:
         1. Stream is properly cancelled in the StreamManager
         2. Resources are cleaned up
         3. CancelledError is re-raised to maintain asyncio semantics
         """
+        chat_request = await self._chat_request_mapper.create_request_from_body(body)
         message_id = await self._chat_async_service.initiate_chat_stream(
-            body=body, message_id=message_id
+            request=chat_request, message_id=message_id
         )
         event_generator = await self._chat_async_service.get_stream_events(
             message_id=message_id,

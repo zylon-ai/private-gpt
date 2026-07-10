@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import AsyncGenerator
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -17,12 +18,15 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedToolConfig,
     ToolSpec,
 )
-from private_gpt.components.engines.chat_loop.chat_loop_engine import (
-    ChatLoopEngine,
-    _LoopEventHandler,
+from private_gpt.components.engines.chat.async_chat_engine import (
+    AsyncChatEngine,
+    _EventHandler,
     _StreamDeltaState,
 )
+from private_gpt.components.engines.chat.chat_engine import ChatLoopEngine
 from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.streaming.tasks.chat_scheduler import LocalChatScheduler
+from private_gpt.components.tools.tool_scheduler import LocalToolScheduler
 from private_gpt.events.models import (
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
@@ -39,6 +43,33 @@ async def _noop_tool(value: str) -> str:
     return f"ok:{value}"
 
 
+async def _collect_events(events: AsyncGenerator[Any, None]) -> list[Any]:
+    return [event async for event in events]
+
+
+async def _run_engine(
+    engine: Any,
+    request: ResolvedChatRequest,
+) -> list[Any]:
+    execution = await engine.run(request)
+    events = await _collect_events(execution.events)
+    await execution.final_state_task
+    return events
+
+
+ENGINE_CONFIGS = [
+    pytest.param(
+        AsyncChatEngine,
+        {
+            "tool_scheduler": LocalToolScheduler(),
+            "chat_scheduler": LocalChatScheduler(),
+        },
+        id="async",
+    ),
+    pytest.param(ChatLoopEngine, {}, id="sync"),
+]
+
+
 @pytest.fixture
 def base_request() -> ResolvedChatRequest:
     return ResolvedChatRequest(
@@ -48,26 +79,33 @@ def base_request() -> ResolvedChatRequest:
 
 
 @pytest.mark.asyncio
-async def test_loop_emits_text_and_stop(base_request: ResolvedChatRequest) -> None:
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_emits_text_and_stop(
+    base_request: ResolvedChatRequest, engine_cls: Any, engine_kwargs: dict
+) -> None:
     mock_llm = get_mock_function_calling_llm(["hello", " world"])
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
 
-    engine = ChatLoopEngine(
+    engine = engine_cls(
         llm_component=llm_component,
         request_interceptors=[],
         response_interceptors=[],
         max_iterations=2,
+        **engine_kwargs,
     )
 
-    events = [event async for event in engine.run(base_request)]
+    events = await _run_engine(engine, base_request)
     assert any(isinstance(event, RawContentBlockDeltaEvent) for event in events)
     assert any(isinstance(event, RawMessageStopEvent) for event in events)
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
 async def test_loop_streams_tool_use_and_tool_result(
     base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
 ) -> None:
     request = base_request.model_copy(deep=True)
     request.tool_config = ResolvedToolConfig(
@@ -96,14 +134,15 @@ async def test_loop_streams_tool_use_and_tool_result(
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
 
-    engine = ChatLoopEngine(
+    engine = engine_cls(
         llm_component=llm_component,
         request_interceptors=[],
         response_interceptors=[],
         max_iterations=4,
+        **engine_kwargs,
     )
 
-    events = [event async for event in engine.run(request)]
+    events = await _run_engine(engine, request)
     assert any(
         isinstance(event, RawContentBlockStartEvent)
         and isinstance(event.content_block, ToolUseBlock)
@@ -117,7 +156,10 @@ async def test_loop_streams_tool_use_and_tool_result(
 
 
 @pytest.mark.asyncio
-async def test_loop_streams_reasoning_blocks(base_request: ResolvedChatRequest) -> None:
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_streams_reasoning_blocks(
+    base_request: ResolvedChatRequest, engine_cls: Any, engine_kwargs: dict
+) -> None:
     mock_llm = MagicMock(spec=FunctionCallingLLM)
     mock_llm.metadata.context_window = 4096
     mock_llm.metadata.num_output = 1024
@@ -170,14 +212,15 @@ async def test_loop_streams_reasoning_blocks(base_request: ResolvedChatRequest) 
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
 
-    engine = ChatLoopEngine(
+    engine = engine_cls(
         llm_component=llm_component,
         request_interceptors=[],
         response_interceptors=[],
         max_iterations=2,
+        **engine_kwargs,
     )
 
-    events = [event async for event in engine.run(base_request)]
+    events = await _run_engine(engine, base_request)
     assert any(
         isinstance(event, RawContentBlockStartEvent)
         and isinstance(event.content_block, ThinkingBlock)
@@ -186,8 +229,11 @@ async def test_loop_streams_reasoning_blocks(base_request: ResolvedChatRequest) 
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
 async def test_loop_accumulates_usage_across_iterations(
     base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
 ) -> None:
     request = base_request.model_copy(deep=True)
     request.tool_config = ResolvedToolConfig(
@@ -274,14 +320,15 @@ async def test_loop_accumulates_usage_across_iterations(
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
 
-    engine = ChatLoopEngine(
+    engine = engine_cls(
         llm_component=llm_component,
         request_interceptors=[],
         response_interceptors=[],
         max_iterations=4,
+        **engine_kwargs,
     )
 
-    events = [event async for event in engine.run(request)]
+    events = await _run_engine(engine, request)
     message_deltas = [
         event for event in events if isinstance(event, RawMessageDeltaEvent)
     ]
@@ -292,8 +339,11 @@ async def test_loop_accumulates_usage_across_iterations(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
 async def test_loop_preserves_tool_calls_when_last_chunk_has_empty_tool_calls(
     base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
 ) -> None:
     request = base_request.model_copy(deep=True)
     request.tool_config = ResolvedToolConfig(
@@ -367,14 +417,15 @@ async def test_loop_preserves_tool_calls_when_last_chunk_has_empty_tool_calls(
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
 
-    engine = ChatLoopEngine(
+    engine = engine_cls(
         llm_component=llm_component,
         request_interceptors=[],
         response_interceptors=[],
         max_iterations=2,
+        **engine_kwargs,
     )
 
-    events = [event async for event in engine.run(request)]
+    events = await _run_engine(engine, request)
     assert any(
         isinstance(event, RawContentBlockStartEvent)
         and isinstance(event.content_block, ToolUseBlock)
@@ -383,8 +434,11 @@ async def test_loop_preserves_tool_calls_when_last_chunk_has_empty_tool_calls(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
 async def test_handle_stream_chunk_accumulates_token_ids_delta(
     base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
 ) -> None:
     mock_llm = MagicMock(spec=FunctionCallingLLM)
     mock_llm.metadata.context_window = 4096
@@ -400,11 +454,12 @@ async def test_handle_stream_chunk_accumulates_token_ids_delta(
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
 
-    engine = ChatLoopEngine(
+    engine = engine_cls(
         llm_component=llm_component,
         request_interceptors=[],
         response_interceptors=[],
         max_iterations=2,
+        **engine_kwargs,
     )
 
     run = engine.initialize_run(base_request)
@@ -416,7 +471,7 @@ async def test_handle_stream_chunk_accumulates_token_ids_delta(
         ),
         additional_kwargs={},
     )
-    handler = _LoopEventHandler(queue=asyncio.Queue())
+    handler = _EventHandler(queue=asyncio.Queue())
     stream_delta_state = _StreamDeltaState()
     lock = asyncio.Lock()
 

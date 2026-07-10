@@ -1,24 +1,34 @@
-from __future__ import annotations
-
 import asyncio
 from collections.abc import AsyncGenerator
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from injector import inject, singleton
 from pydantic import BaseModel, Field, ValidationError
 
+from private_gpt.chat.extensions.citation import ZylonCitation
 from private_gpt.chat.input_models import CountTokensOutput
+from private_gpt.components.chat.models.chat_config_models import (
+    ChatRequest,
+    ResolvedChatRequest,
+)
+from private_gpt.components.chunk.models import SourceType
 from private_gpt.components.container_registry import ContainerRegistry
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
-from private_gpt.components.engines.chat_loop.chat_loop_engine import ChatLoopEngine
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.async_chat_engine import (
+    AsyncChatEngine,
+)
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
+)
+from private_gpt.components.engines.chat.models.execution_hooks import (
+    ExecutionHooks,
 )
 from private_gpt.components.ingest.ingest_component import IngestComponent
 from private_gpt.components.llm.custom.base import ZylonLLM
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.models import ReasoningEffort
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
+from private_gpt.components.streaming.tasks.chat_scheduler import ChatSchedulerFactory
 from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
@@ -41,18 +51,6 @@ from private_gpt.server.chat.interceptors.chat_interceptor_service import (
 from private_gpt.server.models.models_service import ModelsService
 from private_gpt.settings.settings import Settings
 from private_gpt.utils.tokens import estimate_token_count
-
-if TYPE_CHECKING:
-    from private_gpt.chat.extensions.citation import ZylonCitation
-    from private_gpt.components.chat.models.chat_config_models import (
-        ChatRequest,
-        ResolvedChatRequest,
-    )
-    from private_gpt.components.chunk.models import SourceType
-    from private_gpt.components.engines.chat_loop.chat_loop_engine import LoopExecution
-    from private_gpt.components.engines.chat_loop.models.execution_hooks import (
-        ToolExecutionHook,
-    )
 
 
 class Completion(BaseModel):
@@ -112,7 +110,9 @@ class Completion(BaseModel):
         arbitrary_types_allowed = True
 
         @staticmethod
-        def json_schema_extra(schema: dict[str, Any], model: type[Completion]) -> None:
+        def json_schema_extra(
+            schema: dict[str, Any], model: type["Completion"]
+        ) -> None:
             props = schema.get("properties", {})
             for prop_name in ["response", "sources", "citations"]:
                 if prop_name in props:
@@ -159,6 +159,7 @@ class ChatService:
         models_service: ModelsService,
         container_registry: ContainerRegistry,
         scheduler_factory: ToolSchedulerFactory,
+        chat_scheduler_factory: ChatSchedulerFactory,
     ) -> None:
         self.settings = settings
         self.llm_component = llm_component
@@ -170,13 +171,14 @@ class ChatService:
         self.models_service = models_service
         self.container_registry = container_registry
         self._tool_scheduler = scheduler_factory.get()
+        self._chat_scheduler = chat_scheduler_factory.get()
 
-    def _build_loop_engine(self) -> ChatLoopEngine:
+    def build_engine(self) -> AsyncChatEngine:
         # Don't build a singleton since the interceptors
         # and state can be mutated during the loop execution
         # for several threads handling different requests in parallel
         chain = self.chat_interceptor_service.get_chain()
-        return ChatLoopEngine(
+        return AsyncChatEngine(
             llm_component=self.llm_component,
             request_interceptors=chain.request_interceptors,
             response_interceptors=chain.response_interceptors,
@@ -184,15 +186,16 @@ class ChatService:
             max_iterations=40,
             container_registry=self.container_registry,
             tool_scheduler=self._tool_scheduler,
+            chat_scheduler=self._chat_scheduler,
         )
 
     async def stream_chat(
         self,
         request: ChatRequest,
-        hooks: list[ToolExecutionHook] | None = None,
+        hooks: ExecutionHooks | None = None,
     ) -> CompletionGen:
-        loop_engine = await asyncio.to_thread(self._build_loop_engine)
-        execution: LoopExecution = await loop_engine.run(
+        engine = await asyncio.to_thread(self.build_engine)
+        execution = await engine.run(
             request,
             hooks=hooks,
         )
@@ -201,8 +204,12 @@ class ChatService:
             final_state_task=execution.final_state_task,
         )
 
-    async def chat(self, request: ChatRequest) -> Completion:
-        completion_gen = await self.stream_chat(request)
+    async def chat(
+        self,
+        request: ChatRequest,
+        hooks: ExecutionHooks | None = None,
+    ) -> Completion:
+        completion_gen = await self.stream_chat(request, hooks=hooks)
         wrapped_response = await fold(completion_gen.events)
         usage = Usage.model_validate(wrapped_response.usage or {})
         return Completion(
@@ -212,15 +219,19 @@ class ChatService:
             usage=usage,
         )
 
+    async def cancel(self, correlation_id: str) -> bool:
+        engine = await asyncio.to_thread(self.build_engine)
+        return await engine.cancel(correlation_id)
+
     async def validate(self, request: ResolvedChatRequest) -> ChatValidationResult:
         errors: list[str] = []
 
         try:
-            loop_engine = await asyncio.to_thread(self._build_loop_engine)
-            await loop_engine.run_interceptor_phase(
-                run=loop_engine.initialize_run(request),
+            engine = await asyncio.to_thread(self.build_engine)
+            await engine.run_interceptor_phase(
+                run=engine.initialize_run(request),
                 phase=InterceptorPhase.VALIDATION,
-                interceptors=loop_engine._request_interceptors,
+                interceptors=engine._request_interceptors,
             )
         except ValidationError as e:
             for err in e.errors():

@@ -3,8 +3,9 @@ from arq.connections import RedisSettings
 from private_gpt.settings.settings import Settings
 
 CHAT_HEALTH_CHECK_KEY_PREFIX = "private_gpt:arq:health"
-CHAT_TASK_NAME = "private_gpt.chat.run"
-TOOL_DONE_TASK_NAME = "private_gpt.tool.done"
+START_CHAT_TASK_NAME = "private_gpt.chat.start"
+RESUME_ITERATION_TASK_NAME = "private_gpt.chat.resume_iteration"
+TOOL_RESUME_TASK_NAME = "private_gpt.tool.resume"
 CHAT_QUEUE_PREFIX = "private_gpt:arq:queue"
 
 

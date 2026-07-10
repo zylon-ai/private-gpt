@@ -7,6 +7,8 @@ from typing import Any
 
 from injector import singleton
 
+from private_gpt.di import get_global_injector
+
 logger = logging.getLogger(__name__)
 
 
@@ -67,6 +69,14 @@ class TaskManager:
             await asyncio.wait_for(task, timeout=timeout)
 
         return True
+
+    async def cancel(self, correlation_id: str, timeout: float = 2.0) -> bool:
+        from private_gpt.server.chat.chat_service import ChatService
+
+        chat_service = get_global_injector().get(ChatService)
+        success = await self.cancel_task(correlation_id, timeout=timeout)
+        scheduled_cancel = await chat_service.cancel(correlation_id)
+        return success or scheduled_cancel
 
     def _cleanup_task(self, correlation_id: str) -> None:
         """Clean up task references."""

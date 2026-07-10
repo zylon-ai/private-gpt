@@ -4,19 +4,19 @@ from typing import Any
 from llama_index.core.llms.function_calling import FunctionCallingLLM
 from pydantic import BaseModel, ConfigDict, Field
 
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
-    ChatLoopState,
+from private_gpt.components.engines.chat.models.chat_state import (
+    ChatState,
 )
 from private_gpt.events.models import Event
 
 
-class ChatLoopInterceptorContext(BaseModel):
+class ChatInterceptorContext(BaseModel):
     """Carry state, llm runtime, and helpers across interceptors."""
 
-    state: ChatLoopState
+    state: ChatState
     llm: FunctionCallingLLM
     phase: InterceptorPhase
     emit_fn: Callable[[Event], None]
@@ -28,6 +28,6 @@ class ChatLoopInterceptorContext(BaseModel):
         """Emit one event immediately to the loop stream."""
         self.emit_fn(event)
 
-    def set_state(self, state: ChatLoopState) -> None:
+    def set_state(self, state: ChatState) -> None:
         """Replace context state after interceptor transformation."""
         self.state = state
