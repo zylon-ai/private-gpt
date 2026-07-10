@@ -1,5 +1,3 @@
-from types import SimpleNamespace
-from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -8,11 +6,7 @@ from private_gpt.chat.input_models import MessageInput
 from private_gpt.components.streaming.providers.in_memory_stream_service import (
     InMemoryStreamService,
 )
-from private_gpt.components.streaming.providers.models import StreamStatus
 from private_gpt.server.chat.chat_models import ChatBody
-from private_gpt.server.chat_async import (
-    chat_async_service as chat_async_service_module,
-)
 from private_gpt.server.chat_async.chat_async_service import ChatAsyncService
 
 
@@ -20,13 +14,30 @@ class _StreamManagerStub:
     def __init__(self, stream_service: InMemoryStreamService) -> None:
         self.stream_service = stream_service
         self.cancel_stream = AsyncMock(return_value=False)
+        self.stream_exists = AsyncMock(return_value=False)
 
 
-def _service(stream_service: InMemoryStreamService) -> ChatAsyncService:
+class _ChatSchedulerFactoryStub:
+    def __init__(self, scheduler: object) -> None:
+        self._scheduler = scheduler
+
+    def get(self) -> object:
+        return self._scheduler
+
+
+class _ChatSchedulerStub:
+    def __init__(self) -> None:
+        self.create = AsyncMock(return_value="msg-1")
+
+
+def _service(
+    stream_service: InMemoryStreamService,
+    scheduler: _ChatSchedulerStub | None = None,
+) -> ChatAsyncService:
+    scheduler = scheduler or _ChatSchedulerStub()
     return ChatAsyncService(
-        chat_facade=AsyncMock(),
         stream_manager=_StreamManagerStub(stream_service),  # type: ignore[arg-type]
-        chat_request_mapper=AsyncMock(),
+        chat_scheduler_factory=_ChatSchedulerFactoryStub(scheduler),  # type: ignore[arg-type]
     )
 
 
@@ -35,137 +46,48 @@ def _chat_body() -> ChatBody:
 
 
 @pytest.mark.anyio
-async def test_worker_handoff_sends_json_safe_body(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_initiate_chat_stream_delegates_to_scheduler() -> None:
     stream_service = InMemoryStreamService()
-    sent: dict[str, Any] = {}
+    scheduler = _ChatSchedulerStub()
+    service = _service(stream_service, scheduler)
 
-    def send_task(name: str, args: list[Any], **kwargs: Any) -> None:
-        sent["name"] = name
-        sent["args"] = args
-        sent["kwargs"] = kwargs
-
-    from private_gpt.celery.celery import celery_app
-
-    monkeypatch.setattr(celery_app, "send_task", send_task)
-
-    correlation_id = await _service(stream_service)._initiate_chat_stream_worker(
+    correlation_id = await service.initiate_chat_stream(
         body=_chat_body(),
         message_id="msg-1",
     )
 
     assert correlation_id == "msg-1"
-    assert sent["name"] == "private_gpt.chat.run"
-    assert sent["kwargs"]["queue"] == "chat"
-    assert sent["kwargs"]["task_id"] == "msg-1"
-    assert sent["args"][0] == _chat_body()
-    assert sent["args"][1] == "msg-1"
+    scheduler.create.assert_awaited_once_with(body=_chat_body(), message_id="msg-1")
 
 
 @pytest.mark.anyio
-async def test_worker_handoff_enqueue_failure_marks_stream_error(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_initiate_chat_stream_rejects_duplicate_message_id() -> None:
     stream_service = InMemoryStreamService()
+    scheduler = _ChatSchedulerStub()
+    service = _service(stream_service, scheduler)
+    service.stream_manager.stream_exists.return_value = True
 
-    def send_task(*args: Any, **kwargs: Any) -> None:
-        raise RuntimeError("broker unavailable")
+    with pytest.raises(ValueError, match="already exists"):
+        await service.initiate_chat_stream(body=_chat_body(), message_id="msg-2")
 
-    from private_gpt.celery.celery import celery_app
-
-    monkeypatch.setattr(celery_app, "send_task", send_task)
-
-    with pytest.raises(RuntimeError, match="broker unavailable"):
-        await _service(stream_service)._initiate_chat_stream_worker(
-            body=_chat_body(),
-            message_id="msg-2",
-        )
-
-    metadata = await stream_service.get_stream_metadata("msg-2")
-    assert metadata is not None
-    assert metadata.status == StreamStatus.ERROR
-    assert metadata.error_message == "broker unavailable"
+    scheduler.create.assert_not_awaited()
 
 
 @pytest.mark.anyio
-async def test_worker_cancel_marks_stream_cancelled(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_worker_cancel_marks_stream_cancelled() -> None:
     stream_service = InMemoryStreamService()
-    await stream_service.create_stream("chat_completion", correlation_id="msg-3")
-    revoked: list[str] = []
+    service = _service(stream_service)
 
-    monkeypatch.setattr(
-        chat_async_service_module,
-        "_settings",
-        lambda: SimpleNamespace(
-            scheduler=SimpleNamespace(chat=SimpleNamespace(mode="celery"))
-        ),
-    )
-    monkeypatch.setattr(
-        "private_gpt.celery.task_helper.revoke_task",
-        lambda celery_app, task_id: revoked.append(task_id),
-    )
+    await service.cancel_stream("msg-3")
 
-    await _service(stream_service).cancel_stream("msg-3")
-
-    metadata = await stream_service.get_stream_metadata("msg-3")
-    assert metadata is not None
-    assert metadata.status == StreamStatus.CANCELLED
-    assert revoked == ["msg-3"]
+    service.stream_manager.cancel_stream.assert_awaited_once_with("msg-3")
 
 
 @pytest.mark.anyio
-async def test_arq_handoff_enqueues_chat_job(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_arq_cancel_delegates_to_stream_manager() -> None:
     stream_service = InMemoryStreamService()
-    sent: dict[str, Any] = {}
+    service = _service(stream_service)
 
-    async def fake_enqueue_chat_job(**kwargs: Any) -> None:
-        sent.update(kwargs)
+    await service.cancel_stream("msg-4")
 
-    monkeypatch.setattr(
-        chat_async_service_module,
-        "enqueue_chat_job",
-        fake_enqueue_chat_job,
-    )
-
-    correlation_id = await _service(stream_service)._initiate_chat_stream_arq(
-        body=_chat_body(),
-        message_id="msg-arq-1",
-    )
-
-    assert correlation_id == "msg-arq-1"
-    assert sent["correlation_id"] == "msg-arq-1"
-    assert sent["stream_type"] == "chat_completion"
-    assert sent["body"] == _chat_body().model_dump(mode="json")
-
-
-@pytest.mark.anyio
-async def test_arq_cancel_marks_stream_cancelled_without_revoke(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    stream_service = InMemoryStreamService()
-    await stream_service.create_stream("chat_completion", correlation_id="msg-4")
-    revoke_calls: list[str] = []
-
-    monkeypatch.setattr(
-        chat_async_service_module,
-        "_settings",
-        lambda: SimpleNamespace(
-            scheduler=SimpleNamespace(chat=SimpleNamespace(mode="arq"))
-        ),
-    )
-    monkeypatch.setattr(
-        "private_gpt.celery.task_helper.revoke_task",
-        lambda celery_app, task_id: revoke_calls.append(task_id),
-    )
-
-    await _service(stream_service).cancel_stream("msg-4")
-
-    metadata = await stream_service.get_stream_metadata("msg-4")
-    assert metadata is not None
-    assert metadata.status == StreamStatus.CANCELLED
-    assert revoke_calls == []
+    service.stream_manager.cancel_stream.assert_awaited_once_with("msg-4")

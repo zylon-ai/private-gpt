@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from private_gpt.components.streaming.providers.models import StreamStatus
 from private_gpt.components.streaming.stream.event_handler import EventHandler
 from private_gpt.components.streaming.stream_component import StreamComponent
+from private_gpt.components.streaming.tasks.chat_scheduler import ChatSchedulerFactory
 from private_gpt.components.streaming.tasks.task_manager import TaskManager
 
 
@@ -20,9 +21,11 @@ class StreamProcessor:
         self,
         stream_component: StreamComponent,
         task_manager: TaskManager,
+        chat_scheduler_factory: ChatSchedulerFactory,
     ):
         self.stream_service = stream_component.stream
         self.task_manager = task_manager
+        self.chat_scheduler = chat_scheduler_factory.get()
 
     async def process_stream(
         self,
@@ -157,10 +160,11 @@ class StreamProcessor:
            separate Celery worker process that polls the flag).
         """
         await self.stream_service.set_cancel_flag(correlation_id)
+        scheduled_cancel = await self.chat_scheduler.cancel(correlation_id)
         success = await self.task_manager.cancel_task(correlation_id)
-        if success:
+        if success or scheduled_cancel:
             await self.stream_service.update_stream_status(
                 correlation_id,
                 StreamStatus.CANCELLED,
             )
-        return success
+        return success or scheduled_cancel

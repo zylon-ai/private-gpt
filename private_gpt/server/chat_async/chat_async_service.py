@@ -1,176 +1,38 @@
 from collections.abc import AsyncGenerator
-from typing import Any
 
 from injector import inject, singleton
 
-from private_gpt.arq.enqueue import enqueue_chat_job
-from private_gpt.celery.dispatch import dispatch_task
-from private_gpt.components.streaming.providers.models import (
-    StreamMetadata,
-    StreamStatus,
-)
+from private_gpt.components.streaming.providers.models import StreamMetadata
 from private_gpt.components.streaming.stream.stream_manager import StreamManager
+from private_gpt.components.streaming.tasks.chat_scheduler import ChatSchedulerFactory
 from private_gpt.events.event_serializer import StreamingEventHandler
 from private_gpt.events.models import Event
-from private_gpt.server.chat.chat_facade import ChatFacadeService
 from private_gpt.server.chat.chat_models import ChatBody
-from private_gpt.server.chat.chat_request_mapper import ChatRequestMapper
-from private_gpt.settings.settings import settings as _settings
-
-CHAT_TASK_NAME = "private_gpt.chat.run"
 
 
 @singleton
 class ChatAsyncService:
-    """Service for initiating and observing asynchronous chat streams.
-
-    Accepts only :class:`ChatBody` (the API-layer model). The mapping to the
-    internal :class:`ChatRequest` (the business-layer model) happens inside
-    this service via :class:`ChatRequestMapper`, never at the router level.
-    """
+    """Service for initiating and observing asynchronous chat streams."""
 
     @inject
     def __init__(
         self,
-        chat_facade: ChatFacadeService,
         stream_manager: StreamManager,
-        chat_request_mapper: ChatRequestMapper,
+        chat_scheduler_factory: ChatSchedulerFactory,
     ):
-        self._chat_facade = chat_facade
         self.stream_manager = stream_manager
-        self._chat_request_mapper = chat_request_mapper
+        self._chat_scheduler = chat_scheduler_factory.get()
 
     async def initiate_chat_stream(
         self,
         body: ChatBody,
         message_id: str | None = None,
     ) -> str:
-        """Initiate a chat completion stream from a :class:`ChatBody`.
-
-        When ``scheduler.chat.mode`` is ``"celery"`` or ``"arq"``,
-        the chat loop is dispatched to a dedicated worker process and the API becomes a
-        pure Redis → SSE proxy. The Redis stream is created on the API side
-        so the client can start reading immediately; the worker pushes events
-        to that same stream.
-
-        When the flag is off, the chat loop runs as an asyncio task on the
-        API event loop (today's behaviour).
-
-        Raises:
-            ValueError: If message_id already exists.
-        """
+        """Initiate a chat completion stream from a :class:`ChatBody`."""
         if message_id and await self.stream_manager.stream_exists(message_id):
             raise ValueError("Stream with this message_id already exists")
 
-        if _settings().scheduler.chat.mode == "celery":
-            return await self._initiate_chat_stream_worker(
-                body=body,
-                message_id=message_id,
-            )
-        if _settings().scheduler.chat.mode == "arq":
-            return await self._initiate_chat_stream_arq(
-                body=body,
-                message_id=message_id,
-            )
-
-        # Default in-process path: map ChatBody → ChatRequest internally.
-        request = await self._chat_request_mapper.create_request_from_body(body)
-        event_generator = await self._chat_facade.create_chat_event_generator(
-            request=request
-        )
-        message_id = await self.stream_manager.create_and_start_stream(
-            event_handler=StreamingEventHandler(),
-            stream_type="chat_completion",
-            event_generator=event_generator,
-            correlation_id=message_id,
-            metadata={
-                "message_count": len(body.messages),
-            },
-        )
-
-        return message_id
-
-    async def _initiate_chat_stream_worker(
-        self,
-        body: ChatBody,
-        message_id: str | None,
-    ) -> str:
-        """Dispatch the chat loop to the Celery ``chat`` queue.
-
-        Only the raw :class:`ChatBody` (pure Pydantic, picklable) crosses the
-        process boundary. The worker re-maps it to a :class:`ChatRequest`
-        using its own warm injector so tool implementations and output schemas
-        are built fresh in-process.
-        """
-        stream_service = self.stream_manager.stream_service
-
-        correlation_id = await stream_service.create_stream(
-            stream_type="chat_completion",
-            correlation_id=message_id,
-            metadata={
-                "message_count": len(body.messages),
-            },
-        )
-
-        metadata: dict[str, Any] = {
-            "message_count": len(body.messages),
-        }
-
-        try:
-            # Use the correlation_id as the Celery task id so revocation is trivial.
-            dispatch_task(
-                task_name=CHAT_TASK_NAME,
-                args=[body, correlation_id, "chat_completion", metadata],
-                queue=_settings().scheduler.chat.celery_queue,
-                task_id=correlation_id,
-            )
-        except Exception as e:
-            await stream_service.update_stream_status(
-                correlation_id,
-                StreamStatus.ERROR,
-                error_message=str(e),
-                metadata=metadata,
-            )
-            raise
-
-        return correlation_id
-
-    async def _initiate_chat_stream_arq(
-        self,
-        body: ChatBody,
-        message_id: str | None,
-    ) -> str:
-        stream_service = self.stream_manager.stream_service
-
-        correlation_id = await stream_service.create_stream(
-            stream_type="chat_completion",
-            correlation_id=message_id,
-            metadata={
-                "message_count": len(body.messages),
-            },
-        )
-
-        metadata: dict[str, Any] = {
-            "message_count": len(body.messages),
-        }
-
-        try:
-            await enqueue_chat_job(
-                body=body.model_dump(mode="json"),
-                correlation_id=correlation_id,
-                stream_type="chat_completion",
-                metadata=metadata,
-            )
-        except Exception as e:
-            await stream_service.update_stream_status(
-                correlation_id,
-                StreamStatus.ERROR,
-                error_message=str(e),
-                metadata=metadata,
-            )
-            raise
-
-        return correlation_id
+        return await self._chat_scheduler.create(body=body, message_id=message_id)
 
     async def get_stream_events(
         self, message_id: str
@@ -184,27 +46,7 @@ class ChatAsyncService:
         )
 
     async def cancel_stream(self, message_id: str) -> bool | None:
-        """Cancel an active chat stream.
-
-        Signals cancellation through two channels:
-        1. The stream-service cancel flag (consumed by the worker's
-           ``StreamProcessor.process_stream`` poll loop).
-        2. ``revoke_task`` (Celery control-plane backstop).
-        3. ``StreamManager.cancel_stream`` (in-process asyncio task cancel).
-        """
-        from private_gpt.celery.celery import celery_app
-        from private_gpt.celery.task_helper import revoke_task
-
-        await self.stream_manager.stream_service.set_cancel_flag(message_id)
-        if _settings().scheduler.chat.mode in {"celery", "arq"}:
-            await self.stream_manager.stream_service.update_stream_status(
-                message_id,
-                StreamStatus.CANCELLED,
-            )
-
-        if _settings().scheduler.chat.mode == "celery":
-            revoke_task(celery_app, message_id)
-
+        """Cancel an active chat stream via the stream manager tree."""
         return await self.stream_manager.cancel_stream(message_id)
 
     async def clean_up_stream(self, message_id: str) -> None:

@@ -83,7 +83,7 @@ def run_arq_worker() -> None:
             on_shutdown=worker_module.shutdown,
             on_job_end=worker_module.on_job_end,
             handle_signals=False,
-            allow_abort_jobs=False,
+            allow_abort_jobs=True,
             max_jobs=max_jobs,
             max_tries=1,
             retry_jobs=False,
