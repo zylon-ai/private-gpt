@@ -1,17 +1,13 @@
+from __future__ import annotations
+
 import asyncio
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from injector import inject, singleton
 from pydantic import BaseModel, Field, ValidationError
 
-from private_gpt.chat.extensions.citation import ZylonCitation
 from private_gpt.chat.input_models import CountTokensOutput
-from private_gpt.components.chat.models.chat_config_models import (
-    ChatRequest,
-    ResolvedChatRequest,
-)
-from private_gpt.components.chunk.models import SourceType
 from private_gpt.components.container_registry import ContainerRegistry
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.engines.chat_loop.chat_loop_engine import ChatLoopEngine
@@ -45,6 +41,18 @@ from private_gpt.server.chat.interceptors.chat_interceptor_service import (
 from private_gpt.server.models.models_service import ModelsService
 from private_gpt.settings.settings import Settings
 from private_gpt.utils.tokens import estimate_token_count
+
+if TYPE_CHECKING:
+    from private_gpt.chat.extensions.citation import ZylonCitation
+    from private_gpt.components.chat.models.chat_config_models import (
+        ChatRequest,
+        ResolvedChatRequest,
+    )
+    from private_gpt.components.chunk.models import SourceType
+    from private_gpt.components.engines.chat_loop.chat_loop_engine import LoopExecution
+    from private_gpt.components.engines.chat_loop.models.execution_hooks import (
+        ToolExecutionHook,
+    )
 
 
 class Completion(BaseModel):
@@ -104,9 +112,7 @@ class Completion(BaseModel):
         arbitrary_types_allowed = True
 
         @staticmethod
-        def json_schema_extra(
-            schema: dict[str, Any], model: type["Completion"]
-        ) -> None:
+        def json_schema_extra(schema: dict[str, Any], model: type[Completion]) -> None:
             props = schema.get("properties", {})
             for prop_name in ["response", "sources", "citations"]:
                 if prop_name in props:
@@ -115,6 +121,7 @@ class Completion(BaseModel):
 
 class CompletionGen(BaseModel):
     events: AsyncGenerator[Event, None]
+    final_state_task: Any | None = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -182,10 +189,17 @@ class ChatService:
     async def stream_chat(
         self,
         request: ChatRequest,
+        hooks: list[ToolExecutionHook] | None = None,
     ) -> CompletionGen:
         loop_engine = await asyncio.to_thread(self._build_loop_engine)
-        event_generator: AsyncGenerator[Event, None] = loop_engine.run(request)
-        return CompletionGen(events=event_generator)
+        execution: LoopExecution = await loop_engine.run(
+            request,
+            hooks=hooks,
+        )
+        return CompletionGen(
+            events=execution.events,
+            final_state_task=execution.final_state_task,
+        )
 
     async def chat(self, request: ChatRequest) -> Completion:
         completion_gen = await self.stream_chat(request)

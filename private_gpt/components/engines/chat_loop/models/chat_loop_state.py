@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from enum import StrEnum
 from typing import Any, Self
 
 from llama_index.core.llms.llm import ToolSelection
@@ -48,11 +49,19 @@ class ChatLoopRuntimeState(BaseModel):
     )
 
 
+class ChatLoopStatus(StrEnum):
+    RUNNING = "running"
+    WAITING = "waiting"
+    COMPLETED = "completed"
+
+
 class ChatLoopOutputState(BaseModel):
     """Store loop outputs and pending external handoffs."""
 
     stop_reason: str | None = None
     pending_external_tool_calls: list[ToolSelection] = Field(default_factory=list)
+    status: ChatLoopStatus = ChatLoopStatus.RUNNING
+    pending_async_tools: dict[str, str] = Field(default_factory=dict)
 
 
 class ChatLoopTimelineEntry(BaseModel):

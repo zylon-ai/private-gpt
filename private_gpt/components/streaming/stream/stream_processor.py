@@ -40,6 +40,7 @@ class StreamProcessor:
         event_generator: AsyncGenerator[BaseModel, None],
         event_handler: EventHandler,
         metadata: dict[str, Any] | None = None,
+        mark_completed: bool = True,
     ) -> None:
         """Process a stream of events and push to Redis."""
         await run_stream_processing(
@@ -50,6 +51,7 @@ class StreamProcessor:
             event_generator=event_generator,
             event_handler=event_handler,
             metadata=metadata,
+            mark_completed=mark_completed,
         )
 
     async def _handle_cancellation(
@@ -73,6 +75,7 @@ class StreamProcessor:
         event_generator: AsyncGenerator[BaseModel, None],
         event_handler: EventHandler,
         metadata: dict[str, Any] | None = None,
+        mark_completed: bool = True,
     ) -> asyncio.Task[Any]:
         """Start processing a stream in the background."""
         task: asyncio.Task[Any] = await launch_stream_processing(
@@ -83,6 +86,7 @@ class StreamProcessor:
             event_generator=event_generator,
             event_handler=event_handler,
             metadata=metadata,
+            mark_completed=mark_completed,
         )
         return task
 

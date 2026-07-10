@@ -12,6 +12,8 @@ from private_gpt.components.tools.remote_execution import (
     ToolExecutionResponse,
     execute_tool_request,
 )
+from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
+from private_gpt.di import get_global_injector
 from private_gpt.events.models import TextBlock
 
 logger = logging.getLogger(__name__)
@@ -25,16 +27,33 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
     request = ToolExecutionRequest.model_validate(request_data)
     try:
         response = await execute_tool_request(request)
+        await _notify_completion(request, response)
         return response.model_dump(mode="json")
     except Exception as exc:
         logger.exception("Tool '%s' execution failed", request.tool_name)
-        return ToolExecutionResponse(
+        response = ToolExecutionResponse(
             tool_name=request.tool_name,
             tool_id=request.tool_id,
             result_content=[TextBlock(text=str(exc))],
             is_error=True,
             tool_message=request_error_message(request, str(exc)),
-        ).model_dump(mode="json")
+        )
+        await _notify_completion(request, response)
+        return response.model_dump(mode="json")
+
+
+async def _notify_completion(
+    request: ToolExecutionRequest,
+    response: ToolExecutionResponse,
+) -> None:
+    correlation_id = request.context.get("correlation_id")
+    if not correlation_id or not request.tool_id:
+        return
+    try:
+        scheduler = get_global_injector(True).get(ToolSchedulerFactory).get()
+        await scheduler.complete(request, response)
+    except Exception:
+        logger.exception("Tool completion notify failed for %s", request.tool_id)
 
 
 def request_error_message(

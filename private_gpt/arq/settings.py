@@ -4,6 +4,7 @@ from private_gpt.settings.settings import Settings
 
 CHAT_HEALTH_CHECK_KEY_PREFIX = "private_gpt:arq:health"
 CHAT_TASK_NAME = "private_gpt.chat.run"
+TOOL_DONE_TASK_NAME = "private_gpt.tool.done"
 CHAT_QUEUE_PREFIX = "private_gpt:arq:queue"
 
 

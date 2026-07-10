@@ -16,6 +16,9 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
     InterceptorPhase,
 )
+from private_gpt.components.engines.chat_loop.models.execution_hooks import (
+    ExecutionHooks,
+)
 from private_gpt.components.engines.chat_loop.utils.tool_utils import execute_tool_call
 from private_gpt.events.models import (
     ResultContentBlockType,
@@ -29,6 +32,9 @@ if TYPE_CHECKING:
     from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
         ChatLoopState,
     )
+    from private_gpt.components.engines.chat_loop.models.execution_hooks import (
+        ToolExecutionHook,
+    )
 
 
 class ToolExecutionRequest(BaseModel):
@@ -37,6 +43,18 @@ class ToolExecutionRequest(BaseModel):
     tool_kwargs: dict[str, Any] = Field(default_factory=dict)
     tool_spec: ToolSpec
     context: dict[str, Any] = Field(default_factory=dict)
+    hooks: ExecutionHooks = Field(default_factory=ExecutionHooks)
+
+
+async def invoke_execution_hook(
+    hook: ToolExecutionHook,
+    request: ToolExecutionRequest,
+    response: ToolExecutionResponse,
+) -> None:
+    callback_callable = _import_callable(hook.callable_path)
+    result = callback_callable(request=request, response=response, **hook.kwargs)
+    if inspect.isawaitable(result):
+        await result
 
 
 class ToolExecutionResponse(BaseModel):

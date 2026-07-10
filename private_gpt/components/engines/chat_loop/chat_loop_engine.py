@@ -53,7 +53,12 @@ from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
     ChatLoopOutputState,
     ChatLoopRuntimeState,
     ChatLoopState,
+    ChatLoopStatus,
     ChatLoopTimelineEntry,
+)
+from private_gpt.components.engines.chat_loop.models.execution_hooks import (
+    ExecutionHooks,
+    ToolExecutionHook,
 )
 from private_gpt.components.engines.chat_loop.utils.request_builder import (
     build_initial_context_stack,
@@ -105,6 +110,7 @@ logger = logging.getLogger(__name__)
 class ToolExecutionStatus(StrEnum):
     EXECUTED = "executed"
     NOT_EXECUTED = "not_executed"
+    PENDING = "pending"
     NOT_FOUND = "not_found"
 
 
@@ -112,6 +118,13 @@ class ToolExecutionStatus(StrEnum):
 class ToolExecutionResult:
     status: str
     tool_selection: ToolSelection | None = None
+    async_handle: str | None = None
+
+
+@dataclass
+class LoopExecution:
+    events: AsyncGenerator[Event, None]
+    final_state_task: asyncio.Task[ChatLoopState]
 
 
 @dataclass
@@ -126,6 +139,7 @@ class _LoopRun:
     has_input_usage: bool = False
     has_output_usage: bool = False
     block_count: int = 0
+    hooks: list[ToolExecutionHook] = field(default_factory=list)
 
 
 @dataclass
@@ -170,7 +184,7 @@ class _LoopEventHandler:
         """Close event stream for the current loop."""
         self.queue.put_nowait(_LoopDone())
 
-    async def stream(self, producer: asyncio.Task[None]) -> AsyncGenerator[Event, None]:
+    async def stream(self, producer: asyncio.Task[Any]) -> AsyncGenerator[Event, None]:
         """Stream queue events and cancel producer when consumer stops."""
         try:
             while True:
@@ -218,31 +232,47 @@ class ChatLoopEngine:
         self,
         request: ChatRequest,
         context_stack: ContextStack | None = None,
-    ) -> AsyncGenerator[Event, None]:
+        hooks: list[ToolExecutionHook] | None = None,
+    ) -> LoopExecution:
         """Execute the loop and stream produced events immediately."""
         handler = _LoopEventHandler(queue=asyncio.Queue())
-        producer = asyncio.create_task(self._run_loop(request, context_stack, handler))
-        try:
-            async for event in handler.stream(producer):
-                yield event
-        except asyncio.CancelledError:
-            if not producer.done():
-                producer.cancel()
-            with suppress(asyncio.CancelledError):
-                await producer
-            raise
-        except:
-            raise
+        producer = asyncio.create_task(
+            self._run_loop(
+                request,
+                context_stack,
+                handler,
+                hooks=hooks,
+            )
+        )
+
+        async def event_stream() -> AsyncGenerator[Event, None]:
+            try:
+                async for event in handler.stream(producer):
+                    yield event
+            except asyncio.CancelledError:
+                if not producer.done():
+                    producer.cancel()
+                with suppress(asyncio.CancelledError):
+                    await producer
+                raise
+
+        return LoopExecution(events=event_stream(), final_state_task=producer)
 
     async def _run_loop(
         self,
         request: ChatRequest,
         context_stack: ContextStack | None,
         handler: _LoopEventHandler,
-    ) -> None:
+        hooks: list[ToolExecutionHook] | None = None,
+    ) -> ChatLoopState:
         try:
-            run = self.initialize_run(request, context_stack)
+            run = self.initialize_run(
+                request,
+                context_stack,
+                hooks=hooks,
+            )
             await self._run_loop_core(run, handler)
+            return run.state.model_copy(deep=True)
         except asyncio.CancelledError:
             logger.debug("Chat loop producer cancelled")
             raise
@@ -279,6 +309,7 @@ class ChatLoopEngine:
                 )
             )
             handler.emit(RawMessageStopEvent.from_defaults())
+            run.state.output.status = ChatLoopStatus.COMPLETED
             run.state = self._snapshot(run.state, TimelinePhase.STOP)
 
     async def _run_intercepted_iteration(
@@ -444,6 +475,7 @@ class ChatLoopEngine:
             stop_reason = assistant_message.additional_kwargs.get("stop_reason")
             run.state = run.state.model_copy(deep=True)
             run.state.output.stop_reason = stop_reason
+            run.state.output.status = ChatLoopStatus.COMPLETED
             run.stopped = True
             handler.emit(
                 RawMessageDeltaEvent(
@@ -464,7 +496,9 @@ class ChatLoopEngine:
         )
 
         has_external_tool = False
+        has_pending_tool = False
         pending_external = list(run.state.output.pending_external_tool_calls)
+        pending_async = dict(run.state.output.pending_async_tools)
         for result in tool_call_results:
             if isinstance(result, Exception):
                 raise result
@@ -473,6 +507,20 @@ class ChatLoopEngine:
                     has_external_tool = True
                     assert result.tool_selection is not None
                     pending_external.append(result.tool_selection)
+                elif result.status == ToolExecutionStatus.PENDING:
+                    has_pending_tool = True
+                    assert result.tool_selection is not None
+                    pending_async[result.tool_selection.tool_id] = (
+                        result.async_handle or ""
+                    )
+
+        if has_pending_tool:
+            run.state = run.state.model_copy(deep=True)
+            run.state.output.status = ChatLoopStatus.WAITING
+            run.state.output.pending_async_tools = pending_async
+            run.stopped = True
+            run.state = self._snapshot(run.state, TimelinePhase.STOP)
+            return
 
         if has_external_tool:
             run.state = run.state.model_copy(deep=True)
@@ -486,6 +534,7 @@ class ChatLoopEngine:
                 )
             )
             handler.emit(RawMessageStopEvent.from_defaults())
+            run.state.output.status = ChatLoopStatus.COMPLETED
             run.state = self._snapshot(run.state, TimelinePhase.STOP)
             return
 
@@ -778,6 +827,7 @@ class ChatLoopEngine:
         self,
         request: ChatRequest,
         context_stack: ContextStack | None = None,
+        hooks: list[ToolExecutionHook] | None = None,
     ) -> _LoopRun:
         """Build initial llm and state for one run."""
         llm = self._llm_component.get_llm(request.system.model)
@@ -815,7 +865,11 @@ class ChatLoopEngine:
             timeline=[],
         )
         state.original_input = state.input.model_copy(deep=True)
-        return _LoopRun(state=state, llm=llm)
+        return _LoopRun(
+            state=state,
+            llm=llm,
+            hooks=list(hooks or []),
+        )
 
     async def run_interceptor_phase(
         self,
@@ -923,6 +977,29 @@ class ChatLoopEngine:
                 ),
             )
 
+        if self._tool_scheduler.is_async:
+            handle = await self._tool_scheduler.async_execute(
+                ToolExecutionRequest(
+                    tool_id=call_id,
+                    tool_name=tool_call.tool_name or "",
+                    tool_kwargs=tool_call.tool_kwargs,
+                    tool_spec=tool_spec,
+                    context=build_tool_execution_context(run.state),
+                    hooks=ExecutionHooks(tool_result=run.hooks),
+                ),
+                state_ctx=run.state,
+                interceptors=self._tool_interceptors,
+            )
+            return ToolExecutionResult(
+                status=ToolExecutionStatus.PENDING,
+                tool_selection=ToolSelection(
+                    tool_id=call_id,
+                    tool_name=tool_call.tool_name,
+                    tool_kwargs=tool_call.tool_kwargs,
+                ),
+                async_handle=handle,
+            )
+
         async with semaphore if semaphore is not None else contextlib.nullcontext():
             response = await self._tool_scheduler.execute(
                 ToolExecutionRequest(
@@ -931,6 +1008,7 @@ class ChatLoopEngine:
                     tool_kwargs=tool_call.tool_kwargs,
                     tool_spec=tool_spec,
                     context=build_tool_execution_context(run.state),
+                    hooks=ExecutionHooks(tool_result=run.hooks),
                 ),
                 state_ctx=run.state,
                 interceptors=self._tool_interceptors,

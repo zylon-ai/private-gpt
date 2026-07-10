@@ -488,7 +488,7 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
                 self._get_messages_tokens(right_messages, tokenizer_fn=tokenizer_fn),
             )
 
-        # -1. Drop thinking: fully from left and right; re-count changed parts in parallel
+        # -1. Drop thinking from left/right, then re-count changed parts in parallel.
         new_left = self._drop_thinking(left_messages)
         new_right = self._drop_thinking(right_messages)
         has_thinking_left = any(

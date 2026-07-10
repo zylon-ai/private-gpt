@@ -19,6 +19,7 @@ async def process_stream(
     event_generator: AsyncGenerator[BaseModel, None],
     event_handler: EventHandler,
     metadata: dict[str, Any] | None = None,
+    mark_completed: bool = True,
 ) -> None:
     del stream_type
     try:
@@ -58,10 +59,11 @@ async def process_stream(
                 event_data=event_data,
             )
 
-        await stream_service.update_stream_status(
-            correlation_id,
-            StreamStatus.COMPLETED,
-        )
+        if mark_completed:
+            await stream_service.update_stream_status(
+                correlation_id,
+                StreamStatus.COMPLETED,
+            )
         await stream_service.clear_cancel_flag(correlation_id)
 
     except asyncio.CancelledError:
@@ -113,6 +115,7 @@ async def start_stream_processing(
     event_generator: AsyncGenerator[BaseModel, None],
     event_handler: EventHandler,
     metadata: dict[str, Any] | None = None,
+    mark_completed: bool = True,
 ) -> asyncio.Task[Any]:
     return await task_manager.create_task(
         correlation_id=correlation_id,
@@ -124,6 +127,7 @@ async def start_stream_processing(
             event_generator=event_generator,
             event_handler=event_handler,
             metadata=metadata,
+            mark_completed=mark_completed,
         ),
         name=f"stream_processor_{correlation_id}",
     )

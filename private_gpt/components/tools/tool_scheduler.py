@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
@@ -8,10 +7,9 @@ from typing import TYPE_CHECKING
 from injector import inject, singleton
 
 from private_gpt.celery.dispatch import dispatch_task
-from private_gpt.components.streaming.stream_component import StreamComponent
 from private_gpt.components.tools.remote_execution import (
-    ToolExecutionResponse,
     execute_tool_request,
+    invoke_execution_hook,
 )
 from private_gpt.settings.settings import Settings
 
@@ -24,12 +22,17 @@ if TYPE_CHECKING:
     from private_gpt.components.tools.remote_execution import (
         ToolExecutionInterceptor,
         ToolExecutionRequest,
+        ToolExecutionResponse,
     )
 
 logger = logging.getLogger(__name__)
 
 
 class BaseToolScheduler(ABC):
+    @property
+    def is_async(self) -> bool:
+        return False
+
     @abstractmethod
     async def execute(
         self,
@@ -39,6 +42,15 @@ class BaseToolScheduler(ABC):
     ) -> ToolExecutionResponse:
         ...
 
+    async def async_execute(
+        self,
+        request: ToolExecutionRequest,
+        state_ctx: ChatLoopState | None = None,
+        interceptors: list[ToolExecutionInterceptor] | None = None,
+    ) -> str:
+        del request, state_ctx, interceptors
+        raise NotImplementedError
+
     @abstractmethod
     async def cancel(
         self,
@@ -46,6 +58,14 @@ class BaseToolScheduler(ABC):
         task_id: str | None = None,
     ) -> bool:
         ...
+
+    async def complete(
+        self,
+        request: ToolExecutionRequest,
+        response: ToolExecutionResponse,
+    ) -> None:
+        for hook in request.hooks.tool_result:
+            await invoke_execution_hook(hook, request, response)
 
 
 @singleton
@@ -76,9 +96,12 @@ class CeleryToolScheduler(BaseToolScheduler):
     """Dispatch tool calls to a dedicated Celery tools worker."""
 
     @inject
-    def __init__(self, settings: Settings, stream_component: StreamComponent) -> None:
+    def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._stream_service = stream_component.stream
+
+    @property
+    def is_async(self) -> bool:
+        return True
 
     async def execute(
         self,
@@ -86,60 +109,10 @@ class CeleryToolScheduler(BaseToolScheduler):
         state_ctx: ChatLoopState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
-        del state_ctx, interceptors
-
-        correlation_id = request.context.get("correlation_id")
-        task_id = None
-        if correlation_id:
-            task_id = f"{correlation_id}:{request.tool_id}"
-
-        result = dispatch_task(
-            task_name=TOOL_TASK_NAME,
-            kwargs={"request_data": request.model_dump(mode="json")},
-            queue=self._settings.scheduler.tools.celery_queue,
-            task_id=task_id,
+        del request, state_ctx, interceptors
+        raise NotImplementedError(
+            "CeleryToolScheduler only supports async_execute() in resumable chat mode."
         )
-        cancelled = False
-
-        try:
-            while not result.ready():
-                if correlation_id and await self._stream_service.is_cancelled(
-                    correlation_id
-                ):
-                    await self.cancel(request, result.id)
-                    cancelled = True
-                    raise asyncio.CancelledError(
-                        f"Tool execution cancelled for correlation_id={correlation_id}"
-                    )
-                await asyncio.sleep(0.1)
-        except asyncio.CancelledError:
-            if not cancelled:
-                await self.cancel(request, result.id)
-            raise
-
-        if result.failed():
-            error_content = f"Tool execution failed in worker: {str(result.result)}"
-            from private_gpt.events.models import TextBlock
-            from llama_index.core.base.llms.types import ChatMessage
-            
-            return ToolExecutionResponse(
-                tool_name=request.tool_name,
-                tool_id=request.tool_id,
-                result_content=[TextBlock(text=error_content)],
-                is_error=True,
-                tool_message=ChatMessage(
-                    role="tool",
-                    content=error_content,
-                    additional_kwargs={
-                        "tool_call_id": request.tool_id,
-                        "tool_call_name": request.tool_name,
-                        "tool_call_args": request.tool_kwargs,
-                        "raw_output": error_content,
-                    },
-                ),
-            )
-
-        return ToolExecutionResponse.model_validate(result.result)
 
     async def cancel(
         self,
@@ -154,6 +127,24 @@ class CeleryToolScheduler(BaseToolScheduler):
 
         celery_app.control.revoke(task_id, terminate=True)
         return True
+
+    async def async_execute(
+        self,
+        request: ToolExecutionRequest,
+        state_ctx: ChatLoopState | None = None,
+        interceptors: list[ToolExecutionInterceptor] | None = None,
+    ) -> str:
+        del state_ctx, interceptors
+
+        correlation_id = request.context.get("correlation_id")
+        task_id = f"{correlation_id}:{request.tool_id}" if correlation_id else None
+        result = dispatch_task(
+            task_name=TOOL_TASK_NAME,
+            kwargs={"request_data": request.model_dump(mode="json")},
+            queue=self._settings.scheduler.tools.celery_queue,
+            task_id=task_id,
+        )
+        return str(result.id)
 
 
 @singleton
