@@ -463,3 +463,4 @@ async def test_handle_stream_chunk_accumulates_token_ids_delta(
     )
 
     assert current_response.message.additional_kwargs["token_ids_delta"] == [11, 12, 13]
+

@@ -118,7 +118,26 @@ class CeleryToolScheduler(BaseToolScheduler):
             raise
 
         if result.failed():
-            raise result.result
+            error_content = f"Tool execution failed in worker: {str(result.result)}"
+            from private_gpt.events.models import TextBlock
+            from llama_index.core.base.llms.types import ChatMessage
+            
+            return ToolExecutionResponse(
+                tool_name=request.tool_name,
+                tool_id=request.tool_id,
+                result_content=[TextBlock(text=error_content)],
+                is_error=True,
+                tool_message=ChatMessage(
+                    role="tool",
+                    content=error_content,
+                    additional_kwargs={
+                        "tool_call_id": request.tool_id,
+                        "tool_call_name": request.tool_name,
+                        "tool_call_args": request.tool_kwargs,
+                        "raw_output": error_content,
+                    },
+                ),
+            )
 
         return ToolExecutionResponse.model_validate(result.result)
 

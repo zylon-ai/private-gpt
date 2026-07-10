@@ -34,14 +34,14 @@ async def test_celery_tool_scheduler_cancels_child_task_when_stream_cancelled(
     celery_app = MagicMock()
     monkeypatch.setattr("private_gpt.celery.celery.celery_app", celery_app)
 
-    stream_manager = SimpleNamespace(
-        stream_service=SimpleNamespace(is_cancelled=AsyncMock(return_value=True))
+    stream_component = SimpleNamespace(
+        stream=SimpleNamespace(is_cancelled=AsyncMock(return_value=True))
     )
     scheduler = CeleryToolScheduler(
         settings=SimpleNamespace(
             scheduler=SimpleNamespace(tools=SimpleNamespace(celery_queue="tools"))
         ),
-        stream_manager=stream_manager,
+        stream_component=stream_component,
     )
 
     request = ToolExecutionRequest.model_validate(
