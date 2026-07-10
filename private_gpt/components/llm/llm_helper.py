@@ -1,10 +1,13 @@
-from collections.abc import Callable
-from typing import Any
+import asyncio
+import concurrent.futures
+from collections.abc import Awaitable, Callable
+from typing import Any, cast
 
 from llama_index.core.llms import LLM
 from llama_index.core.multi_modal_llms import MultiModalLLMMetadata
 
 from private_gpt.components.llm.tokenizers.tokenizer_base import (
+    AsyncTokenizerBase,
     AudioLike,
     ImageLike,
     TextLike,
@@ -47,6 +50,7 @@ def max_audios_supported(
 
 
 TokenizerFn = Callable[..., TokenizedInput]
+AsyncTokenizerFn = Callable[..., Awaitable[TokenizedInput]]
 
 
 def get_tokenizer_fn(tokenizer: TokenizerBase | None) -> TokenizerFn | None:
@@ -63,6 +67,41 @@ def get_tokenizer_fn(tokenizer: TokenizerBase | None) -> TokenizerFn | None:
         return tokens
 
     return fn
+
+
+def get_async_tokenizer_fn(tokenizer: AsyncTokenizerBase) -> AsyncTokenizerFn:
+    async def fn(
+        texts: TextLike | None = None,
+        images: ImageLike | None = None,
+        audios: AudioLike | None = None,
+        **kwargs: Any,
+    ) -> TokenizedInput:
+        return await tokenizer.acall(
+            texts=texts, images=images, audios=audios, **kwargs
+        )
+
+    return fn
+
+
+def as_sync_tokenizer_fn(
+    tokenizer_fn: TokenizerFn | AsyncTokenizerFn | None,
+) -> TokenizerFn | None:
+    """Wrap an AsyncTokenizerFn so it can be called synchronously.
+
+    Runs the coroutine in a fresh event loop on a dedicated thread, avoiding
+    conflicts with any running loop in the caller's thread.
+    """
+    if tokenizer_fn is None:
+        return None
+    if not asyncio.iscoroutinefunction(tokenizer_fn):
+        return cast(TokenizerFn, tokenizer_fn)
+    _async_fn = tokenizer_fn
+
+    def _sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            return ex.submit(asyncio.run, _async_fn(*args, **kwargs)).result()
+
+    return _sync_wrapper
 
 
 def get_tokenizer() -> TokenizerFn | None:

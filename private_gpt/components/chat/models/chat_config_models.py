@@ -21,7 +21,7 @@ from pydantic import (
 from private_gpt.chat.input_models import BlobVisibilityMode, PromptConfig
 from private_gpt.chat.schema_models import create_model_from_json_schema
 from private_gpt.components.engines.citations.types import Citation, Document
-from private_gpt.components.llm.llm_helper import TokenizerFn
+from private_gpt.components.llm.llm_helper import AsyncTokenizerFn, TokenizerFn
 from private_gpt.components.sandbox.content_bundle import ContentBundle
 from private_gpt.components.tools.tool_names import resolve_internal_tool_name
 from private_gpt.components.tools.types import ToolValidationMode
@@ -37,7 +37,7 @@ class LLMInstanceConfig(BaseModel):
     config: LLMModelConfig = Field(
         description="The LLM model configuration.",
     )
-    tokenizer: TokenizerFn | None = Field(
+    tokenizer: TokenizerFn | AsyncTokenizerFn | None = Field(
         default=None,
         description="The tokenizer function to use for the LLM.",
     )

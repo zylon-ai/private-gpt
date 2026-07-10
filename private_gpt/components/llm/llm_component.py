@@ -9,9 +9,17 @@ from llama_index.core.llms import LLM
 from private_gpt.components.llm.custom.base import ZylonLLM
 from private_gpt.components.llm.discovery import get_models
 from private_gpt.components.llm.factories.registry import LLMFactoryRegistry
-from private_gpt.components.llm.llm_helper import TokenizerFn, get_tokenizer_fn
+from private_gpt.components.llm.llm_helper import (
+    AsyncTokenizerFn,
+    TokenizerFn,
+    get_async_tokenizer_fn,
+    get_tokenizer_fn,
+)
 from private_gpt.components.llm.registry import LLMInstance, LLMRegistry
-from private_gpt.components.llm.tokenizers.tokenizer_base import TokenizerBase
+from private_gpt.components.llm.tokenizers.tokenizer_base import (
+    AsyncTokenizerBase,
+    TokenizerBase,
+)
 from private_gpt.components.model_discovery.service import are_distinct_api_bases
 from private_gpt.settings.settings import LLMModelConfig, Settings
 
@@ -175,7 +183,7 @@ class LLMComponent:
 
     def filter(
         self, predicate: Callable[[LLM, LLMModelConfig], bool]
-    ) -> Iterator[tuple[LLM, LLMModelConfig, TokenizerFn | None]]:
+    ) -> Iterator[tuple[LLM, LLMModelConfig, TokenizerFn | AsyncTokenizerFn | None]]:
         """Filter LLM components based on a predicate function.
 
         :param predicate: A function that takes an LLM
@@ -192,11 +200,12 @@ class LLMComponent:
             ):
                 seen.add(id(model_id))
 
-                tokenizer_fn = (
-                    get_tokenizer_fn(component.tokenizer)
-                    if component.tokenizer
-                    else None
-                )
+                tokenizer_fn: TokenizerFn | AsyncTokenizerFn | None = None
+                if component.tokenizer:
+                    if isinstance(component.tokenizer, AsyncTokenizerBase):
+                        tokenizer_fn = get_async_tokenizer_fn(component.tokenizer)
+                    else:
+                        tokenizer_fn = get_tokenizer_fn(component.tokenizer)
                 yield component.llm, model_config, tokenizer_fn
 
     @property

@@ -9,7 +9,7 @@ from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
     TimelinePhase,
 )
-from private_gpt.components.llm.llm_helper import TokenizerFn
+from private_gpt.components.llm.llm_helper import AsyncTokenizerFn, TokenizerFn
 from private_gpt.components.skills.models.skill_entities import (
     SkillVersionWithSkillEntity,
 )
@@ -39,7 +39,7 @@ class ChatLoopRuntimeState(BaseModel):
     """Store runtime counters."""
 
     effective_token_limit: int | None = None
-    tokenizer_fn: TokenizerFn | None = None
+    tokenizer_fn: TokenizerFn | AsyncTokenizerFn | None = None
 
     iteration: int = 0
     max_iterations: int = 40

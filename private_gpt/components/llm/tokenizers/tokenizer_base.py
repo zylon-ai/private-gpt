@@ -121,3 +121,42 @@ class TokenizerBase(ABC):
         skip_special_tokens: bool = True,
     ) -> list[str]:
         raise NotImplementedError()
+
+
+class AsyncTokenizerBase(TokenizerBase, ABC):
+    """TokenizerBase extension for natively-async tokenizer backends."""
+
+    @abstractmethod
+    async def acall(
+        self,
+        texts: TextLike | None = None,
+        images: ImageLike | None = None,
+        audios: AudioLike | None = None,
+        add_special_tokens: bool = True,
+        truncation: bool = False,
+        max_length: int | None = None,
+        **kwargs: Any,
+    ) -> "TokenizedInput":
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def aencode(
+        self, text: str, add_special_tokens: bool | None = None
+    ) -> list[int]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def adecode(
+        self, ids: list[int] | int, skip_special_tokens: bool = True
+    ) -> str:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def aapply_chat_template(
+        self,
+        conversation: list[dict[str, str | list[dict[str, str]]]],
+        tools: list[dict[str, Any]] | None = None,
+        documents: list[dict[str, str]] | None = None,
+        **kwargs: Any,
+    ) -> list[int] | str:
+        raise NotImplementedError()

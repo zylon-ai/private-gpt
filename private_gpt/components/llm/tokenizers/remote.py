@@ -4,15 +4,15 @@ from typing import Any
 import httpx
 
 from private_gpt.components.llm.tokenizers.tokenizer_base import (
+    AsyncTokenizerBase,
     AudioLike,
     ImageLike,
     TextLike,
     TokenizedInput,
-    TokenizerBase,
 )
 
 
-class RemoteTokenizeTokenizer(TokenizerBase):
+class RemoteTokenizeTokenizer(AsyncTokenizerBase):
     """Tokenizer backed by remote `/tokenize` and `/detokenize` endpoints.
 
     Supports the current wire formats exposed by:
@@ -167,6 +167,63 @@ class RemoteTokenizeTokenizer(TokenizerBase):
             "RemoteTokenizeTokenizer does not expose piecewise token strings"
         )
 
+    async def acall(
+        self,
+        texts: TextLike | None = None,
+        images: ImageLike | None = None,
+        audios: AudioLike | None = None,
+        add_special_tokens: bool = True,
+        truncation: bool = False,
+        max_length: int | None = None,
+        **kwargs: Any,
+    ) -> TokenizedInput:
+        del add_special_tokens, truncation, max_length, kwargs
+
+        if images or audios:
+            raise NotImplementedError(
+                "RemoteTokenizeTokenizer only supports text tokenization"
+            )
+        if texts is None:
+            return TokenizedInput(input_ids=[])
+
+        if isinstance(texts, str):
+            return TokenizedInput(input_ids=await self.aencode(texts))
+
+        if isinstance(texts, Sequence):
+            input_ids: list[int] = []
+            for text in texts:
+                input_ids.extend(await self.aencode(str(text)))
+            return TokenizedInput(input_ids=input_ids)
+
+        return TokenizedInput(input_ids=await self.aencode(str(texts)))
+
+    async def aencode(
+        self, text: str, add_special_tokens: bool | None = None
+    ) -> list[int]:
+        del add_special_tokens
+        response = await self._apost_tokenize(text)
+        return self._extract_tokens(response)
+
+    async def adecode(
+        self, ids: list[int] | int, skip_special_tokens: bool = True
+    ) -> str:
+        del skip_special_tokens
+        token_ids = [ids] if isinstance(ids, int) else ids
+        response = await self._apost_detokenize(token_ids)
+        return self._extract_text(response)
+
+    async def aapply_chat_template(
+        self,
+        conversation: list[dict[str, str | list[dict[str, str]]]],
+        tools: list[dict[str, Any]] | None = None,
+        documents: list[dict[str, str]] | None = None,
+        **kwargs: Any,
+    ) -> list[int] | str:
+        del conversation, tools, documents, kwargs
+        raise NotImplementedError(
+            "RemoteTokenizeTokenizer cannot render chat templates locally"
+        )
+
     def _post_tokenize(self, text: str) -> Any:
         tokenize_url = self._build_url(self.TOKENIZE_ENDPOINT)
         last_error: Exception | None = None
@@ -210,6 +267,56 @@ class RemoteTokenizeTokenizer(TokenizerBase):
                 return response.json()
             except httpx.HTTPError as e:
                 last_error = e
+
+        if last_error is None:
+            raise ValueError("Remote detokenization failed without an HTTP error")
+        raise last_error
+
+    async def _apost_tokenize(self, text: str) -> Any:
+        tokenize_url = self._build_url(self.TOKENIZE_ENDPOINT)
+        last_error: Exception | None = None
+
+        async with httpx.AsyncClient() as client:
+            for payload in (
+                {"model": self.model_id, "prompt": text},
+                {"content": text},
+            ):
+                try:
+                    response = await client.post(
+                        tokenize_url,
+                        json=payload,
+                        headers=self._headers(),
+                        timeout=self.request_timeout,
+                    )
+                    response.raise_for_status()
+                    return response.json()
+                except httpx.HTTPError as e:
+                    last_error = e
+
+        if last_error is None:
+            raise ValueError("Remote tokenization failed without an HTTP error")
+        raise last_error
+
+    async def _apost_detokenize(self, token_ids: list[int]) -> Any:
+        detokenize_url = self._build_url(self.DETOKENIZE_ENDPOINT)
+        last_error: Exception | None = None
+
+        async with httpx.AsyncClient() as client:
+            for payload in (
+                {"model": self.model_id, "tokens": token_ids},
+                {"tokens": token_ids},
+            ):
+                try:
+                    response = await client.post(
+                        detokenize_url,
+                        json=payload,
+                        headers=self._headers(),
+                        timeout=self.request_timeout,
+                    )
+                    response.raise_for_status()
+                    return response.json()
+                except httpx.HTTPError as e:
+                    last_error = e
 
         if last_error is None:
             raise ValueError("Remote detokenization failed without an HTTP error")

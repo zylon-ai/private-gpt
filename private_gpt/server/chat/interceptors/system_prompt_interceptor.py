@@ -21,6 +21,7 @@ from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
 from private_gpt.components.engines.chat_loop.utils.request_builder import (
     build_request_from_context_stack,
 )
+from private_gpt.components.llm.llm_helper import as_sync_tokenizer_fn
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
 
 
@@ -91,7 +92,9 @@ class SystemPromptRequestInterceptor(ChatRequestLoopInterceptor):
                     generate_citations=request.citation.enabled,
                     guidelines_prompt=None,
                     token_limit=context.state.runtime.effective_token_limit,
-                    tokenizer_fn=context.state.runtime.tokenizer_fn,
+                    tokenizer_fn=as_sync_tokenizer_fn(
+                        context.state.runtime.tokenizer_fn
+                    ),
                 )
                 if context_prompt:
                     context_text = context_prompt.format().strip()
