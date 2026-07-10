@@ -214,6 +214,7 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
             direction="left",
             max_length=max_length,
             tokenizer_fn=tokenizer_fn,
+            current_tokens=current_tokens,
         )
         if not chat_history:
             return []
@@ -398,10 +399,12 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
         direction: Literal["left", "right"],
         tokenizer_fn: TokenizerFn | None,
         max_length: int,
+        current_tokens: int | None = None,
     ) -> list[ChatMessage]:
-        current_tokens = await self._get_messages_tokens(
-            chat_history, tokenizer_fn=tokenizer_fn
-        )
+        if current_tokens is None:
+            current_tokens = await self._get_messages_tokens(
+                chat_history, tokenizer_fn=tokenizer_fn
+            )
         if current_tokens <= max_length:
             return chat_history
 
@@ -413,14 +416,25 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
         if direction == "right":
             blocks.reverse()
 
-        # Drop blocks from specified direction until under token limit
-        remaining_blocks = blocks.copy()
-        while remaining_blocks and current_tokens > max_length:
-            dropped_block = remaining_blocks.pop(0)
-            dropped_tokens = await self._get_messages_tokens(
-                dropped_block, tokenizer_fn=tokenizer_fn
+        # Count all blocks in parallel instead of sequentially in a while-loop
+        block_token_counts: list[int] = list(
+            await asyncio.gather(
+                *[
+                    self._get_messages_tokens(block, tokenizer_fn=tokenizer_fn)
+                    for block in blocks
+                ]
             )
-            current_tokens -= dropped_tokens
+        )
+
+        # Drop blocks from the front until we fit within max_length
+        drop_until = 0
+        for block_tokens in block_token_counts:
+            if current_tokens <= max_length:
+                break
+            current_tokens -= block_tokens
+            drop_until += 1
+
+        remaining_blocks = blocks[drop_until:]
 
         # Flatten remaining blocks back to message list
         result = [msg for block in remaining_blocks for msg in block]
@@ -452,6 +466,9 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
         tokenizer_fn: TokenizerFn | None,
         chat_history: list[ChatMessage],
         max_length: int,
+        left_tokens: int | None = None,
+        last_user_tokens: int | None = None,
+        right_tokens: int | None = None,
         iteration: int = 0,
     ) -> list[ChatMessage]:
         if iteration > MAX_CONDENSE_ITERATIONS:
@@ -463,30 +480,61 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
             right_messages,
         ) = await asyncio.to_thread(self._split_conversation, chat_history)
 
-        # -1. Drop thinking: fully from left, fully from right
-        left_messages = self._drop_thinking(left_messages)
-        right_messages = self._drop_thinking(right_messages)
-        current_history = [*left_messages, last_user_message, *right_messages]
-        current_tokens = await self._get_messages_tokens(
-            current_history, tokenizer_fn=tokenizer_fn
-        )
-        if current_tokens <= max_length:
-            return current_history
+        # Compute per-component token counts if not provided by caller
+        if left_tokens is None or last_user_tokens is None or right_tokens is None:
+            left_tokens, last_user_tokens, right_tokens = await asyncio.gather(
+                self._get_messages_tokens(left_messages, tokenizer_fn=tokenizer_fn),
+                self._get_messages_tokens(last_user_message, tokenizer_fn=tokenizer_fn),
+                self._get_messages_tokens(right_messages, tokenizer_fn=tokenizer_fn),
+            )
 
-        # 0. Drop tools
+        # -1. Drop thinking: fully from left and right; re-count changed parts in parallel
+        new_left = self._drop_thinking(left_messages)
+        new_right = self._drop_thinking(right_messages)
+        has_thinking_left = any(
+            "thinking" in m.additional_kwargs for m in left_messages
+        )
+        has_thinking_right = any(
+            "thinking" in m.additional_kwargs for m in right_messages
+        )
+        if has_thinking_left or has_thinking_right:
+            recount_tasks = []
+            if has_thinking_left:
+                recount_tasks.append(
+                    self._get_messages_tokens(new_left, tokenizer_fn=tokenizer_fn)
+                )
+            if has_thinking_right:
+                recount_tasks.append(
+                    self._get_messages_tokens(new_right, tokenizer_fn=tokenizer_fn)
+                )
+            recount_results = list(await asyncio.gather(*recount_tasks))
+            idx = 0
+            if has_thinking_left:
+                left_tokens = recount_results[idx]
+                idx += 1
+            if has_thinking_right:
+                right_tokens = recount_results[idx]
+        left_messages = new_left
+        right_messages = new_right
+
+        current_tokens = left_tokens + last_user_tokens + right_tokens
+        if current_tokens <= max_length:
+            return [*left_messages, last_user_message, *right_messages]
+
+        # 0. Drop tools from left; only re-count if tools were present
+        has_tools = any(m.role == "tool" for m in left_messages)
         potential_left_history = await asyncio.to_thread(
             self._drop_tool_messages, left_messages
         )
-        current_history = [
-            *potential_left_history,
-            last_user_message,
-            *right_messages,
-        ]
-        current_tokens = await self._get_messages_tokens(
-            current_history, tokenizer_fn=tokenizer_fn
-        )
-        if current_tokens <= max_length:
-            return current_history
+        if has_tools:
+            new_left_tokens = await self._get_messages_tokens(
+                potential_left_history, tokenizer_fn=tokenizer_fn
+            )
+            current_tokens = new_left_tokens + last_user_tokens + right_tokens
+            if current_tokens <= max_length:
+                return [*potential_left_history, last_user_message, *right_messages]
+            left_messages = potential_left_history
+            left_tokens = new_left_tokens
 
         # 1. Summarize the left part of the conversation
         current_left = await self._summary_left(
@@ -495,13 +543,12 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
             chat_history=left_messages,
             max_length=max_length,
         )
-        current_history = [*current_left, last_user_message, *right_messages]
-        current_tokens = await self._get_messages_tokens(
-            current_history, tokenizer_fn=tokenizer_fn
+        left_tokens = await self._get_messages_tokens(
+            current_left, tokenizer_fn=tokenizer_fn
         )
-
+        current_tokens = left_tokens + last_user_tokens + right_tokens
         if current_tokens <= max_length:
-            return current_history
+            return [*current_left, last_user_message, *right_messages]
 
         # 2. Summarize the right part of the conversation
         current_right = await self._summary_right(
@@ -511,24 +558,22 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
             last_user_message=last_user_message,
             max_length=max_length,
         )
-        current_history = [*current_left, last_user_message, *current_right]
-        current_tokens = await self._get_messages_tokens(
-            current_history, tokenizer_fn=tokenizer_fn
+        right_tokens = await self._get_messages_tokens(
+            current_right, tokenizer_fn=tokenizer_fn
         )
-
+        current_tokens = left_tokens + last_user_tokens + right_tokens
         if current_tokens <= max_length:
-            return current_history
+            return [*current_left, last_user_message, *current_right]
 
         # 3. Drop messages from the left side until we reach the max length
-        available_left_tokens = max_length - await self._get_messages_tokens(
-            [last_user_message, *current_right],
-            tokenizer_fn=tokenizer_fn,
-        )
+        # available_left_tokens is arithmetic — no Triton call needed
+        available_left_tokens = max_length - last_user_tokens - right_tokens
         current_left = await self._drop_in_direction(
             chat_history=current_left,
             direction="left",
             max_length=available_left_tokens,
             tokenizer_fn=tokenizer_fn,
+            current_tokens=left_tokens,
         )
 
         # 4. Repair the left and right parts of the conversation
@@ -538,11 +583,14 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
                 repair_with_tools, [last_user_message, *current_right], strict=False
             ),
         )
-
-        current_history = [*current_left, *current_right]
-        current_tokens = await self._get_messages_tokens(
-            current_history, tokenizer_fn=tokenizer_fn
+        # current_right now includes last_user_message after repair_with_tools;
+        # count both in parallel
+        repaired_left_tokens, repaired_right_tokens = await asyncio.gather(
+            self._get_messages_tokens(current_left, tokenizer_fn=tokenizer_fn),
+            self._get_messages_tokens(current_right, tokenizer_fn=tokenizer_fn),
         )
+        current_history = [*current_left, *current_right]
+        current_tokens = repaired_left_tokens + repaired_right_tokens
 
         if current_tokens > max_length:
             return await self._condense_from_left(
@@ -561,6 +609,9 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
         tokenizer_fn: TokenizerFn | None,
         chat_history: list[ChatMessage],
         max_length: int,
+        left_tokens: int | None = None,
+        last_user_tokens: int | None = None,
+        right_tokens: int | None = None,
         iteration: int = 0,
     ) -> list[ChatMessage]:
         if iteration > MAX_CONDENSE_ITERATIONS:
@@ -572,25 +623,43 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
             right_messages,
         ) = await asyncio.to_thread(self._split_conversation, chat_history)
 
-        # 0a. Drop thinking from right except the last occurrence
-        right_messages = self._drop_thinking_except_last(right_messages)
-        left_messages = self._drop_thinking(left_messages)
-        current_history = [*left_messages, last_user_message, *right_messages]
-        current_tokens = await self._get_messages_tokens(
-            current_history, tokenizer_fn=tokenizer_fn
-        )
-        if current_tokens <= max_length:
-            return current_history
+        # Compute per-component token counts if not provided by caller
+        if left_tokens is None or last_user_tokens is None or right_tokens is None:
+            left_tokens, last_user_tokens, right_tokens = await asyncio.gather(
+                self._get_messages_tokens(left_messages, tokenizer_fn=tokenizer_fn),
+                self._get_messages_tokens(last_user_message, tokenizer_fn=tokenizer_fn),
+                self._get_messages_tokens(right_messages, tokenizer_fn=tokenizer_fn),
+            )
 
-        # 0b. Drop remaining thinking from right and all from left
-        right_messages = self._drop_thinking(right_messages)
-        left_messages = self._drop_thinking(left_messages)
-        current_history = [*left_messages, last_user_message, *right_messages]
-        current_tokens = await self._get_messages_tokens(
-            current_history, tokenizer_fn=tokenizer_fn
+        # 0a. Drop thinking from right (except last occurrence) and from left;
+        #     re-count both in parallel since either may have changed
+        new_right = self._drop_thinking_except_last(right_messages)
+        new_left = self._drop_thinking(left_messages)
+        new_left_tokens, new_right_tokens = await asyncio.gather(
+            self._get_messages_tokens(new_left, tokenizer_fn=tokenizer_fn),
+            self._get_messages_tokens(new_right, tokenizer_fn=tokenizer_fn),
         )
+        left_messages = new_left
+        right_messages = new_right
+        left_tokens = new_left_tokens
+        right_tokens = new_right_tokens
+        current_tokens = left_tokens + last_user_tokens + right_tokens
         if current_tokens <= max_length:
-            return current_history
+            return [*left_messages, last_user_message, *right_messages]
+
+        # 0b. Drop remaining thinking from right (left already fully stripped)
+        new_right = self._drop_thinking(right_messages)
+        has_remaining_thinking = any(
+            "thinking" in m.additional_kwargs for m in right_messages
+        )
+        if has_remaining_thinking:
+            right_tokens = await self._get_messages_tokens(
+                new_right, tokenizer_fn=tokenizer_fn
+            )
+        right_messages = new_right
+        current_tokens = left_tokens + last_user_tokens + right_tokens
+        if current_tokens <= max_length:
+            return [*left_messages, last_user_message, *right_messages]
 
         # 1. Summarize the right part of the conversation
         current_right = await self._summary_right(
@@ -601,13 +670,12 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
             max_length=max_length,
             aggressive_level=iteration,
         )
-        current_history = [*left_messages, last_user_message, *current_right]
-        current_tokens = await self._get_messages_tokens(
-            current_history, tokenizer_fn=tokenizer_fn
+        right_tokens = await self._get_messages_tokens(
+            current_right, tokenizer_fn=tokenizer_fn
         )
-
+        current_tokens = left_tokens + last_user_tokens + right_tokens
         if current_tokens <= max_length:
-            return current_history
+            return [*left_messages, last_user_message, *current_right]
 
         # 3. Summarize the left part of the conversation
         current_left = await self._summary_left(
@@ -616,20 +684,18 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
             chat_history=left_messages,
             max_length=max_length,
         )
-        current_history = [*current_left, last_user_message, *current_right]
-        current_tokens = await self._get_messages_tokens(
-            current_history, tokenizer_fn=tokenizer_fn
+        left_tokens = await self._get_messages_tokens(
+            current_left, tokenizer_fn=tokenizer_fn
         )
-
+        current_tokens = left_tokens + last_user_tokens + right_tokens
         if current_tokens <= max_length:
-            return current_history
+            return [*current_left, last_user_message, *current_right]
 
         # 4. Drop messages from the left side until we reach the max length
-        right_side = await self._get_messages_tokens(
-            [last_user_message, *current_right],
-            tokenizer_fn=tokenizer_fn,
-        )
+        # right_side is arithmetic — no Triton call needed
+        right_side = last_user_tokens + right_tokens
         if right_side >= max_length:
+            current_history = [*current_left, last_user_message, *current_right]
             return await self._condense_from_right(
                 llm=llm,
                 tokenizer_fn=tokenizer_fn,
@@ -644,20 +710,23 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
             direction="left",
             max_length=available_left_tokens,
             tokenizer_fn=tokenizer_fn,
+            current_tokens=left_tokens,
         )
 
-        # 4. Repair the left and right parts of the conversation
+        # 5. Repair the left and right parts of the conversation
         current_left, current_right = await asyncio.gather(
             asyncio.to_thread(repair_without_tools, current_left),
             asyncio.to_thread(
                 repair_with_tools, [last_user_message, *current_right], strict=False
             ),
         )
-
-        current_history = [*current_left, *current_right]
-        current_tokens = await self._get_messages_tokens(
-            current_history, tokenizer_fn=tokenizer_fn
+        # current_right now includes last_user_message; count both in parallel
+        repaired_left_tokens, repaired_right_tokens = await asyncio.gather(
+            self._get_messages_tokens(current_left, tokenizer_fn=tokenizer_fn),
+            self._get_messages_tokens(current_right, tokenizer_fn=tokenizer_fn),
         )
+        current_history = [*current_left, *current_right]
+        current_tokens = repaired_left_tokens + repaired_right_tokens
 
         if current_tokens > max_length:
             return await self._condense_from_right(
@@ -721,6 +790,9 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
                 tokenizer_fn=tokenizer,
                 chat_history=chat_history,
                 max_length=max_length,
+                left_tokens=left_tokens,
+                last_user_tokens=last_user_message_tokens,
+                right_tokens=right_tokens,
             )
         else:
             chat_history = await self._condense_from_right(
@@ -728,6 +800,9 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
                 tokenizer_fn=tokenizer,
                 chat_history=chat_history,
                 max_length=max_length,
+                left_tokens=left_tokens,
+                last_user_tokens=last_user_message_tokens,
+                right_tokens=right_tokens,
             )
 
         # After condensation, we ensure that the last user message is preserved
