@@ -29,9 +29,18 @@ class BaseIngestionScheduler(ABC):
     The async methods always dispatch to Celery regardless of mode.
     """
 
-    def __init__(self, ingest_service: IngestService, s3_helper: S3Helper) -> None:
+    def __init__(
+        self,
+        ingest_service: IngestService,
+        s3_helper: S3Helper | None = None,
+    ) -> None:
         self._ingest_service = ingest_service
         self._s3_helper = s3_helper
+
+    def _require_s3_helper(self) -> S3Helper:
+        if self._s3_helper is None:
+            raise RuntimeError("S3Helper is required for remote ingestion flows")
+        return self._s3_helper
 
     @abstractmethod
     def ingest(self, ingest_body: IngestBody) -> IngestResponse:
@@ -61,7 +70,7 @@ class BaseIngestionScheduler(ABC):
             if should_upload:
                 content = ingest_body.ingest_body.input.to_binary_content()
                 object_name = str(uuid.uuid4())
-                s3_url = self._s3_helper.upload_file_to_s3(
+                s3_url = self._require_s3_helper().upload_file_to_s3(
                     filename=content.filename,
                     bytes_data=content.data.read(),
                     bucket_name=config.s3.temporary_bucket_name,
@@ -118,8 +127,8 @@ class LocalIngestionScheduler(BaseIngestionScheduler):
     """Run sync ingestion in-process."""
 
     @inject
-    def __init__(self, ingest_service: IngestService, s3_helper: S3Helper) -> None:
-        super().__init__(ingest_service, s3_helper)
+    def __init__(self, ingest_service: IngestService) -> None:
+        super().__init__(ingest_service)
 
     def ingest(self, ingest_body: IngestBody) -> IngestResponse:
         from private_gpt.server.ingest.ingest_router import ingest_data_sync
@@ -189,7 +198,7 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
                 else None
             )
             object_name = str(uuid.uuid4())
-            s3_url = self._s3_helper.upload_file_to_s3(
+            s3_url = self._require_s3_helper().upload_file_to_s3(
                 filename=content.filename,
                 bytes_data=content.data.read(),
                 bucket_name=config.s3.temporary_bucket_name,

@@ -163,7 +163,8 @@ async def _noop_tool(value: str) -> str:
 
 async def _collect_engine(engine: ChatLoopEngine, request: ResolvedChatRequest) -> list:
     result = []
-    async for event in engine.run(request):
+    execution = await engine.run(request)
+    async for event in execution.events:
         result.append(event)
     return result
 

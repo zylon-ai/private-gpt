@@ -31,17 +31,16 @@ def test_chat_scheduler_requires_redis_stream_backend() -> None:
         Settings(**merged)
 
 
-def test_chat_scheduler_requires_real_celery_worker() -> None:
+def test_chat_scheduler_celery_mode_requires_redis_broker() -> None:
     merged = merge_settings(
         [
             unsafe_settings,
             {
                 "scheduler": {"chat": {"mode": "celery"}},
-                "stream": {"broker": "redis"},
-                "celery": {"use_workers": False},
+                "stream": {"broker": "memory"},
             },
         ]
     )
 
-    with pytest.raises(ValueError, match=r"celery\.use_workers=true"):
+    with pytest.raises(ValueError, match=r"stream\.broker=redis"):
         Settings(**merged)

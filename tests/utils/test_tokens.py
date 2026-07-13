@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
-from private_gpt.components.llm.llm_helper import get_tokenizer_fn
+from private_gpt.components.llm.llm_helper import get_async_tokenizer_fn
 from private_gpt.components.llm.tokenizers.tokenizer_base import (
     TokenizedInput,
     TokenizerBase,
@@ -32,7 +32,7 @@ class AsyncCapableTokenizer(MagicMock):
 @pytest.mark.asyncio
 async def test_async_tokenizer_prefers_underlying_acall():
     tokenizer = AsyncCapableTokenizer()
-    tokenizer_fn = get_tokenizer_fn(tokenizer)
+    tokenizer_fn = get_async_tokenizer_fn(tokenizer)
 
     tokens = await async_tokenizer("one two three", tokenizer_fn=tokenizer_fn)
 
@@ -44,11 +44,7 @@ async def test_async_tokenizer_prefers_underlying_acall():
 @pytest.mark.asyncio
 async def test_estimate_token_count_uses_async_tokenizer_wrapper():
     tokenizer = AsyncCapableTokenizer()
-    tokenizer_fn = get_tokenizer_fn(tokenizer)
-
-    async def message_to_input(messages, **kwargs):
-        del kwargs
-        raise AssertionError("message_to_input should run synchronously in this test")
+    tokenizer_fn = get_async_tokenizer_fn(tokenizer)
 
     count = await estimate_token_count(
         chat_history=[ChatMessage(role=MessageRole.USER, content="one two three")],
