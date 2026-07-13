@@ -3,12 +3,18 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from injector import Injector
 
 from private_gpt.components.streaming.tasks.chat_scheduler import (
     ArqChatScheduler,
     ChatSchedulerFactory,
     LocalChatScheduler,
 )
+
+
+@pytest.fixture
+def injector() -> Injector:
+    return Injector()
 
 
 @pytest.mark.anyio
@@ -51,30 +57,33 @@ async def test_local_chat_scheduler_cancel_returns_false_when_no_task() -> None:
     assert cancelled is False
 
 
-def test_chat_scheduler_factory_selects_local_mode() -> None:
+def test_chat_scheduler_factory_selects_local_mode(injector: Injector) -> None:
     factory = ChatSchedulerFactory(
         settings=SimpleNamespace(
             scheduler=SimpleNamespace(chat=SimpleNamespace(mode="local"))
         ),
+        injector=injector,
     )
     assert isinstance(factory.get(), LocalChatScheduler)
 
 
-def test_chat_scheduler_factory_selects_arq_mode() -> None:
+def test_chat_scheduler_factory_selects_arq_mode(injector: Injector) -> None:
     factory = ChatSchedulerFactory(
         settings=SimpleNamespace(
             scheduler=SimpleNamespace(chat=SimpleNamespace(mode="arq"))
         ),
+        injector=injector,
     )
     assert isinstance(factory.get(), ArqChatScheduler)
 
 
-def test_chat_scheduler_factory_raises_on_unknown_mode() -> None:
+def test_chat_scheduler_factory_raises_on_unknown_mode(injector: Injector) -> None:
     with pytest.raises(ValueError, match="Unknown"):
         ChatSchedulerFactory(
             settings=SimpleNamespace(
                 scheduler=SimpleNamespace(chat=SimpleNamespace(mode="unknown"))
             ),
+            injector=injector,
         )
 
 

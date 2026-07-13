@@ -462,11 +462,11 @@ class PreprocessSettings(BaseModel):
 
 
 class SchedulerSettings(BaseModel):
-    mode: Literal["local", "arq", "celery"] = Field(
+    mode: str = Field(
         default="local",
         description=(
-            "``'local'`` runs in-process. ``'arq'`` dispatches to a dedicated "
-            "arq async worker process. ``'celery'`` dispatches to a Celery worker."
+            "Scheduler mode name. Built-ins include ``local``, ``arq``, and ``celery``. "
+            "Tests and extensions may register additional provider names."
         ),
     )
     celery_queue: str = Field(
