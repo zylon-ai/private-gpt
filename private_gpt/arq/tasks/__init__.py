@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from arq.worker import func
 
+from private_gpt.arq.task_registry import get_task_packages
+
 if TYPE_CHECKING:
     from arq.worker import Function
 
@@ -36,8 +38,17 @@ def autodiscover_tasks(package_name: str = __name__) -> list[Function]:
             max_tries = cast(int, getattr(value, "_arq_task_max_tries", 1))
             discovered.append(
                 func(
-                    cast(Callable[..., Any], value), name=task_name, max_tries=max_tries
+                    cast(Callable[..., Any], value),
+                    name=task_name,
+                    max_tries=max_tries,
                 )
             )
 
+    return discovered
+
+
+def autodiscover_registered_tasks(*task_packages: str) -> list[Function]:
+    discovered: list[Function] = []
+    for package_name in get_task_packages(*task_packages):
+        discovered.extend(autodiscover_tasks(package_name))
     return discovered
