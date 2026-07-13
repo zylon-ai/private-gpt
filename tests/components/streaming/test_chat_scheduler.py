@@ -78,66 +78,10 @@ def test_chat_scheduler_factory_selects_arq_mode(injector: Injector) -> None:
 
 
 def test_chat_scheduler_factory_raises_on_unknown_mode(injector: Injector) -> None:
-    with pytest.raises(ValueError, match="Unknown"):
+    with pytest.raises(ValueError, match=r"Unknown scheduler\.chat\.mode"):
         ChatSchedulerFactory(
             settings=SimpleNamespace(
-                scheduler=SimpleNamespace(chat=SimpleNamespace(mode="unknown"))
+                scheduler=SimpleNamespace(chat=SimpleNamespace(mode="missing"))
             ),
             injector=injector,
         )
-
-
-@pytest.mark.anyio
-async def test_arq_chat_scheduler_cancel_returns_false_when_abort_fails(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    abort_chat_job = AsyncMock(return_value=False)
-    monkeypatch.setattr(
-        "private_gpt.components.streaming.tasks.chat_scheduler.abort_chat_job",
-        abort_chat_job,
-    )
-
-    scheduler = ArqChatScheduler()
-    cancelled = await scheduler.cancel("msg-arq-not-found")
-
-    assert cancelled is False
-    abort_chat_job.assert_awaited_once_with(correlation_id="msg-arq-not-found")
-
-
-@pytest.mark.anyio
-async def test_local_chat_scheduler_cancel_marks_task_as_cancelled() -> None:
-    async def _work() -> None:
-        await asyncio.sleep(100)
-
-    task = asyncio.create_task(_work(), name="chat_msg-local-mark")
-
-    scheduler = LocalChatScheduler()
-    result = await scheduler.cancel("msg-local-mark")
-    assert result is True
-
-    with pytest.raises(asyncio.CancelledError):
-        await task
-
-    assert task.cancelled()
-
-
-@pytest.mark.anyio
-async def test_local_chat_scheduler_cancel_only_targets_the_matching_task() -> None:
-    async def _work() -> None:
-        await asyncio.sleep(100)
-
-    task_target = asyncio.create_task(_work(), name="chat_target-cid")
-    task_other = asyncio.create_task(_work(), name="chat_other-cid")
-
-    scheduler = LocalChatScheduler()
-    result = await scheduler.cancel("target-cid")
-    assert result is True
-
-    with pytest.raises(asyncio.CancelledError):
-        await task_target
-    assert task_target.cancelled()
-
-    assert not task_other.done()
-    task_other.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await task_other

@@ -5,7 +5,9 @@ from private_gpt.arq.event_channel import RedisEventChannel
 from private_gpt.arq.iteration_state import IterationStateService
 from private_gpt.arq.settings import RESUME_ITERATION_TASK_NAME, TOOL_RESUME_TASK_NAME
 from private_gpt.arq.tasks import arq_task
-from private_gpt.components.chat.models.chat_config_models import ResolvedChatRequest
+from private_gpt.components.engines.chat.execution.chat_step import (
+    execute_chat_resume_step,
+)
 from private_gpt.components.engines.chat.models.chat_state import ChatStatus
 from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
@@ -64,7 +66,6 @@ async def tool_resume_job(
     request_data["messages"] = messages
 
     await enqueue_resume_iteration_job(
-        body=saved.body,
         correlation_id=correlation_id,
         stream_type=saved.stream_type,
         metadata=saved.metadata,
@@ -83,7 +84,6 @@ async def tool_resume_job(
 @arq_task(name=RESUME_ITERATION_TASK_NAME)
 async def resume_iteration_job(
     ctx: dict[Any, Any],
-    body: dict[str, Any],
     correlation_id: str,
     stream_type: str,
     metadata: dict[str, Any],
@@ -106,22 +106,16 @@ async def resume_iteration_job(
         if saved is None:
             await iteration_state_service.append_done(correlation_id)
             return
-        request = ResolvedChatRequest.model_validate(request_data)
-        engine = chat_service.build_engine()
-        state = await engine.resume(
-            pause_type,
-            request,
+        state = await execute_chat_resume_step(
+            chat_service=chat_service,
+            request_data=request_data,
+            pause_type=pause_type,
+            tool_results=tool_results,
             iteration=iteration,
             next_block_count=next_block_count,
+            iteration_state_service=iteration_state_service,
+            correlation_id=correlation_id,
             hooks=_ARQ_HOOKS,
-            checkpoint_payload=saved.checkpoint_payload.model_copy(
-                update={
-                    "tool_responses": [
-                        ToolExecutionResponse.model_validate(item)
-                        for item in tool_results
-                    ]
-                }
-            ),
             channel=channel,
         )
     except Exception as exc:
@@ -136,7 +130,7 @@ async def resume_iteration_job(
         scheduler = IterationScheduler(
             iteration_state_service=iteration_state_service,
             correlation_id=correlation_id,
-            body=body,
+            request_data=request_data,
             stream_type=stream_type,
             metadata=metadata,
         )

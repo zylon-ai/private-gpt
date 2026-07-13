@@ -17,13 +17,13 @@ class IterationScheduler:
         *,
         iteration_state_service: IterationStateService,
         correlation_id: str,
-        body: dict[str, Any],
+        request_data: dict[str, Any],
         stream_type: str,
         metadata: dict[str, Any],
     ) -> None:
         self._iteration_state_service = iteration_state_service
         self._correlation_id = correlation_id
-        self._body = body
+        self._request_data = request_data
         self._stream_type = stream_type
         self._metadata = metadata
         self._was_waiting = False
@@ -38,7 +38,6 @@ class IterationScheduler:
         await self._iteration_state_service.save(
             IterationContext(
                 correlation_id=self._correlation_id,
-                body=self._body,
                 request_data=state.input.request.model_dump(mode="json"),
                 stream_type=self._stream_type,
                 metadata=self._metadata,

@@ -59,6 +59,18 @@ class StreamManager:
 
         return correlation_id
 
+    async def create_stream(
+        self,
+        stream_type: str,
+        correlation_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> str:
+        return await self.stream_service.create_stream(
+            stream_type=stream_type,
+            correlation_id=correlation_id,
+            metadata=metadata,
+        )
+
     async def cancel_stream(self, correlation_id: str) -> bool:
         """Cancel a stream."""
         return await self.processor.cancel_stream_processing(correlation_id)

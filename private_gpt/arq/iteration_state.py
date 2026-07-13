@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 
 class IterationContext(BaseModel):
     correlation_id: str
-    body: dict[str, Any]
     request_data: dict[str, Any]
     stream_type: str
     metadata: dict[str, Any]

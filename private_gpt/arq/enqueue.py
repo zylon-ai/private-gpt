@@ -15,7 +15,7 @@ from private_gpt.settings.settings import settings as _settings
 
 async def enqueue_start_chat_job(
     *,
-    body: dict[str, Any],
+    request_data: dict[str, Any],
     correlation_id: str,
     stream_type: str,
     metadata: dict[str, Any],
@@ -26,7 +26,7 @@ async def enqueue_start_chat_job(
     try:
         await redis.enqueue_job(
             START_CHAT_TASK_NAME,
-            body,
+            request_data,
             correlation_id,
             stream_type,
             metadata,
@@ -40,7 +40,6 @@ async def enqueue_start_chat_job(
 
 async def enqueue_resume_iteration_job(
     *,
-    body: dict[str, Any],
     correlation_id: str,
     stream_type: str,
     metadata: dict[str, Any],
@@ -56,7 +55,6 @@ async def enqueue_resume_iteration_job(
     try:
         await redis.enqueue_job(
             RESUME_ITERATION_TASK_NAME,
-            body,
             correlation_id,
             stream_type,
             metadata,

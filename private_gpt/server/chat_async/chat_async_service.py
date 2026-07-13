@@ -39,7 +39,6 @@ class ChatAsyncService:
             stream_type="chat_completion",
             event_generator=event_generator,
             correlation_id=message_id,
-            # For debugging purposes, we can include metadata about the request
             metadata={
                 "message_count": len(request.messages),
                 "thinking_enabled": request.thinking.enabled,
