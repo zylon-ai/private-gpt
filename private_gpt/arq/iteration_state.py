@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 import redis.asyncio as redis  # type: ignore[import-untyped]
 from injector import inject, singleton
@@ -13,9 +13,6 @@ from private_gpt.components.engines.chat.async_chat_engine import (
 )
 from private_gpt.components.tools.remote_execution import ToolExecutionResponse
 from private_gpt.settings.settings import Settings
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
 
 
 class IterationContext(BaseModel):
@@ -55,9 +52,6 @@ class IterationStateService:
 
     def _resumed_key(self, correlation_id: str) -> str:
         return f"{self._prefix}:resumed:{correlation_id}"
-
-    def _events_key(self, correlation_id: str) -> str:
-        return f"{self._prefix}:events:{correlation_id}"
 
     async def save(self, ctx: IterationContext) -> None:
         await self._redis.set(
@@ -109,40 +103,7 @@ class IterationStateService:
             self._ctx_key(correlation_id),
             self._results_key(correlation_id),
             self._resumed_key(correlation_id),
-            self._events_key(correlation_id),
         )
-
-    async def append_event(self, correlation_id: str, event_data: str) -> None:
-        await self._redis.xadd(
-            self._events_key(correlation_id),
-            {"type": "event", "data": event_data},
-            maxlen=5000,
-            approximate=True,
-        )
-        await cast(Any, self._redis.expire(self._events_key(correlation_id), self._ttl))
-
-    async def append_done(self, correlation_id: str) -> None:
-        await self._redis.xadd(
-            self._events_key(correlation_id),
-            {"type": "done", "data": ""},
-        )
-        await cast(Any, self._redis.expire(self._events_key(correlation_id), self._ttl))
-
-    async def stream_events(self, correlation_id: str) -> AsyncGenerator[str, None]:
-        key = self._events_key(correlation_id)
-        last_id = "0-0"
-        while True:
-            items = await self._redis.xread({key: last_id}, block=1000, count=100)
-            if not items:
-                continue
-            for _, entries in items:
-                for entry_id, payload in entries:
-                    last_id = entry_id
-                    if payload.get("type") == "done":
-                        return
-                    data = payload.get("data")
-                    if data:
-                        yield data
 
     async def close(self) -> None:
         await self._redis.aclose()

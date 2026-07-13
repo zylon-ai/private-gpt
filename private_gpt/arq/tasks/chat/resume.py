@@ -1,7 +1,6 @@
 from typing import Any
 
 from private_gpt.arq.enqueue import enqueue_resume_iteration_job
-from private_gpt.arq.event_channel import RedisEventChannel
 from private_gpt.arq.iteration_state import IterationStateService
 from private_gpt.arq.settings import RESUME_ITERATION_TASK_NAME, TOOL_RESUME_TASK_NAME
 from private_gpt.arq.tasks import arq_task
@@ -16,6 +15,11 @@ from private_gpt.components.engines.chat.models.execution_hooks import (
 from private_gpt.components.engines.chat.schedulers.iteration_scheduler import (
     IterationScheduler,
 )
+from private_gpt.components.streaming.providers.models import StreamStatus
+from private_gpt.components.streaming.stream.stream_service_event_channel import (
+    StreamServiceEventChannel,
+)
+from private_gpt.components.streaming.stream_component import StreamComponent
 from private_gpt.components.tools.remote_execution import ToolExecutionResponse
 from private_gpt.di import get_global_injector
 from private_gpt.events.event_serializer import StreamingEventHandler
@@ -99,12 +103,15 @@ async def resume_iteration_job(
     chat_service = injector.get(ChatService)
     iteration_state_service = injector.get(IterationStateService)
     event_handler = StreamingEventHandler()
+    stream_service = injector.get(StreamComponent).stream
 
-    channel = RedisEventChannel(iteration_state_service, correlation_id, event_handler)
+    channel = StreamServiceEventChannel(stream_service, correlation_id, event_handler)
     try:
         saved = await iteration_state_service.load(correlation_id)
         if saved is None:
-            await iteration_state_service.append_done(correlation_id)
+            await stream_service.update_stream_status(
+                correlation_id, StreamStatus.COMPLETED
+            )
             return
         state = await execute_chat_resume_step(
             chat_service=chat_service,
@@ -119,10 +126,11 @@ async def resume_iteration_job(
             channel=channel,
         )
     except Exception as exc:
-        await iteration_state_service.append_event(
+        await stream_service.push_event(
             correlation_id,
             event_handler.serialize(event_handler.error_event(correlation_id, exc)),
         )
+        await stream_service.update_stream_status(correlation_id, StreamStatus.FAILED)
         await channel.close()
         raise
 

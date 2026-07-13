@@ -1,6 +1,5 @@
 from typing import Any
 
-from private_gpt.arq.event_channel import RedisEventChannel
 from private_gpt.arq.iteration_state import IterationStateService
 from private_gpt.arq.settings import START_CHAT_TASK_NAME
 from private_gpt.arq.tasks import arq_task
@@ -15,6 +14,11 @@ from private_gpt.components.engines.chat.models.execution_hooks import (
 from private_gpt.components.engines.chat.schedulers.iteration_scheduler import (
     IterationScheduler,
 )
+from private_gpt.components.streaming.providers.models import StreamStatus
+from private_gpt.components.streaming.stream.stream_service_event_channel import (
+    StreamServiceEventChannel,
+)
+from private_gpt.components.streaming.stream_component import StreamComponent
 from private_gpt.di import get_global_injector
 from private_gpt.events.event_serializer import StreamingEventHandler
 from private_gpt.server.chat.chat_service import ChatService
@@ -42,8 +46,9 @@ async def start_chat_job(
     chat_service = injector.get(ChatService)
     iteration_state_service = injector.get(IterationStateService)
     event_handler = StreamingEventHandler()
+    stream_service = injector.get(StreamComponent).stream
 
-    channel = RedisEventChannel(iteration_state_service, correlation_id, event_handler)
+    channel = StreamServiceEventChannel(stream_service, correlation_id, event_handler)
     try:
         state = await execute_chat_start_step(
             chat_service=chat_service,
@@ -52,10 +57,11 @@ async def start_chat_job(
             channel=channel,
         )
     except Exception as exc:
-        await iteration_state_service.append_event(
+        await stream_service.push_event(
             correlation_id,
             event_handler.serialize(event_handler.error_event(correlation_id, exc)),
         )
+        await stream_service.update_stream_status(correlation_id, StreamStatus.FAILED)
         await channel.close()
         raise
 

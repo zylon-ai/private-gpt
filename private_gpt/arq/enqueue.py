@@ -31,7 +31,6 @@ async def enqueue_start_chat_job(
             stream_type,
             metadata,
             _job_id=job_id or f"{correlation_id}:start",
-            _keep_result=10,
             _queue_name=get_queue_name(current_settings),
         )
     finally:
@@ -64,7 +63,6 @@ async def enqueue_resume_iteration_job(
             iteration,
             next_block_count,
             _job_id=job_id or f"{correlation_id}:resume:{iteration}",
-            _keep_result=10,
             _queue_name=get_queue_name(current_settings),
         )
     finally:
@@ -85,7 +83,6 @@ async def enqueue_tool_resume_job(
             correlation_id,
             tool_id,
             result,
-            _keep_result=10,
             _queue_name=get_queue_name(current_settings),
         )
     finally:

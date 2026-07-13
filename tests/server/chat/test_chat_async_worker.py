@@ -1,55 +1,37 @@
-from collections.abc import AsyncGenerator
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from private_gpt.events.models import Event
 from private_gpt.server.chat_async.chat_async_service import ChatAsyncService
 
 
-async def _empty_gen() -> AsyncGenerator[Event, None]:
-    return
-    yield  # make it an async generator
-
-
-def _service(
-    stream_manager: MagicMock | None = None,
-    chat_facade: MagicMock | None = None,
-) -> ChatAsyncService:
+def _service(stream_manager: MagicMock | None = None) -> ChatAsyncService:
     if stream_manager is None:
         stream_manager = MagicMock()
         stream_manager.stream_exists = AsyncMock(return_value=False)
-        stream_manager.create_and_start_stream = AsyncMock(return_value="msg-1")
         stream_manager.cancel_stream = AsyncMock(return_value=False)
 
-    if chat_facade is None:
-        chat_facade = MagicMock()
-        chat_facade.create_chat_event_generator = AsyncMock(return_value=_empty_gen())
-
-    return ChatAsyncService(
-        chat_facade=chat_facade,
-        stream_manager=stream_manager,
-    )
+    return ChatAsyncService(stream_manager=stream_manager)
 
 
 @pytest.mark.anyio
-async def test_initiate_chat_stream_delegates_to_scheduler() -> None:
+async def test_initiate_chat_stream_delegates_to_worker_dispatch() -> None:
     stream_manager = MagicMock()
     stream_manager.stream_exists = AsyncMock(return_value=False)
-    stream_manager.create_and_start_stream = AsyncMock(return_value="msg-1")
 
-    chat_facade = MagicMock()
-    chat_facade.create_chat_event_generator = AsyncMock(return_value=_empty_gen())
+    service = _service(stream_manager=stream_manager)
 
-    service = _service(stream_manager=stream_manager, chat_facade=chat_facade)
-
-    correlation_id = await service.initiate_chat_stream(
-        request=MagicMock(),
-        message_id="msg-1",
-    )
+    with patch(
+        "private_gpt.server.chat_async.chat_async_service.create_stream_and_enqueue_chat",
+        new=AsyncMock(return_value="msg-1"),
+    ) as dispatch:
+        correlation_id = await service.initiate_chat_stream(
+            request=MagicMock(),
+            message_id="msg-1",
+        )
 
     assert correlation_id == "msg-1"
-    stream_manager.create_and_start_stream.assert_awaited_once()
+    dispatch.assert_awaited_once()
 
 
 @pytest.mark.anyio
