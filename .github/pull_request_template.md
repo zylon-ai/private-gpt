@@ -16,7 +16,7 @@ Please delete options that are not relevant.
 Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce. Please also list any relevant details for your test configuration
 
 - [ ] Added new unit/integration tests
-- [ ] I stared at the code and made sure it makes sense
+- [ ] I reviewed the code and made sure it makes sense
 
 **Test Configuration**:
 * Firmware version:
