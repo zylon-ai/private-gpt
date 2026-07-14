@@ -5342,7 +5342,7 @@
                 const svc = l.name || "App";
                 const desc = l.description ? escapeHtml(l.description) : "";
                 if (url) {
-                  return `<a class="code-exec-server-link" href="${escapeAttr(url)}" target="_blank" rel="noreferrer">${icons.globe}<span class="code-exec-server-name">${escapeHtml(svc)}</span><span class="code-exec-server-url">${escapeHtml(url)}</span></a>${desc ? `<div class="code-exec-terminal" style="margin-top:6px">${desc}</div>` : ""}`;
+                  return `<a class="code-exec-server-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${icons.globe}<span class="code-exec-server-name">${escapeHtml(svc)}</span><span class="code-exec-server-url">${escapeHtml(url)}</span></a>${desc ? `<div class="code-exec-terminal" style="margin-top:6px">${desc}</div>` : ""}`;
                 }
                 return `<div class="code-exec-present-file"><span class="file-icon">${icons.globe}</span><span class="file-name">${escapeHtml(svc)}</span></div>`;
               }).join("")}</div>${textHtml ? `<div class="code-exec-terminal" style="margin-top:8px">${textHtml}</div>` : ""}`;
