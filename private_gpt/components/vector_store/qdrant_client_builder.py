@@ -73,15 +73,15 @@ class QdrantClientBuilder:
 
             config = dict(config)
             config["path"] = str(resolve_data_path(config["path"]))
-            # This is a workaround to allow to execute tests/local qdrant
-            # when we want to support sync/async client.
-            # To allow, remove .lock from the db_dir
+            db_dir = config["path"]
 
+            # Local Qdrant uses one lock file for sync and async clients.
+            # Remove it between client construction using the resolved path.
             client = QdrantClient(**config)
-            QdrantClientBuilder.clean_lock(settings)
+            QdrantClientBuilder.clean_lock(db_dir=db_dir)
 
             aclient = AsyncQdrantClient(**config)
-            QdrantClientBuilder.clean_lock(settings)
+            QdrantClientBuilder.clean_lock(db_dir=db_dir)
 
         else:
             client = QdrantClient(**config)
@@ -97,11 +97,7 @@ class QdrantClientBuilder:
         return config.get("path") is not None
 
     @staticmethod
-    def clean_lock(settings: Settings) -> None:
-        db_dir = settings.qdrant.path
-        if db_dir is None:
-            return
-
+    def clean_lock(db_dir: str) -> None:
         lock_file = os.path.join(db_dir, ".lock")
         if os.path.exists(lock_file):
             os.remove(lock_file)
