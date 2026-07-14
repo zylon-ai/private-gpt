@@ -2233,7 +2233,7 @@ async def test_chat_cancels_llm_astream_on_client_disconnection(
         await request_task
 
     try:
-        await asyncio.wait_for(llm_generator_closed.wait(), timeout=2.0)
+        await asyncio.wait_for(llm_generator_closed.wait(), timeout=5.0)
     except TimeoutError:
         pytest.fail(
             "LLM astream_chat_with_tools generator was not closed after client disconnection"

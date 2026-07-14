@@ -692,6 +692,7 @@ def test_messages_count_tokens_endpoint_forwards_message_input_and_options(
     test_client: TestClient,
     httpx_mock: HTTPXMock,
 ) -> None:
+    injector.get(ChatService)
     chat_service = Mock()
     chat_service.count_tokens = AsyncMock(
         return_value=CountTokensOutput(input_tokens=11)
