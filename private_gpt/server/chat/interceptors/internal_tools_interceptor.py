@@ -4,16 +4,16 @@ from private_gpt.components.context.models.context_layer import (
     ToolDefinitionsLayer,
 )
 from private_gpt.components.context.models.layer_type import LayerType
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
-from private_gpt.components.engines.chat_loop.utils.request_builder import (
+from private_gpt.components.engines.chat.utils.request_builder import (
     build_request_from_context_stack,
 )
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
@@ -31,7 +31,7 @@ class InternalToolRequestInterceptor(ChatRequestLoopInterceptor):
         self._tool_pipeline = tool_pipeline
         self._prompt_builder = prompt_builder
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         if (
             context.phase != InterceptorPhase.VALIDATION
             and context.phase != InterceptorPhase.BEFORE_ITERATION

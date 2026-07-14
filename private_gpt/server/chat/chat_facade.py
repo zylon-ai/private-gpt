@@ -31,10 +31,15 @@ class ChatFacadeService:
         """Create the chat event generator."""
 
         async def coro() -> AsyncGenerator[Event, None]:
-            # Open the chat service and start streaming
             completion_gen = await self._chat_service.stream_chat(request)
-            event_generator: AsyncGenerator[Event, None] = completion_gen.events  # type: ignore
-            async for event in event_generator:
-                yield event
+            event_generator = completion_gen.events
+            try:
+                async for event in event_generator:
+                    yield event
+            finally:
+                await event_generator.aclose()
 
         return coro()
+
+    async def cancel(self, correlation_id: str) -> bool:
+        return await self._chat_service.cancel(correlation_id)

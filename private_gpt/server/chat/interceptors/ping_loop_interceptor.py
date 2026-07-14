@@ -3,11 +3,11 @@ import contextlib
 from collections.abc import Mapping
 from typing import Any
 
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatResponseLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
 from private_gpt.events.models import Event, PingEvent
 
@@ -19,7 +19,7 @@ class PingInterceptor(ChatResponseLoopInterceptor):
         self._ping_interval = ping_interval
         self._ping_task: asyncio.Task[None] | None = None
 
-    async def on_iteration_start(self, context: ChatLoopInterceptorContext) -> None:
+    async def on_iteration_start(self, context: ChatInterceptorContext) -> None:
         emit_fn = context.emit_fn
 
         async def _ping_loop() -> None:
@@ -30,7 +30,7 @@ class PingInterceptor(ChatResponseLoopInterceptor):
 
         self._ping_task = asyncio.create_task(_ping_loop())
 
-    async def on_iteration_end(self, context: ChatLoopInterceptorContext) -> None:
+    async def on_iteration_end(self, context: ChatInterceptorContext) -> None:
         if self._ping_task and not self._ping_task.done():
             self._ping_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -40,7 +40,7 @@ class PingInterceptor(ChatResponseLoopInterceptor):
     async def intercept_event(
         self,
         event: Event,
-        context: ChatLoopInterceptorContext,
+        context: ChatInterceptorContext,
     ) -> Event | None:
         return event
 

@@ -15,6 +15,13 @@ qdrant:
 stream:
   broker: memory
 
+scheduler:
+  ingestion:
+    # Tests run local ingestion and local retrieval in the same process. This
+    # mode reuses the already-open local Qdrant handle instead of opening a
+    # second sync/async client pair against the same on-disk database.
+    mode: local
+
 docling:
   mode: api
   use_ocr: true
@@ -88,4 +95,3 @@ skills:
   storage_provider: local
   skill_injection_mode: system_prompt
   maximum_loaded_skills: 1
-

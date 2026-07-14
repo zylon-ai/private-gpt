@@ -1,5 +1,5 @@
 import asyncio
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from injector import inject, singleton
 from llama_index.core.base.llms.types import (
@@ -16,9 +16,11 @@ from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.tools.binary_block_decorators import (
     auto_resolve_media_blocks,
 )
+from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import DATABASE_QUERY_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import DATABASE_QUERY_TOOL_FN
 from private_gpt.components.tools.types import ToolValidationMode
+from private_gpt.di import get_global_injector
 from private_gpt.events.models import (
     BinaryBlock,
     ResultContentBlockType,
@@ -387,4 +389,22 @@ class DatabaseQueryToolBuilder:
             runtime=runtime,
             description=description,
             async_fn=run_tool,
+            execution_metadata=build_rebuild_metadata(
+                rebuild_database_query_tool,
+                {
+                    "sql_artifacts": sql_artifacts,
+                    "chat_history": chat_history,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                    "validate": validate,
+                    "runtime": runtime,
+                    "blob_visibility": blob_visibility,
+                },
+            ),
         )
+
+
+async def rebuild_database_query_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(DatabaseQueryToolBuilder)
+    return await builder.build_tool(**cast(Any, kwargs))

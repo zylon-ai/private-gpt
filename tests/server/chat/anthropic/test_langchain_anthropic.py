@@ -140,6 +140,7 @@ def setup_mock_llm(
 
     llm_component = injector.get(LLMComponent)
     llm_component.llm = mock_llm_instance
+    llm_component.get_llm.return_value = mock_llm_instance
     injector.bind_mock(LLMComponent, mock_llm_instance)
 
 

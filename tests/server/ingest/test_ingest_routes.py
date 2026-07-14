@@ -7,6 +7,9 @@ from unittest.mock import Mock
 from fastapi.testclient import TestClient
 
 from private_gpt.components.broker.broker_component import BrokerComponent
+from private_gpt.components.ingestion.ingestion_scheduler import (
+    IngestionSchedulerFactory,
+)
 from private_gpt.components.storage.s3_helper import S3Helper
 from private_gpt.di import set_global_injector
 from private_gpt.server.ingest.ingest_router import (
@@ -20,6 +23,15 @@ from private_gpt.server.utils.artifact_input import UriArtifact
 from private_gpt.server.utils.callback import AMQP, AsyncResponse, Callback
 from tests.fixtures.ingest_helper import IngestHelper
 from tests.fixtures.mock_injector import MockInjector
+
+
+def _use_celery_ingestion(injector: MockInjector) -> None:
+    settings = injector.bind_settings({"scheduler": {"ingestion": {"mode": "celery"}}})
+    factory = IngestionSchedulerFactory(
+        settings=settings,
+        injector=injector.test_injector,
+    )
+    injector.bind_mock(IngestionSchedulerFactory, factory)
 
 
 def test_ingest_accepts_txt_files(
@@ -103,6 +115,7 @@ def test_ingest_uri_async(
     test_client: TestClient, injector: MockInjector, ingest_helper: IngestHelper
 ) -> None:
     collection = str(uuid.uuid4())
+    _use_celery_ingestion(injector=injector)
 
     # Mock broker to receive callback
     broker_mock = Mock(BrokerComponent)
@@ -285,6 +298,7 @@ def test_delete_async(
     test_client: TestClient, injector: MockInjector, ingest_helper: IngestHelper
 ) -> None:
     collection = str(uuid.uuid4())
+    _use_celery_ingestion(injector=injector)
     # Mock broker to receive callback
     broker_mock = Mock(BrokerComponent)
     injector.bind_mock(BrokerComponent, broker_mock)
@@ -303,7 +317,6 @@ def test_delete_async(
             "collection": collection,
         },
     )
-
     body = DeleteIngestedDocumentAsyncBody(
         delete_body=DeleteIngestedDocumentBody(
             collection=collection,

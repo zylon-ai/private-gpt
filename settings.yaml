@@ -62,6 +62,7 @@ retrieval:
   max_merging_recalculations: ${PGPT_MAX_MERGING_RECALCULATIONS:3}
 
 chat:
+  engine_mode: ${PGPT_CHAT_ENGINE_MODE:async}
   allow_use_default_prompt: ${PGPT_ALLOW_USE_DEFAULT_PROMPT:true}
   allow_use_context: ${PGPT_ALLOW_USE_CONTEXT:true}
   allow_generate_citations: ${PGPT_ALLOW_GENERATE_CITATIONS:true}
@@ -80,7 +81,6 @@ chat:
   tldr_timeout: ${PGPT_TLDR_TIMEOUT:300}
   tldr_minimum_threshold_seconds: ${PGPT_TLDR_MINIMUM_THRESHOLD_SECONDS:1.5}
   multiplexing_threshold: ${PGPT_MULTIPLEXING_THRESHOLD:10}
-  maximum_concurrent_requests: ${PGPT_MAXIMUM_CONCURRENT_REQUESTS:10}
   maximum_blob_size: ${PGPT_MAXIMUM_BLOB_SIZE:26214400}
   preprocess:
     documents:
@@ -163,6 +163,7 @@ celery:
   soft_time_limit: ${PGPT_CELERY_SOFT_TIME_LIMIT:}
   hard_time_limit: ${PGPT_CELERY_HARD_TIME_LIMIT:}
   visibility_timeout: ${PGPT_CELERY_VISIBILITY_TIMEOUT:21600}
+  max_tasks_per_child: ${PGPT_CELERY_MAX_TASKS_PER_CHILD:1000}
 
 # Broker to which workers will notify the result of tasks
 tasks_results_broker:
@@ -297,6 +298,18 @@ skills:
 semaphore:
   mode: ${PGPT_SEMAPHORE_MODE:memory}
 
+scheduler:
+  ingestion:
+    mode: ${PGPT_INGESTION_SCHEDULER_MODE:local}
+    celery_queue: ${PGPT_INGESTION_CELERY_QUEUE:ingestion}
+  chat:
+    mode: ${PGPT_CHAT_SCHEDULER_MODE:local}
+    celery_queue: ${PGPT_CHAT_CELERY_QUEUE:chat}
+    callback_timeout_seconds: ${PGPT_CHAT_CALLBACK_TIMEOUT_SECONDS:300}
+  tools:
+    mode: ${PGPT_TOOLS_SCHEDULER_MODE:local}
+    celery_queue: ${PGPT_TOOLS_CELERY_QUEUE:tools}
+
 transformation:
   pptx:
     vision:
@@ -327,4 +340,3 @@ transformation:
         max_iterations: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MAX_ITERATIONS:2}
         enable_semaphore: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_ENABLE_SEMAPHORE:false}
         mode: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MODE:none}
-

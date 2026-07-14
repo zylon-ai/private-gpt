@@ -1,6 +1,6 @@
 #!/bin/bash
 
-: "${PGPT_WORKER_MODE:=mixed}"  # mixed, worker, flower
+: "${PGPT_WORKER_MODE:=mixed}"  # mixed, celery, flower, arq
 : "${PGPT_FLOWER_PORT:=5555}"
 : "${PGPT_FLOWER_PASSWORD:=flower}"
 : "${PGPT_FLOWER_URL_PREFIX:=}"
@@ -14,11 +14,19 @@
 : "${PGPT_CELERY_CONCURRENCY:=}"
 : "${PGPT_CELERY_TIME_LIMIT:=}"
 : "${PGPT_WORKER_APP_MODULE:=private_gpt}"
+: "${PGPT_STATEFUL_WORKER_TYPE:=}"
+: "${PGPT_MAX_WORKERS:=}"
+: "${PGPT_CELERY_MAX_TASKS_PER_CHILD:=1000}"
 : "${API_ENABLED:=true}"
 : "${API_PORT:=8090}"
 
 CELERY_APP_MODULE="${PGPT_WORKER_APP_MODULE}.celery"
 HEALTHCHECK_APP_MODULE="${PGPT_WORKER_APP_MODULE}.celery.healthcheck:app"
+ARQ_HEALTHCHECK_APP_MODULE="${PGPT_WORKER_APP_MODULE}.arq.healthcheck:app"
+
+if [[ "$PGPT_WORKER_MODE" == "arq" ]]; then
+  exec python -m private_gpt.arq.runner
+fi
 
 # Create directory for PID files
 mkdir -p /tmp/private_gpt_pids
@@ -65,20 +73,30 @@ if [[ "$PGPT_WORKER_MODE" == "flower" || "$PGPT_WORKER_MODE" == "mixed" ]]; then
     python -m celery --app "$CELERY_APP_MODULE" flower "${FLOWER_ARGS[@]}" &
 fi
 
-# Run celery worker using the config
-if [[ "$PGPT_WORKER_MODE" == "worker" || "$PGPT_WORKER_MODE" == "mixed" ]]; then
+# Run celery worker using the config.
+# Stateful workers (PGPT_STATEFUL_WORKER_TYPE set) keep warm DI/runtime state
+# and recycle children after the configured task count.
+if [[ "$PGPT_WORKER_MODE" == "celery" || "$PGPT_WORKER_MODE" == "mixed" ]]; then
   WORKER_ARGS=()
   if [[ -n "$PGPT_CELERY_LOG_LEVEL" ]]; then
       WORKER_ARGS+=("--loglevel=$PGPT_CELERY_LOG_LEVEL")
   fi
-  if [[ -n "$PGPT_CELERY_QUEUES" ]]; then
-      WORKER_ARGS+=("--queues=$PGPT_CELERY_QUEUES")
-      if [[ -n "$PGPT_CELERY_HOSTNAME" ]]; then
-        PGPT_CELERY_HOSTNAME="${PGPT_CELERY_QUEUES}"
-      fi
+
+  QUEUES="$PGPT_CELERY_QUEUES"
+  HOSTNAME="${PGPT_CELERY_HOSTNAME}"
+
+  # If stateful worker type is set, derive defaults.
+  if [[ -n "$PGPT_STATEFUL_WORKER_TYPE" ]]; then
+      QUEUES="${QUEUES:-$PGPT_STATEFUL_WORKER_TYPE}"
+      HOSTNAME="${HOSTNAME:-$PGPT_STATEFUL_WORKER_TYPE}"
+      WORKER_ARGS+=("--max-tasks-per-child=$PGPT_CELERY_MAX_TASKS_PER_CHILD")
   fi
-  if [[ -n "$PGPT_CELERY_HOSTNAME" ]]; then
-      WORKER_ARGS+=("--hostname=${PGPT_CELERY_HOSTNAME}%h")
+
+  if [[ -n "$QUEUES" ]]; then
+      WORKER_ARGS+=("--queues=$QUEUES")
+  fi
+  if [[ -n "$HOSTNAME" ]]; then
+      WORKER_ARGS+=("--hostname=${HOSTNAME}%h")
   fi
   if [[ -n "$PGPT_CELERY_POOL" ]]; then
       WORKER_ARGS+=("--pool=$PGPT_CELERY_POOL")

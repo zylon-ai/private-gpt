@@ -1,26 +1,22 @@
 import logging
-import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body, Depends, Request
 from pydantic import BaseModel, Field
 
-from private_gpt.components.ingest.utils import get_extension, get_file_name
-from private_gpt.components.storage.s3_helper import S3Helper
+from private_gpt.components.ingestion.ingestion_scheduler import (
+    IngestionSchedulerFactory,
+)
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.server.ingest.model import IngestedDoc
-from private_gpt.server.utils.artifact_input import IngestableArtifactType, UriArtifact
+from private_gpt.server.utils.artifact_input import IngestableArtifactType
 from private_gpt.server.utils.auth import authenticated
 from private_gpt.server.utils.callback import BaseCallbackInput
-from private_gpt.settings.settings import settings
 
 try:
     from private_gpt.celery.celery import celery_app
     from private_gpt.celery.model import Task, TaskStatus
-
-    if TYPE_CHECKING:
-        from celery.result import AsyncResult
 
     _CELERY_AVAILABLE = True
 except ImportError:
@@ -429,249 +425,206 @@ def ingest_content(
 
     The ingested content becomes immediately available for use in other API
     endpoints like /messages, /artifacts/search, and /artifacts/content.
+
+    The configured ingestion scheduler decides whether the work runs
+    in-process or is dispatched to a worker.
     """
-    service: IngestService = request.state.injector.get(IngestService)
-
-    content = body.input.to_binary_content(get_file_name(body.metadata))
-    with service.temporary_file(
-        lambda: service.data_path_from_bin_data(
-            content.data, get_extension(content.filename)
-        )
-    ) as data_path:
-        return ingest_data_sync(
-            collection=body.collection,
-            artifact=body.artifact,
-            data_path=data_path,
-            service=service,
-            metadata={**(body.metadata or {}), "file_name": content.filename},
-        )
+    scheduler = request.state.injector.get(IngestionSchedulerFactory).get()
+    result: IngestResponse = scheduler.ingest(body)
+    return result
 
 
-if _CELERY_AVAILABLE:
-
-    @ingest_router.post(
-        "/ingest/async",
-        response_model=Task,
-        summary="Ingest Content Asynchronously",
-        description="Initiate asynchronous ingestion of content from multiple sources",
-        responses={
-            200: {
-                "description": "Successfully initiated ingestion task",
-                "content": {
-                    "application/json": {
-                        "example": {"task_id": "123e4567-e89b-12d3-a456-426614174000"}
-                    }
-                },
-            },
-            422: {
-                "description": "Invalid input format or request parameters",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "detail": "Input format is invalid or parameters are missing"
-                        }
-                    }
-                },
-            },
-            404: {
-                "description": "Resource not accessible (for URI inputs)",
-                "content": {
-                    "application/json": {
-                        "example": {"detail": "The URI resource could not be accessed"}
-                    }
-                },
+@ingest_router.post(
+    "/ingest/async",
+    response_model=Task,
+    summary="Ingest Content Asynchronously",
+    description="Initiate asynchronous ingestion of content from multiple sources",
+    responses={
+        200: {
+            "description": "Successfully initiated ingestion task",
+            "content": {
+                "application/json": {
+                    "example": {"task_id": "123e4567-e89b-12d3-a456-426614174000"}
+                }
             },
         },
-        tags=["Artifacts"],
-        openapi_extra={
-            "requestBody": {
-                "description": "JSON request body containing ingestion parameters and callback configuration for asynchronous processing notifications",
-                "content": {
-                    "application/json": {
-                        "examples": {
-                            "file_async": {
-                                "summary": "Async file ingestion",
-                                "value": {
-                                    "callback": {
-                                        "amqp": {
-                                            "exchange": "ingestion_events",
-                                            "routing_key_done": "ingest.completed",
-                                            "routing_key_error": "ingest.failed",
-                                            "routing_key_progress": "ingest.progress",
-                                        }
-                                    },
-                                    "ingest_body": {
-                                        "input": {
-                                            "type": "file",
-                                            "value": "JVBERi0xLjQKJaqrrK0KMS...",
-                                        },
-                                        "artifact": "quarterly_report",
-                                        "collection": "financial_docs",
-                                        "metadata": {"file_name": "Q3_Report.pdf"},
-                                    },
-                                },
-                            },
-                            "uri_async": {
-                                "summary": "Async URI ingestion",
-                                "value": {
-                                    "callback": {
-                                        "amqp": {
-                                            "exchange": "ingestion_events",
-                                            "routing_key_done": "ingest.completed",
-                                            "routing_key_error": "ingest.failed",
-                                            "routing_key_progress": "ingest.progress",
-                                        }
-                                    },
-                                    "ingest_body": {
-                                        "input": {
-                                            "type": "uri",
-                                            "value": "s3://company-docs/annual-2023.pdf",
-                                        },
-                                        "artifact": "annual_report_2023",
-                                        "collection": "financial_reports",
-                                        "metadata": {"year": "2023"},
-                                    },
-                                },
-                            },
-                            "text_async": {
-                                "summary": "Async text ingestion",
-                                "value": {
-                                    "callback": {
-                                        "amqp": {
-                                            "exchange": "ingestion_events",
-                                            "routing_key_done": "ingest.completed",
-                                            "routing_key_error": "ingest.failed",
-                                            "routing_key_progress": "ingest.progress",
-                                        }
-                                    },
-                                    "ingest_body": {
-                                        "input": {
-                                            "type": "text",
-                                            "value": "Our company was founded in 2020...",
-                                        },
-                                        "artifact": "company_profile",
-                                        "collection": "corporate_docs",
-                                        "metadata": {"author": "Marketing Team"},
-                                    },
-                                },
-                            },
-                        }
+        422: {
+            "description": "Invalid input format or request parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Input format is invalid or parameters are missing"
                     }
-                },
+                }
+            },
+        },
+        404: {
+            "description": "Resource not accessible (for URI inputs)",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "The URI resource could not be accessed"}
+                }
+            },
+        },
+    },
+    tags=["Artifacts"],
+    openapi_extra={
+        "requestBody": {
+            "description": "JSON request body containing ingestion parameters and callback configuration for asynchronous processing notifications",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "file_async": {
+                            "summary": "Async file ingestion",
+                            "value": {
+                                "callback": {
+                                    "amqp": {
+                                        "exchange": "ingestion_events",
+                                        "routing_key_done": "ingest.completed",
+                                        "routing_key_error": "ingest.failed",
+                                        "routing_key_progress": "ingest.progress",
+                                    }
+                                },
+                                "ingest_body": {
+                                    "input": {
+                                        "type": "file",
+                                        "value": "JVBERi0xLjQKJaqrrK0KMS...",
+                                    },
+                                    "artifact": "quarterly_report",
+                                    "collection": "financial_docs",
+                                    "metadata": {"file_name": "Q3_Report.pdf"},
+                                },
+                            },
+                        },
+                        "uri_async": {
+                            "summary": "Async URI ingestion",
+                            "value": {
+                                "callback": {
+                                    "amqp": {
+                                        "exchange": "ingestion_events",
+                                        "routing_key_done": "ingest.completed",
+                                        "routing_key_error": "ingest.failed",
+                                        "routing_key_progress": "ingest.progress",
+                                    }
+                                },
+                                "ingest_body": {
+                                    "input": {
+                                        "type": "uri",
+                                        "value": "s3://company-docs/annual-2023.pdf",
+                                    },
+                                    "artifact": "annual_report_2023",
+                                    "collection": "financial_reports",
+                                    "metadata": {"year": "2023"},
+                                },
+                            },
+                        },
+                        "text_async": {
+                            "summary": "Async text ingestion",
+                            "value": {
+                                "callback": {
+                                    "amqp": {
+                                        "exchange": "ingestion_events",
+                                        "routing_key_done": "ingest.completed",
+                                        "routing_key_error": "ingest.failed",
+                                        "routing_key_progress": "ingest.progress",
+                                    }
+                                },
+                                "ingest_body": {
+                                    "input": {
+                                        "type": "text",
+                                        "value": "Our company was founded in 2020...",
+                                    },
+                                    "artifact": "company_profile",
+                                    "collection": "corporate_docs",
+                                    "metadata": {"author": "Marketing Team"},
+                                },
+                            },
+                        },
+                    }
+                }
+            },
+        }
+    },
+)
+def ingest_content_async(request: Request, body: IngestAsyncBody) -> Task:
+    """Asynchronously process and ingest content from multiple sources.
+
+    This endpoint initiates an asynchronous task to process and ingest content
+    from various sources including files, URIs, and text. It's particularly
+    useful for large files or when you need non-blocking operations.
+
+    Supported input types:
+    - Base64 encoded files
+    - Remote URIs (HTTP/HTTPS, S3, etc.)
+    - Plain text content
+    - Already processed content (ContextFilter objects)
+
+    The context obtained from ingested content is later used in
+    `/chat/completions`, `/completions`, and `/artifacts/search` APIs.
+
+    A file can generate different Documents
+    (for example a PDF generates one Document
+    per page). All Documents are returned in the response, together with the
+    extracted Metadata and artifact id,
+    which is later used to improve context retrieval
+    and can be used to filter the context used to create responses in
+    `/chat/completions`, `/completions`,
+    `/artifacts/search` and `/artifact/content`.
+
+    Example request:
+    ```json
+    {
+        "callback": {
+            "amqp": {
+                "exchange": "ingestion",
+                "routing_key_done": "ingest.done",
+                "routing_key_error": "ingest.error",
+                "routing_key_progress": "ingest.progress"
             }
         },
-    )
-    def ingest_content_async(request: Request, body: IngestAsyncBody) -> Task:
-        """Asynchronously process and ingest content from multiple sources.
-
-        This endpoint initiates an asynchronous task to process and ingest content
-        from various sources including files, URIs, and text. It's particularly
-        useful for large files or when you need non-blocking operations.
-
-        Supported input types:
-        - Base64 encoded files
-        - Remote URIs (HTTP/HTTPS, S3, etc.)
-        - Plain text content
-        - Already processed content (ContextFilter objects)
-
-        The context obtained from ingested content is later used in
-        `/chat/completions`, `/completions`, and `/artifacts/search` APIs.
-
-        A file can generate different Documents
-        (for example a PDF generates one Document
-        per page). All Documents are returned in the response, together with the
-        extracted Metadata and artifact id,
-        which is later used to improve context retrieval
-        and can be used to filter the context used to create responses in
-        `/chat/completions`, `/completions`,
-        `/artifacts/search` and `/artifact/content`.
-
-        Example request:
-        ```json
-        {
-            "callback": {
-                "amqp": {
-                    "exchange": "ingestion",
-                    "routing_key_done": "ingest.done",
-                    "routing_key_error": "ingest.error",
-                    "routing_key_progress": "ingest.progress"
-                }
+        "ingest_body": {
+            "input": {
+                "type": "uri",
+                "value": "s3://company-docs/annual-2023.pdf"
             },
-            "ingest_body": {
-                "input": {
-                    "type": "uri",
-                    "value": "s3://company-docs/annual-2023.pdf"
-                },
-                "artifact": "annual_report_2023",
-                "collection": "financial_reports",
-                "metadata": {
-                    "file_name": "annual_report_2023.pdf",
-                    "department": "finance",
-                    "year": "2023"
-                }
+            "artifact": "annual_report_2023",
+            "collection": "financial_reports",
+            "metadata": {
+                "file_name": "annual_report_2023.pdf",
+                "department": "finance",
+                "year": "2023"
             }
         }
-        ```
+    }
+    ```
 
-        Notes:
-        * URIs must be accessible from the server
-        * Base64 content should be properly encoded
-        * File name with extension is recommended in metadata
-        * PDFs generate one document per page
-        * Large files are automatically split into chunks
-        * Progress can be monitored via /artifacts/ingest/async/{task_id}
-        * Resulting context is available in chat/completion APIs
-        * Ingested content can be filtered using metadata
+    Notes:
+    * URIs must be accessible from the server
+    * Base64 content should be properly encoded
+    * File name with extension is recommended in metadata
+    * PDFs generate one document per page
+    * Large files are automatically split into chunks
+    * Progress can be monitored via /artifacts/ingest/async/{task_id}
+    * Resulting context is available in chat/completion APIs
+    * Ingested content can be filtered using metadata
 
-        Important to know:
-        - Since binary data cannot be passed directly to Celery tasks, files are
-          first uploaded to a temporary S3 bucket. The Celery task then retrieves
-          the file from S3 for processing. This can incur additional time.
+    Important to know:
+    - Since binary data cannot be passed directly to Celery tasks, files are
+      first uploaded to a temporary S3 bucket. The Celery task then retrieves
+      the file from S3 for processing. This can incur additional time.
 
-        """
-        service = request.state.injector.get(IngestService)
-        config = settings()
-        s3_helper = request.state.injector.get(S3Helper)
+    """
+    scheduler = request.state.injector.get(IngestionSchedulerFactory).get()
+    try:
+        task_id = scheduler.ingest_async(body)
+    except NotImplementedError as exc:
+        from fastapi import HTTPException
 
-        # Initialize ingestion
-        service.initialize_artifact_indices(
-            collection=body.ingest_body.collection,
-            artifact=body.ingest_body.artifact,
-        )
-
-        # Since we cannot store in the Celery task args the actual binary data,
-        # we upload the file to a temporary S3 bucket and pass the S3 URI instead.
-        if body.ingest_body.input:
-            should_upload = (
-                # If it's not a URI, we need to upload
-                not isinstance(body.ingest_body.input, UriArtifact)
-                # It's a URI in Base64, we need to upload
-                or body.ingest_body.input.is_base64()
-            )
-
-            if should_upload:
-                content = body.ingest_body.input.to_binary_content()
-                object_name = str(uuid.uuid4())
-
-                s3_url = s3_helper.upload_file_to_s3(
-                    filename=content.filename,
-                    bytes_data=content.data.read(),
-                    bucket_name=config.s3.temporary_bucket_name,
-                    object_name=object_name,
-                )
-
-                if not s3_url:
-                    raise ValueError("Failed to upload file to S3 for async ingestion")
-
-                body.ingest_body.input = UriArtifact(value=s3_url)
-
-        # Enqueue ingestion tasks (index population)
-        async_result = celery_app.send_task(
-            "vector_index_task",
-            args=(body,),
-        )
-
-        return Task(task_id=async_result.task_id)
+        raise HTTPException(
+            status_code=501,
+            detail="Async ingestion is not supported by the configured scheduler",
+        ) from exc
+    return Task(task_id=task_id)
 
 
 def ingest_data_sync(
@@ -900,77 +853,66 @@ def delete_ingested(request: Request, body: DeleteIngestedDocumentBody) -> None:
     and all related chunks from the specified collection. The deletion is
     immediate and cannot be undone.
     """
-    service = request.state.injector.get(IngestService)
-    service.delete(
-        collection=body.collection,
-        artifact=body.artifact,
-    )
+    scheduler = request.state.injector.get(IngestionSchedulerFactory).get()
+    scheduler.delete(collection=body.collection, artifact=body.artifact)
 
 
-if _CELERY_AVAILABLE:
-
-    @ingest_router.post(
-        "/delete/async",
-        response_model=Task,
-        summary="Delete Document Asynchronously",
-        responses={
-            200: {"model": Task, "description": "Successfully initiated deletion task"},
-            422: {"description": "Invalid request parameters"},
-        },
-        tags=["Artifacts"],
-        openapi_extra={
-            "requestBody": {
-                "description": "JSON request body containing deletion parameters and optional callback configuration for asynchronous processing notifications",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "callback": {
-                                "amqp": {
-                                    "exchange": "deletion_events",
-                                    "routing_key_done": "delete.completed",
-                                    "routing_key_error": "delete.failed",
-                                    "routing_key_progress": "delete.progress",
-                                }
-                            },
-                            "delete_body": {
-                                "collection": "financial_reports",
-                                "artifact": "obsolete_report_2022",
-                            },
-                        }
+@ingest_router.post(
+    "/delete/async",
+    response_model=Task,
+    summary="Delete Document Asynchronously",
+    responses={
+        200: {"model": Task, "description": "Successfully initiated deletion task"},
+        422: {"description": "Invalid request parameters"},
+    },
+    tags=["Artifacts"],
+    openapi_extra={
+        "requestBody": {
+            "description": "JSON request body containing deletion parameters and optional callback configuration for asynchronous processing notifications",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "callback": {
+                            "amqp": {
+                                "exchange": "deletion_events",
+                                "routing_key_done": "delete.completed",
+                                "routing_key_error": "delete.failed",
+                                "routing_key_progress": "delete.progress",
+                            }
+                        },
+                        "delete_body": {
+                            "collection": "financial_reports",
+                            "artifact": "obsolete_report_2022",
+                        },
                     }
-                },
-            }
-        },
-    )
-    def delete_ingested_async(body: DeleteIngestedDocumentAsyncBody) -> Task:
-        """Initiates asynchronous deletion of a document and all associated data.
+                }
+            },
+        }
+    },
+)
+def delete_ingested_async(
+    request: Request, body: DeleteIngestedDocumentAsyncBody
+) -> Task:
+    """Initiates asynchronous deletion of a document and all associated data.
 
-        This endpoint queues a deletion task for background processing, making it
-        suitable for large documents or when non-blocking operation is required.
-        The task can be monitored using the returned task ID.
+    This endpoint queues a deletion task for background processing, making it
+    suitable for large documents or when non-blocking operation is required.
+    The task can be monitored using the returned task ID.
 
-        If an ingestion task is currently running for the same document, it will
-        be automatically revoked before initiating the deletion.
-        """
-        # First we try to revoke the running task if it's already running.
-        # In case that yes, we return a task_id with status "revoked"
-        from private_gpt.celery.task_helper import IngestionTaskHelper
+    If an ingestion task is currently running for the same document, it will
+    be automatically revoked before initiating the deletion.
+    """
+    scheduler = request.state.injector.get(IngestionSchedulerFactory).get()
+    try:
+        task_id = scheduler.delete_async(body)
+    except NotImplementedError as exc:
+        from fastapi import HTTPException
 
-        revoked = IngestionTaskHelper.revoke_ingestion_task(
-            celery_app=celery_app,
-            collection=body.delete_body.collection,
-            artifact=body.delete_body.artifact,
-        )
-        if revoked:
-            logger.info(f"Revoked ingestion task for {body.delete_body.artifact}")
-            return Task(task_id="revoked")
-
-        # Enqueue deletion task
-        async_result: AsyncResult[None] = celery_app.send_task(
-            "delete_ingested_task",
-            args=(body,),
-        )
-        return Task(task_id=async_result.task_id)
+        raise HTTPException(
+            status_code=501,
+            detail="Async deletion is not supported by the configured scheduler",
+        ) from exc
+    return Task(task_id=task_id)
 
 
 if _CELERY_AVAILABLE:
@@ -1033,7 +975,7 @@ if _CELERY_AVAILABLE:
                 description="Unique identifier of the deletion task to check status for",
                 examples=["123e4567-e89b-12d3-a456-426614174000"],
             ),
-        ]
+        ],
     ) -> TaskStatus[None]:
         """Retrieves the current status of an asynchronous deletion task.
 

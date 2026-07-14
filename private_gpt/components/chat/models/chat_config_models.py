@@ -3,19 +3,25 @@ import enum
 import inspect
 import re
 from collections.abc import Awaitable, Callable
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock
 from llama_index.core.llms import LLM
 from llama_index.core.tools import BaseTool, FunctionTool
 from llama_index.core.tools.function_tool import AsyncCallable, _is_context_param
 from llama_index.core.tools.utils import create_schema_from_function
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+)
 
 from private_gpt.chat.input_models import BlobVisibilityMode, PromptConfig
 from private_gpt.chat.schema_models import create_model_from_json_schema
 from private_gpt.components.engines.citations.types import Citation, Document
-from private_gpt.components.llm.llm_helper import TokenizerFn
+from private_gpt.components.llm.llm_helper import AsyncTokenizerFn, TokenizerFn
 from private_gpt.components.sandbox.content_bundle import ContentBundle
 from private_gpt.components.tools.tool_names import resolve_internal_tool_name
 from private_gpt.components.tools.types import ToolValidationMode
@@ -31,7 +37,7 @@ class LLMInstanceConfig(BaseModel):
     config: LLMModelConfig = Field(
         description="The LLM model configuration.",
     )
-    tokenizer: TokenizerFn | None = Field(
+    tokenizer: TokenizerFn | AsyncTokenizerFn | None = Field(
         default=None,
         description="The tokenizer function to use for the LLM.",
     )
@@ -111,6 +117,53 @@ class ToolRequirements(enum.StrEnum):
     SANDBOX = "sandbox"
 
 
+class ToolExecutionMetadata(BaseModel):
+    rebuild_callable: str = Field(
+        description="Import path to the callable that rebuilds the server tool."
+    )
+    rebuild_kwargs: dict[str, Any] = Field(
+        default_factory=dict,
+        description="JSON-serializable kwargs used to rebuild the server tool.",
+    )
+
+    MODEL_TAG_KEY: ClassVar[str] = "__pgpt_model__"
+
+    @field_serializer("rebuild_kwargs", when_used="json")
+    def _serialize_kwargs(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Tag BaseModel values so they survive the JSON roundtrip."""
+        result: dict[str, Any] = {}
+        for key, value in kwargs.items():
+            if isinstance(value, BaseModel):
+                result[key] = {
+                    self.MODEL_TAG_KEY: f"{type(value).__module__}:{type(value).__qualname__}",
+                    "data": value.model_dump(mode="json"),
+                }
+            else:
+                result[key] = value
+        return result
+
+    @field_validator("rebuild_kwargs", mode="before")
+    @classmethod
+    def _deserialize_kwargs(cls, kwargs: Any) -> Any:
+        """Untag BaseModel values after JSON roundtrip."""
+        if not isinstance(kwargs, dict):
+            return kwargs
+        import importlib
+
+        result: dict[str, Any] = {}
+        for key, value in kwargs.items():
+            if isinstance(value, dict) and cls.MODEL_TAG_KEY in value:
+                module_path, qualname = value[cls.MODEL_TAG_KEY].rsplit(":", 1)
+                module = importlib.import_module(module_path)
+                model_cls: Any = module
+                for attribute in qualname.split("."):
+                    model_cls = getattr(model_cls, attribute)
+                result[key] = model_cls.model_validate(value["data"])
+            else:
+                result[key] = value
+        return result
+
+
 class ToolSpec(BaseModel):
     name: str | None = Field(description="Unique name identifier for the tool")
     type: str | None = Field(
@@ -164,6 +217,22 @@ class ToolSpec(BaseModel):
         default_factory=list,
         description="List of requirements for the tool, e.g., SANDBOX",
     )
+    execution_metadata: ToolExecutionMetadata | None = Field(
+        default=None,
+        description=(
+            "Optional metadata used to rebuild this server tool in another process."
+        ),
+    )
+
+    @field_serializer("async_fn", "async_callback", when_used="json")
+    def _serialize_callable(self, _v: Any) -> None:
+        return None
+
+    @field_validator("async_fn", mode="before")
+    @classmethod
+    def _deserialize_callable(cls, v: Any) -> Any:
+        """Restore callable after JSON deserialization."""
+        return _dummy_tool_async_fn if v is None else v
 
     def get_original_tool_name(self) -> str:
         """Get the original tool name without version suffix."""
@@ -190,6 +259,7 @@ class ToolSpec(BaseModel):
         partial_params: dict[str, Any] | None = None,
         instructions: str | None = None,
         requirements: list[ToolRequirements] | None = None,
+        execution_metadata: ToolExecutionMetadata | None = None,
     ) -> "ToolSpec":
         """Create a ToolSpec from default parameters."""
         if not input_schema and not async_fn:
@@ -214,6 +284,7 @@ class ToolSpec(BaseModel):
             partial_params=partial_params,
             instructions=instructions,
             requirements=requirements or [],
+            execution_metadata=execution_metadata,
         )
 
     @classmethod
@@ -246,6 +317,7 @@ class ToolSpec(BaseModel):
             partial_params=tool.partial_params
             if hasattr(tool, "partial_params")
             else None,
+            execution_metadata=None,
         )
 
     def to_function_tool(self) -> "FunctionTool":
@@ -405,6 +477,20 @@ class ResponseFormatConfig(BaseModel):
     output_cls: type[BaseModel] | None = Field(
         default=None, description="Output class to use for the response format"
     )
+
+    @field_serializer("output_cls", when_used="json")
+    def _serialize_output_cls(
+        self,
+        output_cls: type[BaseModel] | None,
+    ) -> dict[str, Any] | None:
+        return output_cls.model_json_schema() if output_cls is not None else None
+
+    @field_validator("output_cls", mode="before")
+    @classmethod
+    def _deserialize_output_cls(cls, output_cls: Any) -> Any:
+        if isinstance(output_cls, dict):
+            return create_model_from_json_schema(output_cls)
+        return output_cls
 
 
 class ChatRequest(BaseModel):

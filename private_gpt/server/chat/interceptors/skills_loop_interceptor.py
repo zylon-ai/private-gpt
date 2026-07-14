@@ -13,13 +13,13 @@ from private_gpt.components.context.models.context_layer import (
     SkillCatalogLayer,
 )
 from private_gpt.components.context.models.layer_type import LayerType
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.components.skills.models.skill_entities import SkillFilter
@@ -105,7 +105,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
         self._skill_loader = skill_loader
         self._skill_injection_mode = settings.skills.skill_injection_mode
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         if context.phase != InterceptorPhase.BEFORE_ITERATION:
             return
 

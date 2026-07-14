@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import threading
 import uuid
@@ -42,7 +43,12 @@ class RedisStreamService(StreamService):
             task = asyncio.create_task(
                 self._pre_create_connections(redis_client, config.minimum_connections)
             )
-            task.add_done_callback(lambda t: t.exception())
+            task.add_done_callback(self._consume_background_result)
+
+    @staticmethod
+    def _consume_background_result(task: asyncio.Task[None]) -> None:
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            task.exception()
 
     async def _pre_create_connections(self, client: redis.Redis, n: int) -> None:
         client.auto_close_connection_pool = False
@@ -63,6 +69,10 @@ class RedisStreamService(StreamService):
     def _get_status_key(self, correlation_id: str) -> str:
         """Generate status key for correlation ID."""
         return f"{self._config.status_prefix}:{correlation_id}"
+
+    def _get_cancel_key(self, correlation_id: str) -> str:
+        """Generate cancel-flag key for correlation ID."""
+        return f"{self._config.status_prefix}:cancel:{correlation_id}"
 
     async def create_stream(
         self,
@@ -303,6 +313,22 @@ class RedisStreamService(StreamService):
     async def clean_up_stream(self, correlation_id: str) -> None:
         """Clean up a stream by deleting it and its events."""
         await self.delete_stream(correlation_id)
+        await self.clear_cancel_flag(correlation_id)
+
+    async def set_cancel_flag(self, correlation_id: str) -> None:
+        """Set a cancellation flag in Redis for the chat worker to observe."""
+        cancel_key = self._get_cancel_key(correlation_id)
+        await self._client.set(cancel_key, "1", ex=self._config.expiry_seconds)  # type: ignore
+
+    async def is_cancelled(self, correlation_id: str) -> bool:
+        """Check whether the cancellation flag has been set."""
+        cancel_key = self._get_cancel_key(correlation_id)
+        return bool(await self._client.exists(cancel_key))  # type: ignore
+
+    async def clear_cancel_flag(self, correlation_id: str) -> None:
+        """Remove the cancellation flag."""
+        cancel_key = self._get_cancel_key(correlation_id)
+        await self._client.delete(cancel_key)  # type: ignore
 
     async def close(self) -> None:
         """Close the redis stream service."""

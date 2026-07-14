@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from injector import inject, singleton
 
@@ -11,9 +11,11 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import BASH_TOOL_FN
 from private_gpt.components.tools.utils import truncate_output
+from private_gpt.di import get_global_injector
 from private_gpt.events.models import TextBlock
 from private_gpt.settings.settings import Settings
 
@@ -72,4 +74,18 @@ class BashToolBuilder:
             description=description,
             async_fn=run_bash,
             requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_bash_tool,
+                {
+                    "config": config,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                },
+            ),
         )
+
+
+async def rebuild_bash_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(BashToolBuilder)
+    return await builder.build_tool(**cast(Any, kwargs))

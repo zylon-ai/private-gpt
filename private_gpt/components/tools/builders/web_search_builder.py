@@ -1,16 +1,18 @@
 import asyncio
-from typing import Literal
+from typing import Any, Literal, cast
 
 from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.chunk.models import Website
 from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import WEB_SEARCH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import WEB_SEARCH_TOOL_FN
 from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.components.web.web_search.models import WebSearchResult
 from private_gpt.components.web.web_search.web_search_service import WebSearchService
+from private_gpt.di import get_global_injector
 from private_gpt.events.models import (
     ResultContentBlockType,
     TextBlock,
@@ -87,4 +89,20 @@ class WebSearchToolBuilder:
             runtime=runtime,
             description=description,
             async_fn=run_tool,
+            execution_metadata=build_rebuild_metadata(
+                rebuild_web_search_tool,
+                {
+                    "model_id": model_id,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                    "validate": validate,
+                    "runtime": runtime,
+                },
+            ),
         )
+
+
+async def rebuild_web_search_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(WebSearchToolBuilder)
+    return await builder.build_tool(**cast(Any, kwargs))

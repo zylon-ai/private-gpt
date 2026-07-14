@@ -3,13 +3,13 @@ from injector import inject, singleton
 from private_gpt.components.chat.processors.chat_history.documents.citations import (
     process_chat_history_with_documents,
 )
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 
@@ -24,7 +24,7 @@ class DocumentProcessingRequestInterceptor(ChatRequestLoopInterceptor):
     def __init__(self, add_context_to_system_prompt: bool | None = None) -> None:
         self._add_context_to_system_prompt = add_context_to_system_prompt
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         """Render document context into conversation history when configured."""
         if context.phase != InterceptorPhase.BEFORE_ITERATION:
             return

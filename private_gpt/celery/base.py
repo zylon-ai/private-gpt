@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import os
 import threading
 from collections.abc import Callable
 from typing import Any
@@ -221,7 +222,14 @@ class _BackgroundTask(Task):  # type: ignore
         super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
-class AsyncBackgroundTask(_BackgroundTask):
+class StatelessBackgroundTask(_BackgroundTask):
+    """Task that creates a fresh event loop and DI container per invocation.
+
+    Used by ingestion and other short-lived tasks where per-task isolation
+    is preferred over warm-start performance. The event loop and DI container
+    are created, used, and destroyed within a single task invocation.
+    """
+
     abstract = True
 
     async def _run(self, *args: Any, **kwargs: Any) -> Any:
@@ -263,12 +271,144 @@ class AsyncBackgroundTask(_BackgroundTask):
             raise e
         finally:
             if loop:
-                clean_global_injector(loop)
+                if not loop.is_closed():
+                    with contextlib.suppress(Exception):
+                        asyncio.run_coroutine_threadsafe(
+                            clean_global_injector(loop), loop
+                        ).result(timeout=10)
                 with contextlib.suppress(RuntimeError):
-                    # Stop the loop if it's still running
                     loop.call_soon_threadsafe(loop.stop)
             if thr:
                 thr.join(timeout=5.0)
-
             if loop:
-                clean_global_injector(loop)
+                with contextlib.suppress(RuntimeError):
+                    loop.close()
+
+
+class StatefulBackgroundTask(_BackgroundTask):
+    """Long-lived task base that keeps DI and event loop warm across invocations.
+
+    Designed for prefork pools where each child process independently creates
+    its own persistent event loop and warm DI container. The warm-up is
+    serialized across children via a file lock in ``bootsteps.py`` to avoid
+    OOM from simultaneous model loading.
+    """
+
+    abstract = True
+    _loop: asyncio.AbstractEventLoop | None = None
+    _thread: threading.Thread | None = None
+    _lock = threading.RLock()
+    _warmed = False
+
+    @classmethod
+    def _ensure_runtime(cls) -> asyncio.AbstractEventLoop:
+        with cls._lock:
+            if cls._loop is not None and cls._thread is not None:
+                if cls._thread.is_alive() and not cls._loop.is_closed():
+                    return cls._loop
+
+            loop = asyncio.new_event_loop()
+            nest_asyncio.apply(loop)
+
+            def run_loop() -> None:
+                asyncio.set_event_loop(loop)
+                loop.run_forever()
+
+            thread = threading.Thread(
+                target=run_loop,
+                daemon=True,
+                name="StatefulWorkerLoop",
+            )
+            thread.start()
+            cls._loop = loop
+            cls._thread = thread
+            cls._warmed = False
+            return loop
+
+    @classmethod
+    def run_coroutine(cls, coro: Any) -> Any:
+        loop = cls._ensure_runtime()
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        return future.result()
+
+    @classmethod
+    async def _warm_async(cls) -> None:
+        from private_gpt.eager_loading import warm
+
+        injector = get_global_injector(allow_to_generate_new_injectors=True)
+        profile = os.environ.get("PGPT_STATEFUL_WORKER_TYPE", "chat").strip()
+        warm(injector, profile=profile)
+
+    @classmethod
+    def warm_up(cls) -> None:
+        """Initialize runtime and warm DI. Idempotent across calls."""
+        with cls._lock:
+            if cls._warmed:
+                return
+
+        cls._ensure_runtime()
+        cls.run_coroutine(cls._warm_async())
+        with cls._lock:
+            cls._warmed = True
+        logger.info("StatefulBackgroundTask warm-up complete")
+
+    async def _run(self, *args: Any, **kwargs: Any) -> Any:
+        """Execute the task logic, handling both sync and async implementations."""
+        run_method = self.run
+
+        if run_method is None:
+            raise NotImplementedError("Subclass must implement 'run' method")
+
+        get_global_injector(allow_to_generate_new_injectors=True)
+
+        if asyncio.iscoroutinefunction(run_method):
+            result = await run_method(*args, **kwargs)
+        else:
+            result = run_method(*args, **kwargs)
+
+        if asyncio.iscoroutine(result):
+            result = await result
+
+        return result
+
+    @classmethod
+    async def _shutdown_async(cls) -> None:
+        await clean_global_injector()
+
+    @classmethod
+    def shutdown_runtime(cls) -> None:
+        loop: asyncio.AbstractEventLoop | None = None
+        thread: threading.Thread | None = None
+        with cls._lock:
+            loop = cls._loop
+            thread = cls._thread
+            cls._loop = None
+            cls._thread = None
+            cls._warmed = False
+
+        if loop is None:
+            return
+
+        if not loop.is_closed():
+            with contextlib.suppress(Exception):
+                asyncio.run_coroutine_threadsafe(cls._shutdown_async(), loop).result(
+                    timeout=10
+                )
+            with contextlib.suppress(RuntimeError):
+                loop.call_soon_threadsafe(loop.stop)
+
+        if thread is not None:
+            thread.join(timeout=5.0)
+
+        with contextlib.suppress(RuntimeError):
+            loop.close()
+        logger.info("%s runtime shut down", cls.__name__)
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        try:
+            self.warm_up()
+            return self.run_coroutine(self._run(*args, **kwargs))
+        except Exception as e:
+            if self.rollback_fn:
+                self.rollback_fn(*args, **kwargs)
+            raise e

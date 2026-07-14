@@ -9,17 +9,17 @@ from llama_index.core.llms.llm import ToolSelection
 from private_gpt.components.chat.processors.chat_history.multimodality.multimodality_preprocessor import (
     preprocess_multimodal_history,
 )
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
-    ChatLoopState,
+from private_gpt.components.engines.chat.models.chat_state import (
+    ChatState,
 )
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import supports_audio, supports_images
@@ -48,7 +48,7 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
         self._tool_name = MULTIMODAL_TOOL_NAME
         self._preprocess_settings = settings.chat.preprocess.multimodal
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         """Apply multimodal preprocessing to the current chat history."""
         if context.phase != InterceptorPhase.BEFORE_ITERATION:
             return
@@ -157,7 +157,7 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
 
     def resolve_multimodal_models(
         self,
-        state: ChatLoopState,
+        state: ChatState,
         main_llm: LLM,
     ) -> tuple[LLM | None, LLM | None]:
         """Resolve optional multimodal models using configured LLM registry."""

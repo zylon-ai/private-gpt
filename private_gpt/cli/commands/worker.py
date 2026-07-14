@@ -5,6 +5,20 @@ import sys
 
 import typer
 
+from private_gpt.arq.runner import run_arq_worker
+from private_gpt.settings.settings import settings
+
+
+def _resolve_worker_mode() -> str:
+    env_mode = os.environ.get("PGPT_WORKER_MODE", "").strip().lower()
+    if env_mode:
+        return env_mode
+
+    current_settings = settings()
+    if current_settings.scheduler.chat.mode == "arq":
+        return "arq"
+    return "celery"
+
 
 def _build_flower_args(mode: str) -> list[str]:
     args: list[str] = []
@@ -32,7 +46,7 @@ def _build_flower_args(mode: str) -> list[str]:
     return args
 
 
-def _build_worker_args() -> list[str]:
+def _build_worker_args(max_tasks_per_child: int = 1000) -> list[str]:
     args: list[str] = []
     log_level = os.environ.get("PGPT_CELERY_LOG_LEVEL", "info")
     queues = os.environ.get("PGPT_CELERY_QUEUES", "")
@@ -40,12 +54,18 @@ def _build_worker_args() -> list[str]:
     pool = os.environ.get("PGPT_CELERY_POOL", "prefork")
     concurrency = os.environ.get("PGPT_CELERY_CONCURRENCY", "")
     time_limit = os.environ.get("PGPT_CELERY_TIME_LIMIT", "")
+    stateful_type = os.environ.get("PGPT_STATEFUL_WORKER_TYPE", "").strip()
 
     if log_level:
         args.append(f"--loglevel={log_level}")
+
+    if stateful_type:
+        queues = queues or stateful_type
+        hostname = hostname or stateful_type
+        args.append(f"--max-tasks-per-child={max_tasks_per_child}")
+
     if queues:
         args.append(f"--queues={queues}")
-        hostname = queues
     if hostname:
         args.append(f"--hostname={hostname}%h")
     if pool:
@@ -62,11 +82,15 @@ def worker_command() -> None:
 
     Behaviour is fully controlled through environment variables.
     """
+    mode = _resolve_worker_mode()
+
+    if mode == "arq":
+        run_arq_worker()
+        return
+
     app_module = os.environ.get("PGPT_WORKER_APP_MODULE", "private_gpt")
     celery_app = f"{app_module}.celery"
     healthcheck_app = f"{app_module}.celery.healthcheck:app"
-    mode = os.environ.get("PGPT_WORKER_MODE", "mixed")
-
     procs: list[subprocess.Popen[bytes]] = []
 
     def _cleanup(signum: int = 0, frame: object = None) -> None:
@@ -102,9 +126,11 @@ def worker_command() -> None:
             )
         )
 
-    if mode in ("worker", "mixed"):
-        worker_args = _build_worker_args()
+    if mode in ("celery", "mixed"):
+        worker_args = _build_worker_args(settings().celery.max_tasks_per_child)
         typer.echo(f"Starting celery worker with args: {' '.join(worker_args)}")
+        # The PGPT_STATEFUL_WORKER_TYPE env var triggers eager warm-up in the
+        # worker process via bootsteps.py.
         procs.append(
             subprocess.Popen(
                 [
@@ -141,7 +167,10 @@ def worker_command() -> None:
         )
 
     if not procs:
-        typer.echo(f"No processes started. Check PGPT_WORKER_MODE={mode!r}", err=True)
+        typer.echo(
+            f"No processes started. Check PGPT_WORKER_MODE={mode!r}. Supported: mixed, arq, celery",
+            err=True,
+        )
         raise SystemExit(1)
 
     try:

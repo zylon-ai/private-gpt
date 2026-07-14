@@ -1,24 +1,29 @@
+from __future__ import annotations
+
 import ast
 import contextlib
 import json
 import logging
 import math
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from injector import singleton
 
-from private_gpt.components.chat.models.chat_config_models import ToolSpec
-from private_gpt.components.context.models.context_layer import ToolDefinitionsLayer
-from private_gpt.components.context.models.layer_type import LayerType
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
-)
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
+from private_gpt.components.tools.remote_execution import (
+    ToolExecutionInterceptor,
+    ToolExecutionInterceptorContext,
+)
+
+if TYPE_CHECKING:
+    from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+        ChatInterceptorContext,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -86,10 +91,6 @@ def _parse_literal_string(
     raw: str,
     expected: type | tuple[type, ...],
 ) -> Any:
-    """Parse a string as JSON, falling back to ast.literal_eval for Python repr.
-
-    Returns the parsed value if it is an instance of `expected`, else None.
-    """
     with contextlib.suppress(json.JSONDecodeError, ValueError):
         parsed = json.loads(raw)
         if isinstance(parsed, expected):
@@ -290,46 +291,31 @@ def _coerce_kwargs(
 
 
 @singleton
-class SchemaCoercingToolInterceptor(ChatRequestLoopInterceptor):
-    """Coerce tool kwargs to match the declared input_schema before invocation."""
+class SchemaCoercingToolInterceptor(
+    ChatRequestLoopInterceptor,
+    ToolExecutionInterceptor,
+):
+    """Coerce tool kwargs to the declared schema before execution."""
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
-        if context.phase != InterceptorPhase.BEFORE_ITERATION:
+    async def intercept(
+        self,
+        context: ChatInterceptorContext | ToolExecutionInterceptorContext,
+    ) -> None:
+        if not isinstance(context, ToolExecutionInterceptorContext):
+            return
+        if context.phase != InterceptorPhase.BEFORE_TOOL:
             return
 
-        state = context.state
-        tools = [
-            self._patch_tool(tool) for tool in state.input.context_stack.all_tools()
-        ]
-
-        stack = state.input.context_stack.remove_layers_of_type(
-            LayerType.TOOL_DEFINITIONS
-        )
-        if tools:
-            stack = stack.append_layer(
-                ToolDefinitionsLayer(tools=tools, source="schema_coercion_patch")
+        schema = context.request.tool_spec.input_schema or {}
+        try:
+            context.set_tool_kwargs(
+                _coerce_kwargs(context.tool_kwargs, input_schema=schema)
             )
-        state.input.context_stack = stack
-        context.set_state(state)
-
-    def _patch_tool(self, tool: ToolSpec) -> ToolSpec:
-        schema = tool.input_schema or {}
-        original_fn = tool.async_fn
-
-        async def _coerced_fn(*args: Any, **kwargs: Any) -> Any:
-            try:
-                fixed_kwargs = _coerce_kwargs(kwargs, input_schema=schema)
-            except SchemaCoercionError:
-                raise
-            except Exception as e:
-                logger.exception(
-                    "Schema coercion failed for tool '%s', invoking with original kwargs",
-                    tool.name,
-                    exc_info=e,
-                )
-                fixed_kwargs = kwargs
-            return await original_fn(*args, **fixed_kwargs)
-
-        patched = tool.model_copy(deep=True)
-        patched.async_fn = _coerced_fn
-        return patched
+        except SchemaCoercionError:
+            raise
+        except Exception as e:
+            logger.exception(
+                "Schema coercion failed for tool '%s', invoking with original kwargs",
+                context.request.tool_spec.name,
+                exc_info=e,
+            )

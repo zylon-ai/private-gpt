@@ -8,13 +8,13 @@ from private_gpt.components.context.models.context_layer import (
     ToolInstructionsLayer,
 )
 from private_gpt.components.context.models.context_stack import ContextStack
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.components.engines.citations.types import Document
@@ -61,7 +61,7 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
         self._thinking_content: str | None = None
         self._citation_guidelines_content: str | None = None
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         if context.phase != InterceptorPhase.BEFORE_ITERATION:
             return
 

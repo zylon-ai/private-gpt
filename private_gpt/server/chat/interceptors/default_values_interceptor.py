@@ -3,13 +3,13 @@ import logging
 from injector import inject, singleton
 
 from private_gpt.chat.input_models import PromptConfig
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.settings.settings import Settings
@@ -23,7 +23,7 @@ class DefaultValuesRequestInterceptor(ChatRequestLoopInterceptor):
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         if context.phase != InterceptorPhase.VALIDATION:
             return
 

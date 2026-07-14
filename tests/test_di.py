@@ -159,7 +159,7 @@ def test_clean_global_injector() -> None:
         old_global_injector.get(NodeStoreComponent)
 
         running_loop = asyncio.get_running_loop()
-        clean_global_injector(running_loop)
+        await clean_global_injector(running_loop)
 
         new_injector = get_global_injector()
         assert new_injector is not None
