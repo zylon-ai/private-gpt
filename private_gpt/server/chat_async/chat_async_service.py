@@ -7,6 +7,9 @@ from private_gpt.components.chat.models.chat_config_models import ChatRequest
 from private_gpt.components.streaming.providers.models import StreamMetadata
 from private_gpt.components.streaming.stream.stream_manager import StreamManager
 from private_gpt.events.event_serializer import StreamingEventHandler
+from private_gpt.events.interceptors.ping_event_interceptor import (
+    PingEventInterceptor,
+)
 from private_gpt.events.models import Event
 from private_gpt.server.chat.chat_facade import ChatFacadeService
 
@@ -58,9 +61,10 @@ class ChatAsyncService:
         if not await self.stream_manager.stream_exists(message_id):
             return None
 
-        return self.stream_manager.stream_events(
+        event_generator = self.stream_manager.stream_events(
             event_handler=StreamingEventHandler(), correlation_id=message_id
         )
+        return await PingEventInterceptor().intercept(event_generator)
 
     async def cancel_stream(self, message_id: str) -> bool | None:
         """Cancel an active chat stream."""
