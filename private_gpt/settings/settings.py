@@ -1101,6 +1101,11 @@ class CelerySettings(BaseModel):
         default=1000,
         gt=0,
     )
+    max_memory_per_child: int | None = Field(
+        description="Maximum RSS in KiB for a stateful Celery child before recycling",
+        default=None,
+        gt=0,
+    )
 
     def __init__(self, **data: Any) -> None:
         if "soft_time_limit" in data:
@@ -1110,6 +1115,12 @@ class CelerySettings(BaseModel):
         if "hard_time_limit" in data:
             data["hard_time_limit"] = (
                 int(data["hard_time_limit"]) if data["hard_time_limit"] else None
+            )
+        if "max_memory_per_child" in data:
+            data["max_memory_per_child"] = (
+                int(data["max_memory_per_child"])
+                if data["max_memory_per_child"]
+                else None
             )
         if "visibility_timeout" in data:
             data["visibility_timeout"] = (

@@ -164,6 +164,7 @@ celery:
   hard_time_limit: ${PGPT_CELERY_HARD_TIME_LIMIT:}
   visibility_timeout: ${PGPT_CELERY_VISIBILITY_TIMEOUT:21600}
   max_tasks_per_child: ${PGPT_CELERY_MAX_TASKS_PER_CHILD:1000}
+  max_memory_per_child: ${PGPT_CELERY_MAX_MEMORY_PER_CHILD:}
 
 # Broker to which workers will notify the result of tasks
 tasks_results_broker:
