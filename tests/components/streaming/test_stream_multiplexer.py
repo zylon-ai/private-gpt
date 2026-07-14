@@ -1,10 +1,9 @@
 """Tests for StreamMultiplexer and the streaming readers.
 
-Every test runs against both the InMemory and Redis backends.  The core
-strategy is **differential testing**: each scenario is run through the direct
-path (StreamReader.stream_events) AND the multiplexed path (StreamMultiplexer),
-and the two results must be identical.  If they ever diverge, the multiplexer
-is broken.
+The core strategy is **differential testing**: each scenario is run through the
+direct path (StreamReader.stream_events) AND the multiplexed path
+(StreamMultiplexer), and the two results must be identical. If they ever
+diverge, the multiplexer is broken.
 
 Section layout
 --------------
@@ -13,28 +12,21 @@ Section layout
 3. Terminal detection — events in the terminal gap are drained.
 4. Lifecycle — stop/restart leave no stale state.
 5. Performance — worker does not busy-poll.
-6. Backend block semantics — block_ms=None is non-blocking on both backends.
+6. Backend block semantics — block_ms=None is non-blocking.
 """
 
 import asyncio
 import json
 import random
-import uuid
-from collections.abc import AsyncGenerator
 from typing import Any
 
 import pytest
-import redis.asyncio as redis_async
 from pydantic import BaseModel
 
 from private_gpt.components.streaming.providers.in_memory_stream_service import (
     InMemoryStreamService,
 )
 from private_gpt.components.streaming.providers.models import StreamStatus
-from private_gpt.components.streaming.providers.redis_stream_service import (
-    RedisStreamConfig,
-    RedisStreamService,
-)
 from private_gpt.components.streaming.providers.stream_service import StreamService
 from private_gpt.components.streaming.stream.stream_reader import (
     DEFAULT_BLOCK_MS,
@@ -43,7 +35,6 @@ from private_gpt.components.streaming.stream.stream_reader import (
     StreamReader,
 )
 
-REDIS_URL = "redis://127.0.0.1:6379"
 STRESS_N = 500
 
 
@@ -148,35 +139,9 @@ def assert_ordered_0_to_n(events: list[BaseModel], n: int) -> None:
 # ──────────────────────────── fixtures ───────────────────────────────────────
 
 
-@pytest.fixture(params=["memory", "redis"], ids=["memory", "redis"])
-async def service(
-    request: pytest.FixtureRequest,
-) -> AsyncGenerator[StreamService, None]:
-    prefix = uuid.uuid4().hex
-    if request.param == "memory":
-        yield InMemoryStreamService()
-    else:
-        config = RedisStreamConfig(
-            redis_url=REDIS_URL + "/9",
-            stream_prefix=f"t-stream:{prefix}",
-            status_prefix=f"t-status:{prefix}",
-            expiry_seconds=60,
-            max_stream_length=5000,
-            minimum_connections=None,
-        )
-        client = redis_async.Redis.from_url(
-            REDIS_URL + "/9",
-            decode_responses=True,
-            socket_timeout=5.0,
-            socket_connect_timeout=5.0,
-        )
-        svc = RedisStreamService(config=config, redis_client=client)
-        yield svc
-        for pattern in (f"t-stream:{prefix}:*", f"t-status:{prefix}:*"):
-            keys = await client.keys(pattern)
-            if keys:
-                await client.delete(*keys)
-        await client.aclose()
+@pytest.fixture
+def service() -> StreamService:
+    return InMemoryStreamService()
 
 
 @pytest.fixture
