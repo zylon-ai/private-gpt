@@ -1,18 +1,10 @@
-import asyncio
 import logging
 from typing import Any
 
 from arq import create_pool
 from arq.jobs import Job
 
-from private_gpt.arq.settings import (
-    CHAT_TIMEOUT_TASK_NAME,
-    RESUME_ITERATION_TASK_NAME,
-    START_CHAT_TASK_NAME,
-    TOOL_RESUME_TASK_NAME,
-    get_queue_name,
-    get_redis_settings,
-)
+from private_gpt.arq.settings import get_queue_name, get_redis_settings
 from private_gpt.settings.settings import settings as _settings
 
 logger = logging.getLogger(__name__)
@@ -37,127 +29,33 @@ def _log_dispatch(
     )
 
 
-async def enqueue_start_chat_job(
+async def enqueue_job(
     *,
-    request_data: dict[str, Any],
-    correlation_id: str,
-    stream_type: str,
-    metadata: dict[str, Any],
-    job_id: str | None = None,
-) -> None:
-    current_settings = _settings()
-    queue_name = get_queue_name(current_settings)
-    resolved_job_id = job_id or f"{correlation_id}:start"
-    _log_dispatch(
-        task_name=START_CHAT_TASK_NAME,
-        queue_name=queue_name,
-        job_id=resolved_job_id,
-        correlation_id=correlation_id,
-    )
-    redis = await create_pool(get_redis_settings(current_settings))
-    try:
-        await redis.enqueue_job(
-            START_CHAT_TASK_NAME,
-            request_data,
-            correlation_id,
-            stream_type,
-            metadata,
-            _job_id=resolved_job_id,
-            _queue_name=queue_name,
-        )
-    finally:
-        await redis.aclose()
-
-
-async def enqueue_resume_iteration_job(
-    *,
+    task_name: str,
+    args: tuple[Any, ...] = (),
     correlation_id: str,
     job_id: str | None = None,
-) -> None:
-    current_settings = _settings()
-    queue_name = get_queue_name(current_settings)
-    resolved_job_id = job_id or f"{correlation_id}:resume"
-    _log_dispatch(
-        task_name=RESUME_ITERATION_TASK_NAME,
-        queue_name=queue_name,
-        job_id=resolved_job_id,
-        correlation_id=correlation_id,
-    )
-    redis = await create_pool(get_redis_settings(current_settings))
-    try:
-        await redis.enqueue_job(
-            RESUME_ITERATION_TASK_NAME,
-            correlation_id,
-            _job_id=resolved_job_id,
-            _queue_name=queue_name,
-        )
-    finally:
-        await redis.aclose()
-
-
-async def enqueue_chat_timeout_job(
-    *,
-    correlation_id: str,
-    checkpoint_id: str,
-    delay_seconds: int,
-    job_id: str,
+    defer_seconds: int | None = None,
 ) -> None:
     current_settings = _settings()
     queue_name = get_queue_name(current_settings)
     _log_dispatch(
-        task_name=CHAT_TIMEOUT_TASK_NAME,
+        task_name=task_name,
         queue_name=queue_name,
         job_id=job_id,
         correlation_id=correlation_id,
-        defer_seconds=delay_seconds,
+        defer_seconds=defer_seconds,
     )
     redis = await create_pool(get_redis_settings(current_settings))
     try:
-        await redis.enqueue_job(
-            CHAT_TIMEOUT_TASK_NAME,
-            correlation_id,
-            checkpoint_id,
-            _defer_by=delay_seconds,
-            _job_id=job_id,
-            _queue_name=queue_name,
-        )
+        options: dict[str, Any] = {"_queue_name": queue_name}
+        if job_id is not None:
+            options["_job_id"] = job_id
+        if defer_seconds is not None:
+            options["_defer_by"] = defer_seconds
+        await redis.enqueue_job(task_name, *args, **options)
     finally:
         await redis.aclose()
-
-
-async def enqueue_tool_resume_job(
-    *,
-    correlation_id: str,
-    tool_id: str,
-    result: dict[str, Any],
-) -> None:
-    current_settings = _settings()
-    queue_name = get_queue_name(current_settings)
-    _log_dispatch(
-        task_name=TOOL_RESUME_TASK_NAME,
-        queue_name=queue_name,
-        job_id=None,
-        correlation_id=correlation_id,
-    )
-    redis = await create_pool(get_redis_settings(current_settings))
-    try:
-        await redis.enqueue_job(
-            TOOL_RESUME_TASK_NAME,
-            correlation_id,
-            tool_id,
-            result,
-            _queue_name=queue_name,
-        )
-    finally:
-        await redis.aclose()
-
-
-async def abort_chat_job(*, correlation_id: str) -> bool:
-    results = await asyncio.gather(
-        abort_job(job_id=f"{correlation_id}:start"),
-        abort_job(job_id=f"{correlation_id}:resume"),
-    )
-    return any(results)
 
 
 async def abort_job(*, job_id: str) -> bool:

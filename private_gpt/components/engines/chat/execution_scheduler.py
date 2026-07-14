@@ -132,7 +132,7 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
         stream_type: str,
         metadata: dict[str, Any],
     ) -> None:
-        from private_gpt.arq.enqueue import enqueue_start_chat_job
+        from private_gpt.arq.tasks.chat.start import enqueue_start_chat_job
 
         await enqueue_start_chat_job(
             request_data=request_data,
@@ -143,7 +143,7 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
         )
 
     async def resume(self, *, execution_id: str) -> None:
-        from private_gpt.arq.enqueue import enqueue_resume_iteration_job
+        from private_gpt.arq.tasks.chat.resume import enqueue_resume_iteration_job
 
         await enqueue_resume_iteration_job(
             correlation_id=execution_id,
@@ -153,7 +153,7 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
     async def callback(
         self, *, execution_id: str, tool_id: str, result: dict[str, Any]
     ) -> None:
-        from private_gpt.arq.enqueue import enqueue_tool_resume_job
+        from private_gpt.arq.tasks.chat.resume import enqueue_tool_resume_job
 
         await enqueue_tool_resume_job(
             correlation_id=execution_id,
@@ -164,7 +164,7 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
     async def timeout(
         self, *, execution_id: str, checkpoint_id: str, delay_seconds: int
     ) -> None:
-        from private_gpt.arq.enqueue import enqueue_chat_timeout_job
+        from private_gpt.arq.tasks.chat.resume import enqueue_chat_timeout_job
 
         await enqueue_chat_timeout_job(
             correlation_id=execution_id,
@@ -174,7 +174,7 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
         )
 
     async def cancel(self, execution_id: str) -> bool:
-        from private_gpt.arq.enqueue import abort_chat_job
+        from private_gpt.arq.tasks.chat import abort_chat_job
 
         return await abort_chat_job(correlation_id=execution_id)
 

@@ -7,7 +7,7 @@ from collections.abc import Callable
 
 from injector import Injector, inject, singleton
 
-from private_gpt.arq.enqueue import abort_chat_job
+from private_gpt.arq.tasks.chat import abort_chat_job
 from private_gpt.settings.settings import Settings
 
 ChatSchedulerProvider = (

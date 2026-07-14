@@ -155,7 +155,9 @@ class ToolExecutionMetadata(BaseModel):
             if isinstance(value, dict) and cls.MODEL_TAG_KEY in value:
                 module_path, qualname = value[cls.MODEL_TAG_KEY].rsplit(":", 1)
                 module = importlib.import_module(module_path)
-                model_cls = getattr(module, qualname)
+                model_cls: Any = module
+                for attribute in qualname.split("."):
+                    model_cls = getattr(model_cls, attribute)
                 result[key] = model_cls.model_validate(value["data"])
             else:
                 result[key] = value

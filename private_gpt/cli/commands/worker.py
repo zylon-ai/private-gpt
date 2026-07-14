@@ -12,8 +12,6 @@ from private_gpt.settings.settings import settings
 def _resolve_worker_mode() -> str:
     env_mode = os.environ.get("PGPT_WORKER_MODE", "").strip().lower()
     if env_mode:
-        if env_mode == "worker":
-            return "celery"
         return env_mode
 
     current_settings = settings()
@@ -48,7 +46,7 @@ def _build_flower_args(mode: str) -> list[str]:
     return args
 
 
-def _build_worker_args() -> list[str]:
+def _build_worker_args(max_tasks_per_child: int = 1000) -> list[str]:
     args: list[str] = []
     log_level = os.environ.get("PGPT_CELERY_LOG_LEVEL", "info")
     queues = os.environ.get("PGPT_CELERY_QUEUES", "")
@@ -64,7 +62,7 @@ def _build_worker_args() -> list[str]:
     if stateful_type:
         queues = queues or stateful_type
         hostname = hostname or stateful_type
-        args.append("--max-tasks-per-child=1000000")
+        args.append(f"--max-tasks-per-child={max_tasks_per_child}")
 
     if queues:
         args.append(f"--queues={queues}")
@@ -129,7 +127,7 @@ def worker_command() -> None:
         )
 
     if mode in ("celery", "mixed"):
-        worker_args = _build_worker_args()
+        worker_args = _build_worker_args(settings().celery.max_tasks_per_child)
         typer.echo(f"Starting celery worker with args: {' '.join(worker_args)}")
         # The PGPT_STATEFUL_WORKER_TYPE env var triggers eager warm-up in the
         # worker process via bootsteps.py.

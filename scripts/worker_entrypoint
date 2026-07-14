@@ -1,6 +1,6 @@
 #!/bin/bash
 
-: "${PGPT_WORKER_MODE:=mixed}"  # mixed, worker, flower, arq
+: "${PGPT_WORKER_MODE:=mixed}"  # mixed, celery, flower, arq
 : "${PGPT_FLOWER_PORT:=5555}"
 : "${PGPT_FLOWER_PASSWORD:=flower}"
 : "${PGPT_FLOWER_URL_PREFIX:=}"
@@ -16,6 +16,7 @@
 : "${PGPT_WORKER_APP_MODULE:=private_gpt}"
 : "${PGPT_STATEFUL_WORKER_TYPE:=}"
 : "${PGPT_MAX_WORKERS:=}"
+: "${PGPT_CELERY_MAX_TASKS_PER_CHILD:=1000}"
 : "${API_ENABLED:=true}"
 : "${API_PORT:=8090}"
 
@@ -74,9 +75,8 @@ fi
 
 # Run celery worker using the config.
 # Stateful workers (PGPT_STATEFUL_WORKER_TYPE set) keep warm DI/runtime state
-# for the worker child lifetime (--max-tasks-per-child=0). Ingestion workers
-# use the default per-task process recycling (--max-tasks-per-child=1).
-if [[ "$PGPT_WORKER_MODE" == "worker" || "$PGPT_WORKER_MODE" == "mixed" ]]; then
+# and recycle children after the configured task count.
+if [[ "$PGPT_WORKER_MODE" == "celery" || "$PGPT_WORKER_MODE" == "mixed" ]]; then
   WORKER_ARGS=()
   if [[ -n "$PGPT_CELERY_LOG_LEVEL" ]]; then
       WORKER_ARGS+=("--loglevel=$PGPT_CELERY_LOG_LEVEL")
@@ -89,7 +89,7 @@ if [[ "$PGPT_WORKER_MODE" == "worker" || "$PGPT_WORKER_MODE" == "mixed" ]]; then
   if [[ -n "$PGPT_STATEFUL_WORKER_TYPE" ]]; then
       QUEUES="${QUEUES:-$PGPT_STATEFUL_WORKER_TYPE}"
       HOSTNAME="${HOSTNAME:-$PGPT_STATEFUL_WORKER_TYPE}"
-      WORKER_ARGS+=("--max-tasks-per-child=1000000")
+      WORKER_ARGS+=("--max-tasks-per-child=$PGPT_CELERY_MAX_TASKS_PER_CHILD")
   fi
 
   if [[ -n "$QUEUES" ]]; then

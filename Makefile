@@ -103,13 +103,13 @@ wipe:
 ########################################################################################################################
 
 celery:
-	PGPT_WORKER_MODE=worker uv run private-gpt worker
+	PGPT_WORKER_MODE=celery uv run private-gpt worker
 
 flower:
 	PGPT_WORKER_MODE=flower uv run private-gpt worker
 
 celery-worker:
-	PGPT_WORKER_MODE=worker uv run private-gpt worker
+	PGPT_WORKER_MODE=celery uv run private-gpt worker
 
 arq-worker:
 	PGPT_WORKER_MODE=arq uv run private-gpt worker

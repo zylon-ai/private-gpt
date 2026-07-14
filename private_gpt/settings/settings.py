@@ -1096,6 +1096,11 @@ class CelerySettings(BaseModel):
         description="The visibility timeout for tasks in seconds",
         default=None,
     )
+    max_tasks_per_child: int = Field(
+        description="Maximum tasks handled by a stateful Celery child before recycling",
+        default=1000,
+        gt=0,
+    )
 
     def __init__(self, **data: Any) -> None:
         if "soft_time_limit" in data:

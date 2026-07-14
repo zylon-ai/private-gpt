@@ -416,7 +416,6 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
         if direction == "right":
             blocks.reverse()
 
-        # Count all blocks in parallel instead of sequentially in a while-loop
         block_token_counts: list[int] = list(
             await asyncio.gather(
                 *[

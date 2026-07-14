@@ -1,9 +1,26 @@
 from typing import Any
 
+from private_gpt.arq.enqueue import enqueue_job
 from private_gpt.arq.settings import START_CHAT_TASK_NAME
 from private_gpt.arq.tasks import arq_task
 from private_gpt.di import get_global_injector
 from private_gpt.server.chat.chat_service import ChatService
+
+
+async def enqueue_start_chat_job(
+    *,
+    request_data: dict[str, Any],
+    correlation_id: str,
+    stream_type: str,
+    metadata: dict[str, Any],
+    job_id: str | None = None,
+) -> None:
+    await enqueue_job(
+        task_name=START_CHAT_TASK_NAME,
+        args=(request_data, correlation_id, stream_type, metadata),
+        job_id=job_id or f"{correlation_id}:start",
+        correlation_id=correlation_id,
+    )
 
 
 @arq_task(name=START_CHAT_TASK_NAME)
