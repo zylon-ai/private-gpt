@@ -54,7 +54,7 @@ class BrokerInstanceRegistry:
 
             provider = _PROVIDERS.get(mode)
             if provider is None:
-                raise ValueError(f"Unsupported task result broker mode: {mode}")
+                return None
 
             new_instance = provider(self._settings)
             self._instances[mode] = new_instance
