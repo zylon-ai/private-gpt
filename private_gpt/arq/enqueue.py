@@ -10,7 +10,6 @@ from private_gpt.arq.settings import (
     RESUME_ITERATION_TASK_NAME,
     START_CHAT_TASK_NAME,
     TOOL_RESUME_TASK_NAME,
-    TOOL_RUN_TASK_NAME,
     get_queue_name,
     get_redis_settings,
 )
@@ -147,28 +146,6 @@ async def enqueue_tool_resume_job(
             correlation_id,
             tool_id,
             result,
-            _queue_name=queue_name,
-        )
-    finally:
-        await redis.aclose()
-
-
-async def enqueue_tool_run_job(*, request_data: dict[str, Any], job_id: str) -> None:
-    current_settings = _settings()
-    queue_name = get_queue_name(current_settings)
-    correlation_id = job_id.split(":", maxsplit=1)[0]
-    _log_dispatch(
-        task_name=TOOL_RUN_TASK_NAME,
-        queue_name=queue_name,
-        job_id=job_id,
-        correlation_id=correlation_id,
-    )
-    redis = await create_pool(get_redis_settings(current_settings))
-    try:
-        await redis.enqueue_job(
-            TOOL_RUN_TASK_NAME,
-            request_data,
-            _job_id=job_id,
             _queue_name=queue_name,
         )
     finally:

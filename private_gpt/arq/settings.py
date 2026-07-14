@@ -7,7 +7,6 @@ START_CHAT_TASK_NAME = "private_gpt.chat.start"
 RESUME_ITERATION_TASK_NAME = "private_gpt.chat.resume_iteration"
 TOOL_RESUME_TASK_NAME = "private_gpt.tool.resume"
 CHAT_TIMEOUT_TASK_NAME = "private_gpt.chat.timeout"
-TOOL_RUN_TASK_NAME = "private_gpt.tools.run"
 CHAT_QUEUE_PREFIX = "private_gpt:arq:queue"
 
 

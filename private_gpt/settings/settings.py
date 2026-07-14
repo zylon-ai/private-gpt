@@ -1728,8 +1728,14 @@ class Settings(BaseModel):
                 "Supported chat scheduler modes are 'local' and 'arq'."
             )
 
+        if self.scheduler.tools.mode not in {"local", "celery"}:
+            raise ValueError(
+                f"Unsupported scheduler.tools.mode={self.scheduler.tools.mode!r}. "
+                "Supported tool scheduler modes are 'local' and 'celery'."
+            )
+
         if (
-            self.scheduler.tools.mode != "local"
+            self.scheduler.tools.mode == "celery"
             and self.scheduler.chat.mode != "arq"
         ):
             raise ValueError(

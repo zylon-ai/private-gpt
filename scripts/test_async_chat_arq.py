@@ -199,7 +199,6 @@ def main() -> None:
         "PGPT_CELERY_QUEUES": "tools",
         "PGPT_CELERY_POOL": "solo",
     }
-
     processes = [
         _Process(
             "server",

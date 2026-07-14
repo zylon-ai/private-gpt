@@ -46,19 +46,30 @@ def test_arq_chat_scheduler_requires_redis_stream_backend() -> None:
         Settings(**merged)
 
 
-@pytest.mark.parametrize("tool_mode", ["arq", "celery"])
-def test_remote_tool_scheduler_requires_arq_chat(tool_mode: str) -> None:
+def test_celery_tool_scheduler_requires_arq_chat() -> None:
     merged = merge_settings(
         [
             unsafe_settings,
             {
                 "scheduler": {
                     "chat": {"mode": "local"},
-                    "tools": {"mode": tool_mode},
+                    "tools": {"mode": "celery"},
                 },
             },
         ]
     )
 
     with pytest.raises(ValueError, match=r"scheduler\.chat\.mode='arq'"):
+        Settings(**merged)
+
+
+def test_tool_scheduler_rejects_unsupported_arq_mode() -> None:
+    merged = merge_settings(
+        [
+            unsafe_settings,
+            {"scheduler": {"tools": {"mode": "arq"}}},
+        ]
+    )
+
+    with pytest.raises(ValueError, match=r"Unsupported scheduler\.tools\.mode='arq'"):
         Settings(**merged)
