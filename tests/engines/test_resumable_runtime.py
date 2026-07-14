@@ -189,3 +189,107 @@ def test_runner_restores_additional_kwargs_after_serialization() -> None:
     assert isinstance(additional_kwargs["document"][0], DocumentBlock)
     assert isinstance(additional_kwargs["thinking"][0], ThinkingBlock)
     assert isinstance(additional_kwargs["tool_calls"][0], ToolSelection)
+
+
+def test_resolved_chat_request_is_json_roundtrip_serializable() -> None:
+    import json
+
+    from llama_index.core.base.llms.types import ChatMessage, MessageRole
+    from llama_index.core.tools import ToolSelection
+
+    from private_gpt.chat.schema_models import create_model_from_json_schema
+    from private_gpt.components.chat.models.chat_config_models import (
+        CitationConfig,
+        CondensationConfig,
+        ResolvedChatRequest,
+        ResolvedContextConfig,
+        ResolvedSystemConfig,
+        ResolvedToolConfig,
+        ResponseFormatConfig,
+        ThinkingConfig,
+        ToolSpec,
+    )
+    from private_gpt.components.engines.chat.resumable_runner import (
+        ResumableChatRunner,
+    )
+    from private_gpt.events.models import DocumentBlock, ThinkingBlock
+
+    document = DocumentBlock(
+        source=DocumentBlock.PlainTextSource(
+            data="Document text",
+            media_type="text/plain",
+        ),
+        title="Test document",
+    )
+    thinking = ThinkingBlock(thinking="Reasoning", signature="signature")
+    tool_call = ToolSelection(
+        tool_id="tool-1",
+        tool_name="lookup",
+        tool_kwargs={"query": "test"},
+    )
+    output_schema = {
+        "title": "Profile",
+        "type": "object",
+        "properties": {"name": {"type": "string"}},
+        "required": ["name"],
+    }
+    output_cls = create_model_from_json_schema(output_schema)
+    request = ResolvedChatRequest(
+        stream=True,
+        messages=[
+            ChatMessage(
+                role=MessageRole.USER,
+                content="Create a profile",
+                additional_kwargs={
+                    "document": [document],
+                    "thinking": [thinking],
+                    "tool_calls": [tool_call],
+                },
+            )
+        ],
+        system=ResolvedSystemConfig(prompt="System prompt", model="default"),
+        tool_config=ResolvedToolConfig(
+            tools=[
+                ToolSpec.from_defaults(
+                    name="lookup",
+                    type="lookup",
+                    runtime="server",
+                    input_schema={
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                    },
+                )
+            ],
+            tool_choices=["lookup"],
+            allow_parallel_tool_calls=False,
+        ),
+        context=ResolvedContextConfig(
+            add_context_to_system_prompt=True,
+            deduplicate_context_in_history=True,
+            maximum_context_length=2048,
+            correlation_id="correlation-1",
+            user_id="user-1",
+            container="container-1",
+            maximum_loaded_skills=2,
+        ),
+        condensation=CondensationConfig(enabled=False),
+        citation=CitationConfig(
+            enabled=True,
+            force_to_return_citations=True,
+            return_missing_citations=True,
+        ),
+        thinking=ThinkingConfig(enabled=True, type="high"),
+        response_format=ResponseFormatConfig(output_cls=output_cls),
+        sampling_params={
+            "temperature": 0.2,
+            "max_tokens": 512,
+            "stop": ["done"],
+        },
+    )
+
+    serialized = request.model_dump(mode="json")
+    encoded = json.dumps(serialized)
+    restored = ResumableChatRunner._request(json.loads(encoded))
+
+    assert set(serialized) == set(ResolvedChatRequest.model_fields)
+    assert restored.model_dump(mode="json") == serialized

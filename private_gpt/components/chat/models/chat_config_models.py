@@ -476,6 +476,20 @@ class ResponseFormatConfig(BaseModel):
         default=None, description="Output class to use for the response format"
     )
 
+    @field_serializer("output_cls", when_used="json")
+    def _serialize_output_cls(
+        self,
+        output_cls: type[BaseModel] | None,
+    ) -> dict[str, Any] | None:
+        return output_cls.model_json_schema() if output_cls is not None else None
+
+    @field_validator("output_cls", mode="before")
+    @classmethod
+    def _deserialize_output_cls(cls, output_cls: Any) -> Any:
+        if isinstance(output_cls, dict):
+            return create_model_from_json_schema(output_cls)
+        return output_cls
+
 
 class ChatRequest(BaseModel):
     """Request model for chat-based engines with agent capabilities.
