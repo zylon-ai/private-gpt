@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
 @celery_app.task(
     name="private_gpt.tools.run",
     base=StatefulBackgroundTask,
+    ignore_result=True,
 )
-async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
+async def tool_run_task(*, request_data: dict[str, Any]) -> None:
     request = ToolExecutionRequest.model_validate(request_data)
     try:
         response = await execute_tool_request(request)
         await _notify_completion(request, response)
-        return response.model_dump(mode="json")
     except Exception as exc:
         logger.exception("Tool '%s' execution failed", request.tool_name)
         response = ToolExecutionResponse(
@@ -39,7 +39,6 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
             tool_message=request_error_message(request, str(exc)),
         )
         await _notify_completion(request, response)
-        return response.model_dump(mode="json")
 
 
 async def _notify_completion(
