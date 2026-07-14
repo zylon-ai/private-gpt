@@ -9,7 +9,9 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedChatRequest,
     ResolvedSystemConfig,
 )
-from private_gpt.components.engines.chat.async_chat_engine import ChatExecution
+from private_gpt.components.engines.chat.chat_engine_interface import (
+    ChatEngineExecution,
+)
 from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
@@ -67,7 +69,10 @@ async def _fatal_event_stream() -> AsyncGenerator[Event, None]:
 
 def _mock_engine_for(stream: AsyncGenerator[Event, None]) -> MagicMock:
     mock_engine = MagicMock()
-    execution = ChatExecution(events=stream, final_state_task=MagicMock())
+    execution = ChatEngineExecution(
+        events=stream,
+        final_state_task=MagicMock(),
+    )
     mock_engine.run = AsyncMock(return_value=execution)
     return mock_engine
 

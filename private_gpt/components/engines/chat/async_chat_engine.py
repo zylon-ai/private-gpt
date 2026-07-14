@@ -44,6 +44,7 @@ from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat.chat_engine_interface import (
     ChatEngineExecution,
 )
+from private_gpt.components.engines.chat.chat_runner import ChatRunner
 from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
     ChatResponseLoopInterceptor,
@@ -121,9 +122,6 @@ from private_gpt.events.models import (
 )
 
 if TYPE_CHECKING:
-    from private_gpt.components.engines.chat.resumable_runner import (
-        ResumableChatRunner,
-    )
     from private_gpt.components.streaming.tasks.chat_scheduler import (
         BaseChatScheduler,
     )
@@ -312,7 +310,7 @@ class AsyncChatEngine:
         container_registry: ContainerRegistry | None = None,
         tool_scheduler: BaseToolScheduler | None = None,
         tool_interceptors: list[ToolExecutionInterceptor] | None = None,
-        resumable_runner: "ResumableChatRunner | None" = None,
+        runner: ChatRunner | None = None,
     ) -> None:
         self._llm_component = llm_component
         self._request_interceptors = [
@@ -330,7 +328,7 @@ class AsyncChatEngine:
         self._tool_scheduler: BaseToolScheduler = tool_scheduler or LocalToolScheduler()
         self._tool_interceptors = tool_interceptors or []
         self._chat_scheduler = chat_scheduler
-        self._resumable_runner = resumable_runner
+        self._runner = runner
         self._checkpoint_handlers = {
             _IterationCheckpoint.START: self._execute_start_checkpoint,
             _IterationCheckpoint.BEFORE_ITERATION: self._execute_before_iteration_checkpoint,
@@ -416,9 +414,11 @@ class AsyncChatEngine:
         self,
         request: ChatRequest,
         hooks: ExecutionHooks | None = None,
+        *,
+        runner: ChatRunner | None = None,
     ) -> ChatEngineExecution:
         """Submit execution through the transport-independent resumable runner."""
-        runner = self._resumable_runner
+        runner = runner or self._runner
         if runner is None:
             raise RuntimeError("AsyncChatEngine requires a ResumableChatRunner")
         execution_id, broker_events = await runner.submit(
@@ -453,7 +453,7 @@ class AsyncChatEngine:
         stream_type: str,
         metadata: dict[str, Any],
     ) -> None:
-        runner = self._require_resumable_runner()
+        runner = self._require_runner()
         await runner.start(
             engine=self,
             execution_id=execution_id,
@@ -463,13 +463,13 @@ class AsyncChatEngine:
         )
 
     async def execute_scheduled_resume(self, *, execution_id: str) -> None:
-        runner = self._require_resumable_runner()
+        runner = self._require_runner()
         await runner.resume(engine=self, execution_id=execution_id)
 
     async def record_callback(
         self, *, execution_id: str, tool_id: str, result: dict[str, Any]
     ) -> None:
-        runner = self._require_resumable_runner()
+        runner = self._require_runner()
         await runner.callback(
             execution_id=execution_id,
             tool_id=tool_id,
@@ -477,7 +477,7 @@ class AsyncChatEngine:
         )
 
     async def execute_timeout(self, *, execution_id: str, checkpoint_id: str) -> None:
-        runner = self._require_resumable_runner()
+        runner = self._require_runner()
         await runner.timeout(
             execution_id=execution_id,
             checkpoint_id=checkpoint_id,
@@ -491,14 +491,14 @@ class AsyncChatEngine:
         )
 
     async def cancel(self, correlation_id: str) -> bool:
-        if self._resumable_runner is not None:
-            return bool(await self._resumable_runner.cancel(correlation_id))
+        if self._runner is not None:
+            return bool(await self._runner.cancel(correlation_id))
         return bool(await self._chat_scheduler.cancel(correlation_id))
 
-    def _require_resumable_runner(self) -> "ResumableChatRunner":
-        if self._resumable_runner is None:
+    def _require_runner(self) -> ChatRunner:
+        if self._runner is None:
             raise RuntimeError("AsyncChatEngine requires a ResumableChatRunner")
-        return self._resumable_runner
+        return self._runner
 
     # ------------------------------------------------------------------
     # Internal loop helpers

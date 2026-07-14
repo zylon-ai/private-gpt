@@ -8,6 +8,7 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedChatRequest,
 )
 from private_gpt.components.engines.chat.chat_engine import ChatLoopEngine
+from private_gpt.components.engines.chat.chat_runner import ChatRunner
 from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
 from private_gpt.components.engines.chat.models.chat_state import ChatState
 from private_gpt.components.engines.chat.models.execution_hooks import ExecutionHooks
@@ -26,6 +27,8 @@ class ChatEngine(Protocol):
         self,
         request: ChatRequest,
         hooks: ExecutionHooks | None = None,
+        *,
+        runner: ChatRunner | None = None,
     ) -> ChatEngineExecution:
         ...
 
@@ -44,7 +47,10 @@ class LoopChatEngineAdapter:
         self,
         request: ChatRequest,
         hooks: ExecutionHooks | None = None,
+        *,
+        runner: ChatRunner | None = None,
     ) -> ChatEngineExecution:
+        del runner
         execution = await self._engine.run(
             request=request,
             hooks=hooks.tool_result if hooks is not None else None,

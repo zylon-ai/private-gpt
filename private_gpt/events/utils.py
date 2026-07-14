@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator, AsyncIterator
+from contextlib import aclosing
 from typing import Any
 
 from private_gpt.events.models import (
@@ -39,5 +40,6 @@ def to_message(
 async def to_sse_stream(
     event_generator: AsyncGenerator[Event, None],
 ) -> AsyncIterator[str]:
-    async for event in event_generator:
-        yield SSEFormatter.to_sse_event(event)
+    async with aclosing(event_generator):
+        async for event in event_generator:
+            yield SSEFormatter.to_sse_event(event)

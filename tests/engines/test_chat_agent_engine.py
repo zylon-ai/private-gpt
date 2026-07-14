@@ -20,10 +20,16 @@ from private_gpt.components.chat.models.chat_config_models import (
 )
 from private_gpt.components.engines.chat.async_chat_engine import (
     AsyncChatEngine,
+    LocalEventChannel,
     _EventHandler,
     _StreamDeltaState,
 )
 from private_gpt.components.engines.chat.chat_engine import ChatLoopEngine
+from private_gpt.components.engines.chat.chat_engine_interface import (
+    ChatEngine,
+    LoopChatEngineAdapter,
+)
+from private_gpt.components.engines.chat.chat_runner import ChatRunner
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.streaming.tasks.chat_scheduler import LocalChatScheduler
 from private_gpt.components.tools.tool_scheduler import LocalToolScheduler
@@ -47,14 +53,71 @@ async def _collect_events(events: AsyncGenerator[Any, None]) -> list[Any]:
     return [event async for event in events]
 
 
+class _LocalTestRunner:
+    def __init__(self, engine: AsyncChatEngine) -> None:
+        self._engine = engine
+        self._tasks: dict[str, asyncio.Task[Any]] = {}
+
+    async def submit(
+        self,
+        *,
+        request_data: dict[str, Any],
+        stream_type: str,
+        metadata: dict[str, Any],
+        execution_id: str | None = None,
+    ) -> tuple[str, AsyncGenerator[Any, None]]:
+        del stream_type, metadata
+        correlation_id = execution_id or "test-execution"
+        channel = LocalEventChannel()
+
+        async def execute() -> None:
+            try:
+                request = ResolvedChatRequest.model_validate(request_data)
+                await self._engine.execute(request=request, channel=channel)
+            finally:
+                await channel.close()
+
+        task = asyncio.create_task(execute())
+        self._tasks[correlation_id] = task
+        return correlation_id, channel.stream(task)
+
+    async def cancel(self, execution_id: str) -> bool:
+        task = self._tasks.get(execution_id)
+        if task is None:
+            return False
+        task.cancel()
+        return True
+
+
 async def _run_engine(
-    engine: Any,
+    engine: ChatEngine,
     request: ResolvedChatRequest,
+    runner: ChatRunner | None,
 ) -> list[Any]:
-    execution = await engine.run(request)
+    execution = await engine.run(request=request, runner=runner)
     events = await _collect_events(execution.events)
-    await execution.final_state_task
+    if execution.final_state_task is not None:
+        await execution.final_state_task
     return events
+
+
+def _build_engine(
+    engine_cls: Any,
+    engine_kwargs: dict[str, Any],
+    llm_component: LLMComponent,
+    max_iterations: int,
+) -> tuple[ChatEngine, ChatRunner | None]:
+    engine = engine_cls(
+        llm_component=llm_component,
+        request_interceptors=[],
+        response_interceptors=[],
+        max_iterations=max_iterations,
+        **engine_kwargs,
+    )
+    if isinstance(engine, AsyncChatEngine):
+        runner = _LocalTestRunner(engine)
+        return engine, runner
+    return LoopChatEngineAdapter(engine=engine), None
 
 
 ENGINE_CONFIGS = [
@@ -87,15 +150,18 @@ async def test_loop_emits_text_and_stop(
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
 
-    engine = engine_cls(
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
         llm_component=llm_component,
-        request_interceptors=[],
-        response_interceptors=[],
         max_iterations=2,
-        **engine_kwargs,
     )
 
-    events = await _run_engine(engine, base_request)
+    events = await _run_engine(
+        engine=engine,
+        request=base_request,
+        runner=runner,
+    )
     assert any(isinstance(event, RawContentBlockDeltaEvent) for event in events)
     assert any(isinstance(event, RawMessageStopEvent) for event in events)
 
@@ -134,15 +200,18 @@ async def test_loop_streams_tool_use_and_tool_result(
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
 
-    engine = engine_cls(
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
         llm_component=llm_component,
-        request_interceptors=[],
-        response_interceptors=[],
         max_iterations=4,
-        **engine_kwargs,
     )
 
-    events = await _run_engine(engine, request)
+    events = await _run_engine(
+        engine=engine,
+        request=request,
+        runner=runner,
+    )
     assert any(
         isinstance(event, RawContentBlockStartEvent)
         and isinstance(event.content_block, ToolUseBlock)
@@ -212,15 +281,18 @@ async def test_loop_streams_reasoning_blocks(
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
 
-    engine = engine_cls(
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
         llm_component=llm_component,
-        request_interceptors=[],
-        response_interceptors=[],
         max_iterations=2,
-        **engine_kwargs,
     )
 
-    events = await _run_engine(engine, base_request)
+    events = await _run_engine(
+        engine=engine,
+        request=base_request,
+        runner=runner,
+    )
     assert any(
         isinstance(event, RawContentBlockStartEvent)
         and isinstance(event.content_block, ThinkingBlock)
@@ -320,15 +392,18 @@ async def test_loop_accumulates_usage_across_iterations(
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
 
-    engine = engine_cls(
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
         llm_component=llm_component,
-        request_interceptors=[],
-        response_interceptors=[],
         max_iterations=4,
-        **engine_kwargs,
     )
 
-    events = await _run_engine(engine, request)
+    events = await _run_engine(
+        engine=engine,
+        request=request,
+        runner=runner,
+    )
     message_deltas = [
         event for event in events if isinstance(event, RawMessageDeltaEvent)
     ]
@@ -417,15 +492,18 @@ async def test_loop_preserves_tool_calls_when_last_chunk_has_empty_tool_calls(
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
 
-    engine = engine_cls(
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
         llm_component=llm_component,
-        request_interceptors=[],
-        response_interceptors=[],
         max_iterations=2,
-        **engine_kwargs,
     )
 
-    events = await _run_engine(engine, request)
+    events = await _run_engine(
+        engine=engine,
+        request=request,
+        runner=runner,
+    )
     assert any(
         isinstance(event, RawContentBlockStartEvent)
         and isinstance(event.content_block, ToolUseBlock)

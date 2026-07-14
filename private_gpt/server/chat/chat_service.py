@@ -22,10 +22,13 @@ from private_gpt.components.engines.chat.chat_engine_interface import (
     ChatEngine,
     LoopChatEngineAdapter,
 )
+from private_gpt.components.engines.chat.chat_runner import (
+    ChatRunner,
+    ChatRunnerFactory,
+)
 from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
 )
-from private_gpt.components.engines.chat.resumable_runner import ResumableChatRunner
 from private_gpt.components.ingest.ingest_component import IngestComponent
 from private_gpt.components.llm.custom.base import ZylonLLM
 from private_gpt.components.llm.llm_component import LLMComponent
@@ -163,7 +166,7 @@ class ChatService:
         container_registry: ContainerRegistry,
         scheduler_factory: ToolSchedulerFactory,
         chat_scheduler_factory: ChatSchedulerFactory,
-        resumable_runner: ResumableChatRunner,
+        runner_factory: ChatRunnerFactory,
     ) -> None:
         self.settings = settings
         self.llm_component = llm_component
@@ -176,7 +179,7 @@ class ChatService:
         self.container_registry = container_registry
         self._tool_scheduler = scheduler_factory.get()
         self._chat_scheduler = chat_scheduler_factory.get()
-        self._resumable_runner = resumable_runner
+        self._runner: ChatRunner = runner_factory.get()
 
     def build_async_engine(self) -> AsyncChatEngine:
         # Don't build a singleton since the interceptors
@@ -192,7 +195,7 @@ class ChatService:
             container_registry=self.container_registry,
             tool_scheduler=self._tool_scheduler,
             chat_scheduler=self._chat_scheduler,
-            resumable_runner=self._resumable_runner,
+            runner=self._runner,
         )
 
     def build_loop_engine(self) -> LoopChatEngineAdapter:
@@ -210,9 +213,11 @@ class ChatService:
         )
 
     def build_engine(self) -> ChatEngine:
-        if self.settings.chat.engine_mode == "async":
-            return self.build_async_engine()
-        return self.build_loop_engine()
+        return (
+            self.build_async_engine()
+            if self.settings.chat.engine_mode == "async"
+            else self.build_loop_engine()
+        )
 
     async def stream_chat(
         self,
@@ -220,7 +225,11 @@ class ChatService:
         hooks: ExecutionHooks | None = None,
     ) -> CompletionGen:
         engine = await asyncio.to_thread(self.build_engine)
-        execution = await engine.run(request=request, hooks=hooks)
+        execution = await engine.run(
+            request=request,
+            hooks=hooks,
+            runner=self._runner,
+        )
         return CompletionGen(
             events=execution.events,
             final_state_task=execution.final_state_task,

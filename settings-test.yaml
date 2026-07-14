@@ -20,7 +20,7 @@ scheduler:
     # Tests run local ingestion and local retrieval in the same process. This
     # mode reuses the already-open local Qdrant handle instead of opening a
     # second sync/async client pair against the same on-disk database.
-    mode: test
+    mode: celery
 
 docling:
   mode: api
