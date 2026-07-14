@@ -54,13 +54,16 @@ class CodeExecutionSession(ABC):
         """Close and release the backing execution session."""
 
 
+from pydantic import Field
+
+
 class CodeExecutionSessionConfig(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     session_id: str
-    extra_bundles: list[ContentBundle] = []
-    bundles_to_remove: list[str] = []
-    env: dict[str, str] = {}
+    extra_bundles: list[ContentBundle] = Field(default_factory=list)
+    bundles_to_remove: list[str] = Field(default_factory=list)
+    env: dict[str, str] = Field(default_factory=dict)
 
 
 class CodeExecutionProvider(ABC):
