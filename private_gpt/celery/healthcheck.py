@@ -54,7 +54,7 @@ async def health_check() -> dict[str, Any]:
         if not flower_health:
             status["status"] = "unhealthy"
 
-    if mode in ["mixed", "worker"]:
+    if mode in ["mixed", "worker", "celery"]:
         worker_health = await check_worker()
         status["services"]["worker"] = "healthy" if worker_health else "unhealthy"
         if not worker_health:
