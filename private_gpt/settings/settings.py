@@ -1739,10 +1739,7 @@ class Settings(BaseModel):
                 "Supported tool scheduler modes are 'local' and 'celery'."
             )
 
-        if (
-            self.scheduler.tools.mode == "celery"
-            and self.scheduler.chat.mode != "arq"
-        ):
+        if self.scheduler.tools.mode == "celery" and self.scheduler.chat.mode != "arq":
             raise ValueError(
                 f"scheduler.tools.mode={self.scheduler.tools.mode!r} requires "
                 "scheduler.chat.mode='arq' so tool callbacks can resume shared "
