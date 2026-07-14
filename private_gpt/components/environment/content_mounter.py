@@ -160,7 +160,9 @@ class LocalStorageContentMounter(ContentMounter):
                     dest = host_path / f.path
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     dest.write_bytes(f.content)
-            sandbox.add_local_mount(descriptor.canonical_path, host_path, writable=descriptor.writable)
+            sandbox.add_local_mount(
+                descriptor.canonical_path, host_path, writable=descriptor.writable
+            )
         else:
             files = await descriptor.fetch()
             if files:

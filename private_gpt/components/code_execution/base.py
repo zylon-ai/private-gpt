@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from private_gpt.components.sandbox.content_bundle import ContentBundle
 from private_gpt.settings.settings import Settings
@@ -52,9 +52,6 @@ class CodeExecutionSession(ABC):
     @abstractmethod
     async def close(self) -> None:
         """Close and release the backing execution session."""
-
-
-from pydantic import Field
 
 
 class CodeExecutionSessionConfig(BaseModel):

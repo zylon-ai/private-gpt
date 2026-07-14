@@ -58,6 +58,7 @@ class SandboxLink(BaseModel):
     url: str
     headers: dict[str, str] = Field(default_factory=dict)
 
+
 class SandboxSession(ABC):
     """Async sandbox session with exec + file operations.
 
