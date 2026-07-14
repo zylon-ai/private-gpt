@@ -54,7 +54,7 @@ class TaskManager:
         token = self._cancellation_tokens.get(correlation_id)
         return token is not None and token.is_set()
 
-    async def cancel_task(self, correlation_id: str, timeout: float = 2.0) -> bool:
+    async def cancel_task(self, correlation_id: str) -> bool:
         """Cancel a task and wait for completion."""
         if correlation_id in self._cancellation_tokens:
             self._cancellation_tokens[correlation_id].set()
@@ -65,16 +65,16 @@ class TaskManager:
 
         task.cancel()
 
-        with contextlib.suppress(TimeoutError, asyncio.CancelledError):
-            await asyncio.wait_for(task, timeout=timeout)
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
 
         return True
 
-    async def cancel(self, correlation_id: str, timeout: float = 2.0) -> bool:
+    async def cancel(self, correlation_id: str) -> bool:
         from private_gpt.server.chat.chat_service import ChatService
 
         chat_service = get_global_injector().get(ChatService)
-        success = await self.cancel_task(correlation_id, timeout=timeout)
+        success = await self.cancel_task(correlation_id)
         scheduled_cancel = await chat_service.cancel(correlation_id)
         return success or scheduled_cancel
 
