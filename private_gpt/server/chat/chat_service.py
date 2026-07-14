@@ -243,8 +243,7 @@ class ChatService:
 
     async def cancel(self, correlation_id: str) -> bool:
         engine = await asyncio.to_thread(self.build_engine)
-        await engine.cancel(correlation_id=correlation_id)
-        return True
+        return await engine.cancel(correlation_id=correlation_id)
 
     async def validate(self, request: ResolvedChatRequest) -> ChatValidationResult:
         errors: list[str] = []
