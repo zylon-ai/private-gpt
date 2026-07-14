@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import uuid4
 
 from injector import inject, singleton
 from llama_index.core.tools import ToolSelection
+from pydantic import Field, TypeAdapter, ValidationError
 
 from private_gpt.components.chat.models.chat_config_models import ResolvedChatRequest
 from private_gpt.components.engines.chat.checkpoint_store import (
@@ -25,6 +26,7 @@ from private_gpt.components.engines.chat.models.execution_hooks import (
 )
 from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
 from private_gpt.events.event_serializer import StreamingEventHandler
+from private_gpt.events.models import ContentBlockType
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
@@ -41,6 +43,10 @@ _RESUME_HOOKS = ExecutionHooks(
             callable_path="private_gpt.arq.tasks.chat.callback:resume_chat_callback"
         )
     ]
+)
+
+_CONTENT_BLOCK_ADAPTER: TypeAdapter[ContentBlockType] = TypeAdapter(
+    Annotated[ContentBlockType, Field(discriminator="type")]
 )
 
 
@@ -237,15 +243,30 @@ class ResumableChatRunner:
         request = ResolvedChatRequest.model_validate(request_data)
         for message in request.messages:
             tool_calls = message.additional_kwargs.get("tool_calls")
-            if not isinstance(tool_calls, list):
-                continue
-            message.additional_kwargs["tool_calls"] = [
-                ToolSelection.model_validate(tool_call)
-                if isinstance(tool_call, dict)
-                else tool_call
-                for tool_call in tool_calls
-            ]
+            if isinstance(tool_calls, list):
+                message.additional_kwargs["tool_calls"] = [
+                    ToolSelection.model_validate(tool_call)
+                    if isinstance(tool_call, dict)
+                    else tool_call
+                    for tool_call in tool_calls
+                ]
+
+            message.additional_kwargs = {
+                key: ResumableChatRunner._restore_content_blocks(value)
+                for key, value in message.additional_kwargs.items()
+            }
         return request
+
+    @staticmethod
+    def _restore_content_blocks(value: Any) -> Any:
+        if isinstance(value, list):
+            return [ResumableChatRunner._restore_content_blocks(item) for item in value]
+        if not isinstance(value, dict) or not isinstance(value.get("type"), str):
+            return value
+        try:
+            return _CONTENT_BLOCK_ADAPTER.validate_python(value)
+        except ValidationError:
+            return value
 
     @staticmethod
     def _checkpoint_payload(state: ChatState) -> Any:

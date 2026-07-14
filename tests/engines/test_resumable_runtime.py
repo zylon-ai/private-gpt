@@ -139,3 +139,53 @@ async def test_runner_cancel_revokes_pending_tool_tasks() -> None:
     tool_scheduler.cancel_task.assert_any_await(task_id="celery-task-2")
     chat_scheduler.cancel.assert_awaited_once_with("execution-cancel")
     assert await checkpoint_store.load("execution-cancel") is None
+
+
+def test_runner_restores_additional_kwargs_after_serialization() -> None:
+    from llama_index.core.base.llms.types import ChatMessage, MessageRole
+    from llama_index.core.tools import ToolSelection
+
+    from private_gpt.components.chat.models.chat_config_models import (
+        ResolvedChatRequest,
+    )
+    from private_gpt.components.engines.chat.resumable_runner import (
+        ResumableChatRunner,
+    )
+    from private_gpt.events.models import DocumentBlock, ThinkingBlock
+
+    document = DocumentBlock(
+        source=DocumentBlock.PlainTextSource(
+            data="Document text",
+            media_type="text/plain",
+        ),
+        title="Test document",
+    )
+    thinking = ThinkingBlock(thinking="Reasoning", signature="signature")
+    tool_call = ToolSelection(
+        tool_id="tool-1",
+        tool_name="lookup",
+        tool_kwargs={"query": "test"},
+    )
+    request = ResolvedChatRequest(
+        messages=[
+            ChatMessage(
+                role=MessageRole.USER,
+                content="Summarize this document",
+                additional_kwargs={
+                    "document": [document],
+                    "thinking": [thinking],
+                    "tool_calls": [tool_call],
+                },
+            )
+        ]
+    )
+
+    restored = ResumableChatRunner._request(request.model_dump(mode="json"))
+    additional_kwargs = restored.messages[0].additional_kwargs
+
+    assert additional_kwargs["document"] == [document]
+    assert additional_kwargs["thinking"] == [thinking]
+    assert additional_kwargs["tool_calls"] == [tool_call]
+    assert isinstance(additional_kwargs["document"][0], DocumentBlock)
+    assert isinstance(additional_kwargs["thinking"][0], ThinkingBlock)
+    assert isinstance(additional_kwargs["tool_calls"][0], ToolSelection)
