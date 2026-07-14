@@ -56,8 +56,7 @@ class SandboxLink(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     url: str
-    headers: dict[str, str] = {}
-
+    headers: dict[str, str] = Field(default_factory=dict)
 
 class SandboxSession(ABC):
     """Async sandbox session with exec + file operations.
