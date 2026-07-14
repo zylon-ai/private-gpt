@@ -218,6 +218,7 @@ def create_app(root_injector: Injector) -> FastAPI:
         ).set_current()
 
         response = await call_next(request)
+        response.call_on_close(Principal.reset)
         return response
 
     app.include_router(chat_router)
