@@ -136,10 +136,11 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
                 not isinstance(ingest_body.ingest_body.input, UriArtifact)
                 or ingest_body.ingest_body.input.is_base64()
             )
-            if should_upload:
+            s3_helper = self._require_s3_helper()
+            if should_upload and s3_helper.is_available():
                 content = ingest_body.ingest_body.input.to_binary_content()
                 object_name = str(uuid.uuid4())
-                s3_url = self._require_s3_helper().upload_file_to_s3(
+                s3_url = s3_helper.upload_file_to_s3(
                     filename=content.filename,
                     bytes_data=content.data.read(),
                     bucket_name=config.s3.temporary_bucket_name,
@@ -214,21 +215,25 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
         )
 
         if async_body.ingest_body.input:
-            content = async_body.ingest_body.input.to_binary_content(
-                async_body.ingest_body.metadata.get("file_name")
-                if async_body.ingest_body.metadata
-                else None
-            )
-            object_name = str(uuid.uuid4())
-            s3_url = self._require_s3_helper().upload_file_to_s3(
-                filename=content.filename,
-                bytes_data=content.data.read(),
-                bucket_name=config.s3.temporary_bucket_name,
-                object_name=object_name,
-            )
-            if not s3_url:
-                raise ValueError("Failed to upload file to S3 for sync celery ingest")
-            async_body.ingest_body.input = UriArtifact(value=s3_url)
+            s3_helper = self._require_s3_helper()
+            if s3_helper.is_available():
+                content = async_body.ingest_body.input.to_binary_content(
+                    async_body.ingest_body.metadata.get("file_name")
+                    if async_body.ingest_body.metadata
+                    else None
+                )
+                object_name = str(uuid.uuid4())
+                s3_url = s3_helper.upload_file_to_s3(
+                    filename=content.filename,
+                    bytes_data=content.data.read(),
+                    bucket_name=config.s3.temporary_bucket_name,
+                    object_name=object_name,
+                )
+                if not s3_url:
+                    raise ValueError(
+                        "Failed to upload file to S3 for sync celery ingest"
+                    )
+                async_body.ingest_body.input = UriArtifact(value=s3_url)
 
         result = dispatch_task(
             task_name=VECTOR_INDEX_TASK_NAME,

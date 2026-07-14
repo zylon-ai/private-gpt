@@ -28,6 +28,9 @@ class S3Helper:
         self._s3_settings = settings().s3
         self._s3_client = self._get_s3_client(self._s3_settings)
 
+    def is_available(self) -> bool:
+        return self._s3_client is not None
+
     @staticmethod
     def _get_s3_client(s3_settings: S3Settings) -> S3Client | None:
         if (
