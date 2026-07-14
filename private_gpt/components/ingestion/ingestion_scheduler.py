@@ -201,6 +201,10 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
         from private_gpt.server.utils.callback import AMQP, Callback
 
         config = settings()
+        self._ingest_service.initialize_artifact_indices(
+            collection=ingest_body.collection,
+            artifact=ingest_body.artifact,
+        )
         async_body = IngestAsyncBody(
             ingest_body=ingest_body,
             callback=Callback(

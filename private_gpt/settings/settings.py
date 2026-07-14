@@ -1722,6 +1722,22 @@ class Settings(BaseModel):
 
     @model_validator(mode="after")
     def validate_chat_scheduler_configuration(self) -> "Settings":
+        if self.scheduler.chat.mode not in {"local", "arq"}:
+            raise ValueError(
+                f"Unsupported scheduler.chat.mode={self.scheduler.chat.mode!r}. "
+                "Supported chat scheduler modes are 'local' and 'arq'."
+            )
+
+        if (
+            self.scheduler.tools.mode != "local"
+            and self.scheduler.chat.mode != "arq"
+        ):
+            raise ValueError(
+                f"scheduler.tools.mode={self.scheduler.tools.mode!r} requires "
+                "scheduler.chat.mode='arq' so tool callbacks can resume shared "
+                "chat state."
+            )
+
         if self.scheduler.chat.mode == "local":
             return self
 

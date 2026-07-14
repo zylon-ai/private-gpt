@@ -15,14 +15,29 @@ def test_settings_can_be_overriden(injector: MockInjector) -> None:
     assert mocked_settings.server.env_name == "overriden"
 
 
-def test_chat_scheduler_requires_redis_stream_backend() -> None:
+def test_chat_scheduler_rejects_unsupported_celery_mode() -> None:
     merged = merge_settings(
         [
             unsafe_settings,
             {
                 "scheduler": {"chat": {"mode": "celery"}},
-                "stream": {"broker": "memory"},
+                "stream": {"broker": "redis"},
                 "celery": {"use_workers": True},
+            },
+        ]
+    )
+
+    with pytest.raises(ValueError, match=r"Unsupported scheduler\.chat\.mode='celery'"):
+        Settings(**merged)
+
+
+def test_arq_chat_scheduler_requires_redis_stream_backend() -> None:
+    merged = merge_settings(
+        [
+            unsafe_settings,
+            {
+                "scheduler": {"chat": {"mode": "arq"}},
+                "stream": {"broker": "memory"},
             },
         ]
     )
@@ -31,16 +46,19 @@ def test_chat_scheduler_requires_redis_stream_backend() -> None:
         Settings(**merged)
 
 
-def test_chat_scheduler_celery_mode_requires_redis_broker() -> None:
+@pytest.mark.parametrize("tool_mode", ["arq", "celery"])
+def test_remote_tool_scheduler_requires_arq_chat(tool_mode: str) -> None:
     merged = merge_settings(
         [
             unsafe_settings,
             {
-                "scheduler": {"chat": {"mode": "celery"}},
-                "stream": {"broker": "memory"},
+                "scheduler": {
+                    "chat": {"mode": "local"},
+                    "tools": {"mode": tool_mode},
+                },
             },
         ]
     )
 
-    with pytest.raises(ValueError, match=r"stream\.broker=redis"):
+    with pytest.raises(ValueError, match=r"scheduler\.chat\.mode='arq'"):
         Settings(**merged)
