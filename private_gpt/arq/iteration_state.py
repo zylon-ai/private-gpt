@@ -48,10 +48,7 @@ class RedisChatCheckpointStore(ChatCheckpointStore):
             checkpoint.model_dump_json(),
             ex=self._ttl,
         )
-        await self._redis.delete(
-            self._results_key(checkpoint.correlation_id),
-            self._resumed_key(checkpoint.correlation_id),
-        )
+        await self._redis.delete(self._resumed_key(checkpoint.correlation_id))
 
     async def load(self, execution_id: str) -> ChatCheckpoint | None:
         data = await self._redis.get(self._ctx_key(execution_id))
@@ -61,15 +58,17 @@ class RedisChatCheckpointStore(ChatCheckpointStore):
         self, execution_id: str, tool_id: str, result: dict[str, Any]
     ) -> dict[str, ToolExecutionResponse] | None:
         checkpoint = await self.load(execution_id)
-        if checkpoint is None:
-            return None
         results_key = self._results_key(execution_id)
         await cast(Any, self._redis.hset(results_key, tool_id, json.dumps(result)))
         await cast(Any, self._redis.expire(results_key, self._ttl))
-        expected = len(checkpoint.checkpoint_payload.pending_async_tools)
-        if cast(int, await cast(Any, self._redis.hlen(results_key))) < expected:
+        if checkpoint is None:
             return None
-        return await self.get_results(execution_id)
+        expected = set(checkpoint.checkpoint_payload.pending_async_tools)
+        if tool_id not in expected:
+            await cast(Any, self._redis.hdel(results_key, tool_id))
+            return None
+        results = await self.get_results(execution_id)
+        return results if expected.issubset(results) else None
 
     async def get_results(self, execution_id: str) -> dict[str, ToolExecutionResponse]:
         payload = cast(

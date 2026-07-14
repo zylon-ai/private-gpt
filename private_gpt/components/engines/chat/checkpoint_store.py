@@ -71,7 +71,6 @@ class InMemoryChatCheckpointStore(ChatCheckpointStore):
     async def save(self, checkpoint: ChatCheckpoint) -> None:
         async with self._lock:
             self._checkpoints[checkpoint.correlation_id] = checkpoint
-            self._results.pop(checkpoint.correlation_id, None)
             self._resumed.discard(checkpoint.correlation_id)
 
     async def load(self, execution_id: str) -> ChatCheckpoint | None:
@@ -84,11 +83,15 @@ class InMemoryChatCheckpointStore(ChatCheckpointStore):
         async with self._lock:
             checkpoint = self._checkpoints.get(execution_id)
             if checkpoint is None:
+                results = self._results.setdefault(execution_id, {})
+                results[tool_id] = ToolExecutionResponse.model_validate(result)
+                return None
+            if tool_id not in checkpoint.checkpoint_payload.pending_async_tools:
                 return None
             results = self._results.setdefault(execution_id, {})
             results[tool_id] = ToolExecutionResponse.model_validate(result)
-            expected = len(checkpoint.checkpoint_payload.pending_async_tools)
-            return dict(results) if len(results) >= expected else None
+            expected = set(checkpoint.checkpoint_payload.pending_async_tools)
+            return dict(results) if expected.issubset(results) else None
 
     async def get_results(self, execution_id: str) -> dict[str, ToolExecutionResponse]:
         async with self._lock:

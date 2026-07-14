@@ -171,9 +171,9 @@ class ResumableChatRunner:
         self, *, execution_id: str, tool_id: str, result: dict[str, Any]
     ) -> None:
         ready = await self._state.record_result(execution_id, tool_id, result)
-        if ready is None or not await self._state.claim_resume(execution_id):
+        if ready is None:
             return
-        await self._scheduler.resume(execution_id=execution_id)
+        await self._resume_if_ready(execution_id)
 
     async def timeout(self, *, execution_id: str, checkpoint_id: str) -> None:
         saved = await self._state.load(execution_id)
@@ -217,11 +217,23 @@ class ResumableChatRunner:
                 deadline=datetime.now(UTC) + timedelta(seconds=timeout_seconds),
             )
         )
+        await self._resume_if_ready(execution_id)
         await self._scheduler.timeout(
             execution_id=execution_id,
             checkpoint_id=checkpoint_id,
             delay_seconds=timeout_seconds,
         )
+
+    async def _resume_if_ready(self, execution_id: str) -> None:
+        checkpoint = await self._state.load(execution_id)
+        if checkpoint is None:
+            return
+        expected = set(checkpoint.checkpoint_payload.pending_async_tools)
+        results = await self._state.get_results(execution_id)
+        if not expected or not expected.issubset(results):
+            return
+        if await self._state.claim_resume(execution_id):
+            await self._scheduler.resume(execution_id=execution_id)
 
     async def _fail(
         self,

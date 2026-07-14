@@ -86,6 +86,79 @@ async def test_memory_iteration_state_aggregates_once_and_cleans_up() -> None:
 
 
 @pytest.mark.asyncio
+async def test_memory_iteration_state_preserves_result_received_before_checkpoint() -> None:
+    service = InMemoryChatCheckpointStore()
+    response = ToolExecutionResponse(
+        tool_name="echo",
+        tool_id="tool-early",
+        result_content=[TextBlock(text="ok")],
+        tool_message={
+            "role": "tool",
+            "content": "ok",
+            "additional_kwargs": {"tool_call_id": "tool-early"},
+        },
+    )
+
+    assert (
+        await service.record_result(
+            "execution-early", "tool-early", response.model_dump(mode="json")
+        )
+        is None
+    )
+    await service.save(
+        ChatCheckpoint(
+            correlation_id="execution-early",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=0,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={"tool-early": "job-early"}
+            ),
+        )
+    )
+
+    assert await service.get_results("execution-early") == {"tool-early": response}
+
+
+@pytest.mark.asyncio
+async def test_memory_iteration_state_ignores_unknown_tool_result() -> None:
+    service = InMemoryChatCheckpointStore()
+    await service.save(
+        ChatCheckpoint(
+            correlation_id="execution-unknown",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=0,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={"tool-expected": "job-expected"}
+            ),
+        )
+    )
+    response = ToolExecutionResponse(
+        tool_name="echo",
+        tool_id="tool-unknown",
+        result_content=[TextBlock(text="ok")],
+        tool_message={
+            "role": "tool",
+            "content": "ok",
+            "additional_kwargs": {"tool_call_id": "tool-unknown"},
+        },
+    )
+
+    assert (
+        await service.record_result(
+            "execution-unknown", "tool-unknown", response.model_dump(mode="json")
+        )
+        is None
+    )
+    assert await service.get_results("execution-unknown") == {}
+
+
+@pytest.mark.asyncio
 async def test_runner_cancel_revokes_pending_tool_tasks() -> None:
     from unittest.mock import AsyncMock, MagicMock
 
