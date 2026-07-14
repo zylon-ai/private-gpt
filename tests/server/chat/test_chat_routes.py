@@ -2264,14 +2264,24 @@ async def test_principal_is_propagated_to_background_task(
     original_process_stream = stream_processor.process_stream
 
     async def capturing_process_stream(
-        correlation_id, stream_type, event_generator, event_handler, metadata=None
+        correlation_id,
+        stream_type,
+        event_generator,
+        event_handler,
+        metadata=None,
+        mark_completed=True,
     ):
         # This coroutine runs inside the asyncio task spawned by TaskManager.
         # The task was created with copy_context(), so Principal.current() here
         # must return the principal that was active during the HTTP request.
         captured.append(Principal.current().api_key)
         await original_process_stream(
-            correlation_id, stream_type, event_generator, event_handler, metadata
+            correlation_id,
+            stream_type,
+            event_generator,
+            event_handler,
+            metadata,
+            mark_completed,
         )
 
     stream_processor.process_stream = capturing_process_stream  # type: ignore[method-assign]

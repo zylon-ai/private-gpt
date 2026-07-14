@@ -1,6 +1,7 @@
 import json
 import uuid
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 from httpx import AsyncClient
@@ -72,9 +73,8 @@ async def mock_llm_with_capture(
 
     mock_llm.astream_chat_with_tools = coro
     llm_component = injector.get(LLMComponent)
-    llm_component.llm = mock_llm
-    llm_component.get_llm.side_effect = lambda *args, **kwargs: mock_llm
-    injector.bind_mock(LLMComponent, mock_llm)
+    llm_component.get_llm = Mock(return_value=mock_llm)
+    injector.bind_mock(LLMComponent, llm_component)
 
 
 def _skill_md(name: str, description: str, body: str) -> bytes:
