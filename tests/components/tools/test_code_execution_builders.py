@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from private_gpt.components.code_execution.base import (
+from private_gpt.components.code_execution.results import (
     BashExecutionResult,
     FileOperationResult,
 )

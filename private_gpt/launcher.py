@@ -217,9 +217,10 @@ def create_app(root_injector: Injector) -> FastAPI:
             settings.principal.forwarded_cookies,
         ).set_current()
 
-        response = await call_next(request)
-        response.call_on_close(Principal.reset)
-        return response
+        try:
+            return await call_next(request)
+        finally:
+            Principal.reset()
 
     app.include_router(chat_router)
     app.include_router(completion_router)

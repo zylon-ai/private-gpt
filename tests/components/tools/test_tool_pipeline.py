@@ -99,6 +99,7 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
         bash_processor=BashProcessor(bash_builder),
         text_editor_processor=TextEditorProcessor(text_editor_builder),
         present_files_processor=noop,
+        present_server_processor=noop,
     )
     request = _request(
         [
@@ -170,6 +171,7 @@ async def test_skill_tools_are_built_without_pre_recovery() -> None:
         bash_processor=noop,
         text_editor_processor=noop,
         present_files_processor=noop,
+        present_server_processor=noop,
     )
     request = _request(
         [
@@ -229,6 +231,7 @@ async def test_tool_pipeline_expands_skills_wrapper() -> None:
         bash_processor=noop,
         text_editor_processor=noop,
         present_files_processor=noop,
+        present_server_processor=noop,
     )
     request = _request(
         [
