@@ -1727,7 +1727,7 @@ class Settings(BaseModel):
 
         if self.stream.broker != "redis":
             raise ValueError(
-                "scheduler.chat.mode='arq' requires stream.broker=redis "
+                f"scheduler.chat.mode={self.scheduler.chat.mode!r} requires stream.broker=redis "
                 "because API and chat worker processes must share stream state."
             )
 
