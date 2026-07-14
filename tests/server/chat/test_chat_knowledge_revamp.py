@@ -1,5 +1,6 @@
 import uuid
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 from httpx import AsyncClient
@@ -72,9 +73,8 @@ async def mock_llm_with_capture(
     mock_llm_instance.astream_chat_with_tools = coro
 
     llm_component = injector.get(LLMComponent)
-    llm_component.llm = mock_llm_instance
-    llm_component.get_llm.return_value = mock_llm_instance
-    injector.bind_mock(LLMComponent, mock_llm_instance)
+    llm_component.get_llm = Mock(return_value=mock_llm_instance)
+    injector.bind_mock(LLMComponent, llm_component)
 
 
 def create_tool_definition(

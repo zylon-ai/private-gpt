@@ -3,7 +3,7 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from httpx import AsyncClient
@@ -107,9 +107,8 @@ async def mock_llm(
     mock_llm = get_mock_function_calling_llm(deltas)
 
     llm_component = injector.get(LLMComponent)
-    llm_component.llm = mock_llm
-    llm_component.get_llm.return_value = mock_llm
-    injector.bind_mock(LLMComponent, mock_llm)
+    llm_component.get_llm = Mock(return_value=mock_llm)
+    injector.bind_mock(LLMComponent, llm_component)
 
 
 @pytest.mark.anyio

@@ -73,7 +73,7 @@ async def mock_llm_with_capture(
     mock_llm.astream_chat_with_tools = coro
     llm_component = injector.get(LLMComponent)
     llm_component.llm = mock_llm
-    llm_component.get_llm.return_value = mock_llm
+    llm_component.get_llm.side_effect = lambda *args, **kwargs: mock_llm
     injector.bind_mock(LLMComponent, mock_llm)
 
 

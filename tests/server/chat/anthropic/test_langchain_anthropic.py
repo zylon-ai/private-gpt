@@ -1,6 +1,7 @@
 import uuid
 from collections.abc import Iterator
 from typing import Any, get_args
+from unittest.mock import Mock
 
 import anthropic
 import httpx
@@ -139,9 +140,8 @@ def setup_mock_llm(
     )
 
     llm_component = injector.get(LLMComponent)
-    llm_component.llm = mock_llm_instance
-    llm_component.get_llm.return_value = mock_llm_instance
-    injector.bind_mock(LLMComponent, mock_llm_instance)
+    llm_component.get_llm = Mock(return_value=mock_llm_instance)
+    injector.bind_mock(LLMComponent, llm_component)
 
 
 def create_mock_http_client(
