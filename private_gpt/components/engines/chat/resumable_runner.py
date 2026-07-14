@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -22,6 +23,7 @@ from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
     ToolExecutionHook,
 )
+from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
 from private_gpt.events.event_serializer import StreamingEventHandler
 from private_gpt.settings.settings import Settings
 
@@ -53,11 +55,13 @@ class ResumableChatRunner:
         checkpoint_store_factory: ChatCheckpointStoreFactory,
         event_broker_factory: EngineEventBrokerFactory,
         scheduler_factory: ChatExecutionSchedulerFactory,
+        tool_scheduler_factory: ToolSchedulerFactory,
     ) -> None:
         self._settings = settings
         self._state = checkpoint_store_factory.get()
         self._events = event_broker_factory.get()
         self._scheduler = scheduler_factory.get()
+        self._tool_scheduler = tool_scheduler_factory.get()
 
     async def submit(
         self,
@@ -78,10 +82,22 @@ class ResumableChatRunner:
         return execution_id, events
 
     async def cancel(self, execution_id: str) -> bool:
-        cancelled = await self._scheduler.cancel(execution_id)
+        checkpoint = await self._state.load(execution_id)
+        tool_task_ids = (
+            list(checkpoint.checkpoint_payload.pending_async_tools.values())
+            if checkpoint is not None
+            else []
+        )
+        tool_cancellations = await asyncio.gather(
+            *(
+                self._tool_scheduler.cancel_task(task_id=task_id)
+                for task_id in tool_task_ids
+            )
+        )
+        chat_cancelled = await self._scheduler.cancel(execution_id)
         await self._state.cleanup(execution_id)
         await self._events.finish(execution_id)
-        return cancelled
+        return chat_cancelled or any(tool_cancellations)
 
     async def start(
         self,

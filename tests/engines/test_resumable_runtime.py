@@ -83,3 +83,59 @@ async def test_memory_iteration_state_aggregates_once_and_cleans_up() -> None:
     assert await service.claim_resume("execution-3") is False
     await service.cleanup("execution-3")
     assert await service.load("execution-3") is None
+
+
+@pytest.mark.asyncio
+async def test_runner_cancel_revokes_pending_tool_tasks() -> None:
+    from unittest.mock import AsyncMock, MagicMock
+
+    from private_gpt.components.engines.chat.resumable_runner import ResumableChatRunner
+
+    checkpoint_store = InMemoryChatCheckpointStore()
+    await checkpoint_store.save(
+        ChatCheckpoint(
+            correlation_id="execution-cancel",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=1,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={
+                    "tool-1": "celery-task-1",
+                    "tool-2": "celery-task-2",
+                }
+            ),
+        )
+    )
+    event_broker = InMemoryEngineEventBroker()
+    chat_scheduler = MagicMock()
+    chat_scheduler.cancel = AsyncMock(return_value=False)
+    tool_scheduler = MagicMock()
+    tool_scheduler.cancel_task = AsyncMock(return_value=True)
+
+    checkpoint_factory = MagicMock()
+    checkpoint_factory.get.return_value = checkpoint_store
+    event_factory = MagicMock()
+    event_factory.get.return_value = event_broker
+    scheduler_factory = MagicMock()
+    scheduler_factory.get.return_value = chat_scheduler
+    tool_scheduler_factory = MagicMock()
+    tool_scheduler_factory.get.return_value = tool_scheduler
+
+    runner = ResumableChatRunner(
+        settings=MagicMock(),
+        checkpoint_store_factory=checkpoint_factory,
+        event_broker_factory=event_factory,
+        scheduler_factory=scheduler_factory,
+        tool_scheduler_factory=tool_scheduler_factory,
+    )
+
+    cancelled = await runner.cancel(execution_id="execution-cancel")
+
+    assert cancelled is True
+    assert tool_scheduler.cancel_task.await_count == 2
+    tool_scheduler.cancel_task.assert_any_await(task_id="celery-task-1")
+    tool_scheduler.cancel_task.assert_any_await(task_id="celery-task-2")
+    chat_scheduler.cancel.assert_awaited_once_with("execution-cancel")
+    assert await checkpoint_store.load("execution-cancel") is None

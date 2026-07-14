@@ -33,8 +33,11 @@ class ChatFacadeService:
         async def coro() -> AsyncGenerator[Event, None]:
             completion_gen = await self._chat_service.stream_chat(request)
             event_generator = completion_gen.events
-            async for event in event_generator:
-                yield event
+            try:
+                async for event in event_generator:
+                    yield event
+            finally:
+                await event_generator.aclose()
 
         return coro()
 

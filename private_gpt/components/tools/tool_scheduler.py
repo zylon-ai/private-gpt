@@ -67,6 +67,10 @@ class BaseToolScheduler(ABC):
     ) -> bool:
         ...
 
+    async def cancel_task(self, task_id: str) -> bool:
+        del task_id
+        return False
+
     async def complete(
         self,
         request: ToolExecutionRequest,
@@ -96,6 +100,10 @@ class LocalToolScheduler(BaseToolScheduler):
         task_id: str | None = None,
     ) -> bool:
         del request, task_id
+        return False
+
+    async def cancel_task(self, task_id: str) -> bool:
+        del task_id
         return False
 
 
@@ -128,9 +136,9 @@ class CeleryToolScheduler(BaseToolScheduler):
         task_id: str | None = None,
     ) -> bool:
         del request
-        if not task_id:
-            return False
+        return await self.cancel_task(task_id) if task_id else False
 
+    async def cancel_task(self, task_id: str) -> bool:
         from private_gpt.celery.celery import celery_app
 
         celery_app.control.revoke(task_id, terminate=True)
@@ -201,8 +209,9 @@ class ArqToolScheduler(BaseToolScheduler):
         task_id: str | None = None,
     ) -> bool:
         del request
-        if task_id is None:
-            return False
+        return await self.cancel_task(task_id) if task_id else False
+
+    async def cancel_task(self, task_id: str) -> bool:
         from private_gpt.arq.enqueue import abort_job
 
         return await abort_job(job_id=task_id)

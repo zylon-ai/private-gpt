@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any
 
@@ -175,7 +176,11 @@ async def enqueue_tool_run_job(*, request_data: dict[str, Any], job_id: str) -> 
 
 
 async def abort_chat_job(*, correlation_id: str) -> bool:
-    return await abort_job(job_id=f"{correlation_id}:start")
+    results = await asyncio.gather(
+        abort_job(job_id=f"{correlation_id}:start"),
+        abort_job(job_id=f"{correlation_id}:resume"),
+    )
+    return any(results)
 
 
 async def abort_job(*, job_id: str) -> bool:
