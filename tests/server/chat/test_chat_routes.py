@@ -2256,8 +2256,9 @@ async def test_principal_is_propagated_to_background_task(
     specific Authorization header and asserts that Principal.current() inside
     the spawned task returns the matching api_key.
     """
-    from private_gpt.components.streaming.stream.stream_processor import StreamProcessor
     from private_gpt.server.principal import Principal
+
+    from private_gpt.components.streaming.stream.stream_processor import StreamProcessor
 
     captured: list[str | None] = []
     stream_processor = injector.get(StreamProcessor)
