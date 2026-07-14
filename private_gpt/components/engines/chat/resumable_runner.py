@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 
     from private_gpt.components.engines.chat.async_chat_engine import AsyncChatEngine
     from private_gpt.components.engines.chat.models.chat_state import ChatState
+    from private_gpt.components.tools.remote_execution import ToolExecutionResponse
     from private_gpt.events.models import Event
 
 
@@ -135,7 +136,8 @@ class ResumableChatRunner:
             return
         channel = BrokerEventChannel(self._events, execution_id)
         try:
-            responses = list((await self._state.get_results(execution_id)).values())
+            results = await self._state.get_results(execution_id)
+            responses = self._ordered_results(saved, results)
             request_data = dict(saved.request_data)
             request_data["messages"] = [
                 *list(request_data.get("messages", [])),
@@ -249,6 +251,17 @@ class ResumableChatRunner:
             await channel.close()
         await self._state.cleanup(execution_id)
         await self._events.finish(execution_id)
+
+    @staticmethod
+    def _ordered_results(
+        checkpoint: ChatCheckpoint,
+        results: dict[str, ToolExecutionResponse],
+    ) -> list[ToolExecutionResponse]:
+        return [
+            results[tool_id]
+            for tool_id in checkpoint.checkpoint_payload.pending_async_tools
+            if tool_id in results
+        ]
 
     @staticmethod
     def _request(request_data: dict[str, Any]) -> ResolvedChatRequest:

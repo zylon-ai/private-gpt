@@ -264,6 +264,48 @@ def test_runner_restores_additional_kwargs_after_serialization() -> None:
     assert isinstance(additional_kwargs["tool_calls"][0], ToolSelection)
 
 
+def test_runner_orders_results_by_pending_tool_order() -> None:
+    from private_gpt.components.engines.chat.resumable_runner import ResumableChatRunner
+
+    results = {
+        "tool-2": ToolExecutionResponse(
+            tool_name="second",
+            tool_id="tool-2",
+            result_content=[TextBlock(text="second")],
+            tool_message={
+                "role": "tool",
+                "content": "second",
+                "additional_kwargs": {"tool_call_id": "tool-2"},
+            },
+        ),
+        "tool-1": ToolExecutionResponse(
+            tool_name="first",
+            tool_id="tool-1",
+            result_content=[TextBlock(text="first")],
+            tool_message={
+                "role": "tool",
+                "content": "first",
+                "additional_kwargs": {"tool_call_id": "tool-1"},
+            },
+        ),
+    }
+    checkpoint = ChatCheckpoint(
+        correlation_id="execution-order",
+        request_data={},
+        stream_type="chat_completion",
+        metadata={},
+        iteration=0,
+        checkpoint="tools",
+        checkpoint_payload=IterationCheckpointPayload(
+            pending_async_tools={"tool-1": "job-1", "tool-2": "job-2"}
+        ),
+    )
+
+    ordered = ResumableChatRunner._ordered_results(checkpoint, results)
+
+    assert [response.tool_id for response in ordered] == ["tool-1", "tool-2"]
+
+
 def test_resolved_chat_request_is_json_roundtrip_serializable() -> None:
     import json
 
