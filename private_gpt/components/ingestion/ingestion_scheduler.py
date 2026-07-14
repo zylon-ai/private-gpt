@@ -130,7 +130,6 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
             collection=ingest_body.ingest_body.collection,
             artifact=ingest_body.ingest_body.artifact,
         )
-
         if ingest_body.ingest_body.input:
             should_upload = (
                 not isinstance(ingest_body.ingest_body.input, UriArtifact)

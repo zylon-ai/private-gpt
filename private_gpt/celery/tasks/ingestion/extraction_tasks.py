@@ -103,7 +103,6 @@ def vector_index_task(body: IngestAsyncBody) -> Any:
         )
 
     service = get_global_injector().get(IngestService)
-
     content = body.ingest_body.input.to_binary_content(
         filename=get_file_name(body.ingest_body.metadata)
     )
