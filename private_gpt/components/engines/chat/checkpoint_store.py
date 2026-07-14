@@ -120,7 +120,7 @@ class ChatCheckpointStoreFactory:
 
     def get(self) -> ChatCheckpointStore:
         if self._settings.scheduler.chat.mode == "arq":
-            from private_gpt.arq.iteration_state import RedisChatCheckpointStore
+            from private_gpt.arq.chat.iteration_state import RedisChatCheckpointStore
 
             return cast(
                 ChatCheckpointStore,

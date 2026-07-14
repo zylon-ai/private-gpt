@@ -2,8 +2,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from private_gpt.arq.settings import START_CHAT_TASK_NAME
 from private_gpt.arq.tasks.chat import enqueue_start_chat_job
+from private_gpt.arq.tasks.chat.settings import (
+    START_CHAT_TASK_NAME,
+    get_queue_name,
+)
+from private_gpt.settings.settings import settings
 
 
 @pytest.mark.parametrize(
@@ -37,6 +41,7 @@ async def test_enqueue_start_chat_job_dispatches_generic_arq_job(
 
     enqueue_job.assert_awaited_once_with(
         task_name=START_CHAT_TASK_NAME,
+        queue_name=get_queue_name(settings()),
         args=(
             request_data,
             "execution-id",

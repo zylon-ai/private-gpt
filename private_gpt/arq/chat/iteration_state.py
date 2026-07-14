@@ -1,3 +1,5 @@
+"""Redis-backed state for resumable ARQ chat execution."""
+
 from __future__ import annotations
 
 import json
