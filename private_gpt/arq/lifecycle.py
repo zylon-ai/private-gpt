@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 import nest_asyncio  # type: ignore
@@ -19,7 +20,9 @@ async def startup(ctx: dict[Any, Any]) -> None:
     nest_asyncio.apply()
     injector = get_global_injector(allow_to_generate_new_injectors=True)
     set_global_injector(injector)
-    warm(injector, profile="chat")
+    warm_profile = os.environ.get("PGPT_WORKER_WARM_PROFILE", "").strip()
+    if warm_profile:
+        warm(injector, profile=warm_profile)
     ctx["injector"] = injector
 
 

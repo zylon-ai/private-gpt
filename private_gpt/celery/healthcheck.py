@@ -45,20 +45,24 @@ async def check_worker() -> bool:
 
 
 async def health_check() -> dict[str, Any]:
-    mode = os.getenv("PGPT_WORKER_MODE", "mixed")
+    mode = os.getenv("PGPT_WORKER_MODE", "").strip().lower()
     status: dict[str, Any] = {"status": "healthy", "mode": mode, "services": {}}
 
-    if mode in ["mixed", "flower"]:
+    if mode == "flower":
         flower_health = await check_flower()
         status["services"]["flower"] = "healthy" if flower_health else "unhealthy"
         if not flower_health:
             status["status"] = "unhealthy"
 
-    if mode in ["mixed", "worker", "celery"]:
+    elif mode == "celery":
         worker_health = await check_worker()
         status["services"]["worker"] = "healthy" if worker_health else "unhealthy"
         if not worker_health:
             status["status"] = "unhealthy"
+
+    else:
+        status["status"] = "unhealthy"
+        status["error"] = f"Unsupported worker mode: {mode or '<empty>'}"
 
     return status
 

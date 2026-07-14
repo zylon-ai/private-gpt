@@ -336,7 +336,11 @@ class StatefulBackgroundTask(_BackgroundTask):
         from private_gpt.eager_loading import warm
 
         injector = get_global_injector(allow_to_generate_new_injectors=True)
-        profile = os.environ.get("PGPT_STATEFUL_WORKER_TYPE", "chat").strip()
+        profile = os.environ.get("PGPT_WORKER_WARM_PROFILE", "").strip()
+        if not profile:
+            raise ValueError(
+                "PGPT_WORKER_WARM_PROFILE is required for stateful workers"
+            )
         warm(injector, profile=profile)
 
     @classmethod

@@ -2,20 +2,11 @@ from arq.connections import RedisSettings
 
 from private_gpt.settings.settings import Settings
 
-CHAT_HEALTH_CHECK_KEY_PREFIX = "private_gpt:arq:health"
-START_CHAT_TASK_NAME = "private_gpt.chat.start"
-RESUME_ITERATION_TASK_NAME = "private_gpt.chat.resume_iteration"
-TOOL_RESUME_TASK_NAME = "private_gpt.tool.resume"
-CHAT_TIMEOUT_TASK_NAME = "private_gpt.chat.timeout"
-CHAT_QUEUE_PREFIX = "private_gpt:arq:queue"
+QUEUE_PREFIX = "private_gpt:arq:queue"
 
 
-def get_queue_name(settings: Settings) -> str:
-    return f"{CHAT_QUEUE_PREFIX}:{settings.scheduler.chat.celery_queue}"
-
-
-def get_health_check_key(settings: Settings) -> str:
-    return f"{CHAT_HEALTH_CHECK_KEY_PREFIX}:{settings.scheduler.chat.celery_queue}"
+def get_queue_name(queue: str) -> str:
+    return f"{QUEUE_PREFIX}:{queue}"
 
 
 def get_redis_settings(settings: Settings) -> RedisSettings:
