@@ -17,12 +17,15 @@ from private_gpt.components.embedding.embedding_component import EmbeddingCompon
 from private_gpt.components.engines.chat.async_chat_engine import (
     AsyncChatEngine,
 )
-from private_gpt.components.engines.chat.models.chat_phase import (
-    InterceptorPhase,
+from private_gpt.components.engines.chat.chat_engine import ChatLoopEngine
+from private_gpt.components.engines.chat.chat_engine_interface import (
+    ChatEngine,
+    LoopChatEngineAdapter,
 )
 from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
 )
+from private_gpt.components.engines.chat.resumable_runner import ResumableChatRunner
 from private_gpt.components.ingest.ingest_component import IngestComponent
 from private_gpt.components.llm.custom.base import ZylonLLM
 from private_gpt.components.llm.llm_component import LLMComponent
@@ -160,6 +163,7 @@ class ChatService:
         container_registry: ContainerRegistry,
         scheduler_factory: ToolSchedulerFactory,
         chat_scheduler_factory: ChatSchedulerFactory,
+        resumable_runner: ResumableChatRunner,
     ) -> None:
         self.settings = settings
         self.llm_component = llm_component
@@ -172,8 +176,9 @@ class ChatService:
         self.container_registry = container_registry
         self._tool_scheduler = scheduler_factory.get()
         self._chat_scheduler = chat_scheduler_factory.get()
+        self._resumable_runner = resumable_runner
 
-    def build_engine(self) -> AsyncChatEngine:
+    def build_async_engine(self) -> AsyncChatEngine:
         # Don't build a singleton since the interceptors
         # and state can be mutated during the loop execution
         # for several threads handling different requests in parallel
@@ -187,7 +192,27 @@ class ChatService:
             container_registry=self.container_registry,
             tool_scheduler=self._tool_scheduler,
             chat_scheduler=self._chat_scheduler,
+            resumable_runner=self._resumable_runner,
         )
+
+    def build_loop_engine(self) -> LoopChatEngineAdapter:
+        chain = self.chat_interceptor_service.get_chain()
+        return LoopChatEngineAdapter(
+            engine=ChatLoopEngine(
+                llm_component=self.llm_component,
+                request_interceptors=chain.request_interceptors,
+                response_interceptors=chain.response_interceptors,
+                tool_interceptors=chain.tool_interceptors,
+                max_iterations=40,
+                container_registry=self.container_registry,
+                tool_scheduler=self._tool_scheduler,
+            )
+        )
+
+    def build_engine(self) -> ChatEngine:
+        if self.settings.chat.engine_mode == "async":
+            return self.build_async_engine()
+        return self.build_loop_engine()
 
     async def stream_chat(
         self,
@@ -195,10 +220,7 @@ class ChatService:
         hooks: ExecutionHooks | None = None,
     ) -> CompletionGen:
         engine = await asyncio.to_thread(self.build_engine)
-        execution = await engine.run(
-            request,
-            hooks=hooks,
-        )
+        execution = await engine.run(request=request, hooks=hooks)
         return CompletionGen(
             events=execution.events,
             final_state_task=execution.final_state_task,
@@ -221,18 +243,15 @@ class ChatService:
 
     async def cancel(self, correlation_id: str) -> bool:
         engine = await asyncio.to_thread(self.build_engine)
-        return await engine.cancel(correlation_id)
+        await engine.cancel(correlation_id=correlation_id)
+        return True
 
     async def validate(self, request: ResolvedChatRequest) -> ChatValidationResult:
         errors: list[str] = []
 
         try:
             engine = await asyncio.to_thread(self.build_engine)
-            await engine.run_interceptor_phase(
-                run=engine.initialize_run(request),
-                phase=InterceptorPhase.VALIDATION,
-                interceptors=engine._request_interceptors,
-            )
+            await engine.validate(request=request)
         except ValidationError as e:
             for err in e.errors():
                 field = " -> ".join(str(loc) for loc in err["loc"])

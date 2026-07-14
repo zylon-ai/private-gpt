@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from uuid import uuid4
 
 from injector import inject, singleton
 
@@ -7,28 +8,47 @@ from private_gpt.components.streaming.providers.models import StreamMetadata
 from private_gpt.components.streaming.stream.stream_manager import StreamManager
 from private_gpt.events.event_serializer import StreamingEventHandler
 from private_gpt.events.models import Event
-from private_gpt.server.chat_async.chat_worker_dispatch import (
-    create_stream_and_enqueue_chat,
-)
+from private_gpt.server.chat.chat_facade import ChatFacadeService
 
 
 @singleton
 class ChatAsyncService:
     @inject
-    def __init__(self, stream_manager: StreamManager):
+    def __init__(
+        self,
+        stream_manager: StreamManager,
+        chat_facade: ChatFacadeService,
+    ):
         self.stream_manager = stream_manager
+        self._chat_facade = chat_facade
 
     async def initiate_chat_stream(
         self, request: ChatRequest, message_id: str | None = None
     ) -> str:
         """Initiate a chat completion stream."""
+        message_id = message_id or str(uuid4())
         if message_id and await self.stream_manager.stream_exists(message_id):
             raise ValueError("Stream with this message_id already exists")
 
-        return await create_stream_and_enqueue_chat(
-            stream_manager=self.stream_manager,
-            request=request,
-            message_id=message_id,
+        request = request.model_copy(
+            update={
+                "context": request.context.model_copy(
+                    update={"correlation_id": message_id}
+                )
+            }
+        )
+        event_generator = await self._chat_facade.create_chat_event_generator(
+            request=request
+        )
+        return await self.stream_manager.create_and_start_stream(
+            event_handler=StreamingEventHandler(),
+            stream_type="chat_completion",
+            event_generator=event_generator,
+            correlation_id=message_id,
+            metadata={
+                "message_count": len(request.messages),
+                "thinking_enabled": request.thinking.enabled,
+            },
         )
 
     async def get_stream_events(

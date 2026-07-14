@@ -62,6 +62,7 @@ retrieval:
   max_merging_recalculations: ${PGPT_MAX_MERGING_RECALCULATIONS:3}
 
 chat:
+  engine_mode: ${PGPT_CHAT_ENGINE_MODE:async}
   allow_use_default_prompt: ${PGPT_ALLOW_USE_DEFAULT_PROMPT:true}
   allow_use_context: ${PGPT_ALLOW_USE_CONTEXT:true}
   allow_generate_citations: ${PGPT_ALLOW_GENERATE_CITATIONS:true}
@@ -296,6 +297,7 @@ scheduler:
   chat:
     mode: ${PGPT_CHAT_SCHEDULER_MODE:local}
     celery_queue: ${PGPT_CHAT_CELERY_QUEUE:chat}
+    callback_timeout_seconds: ${PGPT_CHAT_CALLBACK_TIMEOUT_SECONDS:300}
   tools:
     mode: ${PGPT_TOOLS_SCHEDULER_MODE:local}
     celery_queue: ${PGPT_TOOLS_CELERY_QUEUE:tools}

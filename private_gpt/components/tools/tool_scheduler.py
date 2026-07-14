@@ -160,6 +160,58 @@ register_tool_scheduler("celery", CeleryToolScheduler)
 
 
 @singleton
+class ArqToolScheduler(BaseToolScheduler):
+    """Dispatch tools to the same ARQ worker pool as resumable chat steps."""
+
+    @property
+    def is_async(self) -> bool:
+        return True
+
+    async def execute(
+        self,
+        request: ToolExecutionRequest,
+        state_ctx: ChatState | None = None,
+        interceptors: list[ToolExecutionInterceptor] | None = None,
+    ) -> ToolExecutionResponse:
+        del request, state_ctx, interceptors
+        raise NotImplementedError(
+            "ArqToolScheduler only supports async_execute() in resumable chat mode."
+        )
+
+    async def async_execute(
+        self,
+        request: ToolExecutionRequest,
+        state_ctx: ChatState | None = None,
+        interceptors: list[ToolExecutionInterceptor] | None = None,
+    ) -> str:
+        del state_ctx, interceptors
+        from private_gpt.arq.enqueue import enqueue_tool_run_job
+
+        correlation_id = request.context.get("correlation_id")
+        job_id = f"{correlation_id}:{request.tool_id}"
+        await enqueue_tool_run_job(
+            request_data=request.model_dump(mode="json"),
+            job_id=job_id,
+        )
+        return job_id
+
+    async def cancel(
+        self,
+        request: ToolExecutionRequest,
+        task_id: str | None = None,
+    ) -> bool:
+        del request
+        if task_id is None:
+            return False
+        from private_gpt.arq.enqueue import abort_job
+
+        return await abort_job(job_id=task_id)
+
+
+register_tool_scheduler("arq", ArqToolScheduler)
+
+
+@singleton
 class ToolSchedulerFactory:
     @inject
     def __init__(self, settings: Settings, injector: Injector) -> None:

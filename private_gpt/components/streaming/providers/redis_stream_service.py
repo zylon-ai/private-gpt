@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import threading
 import uuid
@@ -42,7 +43,12 @@ class RedisStreamService(StreamService):
             task = asyncio.create_task(
                 self._pre_create_connections(redis_client, config.minimum_connections)
             )
-            task.add_done_callback(lambda t: t.exception())
+            task.add_done_callback(self._consume_background_result)
+
+    @staticmethod
+    def _consume_background_result(task: asyncio.Task[None]) -> None:
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            task.exception()
 
     async def _pre_create_connections(self, client: redis.Redis, n: int) -> None:
         client.auto_close_connection_pool = False

@@ -13,10 +13,15 @@ async def resume_chat_callback(
     if not correlation_id or not request.tool_id:
         return
 
-    from private_gpt.arq.enqueue import enqueue_tool_resume_job
+    from private_gpt.components.engines.chat.execution_scheduler import (
+        ChatExecutionSchedulerFactory,
+    )
+    from private_gpt.di import get_global_injector
 
-    await enqueue_tool_resume_job(
-        correlation_id=correlation_id,
+    injector = get_global_injector(allow_to_generate_new_injectors=True)
+    scheduler = injector.get(ChatExecutionSchedulerFactory).get()
+    await scheduler.callback(
+        execution_id=correlation_id,
         tool_id=request.tool_id,
         result=response.model_dump(mode="json"),
     )

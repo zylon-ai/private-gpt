@@ -473,6 +473,11 @@ class SchedulerSettings(BaseModel):
         default="",
         description="Celery queue name when mode is 'celery'.",
     )
+    callback_timeout_seconds: int = Field(
+        default=300,
+        gt=0,
+        description="Maximum time to wait for resumable chat callbacks.",
+    )
 
 
 class SchedulerConfig(BaseModel):
@@ -491,6 +496,10 @@ class SchedulerConfig(BaseModel):
 
 
 class ChatSettings(BaseModel):
+    engine_mode: Literal["loop", "async"] = Field(
+        default="async",
+        description="Chat engine selected behind the runtime feature flag.",
+    )
     allow_use_default_prompt: bool = Field(
         True,
         description="Flag indicating if the chat engine should use default prompts or not.",

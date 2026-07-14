@@ -5,31 +5,20 @@ from typing import Any, cast
 
 import redis.asyncio as redis  # type: ignore[import-untyped]
 from injector import inject, singleton
-from pydantic import BaseModel, Field
 
 from private_gpt.arq.settings import get_redis_settings
-from private_gpt.components.engines.chat.async_chat_engine import (
-    IterationCheckpointPayload,
+from private_gpt.components.engines.chat.checkpoint_store import (
+    ChatCheckpoint,
+    ChatCheckpointStore,
 )
 from private_gpt.components.tools.remote_execution import ToolExecutionResponse
 from private_gpt.settings.settings import Settings
 
 
-class IterationContext(BaseModel):
-    correlation_id: str
-    request_data: dict[str, Any]
-    stream_type: str
-    metadata: dict[str, Any]
-    iteration: int
-    checkpoint: str = "before_iteration"
-    checkpoint_payload: IterationCheckpointPayload = Field(
-        default_factory=IterationCheckpointPayload
-    )
-    next_block_count: int = 0
-
-
 @singleton
-class IterationStateService:
+class RedisChatCheckpointStore(ChatCheckpointStore):
+    """Redis-backed checkpoint storage for multi-process ARQ execution."""
+
     @inject
     def __init__(self, settings: Settings) -> None:
         redis_settings = get_redis_settings(settings)
@@ -42,67 +31,68 @@ class IterationStateService:
             decode_responses=True,
         )
         self._prefix = "private_gpt:arq:iteration"
-        self._ttl = 3600
+        self._ttl = settings.scheduler.chat.callback_timeout_seconds + 300
 
-    def _ctx_key(self, correlation_id: str) -> str:
-        return f"{self._prefix}:ctx:{correlation_id}"
+    def _ctx_key(self, execution_id: str) -> str:
+        return f"{self._prefix}:ctx:{execution_id}"
 
-    def _results_key(self, correlation_id: str) -> str:
-        return f"{self._prefix}:results:{correlation_id}"
+    def _results_key(self, execution_id: str) -> str:
+        return f"{self._prefix}:results:{execution_id}"
 
-    def _resumed_key(self, correlation_id: str) -> str:
-        return f"{self._prefix}:resumed:{correlation_id}"
+    def _resumed_key(self, execution_id: str) -> str:
+        return f"{self._prefix}:resumed:{execution_id}"
 
-    async def save(self, ctx: IterationContext) -> None:
+    async def save(self, checkpoint: ChatCheckpoint) -> None:
         await self._redis.set(
-            self._ctx_key(ctx.correlation_id), ctx.model_dump_json(), ex=self._ttl
+            self._ctx_key(checkpoint.correlation_id),
+            checkpoint.model_dump_json(),
+            ex=self._ttl,
         )
         await self._redis.delete(
-            self._results_key(ctx.correlation_id), self._resumed_key(ctx.correlation_id)
+            self._results_key(checkpoint.correlation_id),
+            self._resumed_key(checkpoint.correlation_id),
         )
 
-    async def load(self, correlation_id: str) -> IterationContext | None:
-        data = await self._redis.get(self._ctx_key(correlation_id))
-        if not data:
-            return None
-        return IterationContext.model_validate_json(data)
+    async def load(self, execution_id: str) -> ChatCheckpoint | None:
+        data = await self._redis.get(self._ctx_key(execution_id))
+        return ChatCheckpoint.model_validate_json(data) if data else None
 
     async def record_result(
-        self, correlation_id: str, tool_id: str, result: dict[str, Any]
+        self, execution_id: str, tool_id: str, result: dict[str, Any]
     ) -> dict[str, ToolExecutionResponse] | None:
-        ctx = await self.load(correlation_id)
-        if ctx is None:
+        checkpoint = await self.load(execution_id)
+        if checkpoint is None:
             return None
-
-        results_key = self._results_key(correlation_id)
+        results_key = self._results_key(execution_id)
         await cast(Any, self._redis.hset(results_key, tool_id, json.dumps(result)))
         await cast(Any, self._redis.expire(results_key, self._ttl))
-        pending_async_tools = ctx.checkpoint_payload.pending_async_tools
-        if cast(int, await cast(Any, self._redis.hlen(results_key))) < len(
-            pending_async_tools
-        ):
+        expected = len(checkpoint.checkpoint_payload.pending_async_tools)
+        if cast(int, await cast(Any, self._redis.hlen(results_key))) < expected:
             return None
+        return await self.get_results(execution_id)
 
+    async def get_results(self, execution_id: str) -> dict[str, ToolExecutionResponse]:
         payload = cast(
-            dict[str, str], await cast(Any, self._redis.hgetall(results_key))
+            dict[str, str],
+            await cast(Any, self._redis.hgetall(self._results_key(execution_id))),
         )
         return {
             key: ToolExecutionResponse.model_validate_json(value)
             for key, value in payload.items()
         }
 
-    async def claim_resume(self, correlation_id: str) -> bool:
+    async def claim_resume(self, execution_id: str) -> bool:
         return bool(
             await self._redis.set(
-                self._resumed_key(correlation_id), "1", ex=self._ttl, nx=True
+                self._resumed_key(execution_id), "1", ex=self._ttl, nx=True
             )
         )
 
-    async def cleanup(self, correlation_id: str) -> None:
+    async def cleanup(self, execution_id: str) -> None:
         await self._redis.delete(
-            self._ctx_key(correlation_id),
-            self._results_key(correlation_id),
-            self._resumed_key(correlation_id),
+            self._ctx_key(execution_id),
+            self._results_key(execution_id),
+            self._resumed_key(execution_id),
         )
 
     async def close(self) -> None:

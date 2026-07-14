@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import importlib
 import os
 import signal
@@ -104,7 +105,8 @@ def run_arq_worker() -> None:
         )
         if stop_task in done and not worker_task.done():
             await worker.close()
-            await worker_task
+            with contextlib.suppress(asyncio.CancelledError):
+                await worker_task
         for task in pending:
             task.cancel()
 

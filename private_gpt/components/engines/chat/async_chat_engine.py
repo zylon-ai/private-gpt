@@ -25,7 +25,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from functools import partial
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 from uuid import uuid4
 
 from llama_index.core.base.llms.types import ChatMessage, ChatResponse
@@ -41,6 +41,9 @@ from private_gpt.components.chat.models.chat_config_models import (
 )
 from private_gpt.components.container_registry import ContainerRegistry
 from private_gpt.components.context.models.context_stack import ContextStack
+from private_gpt.components.engines.chat.chat_engine_interface import (
+    ChatEngineExecution,
+)
 from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
     ChatResponseLoopInterceptor,
@@ -116,6 +119,14 @@ from private_gpt.events.models import (
     ToolUseBlock,
     Usage,
 )
+
+if TYPE_CHECKING:
+    from private_gpt.components.engines.chat.resumable_runner import (
+        ResumableChatRunner,
+    )
+    from private_gpt.components.streaming.tasks.chat_scheduler import (
+        BaseChatScheduler,
+    )
 from private_gpt.server.chat.interceptors.schema_coercing_tool_interceptor import (
     _coerce_kwargs,
 )
@@ -273,12 +284,6 @@ class _EventHandler(EventChannel):
                 await producer
 
 
-@dataclass
-class ChatExecution:
-    events: AsyncGenerator[Event, None]
-    final_state_task: asyncio.Task[ChatState]
-
-
 # ---------------------------------------------------------------------------
 # AsyncChatEngine
 # ---------------------------------------------------------------------------
@@ -300,13 +305,14 @@ class AsyncChatEngine:
     def __init__(
         self,
         llm_component: LLMComponent,
-        chat_scheduler: Any,
+        chat_scheduler: "BaseChatScheduler",
         request_interceptors: list[ChatRequestLoopInterceptor] | None = None,
         response_interceptors: list[ChatResponseLoopInterceptor] | None = None,
         max_iterations: int = 40,
         container_registry: ContainerRegistry | None = None,
         tool_scheduler: BaseToolScheduler | None = None,
         tool_interceptors: list[ToolExecutionInterceptor] | None = None,
+        resumable_runner: "ResumableChatRunner | None" = None,
     ) -> None:
         self._llm_component = llm_component
         self._request_interceptors = [
@@ -324,6 +330,7 @@ class AsyncChatEngine:
         self._tool_scheduler: BaseToolScheduler = tool_scheduler or LocalToolScheduler()
         self._tool_interceptors = tool_interceptors or []
         self._chat_scheduler = chat_scheduler
+        self._resumable_runner = resumable_runner
         self._checkpoint_handlers = {
             _IterationCheckpoint.START: self._execute_start_checkpoint,
             _IterationCheckpoint.BEFORE_ITERATION: self._execute_before_iteration_checkpoint,
@@ -409,24 +416,89 @@ class AsyncChatEngine:
         self,
         request: ChatRequest,
         hooks: ExecutionHooks | None = None,
-    ) -> ChatExecution:
-        """Local convenience: drive the full loop, return streaming ChatExecution."""
-        channel = LocalEventChannel()
-        cid = getattr(request.context, "correlation_id", None) or str(uuid4())
+    ) -> ChatEngineExecution:
+        """Submit execution through the transport-independent resumable runner."""
+        runner = self._resumable_runner
+        if runner is None:
+            raise RuntimeError("AsyncChatEngine requires a ResumableChatRunner")
+        execution_id, broker_events = await runner.submit(
+            request_data=request.model_dump(mode="json"),
+            stream_type="chat_completion",
+            metadata={
+                "message_count": len(request.messages),
+                "thinking_enabled": request.thinking.enabled,
+            },
+            execution_id=getattr(request.context, "correlation_id", None),
+        )
 
-        async def _worker() -> ChatState:
+        async def _events() -> AsyncGenerator[Event, None]:
+            completed = False
             try:
-                return await self.execute(request, hooks, channel=channel)
-            except asyncio.CancelledError:
-                raise
+                async for event in broker_events:
+                    yield event
+                completed = True
             finally:
-                await channel.close()
+                if not completed:
+                    await runner.cancel(execution_id)
 
-        task = asyncio.create_task(_worker(), name=f"chat_{cid}")
-        return ChatExecution(events=channel.stream(task), final_state_task=task)
+        return ChatEngineExecution(
+            events=_events(), final_state_task=None, execution_id=execution_id
+        )
+
+    async def execute_scheduled_start(
+        self,
+        *,
+        execution_id: str,
+        request_data: dict[str, Any],
+        stream_type: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        runner = self._require_resumable_runner()
+        await runner.start(
+            engine=self,
+            execution_id=execution_id,
+            request_data=request_data,
+            stream_type=stream_type,
+            metadata=metadata,
+        )
+
+    async def execute_scheduled_resume(self, *, execution_id: str) -> None:
+        runner = self._require_resumable_runner()
+        await runner.resume(engine=self, execution_id=execution_id)
+
+    async def record_callback(
+        self, *, execution_id: str, tool_id: str, result: dict[str, Any]
+    ) -> None:
+        runner = self._require_resumable_runner()
+        await runner.callback(
+            execution_id=execution_id,
+            tool_id=tool_id,
+            result=result,
+        )
+
+    async def execute_timeout(self, *, execution_id: str, checkpoint_id: str) -> None:
+        runner = self._require_resumable_runner()
+        await runner.timeout(
+            execution_id=execution_id,
+            checkpoint_id=checkpoint_id,
+        )
+
+    async def validate(self, request: ResolvedChatRequest) -> None:
+        await self.run_interceptor_phase(
+            run=self.initialize_run(request),
+            phase=InterceptorPhase.VALIDATION,
+            interceptors=self._request_interceptors,
+        )
 
     async def cancel(self, correlation_id: str) -> bool:
+        if self._resumable_runner is not None:
+            return bool(await self._resumable_runner.cancel(correlation_id))
         return bool(await self._chat_scheduler.cancel(correlation_id))
+
+    def _require_resumable_runner(self) -> "ResumableChatRunner":
+        if self._resumable_runner is None:
+            raise RuntimeError("AsyncChatEngine requires a ResumableChatRunner")
+        return self._resumable_runner
 
     # ------------------------------------------------------------------
     # Internal loop helpers
@@ -707,6 +779,7 @@ class AsyncChatEngine:
             channel,
         )
         run.state = run.state.model_copy(deep=True)
+        run.state.runtime.next_block_count = run.block_count
         run.state.output.status = ChatStatus.CONTINUE
         return run.state
 

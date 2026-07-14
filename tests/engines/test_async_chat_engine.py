@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any
@@ -43,6 +44,7 @@ from tests.fixtures.mock_function_llm import get_mock_function_calling_llm
 
 
 async def _noop_tool(value: str) -> str:
+    await asyncio.sleep(0.01)
     return f"ok:{value}"
 
 
@@ -174,6 +176,7 @@ def _normalize(value: Any) -> Any:
                 "start_timestamp",
                 "stop_timestamp",
                 "expires_at",
+                "tool_use_id",
             }
         }
     if isinstance(value, list):
@@ -384,6 +387,7 @@ async def test_async_engine_matches_sync_one_server_tool_and_resumes_same_point(
     assert async_result.states[0].output.pause_type == "tools"
     assert _tool_result_texts(async_result.events) == ["ok:x"]
     assert _tool_result_texts(sync_events) == ["ok:x"]
+    assert _normalize_events(async_result.events) == _normalize_events(sync_events)
 
 
 @pytest.mark.asyncio
@@ -446,6 +450,37 @@ async def test_async_engine_matches_sync_two_server_tools_plus_one_client_tool(
     assert len(async_result.states[1].output.pending_external_tool_calls) == 1
     assert sorted(_tool_result_texts(async_result.events)) == ["ok:a", "ok:b"]
     assert sorted(_tool_result_texts(sync_events)) == ["ok:a", "ok:b"]
+    assert _normalize_events(async_result.events) == _normalize_events(sync_events)
+
+
+@pytest.mark.asyncio
+async def test_async_engine_matches_sync_across_multiple_server_tool_iterations(
+    base_request: ResolvedChatRequest,
+) -> None:
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(tools=[_server_tool("echo")])
+    deltas = [
+        [ToolSelection(tool_id="tool_1", tool_name="echo", tool_kwargs={"value": "a"})],
+        [ToolSelection(tool_id="tool_2", tool_name="echo", tool_kwargs={"value": "b"})],
+        ["all", " done"],
+    ]
+    sync_events = await _run_sync_engine(
+        request.model_copy(deep=True),
+        get_mock_function_calling_llm(deltas),
+    )
+    async_result = await _run_async_engine(
+        request.model_copy(deep=True),
+        get_mock_function_calling_llm(deltas),
+        tool_scheduler=_FakeAsyncToolScheduler(),
+    )
+
+    assert [state.output.status for state in async_result.states] == [
+        ChatStatus.WAITING,
+        ChatStatus.WAITING,
+        ChatStatus.COMPLETED,
+    ]
+    assert _tool_result_texts(async_result.events) == ["ok:a", "ok:b"]
+    assert _normalize_events(async_result.events) == _normalize_events(sync_events)
 
 
 @pytest.mark.asyncio
