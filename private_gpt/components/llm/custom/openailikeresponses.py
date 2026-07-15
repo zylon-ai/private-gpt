@@ -41,7 +41,9 @@ if not TYPE_CHECKING:
     PatchedOpenAIResponsesLLM = _load_patched_openai_responses()
 
 
-class PatchedOpenAILikeResponsesLLM(OpenAILikeResponsesBase, PatchedOpenAIResponsesLLM):  # type: ignore[misc]
+class PatchedOpenAILikeResponsesLLM(  # ty: ignore[inconsistent-mro]
+    OpenAILikeResponsesBase, PatchedOpenAIResponsesLLM
+):  # type: ignore[misc]
     """OpenAILikeResponses with all PatchedOpenAIResponsesLLM fixes applied.
 
     OpenAILikeResponses already inherits from OpenAIResponses, so MRO ensures
