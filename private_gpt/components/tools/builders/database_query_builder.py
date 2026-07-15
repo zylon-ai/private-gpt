@@ -11,6 +11,7 @@ from llama_index.core.base.llms.types import (
 )
 
 from private_gpt.chat.input_models import BlobVisibilityMode
+from private_gpt.components.cache import CacheService
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.tools.binary_block_decorators import (
@@ -81,10 +82,12 @@ class DatabaseQueryToolBuilder:
         self,
         settings: Settings,
         llm_component: LLMComponent,
+        cache: CacheService,
     ):
         """Initialize the DatabaseQueryToolBuilder with necessary components."""
         self.settings = settings
         self.llm_component = llm_component
+        self.cache = cache
         self.sample_size = (
             # number of characters to sample from the result for display
             # TODO: this should be moved to tokens instead
@@ -215,6 +218,7 @@ class DatabaseQueryToolBuilder:
                     batch_size=self.settings.database_query.batch_size,
                     timeout_seconds=self.settings.database_query.timeout_seconds,
                     max_mb_result=self.settings.database_query.max_mb_result,
+                    cache=self.cache,
                 )
                 for sql_artifact in sql_artifacts
             ]
@@ -251,6 +255,7 @@ class DatabaseQueryToolBuilder:
                         batch_size=self.settings.database_query.batch_size,
                         timeout_seconds=self.settings.database_query.timeout_seconds,
                         max_mb_result=self.settings.database_query.max_mb_result,
+                        cache=self.cache,
                     )
                     for sql_artifact in sql_artifacts
                 ]

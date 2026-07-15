@@ -188,6 +188,13 @@ redis:
   password: ${PGPT_REDIS_PASSWORD:}
   database: ${PGPT_REDIS_DATABASE:0}
 
+cache:
+  provider: ${PGPT_CACHE_PROVIDER:memory}
+  ttl_seconds: ${PGPT_CACHE_TTL_SECONDS:86400}
+  max_entries: ${PGPT_CACHE_MAX_ENTRIES:1000}
+  key_prefix: ${PGPT_CACHE_KEY_PREFIX:private-gpt}
+  redis_database: ${PGPT_CACHE_REDIS_DATABASE:}
+
 unstructured:
   url: ${PGPT_UNSTRUCTURED_URL:}
 

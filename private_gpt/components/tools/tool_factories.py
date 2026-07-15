@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from injector import inject, singleton
 
+from private_gpt.components.cache import CacheService
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import IngestComponent
 from private_gpt.components.ingest.parse_component import ParseComponent
@@ -122,9 +123,15 @@ class TabularDataToolBuilderFactory:
 @singleton
 class DatabaseQueryToolBuilderFactory:
     @inject
-    def __init__(self, settings: Settings, llm_component: LLMComponent) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        llm_component: LLMComponent,
+        cache: CacheService,
+    ) -> None:
         self.settings = settings
         self.llm_component = llm_component
+        self.cache = cache
 
     def create(self) -> "DatabaseQueryToolBuilder":
         from private_gpt.components.tools.builders.database_query_builder import (
@@ -134,6 +141,7 @@ class DatabaseQueryToolBuilderFactory:
         builder: DatabaseQueryToolBuilder = DatabaseQueryToolBuilder(
             settings=self.settings,
             llm_component=self.llm_component,
+            cache=self.cache,
         )
         return builder
 
