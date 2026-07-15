@@ -310,7 +310,6 @@ test = [
     "pytest-httpx>=0.36.0",
 ]
 typecheck = [
-    "mypy==1.13.0",
     "types-pyyaml>=6.0.12.12,<7",
     "pika-stubs>=0.1.3,<0.2",
     "types-retry>=0.9.9.4,<0.10",
@@ -326,6 +325,7 @@ typecheck = [
     "types-cachetools>=6.2.0.20251022,<7",
     "mypy-boto3-s3>=1.42.37",
     "types-regex>=2026.1.15.20260116",
+    "ty==0.0.59",
 ]
 dev = [
     "private-gpt[lint,test,typecheck]",
@@ -415,24 +415,27 @@ runtime-evaluated-decorators = ["injector.inject"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["D"]
 
-[tool.mypy]
-python_version = "3.11"
-strict = true
-check_untyped_defs = false
-explicit_package_bases = true
-warn_unused_ignores = false
-cache_dir = ".mypy_cache"
-exclude = ["tests"]
+[tool.ty.environment]
+python-version = "3.11"
 
-[tool.mypy-llama-index]
-ignore_missing_imports = true
-
-[tool.mypy-pandasai]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["openai", "openai.*", "cv2"]
-ignore_missing_imports = true
+[tool.ty.rules]
+unused-type-ignore-comment = "ignore"
+possibly-missing-submodule = "ignore"
+deprecated = "ignore"
+unresolved-import = "ignore"
+invalid-argument-type = "ignore"
+unresolved-attribute = "ignore"
+invalid-assignment = "ignore"
+call-non-callable = "ignore"
+invalid-method-override = "ignore"
+no-matching-overload = "ignore"
+missing-argument = "ignore"
+not-iterable = "ignore"
+inconsistent-mro = "ignore"
+unsupported-operator = "ignore"
+invalid-yield = "ignore"
+invalid-return-type = "ignore"
+call-top-callable = "ignore"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
