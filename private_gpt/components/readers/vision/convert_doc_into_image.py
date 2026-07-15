@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import logging
+import os
 import re
 import shutil
 import tempfile
@@ -236,7 +237,9 @@ class VisionReader(IngestionReader):
             )
 
         temp_dir = Path(
-            await asyncio.to_thread(tempfile.mkdtemp, prefix="pptx_converter_")
+            os.fsdecode(
+                await asyncio.to_thread(tempfile.mkdtemp, prefix="pptx_converter_")
+            )
         )
         docs: list[Document] = []
 
