@@ -1,7 +1,8 @@
 import asyncio
+import inspect
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, TypeGuard
 
 from llama_index.core.base.base_retriever import BaseRetriever
 from llama_index.core.callbacks import CallbackManager
@@ -31,6 +32,14 @@ logger.setLevel(logging.INFO)
 _MAX_RETRIES = 5
 _JITTER = (5.0, 15.0)
 RETRY_POLICY = ConstantDelayRetryPolicy(delay=_JITTER[0], maximum_attempts=_MAX_RETRIES)
+
+
+def _is_node_postprocessor_list(
+    value: object,
+) -> TypeGuard[list[BaseNodePostprocessor]]:
+    return isinstance(value, list) and all(
+        isinstance(item, BaseNodePostprocessor) for item in value
+    )
 
 
 class RetrieverConfig(BaseModel):
@@ -96,7 +105,9 @@ class RetrieverWorkflow(Workflow):
         self,
         retriever: BaseRetriever,
         node_postprocessors: list[BaseNodePostprocessor] | None = None,
-        node_postprocessors_fn: Callable[..., list[BaseNodePostprocessor]]
+        node_postprocessors_fn: Callable[
+            ..., list[BaseNodePostprocessor] | Awaitable[list[BaseNodePostprocessor]]
+        ]
         | None = None,
         callback_manager: CallbackManager | None = None,
         timeout: float | None = None,
@@ -255,8 +266,10 @@ class RetrieverWorkflow(Workflow):
             else:
                 result = await asyncio.to_thread(self._node_postprocessors_fn, **kwargs)
 
-            if isinstance(result, Awaitable):
+            if inspect.isawaitable(result):
                 result = await result
+            if not _is_node_postprocessor_list(result):
+                raise TypeError("Node postprocessor callback must return a list")
 
             node_postprocessors = result
 
