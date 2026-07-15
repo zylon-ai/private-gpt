@@ -2,6 +2,7 @@ from llama_index.core.base.llms.types import TextBlock
 from pydantic import BaseModel, ConfigDict, Field
 
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
+from private_gpt.components.context.errors import NonResumableToolError
 from private_gpt.components.context.models.context_layer import (
     AnyContextLayer,
     ContentBundlesLayer,
@@ -29,9 +30,17 @@ class ContextStack(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     def checkpoint_dump(self) -> dict[str, object]:
-        """Serialize durable layers, excluding hydrated runtime tool callables."""
-        durable_stack = self.remove_layers_of_type(LayerType.TOOL_DEFINITIONS)
-        return durable_stack.model_dump(mode="json")
+        """Serialize the complete stack after validating server tool restoration."""
+        for layer in self.layers:
+            if not isinstance(layer, ToolDefinitionsLayer):
+                continue
+            for tool in layer.tools:
+                if tool.runtime == "server" and tool.execution_metadata is None:
+                    raise NonResumableToolError(
+                        f"Server tool {tool.name!r} from layer {layer.source!r} "
+                        "does not define execution metadata."
+                    )
+        return self.model_dump(mode="json")
 
     # ------------------------------------------------------------------
     # Accessors

@@ -419,6 +419,7 @@ def test_checkpoint_context_stack_roundtrip_restores_durable_layers_and_tools() 
         ResolvedChatRequest,
         ResolvedSystemConfig,
         ResolvedToolConfig,
+        ToolExecutionMetadata,
         ToolSpec,
     )
     from private_gpt.components.context.models.context_layer import (
@@ -433,6 +434,10 @@ def test_checkpoint_context_stack_roundtrip_restores_durable_layers_and_tools() 
         type="lookup",
         runtime="server",
         input_schema={"type": "object", "properties": {}},
+        execution_metadata=ToolExecutionMetadata(
+            rebuild_callable="tests.engines.test_async_chat_engine:_rebuild_server_tool",
+            rebuild_kwargs={"name": "lookup"},
+        ),
     )
     request = ResolvedChatRequest(
         messages=[ChatMessage(role=MessageRole.USER, content="hello")],
@@ -466,4 +471,30 @@ def test_checkpoint_context_stack_roundtrip_restores_durable_layers_and_tools() 
     )
     assert len(restored.all_tools()) == 1
     assert restored.all_tools()[0].name == "lookup"
-    assert all(layer.source != "mcp" for layer in restored.layers)
+    assert restored.all_tools()[0].execution_metadata is not None
+    assert any(layer.source == "mcp" for layer in restored.layers)
+
+
+def test_checkpoint_context_stack_rejects_non_resumable_server_tool() -> None:
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+    from private_gpt.components.context.errors import NonResumableToolError
+    from private_gpt.components.context.models.context_layer import ToolDefinitionsLayer
+    from private_gpt.components.context.models.context_stack import ContextStack
+
+    stack = ContextStack(
+        layers=[
+            ToolDefinitionsLayer(
+                tools=[
+                    ToolSpec.from_defaults(
+                        name="ephemeral",
+                        runtime="server",
+                        input_schema={"type": "object", "properties": {}},
+                    )
+                ],
+                source="test",
+            )
+        ]
+    )
+
+    with pytest.raises(NonResumableToolError, match="ephemeral"):
+        stack.checkpoint_dump()

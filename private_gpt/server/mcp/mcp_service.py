@@ -15,6 +15,7 @@ from private_gpt.server.mcp.config import McpServerConfig
 from private_gpt.utils.dependencies import format_missing_dependency_message
 
 if TYPE_CHECKING:
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
     from private_gpt.server.mcp._runtime import (
         AudioContent,
         CallToolResult,
@@ -142,6 +143,40 @@ class McpService:
     def create_client(self, config: McpServerConfig) -> McpClient:
         """Create a new MCP client with the given configuration."""
         return McpClient(config)
+
+
+def mcp_tool_to_spec(config: McpServerConfig, tool: FunctionTool) -> "ToolSpec":
+    """Convert a discovered MCP tool into a durable, rebuildable tool spec."""
+    from private_gpt.components.chat.models.chat_config_models import (
+        ToolExecutionMetadata,
+        ToolSpec,
+    )
+
+    spec = ToolSpec.from_llama_index(tool)
+    return spec.model_copy(
+        update={
+            "execution_metadata": ToolExecutionMetadata(
+                rebuild_callable=(
+                    "private_gpt.server.mcp.mcp_service:rebuild_mcp_tool"
+                ),
+                rebuild_kwargs={
+                    "config": config,
+                    "tool_name": tool.metadata.name,
+                },
+            )
+        }
+    )
+
+
+async def rebuild_mcp_tool(config: McpServerConfig, tool_name: str) -> "ToolSpec":
+    """Reconnect to an MCP server and rebuild one named tool."""
+    tools = await McpClient(config).list_tools()
+    for tool in tools:
+        if tool.metadata.name == tool_name:
+            return mcp_tool_to_spec(config, tool)
+    raise ValueError(
+        f"MCP tool {tool_name!r} is no longer available from server {config.name!r}."
+    )
 
 
 def convert_mcp_blocks_to_llama_index(block: object) -> ContentBlock | None:

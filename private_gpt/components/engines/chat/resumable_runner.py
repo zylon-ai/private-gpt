@@ -306,7 +306,7 @@ class ResumableChatRunner:
             return build_initial_context_stack(request)
 
         stack = ContextStack.model_validate(checkpoint.context_stack_data)
-        if request.tool_config.tools:
+        if request.tool_config.tools and not stack.all_tools():
             stack = stack.append_layer(
                 ToolDefinitionsLayer(
                     tools=list(request.tool_config.tools),

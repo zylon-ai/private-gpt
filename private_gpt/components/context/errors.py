@@ -7,6 +7,7 @@ class ContextErrorCode(StrEnum):
     """Define stable error codes for context module failures."""
 
     TOOL_NAME_CONFLICT = "TOOL_NAME_CONFLICT"
+    NON_RESUMABLE_TOOL = "NON_RESUMABLE_TOOL"
 
 
 class ContextDomainError(Exception):
@@ -25,3 +26,10 @@ class ToolNameConflictError(ContextDomainError):
     def __init__(self, message: str) -> None:
         """Initialize a tool-name-conflict error."""
         super().__init__(ContextErrorCode.TOOL_NAME_CONFLICT, message)
+
+
+class NonResumableToolError(ContextDomainError):
+    """Raise when a server tool cannot be rebuilt after serialization."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(ContextErrorCode.NON_RESUMABLE_TOOL, message)
