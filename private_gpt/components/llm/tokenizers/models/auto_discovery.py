@@ -3,7 +3,7 @@ import functools
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import ParamSpec, TypeVar, cast
+from typing import Any, ParamSpec, TypeVar, cast
 
 from private_gpt.components.llm.tokenizers.models.model_discovery import discover_model
 
@@ -43,11 +43,12 @@ def auto_discover_model(
 
         @functools.wraps(func)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            model_id = kwargs.get("model_id")
+            call_kwargs: dict[str, Any] = dict(kwargs)
+            model_id = call_kwargs.get("model_id")
             if not isinstance(model_id, str) or not model_id:
                 return func(*args, **kwargs)
 
-            cache_dir_raw = kwargs.get("cache_dir")
+            cache_dir_raw = call_kwargs.get("cache_dir")
             if not cache_dir_raw:
                 logger.warning("No cache_dir specified, skipping model resolution")
                 return func(*args, **kwargs)
@@ -59,23 +60,23 @@ def auto_discover_model(
                 resolved_id, is_local = await discover_model(
                     model_id=model_id,
                     cache_dir=cache_dir,
-                    force_download=bool(kwargs.get("force_download", False)),
-                    local_files_only=bool(kwargs.get("local_files_only", False)),
+                    force_download=bool(call_kwargs.get("force_download", False)),
+                    local_files_only=bool(call_kwargs.get("local_files_only", False)),
                     tokenizer_only=tokenizer_only,
                 )
-                kwargs["model_id"] = resolved_id
+                call_kwargs["model_id"] = resolved_id
                 if is_local:
-                    kwargs["local_files_only"] = True
+                    call_kwargs["local_files_only"] = True
 
             except Exception as e:
                 if raise_on_error:
                     raise
-                kwargs["local_files_only"] = True
+                call_kwargs["local_files_only"] = True
                 logger.warning(f"Falling back to original model_id: {model_id}, e={e}")
 
             if asyncio.iscoroutinefunction(func):
-                return cast(T, await func(*args, **kwargs))
-            return func(*args, **kwargs)
+                return cast(T, await func(*args, **call_kwargs))
+            return func(*args, **call_kwargs)
 
         @functools.wraps(func)
         def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
