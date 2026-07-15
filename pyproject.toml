@@ -429,7 +429,6 @@ invalid-assignment = "ignore"
 call-non-callable = "ignore"
 invalid-method-override = "ignore"
 missing-argument = "ignore"
-not-iterable = "ignore"
 inconsistent-mro = "ignore"
 
 [tool.pytest.ini_options]

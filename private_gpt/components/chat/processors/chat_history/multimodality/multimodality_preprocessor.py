@@ -148,21 +148,19 @@ async def preprocess_multimodal_message(
     )
     image_result, audio_result = results
 
-    # RequestTooLarge must abort the request — re-raise the first one found.
-    for result in results:
+    def normalize_result(
+        result: tuple[list[MultimodalProcessingStatus], ChatMessage] | BaseException,
+    ) -> tuple[list[MultimodalProcessingStatus], ChatMessage]:
         if isinstance(result, Errors.RequestTooLarge):
             raise result
+        if isinstance(result, Exception):
+            return [], message
+        if isinstance(result, BaseException):
+            raise result
+        return result
 
-    image_statuses, image_msg = (
-        image_result  # type: ignore[misc]
-        if not isinstance(image_result, Exception)
-        else ([], message)
-    )
-    audio_statuses, audio_msg = (
-        audio_result  # type: ignore[misc]
-        if not isinstance(audio_result, Exception)
-        else ([], message)
-    )
+    image_statuses, image_msg = normalize_result(image_result)
+    audio_statuses, audio_msg = normalize_result(audio_result)
 
     for status in image_statuses:
         if status.status in {"completed", "failed"}:
