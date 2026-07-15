@@ -4,4 +4,10 @@ set -euo pipefail
 : "${PGPT_WORKER_MODE:?PGPT_WORKER_MODE is required}"
 : "${PGPT_WORKER_APP_MODULE:=private_gpt}"
 
+# Limit glibc's per-thread malloc arenas. Stateful tool workers use many native
+# threads, and uncapped arenas can retain gigabytes of freed semantic-search
+# allocations in the worker RSS.
+: "${MALLOC_ARENA_MAX:=2}"
+export MALLOC_ARENA_MAX
+
 exec python -m "${PGPT_WORKER_APP_MODULE}.worker" "$@"

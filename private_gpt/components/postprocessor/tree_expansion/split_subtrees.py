@@ -1,6 +1,8 @@
 import logging
 import uuid
-from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Iterable
+from concurrent.futures import Executor, ThreadPoolExecutor
+from functools import lru_cache
 
 from private_gpt.components.ingest.metadata_helper import MetadataFlags, MetadataNode
 from private_gpt.components.readers.nodes import SectionNode, TreeNode
@@ -13,6 +15,11 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
 
 
+@lru_cache(maxsize=1)
+def _split_subtree_executor() -> ThreadPoolExecutor:
+    return ThreadPoolExecutor(thread_name_prefix="split-subtree")
+
+
 class SplitSubtreeAlg:
     """Algorithm to split a tree into subtrees at specified split points.
 
@@ -21,6 +28,9 @@ class SplitSubtreeAlg:
     two split points and creating a new tree structure with the nodes as children
     of a new root node. The new root node is then added to the list of subtrees.
     """
+
+    def __init__(self, executor: Executor | None = None) -> None:
+        self._executor = executor or _split_subtree_executor()
 
     def split_subtree(self, node: TreeNode) -> list[TreeNode]:
         """Split the tree into subtrees at the specified split points.
@@ -106,20 +116,22 @@ class SplitSubtreeAlg:
         subtrees_matrix.append(current_node + nodes[start:])
 
         # Rebuild the subtrees from the split nodes
-        subtrees = []
-        with ThreadPoolExecutor() as executor:
-            results = executor.map(
-                lambda subtree_nodes: self._create_subtree(subtree_nodes),
-                subtrees_matrix,
-            )
-            for new_subtree in results:
-                if new_subtree:
-                    logger.debug(
-                        f"Generated a new subtree with {len(new_subtree.children)} nodes"
-                    )
-                    subtrees.append(new_subtree)
-                else:
-                    logger.debug("Failed to create subtree. Skipping.")
+        results = self._executor.map(self._create_subtree, subtrees_matrix)
+        return self._collect_subtrees(results)
+
+    def _collect_subtrees(
+        self,
+        results: Iterable[TreeNode | None],
+    ) -> list[TreeNode]:
+        subtrees: list[TreeNode] = []
+        for new_subtree in results:
+            if new_subtree:
+                logger.debug(
+                    f"Generated a new subtree with {len(new_subtree.children)} nodes"
+                )
+                subtrees.append(new_subtree)
+            else:
+                logger.debug("Failed to create subtree. Skipping.")
         return subtrees
 
     def _create_subtree(

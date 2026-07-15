@@ -1,4 +1,4 @@
-"""Tests for FilterZylonLoopInterceptor and PingLoopInterceptor.
+"""Tests for engine filtering and listener-side ping interception.
 
 Direct port of the original EventAdapter test suite.  The two flavours are
 preserved exactly:
@@ -33,6 +33,9 @@ from private_gpt.components.engines.chat.models.chat_interceptor_context import 
     ChatInterceptorContext,
 )
 from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.events.interceptors.ping_event_interceptor import (
+    PingEventInterceptor,
+)
 from private_gpt.events.models import (
     FatalError,
     MessageOutputDelta,
@@ -55,7 +58,6 @@ from private_gpt.events.models import (
 from private_gpt.server.chat.interceptors.filter_event_by_type_interceptor import (
     FilterZylonInterceptor,
 )
-from private_gpt.server.chat.interceptors.ping_loop_interceptor import PingInterceptor
 from tests.fixtures.mock_function_llm import get_mock_function_calling_llm
 
 if TYPE_CHECKING:
@@ -81,7 +83,7 @@ async def _collect_from_gen(
     """Pipe a hand-crafted event generator through the interceptor pipeline."""
     interceptors: list[ChatResponseLoopInterceptor] = [FilterZylonInterceptor()]
     if ping_interval:
-        interceptors.append(PingInterceptor(ping_interval))
+        gen = await PingEventInterceptor(ping_interval).intercept(gen)
 
     output: list = []
     queue: asyncio.Queue = asyncio.Queue()
@@ -135,13 +137,10 @@ async def _collect_from_gen(
 def _make_engine(
     mock_llm: FunctionCallingLLM,
     response_format: str = "anthropic",
-    ping_interval: float | None = None,
 ) -> ChatLoopEngine:
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
     interceptors: list[ChatResponseLoopInterceptor] = [FilterZylonInterceptor()]
-    if ping_interval:
-        interceptors.append(PingInterceptor(ping_interval))
     return ChatLoopEngine(
         llm_component=llm_component,
         response_interceptors=interceptors,
@@ -161,10 +160,17 @@ async def _noop_tool(value: str) -> str:
     return f"ok:{value}"
 
 
-async def _collect_engine(engine: ChatLoopEngine, request: ResolvedChatRequest) -> list:
+async def _collect_engine(
+    engine: ChatLoopEngine,
+    request: ResolvedChatRequest,
+    ping_interval: float | None = None,
+) -> list:
     result = []
     execution = await engine.run(request)
-    async for event in execution.events:
+    events = execution.events
+    if ping_interval:
+        events = await PingEventInterceptor(ping_interval).intercept(events)
+    async for event in events:
         result.append(event)
     return result
 
@@ -619,9 +625,8 @@ async def test_integration_ping_injected_between_slow_llm_chunks() -> None:
     """Ping events are injected when the mock LLM is slow between chunks."""
     engine = _make_engine(
         get_mock_function_calling_llm(["hello", " world"], sleep_between_deltas=2.1),
-        ping_interval=1.0,
     )
-    events = await _collect_engine(engine, _base_request())
+    events = await _collect_engine(engine, _base_request(), ping_interval=1.0)
     assert sum(1 for e in events if isinstance(e, PingEvent)) >= 1
 
 

@@ -50,6 +50,15 @@ class SandboxCodeOptions(SandboxExecOptions):
     )
 
 
+class SandboxLink(BaseModel):
+    """HTTP endpoint for a service running inside a sandbox."""
+
+    model_config = ConfigDict(frozen=True)
+
+    url: str
+    headers: dict[str, str] = Field(default_factory=dict)
+
+
 class SandboxSession(ABC):
     """Async sandbox session with exec + file operations.
 
@@ -125,6 +134,27 @@ class SandboxSession(ABC):
     async def initialize_mount(self, canonical: str, files: list[BundledFile]) -> None:
         """Write mount files during session setup. Bypasses writable check."""
 
+    async def remove_mount(self, canonical_path: str) -> None:
+        """Remove a mounted directory from the sandbox.
+
+        Default: run ``rm -rf`` inside the sandbox, suitable for copy-based
+        mounts (e.g. Docker). Override when deleting host-backed storage files
+        would be destructive (e.g. ``BashExecutorSandbox``).
+        """
+        import shlex
+
+        normalized = canonical_path.rstrip("/")
+        await self.exec(f"rm -rf {shlex.quote(normalized)}")
+
+    async def get_endpoint(self, port: int) -> SandboxLink | None:
+        """Return a browser-consumable URL for a service on the given port.
+
+        URI-mode routing lives in the URL path so the link is usable directly via
+        href/iframe; ``headers`` is empty since browsers can't send routing headers.
+        Returns None for backends without HTTP ingress (e.g. local process).
+        """
+        return None
+
     @abstractmethod
     async def close(self) -> None:
         """Release resources."""
@@ -143,12 +173,14 @@ class SandboxProvider(ABC):
         *,
         session_id: str | None = None,
         volumes: list[VolumeSpec] | None = None,
+        env: dict[str, str] | None = None,
     ) -> SandboxSession:
         """Create a sandbox session. The session may be lazy until first use.
 
         ``session_id`` tags the backend resource so it can be found again by
         restore_session(); ``volumes`` are host directories to bind-mount.
-        Backends without those capabilities may ignore both.
+        ``env`` carries environment variables to inject into the sandbox.
+        Backends without those capabilities may ignore them.
         """
 
     async def restore_session(

@@ -280,9 +280,9 @@ class SkillService:
         return parsed.body
 
     async def list_version_files(self, version: SkillVersionEntity) -> list[str]:
-        """Relative paths of a version's bundled files (SKILL.md excluded)."""
+        """Relative paths of all files bundled in a skill version."""
         files = await self._storage_component.list_files(version.storage_prefix)
-        return sorted(path for path in files if path != "SKILL.md")
+        return sorted(files)
 
 
 def _extract_skill_md(files: list[StoredFile]) -> str:

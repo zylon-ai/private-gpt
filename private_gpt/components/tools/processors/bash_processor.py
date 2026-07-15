@@ -1,6 +1,7 @@
 from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ResolvedChatRequest
+from private_gpt.components.code_execution.base import CodeExecutionSessionConfig
 from private_gpt.components.tools.builders.bash_tool_builder import BashToolBuilder
 from private_gpt.components.tools.processors.base import (
     ToolProcessor,
@@ -10,6 +11,7 @@ from private_gpt.components.tools.processors.base import (
     _tool_matches,
 )
 from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
+from private_gpt.server.principal import Principal
 
 
 @singleton
@@ -23,11 +25,16 @@ class BashProcessor(ToolProcessor):
             if not _tool_matches(tool, BASH_TOOL_NAME) or not _is_unresolved_tool(tool):
                 continue
 
+            config = CodeExecutionSessionConfig(
+                session_id=_session_id(request),
+                extra_bundles=request.context.content_bundles or [],
+                bundles_to_remove=request.context.bundles_to_remove or [],
+                env=Principal.current().as_env() or {},
+            )
             resolved = await self._bash_builder.build_tool(
-                _session_id(request),
+                config,
                 name=tool.name or BASH_TOOL_NAME,
                 type=tool.type or BASH_TOOL_NAME + "_v1",
-                bundles=request.context.content_bundles or None,
             )
             return _replace_tool(request, tool, [resolved])
         return False

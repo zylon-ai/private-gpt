@@ -9,7 +9,7 @@ import time
 from asyncio.subprocess import PIPE
 from typing import TYPE_CHECKING
 
-from private_gpt.components.code_execution.base import BashExecutionResult
+from private_gpt.components.code_execution.results import BashExecutionResult
 
 if TYPE_CHECKING:
     from pathlib import Path

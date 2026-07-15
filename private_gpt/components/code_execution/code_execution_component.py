@@ -13,8 +13,9 @@ if TYPE_CHECKING:
     from private_gpt.components.code_execution.base import (
         CodeExecutionProvider,
         CodeExecutionSession,  # noqa: TC004
+        CodeExecutionSessionConfig,
     )
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
+    from private_gpt.components.sandbox.base import SandboxLink
 
 
 @singleton
@@ -35,26 +36,31 @@ class CodeExecutionComponent:
 
     async def get_or_create_session(
         self,
-        session_id: str,
-        extra_bundles: list[ContentBundle] | None = None,
+        config: CodeExecutionSessionConfig,
     ) -> CodeExecutionSession | None:
         provider = self._get_code_execution_provider()
         if not provider:
             return None
 
         async with self._lock:
-            # Always delegate: the provider reuses or restores per session_id,
-            # and a session cached here could outlive its managed backend
-            # (e.g. after the idle reaper killed the sandbox).
-            session = await provider.create_session(
-                session_id,
-                extra_bundles=extra_bundles,
-            )
-            self._sessions[session_id] = session
+            session = await provider.create_session(config)
+            self._sessions[config.session_id] = session
             self._container_registry.register(
-                session_id, self._settings.code_execution.session_ttl_seconds
+                config.session_id, self._settings.code_execution.session_ttl_seconds
             )
             return session
+
+    async def get_session_endpoint(
+        self, session_id: str, port: int
+    ) -> SandboxLink | None:
+        from private_gpt.components.code_execution.sandbox_session import (
+            SandboxCodeExecutionSession,
+        )
+
+        session = self._sessions.get(session_id)
+        if not isinstance(session, SandboxCodeExecutionSession):
+            return None
+        return await session.get_endpoint(port)
 
     async def delete_session(self, session_id: str) -> None:
         provider = self._get_code_execution_provider()

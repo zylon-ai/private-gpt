@@ -4,30 +4,16 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
+from private_gpt.components.sandbox.content_bundle import ContentBundle
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
-
-
-class BashExecutionResult(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    success: bool
-    stdout: str = ""
-    stderr: str = ""
-    exit_code: int = 0
-    execution_time_ms: int = 0
-
-
-class FileOperationResult(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    success: bool
-    output: str = ""
-    error: str | None = None
+    from private_gpt.components.code_execution.results import (
+        BashExecutionResult,
+        FileOperationResult,
+    )
 
 
 class CodeExecutionSession(ABC):
@@ -68,6 +54,15 @@ class CodeExecutionSession(ABC):
         """Close and release the backing execution session."""
 
 
+class CodeExecutionSessionConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    session_id: str
+    extra_bundles: list[ContentBundle] = Field(default_factory=list)
+    bundles_to_remove: list[str] = Field(default_factory=list)
+    env: dict[str, str] = Field(default_factory=dict)
+
+
 class CodeExecutionProvider(ABC):
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -75,8 +70,7 @@ class CodeExecutionProvider(ABC):
     @abstractmethod
     async def create_session(
         self,
-        session_id: str,
-        extra_bundles: list[ContentBundle] | None = None,
+        config: CodeExecutionSessionConfig,
     ) -> CodeExecutionSession:
         """Create a code execution session, optionally mounting extra bundles."""
 

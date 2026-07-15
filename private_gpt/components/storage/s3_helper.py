@@ -8,6 +8,8 @@ from injector import inject, singleton
 
 from private_gpt.settings.settings import settings
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from mypy_boto3_s3.client import S3Client
 

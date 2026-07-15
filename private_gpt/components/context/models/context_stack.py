@@ -74,6 +74,15 @@ class ContextStack(BaseModel):
             for bundle in layer.bundles
         ]
 
+    def all_bundles_to_remove(self) -> list[str]:
+        """Return canonical paths to remove from all CONTENT_BUNDLES layers."""
+        return [
+            path
+            for layer in self.layers
+            if isinstance(layer, ContentBundlesLayer)
+            for path in layer.to_remove
+        ]
+
     def layers_of_type(
         self,
         layer_types: LayerType | AnyContextLayer | list[LayerType | AnyContextLayer],

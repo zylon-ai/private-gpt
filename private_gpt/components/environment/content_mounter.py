@@ -93,9 +93,13 @@ class LocalStorageContentMounter(ContentMounter):
     """Volume-mounts StoredBundle instances from a local storage root on the host.
 
     When skills are stored locally (storage_provider='local'), the bundle files
-    already exist at storage_root/storage_prefix on the host. This mounter
-    bind-mounts that path directly into the sandbox instead of fetching bytes.
-    prepare_volume() returns the VolumeSpec; materialize() is a no-op.
+    already exist at storage_root/storage_prefix and are bind-mounted directly.
+    When storage_provider='s3', the local directory may be empty; in that case
+    prepare_volume() fetches from the storage backend and caches the files
+    locally before returning the VolumeSpec — keeps the bind-mount the only
+    write path so callers never need to write to read-only container paths.
+    For bundles added lazily after container creation, materialize() re-fetches
+    and writes directly into the sandbox (bind-mounts cannot be added post-start).
     """
 
     def __init__(self, storage_root: Path) -> None:
@@ -114,9 +118,22 @@ class LocalStorageContentMounter(ContentMounter):
 
         if not isinstance(descriptor, StoredBundle):
             return None
+
+        host_path = self._root / descriptor.storage_prefix
+        if not host_path.is_dir() or not any(host_path.iterdir()):
+            # Local directory is absent or empty — fetch from the storage backend
+            # (S3 etc.) and cache locally so the bind-mount has content.
+            files = await descriptor.fetch()
+            if not files:
+                return None
+            for f in files:
+                dest = host_path / f.path
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(f.content)
+
         return VolumeSpec(
             name=_volume_name(descriptor.canonical_path, "stored"),
-            host_path=self._root / descriptor.storage_prefix,
+            host_path=host_path,
             mount_path=descriptor.canonical_path,
             read_only=not descriptor.writable,
         )
@@ -124,4 +141,29 @@ class LocalStorageContentMounter(ContentMounter):
     async def materialize(
         self, descriptor: ContentBundle, sandbox: SandboxSession
     ) -> None:
-        pass  # Already volume-mounted at container creation
+        from private_gpt.components.sandbox.content_bundle import StoredBundle
+        from private_gpt.components.sandbox.local import BashExecutorSandbox
+
+        if not isinstance(descriptor, StoredBundle):
+            return
+
+        if isinstance(sandbox, BashExecutorSandbox):
+            # Ensure skill files exist locally (fetch from backend if absent),
+            # then register the host-path mapping in the path translator so
+            # that subsequent exec() calls can resolve the canonical path.
+            host_path = self._root / descriptor.storage_prefix
+            if not host_path.is_dir() or not any(host_path.iterdir()):
+                files = await descriptor.fetch()
+                if not files:
+                    return
+                for f in files:
+                    dest = host_path / f.path
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_bytes(f.content)
+            sandbox.add_local_mount(
+                descriptor.canonical_path, host_path, writable=descriptor.writable
+            )
+        else:
+            files = await descriptor.fetch()
+            if files:
+                await sandbox.initialize_mount(descriptor.canonical_path, files)

@@ -84,6 +84,9 @@ node_store:
   doc_store: simple
   node_store: qdrant
 
+principal:
+  forwarded_headers: ${PGPT_PRINCIPAL_FORWARDED_HEADERS:authorization,anthropic-beta}
+
 sandbox:
   provider: null
 

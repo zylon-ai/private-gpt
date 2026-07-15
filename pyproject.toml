@@ -238,7 +238,7 @@ tool-database = [
     "private-gpt[database]",
 ]
 tool-web-scraping = [
-    "playwright>=1.59.0",
+    "playwright==1.60.0",
 ]
 tools = [
     "private-gpt[tool-mcp,tool-tabular,tool-database,tool-web-scraping]",

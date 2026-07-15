@@ -606,6 +606,11 @@ class ResolvedContextConfig(ContextConfig):
         ),
         exclude=True,
     )
+    bundles_to_remove: list[str] = Field(
+        default_factory=list,
+        description="Canonical paths of skill bundles to remove from the sandbox.",
+        exclude=True,
+    )
 
 
 class ResolvedChatRequest(ChatRequest):

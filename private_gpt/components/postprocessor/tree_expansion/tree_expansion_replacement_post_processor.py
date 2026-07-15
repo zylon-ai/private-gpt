@@ -1,7 +1,11 @@
 import logging
+import os
+import threading
 from abc import ABC
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING, cast
+from collections.abc import Callable, Iterable, Iterator
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from functools import lru_cache
+from typing import Any, cast
 
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import (
@@ -28,14 +32,53 @@ from private_gpt.components.readers.nodes.tree_node import TreeNode
 from private_gpt.settings.settings import settings
 from private_gpt.utils.random import generate_deterministic_uuid_from_seed
 
-if TYPE_CHECKING:
-    from concurrent.futures import Future
-
 config = settings()
 debug_mode = config.server.debug_mode
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
+
+
+class ReentrantThreadPoolExecutor(ThreadPoolExecutor):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._worker_state = threading.local()
+
+    def submit(
+        self,
+        fn: Callable[..., Any],
+        /,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Future[Any]:
+        def run() -> Any:
+            self._worker_state.active = True
+            try:
+                return fn(*args, **kwargs)
+            finally:
+                self._worker_state.active = False
+
+        return super().submit(run)
+
+    def map(
+        self,
+        fn: Callable[..., Any],
+        *iterables: Iterable[Any],
+        timeout: float | None = None,
+        chunksize: int = 1,
+    ) -> Iterator[Any]:
+        if getattr(self._worker_state, "active", False):
+            return map(fn, *iterables)
+        return super().map(fn, *iterables, timeout=timeout, chunksize=chunksize)
+
+
+@lru_cache(maxsize=1)
+def _tree_expansion_executor() -> ReentrantThreadPoolExecutor:
+    max_workers = int(os.environ.get("PGPT_TREE_EXPANSION_MAX_WORKERS", "4"))
+    return ReentrantThreadPoolExecutor(
+        max_workers=max_workers,
+        thread_name_prefix="tree-expansion",
+    )
 
 
 class ExpansionResult(BaseModel):
@@ -373,24 +416,23 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
         Returns:
             list[ExpansionResult]: List of expansion results
         """
-        with ThreadPoolExecutor() as executor:
-            work_items = list(zip(hit_nodes, root_nodes, token_limits, strict=False))
 
-            def process_node(
-                work_item: tuple[NodeWithScore, TreeNode, int]
-            ) -> ExpansionResult:
-                hit_node, root_node, token_limit = work_item
-                partial_hit_node = root_node.find_self_or_child_by_id(hit_node.node.id_)
+        def process_node(
+            work_item: tuple[NodeWithScore, TreeNode, int],
+        ) -> ExpansionResult:
+            hit_node, root_node, token_limit = work_item
+            partial_hit_node = root_node.find_self_or_child_by_id(hit_node.node.id_)
+            return (
+                self._expand(
+                    hit_node=partial_hit_node,
+                    token_limit=token_limit,
+                )
+                if partial_hit_node
+                else ExpansionResult(node_ids=set(), token_count=0)
+            )
 
-                if partial_hit_node:
-                    expansion_result = self._expand(
-                        hit_node=partial_hit_node, token_limit=token_limit
-                    )
-                    return expansion_result
-
-                return ExpansionResult(node_ids=set(), token_count=0)
-
-            return list(executor.map(process_node, work_items))
+        work_items = zip(hit_nodes, root_nodes, token_limits, strict=False)
+        return list(_tree_expansion_executor().map(process_node, work_items))
 
     def _calculate_configuration_score(
         self, node_selection: NodeSelection, absolute_token_limit: int
@@ -597,20 +639,18 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
             f"Processing {len(processed_nodes.filtered_items)} items for final results"
         )
 
-        with ThreadPoolExecutor() as executor:
-            futures: list[Future[list[NodeWithScore]]] = [
-                executor.submit(
-                    self._process_node,
-                    hit_node,
-                    root_node,
-                    subtree,
-                    processed_nodes.loaded_nodes,
-                )
-                for hit_node, root_node, subtree in processed_nodes.filtered_items
-            ]
-
-            for future in as_completed(futures):
-                result_nodes.extend(future.result())
+        futures = [
+            _tree_expansion_executor().submit(
+                self._process_node,
+                hit_node,
+                root_node,
+                subtree,
+                processed_nodes.loaded_nodes,
+            )
+            for hit_node, root_node, subtree in processed_nodes.filtered_items
+        ]
+        for future in as_completed(futures):
+            result_nodes.extend(future.result())
 
         # Sort by score
         return sorted(result_nodes, key=lambda x: float(x.score or 0), reverse=True)
@@ -687,7 +727,7 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
         return [node for node in result if node]
 
     def _split_subtrees(self, nodes: list[TreeNode]) -> list[TreeNode]:
-        alg: SplitSubtreeAlg = SplitSubtreeAlg()
+        alg = SplitSubtreeAlg(executor=_tree_expansion_executor())
         subtrees = [alg.split_subtree(node) for node in nodes if node]
         return [subtree for subtrees in subtrees for subtree in subtrees]
 

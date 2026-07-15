@@ -62,6 +62,8 @@ class EnvironmentManager:
         self,
         session_id: str,
         extra_bundles: list[ContentBundle] | None = None,
+        bundles_to_remove: list[str] | None = None,
+        sandbox_env: dict[str, str] | None = None,
     ) -> Environment:
         # Serialize per session_id so concurrent calls cannot race into
         # creating two backend sandboxes for the same session (one would leak).
@@ -84,12 +86,17 @@ class EnvironmentManager:
                     )
                 else:
                     env.touch()
+                    if bundles_to_remove:
+                        await env.remove_bundles(bundles_to_remove)
                     if extra_bundles:
-                        # Zero network calls: bundles are registered as pending
-                        # and materialized lazily before the next exec().
+                        # Container is already running — push bundles immediately
+                        # so skills are accessible before the next exec().
                         env.add_pending(extra_bundles)
+                        await env._flush_pending()
                     return env
-            return await self._create(session_id, extra_bundles)
+            return await self._create(
+                session_id, extra_bundles, bundles_to_remove, sandbox_env
+            )
 
     def release(self, session_id: str) -> None:
         """Drop the environment and release its backend resources."""
@@ -105,6 +112,8 @@ class EnvironmentManager:
         self,
         session_id: str,
         extra_bundles: list[ContentBundle] | None,
+        bundles_to_remove: list[str] | None = None,
+        sandbox_env: dict[str, str] | None = None,
     ) -> Environment:
         await asyncio.to_thread(self._layout.ensure_ready)
 
@@ -123,13 +132,18 @@ class EnvironmentManager:
 
         # Bundles that support eager volume-mounting (e.g. local storage,
         # S3FS bind-mount). Pre-populate _mounted so they skip materialize().
+        # Deduplicate by volume name: multiple skills from the same collection
+        # return the same collection-level VolumeSpec; only the first is added.
         pre_mounted: set[str] = set()
+        seen_volume_names: set[str] = set()
         for bundle in extra_bundles or []:
             mounter = self._find_content_mounter(bundle)
             if mounter:
                 vol = await mounter.prepare_volume(bundle, session_id)
                 if vol:
-                    volumes.append(vol)
+                    if vol.name not in seen_volume_names:
+                        volumes.append(vol)
+                        seen_volume_names.add(vol.name)
                     pre_mounted.add(bundle.canonical_path)
 
         sandbox = await self._provider.restore_session(
@@ -141,6 +155,7 @@ class EnvironmentManager:
                 bundle_specs=specs,
                 session_id=session_id,
                 volumes=volumes or None,
+                env=sandbox_env,
             )
 
         try:
@@ -163,6 +178,9 @@ class EnvironmentManager:
             content_mounters=self._content_mounters,
         )
         env._mounted.update(pre_mounted)
+
+        if bundles_to_remove:
+            await env.remove_bundles(bundles_to_remove)
 
         # Deferred bundles: not volume-mounted, will be materialized on exec().
         deferred = [

@@ -1,5 +1,7 @@
 import asyncio
 import contextlib
+import ctypes
+import gc
 import os
 import threading
 from collections.abc import Callable
@@ -20,6 +22,22 @@ logger.setLevel("DEBUG")
 
 REDIS_FAILURE_RETRIES_PREFIX = "failure_retries"
 REDIS_FAILURE_RETRIES_EXPIRY = 86400
+
+
+def release_unused_worker_memory() -> None:
+    """Release unreachable Python objects and unused glibc heap pages."""
+    gc.collect()
+    if os.name != "posix":
+        return
+
+    try:
+        malloc_trim = ctypes.CDLL(None).malloc_trim
+    except (AttributeError, OSError):
+        return
+
+    malloc_trim.argtypes = [ctypes.c_size_t]
+    malloc_trim.restype = ctypes.c_int
+    malloc_trim(0)
 
 
 class RedisFailureRetryTracker:
@@ -416,3 +434,5 @@ class StatefulBackgroundTask(_BackgroundTask):
             if self.rollback_fn:
                 self.rollback_fn(*args, **kwargs)
             raise e
+        finally:
+            release_unused_worker_memory()

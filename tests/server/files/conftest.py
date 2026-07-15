@@ -22,10 +22,13 @@ _MIME_TYPE = "text/plain"  # python-magic detects CSV as text/plain
 
 @pytest.fixture
 def volume_root(tmp_path: Path) -> Path:
-    """Host-side volume root with pre-created session upload/output dirs."""
-    session_path = tmp_path / "sessions" / _SESSION_ID
-    (session_path / "uploads").mkdir(parents=True)
-    (session_path / "outputs").mkdir(parents=True)
+    """Host-side volume root with pre-created per-folder session dirs.
+
+    New layout: {volume_root}/{folder_type}/{session_id}/ so that MinIO
+    lifecycle rules can target each folder type with a simple prefix filter.
+    """
+    (tmp_path / "uploads" / _SESSION_ID).mkdir(parents=True)
+    (tmp_path / "outputs" / _SESSION_ID).mkdir(parents=True)
     return tmp_path
 
 

@@ -8,7 +8,7 @@ from functools import partial
 
 import typer
 
-from private_gpt.settings.settings import settings
+from private_gpt.settings.settings import CelerySettings, settings
 from private_gpt.worker.registry import register_worker_mode
 
 
@@ -40,7 +40,7 @@ def _build_flower_args() -> list[str]:
     return args
 
 
-def _build_celery_args(max_tasks_per_child: int) -> list[str]:
+def _build_celery_args(celery_settings: CelerySettings) -> list[str]:
     args: list[str] = []
     log_level = os.environ.get("PGPT_CELERY_LOG_LEVEL", "info")
     queues = os.environ.get("PGPT_CELERY_QUEUES", "")
@@ -55,7 +55,11 @@ def _build_celery_args(max_tasks_per_child: int) -> list[str]:
     if stateful_type:
         queues = queues or stateful_type
         hostname = hostname or stateful_type
-        args.append(f"--max-tasks-per-child={max_tasks_per_child}")
+        args.append(f"--max-tasks-per-child={celery_settings.max_tasks_per_child}")
+        if celery_settings.max_memory_per_child:
+            args.append(
+                f"--max-memory-per-child={celery_settings.max_memory_per_child}"
+            )
     if queues:
         args.append(f"--queues={queues}")
     if hostname:
@@ -126,11 +130,9 @@ def run_arq(args: Sequence[str]) -> None:
 def run_celery(
     args: Sequence[str],
     *,
-    max_tasks_per_child_resolver: Callable[[], int] = (
-        lambda: settings().celery.max_tasks_per_child
-    ),
+    celery_settings_provider: Callable[[], CelerySettings] = lambda: settings().celery,
 ) -> None:
-    celery_args = _build_celery_args(max_tasks_per_child_resolver())
+    celery_args = _build_celery_args(celery_settings_provider())
     typer.echo(f"Starting celery worker with args: {' '.join(celery_args)}")
     command = [
         sys.executable,
@@ -162,16 +164,14 @@ def run_flower(args: Sequence[str]) -> None:
 
 
 def register_private_gpt_worker_modes(
-    max_tasks_per_child_resolver: Callable[[], int] = (
-        lambda: settings().celery.max_tasks_per_child
-    ),
+    celery_settings_provider: Callable[[], CelerySettings] = lambda: settings().celery,
 ) -> None:
     register_worker_mode("arq", run_arq)
     register_worker_mode(
         "celery",
         partial(
             run_celery,
-            max_tasks_per_child_resolver=max_tasks_per_child_resolver,
+            celery_settings_provider=celery_settings_provider,
         ),
     )
     register_worker_mode("flower", run_flower)

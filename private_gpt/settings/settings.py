@@ -1101,6 +1101,11 @@ class CelerySettings(BaseModel):
         default=1000,
         gt=0,
     )
+    max_memory_per_child: int | None = Field(
+        description="Maximum RSS in KiB for a stateful Celery child before recycling",
+        default=None,
+        gt=0,
+    )
 
     def __init__(self, **data: Any) -> None:
         if "soft_time_limit" in data:
@@ -1110,6 +1115,12 @@ class CelerySettings(BaseModel):
         if "hard_time_limit" in data:
             data["hard_time_limit"] = (
                 int(data["hard_time_limit"]) if data["hard_time_limit"] else None
+            )
+        if "max_memory_per_child" in data:
+            data["max_memory_per_child"] = (
+                int(data["max_memory_per_child"])
+                if data["max_memory_per_child"]
+                else None
             )
         if "visibility_timeout" in data:
             data["visibility_timeout"] = (
@@ -1504,6 +1515,17 @@ class SkillSettings(BaseModel):
             "If None (default), no size limit is enforced."
         ),
     )
+    volume_root: str | None = Field(
+        default=None,
+        description=(
+            "Host filesystem root for skill bundle volumes. "
+            "When set, VolumeContentMounter bind-mounts skill files from "
+            "{volume_root}/{storage_prefix}/ into the sandbox at /mnt/skills/{name}/. "
+            "In production this path should be backed by a FUSE/S3FS DaemonSet mount. "
+            "When absent or empty the mounter fetches files from the storage backend "
+            "and caches them locally before creating the bind-mount."
+        ),
+    )
 
     @field_validator("max_bundle_size_bytes", mode="before")
     @classmethod
@@ -1532,6 +1554,30 @@ class SandboxSettings(BaseModel):
         return value
 
 
+class PrincipalSettings(BaseModel):
+    forwarded_headers: list[str] = Field(
+        default_factory=lambda: ["authorization", "x-api-key"],
+        description="HTTP request headers to capture in the Principal. "
+        "When set via env var, use a comma-separated string: "
+        "'authorization, x-custom-header'.",
+    )
+    forwarded_cookies: list[str] = Field(
+        default_factory=list,
+        description="HTTP request cookies to capture in the Principal. "
+        "When set via env var, use a comma-separated string: "
+        "'session, csrf-token'.",
+    )
+
+    @field_validator("forwarded_headers", "forwarded_cookies", mode="before")
+    @classmethod
+    def _parse_list(cls, value: object) -> list[str]:
+        if isinstance(value, str):
+            return [h.strip().lower() for h in value.split(",") if h.strip()]
+        if not isinstance(value, list):
+            raise ValueError("must be a list or comma-separated string")
+        return [str(h).strip().lower() for h in value if h]
+
+
 class BashSettings(BaseModel):
     cpu_limit_seconds: int = Field(
         default=30,
@@ -1552,6 +1598,17 @@ class BashSettings(BaseModel):
     output_cap_bytes: int = Field(
         default=10 * 1024 * 1024,
         description="Hard cap on raw subprocess output bytes before LLM truncation.",
+    )
+
+
+class CodeExecutionToolsSettings(BaseModel):
+    present_files_enabled: bool = Field(
+        default=True,
+        description="Feature flag to enable the present_files tool.",
+    )
+    present_server_enabled: bool = Field(
+        default=True,
+        description="Feature flag to enable the present_server tool.",
     )
 
 
@@ -1594,6 +1651,10 @@ class CodeExecutionSettings(BaseModel):
         default="local",
         description="Storage backend for session files (Files API). "
         "Use 'local' with volume_root set, or 's3' with s3.durable_bucket_name set.",
+    )
+    tools: CodeExecutionToolsSettings = Field(
+        default_factory=lambda: CodeExecutionToolsSettings(),
+        description="Feature flags for code execution tools.",
     )
 
     @field_validator("provider", mode="before")
@@ -1710,6 +1771,7 @@ class Settings(BaseModel):
     s3: S3Settings
     phoenix: ArizePhoenixSettings
     opik: OpikSettings
+    principal: PrincipalSettings
     sandbox: SandboxSettings
     bash: BashSettings
     code_execution: CodeExecutionSettings

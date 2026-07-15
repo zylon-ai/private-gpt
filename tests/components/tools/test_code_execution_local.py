@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from private_gpt.components.code_execution.base import CodeExecutionSessionConfig
 from private_gpt.components.code_execution.local import LocalCodeExecutionProvider
 from private_gpt.settings.settings import unsafe_typed_settings
 
@@ -20,7 +21,9 @@ async def test_local_code_execution_session_supports_file_operations(
     tmp_path: Path,
 ) -> None:
     provider = LocalCodeExecutionProvider(_settings(tmp_path))
-    session = await provider.create_session("session-2")
+    session = await provider.create_session(
+        CodeExecutionSessionConfig(session_id="session-2")
+    )
 
     created = await session.create("notes.txt", "alpha\nbeta\n")
     assert created.success is True
@@ -49,7 +52,9 @@ async def test_local_code_execution_session_rejects_unmounted_paths(
     tmp_path: Path,
 ) -> None:
     provider = LocalCodeExecutionProvider(_settings(tmp_path))
-    session = await provider.create_session("session-3")
+    session = await provider.create_session(
+        CodeExecutionSessionConfig(session_id="session-3")
+    )
 
     result = await session.create("/home/agent/../escape.txt", "nope")
     assert result.success is False
@@ -63,7 +68,9 @@ async def test_local_code_execution_session_rejects_readonly_writes(
     tmp_path: Path,
 ) -> None:
     provider = LocalCodeExecutionProvider(_settings(tmp_path))
-    session = await provider.create_session("session-4")
+    session = await provider.create_session(
+        CodeExecutionSessionConfig(session_id="session-4")
+    )
 
     result = await session.create("/mnt/user-data/uploads/x.txt", "nope")
     assert result.success is False
@@ -77,11 +84,12 @@ async def test_local_code_execution_files_survive_session_recreation(
     tmp_path: Path,
 ) -> None:
     provider = LocalCodeExecutionProvider(_settings(tmp_path))
-    first = await provider.create_session("session-5")
+    config = CodeExecutionSessionConfig(session_id="session-5")
+    first = await provider.create_session(config)
     await first.create("keep.txt", "data")
     provider.delete_session(first)
 
-    second = await provider.create_session("session-5")
+    second = await provider.create_session(config)
     kept = await second.view("keep.txt")
 
     # The host directories outlive the sandbox — files reappear on reconnect.
