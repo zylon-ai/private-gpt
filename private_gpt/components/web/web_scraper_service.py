@@ -211,8 +211,12 @@ class _BrowserPool:
             async with self._lock:
                 idle = self._browser is not None and self._active == 0
                 if idle and time.monotonic() - self._last_used >= timeout:
-                    await self._browser.close()
-                    await self._playwright.stop()
+                    browser = self._browser
+                    playwright = self._playwright
+                    if browser is None or playwright is None:
+                        continue
+                    await browser.close()
+                    await playwright.stop()
                     self._browser = self._playwright = None
                     logger.debug(
                         f"Idle browser closed after {timeout}s with no activity"

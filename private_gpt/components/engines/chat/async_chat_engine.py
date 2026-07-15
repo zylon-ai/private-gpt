@@ -1228,7 +1228,9 @@ class AsyncChatEngine:
         final_json = tool_state.last_serialized.get(prev_raw_id, "")
         final_obj: Any = json.loads(final_json) if final_json else {}
 
-        tool_name = tool_state.active_tool_block.content_block.name  # type: ignore[union-attr]
+        tool_name = getattr(tool_state.active_tool_block.content_block, "name", None)
+        if not isinstance(tool_name, str):
+            raise TypeError("Active tool block must define a name")
         tool_schema = schema_by_name.get(tool_name, {})
         if tool_schema:
             final_obj = _coerce_kwargs(final_obj, tool_schema)

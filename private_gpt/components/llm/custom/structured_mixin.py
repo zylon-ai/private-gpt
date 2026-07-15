@@ -139,7 +139,11 @@ class StructuredChatMixin:
         )
         flags = Allow.ALL & ~Allow.STR
 
-        for response in self.stream_chat(  # type: ignore[attr-defined]
+        stream_chat = getattr(self, "stream_chat", None)
+        if not callable(stream_chat):
+            raise TypeError("StructuredChatMixin requires stream_chat")
+
+        for response in stream_chat(
             messages=messages,
             tools=tools,
             reasoning_effort=reasoning_effort,
@@ -243,7 +247,11 @@ class StructuredChatMixin:
         flags = Allow.ALL & ~Allow.STR
 
         async def gen() -> typing.AsyncGenerator[Model | FlexibleModel, None]:
-            async for response in await self.astream_chat(  # type: ignore[attr-defined]
+            astream_chat = getattr(self, "astream_chat", None)
+            if not callable(astream_chat):
+                raise TypeError("StructuredChatMixin requires astream_chat")
+
+            async for response in await astream_chat(
                 messages=messages,
                 tools=tools,
                 reasoning_effort=reasoning_effort,

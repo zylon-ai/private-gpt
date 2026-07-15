@@ -142,7 +142,10 @@ class S3Helper:
             }
         except Exception as exc:
             # botocore ClientError with 404 → not found
-            if hasattr(exc, "response") and exc.response.get("Error", {}).get("Code") in ("404", "NoSuchKey"):  # type: ignore[union-attr]
+            error_response = getattr(exc, "response", None)
+            if isinstance(error_response, dict) and error_response.get("Error", {}).get(
+                "Code"
+            ) in ("404", "NoSuchKey"):
                 return None
             raise
 

@@ -56,4 +56,8 @@ def delete_ingested_task(body: "DeleteIngestedDocumentAsyncBody") -> None:
             raise
 
 
-delete_ingested_task.callback_task_name = DELETE_INGESTED_CALLBACK_TASK_NAME  # type: ignore[attr-defined]
+setattr(
+    delete_ingested_task,
+    "callback_task_name",
+    DELETE_INGESTED_CALLBACK_TASK_NAME,
+)

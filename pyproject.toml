@@ -422,7 +422,6 @@ python-version = "3.11"
 unused-type-ignore-comment = "ignore"
 possibly-missing-submodule = "ignore"
 unresolved-import = "ignore"
-unresolved-attribute = "ignore"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
