@@ -366,8 +366,9 @@ class ToolSpec(BaseModel):
 
         ignore_fields.extend(partial_params.keys())
 
+        function_name = getattr(fn, "__name__", fn.__class__.__name__)
         fn_schema = create_schema_from_function(
-            fn.__name__,
+            function_name,
             fn,
             additional_fields=None,
             ignore_fields=ignore_fields,
