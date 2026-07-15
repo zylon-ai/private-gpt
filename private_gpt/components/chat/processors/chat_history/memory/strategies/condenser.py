@@ -748,7 +748,7 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
         self,
         chat_history: list[ChatMessage],
         max_length: int | None = None,
-        **kwargs: dict[str, Any],
+        **kwargs: Any,
     ) -> list[ChatMessage]:
         """Get memory with summarization for overflowing context."""
         if not chat_history or max_length is None or max_length <= 0:
@@ -761,7 +761,7 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
         ) = await asyncio.to_thread(self._split_conversation, chat_history.copy())
 
         # Select LLM and tokenizer
-        model_id: str | None = kwargs.get("model_id")  # type: ignore[assignment]
+        model_id: str | None = kwargs.get("model_id")
         llm = self.llm_component.get_llm(model_id)
         tokenizer = self.llm_component.get_tokenizer(model_id)
 
