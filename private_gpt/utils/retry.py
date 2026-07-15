@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import (
     Any,
+    cast,
 )
 
 from retry_async import retry as retry_untyped  # type: ignore
@@ -29,9 +30,9 @@ def retry(
         is_async=is_async,
         tries=tries,
         delay=delay,
-        max_delay=max_delay,
+        max_delay=cast(float, max_delay),
         backoff=backoff,
-        jitter=jitter,
+        jitter=cast(float, jitter),
         logger=logger,
     )
     return wrapped  # type: ignore
@@ -58,9 +59,9 @@ async def retry_context(
             exceptions=exceptions,
             tries=tries,
             delay=delay,
-            max_delay=max_delay,
+            max_delay=cast(float, max_delay),
             backoff=backoff,
-            jitter=jitter,
+            jitter=cast(float, jitter),
             logger=logger,
         )
         return result
