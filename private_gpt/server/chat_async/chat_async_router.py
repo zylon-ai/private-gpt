@@ -274,11 +274,11 @@ async def chat_messages(
     * Stream status can be monitored via status endpoint
     """
     chat_service: ChatAsyncService = request.state.injector.get(ChatAsyncService)
-    chat_request_mapper: ChatRequestMapper = request.state.injector.get(
-        ChatRequestMapper
-    )
+    request_mapper: ChatRequestMapper = request.state.injector.get(ChatRequestMapper)
+    chat_request = await request_mapper.create_request_from_body(body)
     message_id = await chat_service.initiate_chat_stream(
-        await chat_request_mapper.create_request_from_body(body), message_id=message_id
+        request=chat_request,
+        message_id=message_id,
     )
 
     return ChatResponse(

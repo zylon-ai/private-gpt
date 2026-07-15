@@ -5,7 +5,7 @@ from typing import Any, TypeVar
 
 from private_gpt.artifact_index.base_artifact_index import IndexNotReadyException
 from private_gpt.celery import states as custom_states
-from private_gpt.celery.base import AsyncBackgroundTask
+from private_gpt.celery.base import StatelessBackgroundTask
 from private_gpt.celery.celery import celery_app
 from private_gpt.components.ingest.utils import get_extension, get_file_name
 from private_gpt.components.storage.s3_helper import S3Helper
@@ -17,6 +17,9 @@ from private_gpt.settings.settings import settings
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
+
+VECTOR_INDEX_TASK_NAME = "private_gpt.ingestion.vector_index"
+VECTOR_INDEX_CALLBACK_TASK_NAME = "vector_index_task"
 
 
 T = TypeVar("T")
@@ -45,8 +48,8 @@ def cleanup_temporal_files(func: Callable[..., T]) -> Callable[..., T]:
 
 
 @celery_app.task(
-    name="vector_index_task",
-    base=AsyncBackgroundTask,
+    name=VECTOR_INDEX_TASK_NAME,
+    base=StatelessBackgroundTask,
     autoretry_for=AUTORETRY_EXCEPTIONS,
 )
 @cleanup_temporal_files
@@ -100,7 +103,6 @@ def vector_index_task(body: IngestAsyncBody) -> Any:
         )
 
     service = get_global_injector().get(IngestService)
-
     content = body.ingest_body.input.to_binary_content(
         filename=get_file_name(body.ingest_body.metadata)
     )
@@ -133,6 +135,9 @@ def vector_index_task(body: IngestAsyncBody) -> Any:
         model="private-gpt",
         data=ingested_documents,
     )
+
+
+vector_index_task.callback_task_name = VECTOR_INDEX_CALLBACK_TASK_NAME  # type: ignore[attr-defined]
 
 
 def ensure_to_remove_temporal_files(body: IngestAsyncBody) -> None:

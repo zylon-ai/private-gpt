@@ -6,10 +6,11 @@ from injector import inject, singleton
 from starlette.requests import Request
 from starlette.responses import StreamingResponse
 
-from private_gpt.components.chat.models.chat_config_models import ChatRequest
 from private_gpt.events.event_folding import fold
 from private_gpt.events.models import Event, FatalError, Message
 from private_gpt.events.utils import to_message, to_sse_stream
+from private_gpt.server.chat.chat_models import ChatBody
+from private_gpt.server.chat.chat_request_mapper import ChatRequestMapper
 from private_gpt.server.chat_async.chat_async_service import ChatAsyncService
 
 logger = logging.getLogger(__name__)
@@ -24,11 +25,13 @@ class ChatAsyncFacadeService:
     def __init__(
         self,
         chat_async_service: ChatAsyncService,
+        chat_request_mapper: ChatRequestMapper,
     ) -> None:
         self._chat_async_service = chat_async_service
+        self._chat_request_mapper = chat_request_mapper
 
     async def chat(
-        self, http_request: Request, request: ChatRequest, message_id: str | None = None
+        self, http_request: Request, body: ChatBody, message_id: str | None = None
     ) -> Message | FatalError | StreamingResponse:
         """Handle chat with proper cancellation support for FastAPI.
 
@@ -37,8 +40,9 @@ class ChatAsyncFacadeService:
         2. Resources are cleaned up
         3. CancelledError is re-raised to maintain asyncio semantics
         """
+        chat_request = await self._chat_request_mapper.create_request_from_body(body)
         message_id = await self._chat_async_service.initiate_chat_stream(
-            request=request, message_id=message_id
+            request=chat_request, message_id=message_id
         )
         event_generator = await self._chat_async_service.get_stream_events(
             message_id=message_id,
@@ -49,7 +53,7 @@ class ChatAsyncFacadeService:
         cancellable_generator = self._cancellable_stream_generator(
             http_request, event_generator, message_id
         )
-        if request.stream:
+        if body.stream:
             sse_stream = to_sse_stream(cancellable_generator)
             return StreamingResponse(
                 sse_stream,

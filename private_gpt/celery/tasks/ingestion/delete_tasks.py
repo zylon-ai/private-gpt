@@ -2,7 +2,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from private_gpt.artifact_index.base_artifact_index import IndexNotReadyException
-from private_gpt.celery.base import AsyncBackgroundTask
+from private_gpt.celery.base import StatelessBackgroundTask
 from private_gpt.celery.celery import celery_app
 from private_gpt.celery.task_helper import IngestionTaskHelper
 from private_gpt.di import get_global_injector
@@ -16,10 +16,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
 
+DELETE_INGESTED_TASK_NAME = "private_gpt.ingestion.delete"
+DELETE_INGESTED_CALLBACK_TASK_NAME = "delete_ingested_task"
+
 
 @celery_app.task(
-    name="delete_ingested_task",
-    base=AsyncBackgroundTask,
+    name=DELETE_INGESTED_TASK_NAME,
+    base=StatelessBackgroundTask,
     # Retry on ValueError and IndexNotReadyException.
     # ValueError is thrown when the index is not initialized
     #   and we cannot guarantee that the index will not be ready.
@@ -51,3 +54,6 @@ def delete_ingested_task(body: "DeleteIngestedDocumentAsyncBody") -> None:
             # If the task was not revoked, we follow the normal
             # flow and raise the exception.
             raise
+
+
+delete_ingested_task.callback_task_name = DELETE_INGESTED_CALLBACK_TASK_NAME  # type: ignore[attr-defined]

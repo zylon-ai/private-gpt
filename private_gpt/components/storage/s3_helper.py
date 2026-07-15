@@ -28,13 +28,16 @@ class S3Helper:
         self._s3_settings = settings().s3
         self._s3_client = self._get_s3_client(self._s3_settings)
 
+    def is_available(self) -> bool:
+        return self._s3_client is not None
+
     @staticmethod
     def _get_s3_client(s3_settings: S3Settings) -> S3Client | None:
         if (
             not s3_settings
-            or s3_settings.access_key_id is None
-            or s3_settings.secret_access_key is None
-            or s3_settings.endpoint_url is None
+            or not s3_settings.access_key_id
+            or not s3_settings.secret_access_key
+            or not s3_settings.endpoint_url
         ):
             return None
 

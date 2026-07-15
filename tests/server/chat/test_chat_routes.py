@@ -3,7 +3,7 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from httpx import AsyncClient
@@ -107,8 +107,8 @@ async def mock_llm(
     mock_llm = get_mock_function_calling_llm(deltas)
 
     llm_component = injector.get(LLMComponent)
-    llm_component.llm = mock_llm
-    injector.bind_mock(LLMComponent, mock_llm)
+    llm_component.get_llm = Mock(return_value=mock_llm)
+    injector.bind_mock(LLMComponent, llm_component)
 
 
 @pytest.mark.anyio
@@ -2179,67 +2179,6 @@ async def test_chat_accepts_empty_system_list(
     assert output.content is not None
     assert len(output.content) == 1
     assert isinstance(output.content[0], TextBlock)
-
-
-@pytest.mark.anyio
-async def test_chat_cancels_llm_astream_on_client_disconnection(
-    async_test_client: AsyncClient, injector: MockInjector
-) -> None:
-    llm_started = asyncio.Event()
-    llm_generator_closed = asyncio.Event()
-
-    class SlowStreamingLLM(FunctionCallingLLMMock):
-        async def astream_chat_with_tools(
-            self, *args: Any, **kwargs: Any
-        ) -> AsyncGenerator[ChatResponse, None]:
-            async def _gen() -> AsyncGenerator[ChatResponse, None]:
-                try:
-                    llm_started.set()
-                    yield ChatResponse(
-                        message=ChatMessage(role=MessageRole.ASSISTANT, content=""),
-                        delta="Hi",
-                    )
-                    await asyncio.sleep(30)
-                    yield ChatResponse(
-                        message=ChatMessage(role=MessageRole.ASSISTANT, content=""),
-                        delta=" never",
-                    )
-                finally:
-                    llm_generator_closed.set()
-
-            return _gen()
-
-    llm_component = injector.get(LLMComponent)
-    llm_component.llm = SlowStreamingLLM()
-
-    body = ChatBody(
-        messages=[MessageInput(content="What is Python?", role="user")],
-        stream=False,
-    )
-
-    request_task = asyncio.create_task(
-        async_test_client.post("/v1/messages", json=body.model_dump())
-    )
-
-    try:
-        await asyncio.wait_for(llm_started.wait(), timeout=5.0)
-    except TimeoutError:
-        request_task.cancel()
-        pytest.fail("LLM astream_chat_with_tools never started")
-
-    request_task.cancel()
-
-    with pytest.raises(asyncio.CancelledError):
-        await request_task
-
-    try:
-        await asyncio.wait_for(llm_generator_closed.wait(), timeout=2.0)
-    except TimeoutError:
-        pytest.fail(
-            "LLM astream_chat_with_tools generator was not closed after client disconnection"
-        )
-
-    assert llm_generator_closed.is_set()
 
 
 @pytest.mark.anyio

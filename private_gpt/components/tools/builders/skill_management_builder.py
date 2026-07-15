@@ -10,11 +10,13 @@ from private_gpt.components.skills.models.skill_entities import (
     SkillVersionEntity,
 )
 from private_gpt.components.skills.services.skill_service import SkillService
+from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import (
     SKILL_LIST_TOOL_NAME,
     SKILL_LOAD_TOOL_NAME,
     SKILL_UNLOAD_TOOL_NAME,
 )
+from private_gpt.di import get_global_injector
 from private_gpt.events.models import ResultContentBlockType, TextBlock
 
 
@@ -72,6 +74,15 @@ class SkillManagementToolBuilder:
             description="Mark one available skill as loaded for this conversation.",
             async_fn=load_skill,
             requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_load_skill_tool,
+                {
+                    "skill_filter": self._skill_filter,
+                    "skill_injection_mode": self._skill_injection_mode,
+                    "name": name,
+                    "type": type,
+                },
+            ),
         )
 
     def build_unload_skill(
@@ -89,6 +100,15 @@ class SkillManagementToolBuilder:
             description="Mark one loaded skill as unloaded for this conversation.",
             async_fn=unload_skill,
             requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_unload_skill_tool,
+                {
+                    "skill_filter": self._skill_filter,
+                    "skill_injection_mode": self._skill_injection_mode,
+                    "name": name,
+                    "type": type,
+                },
+            ),
         )
 
     def build_list_skills(
@@ -128,4 +148,61 @@ class SkillManagementToolBuilder:
             description="Browse the skill catalog (paginated). Use page/page_size to navigate large catalogs.",
             async_fn=list_skills,
             requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_list_skills_tool,
+                {
+                    "skill_filter": self._skill_filter,
+                    "skill_injection_mode": self._skill_injection_mode,
+                    "name": name,
+                    "type": type,
+                },
+            ),
         )
+
+
+def _builder(
+    skill_filter: SkillFilter,
+    skill_injection_mode: str,
+) -> "SkillManagementToolBuilder":
+    injector = get_global_injector()
+    return SkillManagementToolBuilder(
+        skill_service=injector.get(SkillService),
+        skill_filter=skill_filter,
+        skill_injection_mode=skill_injection_mode,
+    )
+
+
+def rebuild_load_skill_tool(
+    skill_filter: SkillFilter,
+    skill_injection_mode: str,
+    name: str = SKILL_LOAD_TOOL_NAME,
+    type: str = SKILL_LOAD_TOOL_NAME + "_v1",
+) -> ToolSpec:
+    return _builder(skill_filter, skill_injection_mode).build_load_skill(
+        name=name,
+        type=type,
+    )
+
+
+def rebuild_unload_skill_tool(
+    skill_filter: SkillFilter,
+    skill_injection_mode: str,
+    name: str = SKILL_UNLOAD_TOOL_NAME,
+    type: str = SKILL_UNLOAD_TOOL_NAME + "_v1",
+) -> ToolSpec:
+    return _builder(skill_filter, skill_injection_mode).build_unload_skill(
+        name=name,
+        type=type,
+    )
+
+
+def rebuild_list_skills_tool(
+    skill_filter: SkillFilter,
+    skill_injection_mode: str,
+    name: str = SKILL_LIST_TOOL_NAME,
+    type: str = SKILL_LIST_TOOL_NAME + "_v1",
+) -> ToolSpec:
+    return _builder(skill_filter, skill_injection_mode).build_list_skills(
+        name=name,
+        type=type,
+    )

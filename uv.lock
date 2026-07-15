@@ -163,6 +163,19 @@ wheels = [
 ]
 
 [[package]]
+name = "arq"
+version = "0.26.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "redis", extra = ["hiredis"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4f/65/5add7049297a449d1453e26a8d5924f0d5440b3876edc9e80d5dc621f16d/arq-0.26.3.tar.gz", hash = "sha256:362063ea3c726562fb69c723d5b8ee80827fdefda782a8547da5be3d380ac4b1", size = 291111, upload-time = "2025-01-06T22:44:49.771Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/85/b3/a24a183c628da633b7cafd1759b14aaf47958de82ba6bcae9f1c2898781d/arq-0.26.3-py3-none-any.whl", hash = "sha256:9f4b78149a58c9dc4b88454861a254b7c4e7a159f2c973c89b548288b77e9005", size = 25968, upload-time = "2025-01-06T22:44:45.771Z" },
+]
+
+[[package]]
 name = "astor"
 version = "0.8.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3181,6 +3194,7 @@ name = "private-gpt"
 version = "1.0.1"
 source = { editable = "." }
 dependencies = [
+    { name = "arq" },
     { name = "cachetools" },
     { name = "fastapi", extra = ["all"] },
     { name = "injector" },
@@ -3586,6 +3600,7 @@ vectorstore-qdrant = [
 requires-dist = [
     { name = "aiobotocore", marker = "extra == 'storage-s3'", specifier = ">=3.6.0,<3.7" },
     { name = "anthropic", marker = "extra == 'llm-anthropic'", specifier = ">=0.116.0" },
+    { name = "arq", specifier = ">=0.26,<0.27" },
     { name = "asyncpg", marker = "extra == 'database-postgres'", specifier = ">=0.31.0,<0.32" },
     { name = "beautifulsoup4", marker = "extra == 'ingest-markup'", specifier = ">=4.14.3,<5" },
     { name = "black", extras = ["jupyter"], marker = "extra == 'lint'", specifier = ">=22,<23" },

@@ -18,19 +18,19 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedSystemConfig,
     ToolSpec,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
-    ChatLoopInputState,
-    ChatLoopOutputState,
-    ChatLoopRuntimeState,
-    ChatLoopState,
+from private_gpt.components.engines.chat.models.chat_state import (
+    ChatInputState,
+    ChatOutputState,
+    ChatRuntimeState,
+    ChatState,
 )
-from private_gpt.components.engines.chat_loop.utils.request_builder import (
+from private_gpt.components.engines.chat.utils.request_builder import (
     build_initial_context_stack,
 )
 from private_gpt.events.event_errors import Errors
@@ -124,18 +124,18 @@ async def _run_interceptor(
     interceptor: ValidatorRequestInterceptor,
     request: ChatRequest,
 ) -> None:
-    state = ChatLoopState(
-        input=ChatLoopInputState(
+    state = ChatState(
+        input=ChatInputState(
             request=request,
             context_stack=build_initial_context_stack(request),
             sampling_params=dict(request.sampling_params),
             llm_kwargs=dict(request.sampling_params),
         ),
-        runtime=ChatLoopRuntimeState(),
-        output=ChatLoopOutputState(),
+        runtime=ChatRuntimeState(),
+        output=ChatOutputState(),
         timeline=[],
     )
-    context = ChatLoopInterceptorContext(
+    context = ChatInterceptorContext(
         state=state,
         llm=get_mock_function_calling_llm(["ok"]),
         phase=InterceptorPhase.VALIDATION,

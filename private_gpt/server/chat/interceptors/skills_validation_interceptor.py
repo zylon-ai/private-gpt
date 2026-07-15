@@ -2,16 +2,16 @@ from collections.abc import Sequence
 
 from injector import inject, singleton
 
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_state import (
+from private_gpt.components.engines.chat.models.chat_state import (
     SkillsRuntimeCache,
 )
 from private_gpt.components.skills.models.skill_entities import SkillFilter
@@ -27,7 +27,7 @@ class SkillsValidationInterceptor(ChatRequestLoopInterceptor):
     def __init__(self, skill_service: SkillService) -> None:
         self._skill_service = skill_service
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         if context.phase not in {
             InterceptorPhase.VALIDATION,
             InterceptorPhase.BEFORE_ITERATION,

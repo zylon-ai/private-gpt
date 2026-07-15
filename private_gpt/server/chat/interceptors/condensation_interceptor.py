@@ -12,13 +12,13 @@ from private_gpt.components.chat.processors.chat_history.memory.tldr_processor i
     CondenseResponse,
     condense_chat_history,
 )
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.events.models import (
@@ -156,7 +156,7 @@ class CondensationRequestInterceptor(ChatRequestLoopInterceptor):
         self._condensation_timeout = settings.chat.tldr_timeout
         self._min_duration = settings.chat.tldr_minimum_threshold_seconds
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         if context.phase != InterceptorPhase.BEFORE_ITERATION:
             return
 

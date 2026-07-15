@@ -1,6 +1,7 @@
 # Any args passed to the make script, use with $(call args, default_value)
 args = `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
 AUTO_DISCOVER_ARGS ?=
+WORKER_ARGS ?=
 PROD_DIST_DIR ?= .dist
 PROD_PYTHON ?= .venv/bin/python
 PROD_BINARY ?= .venv/bin/private-gpt
@@ -11,7 +12,7 @@ TEST_LOCAL_DATA_DIR ?= $(TEST_PGPT_HOME)/local_data/tests
 WIPE_PGPT_HOME := $(if $(PGPT_HOME),$(PGPT_HOME),$(HOME)/.local/share/private-gpt)
 WIPE_LOCAL_DATA_DIR := $(WIPE_PGPT_HOME)/local_data
 
-.PHONY: test test-coverage black ruff format mypy check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower
+.PHONY: test test-coverage black ruff format mypy check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower celery-worker arq-worker chat-worker tools-worker
 
 ########################################################################################################################
 # Quality checks
@@ -103,7 +104,31 @@ wipe:
 ########################################################################################################################
 
 celery:
-	PGPT_WORKER_MODE=worker uv run private-gpt worker
+	PGPT_WORKER_MODE=celery ./scripts/worker_entrypoint $(WORKER_ARGS)
 
 flower:
-	PGPT_WORKER_MODE=flower uv run private-gpt worker
+	PGPT_WORKER_MODE=flower ./scripts/worker_entrypoint $(WORKER_ARGS)
+
+celery-worker:
+	PGPT_WORKER_MODE=celery ./scripts/worker_entrypoint $(WORKER_ARGS)
+
+arq-worker:
+	PGPT_WORKER_MODE=arq ./scripts/worker_entrypoint $(WORKER_ARGS)
+
+chat-worker:
+	PGPT_WORKER_MODE=arq \
+	PGPT_WORKER_APP_MODULE=private_gpt \
+	PGPT_ARQ_QUEUE=chat \
+	PGPT_ARQ_TASK_PACKAGES=private_gpt.arq.tasks.chat \
+	PGPT_STATEFUL_WORKER_TYPE=chat \
+	PGPT_WORKER_WARM_PROFILE=chat \
+	./scripts/worker_entrypoint $(WORKER_ARGS)
+
+tools-worker:
+	PGPT_WORKER_MODE=celery \
+	PGPT_WORKER_APP_MODULE=private_gpt \
+	PGPT_CELERY_QUEUES=tools \
+	PGPT_CELERY_TASK_PACKAGES=private_gpt.celery.tasks.tools \
+	PGPT_STATEFUL_WORKER_TYPE=tools \
+	PGPT_WORKER_WARM_PROFILE=tools \
+	./scripts/worker_entrypoint $(WORKER_ARGS)

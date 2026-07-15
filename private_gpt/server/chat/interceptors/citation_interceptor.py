@@ -4,13 +4,13 @@ from injector import singleton
 
 from private_gpt.components.context.models.context_layer import DocumentLayer
 from private_gpt.components.context.models.layer_type import LayerType
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.components.engines.citations.utils import (
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 class CitationRequestInterceptor(ChatRequestLoopInterceptor):
     """Populate documents and citations from chat history."""
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         """Extract citations and source documents from conversation history."""
         if context.phase != InterceptorPhase.BEFORE_ITERATION:
             return

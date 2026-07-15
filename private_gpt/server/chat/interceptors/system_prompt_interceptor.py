@@ -9,18 +9,19 @@ from private_gpt.components.context.models.context_layer import (
     UserInstructionsLayer,
 )
 from private_gpt.components.context.models.layer_type import LayerType
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
-from private_gpt.components.engines.chat_loop.utils.request_builder import (
+from private_gpt.components.engines.chat.utils.request_builder import (
     build_request_from_context_stack,
 )
+from private_gpt.components.llm.llm_helper import as_sync_tokenizer_fn
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
 
 
@@ -37,7 +38,7 @@ class SystemPromptRequestInterceptor(ChatRequestLoopInterceptor):
         self._prompt_builder_service = prompt_builder_service
         self._add_context_to_system_prompt = add_context_to_system_prompt
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         if context.phase != InterceptorPhase.BEFORE_ITERATION:
             return
 
@@ -62,7 +63,7 @@ class SystemPromptRequestInterceptor(ChatRequestLoopInterceptor):
 
     async def _build_generated_layers(
         self,
-        context: ChatLoopInterceptorContext,
+        context: ChatInterceptorContext,
         request: ChatRequest,
         documents: list[Any],
     ) -> list[UserInstructionsLayer | ContextPromptLayer]:
@@ -91,7 +92,9 @@ class SystemPromptRequestInterceptor(ChatRequestLoopInterceptor):
                     generate_citations=request.citation.enabled,
                     guidelines_prompt=None,
                     token_limit=context.state.runtime.effective_token_limit,
-                    tokenizer_fn=context.state.runtime.tokenizer_fn,
+                    tokenizer_fn=as_sync_tokenizer_fn(
+                        context.state.runtime.tokenizer_fn
+                    ),
                 )
                 if context_prompt:
                     context_text = context_prompt.format().strip()

@@ -8,13 +8,13 @@ from private_gpt.components.chat.models.chat_config_models import (
     ToolSpec,
 )
 from private_gpt.components.context.models.context_layer import ToolDefinitionsLayer
-from private_gpt.components.engines.chat_loop.interceptors.chat_loop_interceptor import (
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_interceptor_context import (
-    ChatLoopInterceptorContext,
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
 )
-from private_gpt.components.engines.chat_loop.models.chat_loop_phase import (
+from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.events.event_errors import Errors
@@ -98,7 +98,7 @@ class McpRequestInterceptor(ChatRequestLoopInterceptor):
                 raise e
             return []
 
-    async def intercept(self, context: ChatLoopInterceptorContext) -> None:
+    async def intercept(self, context: ChatInterceptorContext) -> None:
         if (
             context.phase != InterceptorPhase.VALIDATION
             and context.phase != InterceptorPhase.BEFORE_ITERATION

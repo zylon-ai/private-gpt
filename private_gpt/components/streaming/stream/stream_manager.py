@@ -30,9 +30,8 @@ class StreamManager:
     ):
         self.stream_service = stream_component.stream
         self.processor = stream_processor
-
-        should_multiplexing = bool(settings.chat.multiplexing_threshold)
-        if should_multiplexing:
+        self.reader: StreamReader | AdaptiveStreamReader = stream_reader
+        if settings.chat.multiplexing_threshold:
             self.reader = AdaptiveStreamReader(settings, stream_reader)
 
     async def create_and_start_stream(
@@ -59,6 +58,18 @@ class StreamManager:
         )
 
         return correlation_id
+
+    async def create_stream(
+        self,
+        stream_type: str,
+        correlation_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> str:
+        return await self.stream_service.create_stream(
+            stream_type=stream_type,
+            correlation_id=correlation_id,
+            metadata=metadata,
+        )
 
     async def cancel_stream(self, correlation_id: str) -> bool:
         """Cancel a stream."""

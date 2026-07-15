@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from uuid import uuid4
 
 from injector import inject, singleton
 
@@ -13,41 +14,42 @@ from private_gpt.server.chat.chat_facade import ChatFacadeService
 @singleton
 class ChatAsyncService:
     @inject
-    def __init__(self, chat_facade: ChatFacadeService, stream_manager: StreamManager):
-        self._chat_facade = chat_facade
+    def __init__(
+        self,
+        stream_manager: StreamManager,
+        chat_facade: ChatFacadeService,
+    ):
         self.stream_manager = stream_manager
+        self._chat_facade = chat_facade
 
     async def initiate_chat_stream(
         self, request: ChatRequest, message_id: str | None = None
     ) -> str:
-        """Initiate a chat completion stream.
-
-        Returns:
-            Tuple of (message_id, message)
-
-        Raises:
-            HTTPException: If message_id already exists
-        """
+        """Initiate a chat completion stream."""
+        message_id = message_id or str(uuid4())
         if message_id and await self.stream_manager.stream_exists(message_id):
             raise ValueError("Stream with this message_id already exists")
 
+        request = request.model_copy(
+            update={
+                "context": request.context.model_copy(
+                    update={"correlation_id": message_id}
+                )
+            }
+        )
         event_generator = await self._chat_facade.create_chat_event_generator(
             request=request
         )
-        message_id = await self.stream_manager.create_and_start_stream(
+        return await self.stream_manager.create_and_start_stream(
             event_handler=StreamingEventHandler(),
             stream_type="chat_completion",
             event_generator=event_generator,
             correlation_id=message_id,
-            # For debugging purposes, we can include metadata about the request
             metadata={
                 "message_count": len(request.messages),
                 "thinking_enabled": request.thinking.enabled,
-                "citations_enabled": request.citation.enabled,
             },
         )
-
-        return message_id
 
     async def get_stream_events(
         self, message_id: str

@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import mimetypes
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from injector import inject, singleton
 
@@ -14,8 +14,10 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import PRESENT_FILES_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import PRESENT_FILES_TOOL_FN
+from private_gpt.di import get_global_injector
 from private_gpt.events.models import LocalResourceBlock, TextBlock
 
 if TYPE_CHECKING:
@@ -95,4 +97,19 @@ class PresentFilesToolBuilder:
             description=description,
             async_fn=present_files,
             requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_present_files_tool,
+                {
+                    "session_id": session_id,
+                    "bundles": bundles,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                },
+            ),
         )
+
+
+async def rebuild_present_files_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(PresentFilesToolBuilder)
+    return await builder.build_tool(**cast(Any, kwargs))

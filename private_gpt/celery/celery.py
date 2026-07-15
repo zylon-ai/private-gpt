@@ -1,3 +1,4 @@
+import os
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -8,6 +9,15 @@ from private_gpt.celery.config import CeleryConfig, backend_config, broker_confi
 from private_gpt.celery.task_registry import get_task_packages
 from private_gpt.initialize import initialize_globals, initialize_observability
 from private_gpt.settings.settings import Settings, settings
+
+
+def _configured_task_packages(task_packages: Sequence[str]) -> tuple[str, ...]:
+    if task_packages:
+        return tuple(task_packages)
+    configured = os.environ.get("PGPT_CELERY_TASK_PACKAGES", "")
+    return tuple(
+        package.strip() for package in configured.split(",") if package.strip()
+    )
 
 
 def _autodiscover_tasks(
@@ -52,7 +62,9 @@ def create_app(
     if before_setup is not None:
         before_setup()
 
-    resolved_task_packages = get_task_packages(*task_packages)
+    resolved_task_packages = get_task_packages(
+        *_configured_task_packages(task_packages)
+    )
 
     celery_app = Celery(
         app_name,

@@ -79,7 +79,7 @@ def test_delete_during_ingestion(mock_setup, test_bodies):
         "worker1": [
             {
                 "id": "task1",
-                "name": "vector_index_task",
+                "name": "private_gpt.ingestion.vector_index",
                 "args": [ingestion_body],
             }
         ]
@@ -146,7 +146,7 @@ def test_delete_different_artifact_ingesting(mock_setup, test_bodies):
         "worker1": [
             {
                 "id": "task1",
-                "name": "vector_index_task",
+                "name": "private_gpt.ingestion.vector_index",
                 "args": [different_ingestion_body],
             }
         ]
@@ -195,17 +195,17 @@ def test_delete_with_multiple_ingestion_tasks(mock_setup, test_bodies):
         "worker1": [
             {
                 "id": "task1",
-                "name": "vector_index_task",
+                "name": "private_gpt.ingestion.vector_index",
                 "args": [different_artifact],
             },
             {
                 "id": "task2",
-                "name": "vector_index_task",
+                "name": "private_gpt.ingestion.vector_index",
                 "args": [same_artifact_diff_collection],
             },
             {
                 "id": "task3",
-                "name": "vector_index_task",
+                "name": "private_gpt.ingestion.vector_index",
                 "args": [ingestion_body],
             },
             {"id": "task4", "name": "different_task", "args": [{}]},
@@ -234,7 +234,7 @@ def test_delete_terminates_pending_tasks(mock_setup, test_bodies):
 
     pending_task = {
         "id": "task1",
-        "name": "vector_index_task",
+        "name": "private_gpt.ingestion.vector_index",
         "args": [ingestion_body],
         "status": "PENDING",
     }
@@ -270,7 +270,7 @@ def test_delete_scheduled_when_ingestion_will_run(mock_setup, test_bodies):
         "worker1": [
             {
                 "id": "task1",
-                "name": "delete_ingested_task",
+                "name": "private_gpt.ingestion.delete",
                 "args": [delete_body],
             }
         ]

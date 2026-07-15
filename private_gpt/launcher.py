@@ -17,24 +17,13 @@ from injector import Injector
 from llama_index.core.embeddings import MockEmbedding
 from llama_index.core.settings import Settings as LlamaIndexSettings
 
-from private_gpt.components.code_execution.code_execution_component import (
-    CodeExecutionComponent,
-)
-from private_gpt.components.embedding.embedding_component import EmbeddingComponent
-from private_gpt.components.llm.llm_component import LLMComponent
-from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.persistence.persistence_component import (
     PersistenceComponent,
-)
-from private_gpt.components.prompts.prompt_builder import PromptBuilderService
-from private_gpt.components.streaming.stream.stream_manager import StreamManager
-from private_gpt.components.streaming.stream_component import StreamComponent
-from private_gpt.components.vector_store.vector_store_component import (
-    VectorStoreComponent,
 )
 from private_gpt.constants import PROJECT_ROOT_PATH
 from private_gpt.di import set_global_injector
 from private_gpt.docs import DESCRIPTION, TITLE, configure_openapi
+from private_gpt.eager_loading import eager_loading
 from private_gpt.global_handler import (
     ExceptionMiddleware,
     request_validation_exception_adapter,
@@ -55,39 +44,11 @@ from private_gpt.server.models.models_router import models_router
 from private_gpt.server.primitives.primitives_router import primitives_router
 from private_gpt.server.skills.skill_router import skill_router
 from private_gpt.server.tools.tool_router import tool_router
-from private_gpt.server.tools.tool_service import ToolService
 from private_gpt.settings.settings import Settings
 from private_gpt.utils.runner import get_version
 
 logger = logging.getLogger(__name__)
 UI_DIRECTORY = PROJECT_ROOT_PATH / "ui"
-
-
-def eager_loading(injector: Injector) -> None:
-    """Eagerly load modules to avoid race conditions in multi-threaded environments."""
-    logger.debug("Initializing mandatory dependencies")
-    injector.get(Settings)
-
-    # Models
-    logger.debug("Initializing models")
-    injector.get(LLMComponent)
-    injector.get(EmbeddingComponent)
-
-    # Stores
-    logger.debug("Initializing stores")
-    injector.get(NodeStoreComponent)
-    injector.get(VectorStoreComponent)
-
-    # Streaming components
-    logger.debug("Initializing streaming components")
-    injector.get(StreamComponent)
-    injector.get(StreamManager)
-
-    # Auxiliar
-    logger.debug("Initializing auxiliar services")
-    injector.get(PromptBuilderService)
-    injector.get(ToolService)
-    injector.get(CodeExecutionComponent)
 
 
 def apply_migrations(injector: Injector) -> None:
@@ -115,12 +76,17 @@ def create_app(root_injector: Injector) -> FastAPI:
         # Set nested loop
         nest_asyncio.apply()
 
-        # Set default thread pool limit
+        # Set default thread pool limit. This executor now only serves genuine
+        # blocking-I/O offloads (broker waits, sync HTTP, sync file reads); all
+        # CPU-bound work is routed to dedicated workers, and chat can be routed
+        # to a long-lived external worker when ``scheduler.chat.mode`` is enabled,
+        # so a small I/O-only pool is enough
+        # and stops the GIL from being contended with the event loop.
         cpu_count = os.cpu_count() or 1
         executor = concurrent.futures.ThreadPoolExecutor(
             max_workers=min(500, cpu_count * 50), thread_name_prefix="Stream-Pool"
         )
-        asyncio.get_event_loop().set_default_executor(executor)
+        asyncio.get_running_loop().set_default_executor(executor)
 
         # Set the global injector as loop injector.
         set_global_injector(root_injector)

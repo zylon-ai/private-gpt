@@ -74,12 +74,12 @@ Starts the Celery worker stack. All behaviour is controlled through environment 
 private-gpt worker
 ```
 
-The worker process manages up to three sub-processes depending on `PGPT_WORKER_MODE`:
+`PGPT_WORKER_MODE` is required and selects one registered worker runtime:
 
 | `PGPT_WORKER_MODE` | What starts |
 |---|---|
-| `mixed` (default) | Celery worker + Flower UI |
-| `worker` | Celery worker only |
+| `arq` | ARQ worker |
+| `celery` | Celery worker |
 | `flower` | Flower UI only |
 
 **Examples:**
@@ -87,11 +87,7 @@ The worker process manages up to three sub-processes depending on `PGPT_WORKER_M
 <Tabs>
   <Tab title="macOS / Linux">
     ```bash
-    # Default: worker + Flower UI
-    private-gpt worker
-
-    # Worker only, no Flower
-    PGPT_WORKER_MODE=worker private-gpt worker
+    PGPT_WORKER_MODE=celery private-gpt worker
 
     # Custom concurrency and queues
     PGPT_CELERY_QUEUES=ingest,chat PGPT_CELERY_CONCURRENCY=4 private-gpt worker
@@ -99,11 +95,7 @@ The worker process manages up to three sub-processes depending on `PGPT_WORKER_M
   </Tab>
   <Tab title="Windows (PowerShell)">
     ```powershell
-    # Default: worker + Flower UI
-    private-gpt worker
-
-    # Worker only, no Flower
-    $env:PGPT_WORKER_MODE = "worker"
+    $env:PGPT_WORKER_MODE = "celery"
     private-gpt worker
 
     # Custom concurrency and queues
@@ -114,11 +106,7 @@ The worker process manages up to three sub-processes depending on `PGPT_WORKER_M
   </Tab>
   <Tab title="Windows (CMD)">
     ```cmd
-    :: Default: worker + Flower UI
-    private-gpt worker
-
-    :: Worker only, no Flower
-    set PGPT_WORKER_MODE=worker
+    set PGPT_WORKER_MODE=celery
     private-gpt worker
 
     :: Custom concurrency and queues

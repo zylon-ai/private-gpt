@@ -2,7 +2,14 @@ import inspect
 import json
 from typing import Annotated, Any, Literal
 
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    AnyUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from private_gpt.settings.settings_loader import load_active_settings
 
@@ -454,7 +461,45 @@ class PreprocessSettings(BaseModel):
     )
 
 
+class SchedulerSettings(BaseModel):
+    mode: str = Field(
+        default="local",
+        description=(
+            "Scheduler mode name. Built-ins include ``local``, ``arq``, and ``celery``. "
+            "Tests and extensions may register additional provider names."
+        ),
+    )
+    celery_queue: str = Field(
+        default="",
+        description="Celery queue name when mode is 'celery'.",
+    )
+    callback_timeout_seconds: int = Field(
+        default=300,
+        gt=0,
+        description="Maximum time to wait for resumable chat callbacks.",
+    )
+
+
+class SchedulerConfig(BaseModel):
+    ingestion: SchedulerSettings = Field(
+        default_factory=lambda: SchedulerSettings(celery_queue="ingestion"),
+        description="Ingestion worker scheduler configuration.",
+    )
+    chat: SchedulerSettings = Field(
+        default_factory=lambda: SchedulerSettings(celery_queue="chat"),
+        description="Chat worker scheduler configuration.",
+    )
+    tools: SchedulerSettings = Field(
+        default_factory=lambda: SchedulerSettings(celery_queue="tools"),
+        description="Tool worker scheduler configuration.",
+    )
+
+
 class ChatSettings(BaseModel):
+    engine_mode: Literal["loop", "async"] = Field(
+        default="async",
+        description="Chat engine selected behind the runtime feature flag.",
+    )
     allow_use_default_prompt: bool = Field(
         True,
         description="Flag indicating if the chat engine should use default prompts or not.",
@@ -527,10 +572,6 @@ class ChatSettings(BaseModel):
     multiplexing_threshold: int | None = Field(
         None,
         description="The threshold for the number of context items to switch to multiplexing mode.",
-    )
-    maximum_concurrent_requests: int | None = Field(
-        None,
-        description="The maximum number of concurrent requests that can be handled by the chat engine.",
     )
     maximum_blob_size: int = Field(
         25 * 1024 * 1024,
@@ -1054,6 +1095,11 @@ class CelerySettings(BaseModel):
     visibility_timeout: int | None = Field(
         description="The visibility timeout for tasks in seconds",
         default=None,
+    )
+    max_tasks_per_child: int = Field(
+        description="Maximum tasks handled by a stateful Celery child before recycling",
+        default=1000,
+        gt=0,
     )
 
     def __init__(self, **data: Any) -> None:
@@ -1674,6 +1720,42 @@ class Settings(BaseModel):
     skills: SkillSettings
     transformation: TransformationSettings
     semaphore: SemaphoreSettings
+    scheduler: SchedulerConfig = Field(
+        default_factory=SchedulerConfig,
+        description="Scheduler configuration for chat and tool workers.",
+    )
+
+    @model_validator(mode="after")
+    def validate_chat_scheduler_configuration(self) -> "Settings":
+        if self.scheduler.chat.mode not in {"local", "arq"}:
+            raise ValueError(
+                f"Unsupported scheduler.chat.mode={self.scheduler.chat.mode!r}. "
+                "Supported chat scheduler modes are 'local' and 'arq'."
+            )
+
+        if self.scheduler.tools.mode not in {"local", "celery"}:
+            raise ValueError(
+                f"Unsupported scheduler.tools.mode={self.scheduler.tools.mode!r}. "
+                "Supported tool scheduler modes are 'local' and 'celery'."
+            )
+
+        if self.scheduler.tools.mode == "celery" and self.scheduler.chat.mode != "arq":
+            raise ValueError(
+                f"scheduler.tools.mode={self.scheduler.tools.mode!r} requires "
+                "scheduler.chat.mode='arq' so tool callbacks can resume shared "
+                "chat state."
+            )
+
+        if self.scheduler.chat.mode == "local":
+            return self
+
+        if self.stream.broker != "redis":
+            raise ValueError(
+                f"scheduler.chat.mode={self.scheduler.chat.mode!r} requires stream.broker=redis "
+                "because API and chat worker processes must share stream state."
+            )
+
+        return self
 
 
 """

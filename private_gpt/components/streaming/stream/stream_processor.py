@@ -31,6 +31,7 @@ class StreamProcessor:
         event_generator: AsyncGenerator[BaseModel, None],
         event_handler: EventHandler,
         metadata: dict[str, Any] | None = None,
+        mark_completed: bool = True,
     ) -> None:
         """Process a stream of events and push to Redis."""
         try:
@@ -68,10 +69,11 @@ class StreamProcessor:
                     event_data=event_data,
                 )
 
-            await self.stream_service.update_stream_status(
-                correlation_id,
-                StreamStatus.COMPLETED,
-            )
+            if mark_completed:
+                await self.stream_service.update_stream_status(
+                    correlation_id,
+                    StreamStatus.COMPLETED,
+                )
 
         except asyncio.CancelledError:
             await self.stream_service.update_stream_status(
@@ -120,6 +122,7 @@ class StreamProcessor:
         event_generator: AsyncGenerator[BaseModel, None],
         event_handler: EventHandler,
         metadata: dict[str, Any] | None = None,
+        mark_completed: bool = True,
     ) -> asyncio.Task[Any]:
         """Start processing a stream in the background."""
         task: asyncio.Task[Any] = await self.task_manager.create_task(
@@ -130,6 +133,7 @@ class StreamProcessor:
                 event_generator=event_generator,
                 event_handler=event_handler,
                 metadata=metadata,
+                mark_completed=mark_completed,
             ),
             name=f"stream_processor_{correlation_id}",
         )
@@ -137,7 +141,7 @@ class StreamProcessor:
 
     async def cancel_stream_processing(self, correlation_id: str) -> bool:
         """Cancel stream processing."""
-        success = await self.task_manager.cancel_task(correlation_id)
+        success = await self.task_manager.cancel(correlation_id)
         if success:
             await self.stream_service.update_stream_status(
                 correlation_id,

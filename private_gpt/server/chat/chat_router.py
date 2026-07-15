@@ -258,10 +258,10 @@ async def chat_messages(
     chat_facade_service: ChatAsyncFacadeService = request.state.injector.get(
         ChatAsyncFacadeService
     )
-    request_mapper: ChatRequestMapper = request.state.injector.get(ChatRequestMapper)
 
     return await chat_facade_service.chat(
-        request, await request_mapper.create_request_from_body(body)
+        request,
+        body,
     )
 
 
