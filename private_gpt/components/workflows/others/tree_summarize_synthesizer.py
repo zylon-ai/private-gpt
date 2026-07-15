@@ -116,6 +116,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
 
         else:
             # summarize each chunk
+            tasks: list[Coroutine[Any, Any, Any]]
             if self._output_cls is None:
                 tasks = [
                     self._llm.apredict(
@@ -196,6 +197,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
         else:
             # summarize each chunk
             if self._use_async:
+                tasks: list[Coroutine[Any, Any, Any]]
                 if self._output_cls is None:
                     tasks = [
                         self._llm.apredict(
