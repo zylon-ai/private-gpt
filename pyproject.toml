@@ -434,7 +434,6 @@ not-iterable = "ignore"
 inconsistent-mro = "ignore"
 unsupported-operator = "ignore"
 invalid-yield = "ignore"
-call-top-callable = "ignore"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
