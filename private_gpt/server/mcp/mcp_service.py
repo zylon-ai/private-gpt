@@ -157,7 +157,7 @@ def mcp_tool_to_spec(config: McpServerConfig, tool: FunctionTool) -> "ToolSpec":
     discovered = ToolSpec.from_llama_index(tool)
     return rebuild_mcp_tool(
         config=config,
-        tool_name=tool.metadata.name,
+        tool_name=tool.metadata.name or discovered.name or "mcp_tool",
         name=discovered.name,
         type=discovered.type,
         description=discovered.description,

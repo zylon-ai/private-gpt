@@ -157,9 +157,7 @@ class CeleryToolScheduler(BaseToolScheduler):
         del state_ctx
 
         request = request.model_copy(
-            update={
-                "interceptor_paths": tool_execution_interceptor_paths(interceptors)
-            }
+            update={"interceptor_paths": tool_execution_interceptor_paths(interceptors)}
         )
 
         correlation_id = request.context.get("correlation_id")

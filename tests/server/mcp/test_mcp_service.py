@@ -44,9 +44,7 @@ async def test_rebuilt_mcp_tool_uses_task_scoped_client() -> None:
     client.list_tools = AsyncMock(return_value=[_function_tool()])
     client.close = AsyncMock()
 
-    with patch(
-        "private_gpt.server.mcp.mcp_service.McpClient", return_value=client
-    ):
+    with patch("private_gpt.server.mcp.mcp_service.McpClient", return_value=client):
         rebuilt = await rebuild_tool_from_spec(spec)
         result = await rebuilt.acall(query="platform")
 
@@ -62,9 +60,7 @@ async def test_rebuilt_mcp_tool_closes_client_when_tool_is_missing() -> None:
     client.list_tools = AsyncMock(return_value=[])
     client.close = AsyncMock()
 
-    with patch(
-        "private_gpt.server.mcp.mcp_service.McpClient", return_value=client
-    ):
+    with patch("private_gpt.server.mcp.mcp_service.McpClient", return_value=client):
         rebuilt = await rebuild_tool_from_spec(spec)
         with pytest.raises(ValueError, match="no longer available"):
             await rebuilt.acall(query="platform")

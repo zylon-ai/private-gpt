@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 class Cache(Protocol):
-    def get(self, namespace: str, key: str) -> Any | None: ...
+    def get(self, namespace: str, key: str) -> Any | None:
+        ...
 
     def set(
         self,
@@ -23,9 +24,11 @@ class Cache(Protocol):
         key: str,
         value: Any,
         ttl_seconds: int | None = None,
-    ) -> None: ...
+    ) -> None:
+        ...
 
-    def delete(self, namespace: str, key: str) -> None: ...
+    def delete(self, namespace: str, key: str) -> None:
+        ...
 
 
 class MemoryCache:
@@ -60,9 +63,7 @@ class MemoryCache:
         ttl_seconds: int | None = None,
     ) -> None:
         cache_key = self._key(namespace, key)
-        expires_at = (
-            time.monotonic() + ttl_seconds if ttl_seconds is not None else None
-        )
+        expires_at = time.monotonic() + ttl_seconds if ttl_seconds is not None else None
         with self._lock:
             self._values[cache_key] = (expires_at, value)
             self._values.move_to_end(cache_key)

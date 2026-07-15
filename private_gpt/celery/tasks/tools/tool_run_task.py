@@ -30,9 +30,7 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> None:
     try:
         response = await execute_tool_request(
             request,
-            interceptors=resolve_tool_execution_interceptors(
-                request.interceptor_paths
-            ),
+            interceptors=resolve_tool_execution_interceptors(request.interceptor_paths),
         )
         await _notify_completion(request, response)
     except Exception as exc:

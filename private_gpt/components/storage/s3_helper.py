@@ -156,9 +156,7 @@ class S3Helper:
         content = response["Body"].read()
         return io.BytesIO(content)
 
-    async def async_load_file_from_s3(
-        self, s3_url: str, **kwargs: Any
-    ) -> BinaryIO:
+    async def async_load_file_from_s3(self, s3_url: str, **kwargs: Any) -> BinaryIO:
         s3_bucket, s3_key = self._parse_s3_url(s3_url)
         async with self._get_async_s3_client() as s3_client:
             response = await s3_client.get_object(Bucket=s3_bucket, Key=s3_key)
@@ -282,9 +280,10 @@ class S3Helper:
     @staticmethod
     def _is_missing_object(exc: Exception) -> bool:
         response = getattr(exc, "response", None)
-        return isinstance(response, dict) and response.get("Error", {}).get(
-            "Code"
-        ) in {"404", "NoSuchKey"}
+        return isinstance(response, dict) and response.get("Error", {}).get("Code") in {
+            "404",
+            "NoSuchKey",
+        }
 
     @staticmethod
     def _object_metadata(response: dict[str, Any]) -> dict[str, Any]:
