@@ -15,7 +15,7 @@ class DatabaseProcedureInspector(DatabaseObjectInspector):
     def get_inspector_type(self) -> str:
         return DatabaseObjectType.PROCEDURE
 
-    def get_objects(self, schema: str) -> list[InspectedProcedure]:  # type: ignore[override]
+    def get_objects(self, schema: str) -> list[InspectedProcedure]:
         try:
             if self._db_type in ["mssql", "microsoft"]:
                 return self._get_sqlserver_procedures(schema)
