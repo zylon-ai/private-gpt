@@ -104,7 +104,8 @@ def parse_skill_markdown(skill_markdown: str) -> ParsedSkillDocument:
 
 
 def _pydantic_error_to_skill_error(error: dict[str, object]) -> SkillDomainError:
-    loc: tuple[object, ...] = error.get("loc", ())  # type: ignore[assignment]
+    loc_value = error.get("loc", ())
+    loc = loc_value if isinstance(loc_value, tuple) else ()
     error_type = error.get("type", "")
     msg = str(error.get("msg", ""))
     field = str(loc[0]) if loc else ""
