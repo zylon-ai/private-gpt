@@ -59,7 +59,8 @@ class RedisStreamService(StreamService):
             await connection_pool.ensure_connection(connection)
             connection_pool._available_connections.append(connection)
 
-        tasks = [create_connection(client.connection_pool) for _ in range(n)]
+        connection_pool = cast(redis.ConnectionPool, client.connection_pool)
+        tasks = [create_connection(connection_pool) for _ in range(n)]
         await asyncio.gather(*tasks, return_exceptions=True)
 
     def _get_stream_key(self, correlation_id: str) -> str:
