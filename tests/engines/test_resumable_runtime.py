@@ -86,7 +86,9 @@ async def test_memory_iteration_state_aggregates_once_and_cleans_up() -> None:
 
 
 @pytest.mark.asyncio
-async def test_memory_iteration_state_preserves_result_received_before_checkpoint() -> None:
+async def test_memory_iteration_state_preserves_result_received_before_checkpoint() -> (
+    None
+):
     service = InMemoryChatCheckpointStore()
     response = ToolExecutionResponse(
         tool_name="echo",
@@ -408,3 +410,60 @@ def test_resolved_chat_request_is_json_roundtrip_serializable() -> None:
 
     assert set(serialized) == set(ResolvedChatRequest.model_fields)
     assert restored.model_dump(mode="json") == serialized
+
+
+def test_checkpoint_context_stack_roundtrip_restores_durable_layers_and_tools() -> None:
+    from llama_index.core.base.llms.types import ChatMessage, MessageRole
+
+    from private_gpt.components.chat.models.chat_config_models import (
+        ResolvedChatRequest,
+        ResolvedSystemConfig,
+        ResolvedToolConfig,
+        ToolSpec,
+    )
+    from private_gpt.components.context.models.context_layer import (
+        RuntimeInstructionsLayer,
+        ToolDefinitionsLayer,
+    )
+    from private_gpt.components.context.models.context_stack import ContextStack
+    from private_gpt.components.engines.chat.resumable_runner import ResumableChatRunner
+
+    tool = ToolSpec.from_defaults(
+        name="lookup",
+        type="lookup",
+        runtime="server",
+        input_schema={"type": "object", "properties": {}},
+    )
+    request = ResolvedChatRequest(
+        messages=[ChatMessage(role=MessageRole.USER, content="hello")],
+        system=ResolvedSystemConfig(model="default"),
+        tool_config=ResolvedToolConfig(tools=[tool]),
+    )
+    stack = ContextStack(
+        layers=[
+            RuntimeInstructionsLayer(text="keep me", source="runtime"),
+            ToolDefinitionsLayer(tools=[tool], source="mcp"),
+        ]
+    )
+    checkpoint = ChatCheckpoint(
+        correlation_id="execution-context",
+        request_data=request.model_dump(mode="json"),
+        context_stack_data=stack.checkpoint_dump(),
+        stream_type="chat_completion",
+        metadata={},
+        iteration=1,
+    )
+
+    restored_checkpoint = ChatCheckpoint.model_validate_json(
+        checkpoint.model_dump_json()
+    )
+    restored = ResumableChatRunner._context_stack(
+        restored_checkpoint, restored_checkpoint.request_data
+    )
+
+    assert restored.layers[0] == RuntimeInstructionsLayer(
+        text="keep me", source="runtime"
+    )
+    assert len(restored.all_tools()) == 1
+    assert restored.all_tools()[0].name == "lookup"
+    assert all(layer.source != "mcp" for layer in restored.layers)

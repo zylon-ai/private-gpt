@@ -18,6 +18,7 @@ from private_gpt.settings.settings import Settings
 class ChatCheckpoint(BaseModel):
     correlation_id: str
     request_data: dict[str, Any]
+    context_stack_data: dict[str, Any] = Field(default_factory=dict)
     stream_type: str
     metadata: dict[str, Any]
     iteration: int

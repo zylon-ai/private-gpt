@@ -28,6 +28,11 @@ class ContextStack(BaseModel):
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
+    def checkpoint_dump(self) -> dict[str, object]:
+        """Serialize durable layers, excluding hydrated runtime tool callables."""
+        durable_stack = self.remove_layers_of_type(LayerType.TOOL_DEFINITIONS)
+        return durable_stack.model_dump(mode="json")
+
     # ------------------------------------------------------------------
     # Accessors
     # ------------------------------------------------------------------

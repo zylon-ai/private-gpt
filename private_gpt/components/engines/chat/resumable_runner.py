@@ -10,6 +10,9 @@ from llama_index.core.tools import ToolSelection
 from pydantic import Field, TypeAdapter, ValidationError
 
 from private_gpt.components.chat.models.chat_config_models import ResolvedChatRequest
+from private_gpt.components.context.models.context_layer import ToolDefinitionsLayer
+from private_gpt.components.context.models.context_stack import ContextStack
+from private_gpt.components.engines.chat.async_chat_engine import AsyncChatCheckpoint
 from private_gpt.components.engines.chat.checkpoint_store import (
     ChatCheckpoint,
     ChatCheckpointStoreFactory,
@@ -19,10 +22,16 @@ from private_gpt.components.engines.chat.event_channel import BrokerEventChannel
 from private_gpt.components.engines.chat.execution_scheduler import (
     ChatExecutionSchedulerFactory,
 )
-from private_gpt.components.engines.chat.models.chat_state import ChatStatus
+from private_gpt.components.engines.chat.models.chat_state import (
+    ChatInputState,
+    ChatStatus,
+)
 from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
     ToolExecutionHook,
+)
+from private_gpt.components.engines.chat.utils.request_builder import (
+    build_initial_context_stack,
 )
 from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
 from private_gpt.events.event_serializer import StreamingEventHandler
@@ -147,14 +156,19 @@ class ResumableChatRunner:
                 ),
             ]
             state = await engine.resume(
-                saved.checkpoint,
-                self._request(request_data),
-                iteration=saved.iteration,
-                next_block_count=saved.next_block_count,
-                hooks=_RESUME_HOOKS,
-                checkpoint_payload=saved.checkpoint_payload.model_copy(
-                    update={"tool_responses": responses}
+                AsyncChatCheckpoint(
+                    checkpoint=saved.checkpoint,
+                    input=ChatInputState(
+                        request=self._request(request_data),
+                        context_stack=self._context_stack(saved, request_data),
+                    ),
+                    iteration=saved.iteration,
+                    next_block_count=saved.next_block_count,
+                    payload=saved.checkpoint_payload.model_copy(
+                        update={"tool_responses": responses}
+                    ),
                 ),
+                hooks=_RESUME_HOOKS,
                 channel=channel,
             )
             await channel.close()
@@ -209,6 +223,7 @@ class ResumableChatRunner:
             ChatCheckpoint(
                 correlation_id=execution_id,
                 request_data=state.input.request.model_dump(mode="json"),
+                context_stack_data=state.input.context_stack.checkpoint_dump(),
                 stream_type=stream_type,
                 metadata=metadata,
                 iteration=state.runtime.iteration,
@@ -281,6 +296,24 @@ class ResumableChatRunner:
                 for key, value in message.additional_kwargs.items()
             }
         return request
+
+    @staticmethod
+    def _context_stack(
+        checkpoint: ChatCheckpoint, request_data: dict[str, Any]
+    ) -> ContextStack:
+        request = ResumableChatRunner._request(request_data)
+        if not checkpoint.context_stack_data:
+            return build_initial_context_stack(request)
+
+        stack = ContextStack.model_validate(checkpoint.context_stack_data)
+        if request.tool_config.tools:
+            stack = stack.append_layer(
+                ToolDefinitionsLayer(
+                    tools=list(request.tool_config.tools),
+                    source="request",
+                )
+            )
+        return stack
 
     @staticmethod
     def _restore_content_blocks(value: Any) -> Any:
