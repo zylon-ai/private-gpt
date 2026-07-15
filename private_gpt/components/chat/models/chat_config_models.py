@@ -2,7 +2,7 @@ import builtins
 import enum
 import inspect
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from typing import Any, ClassVar, Literal
 
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock
@@ -296,6 +296,10 @@ class ToolSpec(BaseModel):
         if not isinstance(tool, BaseTool):
             raise ValueError("Unsupported tool type. Expected a FunctionTool.")
 
+        partial_params = getattr(tool, "partial_params", None)
+        if not isinstance(partial_params, Mapping):
+            partial_params = None
+
         schema: dict[str, Any] = {}
         if tool.metadata.fn_schema:
             schema = tool.metadata.fn_schema.model_json_schema()
@@ -314,9 +318,7 @@ class ToolSpec(BaseModel):
             async_callback=tool._async_callback
             if hasattr(tool, "_async_callback")
             else None,
-            partial_params=tool.partial_params
-            if hasattr(tool, "partial_params")
-            else None,
+            partial_params=partial_params,
             execution_metadata=None,
         )
 

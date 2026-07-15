@@ -64,9 +64,12 @@ class ContentTree(BaseModel):
         cls, node: TreeNode, mode: TreeMetadataMode = TreeMetadataMode.USER
     ) -> "ContentTree":
         """Recursively convert a TreeNode into a ContentTree."""
+        node_type = getattr(node, "type", None)
+        if not isinstance(node_type, str):
+            node_type = node.get_type()
         return cls(
             id=node.id_,
-            type=node.type if hasattr(node, "type") else node.get_type(),
+            type=node_type,
             content=node.get_content(mode),
             children=[cls.from_node(child, mode=mode) for child in node.children],
         )

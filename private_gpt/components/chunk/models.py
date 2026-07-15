@@ -146,6 +146,10 @@ class Chunk(BaseModel):
             idx = node.node.idx if isinstance(node.node, TreeNode) else 0
             metadata[MetadataChunk.REL_IDX] = idx
 
+        mimetype = getattr(node.node, "mimetype", "text/markdown")
+        if not isinstance(mimetype, str):
+            mimetype = "text/markdown"
+
         return cls(
             object="context.chunk",
             id=node.node.id_,
@@ -164,9 +168,7 @@ class Chunk(BaseModel):
                 if isinstance(node.node, TreeNode)
                 else node.node.get_content()
             ),
-            content_type=node.node.mimetype
-            if hasattr(node.node, "mimetype")
-            else "text/markdown",
+            content_type=mimetype,
             previous_texts=list(node.metadata.get("previous_texts", [])),
             next_texts=list(node.metadata.get("next_texts", [])),
             metadata=metadata,
