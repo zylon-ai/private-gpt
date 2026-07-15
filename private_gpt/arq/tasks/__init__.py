@@ -10,6 +10,7 @@ from arq.worker import func
 from private_gpt.arq.task_registry import get_task_packages
 
 if TYPE_CHECKING:
+    from arq.typing import WorkerCoroutine
     from arq.worker import Function
 
 TaskFn = TypeVar("TaskFn", bound=Callable[..., Any])
@@ -38,7 +39,7 @@ def autodiscover_tasks(package_name: str = __name__) -> list[Function]:
             max_tries = cast(int, getattr(value, "_arq_task_max_tries", 1))
             discovered.append(
                 func(
-                    cast(Callable[..., Any], value),
+                    cast("WorkerCoroutine", value),
                     name=task_name,
                     max_tries=max_tries,
                 )
