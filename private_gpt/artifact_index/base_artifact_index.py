@@ -198,10 +198,9 @@ class ExtendIndex(Generic[IS]):
         self._source = source
         self._embed_size = embed_size
         self._source._transformations = transformations or []
+        insert_batch_size = getattr(self._source, "_insert_batch_size", 512)
         self._insert_batch_size = (
-            self._source._insert_batch_size
-            if hasattr(self._source, "_insert_batch_size")
-            else 512
+            insert_batch_size if isinstance(insert_batch_size, int) else 512
         )
         self._max_truncate_length = max_truncate_length
 
