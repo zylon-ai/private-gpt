@@ -425,9 +425,7 @@ unresolved-import = "ignore"
 invalid-argument-type = "ignore"
 unresolved-attribute = "ignore"
 invalid-assignment = "ignore"
-call-non-callable = "ignore"
 invalid-method-override = "ignore"
-missing-argument = "ignore"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

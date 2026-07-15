@@ -10,6 +10,8 @@ from retry_async.api import retry_call_async  # type: ignore
 
 retry_logger = logging.getLogger(__name__)
 
+AsyncRetryFn = Callable[..., Awaitable[Any]]
+
 
 def retry(
     exceptions: Any = Exception,
@@ -45,9 +47,7 @@ async def retry_context(
     backoff: float = 2.0,
     jitter: float | tuple[float, float] = 0,
     logger: logging.Logger = retry_logger,
-) -> AsyncGenerator[
-    Callable[[Callable[..., Awaitable[Any]], Any], Awaitable[Any]], None
-]:
+) -> AsyncGenerator[AsyncRetryFn, None]:
     async def retry_func(
         func: Callable[..., Awaitable[Any]], *args: Any, **kwargs: Any
     ) -> Any:

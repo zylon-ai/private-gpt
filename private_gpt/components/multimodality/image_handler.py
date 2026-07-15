@@ -362,7 +362,8 @@ class ImageProcessingWorkflow(Workflow):
                     nonlocal count
                     count += 1
 
-                    if not hasattr(self._llm, "astructured_chat"):
+                    structured_chat = getattr(self._llm, "astructured_chat", None)
+                    if not callable(structured_chat):
                         raise NotImplementedError(
                             "LLM does not support structured chat."
                         )
@@ -380,7 +381,7 @@ class ImageProcessingWorkflow(Workflow):
                                 f"Retry {count}: Reduced image quality (iteration {count - 1}/{max_iterations})"
                             )
 
-                        return await self._llm.astructured_chat(
+                        return await structured_chat(
                             response_model, current_messages, **new_kwargs
                         )
                     except Errors.RequestTooLarge as e:
@@ -398,7 +399,7 @@ class ImageProcessingWorkflow(Workflow):
                         )
                     return await _call()
 
-                result = await retry(_call_with_semaphore)  # type: ignore[call-arg]
+                result = await retry(_call_with_semaphore)
                 if isinstance(result, Exception):
                     raise result
                 return result
