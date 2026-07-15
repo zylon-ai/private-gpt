@@ -225,7 +225,7 @@ class DatabaseQueryGenerator:
     _engine: Engine | None
     _connection: Connection | None
     _dialect: str | None
-    _schema_cache: ClassVar[TTLCache] = TTLCache(maxsize=1000, ttl=86400)  # type: ignore
+    _schema_cache: ClassVar[TTLCache] = TTLCache(maxsize=1000, ttl=86400)
     inspector_config: InspectorConfig
     batch_size: int
     timeout_seconds: int | None

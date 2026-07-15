@@ -3,9 +3,9 @@ from datetime import datetime
 
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from llama_index.core.llms import LLM
-from pandasai.agent.state import AgentState  # type: ignore
-from pandasai.core.prompts import BasePrompt  # type: ignore
-from pandasai.llm import LLM as PandasAILLM  # type: ignore
+from pandasai.agent.state import AgentState
+from pandasai.core.prompts import BasePrompt
+from pandasai.llm import LLM as PandasAILLM
 
 
 class PGPTPandasAILLM(PandasAILLM):  # type: ignore[misc]

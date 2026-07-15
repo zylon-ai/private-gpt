@@ -38,10 +38,10 @@ def split_by_regex_sentence_internal(text: str) -> list[str]:
 
 
 def split_by_nltk_sentence_internal(text: str) -> list[str]:
-    from llama_index.core.node_parser.text.utils import (  # type: ignore
+    from llama_index.core.node_parser.text.utils import (
         split_by_sentence_tokenizer_internal,
     )
-    from nltk.tokenize import PunktSentenceTokenizer  # type: ignore
+    from nltk.tokenize import PunktSentenceTokenizer
 
     tokenizer = PunktSentenceTokenizer()
     return split_by_sentence_tokenizer_internal(text, tokenizer)

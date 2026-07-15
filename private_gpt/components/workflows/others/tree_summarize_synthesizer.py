@@ -143,7 +143,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                 jitter=(0.0, 10.0),
             )
             if self._output_cls is not None:
-                summaries = [summary.model_dump_json() for summary in summary_responses]  # type: ignore
+                summaries = [summary.model_dump_json() for summary in summary_responses]
             else:
                 summaries = summary_responses
 
@@ -250,7 +250,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                         )
                         for text_chunk in text_chunks
                     ]
-                    summaries = [summary.model_dump_json() for summary in summaries]  # type: ignore
+                    summaries = [summary.model_dump_json() for summary in summaries]
 
             # recursively summarize the summaries
             return self.get_response(

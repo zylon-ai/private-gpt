@@ -442,8 +442,8 @@ class ImageProcessingWorkflow(Workflow):
             return image_block
 
         try:
-            import cv2  # type: ignore
-            import numpy as np  # type: ignore
+            import cv2
+            import numpy as np
 
             image_b = image_block.resolve_image()
             image_b.seek(0)

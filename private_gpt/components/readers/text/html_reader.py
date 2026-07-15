@@ -1,7 +1,7 @@
 import re
 
 from bs4 import BeautifulSoup
-from markdownify import markdownify  # type: ignore
+from markdownify import markdownify
 
 from private_gpt.components.markdown.markdown_helper import MarkdownHelper
 from private_gpt.components.readers.text.text_reader import TextReader

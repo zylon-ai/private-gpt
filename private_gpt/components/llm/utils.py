@@ -4,9 +4,9 @@ import json
 from json import JSONDecodeError, JSONDecoder
 from typing import Any
 
-import partial_json_parser  # type: ignore
-from partial_json_parser.core.exceptions import MalformedJSON  # type: ignore
-from partial_json_parser.core.options import Allow  # type: ignore
+import partial_json_parser
+from partial_json_parser.core.exceptions import MalformedJSON
+from partial_json_parser.core.options import Allow
 
 _KNOWN_EXTRA_KEYS = frozenset({"tool_calls", "tool_call_id"})
 

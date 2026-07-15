@@ -34,7 +34,7 @@ def _enable_sync_send_task(
     if current_settings.celery.use_workers:
         return
 
-    def send_task_sync(name, args=(), kwargs=None, **opts) -> Any:  # type: ignore
+    def send_task_sync(name, args=(), kwargs=None, **opts) -> Any:
         # Execute the task immediately, instead of using a worker
         # Same as always_eager mode, but for send_task()
         if kwargs is None:

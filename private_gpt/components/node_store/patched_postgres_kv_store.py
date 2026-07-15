@@ -2,13 +2,13 @@ import logging
 
 import psycopg2
 import sqlalchemy
-from llama_index.storage.kvstore.postgres import PostgresKVStore  # type: ignore
+from llama_index.storage.kvstore.postgres import PostgresKVStore
 from sqlalchemy.orm import Session, sessionmaker
 
 logger = logging.getLogger(__name__)
 
 
-class PatchedPostgresKVStore(PostgresKVStore):  # type: ignore
+class PatchedPostgresKVStore(PostgresKVStore):
     """Patched PostgresKVStore.
 
     Our tables names contain "-" (they are uuids),

@@ -19,15 +19,15 @@ from llama_index.core.vector_stores.types import (
     VectorStoreQueryMode,
     VectorStoreQueryResult,
 )
-from llama_index.vector_stores.qdrant import (  # type: ignore
+from llama_index.vector_stores.qdrant import (
     QdrantVectorStore,
 )
-from llama_index.vector_stores.qdrant.base import (  # type: ignore
+from llama_index.vector_stores.qdrant.base import (
     DEFAULT_DENSE_VECTOR_NAME,
     DEFAULT_SPARSE_VECTOR_NAME_OLD,
     LEGACY_UNNAMED_VECTOR,
 )
-from llama_index.vector_stores.qdrant.utils import (  # type: ignore
+from llama_index.vector_stores.qdrant.utils import (
     HybridFusionCallable,
     SparseEncoderCallable,
     relative_score_fusion,
@@ -72,7 +72,7 @@ _JITTER = (5, 25)
 _COLLECTION_INITIALIZED: dict[str, bool] = {}
 
 
-class PatchedQdrantVectorStore(QdrantVectorStore):  # type: ignore
+class PatchedQdrantVectorStore(QdrantVectorStore):
     """QdrantVectorStore impl. that ensures collection creation to prevent crashes.
 
     This class, PatchedQdrantVectorStore, is a modified version of QdrantVectorStore.
@@ -130,7 +130,7 @@ class PatchedQdrantVectorStore(QdrantVectorStore):  # type: ignore
         # Call parent constructor
         super().__init__(
             # Workaround to avoid calling exist collection
-            aclient=object(),  # type: ignore
+            aclient=object(),
             collection_name=collection_name,
             # Disable hybrid search to avoid client conflicts
             enable_hybrid=False,
@@ -221,7 +221,7 @@ class PatchedQdrantVectorStore(QdrantVectorStore):  # type: ignore
         indexes: dict[str, models.KeywordIndexType] | None = None,
         on_disk: bool = False,
     ) -> None:
-        if self._collection_initialized:  # type: ignore
+        if self._collection_initialized:
             logger.debug("Collection already initialized")
             return
 
@@ -231,7 +231,7 @@ class PatchedQdrantVectorStore(QdrantVectorStore):  # type: ignore
             return
 
         if not self._client.collection_exists(collection_name=collection_name):
-            from qdrant_client.qdrant_fastembed import (  # type: ignore
+            from qdrant_client.qdrant_fastembed import (
                 IDF_EMBEDDING_MODELS,
             )
 
@@ -631,7 +631,7 @@ class PatchedQdrantVectorStore(QdrantVectorStore):  # type: ignore
         if node_ids is not None:
             should = [
                 HasIdCondition(
-                    has_id=node_ids,  # type: ignore
+                    has_id=node_ids,
                 )
             ]
             # If we pass a node_ids list,
@@ -643,11 +643,11 @@ class PatchedQdrantVectorStore(QdrantVectorStore):  # type: ignore
         if filters is not None:
             filter = self._build_subfilter(filters)
             if filter.should is None:
-                filter.should = should  # type: ignore
+                filter.should = should
             else:
-                filter.should.extend(should)  # type: ignore
+                filter.should.extend(should)
         else:
-            filter = Filter(should=should)  # type: ignore
+            filter = Filter(should=should)
 
         # If we pass an empty list, Qdrant will not return any results
         filter.must = (
@@ -748,7 +748,7 @@ class PatchedQdrantVectorStore(QdrantVectorStore):  # type: ignore
         if node_ids is not None:
             should = [
                 HasIdCondition(
-                    has_id=node_ids,  # type: ignore
+                    has_id=node_ids,
                 )
             ]
             # If we pass a node_ids list,
@@ -760,11 +760,11 @@ class PatchedQdrantVectorStore(QdrantVectorStore):  # type: ignore
         if filters is not None:
             filter = await asyncio.to_thread(self._build_subfilter, filters)
             if filter.should is None:
-                filter.should = should  # type: ignore
+                filter.should = should
             else:
-                filter.should.extend(should)  # type: ignore
+                filter.should.extend(should)
         else:
-            filter = Filter(should=should)  # type: ignore
+            filter = Filter(should=should)
 
         # If we pass an empty list, Qdrant will not return any results
         filter.must = (
@@ -1203,7 +1203,7 @@ class PatchedQdrantVectorStore(QdrantVectorStore):  # type: ignore
 
             return await self.aparse_to_query_result(hybrid_response[0].points)
         else:
-            response = await self._aclient.query_points(  # type: ignore
+            response = await self._aclient.query_points(
                 collection_name=self.collection_name,
                 query=query_embedding,
                 using=self.dense_vector_name,

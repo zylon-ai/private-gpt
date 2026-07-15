@@ -14,7 +14,7 @@ class OpenAIGPTEmbeddingFactory(EmbeddingFactory):
         self, model_config: EmbeddingModelConfig
     ) -> tuple[BaseEmbedding, str | None]:
         try:
-            from llama_index.embeddings.openai import (  # type: ignore
+            from llama_index.embeddings.openai import (
                 OpenAIEmbedding,
             )
         except ImportError as e:

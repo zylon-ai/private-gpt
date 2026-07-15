@@ -13,7 +13,7 @@ from typing import Any
 
 from llama_index.core.ingestion import arun_transformations
 from llama_index.core.schema import BaseNode, Document
-from pptx2md import convert  # type: ignore
+from pptx2md import convert
 
 from private_gpt.celery.notify import NotifyProtocol
 from private_gpt.components.ingest.progress.errors import IngestionParseErrors

@@ -110,7 +110,7 @@ class EmailContent(BaseModel):
             parts.append("</ul>")
 
         try:
-            from markdownify import markdownify as md  # type: ignore
+            from markdownify import markdownify as md
 
             markdown: str = md(
                 "\n".join(parts),
@@ -152,7 +152,7 @@ class EmailTextReader(TextReader):
         html_converter.ignore_images = False
         html_converter.ignore_tables = False
 
-        super().__init__(  # type: ignore
+        super().__init__(
             include_attachments=include_attachments,
             html_to_text=html_to_text,
             html_converter=html_converter,

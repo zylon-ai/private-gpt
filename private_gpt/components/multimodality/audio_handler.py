@@ -778,7 +778,7 @@ class AudioProcessingWorkflow(Workflow):
         try:
             import io
 
-            from pydub import AudioSegment  # type: ignore
+            from pydub import AudioSegment
 
             audio_data = audio_block.resolve_audio()
             if isinstance(audio_data, bytes):
@@ -881,10 +881,10 @@ class AudioProcessingWorkflow(Workflow):
         try:
             import io
 
-            import noisereduce as nr  # type: ignore
-            import numpy as np  # type: ignore
-            from pydub import AudioSegment  # type: ignore
-            from pydub.effects import normalize  # type: ignore
+            import noisereduce as nr
+            import numpy as np
+            from pydub import AudioSegment
+            from pydub.effects import normalize
 
             audio_data = audio_block.resolve_audio()
             if isinstance(audio_data, bytes):

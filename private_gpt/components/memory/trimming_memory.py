@@ -141,7 +141,7 @@ class TrimmingMemory(BaseChatStoreMemory):
             allow_partial=allow_partial,
             start_on=start_on,
             end_on=end_on,
-            tokenizer_fn=tokenizer_fn,  # type: ignore
+            tokenizer_fn=tokenizer_fn,
             text_splitter=text_splitter or _default_text_splitter,
             chat_store=chat_store or SimpleChatStore(),
             chat_store_key=chat_store_key,

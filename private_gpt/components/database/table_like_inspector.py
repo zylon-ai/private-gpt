@@ -88,9 +88,9 @@ class DatabaseTableLikeInspector(DatabaseObjectInspector, ABC):
         if not self._engine:
             return None
         conn = self._engine.connect()
-        meta = inspect(self._engine)  # type: ignore
+        meta = inspect(self._engine)
         try:
-            data = meta.get_table_comment(table_name=table, schema=schema)  # type: ignore
+            data = meta.get_table_comment(table_name=table, schema=schema)
             if data and isinstance(data, dict):
                 return data.get("text") or None
         except Exception:

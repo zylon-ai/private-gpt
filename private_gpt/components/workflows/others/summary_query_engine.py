@@ -291,7 +291,7 @@ class SummaryQueryEngine(BaseQueryEngine):
         nodes: list[NodeWithScore],
         additional_source_nodes: Sequence[NodeWithScore] | None = None,
     ) -> RESPONSE_TYPE:
-        return self._response_synthesizer.synthesize(  # type: ignore
+        return self._response_synthesizer.synthesize(
             query=query_bundle,
             nodes=nodes,
             **self._response_synthesizer_kwargs,
@@ -303,7 +303,7 @@ class SummaryQueryEngine(BaseQueryEngine):
         nodes: list[NodeWithScore],
         additional_source_nodes: Sequence[NodeWithScore] | None = None,
     ) -> RESPONSE_TYPE:
-        return await self._response_synthesizer.asynthesize(  # type: ignore
+        return await self._response_synthesizer.asynthesize(
             query=query_bundle,
             nodes=nodes,
             **self._response_synthesizer_kwargs,

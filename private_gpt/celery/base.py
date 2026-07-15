@@ -7,9 +7,9 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
-import nest_asyncio  # type: ignore
+import nest_asyncio
 from celery.app.task import Task
-from celery.backends.redis import RedisBackend  # type: ignore
+from celery.backends.redis import RedisBackend
 from celery.exceptions import Retry, SoftTimeLimitExceeded
 from celery.utils.log import get_task_logger
 
@@ -55,7 +55,7 @@ class RedisFailureRetryTracker:
         self._expiry = expiry
 
     def get(self, task_id: str) -> int:
-        from celery import current_app  # type: ignore
+        from celery import current_app
 
         key = self._get_key(task_id)
         backend = current_app.backend
@@ -63,7 +63,7 @@ class RedisFailureRetryTracker:
         return int(backend.client.get(key) or 0)
 
     def increment(self, task_id: str) -> int:
-        from celery import current_app  # type: ignore
+        from celery import current_app
 
         key = self._get_key(task_id)
         backend = current_app.backend
@@ -75,7 +75,7 @@ class RedisFailureRetryTracker:
         return int(result[0])
 
     def decrement(self, task_id: str) -> int:
-        from celery import current_app  # type: ignore
+        from celery import current_app
 
         key = self._get_key(task_id)
         backend = current_app.backend
@@ -87,7 +87,7 @@ class RedisFailureRetryTracker:
         return int(result[0])
 
     def cleanup(self, task_id: str) -> None:
-        from celery import current_app  # type: ignore
+        from celery import current_app
 
         key = self._get_key(task_id)
         backend = current_app.backend
@@ -117,7 +117,7 @@ class MaxFailureRetriesExceeded(Exception):
     pass
 
 
-class _BackgroundTask(Task):  # type: ignore
+class _BackgroundTask(Task):
     """Task with controlled and failure retry capabilities."""
 
     abstract = True

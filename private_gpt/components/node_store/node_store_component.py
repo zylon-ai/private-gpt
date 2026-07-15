@@ -40,11 +40,11 @@ def _simple_index_store(settings: Settings, collection: str) -> BaseIndexStore:
 
 def _postgres_index_store(settings: Settings, collection: str) -> BaseIndexStore:
     try:
-        from llama_index.storage.index_store.postgres import (  # type: ignore
+        from llama_index.storage.index_store.postgres import (
             PostgresIndexStore,
         )
 
-        from private_gpt.components.node_store.patched_postgres_kv_store import (  # type: ignore
+        from private_gpt.components.node_store.patched_postgres_kv_store import (
             PatchedPostgresKVStore,
         )
     except ImportError as e:

@@ -6,8 +6,8 @@ from typing import (
     cast,
 )
 
-from retry_async import retry as retry_untyped  # type: ignore
-from retry_async.api import retry_call_async  # type: ignore
+from retry_async import retry as retry_untyped
+from retry_async.api import retry_call_async
 
 retry_logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def retry(
         jitter=cast(float, jitter),
         logger=logger,
     )
-    return wrapped  # type: ignore
+    return wrapped
 
 
 @asynccontextmanager

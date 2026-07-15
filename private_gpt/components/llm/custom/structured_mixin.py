@@ -26,8 +26,8 @@ class StructuredChatMixin:
         output_cls: type[Model],
         flags: Any,
     ) -> "Model | FlexibleModel | None":
-        from partial_json_parser.core.exceptions import MalformedJSON  # type: ignore
-        from partial_json_parser.core.options import Allow  # type: ignore  # noqa: F401
+        from partial_json_parser.core.exceptions import MalformedJSON
+        from partial_json_parser.core.options import Allow  # noqa: F401
 
         from private_gpt.components.llm.utils import partial_json_loads
 
@@ -130,7 +130,7 @@ class StructuredChatMixin:
         reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
         **kwargs: Any,
     ) -> Generator[Model | FlexibleModel, None, None]:
-        from partial_json_parser.core.options import Allow  # type: ignore
+        from partial_json_parser.core.options import Allow
 
         from private_gpt.components.llm.custom.base import StructuredOutputsParams
 
@@ -236,7 +236,7 @@ class StructuredChatMixin:
         reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
         **kwargs: Any,
     ) -> typing.AsyncGenerator[Model | FlexibleModel, None]:
-        from partial_json_parser.core.options import Allow  # type: ignore
+        from partial_json_parser.core.options import Allow
 
         from private_gpt.components.llm.custom.base import StructuredOutputsParams
 

@@ -793,7 +793,7 @@ class MistralTokenizer(TokenizerBase):
 
         # Keep certain special tokens like tool_calls
         non_skip_special_tokens_ids = {
-            self.tokenizer.get_control_token(SpecialTokens.tool_calls),  # type: ignore
+            self.tokenizer.get_control_token(SpecialTokens.tool_calls),
         }
 
         if isinstance(self.instruct, InstructTokenizerV13):

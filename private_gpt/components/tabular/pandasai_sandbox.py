@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any, ClassVar, TypeVar
 
 import pandas as pd
-from pandasai import Sandbox  # type: ignore
-from pandasai.exceptions import CodeExecutionError  # type: ignore
+from pandasai import Sandbox
+from pandasai.exceptions import CodeExecutionError
 
 from private_gpt.components.sandbox.base import (
     SandboxCodeOptions,

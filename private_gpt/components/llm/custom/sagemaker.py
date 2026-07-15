@@ -6,7 +6,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
-import boto3  # type: ignore
+import boto3
 from aiobotocore.session import get_session
 from llama_index.core.base.llms.generic_utils import (
     completion_response_to_chat_response,

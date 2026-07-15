@@ -25,8 +25,8 @@ def _get_exception_types() -> tuple[type[BaseException], ...]:
     base_exceptions = (ConnectionError, TimeoutError, OSError)
 
     try:
-        from grpc.aio import AioRpcError  # type: ignore
-        from tritonclient.utils import InferenceServerException  # type: ignore
+        from grpc.aio import AioRpcError
+        from tritonclient.utils import InferenceServerException
 
         return *base_exceptions, AioRpcError, InferenceServerException
     except ImportError:

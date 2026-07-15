@@ -48,7 +48,7 @@ async def bounded_concurrent_execute(
 
     try:
         scheduled_tasks = [asyncio.create_task(execute_with_control(c)) for c in tasks]
-        return await asyncio.gather(*scheduled_tasks)  # type: ignore
+        return await asyncio.gather(*scheduled_tasks)
     except asyncio.CancelledError:
         await _clean_up_tasks(scheduled_tasks)
         raise

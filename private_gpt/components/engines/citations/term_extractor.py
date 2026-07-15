@@ -2,10 +2,10 @@ import re
 from typing import Any
 
 from injector import singleton
-from langdetect import detect  # type: ignore
-from nltk import WordNetLemmatizer, pos_tag  # type: ignore
-from nltk.corpus import stopwords  # type: ignore
-from nltk.tokenize import word_tokenize  # type: ignore
+from langdetect import detect
+from nltk import WordNetLemmatizer, pos_tag
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
 
 SUPPORTED_LANGUAGES = {
     "en": "english",

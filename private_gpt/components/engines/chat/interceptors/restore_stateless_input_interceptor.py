@@ -50,8 +50,8 @@ class RestoreStatelessInputInterceptorRequest(ChatRequestLoopInterceptor):
         if not reset_types:
             return current
 
-        original_by_type = defaultdict(deque)  # type: ignore
-        current_by_type = defaultdict(deque)  # type: ignore
+        original_by_type = defaultdict(deque)
+        current_by_type = defaultdict(deque)
         for layer in original.layers:
             original_by_type[layer.type].append(layer)
         for layer in current.layers:

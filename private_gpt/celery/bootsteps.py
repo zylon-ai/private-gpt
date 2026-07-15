@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Any, ClassVar
 
-from celery import bootsteps  # type: ignore
+from celery import bootsteps
 from celery.signals import (
     worker_process_init,
     worker_process_shutdown,
@@ -21,7 +21,7 @@ HEARTBEAT_FILE = Path("/tmp/celery_worker_heartbeat")
 STATEFUL_WARMUP_LOCK = Path("/tmp/stateful_warmup.lock")
 
 
-class LivenessProbe(bootsteps.StartStopStep):  # type: ignore
+class LivenessProbe(bootsteps.StartStopStep):
     """Liveness probe for Celery worker.
 
     Code adapted from:

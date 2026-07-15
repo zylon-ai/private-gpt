@@ -28,13 +28,13 @@ DEFAULT_DISCOVERY_TIMEOUT = 3.0
 def _probe_embed_dim(api_base: str, api_key: str | None, model_name: str) -> int | None:
     try:
         if is_openai_api_base(api_base):
-            from llama_index.embeddings.openai import OpenAIEmbedding  # type: ignore
+            from llama_index.embeddings.openai import OpenAIEmbedding
 
             embedding = OpenAIEmbedding(
                 api_base=api_base, api_key=api_key, model=model_name
             )
         else:
-            from llama_index.embeddings.openai_like import (  # type: ignore
+            from llama_index.embeddings.openai_like import (
                 OpenAILikeEmbedding,
             )
 

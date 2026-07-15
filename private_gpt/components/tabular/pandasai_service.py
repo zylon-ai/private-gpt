@@ -4,13 +4,13 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import pandas as pd
-from pandasai import (  # type: ignore
+from pandasai import (
     ConfigManager,
     DataFrame,
     Sandbox,
     VirtualDataFrame,
 )
-from pandasai.core.response import (  # type: ignore
+from pandasai.core.response import (
     BaseResponse,
     ChartResponse,
     ErrorResponse,

@@ -1,8 +1,8 @@
 import sqlalchemy
-from llama_index.storage.kvstore.postgres import PostgresKVStore  # type: ignore
+from llama_index.storage.kvstore.postgres import PostgresKVStore
 
 
-class PatchedPostgresKVStore(PostgresKVStore):  # type: ignore
+class PatchedPostgresKVStore(PostgresKVStore):
     """Patched PostgresKVStore that escapes the table name.
 
     Our tables names contain "-" (they are uuids),

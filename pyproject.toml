@@ -419,7 +419,6 @@ runtime-evaluated-decorators = ["injector.inject"]
 python-version = "3.11"
 
 [tool.ty.rules]
-unused-type-ignore-comment = "ignore"
 possibly-missing-submodule = "ignore"
 unresolved-import = "ignore"
 

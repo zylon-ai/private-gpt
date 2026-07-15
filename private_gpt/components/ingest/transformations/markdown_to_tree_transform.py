@@ -37,7 +37,7 @@ class MarkdownTreeNodeParser(TransformComponent):
     )
 
     markdown_reader: Any = Field(
-        default=create_markdown(renderer=HTMLRenderer(), plugins=["strikethrough", "table"]),  # type: ignore
+        default=create_markdown(renderer=HTMLRenderer(), plugins=["strikethrough", "table"]),
         description="Markdown parser.",
         exclude=True,
     )
@@ -227,7 +227,7 @@ class MarkdownTreeNodeParser(TransformComponent):
 
     def _convert_tag_to_markdown(self, element: Tag | NavigableString) -> str:
         """Convert a BeautifulSoup element to markdown while preserving formatting."""
-        from markdownify import markdownify as md  # type: ignore
+        from markdownify import markdownify as md
 
         if isinstance(element, NavigableString):
             return element

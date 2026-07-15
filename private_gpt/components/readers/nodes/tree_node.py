@@ -429,7 +429,7 @@ class TreeNode(BaseNode, ABC):
         """Print the tree."""
         from private_gpt.components.readers.nodes.node_print import TreePrinter
 
-        TreePrinter.print(  # type: ignore
+        TreePrinter.print(
             self,
             indent_size=indent,
         )
