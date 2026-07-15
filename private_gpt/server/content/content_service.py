@@ -88,14 +88,18 @@ class ContentService:
             context_filter.metadata_filter,
             limit=1,
         )
-        if not nodes or not hasattr(nodes[0], "root_id"):
+        if not nodes:
+            return None
+
+        root_id = getattr(nodes[0], "root_id", None)
+        if not isinstance(root_id, str) or not root_id:
             return None
 
         root_nodes = self.node_store_component.filtered_nodes(
             context_filter.collection,
             [artifact],
             context_filter.metadata_filter,
-            node_ids=[nodes[0].root_id],
+            node_ids=[root_id],
             limit=1,
         )
         return cast(TreeNode, root_nodes[0]) if root_nodes else None

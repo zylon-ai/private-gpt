@@ -210,7 +210,9 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
     ) -> dict[str, DocumentRootNode]:
         """Load root nodes for the hit nodes."""
         root_ids = [
-            node.node.root_id for node in hit_nodes if hasattr(node.node, "root_id")
+            node.node.root_id
+            for node in hit_nodes
+            if isinstance(node.node, TreeNode) and node.node.root_id
         ]
         unique_root_ids = {root_id for root_id in root_ids if root_id}
 
@@ -395,7 +397,7 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
         root_ids = [
             node.node.root_id
             for node in hit_nodes
-            if hasattr(node.node, "root_id") and node.node.root_id
+            if isinstance(node.node, TreeNode) and node.node.root_id
         ]
         root_nodes_map = self._get_or_load_root_nodes(root_ids)
         result = [
