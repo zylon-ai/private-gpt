@@ -277,8 +277,10 @@ class DatabaseFunctionsInspector(DatabaseObjectInspector):
                     parameter.name = param_name
                     parameter.data_type = param_type
                     parameter.comment = None
+                    assert current_function.parameters is not None
                     current_function.parameters.append(parameter)
                 elif param_direction == "R" and param_type:
+                    assert current_function.return_types is not None
                     current_function.return_types.append(
                         f"{param_name if param_name else''} {param_type}"
                     )

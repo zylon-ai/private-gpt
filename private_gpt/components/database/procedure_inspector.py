@@ -275,8 +275,10 @@ class DatabaseProcedureInspector(DatabaseObjectInspector):
                     parameter.name = param_name
                     parameter.data_type = param_type
                     parameter.comment = None
+                    assert current_procedure.parameters is not None
                     current_procedure.parameters.append(parameter)
                 elif param_direction == "O" and param_type:
+                    assert current_procedure.return_types is not None
                     current_procedure.return_types.append(
                         f"{param_name if param_name else ''} {param_type}"
                     )
