@@ -88,16 +88,16 @@ class UriArtifact(Artifact):
     type: Literal["uri"] = Field(default="uri", description="Input type discriminator")
     value: str = Field(..., description="URI to download from")
 
-    def extract_filename(self, original_filename: str | None = None) -> str:
-        if original_filename:
-            return original_filename
+    def extract_filename(self, fallback_name: str | None = None) -> str:
+        if fallback_name:
+            return fallback_name
         try:
             # Attempt to extract filename from the URL
             parsed = urlparse(self.value)
             filename = Path(parsed.path).name
-            return filename if filename else original_filename or "downloaded_file"
+            return filename if filename else fallback_name or "downloaded_file"
         except Exception:
-            return original_filename or "downloaded_file"
+            return fallback_name or "downloaded_file"
 
     def to_binary_content(self, filename: str | None = None) -> BinaryContent:
         binary_data = load_file_from_uri(self.value)
