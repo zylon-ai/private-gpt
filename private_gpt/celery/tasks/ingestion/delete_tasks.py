@@ -20,7 +20,7 @@ DELETE_INGESTED_TASK_NAME = "private_gpt.ingestion.delete"
 DELETE_INGESTED_CALLBACK_TASK_NAME = "delete_ingested_task"
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[call-overload,misc]
     name=DELETE_INGESTED_TASK_NAME,
     base=StatelessBackgroundTask,
     callback_task_name=DELETE_INGESTED_CALLBACK_TASK_NAME,
