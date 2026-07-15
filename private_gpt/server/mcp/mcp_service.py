@@ -137,6 +137,11 @@ class McpClient:
 
         return tool_list
 
+    async def close(self) -> None:
+        """Close the underlying MCP session in the task that owns it."""
+        if self.client is not None:
+            await self.client.close()
+
 
 @singleton
 class McpService:
@@ -147,35 +152,66 @@ class McpService:
 
 def mcp_tool_to_spec(config: McpServerConfig, tool: FunctionTool) -> "ToolSpec":
     """Convert a discovered MCP tool into a durable, rebuildable tool spec."""
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+
+    discovered = ToolSpec.from_llama_index(tool)
+    return rebuild_mcp_tool(
+        config=config,
+        tool_name=tool.metadata.name,
+        name=discovered.name,
+        type=discovered.type,
+        description=discovered.description,
+        input_schema=discovered.input_schema,
+    )
+
+
+def rebuild_mcp_tool(
+    config: McpServerConfig,
+    tool_name: str,
+    name: str | None,
+    type: str | None,
+    description: str | None,
+    input_schema: dict[str, object] | None,
+) -> "ToolSpec":
+    """Build an MCP tool whose client session is scoped to each invocation."""
     from private_gpt.components.chat.models.chat_config_models import (
         ToolExecutionMetadata,
         ToolSpec,
     )
 
-    spec = ToolSpec.from_llama_index(tool)
-    return spec.model_copy(
-        update={
-            "execution_metadata": ToolExecutionMetadata(
-                rebuild_callable=(
-                    "private_gpt.server.mcp.mcp_service:rebuild_mcp_tool"
-                ),
-                rebuild_kwargs={
-                    "config": config,
-                    "tool_name": tool.metadata.name,
-                },
+    async def invoke_mcp_tool(**kwargs: object) -> object:
+        client = McpClient(config)
+        try:
+            tools = await client.list_tools()
+            for tool in tools:
+                if tool.metadata.name == tool_name:
+                    return await tool.async_fn(**kwargs)
+            raise ValueError(
+                f"MCP tool {tool_name!r} is no longer available from "
+                f"server {config.name!r}."
             )
-        }
-    )
+        finally:
+            await client.close()
 
-
-async def rebuild_mcp_tool(config: McpServerConfig, tool_name: str) -> "ToolSpec":
-    """Reconnect to an MCP server and rebuild one named tool."""
-    tools = await McpClient(config).list_tools()
-    for tool in tools:
-        if tool.metadata.name == tool_name:
-            return mcp_tool_to_spec(config, tool)
-    raise ValueError(
-        f"MCP tool {tool_name!r} is no longer available from server {config.name!r}."
+    rebuild_kwargs = {
+        "config": config,
+        "tool_name": tool_name,
+        "name": name,
+        "type": type,
+        "description": description,
+        "input_schema": input_schema,
+    }
+    return ToolSpec.from_defaults(
+        name=name or tool_name,
+        type=type,
+        runtime="server",
+        description=description,
+        input_schema=input_schema,
+        async_fn=invoke_mcp_tool,
+        execution_metadata=ToolExecutionMetadata(
+            rebuild_callable="private_gpt.server.mcp.mcp_service:rebuild_mcp_tool",
+            rebuild_kwargs=rebuild_kwargs,
+        ),
     )
 
 
