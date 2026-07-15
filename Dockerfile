@@ -1,4 +1,5 @@
 ARG EXTRAS="core"
+ARG PLAYWRIGHT_VERSION="1.60.0"
 
 FROM python:3.11.10-slim-bookworm AS base
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
@@ -113,6 +114,7 @@ COPY ui/ ui
 FROM base AS downloads
 WORKDIR /home/worker/app
 ARG EXTRAS
+ARG PLAYWRIGHT_VERSION
 ARG PGPT_DOWNLOAD_NLTK
 ARG PGPT_DOWNLOAD_TIKTOKEN_CACHE
 ARG PGPT_DOWNLOAD_TIKTOKEN_ENCODINGS
@@ -149,13 +151,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     if [ "$resolved_download_tiktoken_cache" = "1" ] || [ "$resolved_download_tiktoken_encodings" = "1" ]; then \
       requested_packages="$requested_packages tiktoken"; \
     fi; \
-    if [ "$resolved_download_playwright" = "1" ]; then \
-      requested_packages="$requested_packages playwright"; \
-    fi; \
     if [ -n "$requested_packages" ]; then \
       export REQUESTED_PACKAGES="$requested_packages"; \
       locked_packages="$(python3 -c 'import os, sys, tomllib; requested = [pkg for pkg in os.environ.get("REQUESTED_PACKAGES", "").split() if pkg]; lock = tomllib.load(open("uv.lock", "rb")); versions = {pkg["name"]: pkg["version"] for pkg in lock.get("package", []) if pkg.get("name") in requested and "version" in pkg}; missing = [pkg for pkg in requested if pkg not in versions]; sys.exit("Missing locked version(s) in uv.lock for: " + ", ".join(missing)) if missing else print(" ".join(f"{pkg}=={versions[pkg]}" for pkg in requested))')"; \
       uv pip install --system $locked_packages; \
+    fi; \
+    if [ "$resolved_download_playwright" = "1" ]; then \
+      uv pip install --system "playwright==$PLAYWRIGHT_VERSION"; \
     fi; \
     if [ "$resolved_download_nltk" = "1" ]; then \
       python3 -c "import nltk, zipfile; from pathlib import Path; download_dir=Path('models/nltk_cache'); packages=('punkt_tab', 'punkt', 'averaged_perceptron_tagger_eng', 'averaged_perceptron_tagger', 'stopwords', 'wordnet'); [nltk.download(p, download_dir=str(download_dir), raise_on_error=True) for p in packages]; [(lambda path: (lambda zf: (zf.extractall(path.parent), zf.close()))(zipfile.ZipFile(path)))(path) for path in download_dir.rglob('*.zip')]"; \
