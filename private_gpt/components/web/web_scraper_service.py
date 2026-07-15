@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-import html2text
+import html2text  # ty:ignore[unresolved-import]
 from injector import inject
 from pydantic import BaseModel
 
@@ -115,7 +115,7 @@ class _BrowserPool:
             if self._browser is None or not self._browser.is_connected():
                 if self._browser is not None:
                     logger.warning("Browser was disconnected, relaunching")
-                from playwright.async_api import (  # type: ignore[import-not-found]
+                from playwright.async_api import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
                     async_playwright,
                 )
 
@@ -195,7 +195,7 @@ class _BrowserPool:
         url = cfg.https_server or cfg.http_server  # decided once, no dead code
         if not url:
             return None
-        from playwright.async_api import ProxySettings
+        from playwright.async_api import ProxySettings  # ty:ignore[unresolved-import]
 
         return ProxySettings(
             server=f"{url.scheme}://{url.host}" + (f":{url.port}" if url.port else ""),

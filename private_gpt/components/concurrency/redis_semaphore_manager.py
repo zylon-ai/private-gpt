@@ -8,7 +8,7 @@ from contextlib import suppress
 from typing import Any
 
 from redis.asyncio import Redis  # type: ignore[import-untyped]
-from redis_semaphore_async import Semaphore
+from redis_semaphore_async import Semaphore  # ty:ignore[unresolved-import]
 
 from private_gpt.components.concurrency.semaphore_manager import (
     QueueShutdownError,

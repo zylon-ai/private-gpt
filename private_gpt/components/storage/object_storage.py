@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import magic
+import magic  # ty:ignore[unresolved-import]
 from anyio import to_thread
 
 from private_gpt.components.storage.models import FileInfo

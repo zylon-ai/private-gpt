@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, TypeVar, cast
 
-from transformers import (  # type: ignore[import-not-found]
+from transformers import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
     PreTrainedTokenizerBase,
     ProcessorMixin,
 )
@@ -64,7 +64,7 @@ class HuggingFaceTokenizer(TokenizerBase):
             **kwargs: Additional arguments for AutoProcessor
         """
         try:
-            from transformers import AutoProcessor
+            from transformers import AutoProcessor  # ty:ignore[unresolved-import]
         except ImportError as e:
             raise ImportError(
                 format_missing_dependency_message(
@@ -224,7 +224,9 @@ class HuggingFaceTokenizer(TokenizerBase):
         raise NotImplementedError()
 
     def encode(self, text: str, add_special_tokens: bool | None = None) -> list[int]:
-        encoded: list[int] = self._tokenizer.encode(text, add_special_tokens=add_special_tokens or True)
+        encoded: list[int] = self._tokenizer.encode(
+            text, add_special_tokens=add_special_tokens or True
+        )
         return encoded
 
     def support_chat_template(self, tokenizer: Any) -> bool:
@@ -247,7 +249,9 @@ class HuggingFaceTokenizer(TokenizerBase):
         return converted
 
     def decode(self, ids: list[int] | int, skip_special_tokens: bool = True) -> str:
-        decoded: str = self._tokenizer.decode(ids, skip_special_tokens=skip_special_tokens)
+        decoded: str = self._tokenizer.decode(
+            ids, skip_special_tokens=skip_special_tokens
+        )
         return decoded
 
     def convert_ids_to_tokens(

@@ -6,8 +6,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal, TypeAlias, assert_never, cast
 
-import huggingface_hub  # type: ignore[import-not-found]
-from huggingface_hub import HfApi, hf_hub_download  # type: ignore[import-not-found]
+import huggingface_hub  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
+from huggingface_hub import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
+    HfApi,
+    hf_hub_download,
+)
 
 from private_gpt.components.llm.tokenizers.tokenizer_base import (
     AudioLike,

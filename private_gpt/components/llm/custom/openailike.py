@@ -2,7 +2,7 @@ import importlib
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
-    from llama_index.llms.openai_like import (  # type: ignore[import-not-found,import-untyped]
+    from llama_index.llms.openai_like import (  # type: ignore[import-not-found,import-untyped]  # ty:ignore[unresolved-import]
         OpenAILike as OpenAILikeBase,
     )
 

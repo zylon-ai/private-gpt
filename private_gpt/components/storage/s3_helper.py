@@ -43,7 +43,7 @@ class S3Helper:
         ):
             return None
 
-        import boto3
+        import boto3  # ty:ignore[unresolved-import]
 
         boto3.set_stream_logger(
             "botocore", logging.INFO if DEBUG_MODE else logging.ERROR

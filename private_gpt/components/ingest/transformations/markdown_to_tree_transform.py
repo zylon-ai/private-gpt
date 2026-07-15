@@ -7,7 +7,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, Tag
 from llama_index.core.schema import MetadataMode, TransformComponent
-from mistune import HTMLRenderer, create_markdown
+from mistune import HTMLRenderer, create_markdown  # ty:ignore[unresolved-import]
 from pydantic import Field
 
 from private_gpt.components.ingest.processors.df_preprocessor import (
@@ -37,7 +37,9 @@ class MarkdownTreeNodeParser(TransformComponent):
     )
 
     markdown_reader: Any = Field(
-        default=create_markdown(renderer=HTMLRenderer(), plugins=["strikethrough", "table"]),
+        default=create_markdown(
+            renderer=HTMLRenderer(), plugins=["strikethrough", "table"]
+        ),
         description="Markdown parser.",
         exclude=True,
     )
@@ -227,7 +229,7 @@ class MarkdownTreeNodeParser(TransformComponent):
 
     def _convert_tag_to_markdown(self, element: Tag | NavigableString) -> str:
         """Convert a BeautifulSoup element to markdown while preserving formatting."""
-        from markdownify import markdownify as md
+        from markdownify import markdownify as md  # ty:ignore[unresolved-import]
 
         if isinstance(element, NavigableString):
             return element

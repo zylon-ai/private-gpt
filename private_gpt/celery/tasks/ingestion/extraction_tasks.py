@@ -137,7 +137,9 @@ def vector_index_task(body: IngestAsyncBody) -> Any:
     )
 
 
-setattr(vector_index_task, "callback_task_name", VECTOR_INDEX_CALLBACK_TASK_NAME)
+setattr(  # noqa: B010
+    vector_index_task, "callback_task_name", VECTOR_INDEX_CALLBACK_TASK_NAME
+)
 
 
 def ensure_to_remove_temporal_files(body: IngestAsyncBody) -> None:

@@ -442,7 +442,7 @@ class ImageProcessingWorkflow(Workflow):
             return image_block
 
         try:
-            import cv2
+            import cv2  # ty:ignore[unresolved-import]
             import numpy as np
 
             image_b = image_block.resolve_image()

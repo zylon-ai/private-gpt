@@ -56,8 +56,6 @@ def delete_ingested_task(body: "DeleteIngestedDocumentAsyncBody") -> None:
             raise
 
 
-setattr(
-    delete_ingested_task,
-    "callback_task_name",
-    DELETE_INGESTED_CALLBACK_TASK_NAME,
+delete_ingested_task.callback_task_name = (  # ty:ignore[unresolved-attribute]
+    DELETE_INGESTED_CALLBACK_TASK_NAME
 )

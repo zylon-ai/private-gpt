@@ -1,5 +1,7 @@
 import sqlalchemy
-from llama_index.storage.kvstore.postgres import PostgresKVStore
+from llama_index.storage.kvstore.postgres import (  # ty:ignore[unresolved-import]
+    PostgresKVStore,
+)
 
 
 class PatchedPostgresKVStore(PostgresKVStore):
@@ -16,7 +18,8 @@ class PatchedPostgresKVStore(PostgresKVStore):
         table_name: str,
         schema_name: str = "public",
         engine: sqlalchemy.engine.Engine | None = None,
-        async_engine: sqlalchemy.ext.asyncio.AsyncEngine | None = None,
+        async_engine: sqlalchemy.ext.asyncio.AsyncEngine  # ty:ignore[possibly-missing-submodule]
+        | None = None,
         perform_setup: bool = True,
         debug: bool = False,
         use_jsonb: bool = False,

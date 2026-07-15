@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from cachetools import TTLCache, cachedmethod
 from cachetools.keys import hashkey
-from Levenshtein import distance
+from Levenshtein import distance  # ty:ignore[unresolved-import]
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from pandas import DataFrame
 from pydantic import BaseModel, Field
@@ -51,9 +51,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 try:
-    import sqlglot  # type: ignore[import-not-found]
-    from sqlglot import Dialects  # type: ignore[import-not-found]
-    from sqlglot.errors import ParseError  # type: ignore[import-not-found]
+    import sqlglot  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
+    from sqlglot import (  # ty:ignore[unresolved-import]
+        Dialects,  # type: ignore[import-not-found]
+    )
+    from sqlglot.errors import (  # ty:ignore[unresolved-import]
+        ParseError,  # type: ignore[import-not-found]
+    )
 except (ImportError, ModuleNotFoundError) as e:
     raise ImportError(
         format_missing_dependency_message(
@@ -72,7 +76,7 @@ except (ImportError, ModuleNotFoundError) as e:
 @functools.cache
 def _load_ibm_db() -> Any:
     try:
-        import ibm_db  # type: ignore[import-not-found]
+        import ibm_db  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
     except ImportError as e:
         raise ImportError(
             format_missing_dependency_message(
@@ -1009,19 +1013,19 @@ class DatabaseQueryGenerator:
 
     def _try_to_fix_unsupported_type_error(self, original_sql: str) -> str | None:
         try:
-            from sqlgpt_parser.format.formatter import (  # type: ignore[import-not-found,import-untyped]
+            from sqlgpt_parser.format.formatter import (  # type: ignore[import-not-found,import-untyped]  # ty:ignore[unresolved-import]
                 format_sql,
             )
-            from sqlgpt_parser.parser.mysql_parser import (  # type: ignore[import-not-found,import-untyped]
+            from sqlgpt_parser.parser.mysql_parser import (  # type: ignore[import-not-found,import-untyped]  # ty:ignore[unresolved-import]
                 parser as mysql_parser,
             )
-            from sqlgpt_parser.parser.tree.expression import (  # type: ignore[import-not-found,import-untyped]
+            from sqlgpt_parser.parser.tree.expression import (  # type: ignore[import-not-found,import-untyped]  # ty:ignore[unresolved-import]
                 QualifiedNameReference,
             )
-            from sqlgpt_parser.parser.tree.qualified_name import (  # type: ignore[import-not-found,import-untyped]
+            from sqlgpt_parser.parser.tree.qualified_name import (  # type: ignore[import-not-found,import-untyped]  # ty:ignore[unresolved-import]
                 QualifiedName,
             )
-            from sqlgpt_parser.parser.tree.select_item import (  # type: ignore[import-not-found,import-untyped]
+            from sqlgpt_parser.parser.tree.select_item import (  # type: ignore[import-not-found,import-untyped]  # ty:ignore[unresolved-import]
                 SingleColumn,
             )
         except ImportError:

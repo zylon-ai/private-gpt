@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Any, ClassVar
 
-from celery import bootsteps
+from celery import bootsteps  # ty:ignore[unresolved-import]
 from celery.signals import (
     worker_process_init,
     worker_process_shutdown,

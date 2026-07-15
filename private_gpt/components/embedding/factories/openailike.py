@@ -13,7 +13,7 @@ class OpenAILikeEmbeddingFactory(EmbeddingFactory):
         self, model_config: EmbeddingModelConfig
     ) -> tuple[BaseEmbedding, str | None]:
         try:
-            from llama_index.embeddings.openai_like import (
+            from llama_index.embeddings.openai_like import (  # ty:ignore[unresolved-import]
                 OpenAILikeEmbedding,
             )
         except ImportError as e:

@@ -17,10 +17,12 @@ from private_gpt.components.llm.models import ReasoningEffort
 from private_gpt.events.models import StopReasonEnum
 
 if TYPE_CHECKING:
-    from llama_index.llms.openai import (  # type: ignore[import-not-found,import-untyped]
+    from llama_index.llms.openai import (  # type: ignore[import-not-found,import-untyped]  # ty:ignore[unresolved-import]
         OpenAIResponses as OpenAIResponsesBase,
     )
-    from openai.types.responses import ResponseFunctionToolCall
+    from openai.types.responses import (  # ty:ignore[unresolved-import]
+        ResponseFunctionToolCall,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -304,11 +306,13 @@ class PatchedOpenAIResponsesLLM(StructuredChatMixin, OpenAIResponsesBase):  # ty
         self, messages: Sequence[ChatMessage], **kwargs: Any
     ) -> ChatResponseGen:
         """Stream chat with thinking_delta, stop_reason, and usage normalization."""
-        from llama_index.llms.openai import (
+        from llama_index.llms.openai import (  # ty:ignore[unresolved-import]
             OpenAIResponses as _OpenAIResponsesBase,
         )
-        from llama_index.llms.openai.utils import to_openai_message_dicts
-        from openai.types.responses import (
+        from llama_index.llms.openai.utils import (  # ty:ignore[unresolved-import]
+            to_openai_message_dicts,
+        )
+        from openai.types.responses import (  # ty:ignore[unresolved-import]
             ResponseCompletedEvent,
             ResponseReasoningSummaryTextDeltaEvent,
             ResponseReasoningTextDeltaEvent,
@@ -422,11 +426,13 @@ class PatchedOpenAIResponsesLLM(StructuredChatMixin, OpenAIResponsesBase):  # ty
         self, messages: Sequence[ChatMessage], **kwargs: Any
     ) -> ChatResponseAsyncGen:
         """Async stream chat normalizing thinking_delta, stop_reason, and usage."""
-        from llama_index.llms.openai import (
+        from llama_index.llms.openai import (  # ty:ignore[unresolved-import]
             OpenAIResponses as _OpenAIResponsesBase,
         )
-        from llama_index.llms.openai.utils import to_openai_message_dicts
-        from openai.types.responses import (
+        from llama_index.llms.openai.utils import (  # ty:ignore[unresolved-import]
+            to_openai_message_dicts,
+        )
+        from openai.types.responses import (  # ty:ignore[unresolved-import]
             ResponseCompletedEvent,
             ResponseReasoningSummaryTextDeltaEvent,
             ResponseReasoningTextDeltaEvent,

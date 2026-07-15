@@ -64,7 +64,7 @@ def get_guest_mime_type(file_data: Path) -> str | None:
 
 def get_actual_mime_type(file_data: Path) -> str | None:
     try:
-        import magic
+        import magic  # ty:ignore[unresolved-import]
 
         mime_detector = magic.Magic(mime=True)
         return mime_detector.from_file(file_data)
@@ -211,7 +211,7 @@ def should_ignore_mime_mismatch(guest_mime: str, actual_mime: str) -> bool:
 
 def detect_encoding(file_data: Path) -> str | None:
     try:
-        import chardet.universaldetector
+        import chardet.universaldetector  # ty:ignore[unresolved-import]
 
         detector = chardet.universaldetector.UniversalDetector()
         initial_chunk_size = 4096  # Start with 4KB
@@ -274,7 +274,7 @@ def extract_pdf_info(file_data: Path) -> dict[str, Any | None]:
     config: dict[str, Any | None] = {}
 
     try:
-        from pypdf import PdfReader
+        from pypdf import PdfReader  # ty:ignore[unresolved-import]
 
         with open(file_data, "rb") as f:
             reader = PdfReader(f)

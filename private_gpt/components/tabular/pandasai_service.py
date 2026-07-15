@@ -4,13 +4,13 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import pandas as pd
-from pandasai import (
+from pandasai import (  # ty:ignore[unresolved-import]
     ConfigManager,
     DataFrame,
     Sandbox,
     VirtualDataFrame,
 )
-from pandasai.core.response import (
+from pandasai.core.response import (  # ty:ignore[unresolved-import]
     BaseResponse,
     ChartResponse,
     ErrorResponse,

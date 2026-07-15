@@ -9,7 +9,7 @@ from typing import Any
 
 import nest_asyncio
 from celery.app.task import Task
-from celery.backends.redis import RedisBackend
+from celery.backends.redis import RedisBackend  # ty:ignore[unresolved-import]
 from celery.exceptions import Retry, SoftTimeLimitExceeded
 from celery.utils.log import get_task_logger
 

@@ -40,7 +40,7 @@ def _simple_index_store(settings: Settings, collection: str) -> BaseIndexStore:
 
 def _postgres_index_store(settings: Settings, collection: str) -> BaseIndexStore:
     try:
-        from llama_index.storage.index_store.postgres import (
+        from llama_index.storage.index_store.postgres import (  # ty:ignore[unresolved-import]
             PostgresIndexStore,
         )
 

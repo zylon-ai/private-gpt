@@ -138,7 +138,7 @@ def _infer_file_meta(field_name: str, content: bytes | None) -> tuple[str, str]:
     if not is_magic_available():
         return field_name.rstrip("[]"), _DEFAULT_MIME_TYPE
 
-    import magic
+    import magic  # ty:ignore[unresolved-import]
 
     mime = magic.from_buffer(content, mime=True)
 

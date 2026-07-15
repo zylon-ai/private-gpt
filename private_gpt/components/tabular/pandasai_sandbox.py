@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any, ClassVar, TypeVar
 
 import pandas as pd
-from pandasai import Sandbox
-from pandasai.exceptions import CodeExecutionError
+from pandasai import Sandbox  # ty:ignore[unresolved-import]
+from pandasai.exceptions import CodeExecutionError  # ty:ignore[unresolved-import]
 
 from private_gpt.components.sandbox.base import (
     SandboxCodeOptions,

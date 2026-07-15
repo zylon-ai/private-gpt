@@ -127,7 +127,7 @@ def _get_openai_api_type_for_model(model_id: str) -> str:
     Responses API; all others default to chat_completions.
     """
     try:
-        from llama_index.llms.openai.utils import (
+        from llama_index.llms.openai.utils import (  # ty:ignore[unresolved-import]
             is_chatcomp_api_supported,
         )
 

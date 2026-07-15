@@ -116,14 +116,14 @@ def register_observability(mode: str, provider: ObservabilityProvider) -> None:
 
 def _initialize_arize_phoenix(settings: "Settings") -> None:
     try:
-        from openinference.instrumentation.llama_index import (
+        from openinference.instrumentation.llama_index import (  # ty:ignore[unresolved-import]
             LlamaIndexInstrumentor,
         )
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # ty:ignore[unresolved-import]
             OTLPSpanExporter,
         )
-        from opentelemetry.sdk import trace as trace_sdk
-        from opentelemetry.sdk.trace.export import (
+        from opentelemetry.sdk import trace as trace_sdk  # ty:ignore[unresolved-import]
+        from opentelemetry.sdk.trace.export import (  # ty:ignore[unresolved-import]
             SimpleSpanProcessor,
         )
     except ImportError as e:
@@ -150,8 +150,8 @@ def _initialize_arize_phoenix(settings: "Settings") -> None:
 
 def _initialize_opik(settings: "Settings") -> None:
     try:
-        import opik
-        from opik.integrations.llama_index import (
+        import opik  # ty:ignore[unresolved-import]
+        from opik.integrations.llama_index import (  # ty:ignore[unresolved-import]
             LlamaIndexCallbackHandler,
         )
     except ImportError as e:

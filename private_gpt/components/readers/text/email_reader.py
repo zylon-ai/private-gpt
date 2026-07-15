@@ -10,7 +10,7 @@ from email.utils import getaddresses, parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 
-import html2text
+import html2text  # ty:ignore[unresolved-import]
 from llama_index.core.schema import BaseNode, Document
 from pydantic import BaseModel, Field
 
@@ -110,7 +110,7 @@ class EmailContent(BaseModel):
             parts.append("</ul>")
 
         try:
-            from markdownify import markdownify as md
+            from markdownify import markdownify as md  # ty:ignore[unresolved-import]
 
             markdown: str = md(
                 "\n".join(parts),

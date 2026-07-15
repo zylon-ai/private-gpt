@@ -99,7 +99,7 @@ def create_app(root_injector: Injector) -> FastAPI:
         # so a small I/O-only pool is enough
         # and stops the GIL from being contended with the event loop.
         cpu_count = os.cpu_count() or 1
-        executor = concurrent.futures.ThreadPoolExecutor(
+        executor = concurrent.futures.ThreadPoolExecutor(  # ty:ignore[possibly-missing-submodule]
             max_workers=min(500, cpu_count * 50), thread_name_prefix="Stream-Pool"
         )
         asyncio.get_running_loop().set_default_executor(executor)

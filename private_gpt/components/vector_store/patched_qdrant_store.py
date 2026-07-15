@@ -19,25 +19,25 @@ from llama_index.core.vector_stores.types import (
     VectorStoreQueryMode,
     VectorStoreQueryResult,
 )
-from llama_index.vector_stores.qdrant import (
+from llama_index.vector_stores.qdrant import (  # ty:ignore[unresolved-import]
     QdrantVectorStore,
 )
-from llama_index.vector_stores.qdrant.base import (
+from llama_index.vector_stores.qdrant.base import (  # ty:ignore[unresolved-import]
     DEFAULT_DENSE_VECTOR_NAME,
     DEFAULT_SPARSE_VECTOR_NAME_OLD,
     LEGACY_UNNAMED_VECTOR,
 )
-from llama_index.vector_stores.qdrant.utils import (
+from llama_index.vector_stores.qdrant.utils import (  # ty:ignore[unresolved-import]
     HybridFusionCallable,
     SparseEncoderCallable,
     relative_score_fusion,
 )
-from qdrant_client import (  # type: ignore[import-not-found]
+from qdrant_client import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
     AsyncQdrantClient,
     QdrantClient,
     models,
 )
-from qdrant_client.conversions.common_types import (  # type: ignore[import-not-found]
+from qdrant_client.conversions.common_types import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
     OrderBy,
     PayloadSelector,
     QuantizationConfig,
@@ -45,13 +45,15 @@ from qdrant_client.conversions.common_types import (  # type: ignore[import-not-
     Record,
     ShardKeySelector,
 )
-from qdrant_client.http import models as rest  # type: ignore[import-not-found]
-from qdrant_client.http.models import (  # type: ignore[import-not-found]
+from qdrant_client.http import (  # ty:ignore[unresolved-import]
+    models as rest,  # type: ignore[import-not-found]
+)
+from qdrant_client.http.models import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
     Filter,
     HasIdCondition,
     Payload,
 )
-from qdrant_client.local.qdrant_local import (  # type: ignore[import-not-found]
+from qdrant_client.local.qdrant_local import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
     QdrantLocal,
 )
 
@@ -231,7 +233,7 @@ class PatchedQdrantVectorStore(QdrantVectorStore):
             return
 
         if not self._client.collection_exists(collection_name=collection_name):
-            from qdrant_client.qdrant_fastembed import (
+            from qdrant_client.qdrant_fastembed import (  # ty:ignore[unresolved-import]
                 IDF_EMBEDDING_MODELS,
             )
 

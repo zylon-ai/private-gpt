@@ -38,7 +38,7 @@ class QdrantVectorStoreFactory(VectorStoreFactory):
 
     def vector_store(self, collection: str) -> BasePydanticVectorStore:
         try:
-            from qdrant_client import models
+            from qdrant_client import models  # ty:ignore[unresolved-import]
 
             from private_gpt.components.vector_store.patched_qdrant_store import (
                 PatchedQdrantVectorStore,

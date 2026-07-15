@@ -4,7 +4,7 @@ import base64
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import magic
+import magic  # ty:ignore[unresolved-import]
 from fastapi import HTTPException
 from injector import inject, singleton
 

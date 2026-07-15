@@ -6,13 +6,15 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import cv2
+import cv2  # ty:ignore[unresolved-import]
 import numpy as np
 from PIL import Image, ImageDraw
-from pptx import Presentation
-from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pptx import Presentation  # ty:ignore[unresolved-import]
+from pptx.enum.shapes import MSO_SHAPE_TYPE  # ty:ignore[unresolved-import]
 from pydantic import BaseModel, Field
-from scipy import ndimage  # type: ignore[import-untyped]
+from scipy import (  # ty:ignore[unresolved-import]
+    ndimage,  # type: ignore[import-untyped]
+)
 
 from private_gpt.components.ingest.utils import FileInfo
 from private_gpt.settings.settings import settings

@@ -2,7 +2,7 @@ import re
 from typing import Any
 
 from injector import singleton
-from langdetect import detect
+from langdetect import detect  # ty:ignore[unresolved-import]
 from nltk import WordNetLemmatizer, pos_tag
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
