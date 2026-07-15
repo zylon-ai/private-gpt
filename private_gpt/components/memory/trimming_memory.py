@@ -316,9 +316,9 @@ class TrimmingMemory(BaseChatStoreMemory):
                 excluded.content = partial_content
 
                 test_messages = (
-                    [messages[:idx], *excluded]
+                    [*messages[:idx], excluded]
                     if direction == "first"
-                    else [messages[idx:], *excluded]
+                    else [*messages[idx:], excluded]
                 )
 
                 if await self._token_count_for_messages(test_messages) <= max_tokens:
