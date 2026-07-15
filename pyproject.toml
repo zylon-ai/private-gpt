@@ -431,7 +431,6 @@ invalid-method-override = "ignore"
 missing-argument = "ignore"
 not-iterable = "ignore"
 inconsistent-mro = "ignore"
-unsupported-operator = "ignore"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

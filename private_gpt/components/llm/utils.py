@@ -123,7 +123,8 @@ def partial_json_loads(input_str: str, flags: Allow) -> tuple[Any, int]:
     try:
         return (partial_json_parser.loads(input_str, flags), len(input_str))
     except (MalformedJSON, JSONDecodeError, json.JSONDecodeError) as e:
-        if hasattr(e, "msg") and "Extra data" in e.msg:
+        message = getattr(e, "msg", None)
+        if isinstance(message, str) and "Extra data" in message:
             dec = JSONDecoder()
             return dec.raw_decode(input_str)
         raise
