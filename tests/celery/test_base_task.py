@@ -86,9 +86,12 @@ def test_background_task_controlled_retry(app: Celery, redis_client: MagicMock) 
     mock_request.retries = 1
     mock_request.id = "test_id"
 
-    with patch.object(task, "_retry_tracker", retry_tracker), patch(
-        "celery.app.task.Task.request", new_callable=PropertyMock
-    ) as mock_task_request:
+    with (
+        patch.object(task, "_retry_tracker", retry_tracker),
+        patch(
+            "celery.app.task.Task.request", new_callable=PropertyMock
+        ) as mock_task_request,
+    ):
         mock_task_request.return_value = mock_request
 
         result = task.apply_async().get()

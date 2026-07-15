@@ -35,8 +35,7 @@ if TYPE_CHECKING:
 class DocumentConverter(Protocol):
     """Structural protocol satisfied by ConvertService."""
 
-    def bytes_to_text(self, raw: bytes, ext: str) -> str:
-        ...
+    def bytes_to_text(self, raw: bytes, ext: str) -> str: ...
 
 
 class TextBlock(CacheableContentBlock, StandardContentProtocol):

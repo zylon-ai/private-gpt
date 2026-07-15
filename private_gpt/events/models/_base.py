@@ -137,6 +137,6 @@ class BaseContentBlock(BaseModel, StandardContentProtocol):
 class CacheableContentBlock(BaseContentBlock, StandardContentProtocol):
     """Base for blocks that support Anthropic prompt-caching breakpoints."""
 
-    cache_control: Annotated[
-        CacheControlEphemeral, Field(discriminator="type")
-    ] | None = Field(default=None)
+    cache_control: (
+        Annotated[CacheControlEphemeral, Field(discriminator="type")] | None
+    ) = Field(default=None)

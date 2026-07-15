@@ -33,7 +33,6 @@ def register_broker(mode: str, provider: BrokerProvider) -> None:
 
 
 class BrokerInstanceRegistry:
-
     _settings: Settings
     _instances: dict[str, BlockingPublisher | None]
 

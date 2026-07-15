@@ -64,9 +64,7 @@ def test_select_star_excludes_geography(
     with patch.object(generator, "_extract_database_schema", return_value=[schema]):
         result = generator._try_to_fix_unsupported_type_error(original_sql)
 
-    expected_sql = (
-        "SELECT\n" "  id\n" ", name\n" ", location.ToString()\n" "FROM\n" "  dbo.places"
-    )
+    expected_sql = "SELECT\n  id\n, name\n, location.ToString()\nFROM\n  dbo.places"
 
     assert result is not None
     assert result == expected_sql
@@ -92,9 +90,7 @@ def test_select_partial_columns_excludes_geography(connection_string: str) -> No
     with patch.object(generator, "_extract_database_schema", return_value=[schema]):
         result = generator._try_to_fix_unsupported_type_error(original_sql)
 
-    expected_sql = (
-        "SELECT\n" "  name\n" ", location.ToString()\n" "FROM\n" "  dbo.places"
-    )
+    expected_sql = "SELECT\n  name\n, location.ToString()\nFROM\n  dbo.places"
 
     assert result is not None
     assert result == expected_sql

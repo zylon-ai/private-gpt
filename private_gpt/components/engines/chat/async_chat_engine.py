@@ -221,12 +221,10 @@ class EventChannel(ABC):
     """Sink for events produced by the engine."""
 
     @abstractmethod
-    def emit(self, event: Event) -> None:
-        ...
+    def emit(self, event: Event) -> None: ...
 
     @abstractmethod
-    async def close(self) -> None:
-        ...
+    async def close(self) -> None: ...
 
 
 class LocalEventChannel(EventChannel):

@@ -159,7 +159,7 @@ class NodeStoreComponent:
         unsorted_nodes = self.get_nodes(collection, artifacts, node_ids, filters, limit)
         index = {node.id_: node for node in unsorted_nodes}
         sorted_nodes = [
-            index[node_id] for node_id in node_ids if node_id in index  # type: ignore
+            index[node_id] for node_id in node_ids or [] if node_id in index
         ]
         return sorted_nodes
 

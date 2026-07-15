@@ -375,7 +375,6 @@ def extract_citations_by_original_text(
         rf"{re.escape(start_token)}?[A-Z0-9]{shorter_id_length}{re.escape(end_token)}?"
     )
     for match in pattern.finditer(result):
-
         # If citation is well-formed, skip
         word = match.group(0) if match.groups() else ""
         if not word or (word.startswith(start_token) and word.endswith(end_token)):

@@ -11,7 +11,7 @@ from private_gpt.components.storage.models import StoredFile
 
 
 async def uploads_from_request_form(
-    form_items: list[tuple[str, object]]
+    form_items: list[tuple[str, object]],
 ) -> list[UploadFile]:
     uploads: list[UploadFile] = []
     for k, v in form_items:
@@ -182,7 +182,7 @@ def _extract_zip(upload: UploadFile, payload: bytes) -> list[tuple[str, bytes]]:
 
 
 def _flatten_wrapper_directory(
-    entries: list[tuple[str, bytes]]
+    entries: list[tuple[str, bytes]],
 ) -> list[tuple[str, bytes]]:
     """Find SKILL.md and strip wrapper directories above it.
 

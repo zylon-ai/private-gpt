@@ -103,9 +103,10 @@ class TestBraveProviderErrorHandling:
         mock_session.get.return_value = mock_context
 
         # Patch _ensure_session to return our mock session
-        with patch.object(
-            provider, "_ensure_session", return_value=mock_session
-        ), pytest.raises(ValueError) as exc:
+        with (
+            patch.object(provider, "_ensure_session", return_value=mock_session),
+            pytest.raises(ValueError) as exc,
+        ):
             await provider._execute_http_request(
                 query="test query",
                 num_links=10,
@@ -183,9 +184,10 @@ class TestBraveProviderErrorHandling:
         mock_session = MagicMock()
         mock_session.get.return_value = mock_context
 
-        with patch.object(
-            provider, "_ensure_session", return_value=mock_session
-        ), pytest.raises(QuotaConsumed):
+        with (
+            patch.object(provider, "_ensure_session", return_value=mock_session),
+            pytest.raises(QuotaConsumed),
+        ):
             await provider._execute_http_request(
                 query="python asyncio",
                 num_links=10,

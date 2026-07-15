@@ -355,9 +355,12 @@ class DoclingClient(BaseModel, BaseDoclingClient):
             return_as_file=return_as_file,
         )
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/convert/source", json=payload, headers=headers
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/convert/source", json=payload, headers=headers
+            ) as response,
+        ):
             response.raise_for_status()
             result = await response.json()
             return DoclingApiOutputModel(**result)
@@ -427,9 +430,12 @@ class AsyncDoclingClient(BaseModel, BaseDoclingClient):
             return_as_file=return_as_file,
         )
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/convert/source/async", json=payload, headers=headers
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/convert/source/async", json=payload, headers=headers
+            ) as response,
+        ):
             response.raise_for_status()
             result = await response.json()
             task_status = _TaskStatusResponse(**result)
@@ -469,9 +475,12 @@ class AsyncDoclingClient(BaseModel, BaseDoclingClient):
     )
     async def _get_task_result(self, task_id: str) -> DoclingApiOutputModel:
         headers = _build_request_headers(self.docling_settings)
-        async with aiohttp.ClientSession() as session, session.get(
-            f"{self.base_url}/result/{task_id}", headers=headers
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(
+                f"{self.base_url}/result/{task_id}", headers=headers
+            ) as response,
+        ):
             response.raise_for_status()
             result = await response.json()
             return DoclingApiOutputModel(**result)

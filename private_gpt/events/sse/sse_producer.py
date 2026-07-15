@@ -21,7 +21,6 @@ from private_gpt.events.sse.sse_manager import SSEStreamManager
 
 
 class SSEProducer:
-
     manager: SSEStreamManager
 
     def __init__(

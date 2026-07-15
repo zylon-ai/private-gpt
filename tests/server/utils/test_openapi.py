@@ -9,9 +9,9 @@ from private_gpt.settings.settings import settings
 def _get_openapi_spec(test_client: TestClient) -> dict[str, Any]:
     prefix_path = settings().server.root_path
     response = test_client.get(f"{prefix_path}/openapi.json")
-    assert (
-        response.status_code == 200
-    ), f"Failed to fetch OpenAPI schema: {response.status_code}"
+    assert response.status_code == 200, (
+        f"Failed to fetch OpenAPI schema: {response.status_code}"
+    )
     spec: dict[str, Any] = response.json()
     return spec
 
@@ -117,9 +117,9 @@ def test_all_schemas_have_required_properties(test_client: TestClient) -> None:
         )
 
     response = test_client.get("/openapi.json")
-    assert (
-        response.status_code == 200
-    ), f"Failed to fetch OpenAPI schema: {response.status_code}"
+    assert response.status_code == 200, (
+        f"Failed to fetch OpenAPI schema: {response.status_code}"
+    )
 
     spec: dict[str, Any] = response.json()
     components: dict[str, Any] | None = spec.get("components")

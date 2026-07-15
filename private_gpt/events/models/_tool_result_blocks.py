@@ -33,9 +33,10 @@ class ToolResultBlock(CacheableContentBlock, StandardContentProtocol):
         description="ID of the ToolUseBlock this result answers",
         pattern=r"^[a-zA-Z0-9_-]+$",
     )
-    content: str | Sequence[
-        Annotated[ToolResultContentBlockType, Field(discriminator="type")]
-    ] = Field(default="", description="Tool execution result")
+    content: (
+        str
+        | Sequence[Annotated[ToolResultContentBlockType, Field(discriminator="type")]]
+    ) = Field(default="", description="Tool execution result")
     is_error: bool = Field(
         default=False, description="Whether the tool result indicates an error."
     )

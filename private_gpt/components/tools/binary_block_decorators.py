@@ -36,7 +36,7 @@ def auto_resolve_media_blocks(
     """
 
     def decorator(
-        func: Callable[P, Awaitable[list[Any]]]
+        func: Callable[P, Awaitable[list[Any]]],
     ) -> Callable[P, Awaitable[list[Any]]]:
         if not enabled:
             return func

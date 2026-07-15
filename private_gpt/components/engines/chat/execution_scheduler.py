@@ -18,28 +18,23 @@ class ChatExecutionScheduler(ABC):
         request_data: dict[str, Any],
         stream_type: str,
         metadata: dict[str, Any],
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @abstractmethod
-    async def resume(self, *, execution_id: str) -> None:
-        ...
+    async def resume(self, *, execution_id: str) -> None: ...
 
     @abstractmethod
     async def callback(
         self, *, execution_id: str, tool_id: str, result: dict[str, Any]
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @abstractmethod
     async def timeout(
         self, *, execution_id: str, checkpoint_id: str, delay_seconds: int
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @abstractmethod
-    async def cancel(self, execution_id: str) -> bool:
-        ...
+    async def cancel(self, execution_id: str) -> bool: ...
 
 
 @singleton

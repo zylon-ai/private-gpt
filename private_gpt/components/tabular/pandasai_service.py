@@ -68,22 +68,17 @@ class PandaAIProtocol(Protocol):
         view: bool = False,
         group_by: list[str] | None = None,
         transformations: list[dict[str, Any]] | None = None,
-    ) -> pd.DataFrame:
-        ...
+    ) -> pd.DataFrame: ...
 
     def chat(
         self, query: str, *dataframes: pd.DataFrame, sandbox: Sandbox | None = None
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
-    def follow_up(self, query: str) -> Any:
-        ...
+    def follow_up(self, query: str) -> Any: ...
 
-    def load(self, dataset_path: str) -> pd.DataFrame:
-        ...
+    def load(self, dataset_path: str) -> pd.DataFrame: ...
 
-    def read_csv(self, filepath: str) -> pd.DataFrame:
-        ...
+    def read_csv(self, filepath: str) -> pd.DataFrame: ...
 
 
 class PandasAIOutput(BaseModel):
@@ -191,10 +186,13 @@ class PandasAIOutput(BaseModel):
     def __str__(self) -> str:
         """Convert the output to a string representation."""
         str_converters: dict[str, Callable[[], str]] = {
-            "dataframe": lambda: df_to_minimal_markdown(self.get_dataframe())
-            or "No results.",
-            "chart": lambda: "Generated chart successfully. Plot was attached to the conversation."
-            "Don't create placeholders for charts, just reply that the chart was generated.",
+            "dataframe": lambda: (
+                df_to_minimal_markdown(self.get_dataframe()) or "No results."
+            ),
+            "chart": lambda: (
+                "Generated chart successfully. Plot was attached to the conversation."
+                "Don't create placeholders for charts, just reply that the chart was generated."
+            ),
             "string": lambda: str(self.value),
             "number": lambda: format_number(self.value),
         }

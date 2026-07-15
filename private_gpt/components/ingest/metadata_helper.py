@@ -90,7 +90,6 @@ class MetadataChunk(enum.StrEnum):
 
 
 class MetadataHelper:
-
     ##############################
     # Exclude metadata functions #
     ##############################

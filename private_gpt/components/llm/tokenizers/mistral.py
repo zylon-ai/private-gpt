@@ -433,9 +433,9 @@ class MistralTokenizer(TokenizerBase):
 
         if isinstance(model_id, str) or not model_id.exists():
             model_id_str = str(model_id)
-            assert (
-                not local_files_only
-            ), "local_files_only=True but model_id is not a local path"
+            assert not local_files_only, (
+                "local_files_only=True but model_id is not a local path"
+            )
             assert len(model_id_str.split("/")) == 2, (
                 f"You have either provided a non-existent path: "
                 f"{model_id} or an invalid HF Hub repo id."

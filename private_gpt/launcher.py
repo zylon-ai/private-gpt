@@ -1,4 +1,5 @@
 """FastAPI app creation, logger configuration and main API routes."""
+
 import asyncio
 import concurrent
 import logging

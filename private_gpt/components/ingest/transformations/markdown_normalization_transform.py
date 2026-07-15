@@ -110,7 +110,6 @@ class MarkdownNormalizer:
                         self.PATTERNS["table"], current_stripped
                     )
                 ):  # Not a table row
-
                     if (
                         re.match(self.PATTERNS["heading_underline_1"], next_line)
                         and len(next_line) > 0

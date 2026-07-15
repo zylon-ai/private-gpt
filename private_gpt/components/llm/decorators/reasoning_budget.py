@@ -130,7 +130,7 @@ def _phase2_kwargs(max_tokens: int, budget: int, **kwargs: Any) -> Any:
 
 
 def with_reasoning_budget_chat(
-    fn: Callable[..., ChatResponse]
+    fn: Callable[..., ChatResponse],
 ) -> Callable[..., ChatResponse]:
     """Decorator for sync `chat`."""
 
@@ -144,7 +144,9 @@ def with_reasoning_budget_chat(
     ) -> ChatResponse:
         # Check if reasoning_effort budget is enabled for this model
         if not getattr(self, "allow_reasoning_budget", False):
-            return fn(self, messages, tools=tools, reasoning_effort=reasoning_effort, **kwargs)  # type: ignore[return-value]
+            return fn(
+                self, messages, tools=tools, reasoning_effort=reasoning_effort, **kwargs
+            )  # type: ignore[return-value]
 
         explicit, kwargs = _extract_budget(**kwargs)
         budget = _resolve_budget(self, explicit, reasoning_effort, **kwargs)
@@ -154,7 +156,9 @@ def with_reasoning_budget_chat(
         )
 
         if reasoning_effort == ReasoningEffort.NONE or not budget:
-            return fn(self, messages, tools=tools, reasoning_effort=reasoning_effort, **kwargs)  # type: ignore[return-value]
+            return fn(
+                self, messages, tools=tools, reasoning_effort=reasoning_effort, **kwargs
+            )  # type: ignore[return-value]
 
         kwargs.pop("max_tokens", None)
         phase1: ChatResponse = fn(
@@ -181,7 +185,7 @@ def with_reasoning_budget_chat(
 
 
 def with_reasoning_budget_stream_chat(
-    fn: Callable[..., ChatResponseGen]
+    fn: Callable[..., ChatResponseGen],
 ) -> Callable[..., ChatResponseGen]:
     """Decorator for sync `stream_chat`, which returns a generator."""
 
@@ -195,7 +199,9 @@ def with_reasoning_budget_stream_chat(
     ) -> ChatResponseGen:
         # Check if reasoning_effort budget is enabled for this model
         if not getattr(self, "allow_reasoning_budget", False):
-            return fn(self, messages, tools=tools, reasoning_effort=reasoning_effort, **kwargs)  # type: ignore[return-value]
+            return fn(
+                self, messages, tools=tools, reasoning_effort=reasoning_effort, **kwargs
+            )  # type: ignore[return-value]
 
         explicit, kwargs = _extract_budget(**kwargs)
         budget = _resolve_budget(self, explicit, reasoning_effort, **kwargs)
@@ -205,7 +211,9 @@ def with_reasoning_budget_stream_chat(
         )
 
         if reasoning_effort == ReasoningEffort.NONE or not budget:
-            return fn(self, messages, tools=tools, reasoning_effort=reasoning_effort, **kwargs)  # type: ignore[return-value]
+            return fn(
+                self, messages, tools=tools, reasoning_effort=reasoning_effort, **kwargs
+            )  # type: ignore[return-value]
 
         def _gen() -> ChatResponseGen:
             kwargs.pop("max_tokens", None)

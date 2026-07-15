@@ -2,6 +2,7 @@
 
 Scenario 5: Cache Evolution Scenarios
 """
+
 from pathlib import Path
 
 from private_gpt.components.llm.tokenizers.models.model_cache import (

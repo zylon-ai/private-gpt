@@ -54,9 +54,9 @@ class TestSDKParse:
                     f"{type(exc).__name__}: {exc}"
                 )
 
-        assert (
-            not failures
-        ), "SDK parse failed for the following models:\n\n" + "\n\n".join(failures)
+        assert not failures, (
+            "SDK parse failed for the following models:\n\n" + "\n\n".join(failures)
+        )
 
     def test_sdk_samples_are_parseable_by_our_models(self) -> None:
         failures: list[str] = []
@@ -74,9 +74,9 @@ class TestSDKParse:
                     f"{type(exc).__name__}: {exc}"
                 )
 
-        assert (
-            not failures
-        ), "Our models rejected valid SDK payloads:\n\n" + "\n\n".join(failures)
+        assert not failures, (
+            "Our models rejected valid SDK payloads:\n\n" + "\n\n".join(failures)
+        )
 
     def test_sdk_sample_directly_parseable_by_sdk_type(self) -> None:
         failures: list[str] = []
@@ -93,6 +93,6 @@ class TestSDKParse:
                     f"{type(exc).__name__}: {exc}"
                 )
 
-        assert (
-            not failures
-        ), "Registry sdk_sample payloads are invalid:\n\n" + "\n\n".join(failures)
+        assert not failures, (
+            "Registry sdk_sample payloads are invalid:\n\n" + "\n\n".join(failures)
+        )

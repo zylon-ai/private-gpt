@@ -87,7 +87,6 @@ class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
         """Normalize chat messages to ensure compatibility with OpenAI."""
         normalized = []
         for msg in messages:
-
             # OpenAI expects to have content even when it's None
             blocks = msg.blocks if msg.blocks else [TextBlock(text="")]
 
@@ -101,11 +100,9 @@ class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
 
                 openai_tool_calls = []
                 for i, tool_call in enumerate(tool_calls):
-
                     if isinstance(tool_call, ChoiceDeltaToolCall):
                         openai_tool_calls.append(tool_call)
                     elif isinstance(tool_call, ToolSelection):
-
                         openai_tool_calls.append(
                             ChoiceDeltaToolCall(
                                 index=i,

@@ -463,7 +463,6 @@ class CondensationConfig(BaseModel):
 
 
 class ThinkingConfig(BaseModel):
-
     enabled: bool = Field(
         default=False,
         description="Whether to enable reasoning in the chat.",

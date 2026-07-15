@@ -191,9 +191,9 @@ class TabularDataAnalysisWorkflow(Workflow):
             kwargs=ev.kwargs,
         )
 
-        assert (
-            self._retriever_workflow is not None
-        ), "Retriever workflow is not configured."
+        assert self._retriever_workflow is not None, (
+            "Retriever workflow is not configured."
+        )
         retrieval_result: RetrieverResultEvent = await self._retriever_workflow.run(
             start_event=retriever_input
         )

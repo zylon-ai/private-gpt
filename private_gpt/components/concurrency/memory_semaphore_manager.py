@@ -32,9 +32,9 @@ class MemorySemaphoreManager(SemaphoreManager):
             str,
             tuple[Callable[..., Awaitable[Any]], dict[str, Any], asyncio.Future[Any]],
         ] = {}
-        self._queue: asyncio.PriorityQueue[
-            tuple[int, int, str]
-        ] = asyncio.PriorityQueue()
+        self._queue: asyncio.PriorityQueue[tuple[int, int, str]] = (
+            asyncio.PriorityQueue()
+        )
         self._workers: list[asyncio.Task[None]] = []
         self._shutdown = asyncio.Event()
         self._started = False

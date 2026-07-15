@@ -271,8 +271,7 @@ def run_command(
     app_name: str = typer.Argument(
         ..., metavar="app", help="claude-code | openclaw | custom"
     ),
-    attach: bool
-    | None = typer.Option(
+    attach: bool | None = typer.Option(
         None,
         "--attach/--no-attach",
         help="Attach stdin/stdout (default when TTY detected)",
@@ -280,8 +279,9 @@ def run_command(
     detach: bool = typer.Option(
         False, "--detach", help="Run in background, return run ID"
     ),
-    session: str
-    | None = typer.Option(None, "--session", help="Resume a previous app session"),
+    session: str | None = typer.Option(
+        None, "--session", help="Resume a previous app session"
+    ),
     model: str | None = typer.Option(None, "--model", help="Model name to use"),
     auto_approve: bool = typer.Option(
         False, "--auto-approve", help="Skip confirmations (CI mode)"

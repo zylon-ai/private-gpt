@@ -538,7 +538,10 @@ class ChatSettings(BaseModel):
     )
     assistant_name: str = Field("Zylon", description="The assistant name")
     assistant_description: str = Field("Zylon", description="The assistant description")
-    condense_strategy: Literal["none", "condenser",] = Field(
+    condense_strategy: Literal[
+        "none",
+        "condenser",
+    ] = Field(
         "none",
         description=(
             "The strategy to use for condensing the chat history.\n"

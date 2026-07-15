@@ -59,7 +59,6 @@ def get_clean_exception_info(exc: Exception) -> str:
 
 
 class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
-
     _user_id: str
     _timeout: int
     _client: SandboxSession | None

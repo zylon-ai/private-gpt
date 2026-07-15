@@ -182,7 +182,9 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
 
         batches: list[list[ChatMessage]] = []
         async for batch in aiter_batch(
-            async_chat_generator(), size=chunk_size, stop_condition=token_stop_condition  # type: ignore[call-arg,return-value]
+            async_chat_generator(),
+            size=chunk_size,
+            stop_condition=token_stop_condition,  # type: ignore[call-arg,return-value]
         ):
             batches.append(batch)
 

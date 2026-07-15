@@ -91,9 +91,9 @@ class SelectBestLinks(BaseWebSearchResultProcessor):
         token_limit = max_tokens / self._params.num_references
 
         scrape_queue: asyncio.Queue[WebSearchResult | None] = asyncio.Queue()
-        summary_queue: asyncio.PriorityQueue[
-            tuple[float, WebSearchResult | None]
-        ] = asyncio.PriorityQueue()
+        summary_queue: asyncio.PriorityQueue[tuple[float, WebSearchResult | None]] = (
+            asyncio.PriorityQueue()
+        )
         is_finished_queue: asyncio.Queue[asyncio.Event | None] = asyncio.Queue()
 
         scraped_results: list[WebSearchResult] = []
@@ -211,7 +211,7 @@ class SelectBestLinks(BaseWebSearchResultProcessor):
                 and total_tokens <= max_tokens
             ):
                 logger.debug(
-                    f"Find {len(selected) } links with total size {total_tokens}/{max_tokens} "
+                    f"Find {len(selected)} links with total size {total_tokens}/{max_tokens} "
                 )
                 return selected
             return None

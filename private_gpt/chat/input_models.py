@@ -353,9 +353,9 @@ class MessageInput(BaseModel):
     role: Literal["system", "user", "assistant"] = Field(
         description="The role of the message sender"
     )
-    content: str | list[
-        Annotated[ContentBlockType, Field(discriminator="type")]
-    ] = Field(description="The message content")
+    content: str | list[Annotated[ContentBlockType, Field(discriminator="type")]] = (
+        Field(description="The message content")
+    )
 
     model_config = ConfigDict(
         alias_generator=to_camel,

@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 @singleton
 class ChatAsyncFacadeService:
-
     _chat_async_service: ChatAsyncService
 
     @inject

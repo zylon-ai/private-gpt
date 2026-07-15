@@ -299,7 +299,6 @@ core = [
 # Dev tooling
 # ---------------------------------------------------------------------------
 lint = [
-    "black[jupyter]>=22,<23",
     "pre-commit>=4.5.0,<5",
     "ruff>=0,<1",
 ]
@@ -359,9 +358,6 @@ branch = true
 [tool.coverage.report]
 skip_empty = true
 precision = 2
-
-[tool.black]
-target-version = ['py311']
 
 [tool.ruff]
 target-version = 'py311'

@@ -96,12 +96,10 @@ class WebSearchService:
             self._provider = MockSearchProvider()
         else:
             logger.error(
-                f"Unsupported web search provider: "
-                f"{self._settings.web_search.provider}"
+                f"Unsupported web search provider: {self._settings.web_search.provider}"
             )
             raise ValueError(
-                f"Unsupported web search provider: "
-                f"{self._settings.web_search.provider}"
+                f"Unsupported web search provider: {self._settings.web_search.provider}"
             )
 
         if self._settings.web_search.cached:

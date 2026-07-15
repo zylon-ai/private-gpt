@@ -488,9 +488,7 @@ def test_minimal_markdown_table() -> None:
     )
     node = TableNode(df=df)
     content = node.get_content(metadata_mode=MetadataMode.ALL)
-    expected_output = (
-        "| Name | Age |\n" "| - | - |\n" "| Alice | 25 |\n" "| Bob | 30 |\n\n"
-    )
+    expected_output = "| Name | Age |\n| - | - |\n| Alice | 25 |\n| Bob | 30 |\n\n"
     assert content.strip() == expected_output.strip()
 
 

@@ -4,6 +4,7 @@ A single entry point ``warm(injector, profile)`` dispatches to the right
 component groups based on the role. New worker types only need a new
 profile entry — no changes anywhere else.
 """
+
 import logging
 from collections.abc import Callable, Sequence
 

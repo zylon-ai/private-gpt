@@ -854,7 +854,6 @@ class ChatLoopEngine:
                 request.thinking.type
             )
         if request.response_format and request.response_format.output_cls:
-
             structured = StructuredOutputsParams.from_optional(
                 output_cls=request.response_format.output_cls,
             )

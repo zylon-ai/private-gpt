@@ -256,7 +256,7 @@ class MarkdownTreeNodeParser(TransformComponent):
         if element.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
             level = int(element.name[1])
             header_text = element.get_text(strip=False)
-            markdown = f'{"#" * level} {header_text}\n\n'
+            markdown = f"{'#' * level} {header_text}\n\n"
             node = SectionNode(
                 text=MarkdownHelper.sanitize_markdown(markdown),
                 extra_info={"header_level": level},

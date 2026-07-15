@@ -18,16 +18,13 @@ if TYPE_CHECKING:
 
 class ObjectStorage(ABC):
     @abstractmethod
-    async def write_bundle(self, prefix: str, files: list[StoredFile]) -> None:
-        ...
+    async def write_bundle(self, prefix: str, files: list[StoredFile]) -> None: ...
 
     @abstractmethod
-    async def delete_prefix(self, prefix: str) -> None:
-        ...
+    async def delete_prefix(self, prefix: str) -> None: ...
 
     @abstractmethod
-    async def read_file(self, prefix: str, path: str) -> bytes:
-        ...
+    async def read_file(self, prefix: str, path: str) -> bytes: ...
 
     @abstractmethod
     async def list_files(self, prefix: str) -> list[str]:

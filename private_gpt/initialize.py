@@ -1,4 +1,5 @@
 """Initialization of PrivateGPT common to the main process and the celery worker."""
+
 import logging
 import sys
 import zipfile

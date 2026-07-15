@@ -28,7 +28,6 @@ class IngestionReader(BaseComponent):
 
 
 class LlamaIndexReaderAdapter(IngestionReader):
-
     _reader: BaseReader
 
     def __init__(self, reader: BaseReader) -> None:

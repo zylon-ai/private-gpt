@@ -1,4 +1,5 @@
 """Tests for the process_citations function."""
+
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING, cast
 
@@ -132,7 +133,6 @@ async def test_multiple_citations_processing() -> None:
             and isinstance(event.delta, TextDelta)
             and event.delta.citations
         ):
-
             all_citations.extend(event.delta.citations)
 
     assert len(all_citations) == 2

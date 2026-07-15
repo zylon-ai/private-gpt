@@ -12,18 +12,17 @@ TEST_FILE_PATH = TEST_FOLDER_PATH / "test.pdf"
 
 def test_get_file_info_valid_pdf():
     """Test extracting file info from a valid PDF file."""
-    with patch(
-        "private_gpt.components.ingest.utils.get_filesize"
-    ) as mock_filesize, patch(
-        "private_gpt.components.ingest.utils.get_guest_mime_type"
-    ) as mock_guest_mime, patch(
-        "private_gpt.components.ingest.utils.get_actual_mime_type"
-    ) as mock_actual_mime, patch(
-        "private_gpt.components.ingest.utils.detect_encoding"
-    ) as mock_encoding, patch(
-        "private_gpt.components.ingest.utils.extract_config"
-    ) as mock_config:
-
+    with (
+        patch("private_gpt.components.ingest.utils.get_filesize") as mock_filesize,
+        patch(
+            "private_gpt.components.ingest.utils.get_guest_mime_type"
+        ) as mock_guest_mime,
+        patch(
+            "private_gpt.components.ingest.utils.get_actual_mime_type"
+        ) as mock_actual_mime,
+        patch("private_gpt.components.ingest.utils.detect_encoding") as mock_encoding,
+        patch("private_gpt.components.ingest.utils.extract_config") as mock_config,
+    ):
         mock_filesize.return_value = 1024  # 1KB
         mock_guest_mime.return_value = "application/pdf"
         mock_actual_mime.return_value = "application/pdf"

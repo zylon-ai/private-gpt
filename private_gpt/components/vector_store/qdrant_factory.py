@@ -57,9 +57,9 @@ class QdrantVectorStoreFactory(VectorStoreFactory):
         )
 
         self._ensure_client()
-        assert (
-            self._client is not None
-        ), "Qdrant client should be initialized at this point"
+        assert self._client is not None, (
+            "Qdrant client should be initialized at this point"
+        )
 
         return typing.cast(
             BasePydanticVectorStore,

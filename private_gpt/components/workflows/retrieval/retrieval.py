@@ -195,7 +195,7 @@ class RetrieverWorkflow(Workflow):
             )
             for i, postprocessor in enumerate(node_processors):
                 logger.debug(
-                    f"Applying postprocessor: {postprocessor.__class__.__name__} ({i+1}/{len(node_processors)})"
+                    f"Applying postprocessor: {postprocessor.__class__.__name__} ({i + 1}/{len(node_processors)})"
                 )
                 nodes = await postprocessor.apostprocess_nodes(
                     nodes, query_bundle=query_bundle
@@ -257,9 +257,9 @@ class RetrieverWorkflow(Workflow):
     async def _get_node_postprocessors(
         self, **kwargs: Any
     ) -> list[BaseNodePostprocessor]:
-        node_postprocessors: list[
-            BaseNodePostprocessor
-        ] | None = self._node_postprocessors
+        node_postprocessors: list[BaseNodePostprocessor] | None = (
+            self._node_postprocessors
+        )
         if self._node_postprocessors_fn:
             if asyncio.iscoroutinefunction(self._node_postprocessors_fn):
                 result = await self._node_postprocessors_fn(**kwargs)

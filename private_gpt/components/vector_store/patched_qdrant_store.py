@@ -371,7 +371,7 @@ class PatchedQdrantVectorStore(QdrantVectorStore):
 
         # Reduce tree removing MetadataFilters with no filters or with only one filter
         def reduce_tree(
-            f: Union[MetadataFilter, ExactMatchFilter, "MetadataFilters"]
+            f: Union[MetadataFilter, ExactMatchFilter, "MetadataFilters"],
         ) -> Union[MetadataFilter, ExactMatchFilter, "MetadataFilters"] | None:
             if isinstance(f, MetadataFilter):
                 return f

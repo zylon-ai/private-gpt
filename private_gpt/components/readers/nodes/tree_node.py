@@ -333,16 +333,15 @@ class TreeNode(BaseNode, ABC):
         return super().from_dict(data, **kwargs)
 
     @overload
-    def get_metadata_str(self, mode: TreeMetadataMode = TreeMetadataMode.ALL) -> str:
-        ...
+    def get_metadata_str(
+        self, mode: TreeMetadataMode = TreeMetadataMode.ALL
+    ) -> str: ...
 
     @overload
-    def get_metadata_str(self, mode: MetadataMode = MetadataMode.ALL) -> str:
-        ...
+    def get_metadata_str(self, mode: MetadataMode = MetadataMode.ALL) -> str: ...
 
     @overload
-    def get_metadata_str(self, mode: str = "all") -> str:
-        ...
+    def get_metadata_str(self, mode: str = "all") -> str: ...
 
     def get_metadata_str(
         self, mode: TreeMetadataMode | MetadataMode | str = TreeMetadataMode.ALL
@@ -377,16 +376,13 @@ class TreeNode(BaseNode, ABC):
     @overload
     def get_content(
         self, metadata_mode: TreeMetadataMode = TreeMetadataMode.ALL
-    ) -> str:
-        ...
+    ) -> str: ...
 
     @overload
-    def get_content(self, metadata_mode: MetadataMode = MetadataMode.ALL) -> str:
-        ...
+    def get_content(self, metadata_mode: MetadataMode = MetadataMode.ALL) -> str: ...
 
     @overload
-    def get_content(self, metadata_mode: str = "all") -> str:
-        ...
+    def get_content(self, metadata_mode: str = "all") -> str: ...
 
     def get_content(
         self,
@@ -402,18 +398,17 @@ class TreeNode(BaseNode, ABC):
     @overload
     def get_content_blocks(
         self, metadata_mode: TreeMetadataMode = TreeMetadataMode.ALL
-    ) -> list[BaseContentBlock]:
-        ...
+    ) -> list[BaseContentBlock]: ...
 
     @overload
     def get_content_blocks(
         self, metadata_mode: MetadataMode = MetadataMode.ALL
-    ) -> list[BaseContentBlock]:
-        ...
+    ) -> list[BaseContentBlock]: ...
 
     @overload
-    def get_content_blocks(self, metadata_mode: str = "all") -> list[BaseContentBlock]:
-        ...
+    def get_content_blocks(
+        self, metadata_mode: str = "all"
+    ) -> list[BaseContentBlock]: ...
 
     def get_content_blocks(
         self,

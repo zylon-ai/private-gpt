@@ -55,8 +55,7 @@ class BaseIngestionScheduler(ABC):
         return self._s3_helper
 
     @abstractmethod
-    def ingest(self, ingest_body: IngestBody) -> IngestResponse:
-        ...
+    def ingest(self, ingest_body: IngestBody) -> IngestResponse: ...
 
     def ingest_async(self, ingest_body: IngestAsyncBody) -> str:
         del ingest_body

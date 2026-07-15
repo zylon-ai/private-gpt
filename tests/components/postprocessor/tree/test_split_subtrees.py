@@ -185,9 +185,9 @@ def test_various_tree_structures(
 
     # Verify each subtree is valid
     for subtree in subtrees:
-        assert isinstance(
-            subtree, DocumentRootNode
-        ), "Subtree root should be DocumentRoot"
+        assert isinstance(subtree, DocumentRootNode), (
+            "Subtree root should be DocumentRoot"
+        )
         # Check that each subtree has at least one child
         assert len(subtree.children) > 0, "Subtree should not be empty"
 
@@ -214,9 +214,9 @@ def test_multilevel_section_hierarchy() -> None:
                 # Verify parent references are correct
                 for child in section.children:
                     if isinstance(child, SectionNode):
-                        assert (
-                            child.parent.id_ == section.id_
-                        ), "Parent-child relationship broken"
+                        assert child.parent.id_ == section.id_, (
+                            "Parent-child relationship broken"
+                        )
 
 
 def test_no_sections_integrity() -> None:
@@ -238,9 +238,9 @@ def test_no_sections_integrity() -> None:
     # Verify all content is preserved
     original_nodes = list(tree.flatten())
     result_nodes = list(subtrees[0].flatten())
-    assert len(result_nodes) >= len(
-        original_nodes
-    ), "Content was lost in no-sections tree"
+    assert len(result_nodes) >= len(original_nodes), (
+        "Content was lost in no-sections tree"
+    )
 
     # Verify the types of nodes are preserved
     original_types = [type(n) for n in original_nodes]
@@ -270,9 +270,9 @@ def test_multiple_sections_relationships() -> None:
     ]
 
     # Each subtree should have exactly one section
-    assert all(
-        count == 1 for count in section_counts
-    ), "Each subtree should contain exactly one section"
+    assert all(count == 1 for count in section_counts), (
+        "Each subtree should contain exactly one section"
+    )
 
     # Verify content type preservation
     for subtree in subtrees:
@@ -283,10 +283,10 @@ def test_multiple_sections_relationships() -> None:
         if section:
             # Verify that the section's content is preserved
             if "Section 2" in section.text:
-                assert any(
-                    isinstance(node, ListNode) for node in section.flatten()
-                ), "List content not preserved in Section 2"
+                assert any(isinstance(node, ListNode) for node in section.flatten()), (
+                    "List content not preserved in Section 2"
+                )
             elif "Section 3" in section.text:
-                assert any(
-                    isinstance(node, TableNode) for node in section.flatten()
-                ), "Table content not preserved in Section 3"
+                assert any(isinstance(node, TableNode) for node in section.flatten()), (
+                    "Table content not preserved in Section 3"
+                )

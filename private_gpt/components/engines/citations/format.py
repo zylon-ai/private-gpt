@@ -135,7 +135,7 @@ def _format_documents_as_xml(
                 continue  # Skip empty content
 
             formatted_doc = (
-                f"<node id='{citation}'>\n" f"{doc_content}\n" f"</node>\n\n"
+                f"<node id='{citation}'>\n{doc_content}\n</node>\n\n"
                 if generate_citations
                 else f"<node>\n{doc_content}\n</node>\n\n"
             )

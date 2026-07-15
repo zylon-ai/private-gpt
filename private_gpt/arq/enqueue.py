@@ -19,8 +19,7 @@ def _log_dispatch(
     defer_seconds: int | None = None,
 ) -> None:
     logger.info(
-        "Dispatching ARQ task=%s queue=%s job_id=%s correlation_id=%s "
-        "defer_seconds=%s",
+        "Dispatching ARQ task=%s queue=%s job_id=%s correlation_id=%s defer_seconds=%s",
         task_name,
         queue_name,
         job_id,

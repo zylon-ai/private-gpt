@@ -2409,16 +2409,16 @@ async def test_chat_with_multiple_document_files_emits_one_tool_pair_per_documen
     tool_uses, tool_results = _parse_sse_tool_blocks(response.text)
     doc_uses = [b for b in tool_uses if b.get("name") == "document_preprocessing"]
     assert len(doc_uses) == 3, f"Expected 3 tool use blocks, got {len(doc_uses)}"
-    assert (
-        len(tool_results) == 3
-    ), f"Expected 3 tool result blocks, got {len(tool_results)}"
+    assert len(tool_results) == 3, (
+        f"Expected 3 tool result blocks, got {len(tool_results)}"
+    )
 
     # Each result must reference a use that was emitted for this message.
     use_ids = {b["id"] for b in doc_uses}
     for result in tool_results:
-        assert (
-            result["tool_use_id"] in use_ids
-        ), f"tool_result references unknown tool_use_id {result['tool_use_id']!r}"
+        assert result["tool_use_id"] in use_ids, (
+            f"tool_result references unknown tool_use_id {result['tool_use_id']!r}"
+        )
 
 
 @pytest.mark.anyio

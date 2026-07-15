@@ -97,9 +97,9 @@ def configure_openapi(app: FastAPI) -> None:
                         if not isinstance(prop_def, dict):
                             continue
                         if not str(prop_def.get("description") or "").strip():
-                            prop_def[
-                                "description"
-                            ] = f"{prop_name.replace('_', ' ')} field."
+                            prop_def["description"] = (
+                                f"{prop_name.replace('_', ' ')} field."
+                            )
         return openapi_schema
 
     def uniquify_property_titles(openapi_schema: dict[str, Any]) -> dict[str, Any]:

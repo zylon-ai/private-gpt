@@ -376,9 +376,9 @@ def _assert_no_fail_nodes_in_result(tree: TreeNode, result: [str]) -> None:
     fail_nodes = [
         node for node in flat if _fail_marker in node.get_content(TreeMetadataMode.RAG)
     ]
-    assert not any(
-        node.id_ in result for node in fail_nodes
-    ), "Fail node found in result"
+    assert not any(node.id_ in result for node in fail_nodes), (
+        "Fail node found in result"
+    )
 
 
 def create_fake_document_expander(

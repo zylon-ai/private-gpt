@@ -10,12 +10,7 @@ from private_gpt.settings.settings import unsafe_typed_settings
 
 def _skill_md_bytes() -> bytes:
     return (
-        b"---\n"
-        b"name: test-skill\n"
-        b"description: test description\n"
-        b"---\n"
-        b"\n"
-        b"Use this skill\n"
+        b"---\nname: test-skill\ndescription: test description\n---\n\nUse this skill\n"
     )
 
 

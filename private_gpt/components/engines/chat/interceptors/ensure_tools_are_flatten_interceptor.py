@@ -54,9 +54,9 @@ class EnsureToolAreFlattenInterceptor(ChatRequestLoopInterceptor):
                                 "tool_calls": [tool_call_data],
                             }
                             if "tldr" in message.additional_kwargs:
-                                assistant_msg.additional_kwargs[
-                                    "tldr"
-                                ] = message.additional_kwargs["tldr"]
+                                assistant_msg.additional_kwargs["tldr"] = (
+                                    message.additional_kwargs["tldr"]
+                                )
 
                             found_assistant = True
 

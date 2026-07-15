@@ -116,9 +116,9 @@ class PromptStyleBase(ABC):
     def messages_to_prompt(self, messages: Sequence[ChatMessage]) -> str | list[int]:
         """Legacy method to format messages into a string prompt."""
         prompt = self._messages_to_prompt(messages)
-        assert (
-            prompt.prompt is not None or prompt.token_ids is not None
-        ), "PromptData.prompt should not be None or PromptData.token_ids should not be None"
+        assert prompt.prompt is not None or prompt.token_ids is not None, (
+            "PromptData.prompt should not be None or PromptData.token_ids should not be None"
+        )
         return prompt.prompt if prompt.prompt is not None else prompt.token_ids  # type: ignore
 
     def completion_to_prompt(self, completion: str) -> str:

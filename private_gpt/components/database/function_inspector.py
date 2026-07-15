@@ -250,7 +250,14 @@ class DatabaseFunctionsInspector(DatabaseObjectInspector):
             current_function = None
 
             for row in result:
-                (schema, name, comment, param_name, param_type, param_direction,) = (
+                (
+                    schema,
+                    name,
+                    comment,
+                    param_name,
+                    param_type,
+                    param_direction,
+                ) = (
                     row[0],
                     row[1],
                     row[2],
@@ -282,7 +289,7 @@ class DatabaseFunctionsInspector(DatabaseObjectInspector):
                 elif param_direction == "R" and param_type:
                     assert current_function.return_types is not None
                     current_function.return_types.append(
-                        f"{param_name if param_name else''} {param_type}"
+                        f"{param_name if param_name else ''} {param_type}"
                     )
 
             if current_function is not None:

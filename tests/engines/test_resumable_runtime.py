@@ -86,7 +86,9 @@ async def test_memory_iteration_state_aggregates_once_and_cleans_up() -> None:
 
 
 @pytest.mark.asyncio
-async def test_memory_iteration_state_preserves_result_received_before_checkpoint() -> None:
+async def test_memory_iteration_state_preserves_result_received_before_checkpoint() -> (
+    None
+):
     service = InMemoryChatCheckpointStore()
     response = ToolExecutionResponse(
         tool_name="echo",

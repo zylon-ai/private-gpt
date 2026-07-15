@@ -21,7 +21,6 @@ DEBUG_MODE = settings().server.debug_mode
 
 @singleton
 class S3Helper:
-
     _s3_client: S3Client | None
     _s3_settings: S3Settings
 

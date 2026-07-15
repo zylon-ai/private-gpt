@@ -1,4 +1,5 @@
 """Simple node parser."""
+
 import copy
 import logging
 import re
@@ -151,14 +152,18 @@ class SentenceTreeNodeParser(NodeParser):
         sentence_splitter = sentence_splitter or split_by_sentence_tokenizer()
         embedding_component = get_global_injector().get(EmbeddingComponent)
         embed_context_window = embedding_component.get_config().context_window
-        fallback_text_splitter = fallback_text_splitter or TokenTextSplitterWithoutStripping(
-            # Config:
-            # 1. Chunk size should be half of the context window size to
-            #    allow to add metadata to the original text.
-            # 2. Chunk overlap should be 0 to avoid overlapping chunks.
-            #    If we overlap content, it will store the same content in couple chunks.
-            chunk_size=int(embed_context_window * 0.9),
-            chunk_overlap=0,
+        fallback_text_splitter = (
+            fallback_text_splitter
+            or TokenTextSplitterWithoutStripping(
+                # Config:
+                # 1. Chunk size should be half of the context window size to
+                #    allow to add metadata to the original text.
+                # 2. Chunk overlap should be 0 to avoid overlapping chunks.
+                #    If we overlap content, it will store the same content in
+                #    multiple chunks.
+                chunk_size=int(embed_context_window * 0.9),
+                chunk_overlap=0,
+            )
         )
 
         id_func = id_func or default_id_func

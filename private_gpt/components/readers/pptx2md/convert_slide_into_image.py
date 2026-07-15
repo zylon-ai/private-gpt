@@ -453,7 +453,6 @@ class EnhancedPPTXTransform:
                             "DIAGRAM",
                         ]
                     ):
-
                         if all(
                             hasattr(shape, attr)
                             for attr in ["left", "top", "width", "height"]

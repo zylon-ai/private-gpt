@@ -353,9 +353,9 @@ class TestOpenAPISchemaCompatibility:
                     f"details:\n{chr(10).join(details) or '<none>'}"
                 )
 
-        assert (
-            not failures
-        ), "OpenAPI contract drift changed unexpectedly.\n\n" + "\n\n".join(failures)
+        assert not failures, (
+            "OpenAPI contract drift changed unexpectedly.\n\n" + "\n\n".join(failures)
+        )
 
     def test_endpoint_request_response_samples_pass_openapi_schema_validation(
         self,
