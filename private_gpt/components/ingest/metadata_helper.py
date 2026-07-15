@@ -37,19 +37,20 @@ class MetadataDocument(enum.StrEnum):
     PROJECT_ID = MetadataKeys.PROJECT_ID.value
 
 
-class MetadataFeatures(enum.Enum):
-    """Metadata used to identify features."""
+class MetadataSummaryFeature(enum.StrEnum):
+    """Metadata used to identify summary features."""
 
-    class MetadataSummaryFeature(enum.StrEnum):
-        SUMMARY = "summary"
+    SUMMARY = "summary"
 
-    class MetadataTableFeature(enum.StrEnum):
 
-        TABLE_ID = "table_id"
-        TABLE_HEADER = "table_header"
-        TABLE_CONTENT = "table_content"
-        TABLE_DESCRIPTION = "table_description"
-        TABLE_RAW_CONTENT = "table_raw_content"
+class MetadataTableFeature(enum.StrEnum):
+    """Metadata used to identify table features."""
+
+    TABLE_ID = "table_id"
+    TABLE_HEADER = "table_header"
+    TABLE_CONTENT = "table_content"
+    TABLE_DESCRIPTION = "table_description"
+    TABLE_RAW_CONTENT = "table_raw_content"
 
 
 class MetadataNode(enum.StrEnum):
@@ -177,11 +178,7 @@ class MetadataHelper:
 
     @staticmethod
     def exclude_feature_metadata(node: BaseNode) -> None:
-        features = list(  # type: ignore
-            MetadataFeatures.MetadataTableFeature.value
-        ) + list(  # type: ignore
-            MetadataFeatures.MetadataSummaryFeature.value
-        )
+        features = list(MetadataTableFeature) + list(MetadataSummaryFeature)
         for key in features:
             MetadataHelper.exclude_key_metadata(
                 node, key, exclude_llm=True, exclude_from_embed=True
