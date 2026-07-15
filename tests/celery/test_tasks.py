@@ -82,6 +82,46 @@ def test_success_task_posts_to_success_broker_queue(injector: MockInjector):
     )
 
 
+def test_success_task_posts_to_callback_task_name_queue(injector: MockInjector):
+    broker_mock = Mock(BrokerComponent)
+    injector.bind_mock(BrokerComponent, broker_mock)
+
+    set_global_injector(injector.test_injector)
+
+    @celery_app.task(
+        name="renamed_callback_task",
+        callback_task_name="legacy_callback_task",
+        after_return=task_after_return,
+    )
+    def renamed_task(input_with_callback: CallbackInput) -> CallbackResponse:
+        return CallbackResponse(
+            result=input_with_callback.x * input_with_callback.y,
+            label="test",
+        )
+
+    celery_app.send_task(
+        "renamed_callback_task",
+        args=(
+            CallbackInput(
+                x=2,
+                y=3,
+                callback=Callback(amqp=AMQP(exchange="main")),
+            ),
+        ),
+    )
+
+    expected_response = AsyncResponse(
+        data=CallbackResponse(result=6, label="test"),
+        type="pgpt.legacy_callback_task.done",
+    )
+
+    broker_mock.publish.assert_called_once_with(
+        exchange="main",
+        routing_key="pgpt.legacy_callback_task.done",
+        body=bytes(expected_response.model_dump_json(), "utf-8"),
+    )
+
+
 def test_failing_task_posts_to_error_handler_queue(injector: MockInjector):
     broker_mock = Mock(BrokerComponent)
     injector.bind_mock(BrokerComponent, broker_mock)
