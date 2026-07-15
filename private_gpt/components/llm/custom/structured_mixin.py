@@ -259,6 +259,6 @@ class StructuredChatMixin:
                     flags,
                 )
                 if output is not None:
-                    yield output
+                    yield typing.cast("Model | FlexibleModel", output)
 
         return gen()
