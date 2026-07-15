@@ -247,7 +247,7 @@ class PandasAIService(BaseModel):
             {
                 "llm": llm,
                 "organization": "zylon",
-                **config.dict(exclude_none=True),
+                **config.model_dump(exclude_none=True),
             }
         )
 

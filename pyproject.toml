@@ -421,7 +421,6 @@ python-version = "3.11"
 [tool.ty.rules]
 unused-type-ignore-comment = "ignore"
 possibly-missing-submodule = "ignore"
-deprecated = "ignore"
 unresolved-import = "ignore"
 invalid-argument-type = "ignore"
 unresolved-attribute = "ignore"
