@@ -40,8 +40,16 @@ jobs:
     name: test
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: ./.github/workflows/actions/install_dependencies
-      - name: run test
+      - name: Run affected tests
+        if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
+        env:
+          GIT_TARGET: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'HEAD^' }}
+        run: make test-changed PYTEST_ARGS="--git-target $GIT_TARGET --junit-xml=tests-results.xml"
+      - name: Run full test suite with coverage
+        if: ${{ startsWith(github.head_ref, 'release-please--branches--') }}
         run: make test-coverage
       # Run even if make test fails for coverage reports
       # TODO: select a better xml results displayer
@@ -53,7 +61,7 @@ jobs:
           path: tests-results.xml
       - name: Archive code coverage results
         uses: actions/upload-artifact@v7
-        if: always()
+        if: ${{ always() && startsWith(github.head_ref, 'release-please--branches--') }}
         with:
           name: code-coverage-report
           path: htmlcov/
