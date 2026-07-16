@@ -12,7 +12,7 @@ TEST_LOCAL_DATA_DIR ?= $(TEST_PGPT_HOME)/local_data/tests
 WIPE_PGPT_HOME := $(if $(PGPT_HOME),$(PGPT_HOME),$(HOME)/.local/share/private-gpt)
 WIPE_LOCAL_DATA_DIR := $(WIPE_PGPT_HOME)/local_data
 
-.PHONY: test test-coverage format-check ruff format ty check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower celery-worker arq-worker chat-worker tools-worker
+.PHONY: test test-coverage format lint typecheck fix check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower celery-worker arq-worker chat-worker tools-worker
 
 ########################################################################################################################
 # Quality checks
@@ -26,22 +26,23 @@ test-coverage:
 	rm -rf "$(TEST_LOCAL_DATA_DIR)"/*
 	PGPT_HOME=$(TEST_PGPT_HOME) PYTHONPATH=. uv run pytest tests --cov private_gpt --cov-report term --cov-report=html --cov-report xml --junit-xml=tests-results.xml
 
-format-check:
+format:
 	uv run ruff format . --check
 
-ruff:
+lint:
 	uv run ruff check private_gpt tests scripts
 
-format:
+fix:
 	uv run ruff check private_gpt tests scripts --fix
 	uv run ruff format .
 
-ty:
+typecheck:
 	uv run ty check private_gpt scripts
 
 check:
-	make format
-	make ty
+	$(MAKE) format
+	$(MAKE) lint
+	$(MAKE) typecheck
 
 auto-discover-models:
 	uv run python scripts/auto_discover_models.py $(AUTO_DISCOVER_ARGS)
