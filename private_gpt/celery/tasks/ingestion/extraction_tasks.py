@@ -47,9 +47,10 @@ def cleanup_temporal_files(func: Callable[..., T]) -> Callable[..., T]:
     return wrapper
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[call-overload,misc]
     name=VECTOR_INDEX_TASK_NAME,
     base=StatelessBackgroundTask,
+    callback_task_name=VECTOR_INDEX_CALLBACK_TASK_NAME,
     autoretry_for=AUTORETRY_EXCEPTIONS,
 )
 @cleanup_temporal_files
@@ -135,9 +136,6 @@ def vector_index_task(body: IngestAsyncBody) -> Any:
         model="private-gpt",
         data=ingested_documents,
     )
-
-
-vector_index_task.callback_task_name = VECTOR_INDEX_CALLBACK_TASK_NAME  # type: ignore[attr-defined]
 
 
 def ensure_to_remove_temporal_files(body: IngestAsyncBody) -> None:

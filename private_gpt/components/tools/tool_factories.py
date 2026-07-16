@@ -146,8 +146,10 @@ class WebScraperServiceFactory:
 
     def create(self) -> "WebScraperService":
         from private_gpt.components.web.web_scraper_service import WebScraperService
+        from private_gpt.di import get_global_injector
 
-        return WebScraperService(settings=self.settings)
+        # Resolve the singleton so every consumer shares one provider pool.
+        return get_global_injector().get(WebScraperService)
 
 
 @singleton

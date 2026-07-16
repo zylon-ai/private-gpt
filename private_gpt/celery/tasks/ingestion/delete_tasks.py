@@ -20,9 +20,10 @@ DELETE_INGESTED_TASK_NAME = "private_gpt.ingestion.delete"
 DELETE_INGESTED_CALLBACK_TASK_NAME = "delete_ingested_task"
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[call-overload,misc]
     name=DELETE_INGESTED_TASK_NAME,
     base=StatelessBackgroundTask,
+    callback_task_name=DELETE_INGESTED_CALLBACK_TASK_NAME,
     # Retry on ValueError and IndexNotReadyException.
     # ValueError is thrown when the index is not initialized
     #   and we cannot guarantee that the index will not be ready.
@@ -54,6 +55,3 @@ def delete_ingested_task(body: "DeleteIngestedDocumentAsyncBody") -> None:
             # If the task was not revoked, we follow the normal
             # flow and raise the exception.
             raise
-
-
-delete_ingested_task.callback_task_name = DELETE_INGESTED_CALLBACK_TASK_NAME  # type: ignore[attr-defined]
