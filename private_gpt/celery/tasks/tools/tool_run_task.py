@@ -26,7 +26,12 @@ logger = logging.getLogger(__name__)
     ignore_result=True,
 )
 async def tool_run_task(*, request_data: dict[str, Any]) -> None:
-    request = ToolExecutionRequest.model_validate(request_data)
+    try:
+        request = ToolExecutionRequest.model_validate(request_data)
+    except Exception:
+        logger.exception("Invalid tool execution request")
+        raise
+
     try:
         response = await execute_tool_request(
             request,

@@ -89,9 +89,13 @@ class LocalToolScheduler(BaseToolScheduler):
         state_ctx: ChatState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
-        return await execute_tool_request(
-            request, state_ctx=state_ctx, interceptors=interceptors
-        )
+        try:
+            return await execute_tool_request(
+                request, state_ctx=state_ctx, interceptors=interceptors
+            )
+        except Exception:
+            logger.exception("Local tool '%s' execution failed", request.tool_name)
+            raise
 
     async def cancel(
         self,
