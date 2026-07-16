@@ -132,7 +132,7 @@ class PatchedQdrantVectorStore(QdrantVectorStore):
         # Call parent constructor
         super().__init__(
             # Workaround to avoid calling exist collection
-            aclient=object(),
+            aclient=cast(AsyncQdrantClient, object()),
             collection_name=collection_name,
             # Disable hybrid search to avoid client conflicts
             enable_hybrid=False,
@@ -644,10 +644,13 @@ class PatchedQdrantVectorStore(QdrantVectorStore):
         filter: Filter
         if filters is not None:
             filter = self._build_subfilter(filters)
-            if filter.should is None:
-                filter.should = should
+            current_should = filter.should
+            if current_should is None:
+                filter.should = cast(Any, should)
+            elif isinstance(current_should, list):
+                current_should.extend(should)
             else:
-                filter.should.extend(should)
+                filter.should = cast(Any, [current_should, *should])
         else:
             filter = Filter(should=should)
 
@@ -761,10 +764,13 @@ class PatchedQdrantVectorStore(QdrantVectorStore):
         filter: Filter
         if filters is not None:
             filter = await asyncio.to_thread(self._build_subfilter, filters)
-            if filter.should is None:
-                filter.should = should
+            current_should = filter.should
+            if current_should is None:
+                filter.should = cast(Any, should)
+            elif isinstance(current_should, list):
+                current_should.extend(should)
             else:
-                filter.should.extend(should)
+                filter.should = cast(Any, [current_should, *should])
         else:
             filter = Filter(should=should)
 

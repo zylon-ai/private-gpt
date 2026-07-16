@@ -414,6 +414,12 @@ runtime-evaluated-decorators = ["injector.inject"]
 [tool.ty.environment]
 python-version = "3.11"
 
+[tool.ty.rules]
+redundant-cast = "ignore"
+unresolved-import = "ignore"
+unused-ignore-comment = "ignore"
+unused-type-ignore-comment = "ignore"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

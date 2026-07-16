@@ -31,7 +31,7 @@ class PGPTPandasAILLM(PandasAILLM):  # type: ignore[misc]
             "Import "
         )
 
-    def call(self, instruction: BasePrompt, context: AgentState = None) -> str:
+    def call(self, instruction: BasePrompt, context: AgentState | None = None) -> str:
         prompt = f"{self._custom_prompt}\n" if self._custom_prompt else ""
         prompt += instruction.to_string()
 

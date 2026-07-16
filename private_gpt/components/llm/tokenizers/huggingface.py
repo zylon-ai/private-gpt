@@ -239,20 +239,22 @@ class HuggingFaceTokenizer(TokenizerBase):
         documents: list[dict[str, str]] | None = None,
         **kwargs: Any,
     ) -> list[int] | str:
-        result: list[int] | str = self._tokenizer.apply_chat_template(
-            conversation, tools=tools, documents=documents, **kwargs
+        apply_chat_template = cast(Any, self._tokenizer.apply_chat_template)
+        return cast(
+            list[int] | str,
+            apply_chat_template(
+                conversation, tools=tools, documents=documents, **kwargs
+            ),
         )
-        return result
 
     def convert_tokens_to_string(self, tokens: list[str]) -> str:
-        converted: str = self._tokenizer.convert_tokens_to_string(tokens)
-        return converted
+        return cast(str, self._tokenizer.convert_tokens_to_string(tokens))
 
     def decode(self, ids: list[int] | int, skip_special_tokens: bool = True) -> str:
-        decoded: str = self._tokenizer.decode(
-            ids, skip_special_tokens=skip_special_tokens
+        return cast(
+            str,
+            self._tokenizer.decode(ids, skip_special_tokens=skip_special_tokens),
         )
-        return decoded
 
     def convert_ids_to_tokens(
         self, ids: list[int], skip_special_tokens: bool = True

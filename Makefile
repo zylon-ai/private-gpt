@@ -12,7 +12,7 @@ TEST_LOCAL_DATA_DIR ?= $(TEST_PGPT_HOME)/local_data/tests
 WIPE_PGPT_HOME := $(if $(PGPT_HOME),$(PGPT_HOME),$(HOME)/.local/share/private-gpt)
 WIPE_LOCAL_DATA_DIR := $(WIPE_PGPT_HOME)/local_data
 
-.PHONY: test test-coverage format lint typecheck fix check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower celery-worker arq-worker chat-worker tools-worker
+.PHONY: test test-coverage quality-dependencies format lint typecheck fix check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower celery-worker arq-worker chat-worker tools-worker
 
 ########################################################################################################################
 # Quality checks
@@ -26,18 +26,21 @@ test-coverage:
 	rm -rf "$(TEST_LOCAL_DATA_DIR)"/*
 	PGPT_HOME=$(TEST_PGPT_HOME) PYTHONPATH=. uv run pytest tests --cov private_gpt --cov-report term --cov-report=html --cov-report xml --junit-xml=tests-results.xml
 
-format:
-	uv run ruff format . --check
+quality-dependencies:
+	uv sync --inexact --extra dev
 
-lint:
-	uv run ruff check private_gpt tests scripts
+format: quality-dependencies
+	uv run --no-sync ruff format . --check
 
-fix:
-	uv run ruff check private_gpt tests scripts --fix
-	uv run ruff format .
+lint: quality-dependencies
+	uv run --no-sync ruff check private_gpt tests scripts
 
-typecheck:
-	uv run ty check private_gpt scripts
+fix: quality-dependencies
+	uv run --no-sync ruff check private_gpt tests scripts --fix
+	uv run --no-sync ruff format .
+
+typecheck: quality-dependencies
+	uv run --no-sync ty check private_gpt scripts
 
 check:
 	$(MAKE) format

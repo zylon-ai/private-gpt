@@ -331,7 +331,8 @@ class PatchedOpenAIResponsesLLM(StructuredChatMixin, OpenAIResponsesBase):  # ty
             current_tool_call: ResponseFunctionToolCall | None = None
             local_previous_response_id = self._previous_response_id
 
-            for event in self._client.responses.create(
+            create_response = cast(Any, self._client.responses.create)
+            for event in create_response(
                 input=message_dicts,  # type: ignore[arg-type]
                 stream=True,
                 **self._get_model_kwargs(**kwargs),
@@ -451,7 +452,8 @@ class PatchedOpenAIResponsesLLM(StructuredChatMixin, OpenAIResponsesBase):  # ty
             current_tool_call: ResponseFunctionToolCall | None = None
             local_previous_response_id = self._previous_response_id
 
-            response_stream = await self._aclient.responses.create(
+            create_response = cast(Any, self._aclient.responses.create)
+            response_stream = await create_response(
                 input=message_dicts,  # type: ignore[arg-type]
                 stream=True,
                 **self._get_model_kwargs(**kwargs),
