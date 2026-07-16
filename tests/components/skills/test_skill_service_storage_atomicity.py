@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -26,6 +26,7 @@ def _service(*, repo: object, storage: object) -> SkillService:
         settings=_settings(),
         storage_component=SimpleNamespace(get_object_storage=lambda **_: storage),
         skill_repository=repo,
+        cache=MagicMock(),
     )
 
 

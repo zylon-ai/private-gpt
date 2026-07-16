@@ -4,6 +4,7 @@ from typing import Literal
 
 from injector import inject, singleton
 
+from private_gpt.components.cache import CacheService
 from private_gpt.components.skills.errors import SkillDomainError, SkillErrorCode
 from private_gpt.components.skills.models.skill_entities import (
     SkillEntity,
@@ -31,6 +32,9 @@ from private_gpt.components.storage.models import StoredFile
 from private_gpt.components.storage.storage_component import StorageComponent
 from private_gpt.settings.settings import Settings
 
+_SKILL_METADATA_CACHE_TTL_SECONDS = 60
+_SKILL_BODY_CACHE_TTL_SECONDS = 86400
+
 
 @singleton
 class SkillService:
@@ -40,6 +44,7 @@ class SkillService:
         settings: Settings,
         storage_component: StorageComponent,
         skill_repository: SQLAlchemySkillRepository,
+        cache: CacheService,
     ) -> None:
         self._skill_repository = skill_repository
         self._max_bundle_size_bytes = settings.skills.max_bundle_size_bytes
@@ -50,6 +55,7 @@ class SkillService:
             local_root_path=local_root,
             bucket_name=self._storage_bucket_name,
         )
+        self._cache = cache
 
     def _check_bundle_size(self, files: list[StoredFile]) -> None:
         if self._max_bundle_size_bytes is None:
@@ -250,6 +256,11 @@ class SkillService:
     async def recover_versions(
         self, skill_filter: SkillFilter
     ) -> list[SkillVersionWithSkillEntity]:
+        cache_key = skill_filter.model_dump_json(exclude_none=True)
+        cached = self._cache.get("skill-resolved-versions", cache_key)
+        if cached is not None:
+            return list(cached)
+
         versions = await self._skill_repository.recover_versions(
             skill_filter=skill_filter
         )
@@ -270,13 +281,30 @@ class SkillService:
                     version=version,
                 )
             )
+        self._cache.set(
+            "skill-resolved-versions",
+            cache_key,
+            resolved,
+            ttl_seconds=_SKILL_METADATA_CACHE_TTL_SECONDS,
+        )
         return resolved
 
     async def get_skill_body(self, version: SkillVersionEntity) -> str:
+        cache_key = f"{version.skill_id}:{version.id}:{version.version}"
+        cached = self._cache.get("skill-body", cache_key)
+        if cached is not None:
+            return str(cached)
+
         markdown_bytes = await self._storage_component.read_file(
             version.storage_prefix, "SKILL.md"
         )
         parsed = parse_skill_markdown(markdown_bytes.decode("utf-8"))
+        self._cache.set(
+            "skill-body",
+            cache_key,
+            parsed.body,
+            ttl_seconds=_SKILL_BODY_CACHE_TTL_SECONDS,
+        )
         return parsed.body
 
     async def list_version_files(self, version: SkillVersionEntity) -> list[str]:

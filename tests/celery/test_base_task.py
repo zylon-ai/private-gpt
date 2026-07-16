@@ -7,8 +7,11 @@ from celery.backends.redis import RedisBackend
 
 from private_gpt.celery.base import (
     MaxFailureRetriesExceeded,
+    StatelessBackgroundTask,
     _BackgroundTask,
 )
+from private_gpt.di import get_global_injector, set_global_injector
+from tests.fixtures.mock_injector import MockInjector
 
 
 @pytest.fixture
@@ -126,3 +129,38 @@ def test_redis_failure_tracker_with_no_redis(app: Celery) -> None:
 
         result = task.apply_async().get()
         assert result == "success"
+
+
+def test_stateless_task_does_not_close_global_injector(
+    injector: MockInjector,
+) -> None:
+    class GlobalResource:
+        closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    global_resource = GlobalResource()
+    injector.test_injector.binder.bind(GlobalResource, to=global_resource)
+    set_global_injector(injector.test_injector)
+
+    callback_ran = False
+
+    def after_return(*_args: Any, **_kwargs: Any) -> None:
+        nonlocal callback_ran
+        callback_ran = True
+        assert get_global_injector().get(GlobalResource) is global_resource
+        assert not global_resource.closed
+
+    celery_app = Celery(__name__)
+    celery_app.conf.update(task_always_eager=True, task_eager_propagates=True)
+
+    @celery_app.task(base=StatelessBackgroundTask, after_return=after_return)
+    def stateless_task() -> str:
+        task_resource = get_global_injector().get(GlobalResource)
+        assert task_resource is not global_resource
+        return "success"
+
+    assert stateless_task.apply().get() == "success"
+    assert callback_ran
+    assert not global_resource.closed

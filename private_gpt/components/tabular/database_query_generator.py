@@ -7,18 +7,17 @@ import pickle
 import re
 import time
 from collections.abc import Generator, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-from cachetools import TTLCache, cachedmethod
-from cachetools.keys import hashkey
-from Levenshtein import distance  # ty:ignore[unresolved-import]
+from Levenshtein import distance
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from pandas import DataFrame
 from pydantic import BaseModel, Field
 from sqlalchemy import Connection, Engine, create_engine, inspect, text
 from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 
+from private_gpt.components.cache import Cache, MemoryCache
 from private_gpt.components.chat.models.chat_config_models import (
     CondensationConfig,
     ResolvedChatRequest,
@@ -229,7 +228,6 @@ class DatabaseQueryGenerator:
     _engine: Engine | None
     _connection: Connection | None
     _dialect: str | None
-    _schema_cache: ClassVar[TTLCache] = TTLCache(maxsize=1000, ttl=86400)
     inspector_config: InspectorConfig
     batch_size: int
     timeout_seconds: int | None
@@ -250,6 +248,7 @@ class DatabaseQueryGenerator:
         batch_size: int = 1000,
         timeout_seconds: int | None = None,
         max_mb_result: int | None = None,
+        cache: Cache | None = None,
     ):
         # Need to do it lazily to avoid circular dependency
         self.connection_string = connection_string
@@ -270,6 +269,7 @@ class DatabaseQueryGenerator:
         self.batch_size = batch_size
         self.timeout_seconds = timeout_seconds
         self.max_mb_result = max_mb_result
+        self.cache = cache or MemoryCache(max_entries=1000)
 
     def _extract_database_name(self) -> str:
         # crude way to extract the database name from the connection string
@@ -972,17 +972,19 @@ class DatabaseQueryGenerator:
                 self.is_readonly,
             )
 
-    @cachedmethod(
-        cache=lambda self: self._schema_cache,
-        key=lambda self, cache_key, schema, inspector: hashkey(cache_key, schema),
-    )
     def _get_cached_objects_by_type(
         self,
         cache_key: str,
         schema: str,
         inspector: DatabaseObjectInspector,
     ) -> list[InspectedDatabaseObject]:
-        return list(inspector.get_objects(schema))
+        cached_objects = self.cache.get("database-schema", cache_key)
+        if cached_objects is not None:
+            return cast(list[InspectedDatabaseObject], cached_objects)
+
+        objects = list(inspector.get_objects(schema))
+        self.cache.set("database-schema", cache_key, objects)
+        return objects
 
     def _extract_database_schema(
         self,

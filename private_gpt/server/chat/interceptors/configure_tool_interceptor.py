@@ -34,7 +34,7 @@ class ConfigureToolRequestInterceptor(ChatRequestLoopInterceptor):
 
     async def intercept(self, context: ChatInterceptorContext) -> None:
         """Run all tool-configuration interceptors in order."""
-        if context.phase != InterceptorPhase.BEFORE_ITERATION:
+        if context.phase != InterceptorPhase.BEFORE_TOOL:
             return
 
         for interceptor in self._interceptors:

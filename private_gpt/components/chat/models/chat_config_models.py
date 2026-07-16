@@ -130,17 +130,21 @@ class ToolExecutionMetadata(BaseModel):
 
     @field_serializer("rebuild_kwargs", when_used="json")
     def _serialize_kwargs(self, kwargs: dict[str, Any]) -> dict[str, Any]:
-        """Tag BaseModel values so they survive the JSON roundtrip."""
-        result: dict[str, Any] = {}
-        for key, value in kwargs.items():
-            if isinstance(value, BaseModel):
-                result[key] = {
-                    self.MODEL_TAG_KEY: f"{type(value).__module__}:{type(value).__qualname__}",
-                    "data": value.model_dump(mode="json"),
-                }
-            else:
-                result[key] = value
-        return result
+        """Tag nested BaseModel values so they survive the JSON roundtrip."""
+        return {key: self._serialize_value(value) for key, value in kwargs.items()}
+
+    @classmethod
+    def _serialize_value(cls, value: Any) -> Any:
+        if isinstance(value, BaseModel):
+            return {
+                cls.MODEL_TAG_KEY: f"{type(value).__module__}:{type(value).__qualname__}",
+                "data": value.model_dump(mode="json"),
+            }
+        if isinstance(value, dict):
+            return {key: cls._serialize_value(item) for key, item in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [cls._serialize_value(item) for item in value]
+        return value
 
     @field_validator("rebuild_kwargs", mode="before")
     @classmethod
@@ -150,18 +154,22 @@ class ToolExecutionMetadata(BaseModel):
             return kwargs
         import importlib
 
-        result: dict[str, Any] = {}
-        for key, value in kwargs.items():
-            if isinstance(value, dict) and cls.MODEL_TAG_KEY in value:
-                module_path, qualname = value[cls.MODEL_TAG_KEY].rsplit(":", 1)
-                module = importlib.import_module(module_path)
-                model_cls: Any = module
-                for attribute in qualname.split("."):
-                    model_cls = getattr(model_cls, attribute)
-                result[key] = model_cls.model_validate(value["data"])
-            else:
-                result[key] = value
-        return result
+        def deserialize_value(value: Any) -> Any:
+            if isinstance(value, list):
+                return [deserialize_value(item) for item in value]
+            if not isinstance(value, dict):
+                return value
+            if cls.MODEL_TAG_KEY not in value:
+                return {key: deserialize_value(item) for key, item in value.items()}
+
+            module_path, qualname = value[cls.MODEL_TAG_KEY].rsplit(":", 1)
+            module = importlib.import_module(module_path)
+            model_cls: Any = module
+            for attribute in qualname.split("."):
+                model_cls = getattr(model_cls, attribute)
+            return model_cls.model_validate(value["data"])
+
+        return {key: deserialize_value(value) for key, value in kwargs.items()}
 
 
 class ToolSpec(BaseModel):

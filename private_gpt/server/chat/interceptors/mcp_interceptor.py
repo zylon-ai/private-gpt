@@ -19,7 +19,7 @@ from private_gpt.components.engines.chat.models.chat_phase import (
 )
 from private_gpt.events.event_errors import Errors
 from private_gpt.server.mcp.config import McpServerConfig
-from private_gpt.server.mcp.mcp_service import McpService
+from private_gpt.server.mcp.mcp_service import McpService, mcp_tool_to_spec
 
 
 def _extract_original_exception(exc: BaseException) -> BaseException:
@@ -62,8 +62,11 @@ class McpRequestInterceptor(ChatRequestLoopInterceptor):
                 ) -> list[ToolSpec]:
                     """Fetch tools from a single MCP server."""
                     client = self._mcp_service.create_client(config)
-                    li_tools = await client.list_tools()
-                    return [ToolSpec.from_llama_index(tool) for tool in li_tools]
+                    try:
+                        li_tools = await client.list_tools()
+                        return [mcp_tool_to_spec(config, tool) for tool in li_tools]
+                    finally:
+                        await client.close()
 
                 # Gather tools from all MCP servers concurrently
                 mcp_tools_results: list[BaseException | list[ToolSpec]] = list(
@@ -121,11 +124,6 @@ class McpRequestInterceptor(ChatRequestLoopInterceptor):
 
                 # Update original context stack as well
                 if state.original_input:
-                    state.input.context_stack = (
-                        state.original_input.context_stack.remove_layers_of_source(
-                            "mcp"
-                        )
-                    )
                     state.original_input.context_stack = (
                         state.original_input.context_stack.remove_layers_of_source(
                             "mcp"

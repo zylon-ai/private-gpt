@@ -1189,6 +1189,22 @@ class RedisSettings(BaseModel):
         return f"{self.url}{database_path}"
 
 
+class CacheSettings(BaseModel):
+    provider: Literal["memory", "redis"] = Field(
+        default="memory",
+        description="Cache provider. Redis uses local memory as L1 and Redis as L2.",
+    )
+    ttl_seconds: int = Field(default=86400, gt=0)
+    max_entries: int = Field(default=1000, gt=0)
+    key_prefix: str = Field(default="private-gpt")
+    redis_database: int | None = Field(default=None, ge=0)
+
+    @field_validator("redis_database", mode="before")
+    @classmethod
+    def empty_redis_database_is_none(cls, value: Any) -> Any:
+        return None if value == "" else value
+
+
 class DoclingSettings(BaseModel):
     mode: Literal["api"] = "api"
     api_base: str = Field(
@@ -1368,17 +1384,37 @@ class WebFetchSettings(BaseModel):
     enabled: bool = Field(
         default=False, description="Flag indicating if web page fetching is enabled."
     )
+    provider: str = Field(
+        default="local",
+        description="Web scraper provider to run the scrape script with "
+        "(local, opensandbox, ...).",
+    )
     timeout_seconds: int = Field(
         default=15, description="Timeout in seconds for web page fetching."
     )
     pool_size: int = Field(
-        default=5, description="Number of browser instances to keep in pool."
+        default=5, description="Max concurrent scrape sessions in the pool."
     )
     pool_idle_timeout_seconds: int = Field(
-        default=300, description="Seconds before idle browser is terminated."
+        default=300, description="Seconds before an idle warm session is terminated."
     )
-    pool_max_pages_per_browser: int = Field(
-        default=5, description="Max concurrent pages per browser instance."
+    max_requests_per_session: int = Field(
+        default=1,
+        description="Scrapes a session serves before it is killed and replaced. "
+        "1 destroys the session after every scrape; higher values keep it "
+        "warm and amortize session creation.",
+    )
+    batch_size: int = Field(
+        default=5,
+        description="Max pages coalesced into one browser run. Requests that "
+        "arrive within the batch window share a single session instead of "
+        "launching one browser each; the batch dispatches early when full. "
+        "1 disables batching.",
+    )
+    batch_wait_ms: int = Field(
+        default=250,
+        description="How long (ms) the first request of a batch waits for "
+        "more pages before the batch is dispatched.",
     )
 
 
@@ -1770,6 +1806,7 @@ class Settings(BaseModel):
     database: DatabaseSettings
     celery: CelerySettings
     redis: RedisSettings
+    cache: CacheSettings = Field(default_factory=CacheSettings)
     tasks_results_broker: TasksResultsBroker
     s3: S3Settings
     phoenix: ArizePhoenixSettings

@@ -15,7 +15,12 @@ from celery.utils.log import get_task_logger
 
 from private_gpt.celery.callback import task_after_return
 from private_gpt.celery.config import celery_settings
-from private_gpt.di import clean_global_injector, get_global_injector
+from private_gpt.di import (
+    clean_global_injector,
+    create_application_injector,
+    get_global_injector,
+    set_global_injector,
+)
 
 logger = get_task_logger(__name__)
 logger.setLevel("DEBUG")
@@ -257,8 +262,7 @@ class StatelessBackgroundTask(_BackgroundTask):
         if run_method is None:
             raise NotImplementedError("Subclass must implement 'run' method")
 
-        # Inject injector
-        get_global_injector(allow_to_generate_new_injectors=True)
+        set_global_injector(create_application_injector())
 
         if asyncio.iscoroutinefunction(run_method):
             result = await run_method(*args, **kwargs)

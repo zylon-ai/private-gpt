@@ -171,47 +171,37 @@ class S3ObjectStorage(ObjectStorage):
         self._bucket_name = bucket_name
 
     async def write_bundle(self, prefix: str, files: list[StoredFile]) -> None:
-        await to_thread.run_sync(self._write_bundle_sync, prefix, files)
-
-    def _write_bundle_sync(self, prefix: str, files: list[StoredFile]) -> None:
         for file in files:
-            object_name = f"{prefix}/{file.path}"
-            self._s3_helper.upload_file_to_s3(
+            await self._s3_helper.async_upload_file_to_s3(
                 filename=file.path,
                 bytes_data=file.content,
                 bucket_name=self._bucket_name,
-                object_name=object_name,
+                object_name=f"{prefix}/{file.path}",
                 mime_type=file.mime_type,
             )
 
     async def delete_prefix(self, prefix: str) -> None:
-        await to_thread.run_sync(self._delete_prefix_sync, prefix)
-
-    def _delete_prefix_sync(self, prefix: str) -> None:
-        keys = self._s3_helper.list_objects_by_prefix(
+        keys = await self._s3_helper.async_list_objects_by_prefix(
             bucket_name=self._bucket_name,
             prefix=prefix,
         )
         for key in keys:
-            self._s3_helper.remove_file_from_s3(f"s3://{self._bucket_name}/{key}")
+            await self._s3_helper.async_remove_file_from_s3(
+                f"s3://{self._bucket_name}/{key}"
+            )
 
     async def read_file(self, prefix: str, path: str) -> bytes:
-        return await to_thread.run_sync(self._read_file_sync, prefix, path)
-
-    def _read_file_sync(self, prefix: str, path: str) -> bytes:
-        s3_url = f"s3://{self._bucket_name}/{prefix}/{path}"
-        binary = self._s3_helper.load_file_from_s3(s3_url)
+        binary = await self._s3_helper.async_load_file_from_s3(
+            f"s3://{self._bucket_name}/{prefix}/{path}"
+        )
         return binary.read()
 
     async def list_files(self, prefix: str) -> list[str]:
-        return await to_thread.run_sync(self._list_files_sync, prefix)
-
-    def _list_files_sync(self, prefix: str) -> list[str]:
-        keys = self._s3_helper.list_objects_by_prefix(
+        keys = await self._s3_helper.async_list_objects_by_prefix(
             bucket_name=self._bucket_name,
             prefix=prefix,
         )
-        return [k[len(prefix) :].lstrip("/") for k in keys]
+        return [key[len(prefix) :].lstrip("/") for key in keys]
 
     async def write_file(
         self,
@@ -220,14 +210,7 @@ class S3ObjectStorage(ObjectStorage):
         content: bytes,
         mime_type: str = "application/octet-stream",
     ) -> None:
-        await to_thread.run_sync(
-            self._write_file_sync, prefix, path, content, mime_type
-        )
-
-    def _write_file_sync(
-        self, prefix: str, path: str, content: bytes, mime_type: str
-    ) -> None:
-        self._s3_helper.upload_file_to_s3(
+        await self._s3_helper.async_upload_file_to_s3(
             filename=path,
             bytes_data=content,
             bucket_name=self._bucket_name,
@@ -236,10 +219,34 @@ class S3ObjectStorage(ObjectStorage):
         )
 
     async def stat_file(self, prefix: str, path: str) -> FileInfo | None:
-        return await to_thread.run_sync(self._stat_file_sync, prefix, path)
+        meta = await self._s3_helper.async_head_object(
+            self._bucket_name, f"{prefix}/{path}"
+        )
+        return self._file_info(path, meta)
 
-    def _stat_file_sync(self, prefix: str, path: str) -> FileInfo | None:
-        meta = self._s3_helper.head_object(self._bucket_name, f"{prefix}/{path}")
+    async def list_files_meta(self, prefix: str) -> list[FileInfo]:
+        keys = await self._s3_helper.async_list_objects_by_prefix(
+            bucket_name=self._bucket_name,
+            prefix=prefix,
+        )
+        results: list[FileInfo] = []
+        for key in keys:
+            relative_path = key[len(prefix) :].lstrip("/")
+            if not relative_path:
+                continue
+            meta = await self._s3_helper.async_head_object(self._bucket_name, key)
+            file_info = self._file_info(relative_path, meta)
+            if file_info is not None:
+                results.append(file_info)
+        return results
+
+    async def delete_file(self, prefix: str, path: str) -> bool:
+        return await self._s3_helper.async_delete_key(
+            self._bucket_name, f"{prefix}/{path}"
+        )
+
+    @staticmethod
+    def _file_info(path: str, meta: dict[str, object] | None) -> FileInfo | None:
         if meta is None:
             return None
         last_modified = meta.get("last_modified")
@@ -250,44 +257,7 @@ class S3ObjectStorage(ObjectStorage):
         )
         return FileInfo(
             path=path,
-            size_bytes=int(meta.get("content_length", 0)),
+            size_bytes=int(str(meta.get("content_length", 0))),
             created_at=created_at,
             mime_type=str(meta.get("content_type", "application/octet-stream")),
-        )
-
-    async def list_files_meta(self, prefix: str) -> list[FileInfo]:
-        return await to_thread.run_sync(self._list_files_meta_sync, prefix)
-
-    def _list_files_meta_sync(self, prefix: str) -> list[FileInfo]:
-        keys = self._s3_helper.list_objects_by_prefix(
-            bucket_name=self._bucket_name,
-            prefix=prefix,
-        )
-        results: list[FileInfo] = []
-        for key in keys:
-            relative_path = key[len(prefix) :].lstrip("/")
-            if not relative_path:
-                continue
-            meta = self._s3_helper.head_object(self._bucket_name, key)
-            if meta is None:
-                continue
-            last_modified = meta.get("last_modified")
-            created_at = (
-                last_modified
-                if isinstance(last_modified, datetime)
-                else datetime.now(tz=UTC)
-            )
-            results.append(
-                FileInfo(
-                    path=relative_path,
-                    size_bytes=int(meta.get("content_length", 0)),
-                    created_at=created_at,
-                    mime_type=str(meta.get("content_type", "application/octet-stream")),
-                )
-            )
-        return results
-
-    async def delete_file(self, prefix: str, path: str) -> bool:
-        return await to_thread.run_sync(
-            self._s3_helper.delete_key, self._bucket_name, f"{prefix}/{path}"
         )
