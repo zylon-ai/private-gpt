@@ -23,8 +23,8 @@ class ConfigureToolExecutionInterceptor(ToolExecutionInterceptor):
         schema_coercing_interceptor: SchemaCoercingToolInterceptor,
     ) -> None:
         self._interceptors: list[ToolExecutionInterceptor] = [
-            null_tool_values_interceptor,
             schema_coercing_interceptor,
+            null_tool_values_interceptor,
         ]
 
     async def intercept(self, context: ToolExecutionInterceptorContext) -> None:

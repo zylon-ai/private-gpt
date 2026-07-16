@@ -1186,6 +1186,22 @@ class RedisSettings(BaseModel):
         return f"{self.url}{database_path}"
 
 
+class CacheSettings(BaseModel):
+    provider: Literal["memory", "redis"] = Field(
+        default="memory",
+        description="Cache provider. Redis uses local memory as L1 and Redis as L2.",
+    )
+    ttl_seconds: int = Field(default=86400, gt=0)
+    max_entries: int = Field(default=1000, gt=0)
+    key_prefix: str = Field(default="private-gpt")
+    redis_database: int | None = Field(default=None, ge=0)
+
+    @field_validator("redis_database", mode="before")
+    @classmethod
+    def empty_redis_database_is_none(cls, value: Any) -> Any:
+        return None if value == "" else value
+
+
 class DoclingSettings(BaseModel):
     mode: Literal["api"] = "api"
     api_base: str = Field(
@@ -1787,6 +1803,7 @@ class Settings(BaseModel):
     database: DatabaseSettings
     celery: CelerySettings
     redis: RedisSettings
+    cache: CacheSettings = Field(default_factory=CacheSettings)
     tasks_results_broker: TasksResultsBroker
     s3: S3Settings
     phoenix: ArizePhoenixSettings

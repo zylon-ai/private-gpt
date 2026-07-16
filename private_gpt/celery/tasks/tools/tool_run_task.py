@@ -11,6 +11,7 @@ from private_gpt.components.tools.remote_execution import (
     ToolExecutionRequest,
     ToolExecutionResponse,
     execute_tool_request,
+    resolve_tool_execution_interceptors,
 )
 from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
 from private_gpt.di import get_global_injector
@@ -27,7 +28,10 @@ logger = logging.getLogger(__name__)
 async def tool_run_task(*, request_data: dict[str, Any]) -> None:
     request = ToolExecutionRequest.model_validate(request_data)
     try:
-        response = await execute_tool_request(request)
+        response = await execute_tool_request(
+            request,
+            interceptors=resolve_tool_execution_interceptors(request.interceptor_paths),
+        )
         await _notify_completion(request, response)
     except Exception as exc:
         logger.exception("Tool '%s' execution failed", request.tool_name)

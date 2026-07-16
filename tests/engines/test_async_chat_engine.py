@@ -15,12 +15,14 @@ from private_gpt.components.chat.models.chat_config_models import (
     ToolSpec,
 )
 from private_gpt.components.engines.chat.async_chat_engine import (
+    AsyncChatCheckpoint,
     AsyncChatEngine,
     IterationCheckpointPayload,
     LocalEventChannel,
 )
 from private_gpt.components.engines.chat.chat_engine import ChatLoopEngine
 from private_gpt.components.engines.chat.models.chat_state import (
+    ChatInputState,
     ChatState,
     ChatStatus,
 )
@@ -262,18 +264,23 @@ async def _run_async_engine(
         ]
         channel2 = LocalEventChannel()
         state = await engine.resume(
-            state.output.pause_type,
-            resumed_request,
-            iteration=state.runtime.iteration,
-            next_block_count=state.runtime.next_block_count,
-            checkpoint_payload=IterationCheckpointPayload(
-                pending_async_tools=state.output.pending_async_tools,
-                tool_responses=responses,
-                pending_external_tool_calls=state.output.pending_external_tool_calls,
-                total_input_tokens=state.runtime.total_input_tokens,
-                total_output_tokens=state.runtime.total_output_tokens,
-                has_input_usage=state.runtime.has_input_usage,
-                has_output_usage=state.runtime.has_output_usage,
+            AsyncChatCheckpoint(
+                checkpoint=state.output.pause_type,
+                input=ChatInputState(
+                    request=resumed_request,
+                    context_stack=state.input.context_stack,
+                ),
+                iteration=state.runtime.iteration,
+                next_block_count=state.runtime.next_block_count,
+                payload=IterationCheckpointPayload(
+                    pending_async_tools=state.output.pending_async_tools,
+                    tool_responses=responses,
+                    pending_external_tool_calls=state.output.pending_external_tool_calls,
+                    total_input_tokens=state.runtime.total_input_tokens,
+                    total_output_tokens=state.runtime.total_output_tokens,
+                    has_input_usage=state.runtime.has_input_usage,
+                    has_output_usage=state.runtime.has_output_usage,
+                ),
             ),
             channel=channel2,
         )

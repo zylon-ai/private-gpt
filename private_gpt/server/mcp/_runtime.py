@@ -43,6 +43,9 @@ if TYPE_CHECKING:
         async def list_tools(self) -> object:
             ...
 
+        async def close(self) -> None:
+            ...
+
 else:
     from llama_index.tools.mcp import BasicMCPClient  # type: ignore[import-untyped]
     from llama_index.tools.mcp import aget_tools_from_mcp_url  # type: ignore[import-untyped]

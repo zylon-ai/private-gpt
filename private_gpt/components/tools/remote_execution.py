@@ -44,6 +44,7 @@ class ToolExecutionRequest(BaseModel):
     tool_spec: ToolSpec
     context: dict[str, Any] = Field(default_factory=dict)
     hooks: ExecutionHooks = Field(default_factory=ExecutionHooks)
+    interceptor_paths: list[str] = Field(default_factory=list)
 
 
 async def invoke_execution_hook(
@@ -82,6 +83,24 @@ class ToolExecutionInterceptor(ABC):
     @abstractmethod
     async def intercept(self, context: ToolExecutionInterceptorContext) -> None:
         """Mutate tool execution context before/after tool invocation."""
+
+
+def tool_execution_interceptor_paths(
+    interceptors: list[ToolExecutionInterceptor] | None,
+) -> list[str]:
+    return [
+        f"{type(interceptor).__module__}:{type(interceptor).__qualname__}"
+        for interceptor in interceptors or []
+    ]
+
+
+def resolve_tool_execution_interceptors(
+    paths: list[str],
+) -> list[ToolExecutionInterceptor]:
+    from private_gpt.di import get_global_injector
+
+    injector = get_global_injector(True)
+    return [injector.get(_import_callable(path)) for path in paths]
 
 
 class ToolExecutor:
