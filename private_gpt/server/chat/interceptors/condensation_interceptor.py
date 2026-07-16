@@ -37,6 +37,10 @@ logger = logging.getLogger(__name__)
 _SENTINEL: object = object()
 
 
+def _token_limit_with_buffer(token_limit: int, token_buffer: float) -> int:
+    return max(1, int(token_limit * (1 - token_buffer)))
+
+
 class _CondensationResult(BaseModel):
     chat_history: list[ChatMessage] | None = None
     condensed: bool = False
@@ -166,12 +170,17 @@ class CondensationRequestInterceptor(ChatRequestLoopInterceptor):
         if not self._enabled or not history:
             return
 
+        max_length = _token_limit_with_buffer(
+            context.state.runtime.effective_token_limit,
+            state.input.request.condensation.token_buffer,
+        )
+
         generator = condense_chat_history(
             **state.input.llm_kwargs,
             chat_history=history,
             tools=state.input.context_stack.all_tools(),
             strategy_type=self._strategy_type,
-            max_length=context.state.runtime.effective_token_limit,
+            max_length=max_length,
             tokenizer_fn=context.state.runtime.tokenizer_fn,
             message_to_input=context.llm.messages_to_prompt,
             condensation_timeout=self._condensation_timeout,
