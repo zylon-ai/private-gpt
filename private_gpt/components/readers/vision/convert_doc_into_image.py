@@ -220,7 +220,6 @@ class VisionReader(IngestionReader):
         *args: Any,
         **load_kwargs: Any,
     ) -> AsyncIterable[BaseNode]:
-
         # Calculate the mode of the transformation
         vision_mode: str = "none"
         if self._reader_settings and self._reader_settings.vision.is_enabled:

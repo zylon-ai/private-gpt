@@ -127,7 +127,6 @@ class DoclingApiReader(IngestionReader):
         conversion_result: DoclingApiOutputModel,
     ) -> list[str]:
         def post_process_content(c: str) -> list[str]:
-
             result = c
 
             # Replace API image placeholder with a custom one

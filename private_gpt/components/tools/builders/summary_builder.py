@@ -192,7 +192,6 @@ class SummarizeWorkflowBuilder:
             additional_instructions: list[str] | None = None,
             output_cls: type[BaseModel] | None = None,
         ) -> list[ResultContentBlockType]:
-
             w = await _ensure_workflow()
             result: SummarizeResultEvent = await w.run(
                 start_event=SummarizeInputEvent(

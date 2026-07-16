@@ -1994,7 +1994,6 @@ async def test_chat_handles_client_disconnection_streaming(
 async def test_validate_chat_with_invalid_tool_context_fails(
     async_test_client: AsyncClient, injector: MockInjector
 ) -> None:
-
     body = ChatBody(
         messages=[MessageInput(content="Lorem ipsum", role="user")],
         stream=False,

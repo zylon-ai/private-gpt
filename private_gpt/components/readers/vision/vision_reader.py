@@ -145,7 +145,6 @@ class VisionReader(IngestionReader):
         *args: Any,
         **load_kwargs: Any,
     ) -> AsyncIterable[BaseNode]:
-
         # Resolve the vision mode (deep / lite / none) the same way as pptx.
         vision_mode: str = "none"
         if self._reader_settings and self._reader_settings.vision.is_enabled:

@@ -263,7 +263,6 @@ class EnhancedPPTXTransform:
         slide_height: int,
         slide_index: int,
     ) -> list[ContentZone]:
-
         occupancy_map = np.zeros(
             (self.config.grid_height, self.config.grid_width), dtype=np.float64
         )
@@ -341,7 +340,6 @@ class EnhancedPPTXTransform:
     def _classify_content_zone(
         self, width: int, height: int, slide_width: int, slide_height: int
     ) -> tuple[ContentType, float]:
-
         aspect_ratio = width / height
         area_ratio = (width * height) / (slide_width * slide_height)
 
@@ -502,7 +500,6 @@ class EnhancedPPTXTransform:
         temp_dir: Path,
         presentation: Any,
     ) -> list[ZoneImageMap]:
-
         zone_images: list[ZoneImageMap] = []
         actual_slide_width = presentation.slide_width
         actual_slide_height = presentation.slide_height

@@ -558,7 +558,6 @@ async def process_history_citations(
     correlation_id: str | None = None,
     **kwargs: Any,
 ) -> tuple[list[ChatMessage], list[Document], list[Citation]]:
-
     if not chat_history:
         return chat_history, [], []
 

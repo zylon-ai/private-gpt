@@ -111,7 +111,6 @@ class ChatState(BaseModel):
     def model_copy(
         self, *, update: Mapping[str, Any] | None = None, deep: bool = False
     ) -> Self:
-
         # Temporarily detach fields that must not be deep-copied:
         # - tokenizer_fn: HF tokenizer is not safely copyable and expensive
         # - context_stack: pydantic frozen — all mutations return new instances

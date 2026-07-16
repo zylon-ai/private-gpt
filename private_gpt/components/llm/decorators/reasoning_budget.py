@@ -68,7 +68,7 @@ def _merge_responses(phase1: ChatResponse, phase2: ChatResponse) -> ChatResponse
 
 def _extract_budget(**kwargs: Any) -> tuple[int | None, dict[str, Any]]:
     budget = kwargs.get(_REASONING_BUDGET_KWARG)
-    if budget is not None and not isinstance(budget, (int, float)):
+    if budget is not None and not isinstance(budget, int | float):
         raise ValueError(
             f"Invalid reasoning_effort budget: {budget}. Must be a number (int or float)."
         )

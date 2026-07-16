@@ -157,7 +157,6 @@ class SemanticSearchToolBuilder:
         token_limit: int | None = None,
         **_: Any,
     ) -> Generator[BaseNodePostprocessor, None, None]:
-
         # Filter nodes by similarity
         if similarity_cutoff:
             yield SimilarityPostprocessor(
@@ -296,7 +295,6 @@ class SemanticSearchToolBuilder:
             query: str,
             artifacts: list[str] | None = None,
         ) -> list[ResultContentBlockType]:
-
             w = await _ensure_workflow(artifacts=artifacts)
             result: SemanticSearchResultEvent = await w.run(
                 start_event=SemanticSearchInputEvent(

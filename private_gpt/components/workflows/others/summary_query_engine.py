@@ -126,7 +126,6 @@ class SummaryQueryEngine(BaseQueryEngine):
         separator: str = " ",
         **response_synthesizer_kwargs: Any,
     ) -> PromptHelper:
-
         llm_metadata = (
             llm.get_metadata(**response_synthesizer_kwargs)
             if isinstance(llm, ZylonLLM)
@@ -329,7 +328,6 @@ class SummaryQueryEngine(BaseQueryEngine):
         self,
         response: RESPONSE_TYPE,
     ) -> str | None:
-
         if isinstance(response, Response):
             return response.response
         elif isinstance(response, PydanticResponse):

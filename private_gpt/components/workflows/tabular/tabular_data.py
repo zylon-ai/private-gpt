@@ -177,7 +177,6 @@ class TabularDataAnalysisWorkflow(Workflow):
     async def _retrieve_from_nodes(
         self, ctx: AnyContext, ev: TabularDataAnalysisInputEvent
     ) -> CreatedDataFrame:
-
         from private_gpt.components.workflows.retrieval.retrieval import (
             RetrieverInputEvent,
         )
@@ -259,7 +258,6 @@ class TabularDataAnalysisWorkflow(Workflow):
     async def analyze_df(
         self, ctx: AnyContext, ev: DataFramesReadyEvent
     ) -> TabularDataAnalysisResultEvent:
-
         if ev.is_error:
             return TabularDataAnalysisResultEvent(
                 content=[ev.error_message or "Error querying data."], is_error=True

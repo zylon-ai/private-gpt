@@ -42,7 +42,6 @@ class WebFetchToolBuilder:
         runtime: Literal["client", "server"] = "server",
     ) -> ToolSpec:
         async def run_tool(url: str) -> list[ResultContentBlockType]:
-
             result = await self.web_scraper.scrape_max_compress(url)
 
             if not result.markdown_content:

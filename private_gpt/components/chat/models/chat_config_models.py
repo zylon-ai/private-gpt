@@ -142,7 +142,7 @@ class ToolExecutionMetadata(BaseModel):
             }
         if isinstance(value, dict):
             return {key: cls._serialize_value(item) for key, item in value.items()}
-        if isinstance(value, (list, tuple)):
+        if isinstance(value, list | tuple):
             return [cls._serialize_value(item) for item in value]
         return value
 

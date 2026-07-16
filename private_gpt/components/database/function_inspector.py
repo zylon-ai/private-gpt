@@ -120,7 +120,6 @@ class DatabaseFunctionsInspector(DatabaseObjectInspector):
         return functions
 
     def _get_sqlserver_functions(self, schema: str) -> list[InspectedFunction]:
-
         schema_filter = f"AND s.name = '{schema}'" if schema else ""
         if self._is_readonly:
             schema_filter += "AND UPPER(m.definition) NOT LIKE '%DELETE%'"

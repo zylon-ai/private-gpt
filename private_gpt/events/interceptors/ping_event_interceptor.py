@@ -19,7 +19,6 @@ class PingEventInterceptor(BaseEventInterceptor):
         self, gen: AsyncGenerator[Event, None]
     ) -> AsyncGenerator[Event, None]:
         async def coro() -> AsyncGenerator[Event, None]:
-
             event_queue: asyncio.Queue[Event | None] = asyncio.Queue()
             generator_done = asyncio.Event()
             exception_holder: list[BaseException] = []

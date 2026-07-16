@@ -12,7 +12,6 @@ class DiffProcessor:
         ref_text: str,
         other_text: str,
     ) -> str | None:
-
         if ref_text == other_text:
             return None
 

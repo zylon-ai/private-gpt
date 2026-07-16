@@ -109,8 +109,8 @@ def _normalize_schema(node: Any, parent_key: str | None = None) -> Any:
 def _schema_diff(local_node: Any, remote_node: Any, path: str) -> list[str]:
     if type(local_node) is not type(remote_node):
         if (
-            isinstance(local_node, (int, float))
-            and isinstance(remote_node, (int, float))
+            isinstance(local_node, int | float)
+            and isinstance(remote_node, int | float)
             and float(local_node) == float(remote_node)
         ):
             return []
@@ -174,8 +174,8 @@ def _schema_diff(local_node: Any, remote_node: Any, path: str) -> list[str]:
         return differences
 
     if (
-        isinstance(local_node, (int, float))
-        and isinstance(remote_node, (int, float))
+        isinstance(local_node, int | float)
+        and isinstance(remote_node, int | float)
         and float(local_node) == float(remote_node)
     ):
         return []

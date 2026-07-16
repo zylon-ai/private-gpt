@@ -170,7 +170,6 @@ class ImageProcessingWorkflow(Workflow):
     async def infer_strategy(
         self, ctx: AnyContext, ev: WorkflowInitializedEvent
     ) -> StrategyInferredEvent | ImagesPreprocessedEvent:
-
         enable_preprocessing = await ctx.store.get("enable_preprocessing")
         skip_strategy_inference = await ctx.store.get("skip_strategy_inference")
         kwargs = await ctx.store.get("kwargs")
@@ -320,7 +319,6 @@ class ImageProcessingWorkflow(Workflow):
     async def finalize(
         self, ctx: AnyContext, ev: FinalizeContentEvent
     ) -> ImageProcessingResultEvent:
-
         user_query = await ctx.store.get("user_query")
         final_content = ev.final_content
         evaluation = ev.evaluation

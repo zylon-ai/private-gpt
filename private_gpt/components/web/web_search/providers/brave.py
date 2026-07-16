@@ -58,7 +58,6 @@ class BraveSearchProvider(BaseWebSearchProvider):
         language: str | None = None,
         **kwargs: Any,
     ) -> list[WebSearchResult]:
-
         # 1. Check params
         query, num_links, offset = self._validate_query_params(query, num_links, offset)
 
