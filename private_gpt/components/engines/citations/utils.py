@@ -12,6 +12,7 @@ from llama_index.core.schema import MetadataMode, NodeWithScore
 from private_gpt.components.chat.processors.chat_history.memory.utils.splitting import (
     get_user_blocks,
 )
+from private_gpt.components.engines.citations.parser import CitationTextParser
 from private_gpt.components.engines.citations.types import Citation, Document
 from private_gpt.components.ingest.metadata_helper import (
     MetadataFlags,
@@ -242,8 +243,6 @@ def _extract_citations_from_text(
     return cites
 
 
-
-
 def extract_citations_by_original_text(
     text: str,
     documents: list[Document],
@@ -254,187 +253,17 @@ def extract_citations_by_original_text(
     citation_indices: dict[str, int] | None = None,
     is_final: bool = False,
 ) -> tuple[str, list[Citation], dict[str, int]]:
-    # Initialize an empty string to store the cleaned text
-    citation_indices = citation_indices or {}
-
-    result = ""
-    start_len = len(start_token)
-    end_len = len(end_token)
-
-    # Model can generate brackets not normalized 【
-    text = text.replace("【", start_token).replace("】", end_token)
-
-    # Iterate through the text to remove malformed citations and save correct citations.
-    # Backticks directly wrapping a citation are formatting noise and are not emitted.
-    i = 0
-    docs = []
-    citation_placeholders: list[str] = []
-    code_delimiter: str | None = None
-    citation_wrapper_delimiter: str | None = None
-
-    while i < len(text):
-        if text[i] == "`":
-            delimiter_end = i + 1
-            while delimiter_end < len(text) and text[delimiter_end] == "`":
-                delimiter_end += 1
-            delimiter = text[i:delimiter_end]
-
-            if citation_wrapper_delimiter == delimiter:
-                citation_wrapper_delimiter = None
-                i = delimiter_end
-                continue
-
-            if code_delimiter == delimiter:
-                result += delimiter
-                code_delimiter = None
-                i = delimiter_end
-                continue
-
-            if delimiter_end == len(text):
-                if is_final:
-                    result += delimiter
-                break
-
-            if text[delimiter_end : delimiter_end + start_len] == start_token:
-                citation_start = delimiter_end
-                citation_end = citation_start + start_len
-                while (
-                    citation_end < len(text)
-                    and text[citation_end : citation_end + end_len] != end_token
-                ):
-                    citation_end += 1
-
-                if citation_end >= len(text):
-                    break
-
-                node_ids = [
-                    node_id.strip()
-                    for node_id in text[
-                        citation_start + start_len : citation_end
-                    ].split(split_token)
-                ]
-                valid_docs = [
-                    doc
-                    for node_id in node_ids
-                    if (
-                        doc := next(
-                            (
-                                document
-                                for document in documents
-                                if document.id.lower() == node_id.lower()
-                            ),
-                            None,
-                        )
-                    )
-                ]
-                if valid_docs:
-                    placeholders = []
-                    for doc in valid_docs:
-                        placeholder_index = "".join(
-                            f"n{digit}" for digit in str(len(docs))
-                        )
-                        placeholder = f"\ue000citation{placeholder_index}\ue001"
-                        docs.append(doc)
-                        citation_placeholders.append(placeholder)
-                        placeholders.append(placeholder)
-                    result += split_token.join(placeholders)
-                    i = citation_end + end_len
-                    if text[i : i + len(delimiter)] == delimiter:
-                        i += len(delimiter)
-                    else:
-                        citation_wrapper_delimiter = delimiter
-                    continue
-
-            result += delimiter
-            code_delimiter = delimiter
-            i = delimiter_end
-        elif text[i : i + start_len] == start_token:
-            # Check if we have a complete citation
-            j = i + start_len
-            while j < len(text) and text[j : j + end_len] != end_token:
-                j += 1
-
-            if j < len(text) and text[j : j + end_len] == end_token:
-                node_ids = [
-                    id.strip() for id in text[i + start_len : j].split(split_token)
-                ]
-                valid_docs = []
-                for node_id in node_ids:
-                    doc = next(
-                        (doc for doc in documents if doc.id.lower() == node_id.lower()),
-                        None,
-                    )
-                    if doc:
-                        valid_docs.append(doc)
-                if valid_docs:
-                    placeholders = []
-                    for doc in valid_docs:
-                        placeholder_index = "".join(
-                            f"n{digit}" for digit in str(len(docs))
-                        )
-                        placeholder = f"\ue000citation{placeholder_index}\ue001"
-                        docs.append(doc)
-                        citation_placeholders.append(placeholder)
-                        placeholders.append(placeholder)
-                    result += split_token.join(placeholders)
-                    i = j + end_len
-                else:
-                    # No valid docs in citation, treat as regular text
-                    result += text[i : j + end_len]
-                    i = j + end_len
-            else:
-                # Incomplete citation detected: drop the
-                # citation content and stop processing further.
-                # This change fixes the issue by not
-                # appending any incomplete citation text.
-                i = len(text)
-                continue
-        else:
-            result += text[i]
-            i += 1
-
-    # Process citations
-    pattern = re.compile(
-        rf"{re.escape(start_token)}?[A-Z0-9]{shorter_id_length}{re.escape(end_token)}?"
+    parser = CitationTextParser(
+        documents,
+        format_cite,
+        start_token=start_token,
+        end_token=end_token,
+        separator=split_token,
+        identifier_length=shorter_id_length,
+        citation_indices=citation_indices,
     )
-    for match in pattern.finditer(result):
-        # If citation is well-formed, skip
-        word = match.group(0) if match.groups() else ""
-        if not word or (word.startswith(start_token) and word.endswith(end_token)):
-            continue
-
-        # Try to find the related document, if no document found, skip
-        doc = next((doc for doc in documents if doc.id in word), None)
-        if not doc:
-            continue
-
-        # Remove doc reference
-        new_token = word.replace(doc.id, "", 1).lstrip().rstrip()
-        result = result[: match.start()] + new_token + result[match.end() :]
-
-    # Replace citations with sequential numbers, just first occurrence
-    max_index = max(citation_indices.values(), default=-1)
-    current_index = max_index + 1
-    processed_docs = []
-    for i, (doc, placeholder) in enumerate(
-        zip(docs, citation_placeholders, strict=True)
-    ):
-        if doc.id_ not in processed_docs:
-            processed_docs.append(doc.id_)
-
-        if doc.id_ in citation_indices:
-            # If we already have this document, use the existing index
-            index = citation_indices[doc.id_]
-        else:
-            # Otherwise, assign a new index
-            index = current_index
-            current_index += 1
-        citation_indices[doc.id_] = index
-
-        citation = format_cite(i, doc, index)
-        result = result.replace(placeholder, citation, 1)
-
-    return result, _extract_citations_from_text(result), citation_indices
+    result, updated_indices = parser.parse(text, final=is_final)
+    return result, _extract_citations_from_text(result), updated_indices
 
 
 async def deduplicate_documents_in_history(

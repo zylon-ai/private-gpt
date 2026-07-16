@@ -7,7 +7,6 @@ from private_gpt.components.engines.citations.utils import (
     extract_citations_by_original_text,
 )
 
-
 TEXT = (
     "Format: `[XXXX]`. Correct: `[AB12]`. "
     "Invalid: `[[AB12]]`, `(AB12)`. "

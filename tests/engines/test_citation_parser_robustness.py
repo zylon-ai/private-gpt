@@ -118,10 +118,6 @@ def test_incomplete_citation_is_withheld_with_no_false_citation() -> None:
     assert citations == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Model output can currently collide with the internal citation placeholder.",
-)
 def test_placeholder_like_model_output_does_not_capture_real_citation() -> None:
     document = create_document("AB12")
     model_text = "Literal \ue000citationn0\ue001 then [AB12]."
@@ -132,8 +128,7 @@ def test_placeholder_like_model_output_does_not_capture_real_citation() -> None:
     )
 
     assert formatted == (
-        "Literal \ue000citationn0\ue001 then "
-        f"{format_cite(0, document, 0)}."
+        f"Literal \ue000citationn0\ue001 then {format_cite(0, document, 0)}."
     )
     assert len(citations) == 1
 

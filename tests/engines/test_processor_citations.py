@@ -181,10 +181,10 @@ async def test_process_citations_trailing_backtick_with_stop_event() -> None:
 
     # start, delta (without backtick), delta (with backtick), stop
     assert len(result) == 4
-    
+
     combined = ""
     for r in result:
         if isinstance(r, RawContentBlockDeltaEvent) and isinstance(r.delta, TextDelta):
             combined += r.delta.text or ""
-            
+
     assert combined == "This is a test with a trailing backtick `"

@@ -144,7 +144,7 @@ async def process_citations(
                         delta = TextDelta.from_citations(delta_text, delta_citation)
 
                     yield RawContentBlockDeltaEvent(block_id=event.block_id, delta=delta)
-                    
+
                     send_text = cleaned_text
                     send_citations.extend(delta_citation)
 
