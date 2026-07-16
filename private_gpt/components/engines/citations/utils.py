@@ -250,6 +250,7 @@ def extract_citations_by_original_text(
     split_token: str = DEFAULT_SPLIT_CITATION_TOKEN,
     shorter_id_length: int = SHORTER_ID_LENGTH,
     citation_indices: dict[str, int] | None = None,
+    is_final: bool = False,
 ) -> tuple[str, list[Citation], dict[str, int]]:
     # Initialize an empty string to store the cleaned text
     citation_indices = citation_indices or {}
@@ -365,10 +366,11 @@ def extract_citations_by_original_text(
             i += 1
 
     # Don't output buffer if:
-    # 1. It's just a backtick (could be start of citation)
+    # 1. It's just a backtick (could be start of citation) and we are not final
     # 2. It contains start token but not end token (incomplete citation)
-    if buffer and buffer != "`" and start_token not in buffer:
-        result += buffer
+    if buffer and start_token not in buffer:
+        if is_final or buffer != "`":
+            result += buffer
 
     # Process citations
     pattern = re.compile(

@@ -15,6 +15,7 @@ from private_gpt.events.models import (
     Event,
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
+    RawContentBlockStopEvent,
     TextDelta,
     ThinkingDelta,
 )
@@ -30,11 +31,13 @@ class ExtractCitationInterceptor(ChatResponseLoopInterceptor):
         self._current_text: str = ""
         self._documents: list[Document] = []
         self._citation_indices: dict[str, int] = {}
+        self._last_delta_type: str | None = None
 
     async def on_iteration_start(self, context: ChatInterceptorContext) -> None:
         self._send_text = ""
         self._send_citations = []
         self._current_text = ""
+        self._last_delta_type = None
 
     async def on_iteration_end(self, context: ChatInterceptorContext) -> None:
         # Mutate the context state to include the final citations for this iteration
@@ -64,6 +67,53 @@ class ExtractCitationInterceptor(ChatResponseLoopInterceptor):
             self._send_text = ""
             self._send_citations = []
             self._current_text = ""
+            self._last_delta_type = None
+            return event
+
+        if isinstance(event, RawContentBlockStopEvent):
+            if self._current_text and documents:
+                if not self._citation_indices:
+                    raw = context.state.input.request.citation.citations or []
+                    self._citation_indices = {
+                        c.source_id: int(c.value["index"])
+                        for c in raw
+                        if c.source_id
+                        and c.value is not None
+                        and c.value.get("index") is not None
+                    }
+
+                (
+                    cleaned_text,
+                    current_citations,
+                    self._citation_indices,
+                ) = await asyncio.to_thread(
+                    extract_citations_by_original_text,
+                    text=self._current_text,
+                    documents=documents,
+                    citation_indices=self._citation_indices,
+                    is_final=True,
+                )
+
+                new_delta_text = cleaned_text[len(self._send_text) :]
+                new_citations = current_citations[len(self._send_citations) :]
+
+                if new_delta_text or new_citations:
+                    if self._last_delta_type == "text":
+                        delta = TextDelta.from_citations(new_delta_text, new_citations)
+                    elif self._last_delta_type == "thinking":
+                        delta = ThinkingDelta.from_citations(new_delta_text, new_citations)
+                    else:
+                        delta = TextDelta.from_citations(new_delta_text, new_citations)
+
+                    context.emit_event(
+                        RawContentBlockDeltaEvent(
+                            block_id=event.block_id,
+                            delta=delta,
+                        )
+                    )
+
+                    self._send_text = cleaned_text
+                    self._send_citations.extend(new_citations)
             return event
 
         if not isinstance(event, RawContentBlockDeltaEvent) or not event.delta:
@@ -72,9 +122,11 @@ class ExtractCitationInterceptor(ChatResponseLoopInterceptor):
         if isinstance(event.delta, TextDelta):
             delta_text = event.delta.text or ""
             self._current_text += delta_text
+            self._last_delta_type = "text"
         elif isinstance(event.delta, ThinkingDelta):
             delta_text = event.delta.thinking or ""
             self._current_text += delta_text
+            self._last_delta_type = "thinking"
         else:
             return event
 
@@ -97,6 +149,7 @@ class ExtractCitationInterceptor(ChatResponseLoopInterceptor):
             text=self._current_text,
             documents=documents,
             citation_indices=self._citation_indices,
+            is_final=False,
         )
 
         if not cleaned_text:
