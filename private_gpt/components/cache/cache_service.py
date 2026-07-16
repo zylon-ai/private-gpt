@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class Cache(Protocol):
-    def get(self, namespace: str, key: str) -> Any | None:
-        ...
+    def get(self, namespace: str, key: str) -> Any | None: ...
 
     def set(
         self,
@@ -24,11 +23,9 @@ class Cache(Protocol):
         key: str,
         value: Any,
         ttl_seconds: int | None = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
-    def delete(self, namespace: str, key: str) -> None:
-        ...
+    def delete(self, namespace: str, key: str) -> None: ...
 
 
 class MemoryCache:

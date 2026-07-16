@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from private_gpt.chat.extensions.context_filter import ContextFilter
 from private_gpt.events.models import ResultContentBlockType
 from private_gpt.server.tools.tool_service import ToolService
-from private_gpt.server.utils.artifact_input import ArtifactType
+from private_gpt.server.utils.artifact_input import ArtifactType, SqlDatabaseArtifact
 from private_gpt.server.utils.auth import authenticated
 from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
@@ -470,9 +470,7 @@ async def database_query(
     result = await service.database_query_tool(
         body.query,
         sql_artifacts=[
-            ctx
-            for ctx in body.artifacts
-            if isinstance(ctx, ArtifactType) and ctx.type == "sql_database"
+            ctx for ctx in body.artifacts if isinstance(ctx, SqlDatabaseArtifact)
         ],
     )
     return ToolResponse(content=result.content, is_error=result.is_error)

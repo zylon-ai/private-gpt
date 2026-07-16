@@ -16,7 +16,6 @@ from private_gpt.events.models import (
 
 
 class EnsureIndexIsRefreshedInterceptor(ChatResponseLoopInterceptor):
-
     _current_index: int = 0
     _block_id_map: dict[str, int] | None = None
 
@@ -40,9 +39,10 @@ class EnsureIndexIsRefreshedInterceptor(ChatResponseLoopInterceptor):
                 context.state.runtime.next_block_count = self._current_index
                 return event.model_copy(update={"index": self._block_id_map[block_id]})
 
-            case RawContentBlockDeltaEvent(
-                block_id=block_id
-            ) | RawContentBlockStopEvent(block_id=block_id):
+            case (
+                RawContentBlockDeltaEvent(block_id=block_id)
+                | RawContentBlockStopEvent(block_id=block_id)
+            ):
                 if block_id not in self._block_id_map:
                     raise ValueError(
                         f"Received {type(event).__name__} for unknown blockId {block_id}"

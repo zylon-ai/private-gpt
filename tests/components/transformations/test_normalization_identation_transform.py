@@ -209,8 +209,8 @@ def test_markdown_normalizer(input_markdown: str, expected_output: str) -> None:
 def test_normalize_underline_headers() -> None:
     """Test normalizing underline-style headers."""
     normalizer = MarkdownNormalizer(target_indent=2)
-    content = "Title\n" "=====\n" "\n" "Section\n" "-------\n" "Normal text"
-    expected = "# Title\n" "\n" "## Section\n" "Normal text"
+    content = "Title\n=====\n\nSection\n-------\nNormal text"
+    expected = "# Title\n\n## Section\nNormal text"
     assert normalizer.normalize_markdown(content) == expected
 
 
@@ -218,57 +218,31 @@ def test_normalize_mixed_headers() -> None:
     """Test normalizing mixed header styles."""
     normalizer = MarkdownNormalizer(target_indent=2)
     content = (
-        "# Existing Header\n"
-        "\n"
-        "Title\n"
-        "=====\n"
-        "\n"
-        "## Another existing\n"
-        "\n"
-        "Section\n"
-        "-------"
+        "# Existing Header\n\nTitle\n=====\n\n## Another existing\n\nSection\n-------"
     )
-    expected = (
-        "# Existing Header\n"
-        "\n"
-        "# Title\n"
-        "\n"
-        "## Another existing\n"
-        "\n"
-        "## Section"
-    )
+    expected = "# Existing Header\n\n# Title\n\n## Another existing\n\n## Section"
     assert normalizer.normalize_markdown(content) == expected
 
 
 def test_preserve_code_blocks_with_underlines() -> None:
     """Test that underlines in code blocks are not converted to headers."""
     normalizer = MarkdownNormalizer(target_indent=2)
-    content = (
-        "# Header\n" "\n" "```markdown\n" "Title\n" "=====\n" "```\n" "\n" "Normal text"
-    )
+    content = "# Header\n\n```markdown\nTitle\n=====\n```\n\nNormal text"
     assert normalizer.normalize_markdown(content) == content
 
 
 def test_preserve_table_with_underlines() -> None:
     """Test that table separators are not converted to headers."""
     normalizer = MarkdownNormalizer(target_indent=2)
-    content = "| Header |\n" "|--------|\n" "| Value  |"
+    content = "| Header |\n|--------|\n| Value  |"
     assert normalizer.normalize_markdown(content) == content
 
 
 def test_normalize_lists_with_headers() -> None:
     """Test normalizing lists combined with headers."""
     normalizer = MarkdownNormalizer(target_indent=2)
-    content = (
-        "Title\n"
-        "=====\n"
-        "- Item 1\n"
-        "  - Item 2\n"
-        "Section\n"
-        "-------\n"
-        "    - Item 3"
-    )
-    expected = "# Title\n" "- Item 1\n" "  - Item 2\n" "## Section\n" "    - Item 3"
+    content = "Title\n=====\n- Item 1\n  - Item 2\nSection\n-------\n    - Item 3"
+    expected = "# Title\n- Item 1\n  - Item 2\n## Section\n    - Item 3"
     assert normalizer.normalize_markdown(content) == expected
 
 

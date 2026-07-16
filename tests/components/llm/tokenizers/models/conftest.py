@@ -1,4 +1,5 @@
 """Shared fixtures for model cache/discovery/downloader tests."""
+
 import os
 import time
 from pathlib import Path

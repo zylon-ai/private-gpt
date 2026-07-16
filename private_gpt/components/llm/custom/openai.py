@@ -13,7 +13,7 @@ from llama_index.core.base.llms.types import (
     TextBlock,
 )
 from llama_index.core.llms.llm import ToolSelection
-from llama_index.llms.openai.utils import O1_MODELS
+from llama_index.llms.openai.utils import O1_MODELS  # ty:ignore[unresolved-import]
 
 from private_gpt.components.llm.custom.structured_mixin import StructuredChatMixin
 from private_gpt.components.llm.models import ReasoningEffort
@@ -21,7 +21,7 @@ from private_gpt.components.model_discovery.url_utils import is_openai_api_base
 from private_gpt.events.models import StopReasonEnum
 
 if TYPE_CHECKING:
-    from llama_index.llms.openai import (  # type: ignore[import-not-found,import-untyped]
+    from llama_index.llms.openai import (  # type: ignore[import-not-found,import-untyped]  # ty:ignore[unresolved-import]
         OpenAI as OpenAIBase,
     )
 
@@ -87,25 +87,22 @@ class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
         """Normalize chat messages to ensure compatibility with OpenAI."""
         normalized = []
         for msg in messages:
-
             # OpenAI expects to have content even when it's None
             blocks = msg.blocks if msg.blocks else [TextBlock(text="")]
 
             # The tool_uses has to be in OpenAI format
             tool_calls = msg.additional_kwargs.get("tool_calls", [])
             if tool_calls:
-                from openai.types.chat.chat_completion_chunk import (
+                from openai.types.chat.chat_completion_chunk import (  # ty:ignore[unresolved-import]
                     ChoiceDeltaToolCall,
                     ChoiceDeltaToolCallFunction,
                 )
 
                 openai_tool_calls = []
                 for i, tool_call in enumerate(tool_calls):
-
                     if isinstance(tool_call, ChoiceDeltaToolCall):
                         openai_tool_calls.append(tool_call)
                     elif isinstance(tool_call, ToolSelection):
-
                         openai_tool_calls.append(
                             ChoiceDeltaToolCall(
                                 index=i,
@@ -133,7 +130,9 @@ class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
         chat_response: ChatResponse,
     ) -> ChatResponse:
         """Normalize OpenAI-specific fields to the unified format."""
-        from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
+        from openai.types.chat.chat_completion_chunk import (  # ty:ignore[unresolved-import]
+            ChatCompletionChunk,
+        )
 
         raw = cast(ChatCompletionChunk, chat_response.raw)
 
@@ -163,7 +162,7 @@ class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
         chat_response: ChatResponse,
     ) -> ChatResponse:
         """Extract reasoning content from OpenAI response deltas."""
-        from openai.types.chat.chat_completion_chunk import (
+        from openai.types.chat.chat_completion_chunk import (  # ty:ignore[unresolved-import]
             ChatCompletionChunk,
             ChoiceDelta,
         )

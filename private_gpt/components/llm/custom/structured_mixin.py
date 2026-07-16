@@ -26,8 +26,8 @@ class StructuredChatMixin:
         output_cls: type[Model],
         flags: Any,
     ) -> "Model | FlexibleModel | None":
-        from partial_json_parser.core.exceptions import MalformedJSON  # type: ignore
-        from partial_json_parser.core.options import Allow  # type: ignore  # noqa: F401
+        from partial_json_parser.core.exceptions import MalformedJSON
+        from partial_json_parser.core.options import Allow  # noqa: F401
 
         from private_gpt.components.llm.utils import partial_json_loads
 
@@ -130,7 +130,7 @@ class StructuredChatMixin:
         reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
         **kwargs: Any,
     ) -> Generator[Model | FlexibleModel, None, None]:
-        from partial_json_parser.core.options import Allow  # type: ignore
+        from partial_json_parser.core.options import Allow
 
         from private_gpt.components.llm.custom.base import StructuredOutputsParams
 
@@ -139,7 +139,11 @@ class StructuredChatMixin:
         )
         flags = Allow.ALL & ~Allow.STR
 
-        for response in self.stream_chat(  # type: ignore[attr-defined]
+        stream_chat = getattr(self, "stream_chat", None)
+        if not callable(stream_chat):
+            raise TypeError("StructuredChatMixin requires stream_chat")
+
+        for response in stream_chat(
             messages=messages,
             tools=tools,
             reasoning_effort=reasoning_effort,
@@ -232,7 +236,7 @@ class StructuredChatMixin:
         reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
         **kwargs: Any,
     ) -> typing.AsyncGenerator[Model | FlexibleModel, None]:
-        from partial_json_parser.core.options import Allow  # type: ignore
+        from partial_json_parser.core.options import Allow
 
         from private_gpt.components.llm.custom.base import StructuredOutputsParams
 
@@ -243,7 +247,11 @@ class StructuredChatMixin:
         flags = Allow.ALL & ~Allow.STR
 
         async def gen() -> typing.AsyncGenerator[Model | FlexibleModel, None]:
-            async for response in await self.astream_chat(  # type: ignore[attr-defined]
+            astream_chat = getattr(self, "astream_chat", None)
+            if not callable(astream_chat):
+                raise TypeError("StructuredChatMixin requires astream_chat")
+
+            async for response in await astream_chat(
                 messages=messages,
                 tools=tools,
                 reasoning_effort=reasoning_effort,
@@ -259,6 +267,6 @@ class StructuredChatMixin:
                     flags,
                 )
                 if output is not None:
-                    yield output
+                    yield typing.cast("Model | FlexibleModel", output)
 
         return gen()

@@ -1,7 +1,7 @@
 import os
 from typing import Any
 
-import nest_asyncio  # type: ignore
+import nest_asyncio
 
 from private_gpt.di import (
     clean_global_injector,

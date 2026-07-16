@@ -100,9 +100,9 @@ def combine_trees(root: TreeNode, *trees: TreeNode) -> TreeNode:
 
         return root1
 
-    root_copy = root.copy()
+    root_copy = root.model_copy()
     for tree in trees:
-        tree_copy = tree.copy()
+        tree_copy = tree.model_copy()
         root_copy = combine_trees(root_copy, tree_copy)
 
     return root_copy

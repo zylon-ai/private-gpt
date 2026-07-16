@@ -1,6 +1,7 @@
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Body, Depends, Request
+from fastapi.openapi.models import Example
 
 from private_gpt.server.primitives.primitives_service import (
     PrimitivesService,
@@ -16,38 +17,41 @@ primitives_router = APIRouter(
     responses={401: {"description": "Unauthorized"}},
 )
 
-SEARCH_REQUEST_EXAMPLES = {
-    "semantic_search": {
-        "summary": "Semantic Search Example",
-        "value": {
-            "type": "semantic_search",
-            "text": "Q3 2023 sales performance",
-            "context_filter": {"collection": "reports"},
-            "limit": 10,
-            "expand": True,
+SEARCH_REQUEST_EXAMPLES = cast(
+    dict[str, Example],
+    {
+        "semantic_search": {
+            "summary": "Semantic Search Example",
+            "value": {
+                "type": "semantic_search",
+                "text": "Q3 2023 sales performance",
+                "context_filter": {"collection": "reports"},
+                "limit": 10,
+                "expand": True,
+            },
+        },
+        "keyword_search": {
+            "summary": "Keyword Search Example (Coming Soon)",
+            "value": {
+                "type": "keywords_search",
+                "keywords": ["sales", "Q3", "2023"],
+                "context_filter": {"artifacts": ["q3_report"]},
+                "limit": 5,
+            },
+        },
+        "hybrid_search": {
+            "summary": "Hybrid Search Example (Coming Soon)",
+            "value": {
+                "type": "hybrid_search",
+                "text": "quarterly sales analysis",
+                "keywords": ["revenue", "growth", "metrics"],
+                "context_filter": {"collection": "financial"},
+                "limit": 15,
+                "expand": False,
+            },
         },
     },
-    "keyword_search": {
-        "summary": "Keyword Search Example (Coming Soon)",
-        "value": {
-            "type": "keywords_search",
-            "keywords": ["sales", "Q3", "2023"],
-            "context_filter": {"artifacts": ["q3_report"]},
-            "limit": 5,
-        },
-    },
-    "hybrid_search": {
-        "summary": "Hybrid Search Example (Coming Soon)",
-        "value": {
-            "type": "hybrid_search",
-            "text": "quarterly sales analysis",
-            "keywords": ["revenue", "growth", "metrics"],
-            "context_filter": {"collection": "financial"},
-            "limit": 15,
-            "expand": False,
-        },
-    },
-}
+)
 
 
 @primitives_router.post(

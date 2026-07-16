@@ -15,7 +15,7 @@ class DatabaseFunctionsInspector(DatabaseObjectInspector):
     def get_inspector_type(self) -> str:
         return DatabaseObjectType.FUNCTION
 
-    def get_objects(self, schema: str) -> list[InspectedFunction]:  # type: ignore[override]
+    def get_objects(self, schema: str) -> list[InspectedFunction]:
         try:
             if self._db_type in ["mssql", "microsoft"]:
                 return self._get_sqlserver_functions(schema)
@@ -120,7 +120,6 @@ class DatabaseFunctionsInspector(DatabaseObjectInspector):
         return functions
 
     def _get_sqlserver_functions(self, schema: str) -> list[InspectedFunction]:
-
         schema_filter = f"AND s.name = '{schema}'" if schema else ""
         if self._is_readonly:
             schema_filter += "AND UPPER(m.definition) NOT LIKE '%DELETE%'"
@@ -250,7 +249,14 @@ class DatabaseFunctionsInspector(DatabaseObjectInspector):
             current_function = None
 
             for row in result:
-                (schema, name, comment, param_name, param_type, param_direction,) = (
+                (
+                    schema,
+                    name,
+                    comment,
+                    param_name,
+                    param_type,
+                    param_direction,
+                ) = (
                     row[0],
                     row[1],
                     row[2],
@@ -277,10 +283,12 @@ class DatabaseFunctionsInspector(DatabaseObjectInspector):
                     parameter.name = param_name
                     parameter.data_type = param_type
                     parameter.comment = None
+                    assert current_function.parameters is not None
                     current_function.parameters.append(parameter)
                 elif param_direction == "R" and param_type:
+                    assert current_function.return_types is not None
                     current_function.return_types.append(
-                        f"{param_name if param_name else''} {param_type}"
+                        f"{param_name if param_name else ''} {param_type}"
                     )
 
             if current_function is not None:

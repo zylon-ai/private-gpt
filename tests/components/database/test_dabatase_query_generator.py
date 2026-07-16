@@ -145,9 +145,7 @@ def test_remove_multiple_ansi_codes(connection_string: str) -> None:
     )
 
     result: str = generator._extract_sql_code(complex_sql)
-    expected: str = (
-        "SELECT TOP 5\n" "c.CityID,\n" "c.CityName\n" "FROM Application.Cities c"
-    )
+    expected: str = "SELECT TOP 5\nc.CityID,\nc.CityName\nFROM Application.Cities c"
     expected = get_expected_result(expected, connection_string=connection_string)
 
     compare_sql(result, expected)
@@ -207,7 +205,7 @@ def test_ansi_codes_at_line_boundaries(connection_string: str) -> None:
     )
 
     result: str = generator._extract_sql_code(sql_multiline)
-    expected: str = "SELECT *\n" "FROM users\n" "WHERE active = 1"
+    expected: str = "SELECT *\nFROM users\nWHERE active = 1"
     expected = get_expected_result(expected, connection_string=connection_string)
 
     compare_sql(result, expected)
@@ -275,7 +273,7 @@ def test_whitespace_preservation(connection_string: str) -> None:
 
     result: str = generator._extract_sql_code(sql_with_spaces)
     expected: str = (
-        "SELECT    COUNT(*)   AS total\n" "FROM       users\n" "WHERE      active = 1"
+        "SELECT    COUNT(*)   AS total\nFROM       users\nWHERE      active = 1"
     )
     expected = get_expected_result(expected, connection_string=connection_string)
 

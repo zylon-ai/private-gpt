@@ -11,7 +11,7 @@ from private_gpt.components.storage.models import StoredFile
 
 
 async def uploads_from_request_form(
-    form_items: list[tuple[str, object]]
+    form_items: list[tuple[str, object]],
 ) -> list[UploadFile]:
     uploads: list[UploadFile] = []
     for k, v in form_items:
@@ -138,7 +138,7 @@ def _infer_file_meta(field_name: str, content: bytes | None) -> tuple[str, str]:
     if not is_magic_available():
         return field_name.rstrip("[]"), _DEFAULT_MIME_TYPE
 
-    import magic
+    import magic  # ty:ignore[unresolved-import]
 
     mime = magic.from_buffer(content, mime=True)
 
@@ -182,7 +182,7 @@ def _extract_zip(upload: UploadFile, payload: bytes) -> list[tuple[str, bytes]]:
 
 
 def _flatten_wrapper_directory(
-    entries: list[tuple[str, bytes]]
+    entries: list[tuple[str, bytes]],
 ) -> list[tuple[str, bytes]]:
     """Find SKILL.md and strip wrapper directories above it.
 

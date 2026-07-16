@@ -6,8 +6,8 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
-import boto3  # type: ignore
-from aiobotocore.session import get_session
+import boto3  # ty:ignore[unresolved-import]
+from aiobotocore.session import get_session  # ty:ignore[unresolved-import]
 from llama_index.core.base.llms.generic_utils import (
     completion_response_to_chat_response,
     stream_completion_response_to_chat_response,

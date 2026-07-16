@@ -82,7 +82,7 @@ async def to_async_iterator(
                         )
                         yield result
                     else:
-                        yield item  # type: ignore
+                        yield item
                 except Exception as e:
                     raise AsyncIteratorError(
                         f"Item transformation failed: {e!s}"

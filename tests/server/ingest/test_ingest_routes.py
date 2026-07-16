@@ -62,9 +62,9 @@ def test_ingest_list_returns_something_after_ingestion(
         assert len(ingest_result.data) == 1, "The temp doc should have been ingested"
         response_after = test_client.get(f"/v1/artifacts/list?collection={collection}")
         count_ingest_after = len(response_after.json()["data"])
-        assert (
-            count_ingest_after == count_ingest_before + 1
-        ), "The temp doc should be returned"
+        assert count_ingest_after == count_ingest_before + 1, (
+            "The temp doc should be returned"
+        )
 
         # Delete the created temp file
         ingest_helper.delete_file(collection, Path(test_file.name).name)

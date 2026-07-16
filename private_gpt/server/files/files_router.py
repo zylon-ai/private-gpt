@@ -67,14 +67,12 @@ async def list_files(
         description="Maximum number of files to return per page.",
         examples=[20],
     ),
-    after_id: str
-    | None = Query(
+    after_id: str | None = Query(
         default=None,
         description="Return files created after this file ID (exclusive). Used for forward pagination.",
         examples=["uploads/data.csv"],
     ),
-    before_id: str
-    | None = Query(
+    before_id: str | None = Query(
         default=None,
         description="Return files created before this file ID (exclusive). Used for backward pagination.",
         examples=["outputs/result.png"],

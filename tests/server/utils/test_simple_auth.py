@@ -21,7 +21,7 @@ from private_gpt.settings.settings import settings
 
 
 def _copy_simple_authenticated(
-    _simple_authentication: Annotated[bool, Depends(_simple_authentication)]
+    _simple_authentication: Annotated[bool, Depends(_simple_authentication)],
 ) -> bool:
     """Check if the request is authenticated."""
     if not _simple_authentication:

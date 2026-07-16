@@ -188,9 +188,9 @@ class StreamReader:
                 logger.error(f"Error checking cached status for {correlation_id}: {e}")
 
         try:
-            metadata: StreamMetadata | None = (
-                await self.stream_service.get_stream_metadata(correlation_id)
-            )
+            metadata: (
+                StreamMetadata | None
+            ) = await self.stream_service.get_stream_metadata(correlation_id)
             if metadata and metadata.status in TERMINAL_STATUSES:
                 return True
         except Exception as e:

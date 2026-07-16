@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Any
 
-from qdrant_client import (  # type: ignore[import-not-found]
+from qdrant_client import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
     AsyncQdrantClient,
     QdrantClient,
 )

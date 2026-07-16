@@ -2,7 +2,7 @@ import importlib
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
-    from llama_index.llms.openai_like import (  # type: ignore[import-not-found,import-untyped]
+    from llama_index.llms.openai_like import (  # type: ignore[import-not-found,import-untyped]  # ty:ignore[unresolved-import]
         OpenAILikeResponses as OpenAILikeResponsesBase,
     )
 
@@ -41,7 +41,9 @@ if not TYPE_CHECKING:
     PatchedOpenAIResponsesLLM = _load_patched_openai_responses()
 
 
-class PatchedOpenAILikeResponsesLLM(OpenAILikeResponsesBase, PatchedOpenAIResponsesLLM):  # type: ignore[misc]
+class PatchedOpenAILikeResponsesLLM(  # ty: ignore[inconsistent-mro]
+    OpenAILikeResponsesBase, PatchedOpenAIResponsesLLM
+):  # type: ignore[misc]
     """OpenAILikeResponses with all PatchedOpenAIResponsesLLM fixes applied.
 
     OpenAILikeResponses already inherits from OpenAIResponses, so MRO ensures

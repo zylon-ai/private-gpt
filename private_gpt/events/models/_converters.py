@@ -45,7 +45,7 @@ def from_tool_output(tool_output: Any) -> list[ResultContentBlockType]:
                 raise RuntimeError(
                     f"{type(tool_output).__name__} is not a member of ResultContentBlockType"
                 )
-            return [tool_output]  # type: ignore
+            return [tool_output]
 
         case Image():
             return [ImageBlock.from_image(tool_output)]

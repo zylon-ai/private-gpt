@@ -57,9 +57,10 @@ class ErrorBlock(BaseContentBlock, StandardContentProtocol):
         wrapped_exception = Errors.build(error)
         if wrapped_exception.original_exception is not None:
             original = wrapped_exception.original_exception
-            if hasattr(original, "errors") and callable(original.errors):
+            errors_method = getattr(original, "errors", None)
+            if callable(errors_method):
                 try:
-                    parsed = _normalize_validation_errors(original.errors())  # type: ignore[call-arg]
+                    parsed = _normalize_validation_errors(errors_method())
                     explanation = parsed if parsed is not None else str(original)
                 except Exception:
                     explanation = str(original)

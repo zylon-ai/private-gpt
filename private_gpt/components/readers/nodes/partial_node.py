@@ -35,7 +35,6 @@ class PartialNode(TreeNode):
         return self.original_hash or super().hash
 
     def __str__(self) -> str:
-
         content = self.token_count
         return (
             f"{self.type}({self.id_})" + f": Token count {content}" if content else ""

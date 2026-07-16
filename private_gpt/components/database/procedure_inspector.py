@@ -15,7 +15,7 @@ class DatabaseProcedureInspector(DatabaseObjectInspector):
     def get_inspector_type(self) -> str:
         return DatabaseObjectType.PROCEDURE
 
-    def get_objects(self, schema: str) -> list[InspectedProcedure]:  # type: ignore[override]
+    def get_objects(self, schema: str) -> list[InspectedProcedure]:
         try:
             if self._db_type in ["mssql", "microsoft"]:
                 return self._get_sqlserver_procedures(schema)
@@ -275,8 +275,10 @@ class DatabaseProcedureInspector(DatabaseObjectInspector):
                     parameter.name = param_name
                     parameter.data_type = param_type
                     parameter.comment = None
+                    assert current_procedure.parameters is not None
                     current_procedure.parameters.append(parameter)
                 elif param_direction == "O" and param_type:
+                    assert current_procedure.return_types is not None
                     current_procedure.return_types.append(
                         f"{param_name if param_name else ''} {param_type}"
                     )

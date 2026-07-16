@@ -103,7 +103,6 @@ class SemanticSearchService:
         token_limit: int | None = None,
         validate: bool = True,
     ) -> list[Chunk]:
-
         llm = self.llm_component.get_llm(model_id)
         collection = context_filter.collection
         # If artifacts are provided, verify the related required indexes are ready

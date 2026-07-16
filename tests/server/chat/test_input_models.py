@@ -956,9 +956,9 @@ def test_convert_from_llama_index_messages_preserves_order() -> None:
 
     assert len(result) == len(expected_roles)
     for i, expected_role in enumerate(expected_roles):
-        assert (
-            result[i].role == expected_role
-        ), f"Position {i}: expected {expected_role}, got {result[i].role}"
+        assert result[i].role == expected_role, (
+            f"Position {i}: expected {expected_role}, got {result[i].role}"
+        )
 
 
 @pytest.mark.parametrize("invalid_role", ["tool", "invalid", "ASSISTANT", "USER"])
@@ -2164,22 +2164,22 @@ def test_reorder_tldr_messages_with_message_input(
 ) -> None:
     result = MessageInput.convert_from_llama_index_messages(message_inputs)
 
-    assert len(result) == len(
-        expected_roles_and_tldr
-    ), f"Expected {len(expected_roles_and_tldr)} messages, got {len(result)}"
+    assert len(result) == len(expected_roles_and_tldr), (
+        f"Expected {len(expected_roles_and_tldr)} messages, got {len(result)}"
+    )
 
     for i, (actual_msg, (expected_role, has_tldr, expected_content)) in enumerate(
         zip(result, expected_roles_and_tldr, strict=False)
     ):
-        assert (
-            actual_msg.role.value == expected_role
-        ), f"Message {i}: expected role {expected_role}, got {actual_msg.role.value}"
-        assert (
-            bool("tldr" in actual_msg.additional_kwargs) == has_tldr
-        ), f"Message {i}: TLDR flag mismatch"
-        assert (
-            actual_msg.content == expected_content
-        ), f"Message {i}: expected content '{expected_content}', got '{actual_msg.content}'"
+        assert actual_msg.role.value == expected_role, (
+            f"Message {i}: expected role {expected_role}, got {actual_msg.role.value}"
+        )
+        assert bool("tldr" in actual_msg.additional_kwargs) == has_tldr, (
+            f"Message {i}: TLDR flag mismatch"
+        )
+        assert actual_msg.content == expected_content, (
+            f"Message {i}: expected content '{expected_content}', got '{actual_msg.content}'"
+        )
 
 
 def test_bug_three_consecutive_same_role_with_tldr_pattern() -> None:
@@ -2310,6 +2310,6 @@ def test_accumulated_right_tldr_with_thinking_blocks_causes_consecutive_assistan
 
     roles = [m.role for m in result]
     for i in range(len(roles) - 1):
-        assert (
-            roles[i] != roles[i + 1]
-        ), f"Consecutive same-role at positions {i}/{i + 1}: {roles}"
+        assert roles[i] != roles[i + 1], (
+            f"Consecutive same-role at positions {i}/{i + 1}: {roles}"
+        )

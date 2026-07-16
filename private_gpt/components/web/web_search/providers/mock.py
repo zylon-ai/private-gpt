@@ -17,7 +17,6 @@ class MockSearchProvider(BaseWebSearchProvider):
     async def make_query(
         self, query: str, num_links: int = 10, **kwargs: Any
     ) -> list[WebSearchResult]:
-
         self._requests_count += 1
         mock_results = [
             WebSearchResult(

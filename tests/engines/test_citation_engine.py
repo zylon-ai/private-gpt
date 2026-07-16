@@ -294,7 +294,6 @@ def test_extract_citations_with_citations(
 def test_extract_citations_with_citations_and_quotes(
     mock_retriever: Mock, start_token: str, end_token: str, id_length: int
 ) -> None:
-
     id_1 = random_id_with_length(id_length)
     mock_retriever.retrieve.return_value = [
         NodeWithScore(

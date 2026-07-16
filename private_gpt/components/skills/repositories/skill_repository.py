@@ -71,28 +71,23 @@ class CreateSkillInput(BaseModel):
 
 class SkillRepository(ABC):
     @abstractmethod
-    async def create_skill(self, payload: CreateSkillInput) -> SkillEntity:
-        ...
+    async def create_skill(self, payload: CreateSkillInput) -> SkillEntity: ...
 
     @abstractmethod
-    async def get_skill(self, skill_id: str, collection: str) -> SkillEntity | None:
-        ...
+    async def get_skill(self, skill_id: str, collection: str) -> SkillEntity | None: ...
 
     @abstractmethod
     async def list_skills(
         self, collection: str, pagination: SkillPagination
-    ) -> SkillPage:
-        ...
+    ) -> SkillPage: ...
 
     @abstractmethod
-    async def delete_skill(self, skill_id: str, collection: str) -> bool:
-        ...
+    async def delete_skill(self, skill_id: str, collection: str) -> bool: ...
 
     @abstractmethod
     async def create_version(
         self, payload: SkillVersionEntity, collection: str
-    ) -> SkillVersionEntity | None:
-        ...
+    ) -> SkillVersionEntity | None: ...
 
     @abstractmethod
     async def get_version(
@@ -100,8 +95,7 @@ class SkillRepository(ABC):
         skill_id: str,
         version: str,
         collection: str,
-    ) -> SkillVersionEntity | None:
-        ...
+    ) -> SkillVersionEntity | None: ...
 
     @abstractmethod
     async def list_versions(
@@ -109,20 +103,17 @@ class SkillRepository(ABC):
         skill_id: str,
         collection: str,
         pagination: SkillPagination,
-    ) -> SkillVersionPage | None:
-        ...
+    ) -> SkillVersionPage | None: ...
 
     @abstractmethod
     async def delete_version(
         self, skill_id: str, version: str, collection: str
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
     @abstractmethod
     async def recover_versions(
         self, skill_filter: SkillFilter
-    ) -> list[SkillVersionEntity]:
-        ...
+    ) -> list[SkillVersionEntity]: ...
 
 
 @singleton

@@ -17,7 +17,10 @@ class MarkItDownReader(TextReader):
         encoding: str | None = None,
         extra_info: dict[str, Any] | None = None,
     ) -> Iterator[BaseNode]:
-        from markitdown import MarkItDown, StreamInfo  # type: ignore[import-not-found]
+        from markitdown import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
+            MarkItDown,
+            StreamInfo,
+        )
 
         logger.debug("Starting MarkItDown conversion of file: %s", file_path)
         converter = MarkItDown(

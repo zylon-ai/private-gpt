@@ -83,13 +83,13 @@ class TestMarkdownParser(unittest.TestCase):
 
     def test_lists(self) -> None:
         """Test ordered and unordered list parsing."""
-        markdown = "1. First item\n" "2. Second item"
+        markdown = "1. First item\n2. Second item"
         self._round_trip_test(markdown)
 
-        markdown = "- First item\n" "- Second item"
+        markdown = "- First item\n- Second item"
         self._round_trip_test(markdown, exact=False)
 
-        markdown = "+ First item\n" "\t+ Second item"
+        markdown = "+ First item\n\t+ Second item"
         self._round_trip_test(markdown, exact=False)
 
     def test_code_blocks(self) -> None:
@@ -97,10 +97,10 @@ class TestMarkdownParser(unittest.TestCase):
         markdown = "Inline `code`"
         self._round_trip_test(markdown)
 
-        markdown = "```\n" "Sample text\n" "```"
+        markdown = "```\nSample text\n```"
         self._round_trip_test(markdown)
 
-        markdown = "```js \n" "var foo = 'bar';\n" "```"
+        markdown = "```js \nvar foo = 'bar';\n```"
         self._round_trip_test(markdown, exact=False)
 
     def test_tables(self) -> None:
@@ -132,33 +132,22 @@ class TestMarkdownParser(unittest.TestCase):
         assert serialized.strip() == expected.strip()
 
         # Case 3: Has default header without header row
-        markdown = "| 0 | 1 |\n" "| - | - |\n" "| Alice | 25 |\n" "| Bob | 30 |"
+        markdown = "| 0 | 1 |\n| - | - |\n| Alice | 25 |\n| Bob | 30 |"
         self._round_trip_test(markdown)
 
         # Case 4: Has default header with header row
-        markdown = (
-            "| 0 | 1 |\n"
-            "| - | - |\n"
-            "| Name | Age |\n"
-            "| Alice | 25 |\n"
-            "| Bob | 30 |"
-        )
+        markdown = "| 0 | 1 |\n| - | - |\n| Name | Age |\n| Alice | 25 |\n| Bob | 30 |"
         root = self.parser.parse(markdown)
         serialized = self._serialize_tree(root)
-        expected = (
-            "| Name | Age |\n" "| - | - |\n" "| Alice | 25 |\n" "| Bob | 30 |\n\n"
-        )
+        expected = "| Name | Age |\n| - | - |\n| Alice | 25 |\n| Bob | 30 |\n\n"
         assert serialized.strip() == expected.strip()
 
         # Case 5. Empty headers
-        markdown = "| | |\n" "| - | - |\n" "| Alice | 25 |\n" "| Bob | 30 |"
+        markdown = "| | |\n| - | - |\n| Alice | 25 |\n| Bob | 30 |"
         root = self.parser.parse(markdown)
         serialized = self._serialize_tree(root)
         expected = (
-            "| Unknown_1 | Unknown_2 |\n"
-            "| - | - |\n"
-            "| Alice | 25 |\n"
-            "| Bob | 30 |\n\n"
+            "| Unknown_1 | Unknown_2 |\n| - | - |\n| Alice | 25 |\n| Bob | 30 |\n\n"
         )
         assert serialized.strip() == expected.strip()
 
@@ -182,18 +171,14 @@ class TestMarkdownParser(unittest.TestCase):
 
     def test_blockquotes(self) -> None:
         """Test blockquote parsing."""
-        markdown = (
-            "> Blockquote level 1\n" "> Blockquote level 2\n" "> Blockquote level 3"
-        )
+        markdown = "> Blockquote level 1\n> Blockquote level 2\n> Blockquote level 3"
         self._round_trip_test(markdown)
-        markdown = (
-            "> Blockquote level 1\n" ">> Blockquote level 2\n" ">>> Blockquote level 3"
-        )
+        markdown = "> Blockquote level 1\n>> Blockquote level 2\n>>> Blockquote level 3"
         self._round_trip_test(markdown)
 
     def test_typographic_replacements(self) -> None:
         """Test typographic replacements."""
-        markdown = "(c) (C) (r) (R) (tm) (TM)\n" "Smart quotes: 'single' and \"double\""
+        markdown = "(c) (C) (r) (R) (tm) (TM)\nSmart quotes: 'single' and \"double\""
         self._round_trip_test(markdown)
 
     def test_images_and_links(self) -> None:
@@ -209,122 +194,122 @@ class TestMarkdownParser(unittest.TestCase):
         markdown = "   ##  Improper Heading"
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "## Improper Heading"
-        assert (
-            expected.strip() == new_markdown.strip()
-        ), "Sanitized headings should remove excessive spaces and normalize formatting."
+        assert expected.strip() == new_markdown.strip(), (
+            "Sanitized headings should remove excessive spaces and normalize formatting."
+        )
 
     def test_sanity_paragraph_format(self) -> None:
         """Test the sanitization of paragraphs with inconsistent line breaks."""
         markdown = "Paragraph one.\n\n   Paragraph two with extra indentation.\n\n"
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "Paragraph one.\n\nParagraph two with extra indentation.\n\n"
-        assert (
-            expected.strip() == new_markdown.strip()
-        ), "Sanitized paragraphs should have consistent formatting and spacing."
+        assert expected.strip() == new_markdown.strip(), (
+            "Sanitized paragraphs should have consistent formatting and spacing."
+        )
 
     def test_sanity_image_format(self) -> None:
         """Test the sanitization of image syntax."""
         markdown = "![  Alt Text  ]( http://example.com )"
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "![Alt Text](http://example.com)"
-        assert (
-            expected.strip() == new_markdown.strip()
-        ), "Sanitized images should have no unnecessary spaces and correct syntax."
+        assert expected.strip() == new_markdown.strip(), (
+            "Sanitized images should have no unnecessary spaces and correct syntax."
+        )
 
     def test_sanity_link_format(self) -> None:
         """Test the sanitization of link syntax."""
         markdown = "[  Link Text  ]( http://example.com )"
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "[Link Text](http://example.com)\n\n"
-        assert (
-            expected.strip() == new_markdown.strip()
-        ), "Sanitized links should remove extra spaces and preserve valid syntax."
+        assert expected.strip() == new_markdown.strip(), (
+            "Sanitized links should remove extra spaces and preserve valid syntax."
+        )
 
     def test_sanity_bold_format(self) -> None:
         """Test the sanitization of bold syntax."""
         markdown = "**Bold Text** and __More Bold__"
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "Bold Text and More Bold\n\n"
-        assert (
-            expected.strip() == new_markdown.strip()
-        ), "Sanitized bold should remove asterisks/underscores and preserve text content."
+        assert expected.strip() == new_markdown.strip(), (
+            "Sanitized bold should remove asterisks/underscores and preserve text content."
+        )
 
     def test_sanity_italic_format(self) -> None:
         """Test the sanitization of italic syntax."""
         markdown = "*Italic Text* and _More Italic_"
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "Italic Text and More Italic\n\n"
-        assert (
-            expected.strip() == new_markdown.strip()
-        ), "Sanitized italic should remove single asterisks/underscores and preserve text content."
+        assert expected.strip() == new_markdown.strip(), (
+            "Sanitized italic should remove single asterisks/underscores and preserve text content."
+        )
 
     def test_sanity_bold_italic_format(self) -> None:
         """Test the sanitization of combined bold and italic syntax."""
         markdown = "***Bold Italic*** and ___More Bold Italic___"
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "Bold Italic and More Bold Italic\n\n"
-        assert (
-            expected.strip() == new_markdown.strip()
-        ), "Sanitized bold-italic should remove triple asterisks/underscores and preserve text content."
+        assert expected.strip() == new_markdown.strip(), (
+            "Sanitized bold-italic should remove triple asterisks/underscores and preserve text content."
+        )
 
     def test_sanity_mixed_format(self) -> None:
         """Test the sanitization of mixed markdown formatting."""
         markdown = "**Bold** with *italic* and ***bold-italic*** mixed"
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "Bold with italic and bold-italic mixed\n\n"
-        assert (
-            expected.strip() == new_markdown.strip()
-        ), "Sanitized mixed formatting should remove all markdown syntax and preserve text content."
+        assert expected.strip() == new_markdown.strip(), (
+            "Sanitized mixed formatting should remove all markdown syntax and preserve text content."
+        )
 
     def test_sanity_item_format(self) -> None:
         markdown = "* ● Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily."
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "* Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily.\n"
-        assert (
-            expected == new_markdown
-        ), "Sanitized items should remove extra icons and preserve valid syntax."
+        assert expected == new_markdown, (
+            "Sanitized items should remove extra icons and preserve valid syntax."
+        )
 
         markdown = "* ◦ Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily."
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "* Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily.\n"
-        assert (
-            expected == new_markdown
-        ), "Sanitized items should remove extra spaces and preserve valid syntax."
+        assert expected == new_markdown, (
+            "Sanitized items should remove extra spaces and preserve valid syntax."
+        )
 
         markdown = "*     ◦ Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily."
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "* Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily.\n"
-        assert (
-            expected == new_markdown
-        ), "Sanitized items should remove extra spaces and preserve valid syntax."
+        assert expected == new_markdown, (
+            "Sanitized items should remove extra spaces and preserve valid syntax."
+        )
 
         markdown = "*     + Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily."
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "* Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily.\n"
-        assert (
-            expected == new_markdown
-        ), "Sanitized items should remove extra spaces and preserve valid syntax."
+        assert expected == new_markdown, (
+            "Sanitized items should remove extra spaces and preserve valid syntax."
+        )
 
         markdown = "* - Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily."
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "* Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily.\n"
-        assert (
-            expected == new_markdown
-        ), "Sanitized items should remove extra spaces and preserve valid syntax."
+        assert expected == new_markdown, (
+            "Sanitized items should remove extra spaces and preserve valid syntax."
+        )
 
         markdown = "  -     1. Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily."
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "1. Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily.\n"
-        assert (
-            expected == new_markdown
-        ), "Sanitized items should remove extra spaces and preserve valid syntax."
+        assert expected == new_markdown, (
+            "Sanitized items should remove extra spaces and preserve valid syntax."
+        )
 
         markdown = "  5.     + Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily."
         new_markdown = self._round_trip_test(markdown, check=False)
         expected = "5. Hypertension: Diagnosed at age 32, currently managed with losartan 50 mg once daily.\n"
-        assert (
-            expected == new_markdown
-        ), "Sanitized items should remove extra spaces and preserve valid syntax."
+        assert expected == new_markdown, (
+            "Sanitized items should remove extra spaces and preserve valid syntax."
+        )
 
     def test_sample_markdown(self) -> None:
         """Test the parser on the sample markdown."""

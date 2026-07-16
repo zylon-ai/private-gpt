@@ -137,10 +137,9 @@ class TestFieldParity:
                     f"TypeMapping.sdk_only_fields."
                 )
 
-        assert (
-            not failures
-        ), "SDK optional fields are unaccounted for in the registry.\n\n" + "\n".join(
-            failures
+        assert not failures, (
+            "SDK optional fields are unaccounted for in the registry.\n\n"
+            + "\n".join(failures)
         )
 
     def test_our_extension_fields_are_declared_in_registry(self) -> None:

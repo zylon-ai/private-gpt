@@ -35,7 +35,7 @@ class CorsSettings(BaseModel):
         description="A list of origins that should be permitted to make cross-origin requests.",
         default=[],
     )
-    allow_origin_regex: list[str] | None = Field(
+    allow_origin_regex: str | None = Field(
         description="A regex string to match against origins that should be permitted to make cross-origin requests.",
         default=None,
     )
@@ -538,7 +538,10 @@ class ChatSettings(BaseModel):
     )
     assistant_name: str = Field("Zylon", description="The assistant name")
     assistant_description: str = Field("Zylon", description="The assistant description")
-    condense_strategy: Literal["none", "condenser",] = Field(
+    condense_strategy: Literal[
+        "none",
+        "condenser",
+    ] = Field(
         "none",
         description=(
             "The strategy to use for condensing the chat history.\n"

@@ -10,7 +10,7 @@ from email.utils import getaddresses, parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 
-import html2text
+import html2text  # ty:ignore[unresolved-import]
 from llama_index.core.schema import BaseNode, Document
 from pydantic import BaseModel, Field
 
@@ -110,7 +110,7 @@ class EmailContent(BaseModel):
             parts.append("</ul>")
 
         try:
-            from markdownify import markdownify as md  # type: ignore
+            from markdownify import markdownify as md  # ty:ignore[unresolved-import]
 
             markdown: str = md(
                 "\n".join(parts),
@@ -152,7 +152,7 @@ class EmailTextReader(TextReader):
         html_converter.ignore_images = False
         html_converter.ignore_tables = False
 
-        super().__init__(  # type: ignore
+        super().__init__(
             include_attachments=include_attachments,
             html_to_text=html_to_text,
             html_converter=html_converter,

@@ -6,13 +6,15 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import cv2
+import cv2  # ty:ignore[unresolved-import]
 import numpy as np
 from PIL import Image, ImageDraw
-from pptx import Presentation
-from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pptx import Presentation  # ty:ignore[unresolved-import]
+from pptx.enum.shapes import MSO_SHAPE_TYPE  # ty:ignore[unresolved-import]
 from pydantic import BaseModel, Field
-from scipy import ndimage  # type: ignore[import-untyped]
+from scipy import (  # ty:ignore[unresolved-import]
+    ndimage,  # type: ignore[import-untyped]
+)
 
 from private_gpt.components.ingest.utils import FileInfo
 from private_gpt.settings.settings import settings
@@ -261,7 +263,6 @@ class EnhancedPPTXTransform:
         slide_height: int,
         slide_index: int,
     ) -> list[ContentZone]:
-
         occupancy_map = np.zeros(
             (self.config.grid_height, self.config.grid_width), dtype=np.float64
         )
@@ -339,7 +340,6 @@ class EnhancedPPTXTransform:
     def _classify_content_zone(
         self, width: int, height: int, slide_width: int, slide_height: int
     ) -> tuple[ContentType, float]:
-
         aspect_ratio = width / height
         area_ratio = (width * height) / (slide_width * slide_height)
 
@@ -451,7 +451,6 @@ class EnhancedPPTXTransform:
                             "DIAGRAM",
                         ]
                     ):
-
                         if all(
                             hasattr(shape, attr)
                             for attr in ["left", "top", "width", "height"]
@@ -501,7 +500,6 @@ class EnhancedPPTXTransform:
         temp_dir: Path,
         presentation: Any,
     ) -> list[ZoneImageMap]:
-
         zone_images: list[ZoneImageMap] = []
         actual_slide_width = presentation.slide_width
         actual_slide_height = presentation.slide_height

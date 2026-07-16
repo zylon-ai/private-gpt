@@ -4,13 +4,13 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import pandas as pd
-from pandasai import (  # type: ignore
+from pandasai import (  # ty:ignore[unresolved-import]
     ConfigManager,
     DataFrame,
     Sandbox,
     VirtualDataFrame,
 )
-from pandasai.core.response import (  # type: ignore
+from pandasai.core.response import (  # ty:ignore[unresolved-import]
     BaseResponse,
     ChartResponse,
     ErrorResponse,
@@ -68,22 +68,17 @@ class PandaAIProtocol(Protocol):
         view: bool = False,
         group_by: list[str] | None = None,
         transformations: list[dict[str, Any]] | None = None,
-    ) -> pd.DataFrame:
-        ...
+    ) -> pd.DataFrame: ...
 
     def chat(
         self, query: str, *dataframes: pd.DataFrame, sandbox: Sandbox | None = None
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
-    def follow_up(self, query: str) -> Any:
-        ...
+    def follow_up(self, query: str) -> Any: ...
 
-    def load(self, dataset_path: str) -> pd.DataFrame:
-        ...
+    def load(self, dataset_path: str) -> pd.DataFrame: ...
 
-    def read_csv(self, filepath: str) -> pd.DataFrame:
-        ...
+    def read_csv(self, filepath: str) -> pd.DataFrame: ...
 
 
 class PandasAIOutput(BaseModel):
@@ -191,10 +186,13 @@ class PandasAIOutput(BaseModel):
     def __str__(self) -> str:
         """Convert the output to a string representation."""
         str_converters: dict[str, Callable[[], str]] = {
-            "dataframe": lambda: df_to_minimal_markdown(self.get_dataframe())
-            or "No results.",
-            "chart": lambda: "Generated chart successfully. Plot was attached to the conversation."
-            "Don't create placeholders for charts, just reply that the chart was generated.",
+            "dataframe": lambda: (
+                df_to_minimal_markdown(self.get_dataframe()) or "No results."
+            ),
+            "chart": lambda: (
+                "Generated chart successfully. Plot was attached to the conversation."
+                "Don't create placeholders for charts, just reply that the chart was generated."
+            ),
             "string": lambda: str(self.value),
             "number": lambda: format_number(self.value),
         }
@@ -247,7 +245,7 @@ class PandasAIService(BaseModel):
             {
                 "llm": llm,
                 "organization": "zylon",
-                **config.dict(exclude_none=True),
+                **config.model_dump(exclude_none=True),
             }
         )
 

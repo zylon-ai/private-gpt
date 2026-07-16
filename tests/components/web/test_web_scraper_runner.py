@@ -90,8 +90,7 @@ async def test_batch_failures_are_isolated_per_request() -> None:
         _success(),
         files={
             "/work/page_0.html": b"<html>ok</html>",
-            "/work/"
-            + RESULTS_FILENAME: _results_json(
+            "/work/" + RESULTS_FILENAME: _results_json(
                 {"output_path": "page_0.html"},
                 {"output_path": "page_1.html", "error": "net::ERR_FAILED"},
                 {"output_path": "page_2.html", "error": "nav timeout", "timeout": True},

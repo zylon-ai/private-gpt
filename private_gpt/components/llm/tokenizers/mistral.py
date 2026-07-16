@@ -6,8 +6,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal, TypeAlias, assert_never, cast
 
-import huggingface_hub  # type: ignore[import-not-found]
-from huggingface_hub import HfApi, hf_hub_download  # type: ignore[import-not-found]
+import huggingface_hub  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
+from huggingface_hub import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
+    HfApi,
+    hf_hub_download,
+)
 
 from private_gpt.components.llm.tokenizers.tokenizer_base import (
     AudioLike,
@@ -430,9 +433,9 @@ class MistralTokenizer(TokenizerBase):
 
         if isinstance(model_id, str) or not model_id.exists():
             model_id_str = str(model_id)
-            assert (
-                not local_files_only
-            ), "local_files_only=True but model_id is not a local path"
+            assert not local_files_only, (
+                "local_files_only=True but model_id is not a local path"
+            )
             assert len(model_id_str.split("/")) == 2, (
                 f"You have either provided a non-existent path: "
                 f"{model_id} or an invalid HF Hub repo id."
@@ -793,7 +796,7 @@ class MistralTokenizer(TokenizerBase):
 
         # Keep certain special tokens like tool_calls
         non_skip_special_tokens_ids = {
-            self.tokenizer.get_control_token(SpecialTokens.tool_calls),  # type: ignore
+            self.tokenizer.get_control_token(SpecialTokens.tool_calls),
         }
 
         if isinstance(self.instruct, InstructTokenizerV13):

@@ -67,7 +67,6 @@ class DescribeImageTransform(TransformComponent):
     async def acall(
         self, nodes: Sequence[BaseNode], **kwargs: Any
     ) -> Sequence[BaseNode]:
-
         # Since we are executing async code since sync entrypoint,
         # we need to get the LLMComponent instance from the global injector
         llm_component = get_global_injector().get(LLMComponent)

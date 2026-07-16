@@ -22,5 +22,4 @@ class VectorStoreFactory(ABC):
         self.embed_dim = embed_dim
 
     @abstractmethod
-    def vector_store(self, collection: str) -> BasePydanticVectorStore:
-        ...
+    def vector_store(self, collection: str) -> BasePydanticVectorStore: ...

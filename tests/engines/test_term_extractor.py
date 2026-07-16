@@ -176,9 +176,9 @@ def test_unique_terms_across_texts() -> None:
     unique_terms = analyzer.get_unique_terms(texts)
 
     # Verify uniqueness
-    assert not any(
-        "revenue" in terms for terms in unique_terms
-    ), "Revenue appears in multiple texts"
+    assert not any("revenue" in terms for terms in unique_terms), (
+        "Revenue appears in multiple texts"
+    )
     assert any("cost" in terms for terms in unique_terms), "Cost should be unique"
     assert any("margin" in terms for terms in unique_terms), "Margins should be unique"
 

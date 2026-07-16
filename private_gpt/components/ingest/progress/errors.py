@@ -20,7 +20,6 @@ class IngestionValidationErrors(enum.StrEnum):
 
 
 class IngestionParseErrors(enum.StrEnum):
-
     # Errors during the parsing process
     PARSING_FAILURE = "zpgt.ingest.parsing_failure.error"
 
@@ -33,7 +32,6 @@ class IngestionParseErrors(enum.StrEnum):
 
 
 class IngestionLoadErrors(enum.StrEnum):
-
     # Errors during the loading process
     NO_VALID_FILES = "zpgt.ingest.no_valid_files.error"
     NO_VALID_NODES = "zpgt.ingest.no_valid_nodes.error"

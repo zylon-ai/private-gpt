@@ -1,4 +1,5 @@
 """Simple node parser."""
+
 from collections.abc import Sequence
 from typing import Any
 
@@ -41,12 +42,12 @@ class CreateLlamaIndexRelationshipsTransform(TransformComponent):
                 and node.source_node
                 and prev_node.source_node == node.source_node
             ):
-                node.relationships[
-                    NodeRelationship.PREVIOUS
-                ] = prev_node.as_related_node_info()
-                prev_node.relationships[
-                    NodeRelationship.NEXT
-                ] = node.as_related_node_info()
+                node.relationships[NodeRelationship.PREVIOUS] = (
+                    prev_node.as_related_node_info()
+                )
+                prev_node.relationships[NodeRelationship.NEXT] = (
+                    node.as_related_node_info()
+                )
 
             last_processed: TreeNode | None = node
             for child in node.children:

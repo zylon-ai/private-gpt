@@ -170,7 +170,6 @@ class ImageProcessingWorkflow(Workflow):
     async def infer_strategy(
         self, ctx: AnyContext, ev: WorkflowInitializedEvent
     ) -> StrategyInferredEvent | ImagesPreprocessedEvent:
-
         enable_preprocessing = await ctx.store.get("enable_preprocessing")
         skip_strategy_inference = await ctx.store.get("skip_strategy_inference")
         kwargs = await ctx.store.get("kwargs")
@@ -320,7 +319,6 @@ class ImageProcessingWorkflow(Workflow):
     async def finalize(
         self, ctx: AnyContext, ev: FinalizeContentEvent
     ) -> ImageProcessingResultEvent:
-
         user_query = await ctx.store.get("user_query")
         final_content = ev.final_content
         evaluation = ev.evaluation
@@ -362,7 +360,8 @@ class ImageProcessingWorkflow(Workflow):
                     nonlocal count
                     count += 1
 
-                    if not hasattr(self._llm, "astructured_chat"):
+                    structured_chat = getattr(self._llm, "astructured_chat", None)
+                    if not callable(structured_chat):
                         raise NotImplementedError(
                             "LLM does not support structured chat."
                         )
@@ -380,7 +379,7 @@ class ImageProcessingWorkflow(Workflow):
                                 f"Retry {count}: Reduced image quality (iteration {count - 1}/{max_iterations})"
                             )
 
-                        return await self._llm.astructured_chat(
+                        return await structured_chat(
                             response_model, current_messages, **new_kwargs
                         )
                     except Errors.RequestTooLarge as e:
@@ -398,7 +397,7 @@ class ImageProcessingWorkflow(Workflow):
                         )
                     return await _call()
 
-                result = await retry(_call_with_semaphore)  # type: ignore[call-arg]
+                result = await retry(_call_with_semaphore)
                 if isinstance(result, Exception):
                     raise result
                 return result
@@ -441,8 +440,8 @@ class ImageProcessingWorkflow(Workflow):
             return image_block
 
         try:
-            import cv2  # type: ignore
-            import numpy as np  # type: ignore
+            import cv2  # ty:ignore[unresolved-import]
+            import numpy as np
 
             image_b = image_block.resolve_image()
             image_b.seek(0)

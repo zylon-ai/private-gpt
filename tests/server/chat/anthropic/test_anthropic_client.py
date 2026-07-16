@@ -1046,13 +1046,16 @@ def test_streaming_with_additional_parameters(
     client = anthropic.Anthropic(**CLIENT_KWARGS)
     client._client = create_mock_http_client(test_client, httpx_mock)
 
-    with client.messages.stream(
-        model="custom-model",
-        max_tokens=2048,
-        temperature=0.8,
-        top_p=0.95,
-        messages=[MessageParam(role="user", content="Test message")],
-    ) as stream, pytest.raises(APIStatusError):
+    with (
+        client.messages.stream(
+            model="custom-model",
+            max_tokens=2048,
+            temperature=0.8,
+            top_p=0.95,
+            messages=[MessageParam(role="user", content="Test message")],
+        ) as stream,
+        pytest.raises(APIStatusError),
+    ):
         list(stream)
 
 

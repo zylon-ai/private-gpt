@@ -770,15 +770,15 @@ def test_complex_json_schema_handling(schema_case: dict[str, Any]) -> None:
 
     if schema["type"] == "array":
         # For root-level arrays, dumped should be a list
-        assert isinstance(
-            dumped, list
-        ), f"Expected list for array schema in case: {case_name}"
+        assert isinstance(dumped, list), (
+            f"Expected list for array schema in case: {case_name}"
+        )
         assert dumped == test_data, f"Data mismatch for case: {case_name}"
     else:
         # For objects, dumped should be a dict
-        assert isinstance(
-            dumped, dict
-        ), f"Expected dict for object schema in case: {case_name}"
+        assert isinstance(dumped, dict), (
+            f"Expected dict for object schema in case: {case_name}"
+        )
 
         # Verify all required fields are present and correctly mapped
         _verify_data_integrity(dumped, test_data, case_name)
@@ -788,19 +788,19 @@ def test_complex_json_schema_handling(schema_case: dict[str, Any]) -> None:
     json_data = json.loads(json_str)
 
     if schema["type"] == "array":
-        assert isinstance(
-            json_data, list
-        ), f"JSON should be array for case: {case_name}"
+        assert isinstance(json_data, list), (
+            f"JSON should be array for case: {case_name}"
+        )
     else:
-        assert isinstance(
-            json_data, dict
-        ), f"JSON should be object for case: {case_name}"
+        assert isinstance(json_data, dict), (
+            f"JSON should be object for case: {case_name}"
+        )
 
     # Test that we can create a new instance from dumped data
     new_instance = model.model_validate(dumped)
-    assert (
-        new_instance.model_dump() == dumped
-    ), f"Round-trip validation failed for case: {case_name}"
+    assert new_instance.model_dump() == dumped, (
+        f"Round-trip validation failed for case: {case_name}"
+    )
 
     # Test field sanitization for object schemas
     if schema["type"] == "object":
@@ -813,26 +813,26 @@ def _verify_data_integrity(
     """Verify that dumped data maintains integrity with original data."""
     # Check that all original keys are preserved in dumped data
     for key, value in original.items():
-        assert (
-            key in dumped
-        ), f"Key '{key}' missing in dumped data for case: {case_name}"
+        assert key in dumped, (
+            f"Key '{key}' missing in dumped data for case: {case_name}"
+        )
 
         if isinstance(value, dict):
-            assert isinstance(
-                dumped[key], dict
-            ), f"Value type mismatch for key '{key}' in case: {case_name}"
+            assert isinstance(dumped[key], dict), (
+                f"Value type mismatch for key '{key}' in case: {case_name}"
+            )
             _verify_data_integrity(dumped[key], value, case_name)
         elif isinstance(value, list):
-            assert isinstance(
-                dumped[key], list
-            ), f"Value type mismatch for key '{key}' in case: {case_name}"
-            assert len(dumped[key]) == len(
-                value
-            ), f"Array length mismatch for key '{key}' in case: {case_name}"
+            assert isinstance(dumped[key], list), (
+                f"Value type mismatch for key '{key}' in case: {case_name}"
+            )
+            assert len(dumped[key]) == len(value), (
+                f"Array length mismatch for key '{key}' in case: {case_name}"
+            )
         else:
-            assert (
-                dumped[key] == value
-            ), f"Value mismatch for key '{key}' in case: {case_name}"
+            assert dumped[key] == value, (
+                f"Value mismatch for key '{key}' in case: {case_name}"
+            )
 
 
 def _verify_field_sanitization(
@@ -845,9 +845,9 @@ def _verify_field_sanitization(
             if field_name.startswith("_"):
                 sanitized_name = field_name.lstrip("_")
                 if sanitized_name:  # Only if there's something left after stripping
-                    assert hasattr(
-                        instance, sanitized_name
-                    ), f"Sanitized field '{sanitized_name}' not found for case: {case_name}"
+                    assert hasattr(instance, sanitized_name), (
+                        f"Sanitized field '{sanitized_name}' not found for case: {case_name}"
+                    )
 
             elif field_name in [
                 "class",
@@ -863,9 +863,9 @@ def _verify_field_sanitization(
             ]:
                 # Python keywords should be sanitized
                 sanitized_name = f"{field_name}_"
-                assert hasattr(
-                    instance, sanitized_name
-                ), f"Sanitized keyword field '{sanitized_name}' not found for case: {case_name}"
+                assert hasattr(instance, sanitized_name), (
+                    f"Sanitized keyword field '{sanitized_name}' not found for case: {case_name}"
+                )
 
 
 def test_tuple_style_array_items_raises_error() -> None:

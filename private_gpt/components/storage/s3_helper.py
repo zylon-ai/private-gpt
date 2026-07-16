@@ -25,7 +25,6 @@ def _remove_expect_header(params: dict[str, Any], **_: Any) -> None:
 
 @singleton
 class S3Helper:
-
     _s3_client: S3Client | None
     _s3_settings: S3Settings
 
@@ -47,7 +46,7 @@ class S3Helper:
         ):
             return None
 
-        import boto3  # type: ignore
+        import boto3  # ty:ignore[unresolved-import]
 
         boto3.set_stream_logger(
             "botocore", logging.INFO if DEBUG_MODE else logging.ERROR
@@ -66,7 +65,7 @@ class S3Helper:
         return client
 
     def _get_async_s3_client(self) -> Any:
-        from aiobotocore.session import get_session  # type: ignore[import-untyped]
+        from aiobotocore.session import get_session  # ty:ignore[unresolved-import]
 
         return get_session().create_client(
             "s3",
@@ -203,7 +202,10 @@ class S3Helper:
             }
         except Exception as exc:
             # botocore ClientError with 404 → not found
-            if hasattr(exc, "response") and exc.response.get("Error", {}).get("Code") in ("404", "NoSuchKey"):  # type: ignore[union-attr]
+            error_response = getattr(exc, "response", None)
+            if isinstance(error_response, dict) and error_response.get("Error", {}).get(
+                "Code"
+            ) in ("404", "NoSuchKey"):
                 return None
             raise
 

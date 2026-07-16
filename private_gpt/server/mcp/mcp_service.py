@@ -68,9 +68,8 @@ def is_mcp_content_block(block: object) -> bool:
     except ImportError:
         return False
 
-    return isinstance(
-        block, (text_content_type, image_content_type, audio_content_type)
-    )
+    content_types = (text_content_type, image_content_type, audio_content_type)
+    return isinstance(block, content_types)
 
 
 def is_mcp_tool_result(value: object) -> bool:

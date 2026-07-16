@@ -17,7 +17,9 @@ def download_from_hf(
 ) -> Path | None:
     """Download a model from HuggingFace Hub via snapshot_download."""
     try:
-        from huggingface_hub import snapshot_download  # type: ignore[import]
+        from huggingface_hub import (  # ty:ignore[unresolved-import]
+            snapshot_download,  # type: ignore[import]
+        )
 
         allow_patterns = (
             ["*.json", "*.model", "vocab.txt", "tokenizer*"] if tokenizer_only else None

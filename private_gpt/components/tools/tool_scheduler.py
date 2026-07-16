@@ -48,8 +48,7 @@ class BaseToolScheduler(ABC):
         request: ToolExecutionRequest,
         state_ctx: ChatState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
-    ) -> ToolExecutionResponse:
-        ...
+    ) -> ToolExecutionResponse: ...
 
     async def async_execute(
         self,
@@ -65,8 +64,7 @@ class BaseToolScheduler(ABC):
         self,
         request: ToolExecutionRequest,
         task_id: str | None = None,
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
     async def cancel_task(self, task_id: str) -> bool:
         del task_id

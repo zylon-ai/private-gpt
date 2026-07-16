@@ -113,7 +113,7 @@ class ReduceHeaderLevelsTransform(TransformComponent):
         predicate: Callable[[str], bool] | None = None,
         batch_size: int = 100,
     ):
-        super().__init__(  # type: ignore
+        super().__init__(
             reduce_by=reduce_by,
             predicate=predicate or (lambda content: True),
         )

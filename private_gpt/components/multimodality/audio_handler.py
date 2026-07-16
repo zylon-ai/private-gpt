@@ -483,7 +483,8 @@ class ChunkTranscriptionWorkflow(Workflow):
                     nonlocal count
                     count += 1
 
-                    if not hasattr(self._llm, "astructured_chat"):
+                    structured_chat = getattr(self._llm, "astructured_chat", None)
+                    if not callable(structured_chat):
                         raise NotImplementedError(
                             "LLM does not support structured chat."
                         )
@@ -491,11 +492,9 @@ class ChunkTranscriptionWorkflow(Workflow):
                     new_kwargs = kwargs.copy()
                     new_kwargs["seed"] = str(seed) + str(count)
 
-                    return await self._llm.astructured_chat(
-                        response_model, messages, **new_kwargs
-                    )
+                    return await structured_chat(response_model, messages, **new_kwargs)
 
-                return await retry(_call)  # type: ignore[call-arg]
+                return await retry(_call)
         except MODEL_NOT_AVAILABLE_EXCEPTION_TYPES as e:
             raise ModelNotAvailableError(
                 "Model server is not available or request failed."
@@ -726,7 +725,8 @@ class AudioProcessingWorkflow(Workflow):
                     nonlocal count
                     count += 1
 
-                    if not hasattr(self._llm, "astructured_chat"):
+                    structured_chat = getattr(self._llm, "astructured_chat", None)
+                    if not callable(structured_chat):
                         raise NotImplementedError(
                             "LLM does not support structured chat."
                         )
@@ -734,11 +734,9 @@ class AudioProcessingWorkflow(Workflow):
                     new_kwargs = kwargs.copy()
                     new_kwargs["seed"] = str(seed) + str(count)
 
-                    return await self._llm.astructured_chat(
-                        response_model, messages, **new_kwargs
-                    )
+                    return await structured_chat(response_model, messages, **new_kwargs)
 
-                return await retry(_call)  # type: ignore[call-arg]
+                return await retry(_call)
         except MODEL_NOT_AVAILABLE_EXCEPTION_TYPES as e:
             raise ModelNotAvailableError(
                 "Model server is not available or request failed."
@@ -780,7 +778,7 @@ class AudioProcessingWorkflow(Workflow):
         try:
             import io
 
-            from pydub import AudioSegment  # type: ignore
+            from pydub import AudioSegment  # ty:ignore[unresolved-import]
 
             audio_data = audio_block.resolve_audio()
             if isinstance(audio_data, bytes):
@@ -883,10 +881,10 @@ class AudioProcessingWorkflow(Workflow):
         try:
             import io
 
-            import noisereduce as nr  # type: ignore
-            import numpy as np  # type: ignore
-            from pydub import AudioSegment  # type: ignore
-            from pydub.effects import normalize  # type: ignore
+            import noisereduce as nr  # ty:ignore[unresolved-import]
+            import numpy as np
+            from pydub import AudioSegment  # ty:ignore[unresolved-import]
+            from pydub.effects import normalize  # ty:ignore[unresolved-import]
 
             audio_data = audio_block.resolve_audio()
             if isinstance(audio_data, bytes):

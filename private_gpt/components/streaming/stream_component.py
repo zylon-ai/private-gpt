@@ -9,7 +9,6 @@ __all__ = ["StreamComponent", "register_stream"]
 
 @singleton
 class StreamComponent:
-
     stream: StreamService
 
     @inject

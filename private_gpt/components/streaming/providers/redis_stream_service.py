@@ -55,11 +55,12 @@ class RedisStreamService(StreamService):
         client.single_connection_client = False
 
         async def create_connection(connection_pool: redis.ConnectionPool) -> None:
-            connection = connection_pool.make_connection()  # type: ignore
+            connection = connection_pool.make_connection()
             await connection_pool.ensure_connection(connection)
             connection_pool._available_connections.append(connection)
 
-        tasks = [create_connection(client.connection_pool) for _ in range(n)]
+        connection_pool = cast(redis.ConnectionPool, client.connection_pool)
+        tasks = [create_connection(connection_pool) for _ in range(n)]
         await asyncio.gather(*tasks, return_exceptions=True)
 
     def _get_stream_key(self, correlation_id: str) -> str:
@@ -318,17 +319,17 @@ class RedisStreamService(StreamService):
     async def set_cancel_flag(self, correlation_id: str) -> None:
         """Set a cancellation flag in Redis for the chat worker to observe."""
         cancel_key = self._get_cancel_key(correlation_id)
-        await self._client.set(cancel_key, "1", ex=self._config.expiry_seconds)  # type: ignore
+        await self._client.set(cancel_key, "1", ex=self._config.expiry_seconds)
 
     async def is_cancelled(self, correlation_id: str) -> bool:
         """Check whether the cancellation flag has been set."""
         cancel_key = self._get_cancel_key(correlation_id)
-        return bool(await self._client.exists(cancel_key))  # type: ignore
+        return bool(await self._client.exists(cancel_key))
 
     async def clear_cancel_flag(self, correlation_id: str) -> None:
         """Remove the cancellation flag."""
         cancel_key = self._get_cancel_key(correlation_id)
-        await self._client.delete(cancel_key)  # type: ignore
+        await self._client.delete(cancel_key)
 
     async def close(self) -> None:
         """Close the redis stream service."""

@@ -36,9 +36,13 @@ async def start_chat_job(
     injector = ctx.get("injector") or get_global_injector(
         allow_to_generate_new_injectors=True
     )
-    await injector.get(ChatService).build_async_engine().execute_scheduled_start(
-        execution_id=correlation_id,
-        request_data=request_data,
-        stream_type=stream_type,
-        metadata=metadata,
+    await (
+        injector.get(ChatService)
+        .build_async_engine()
+        .execute_scheduled_start(
+            execution_id=correlation_id,
+            request_data=request_data,
+            stream_type=stream_type,
+            metadata=metadata,
+        )
     )

@@ -1,8 +1,9 @@
 import logging
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
 
 from fastapi import APIRouter, Body, Depends, Request
+from fastapi.openapi.models import Example
 from pydantic import BaseModel, Field
 
 from private_gpt.components.ingestion.ingestion_scheduler import (
@@ -33,47 +34,50 @@ ingest_router = APIRouter(
     responses={401: {"description": "Unauthorized"}},
 )
 
-INGEST_REQUEST_EXAMPLES = {
-    "file_base64": {
-        "summary": "File content (base64)",
-        "value": {
-            "input": {
-                "type": "file",
-                "value": "JVBERi0xLjQKJaqrrK0KMS...",
-            },
-            "artifact": "quarterly_report",
-            "collection": "financial_docs",
-            "metadata": {"file_name": "Q3_Report.pdf"},
-        },
-    },
-    "uri": {
-        "summary": "Remote URI",
-        "value": {
-            "input": {
-                "type": "uri",
-                "value": "s3://company-docs/annual-2023.pdf",
-            },
-            "artifact": "annual_report_2023",
-            "collection": "financial_reports",
-            "metadata": {"file_name": "annual-2023.pdf", "year": "2023"},
-        },
-    },
-    "text": {
-        "summary": "Plain text content",
-        "value": {
-            "input": {
-                "type": "text",
-                "value": "Our company was founded in 2020...",
-            },
-            "artifact": "company_profile",
-            "collection": "corporate_docs",
-            "metadata": {
-                "file_name": "company_profile.txt",
-                "author": "Marketing Team",
+INGEST_REQUEST_EXAMPLES = cast(
+    dict[str, Example],
+    {
+        "file_base64": {
+            "summary": "File content (base64)",
+            "value": {
+                "input": {
+                    "type": "file",
+                    "value": "JVBERi0xLjQKJaqrrK0KMS...",
+                },
+                "artifact": "quarterly_report",
+                "collection": "financial_docs",
+                "metadata": {"file_name": "Q3_Report.pdf"},
             },
         },
+        "uri": {
+            "summary": "Remote URI",
+            "value": {
+                "input": {
+                    "type": "uri",
+                    "value": "s3://company-docs/annual-2023.pdf",
+                },
+                "artifact": "annual_report_2023",
+                "collection": "financial_reports",
+                "metadata": {"file_name": "annual-2023.pdf", "year": "2023"},
+            },
+        },
+        "text": {
+            "summary": "Plain text content",
+            "value": {
+                "input": {
+                    "type": "text",
+                    "value": "Our company was founded in 2020...",
+                },
+                "artifact": "company_profile",
+                "collection": "corporate_docs",
+                "metadata": {
+                    "file_name": "company_profile.txt",
+                    "author": "Marketing Team",
+                },
+            },
+        },
     },
-}
+)
 
 
 class IngestBody(BaseModel):

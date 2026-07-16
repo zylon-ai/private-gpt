@@ -41,12 +41,12 @@ def test_html_case() -> None:
     assert len(nodes) > 1, "Expected more than 1 node for the image case."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "Comprehensive Profile of" in markdown_content
-    ), "Expected an header with bold in the content."
-    assert (
-        "# Comprehensive Profile of [Alex Morgan]" in markdown_content
-    ), "Expected a markdown header."
+    assert "Comprehensive Profile of" in markdown_content, (
+        "Expected an header with bold in the content."
+    )
+    assert "# Comprehensive Profile of [Alex Morgan]" in markdown_content, (
+        "Expected a markdown header."
+    )
 
 
 def test_non_utf_8_html_case() -> None:
@@ -57,9 +57,9 @@ def test_non_utf_8_html_case() -> None:
     assert len(nodes) > 1, "Expected more than 1 node for the image case."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "The fines collected pursuant to this Res" in markdown_content
-    ), "Expected an header with bold in the content."
+    assert "The fines collected pursuant to this Res" in markdown_content, (
+        "Expected an header with bold in the content."
+    )
 
     file = TEST_FILE_PATH / "another_file_no_utf8.html"
     mock_file_info = convert_unsupported_file(
@@ -70,9 +70,9 @@ def test_non_utf_8_html_case() -> None:
     assert len(nodes) > 1, "Expected more than 1 node for the image case."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "Conflict of Interest" in markdown_content
-    ), "Expected an header with bold in the content."
+    assert "Conflict of Interest" in markdown_content, (
+        "Expected an header with bold in the content."
+    )
 
     file = TEST_FILE_PATH / "file_window.html"
     mock_file_info = convert_unsupported_file(get_file_info(file, "file_window.html"))
@@ -81,9 +81,9 @@ def test_non_utf_8_html_case() -> None:
     assert len(nodes) > 1, "Expected more than 1 node for the image case."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "the Director General of the Dubai" in markdown_content
-    ), "Expected an header with bold in the content."
+    assert "the Director General of the Dubai" in markdown_content, (
+        "Expected an header with bold in the content."
+    )
 
     file = TEST_FILE_PATH / "file_unknown.txt"
     mock_file_info = convert_unsupported_file(get_file_info(file, "file_unknown.text"))
@@ -92,9 +92,9 @@ def test_non_utf_8_html_case() -> None:
     assert len(nodes) > 1, "Expected more than 1 node for the image case."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "The Project Gutenberg eBook of The Great Gatsby" in markdown_content
-    ), "Expected an header with bold in the content."
+    assert "The Project Gutenberg eBook of The Great Gatsby" in markdown_content, (
+        "Expected an header with bold in the content."
+    )
 
 
 def test_emoji_html_case() -> None:
@@ -105,12 +105,12 @@ def test_emoji_html_case() -> None:
     assert len(nodes) > 1, "Expected more than 1 node for the image case."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "blue star" in markdown_content
-    ), "Expected an header with bold in the content."
-    assert (
-        "/_/" in markdown_content
-    ), "We expect to process emoji images in the right way"
+    assert "blue star" in markdown_content, (
+        "Expected an header with bold in the content."
+    )
+    assert "/_/" in markdown_content, (
+        "We expect to process emoji images in the right way"
+    )
 
 
 def test_txt_case() -> None:
@@ -121,9 +121,9 @@ def test_txt_case() -> None:
     assert len(nodes) > 1, "Expected more than 1 node."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "Other files in this director" in markdown_content
-    ), "Expected the test file content."
+    assert "Other files in this director" in markdown_content, (
+        "Expected the test file content."
+    )
 
 
 def test_csv_case() -> None:
@@ -135,9 +135,9 @@ def test_csv_case() -> None:
     assert len(nodes) > 1, "Expected more than 1 node."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "| Column1 | Column2 | Column3 | Column4 | Column5 |" in markdown_content
-    ), "Expected a table in the second node."
+    assert "| Column1 | Column2 | Column3 | Column4 | Column5 |" in markdown_content, (
+        "Expected a table in the second node."
+    )
 
 
 def test_csv_comma() -> None:
@@ -149,12 +149,12 @@ def test_csv_comma() -> None:
     assert len(nodes) > 1, "Expected more than 1 node."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "| Name | Age | City |" in markdown_content
-    ), "Expected a table in the first node."
-    assert (
-        "| Alice | 30 | New York |" in markdown_content
-    ), "Expected a table in the second node."
+    assert "| Name | Age | City |" in markdown_content, (
+        "Expected a table in the first node."
+    )
+    assert "| Alice | 30 | New York |" in markdown_content, (
+        "Expected a table in the second node."
+    )
 
 
 def test_csv_semicolon() -> None:
@@ -166,12 +166,12 @@ def test_csv_semicolon() -> None:
     assert len(nodes) > 1, "Expected more than 1 node."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "| Name | Age | City |" in markdown_content
-    ), "Expected a table in the first node."
-    assert (
-        "| Alice | 30 | New York |" in markdown_content
-    ), "Expected a table in the second node."
+    assert "| Name | Age | City |" in markdown_content, (
+        "Expected a table in the first node."
+    )
+    assert "| Alice | 30 | New York |" in markdown_content, (
+        "Expected a table in the second node."
+    )
 
 
 def test_tsv_tab() -> None:
@@ -183,12 +183,12 @@ def test_tsv_tab() -> None:
     assert len(nodes) > 1, "Expected more than 1 node."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "| Name | Age | City |" in markdown_content
-    ), "Expected a table in the first node."
-    assert (
-        "| Alice | 30 | New York |" in markdown_content
-    ), "Expected a table in the second node."
+    assert "| Name | Age | City |" in markdown_content, (
+        "Expected a table in the first node."
+    )
+    assert "| Alice | 30 | New York |" in markdown_content, (
+        "Expected a table in the second node."
+    )
 
 
 def test_psv_pipe() -> None:
@@ -200,12 +200,12 @@ def test_psv_pipe() -> None:
     assert len(nodes) > 1, "Expected more than 1 node."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "| Name | Age | City |" in markdown_content
-    ), "Expected a table in the first node."
-    assert (
-        "| Alice | 30 | New York |" in markdown_content
-    ), "Expected a table in the second node."
+    assert "| Name | Age | City |" in markdown_content, (
+        "Expected a table in the first node."
+    )
+    assert "| Alice | 30 | New York |" in markdown_content, (
+        "Expected a table in the second node."
+    )
 
 
 def test_quote_in_csv() -> None:
@@ -229,6 +229,6 @@ def test_eml() -> None:
     assert len(nodes) > 1, "Expected more than 1 node."
 
     markdown_content = "".join([node.get_content(MetadataMode.NONE) for node in nodes])
-    assert (
-        "Thanks for your time today." in markdown_content
-    ), "Expected a table in the first node."
+    assert "Thanks for your time today." in markdown_content, (
+        "Expected a table in the first node."
+    )

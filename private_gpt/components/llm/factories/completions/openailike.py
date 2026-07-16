@@ -52,8 +52,12 @@ class OpenAILikeCompletionsFactory(LLMFactory):
             temperature=model_config.sampling_params.temperature or 0.1,
             context_window=model_config.context_window or 3900,
             max_tokens=model_config.sampling_params.max_new_tokens or 1024,
-            messages_to_prompt=prompt_style.messages_to_prompt if prompt_style else None,  # type: ignore
-            completion_to_prompt=prompt_style.completion_to_prompt if prompt_style else None,  # type: ignore
+            messages_to_prompt=prompt_style.messages_to_prompt
+            if prompt_style
+            else None,
+            completion_to_prompt=prompt_style.completion_to_prompt
+            if prompt_style
+            else None,
             tokenizer=model_config.tokenizer,
             timeout=120.0,
             reuse_client=False,

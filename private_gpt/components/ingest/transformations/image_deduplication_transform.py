@@ -21,7 +21,7 @@ class ImageComparer:
         try:
             from io import BytesIO
 
-            import imagehash  # type: ignore[import-not-found]
+            import imagehash  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
             from PIL import Image
 
             hash0 = imagehash.average_hash(Image.open(BytesIO(image_bytes_1)))

@@ -77,7 +77,7 @@ class OpenAIStrategy(RegexModelClassifier):
 
     def _is_openai_chat_model(self, model_id: str) -> bool:
         try:
-            from llama_index.llms.openai.utils import (
+            from llama_index.llms.openai.utils import (  # ty:ignore[unresolved-import]
                 CHAT_MODELS,
                 RESPONSES_API_ONLY_MODELS,
             )

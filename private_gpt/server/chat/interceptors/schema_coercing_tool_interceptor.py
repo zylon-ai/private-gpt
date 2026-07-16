@@ -118,7 +118,7 @@ def _coerce_array(
     parsed: Any = value
     if isinstance(value, str):
         parsed = _parse_literal_string(key, value, (list, tuple))
-    if not isinstance(parsed, (list, tuple)):
+    if not isinstance(parsed, list | tuple):
         if strict:
             raise SchemaCoercionError(key, value, "array")
         return value
@@ -185,7 +185,7 @@ def _coerce_scalar(
                     if lower in _FALSE_STRINGS:
                         return False
                     continue
-                if isinstance(value, (int, float)):
+                if isinstance(value, int | float):
                     return bool(value)
                 continue
             if scalar_type == "integer":

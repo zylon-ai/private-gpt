@@ -52,8 +52,10 @@ async def async_tokenizer(
         return tokens
     else:
         result = await asyncio.to_thread(tokenizer_fn, texts, images, audios)
-        if isinstance(result, Awaitable):
+        if inspect.isawaitable(result):
             result = await result
+        if not isinstance(result, TokenizedInput):
+            raise TypeError("Tokenizer function must return TokenizedInput")
         return result
 
 

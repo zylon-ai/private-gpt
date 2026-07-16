@@ -2,13 +2,15 @@ import logging
 
 import psycopg2
 import sqlalchemy
-from llama_index.storage.kvstore.postgres import PostgresKVStore  # type: ignore
+from llama_index.storage.kvstore.postgres import (  # ty:ignore[unresolved-import]
+    PostgresKVStore,
+)
 from sqlalchemy.orm import Session, sessionmaker
 
 logger = logging.getLogger(__name__)
 
 
-class PatchedPostgresKVStore(PostgresKVStore):  # type: ignore
+class PatchedPostgresKVStore(PostgresKVStore):
     """Patched PostgresKVStore.
 
     Our tables names contain "-" (they are uuids),
@@ -24,7 +26,8 @@ class PatchedPostgresKVStore(PostgresKVStore):  # type: ignore
         table_name: str,
         schema_name: str = "public",
         engine: sqlalchemy.engine.Engine | None = None,
-        async_engine: sqlalchemy.ext.asyncio.AsyncEngine | None = None,
+        async_engine: sqlalchemy.ext.asyncio.AsyncEngine  # ty:ignore[possibly-missing-submodule]
+        | None = None,
         debug: bool = False,
     ) -> None:
         super().__init__(
@@ -69,14 +72,14 @@ class PatchedPostgresKVStore(PostgresKVStore):  # type: ignore
         """
         try:
             super()._create_tables_if_not_exists()
-        except sqlalchemy.exc.IntegrityError as e:
+        except sqlalchemy.exc.IntegrityError as e:  # ty:ignore[possibly-missing-submodule]
             if isinstance(e.orig, psycopg2.errors.IntegrityError):
                 logger.warning(
                     "Table %s already exists, ignoring error", self.table_name
                 )
                 return
             raise e
-        except sqlalchemy.exc.ProgrammingError as e:
+        except sqlalchemy.exc.ProgrammingError as e:  # ty:ignore[possibly-missing-submodule]
             if isinstance(e.orig, psycopg2.errors.DuplicateTable):
                 logger.warning(
                     "Table %s already exists, ignoring error", self.table_name

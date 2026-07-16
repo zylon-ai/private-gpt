@@ -7,7 +7,7 @@ from private_gpt.di import get_global_injector
 
 
 def _load_file_from_url(url: str, **kwargs: Any) -> BinaryIO:
-    import requests  # type: ignore
+    import requests
 
     r = requests.get(url, allow_redirects=True)
     return io.BytesIO(r.content)

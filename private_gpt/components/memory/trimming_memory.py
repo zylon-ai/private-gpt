@@ -141,7 +141,7 @@ class TrimmingMemory(BaseChatStoreMemory):
             allow_partial=allow_partial,
             start_on=start_on,
             end_on=end_on,
-            tokenizer_fn=tokenizer_fn,  # type: ignore
+            tokenizer_fn=tokenizer_fn,
             text_splitter=text_splitter or _default_text_splitter,
             chat_store=chat_store or SimpleChatStore(),
             chat_store_key=chat_store_key,
@@ -316,9 +316,9 @@ class TrimmingMemory(BaseChatStoreMemory):
                 excluded.content = partial_content
 
                 test_messages = (
-                    [messages[:idx], *excluded]
+                    [*messages[:idx], excluded]
                     if direction == "first"
-                    else [messages[idx:], *excluded]
+                    else [*messages[idx:], excluded]
                 )
 
                 if await self._token_count_for_messages(test_messages) <= max_tokens:

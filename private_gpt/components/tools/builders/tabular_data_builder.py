@@ -199,7 +199,6 @@ class TabularDataToolBuilder:
         similarity_cutoff: float | None = 0.4,
         **_: Any,
     ) -> Generator[BaseNodePostprocessor, None, None]:
-
         # Filter nodes by similarity
         if similarity_cutoff:
             yield SimilarityPostprocessor(
@@ -312,7 +311,6 @@ class TabularDataToolBuilder:
             query: str,
             artifacts: list[str] | None = None,
         ) -> list[ResultContentBlockType]:
-
             w = await _ensure_workflow(artifacts=artifacts)
             result = await w.run(
                 start_event=tabular_data_analysis_input_event_cls(

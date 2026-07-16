@@ -73,9 +73,9 @@ class TestRateLimiting:
 
         # With rate_limit=1.0 (1 req/s), 5 requests need 4 intervals
         # Minimum: 4.0 seconds
-        assert (
-            elapsed >= 4.0
-        ), f"Rate limiting failed: elapsed={elapsed:.2f}s (expected >=4.0s)"
+        assert elapsed >= 4.0, (
+            f"Rate limiting failed: elapsed={elapsed:.2f}s (expected >=4.0s)"
+        )
         assert elapsed < 6.0, f"Too slow: elapsed={elapsed:.2f}s (expected <5.0s)"
 
         # Verify it was called 5 times

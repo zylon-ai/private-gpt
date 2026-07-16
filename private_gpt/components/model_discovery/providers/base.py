@@ -58,8 +58,7 @@ class ModelDiscoveryStrategy(Protocol):
         *,
         fetch_all_pages: bool,
         force_kind: ModelKind | None = None,
-    ) -> ModelClassificationResult | None:
-        ...
+    ) -> ModelClassificationResult | None: ...
 
 
 class OpenAICompatStrategy(Protocol):
@@ -72,5 +71,4 @@ class OpenAICompatStrategy(Protocol):
         unclassified: tuple[UnclassifiedModel, ...],
         *,
         force_kind: ModelKind | None = None,
-    ) -> ModelClassificationResult | None:
-        ...
+    ) -> ModelClassificationResult | None: ...

@@ -24,9 +24,9 @@ def test_progress_status_from_percentage():
 
     # Calculate the expected percentage:
     expected_percentage = 50
-    assert result.percentage == pytest.approx(
-        expected_percentage, rel=PRECISION
-    ), f"The percentage should be close to {expected_percentage}, but got {result.percentage}."
+    assert result.percentage == pytest.approx(expected_percentage, rel=PRECISION), (
+        f"The percentage should be close to {expected_percentage}, but got {result.percentage}."
+    )
 
 
 def test_calculate_percentage_out_of_bounds():
@@ -38,9 +38,9 @@ def test_calculate_percentage_out_of_bounds():
 
     # The result should still cap at the maximum percentage for STEP_ONE (33.333%)
     expected_percentage = 100
-    assert result.percentage == pytest.approx(
-        expected_percentage, rel=PRECISION
-    ), f"Expected capped percentage to be close to {expected_percentage} for STEP_ONE, but got {result}."
+    assert result.percentage == pytest.approx(expected_percentage, rel=PRECISION), (
+        f"Expected capped percentage to be close to {expected_percentage} for STEP_ONE, but got {result}."
+    )
 
 
 def test_notify_progress():
@@ -61,9 +61,9 @@ def test_notify_progress():
         pass  # Simulating the work being done
 
     # Ensure notify was called at start and end
-    assert (
-        notify_mock.call_count == 2
-    ), "Notify should be called twice, once at start and once at end."
+    assert notify_mock.call_count == 2, (
+        "Notify should be called twice, once at start and once at end."
+    )
 
     # Check that the correct progress was notified at the start
     notify_mock.assert_any_call(TestProgressStatus.from_percentage(percentage=10))
@@ -158,9 +158,9 @@ def test_progress_status_boundary_cases(
     result = ProgressStatus.from_percentage(percentage=provided_percentage)
 
     # Ensure the percentage matches the expected result with a small tolerance
-    assert result.percentage == pytest.approx(
-        expected_result, rel=PRECISION
-    ), f"Expected {expected_result}%, but got {result.percentage}%."
+    assert result.percentage == pytest.approx(expected_result, rel=PRECISION), (
+        f"Expected {expected_result}%, but got {result.percentage}%."
+    )
 
 
 def test_fake_generator_progress() -> None:
@@ -189,8 +189,8 @@ def test_fake_generator_progress() -> None:
 
     assert len(notifications) > 3
     assert notifications[0] == 0.0
-    assert notifications[-1] == pytest.approx(
-        100, rel=PRECISION
-    ), f"Expected 100%, but got {notifications[-1]}%."
+    assert notifications[-1] == pytest.approx(100, rel=PRECISION), (
+        f"Expected 100%, but got {notifications[-1]}%."
+    )
     assert duration < 1.0
     assert all(x <= y for x, y in itertools.pairwise(notifications))

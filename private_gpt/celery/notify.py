@@ -159,8 +159,9 @@ def notify_progress(
         yield notify_custom
         success = True
     finally:
-        if fake_generator and hasattr(fake_generator, "stop"):
-            fake_generator.stop()
+        stop_generator = getattr(fake_generator, "stop", None)
+        if callable(stop_generator):
+            stop_generator()
 
         if success:
             # Notify the end

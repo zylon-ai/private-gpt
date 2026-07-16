@@ -26,9 +26,9 @@ jobs:
     strategy:
       matrix:
         quality-command:
-          - black
-          - ruff
-          - mypy
+          - format
+          - lint
+          - typecheck
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/workflows/actions/install_dependencies

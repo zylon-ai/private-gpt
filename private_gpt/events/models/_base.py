@@ -59,12 +59,12 @@ class BaseContentBlock(BaseModel, StandardContentProtocol):
     @model_validator(mode="before")
     @classmethod
     def validate_metadata(
-        cls, values: dict[str, Any] | tuple[str, Any] | None
+        cls, values: dict[str, Any] | tuple[tuple[str, Any], ...] | None
     ) -> dict[str, Any] | None:
         if values is None:
             return values
         if isinstance(values, tuple):
-            values = dict(values)  # type: ignore[arg-type]
+            values = dict(values)
         if "metadata" in values:
             try:
                 values["_meta"] = values.pop("metadata")
@@ -137,6 +137,6 @@ class BaseContentBlock(BaseModel, StandardContentProtocol):
 class CacheableContentBlock(BaseContentBlock, StandardContentProtocol):
     """Base for blocks that support Anthropic prompt-caching breakpoints."""
 
-    cache_control: Annotated[
-        CacheControlEphemeral, Field(discriminator="type")
-    ] | None = Field(default=None)
+    cache_control: (
+        Annotated[CacheControlEphemeral, Field(discriminator="type")] | None
+    ) = Field(default=None)

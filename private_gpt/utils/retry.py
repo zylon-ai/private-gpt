@@ -3,12 +3,15 @@ from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import (
     Any,
+    cast,
 )
 
-from retry_async import retry as retry_untyped  # type: ignore
-from retry_async.api import retry_call_async  # type: ignore
+from retry_async import retry as retry_untyped
+from retry_async.api import retry_call_async
 
 retry_logger = logging.getLogger(__name__)
+
+AsyncRetryFn = Callable[..., Awaitable[Any]]
 
 
 def retry(
@@ -27,12 +30,12 @@ def retry(
         is_async=is_async,
         tries=tries,
         delay=delay,
-        max_delay=max_delay,
+        max_delay=cast(float, max_delay),
         backoff=backoff,
-        jitter=jitter,
+        jitter=cast(float, jitter),
         logger=logger,
     )
-    return wrapped  # type: ignore
+    return wrapped
 
 
 @asynccontextmanager
@@ -45,9 +48,7 @@ async def retry_context(
     backoff: float = 2.0,
     jitter: float | tuple[float, float] = 0,
     logger: logging.Logger = retry_logger,
-) -> AsyncGenerator[
-    Callable[[Callable[..., Awaitable[Any]], Any], Awaitable[Any]], None
-]:
+) -> AsyncGenerator[AsyncRetryFn, None]:
     async def retry_func(
         func: Callable[..., Awaitable[Any]], *args: Any, **kwargs: Any
     ) -> Any:
@@ -58,9 +59,9 @@ async def retry_context(
             exceptions=exceptions,
             tries=tries,
             delay=delay,
-            max_delay=max_delay,
+            max_delay=cast(float, max_delay),
             backoff=backoff,
-            jitter=jitter,
+            jitter=cast(float, jitter),
             logger=logger,
         )
         return result

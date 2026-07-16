@@ -79,7 +79,7 @@ def load_settings_from_profile(profile: str) -> dict[str, Any]:
 
 @typing.no_type_check
 def discover_models_from_environment(
-    environ: dict[str, Any] = os.environ
+    environ: dict[str, Any] = os.environ,
 ) -> list[dict[str, Any]]:
     """Discover model configurations from environment variables.
 

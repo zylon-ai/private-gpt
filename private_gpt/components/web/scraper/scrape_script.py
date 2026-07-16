@@ -63,10 +63,10 @@ async def _scrape_page(context: Any, request: dict[str, Any]) -> None:
 
 
 async def _scrape(config: dict[str, Any]) -> None:
-    from playwright.async_api import (  # type: ignore[import-not-found]
+    from playwright.async_api import (  # ty:ignore[unresolved-import]
         TimeoutError as PlaywrightTimeoutError,
     )
-    from playwright.async_api import (
+    from playwright.async_api import (  # ty:ignore[unresolved-import]
         async_playwright,
     )
 

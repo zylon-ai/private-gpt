@@ -38,7 +38,7 @@ class QdrantVectorStoreFactory(VectorStoreFactory):
 
     def vector_store(self, collection: str) -> BasePydanticVectorStore:
         try:
-            from qdrant_client import models  # type: ignore
+            from qdrant_client import models  # ty:ignore[unresolved-import]
 
             from private_gpt.components.vector_store.patched_qdrant_store import (
                 PatchedQdrantVectorStore,
@@ -57,9 +57,9 @@ class QdrantVectorStoreFactory(VectorStoreFactory):
         )
 
         self._ensure_client()
-        assert (
-            self._client is not None
-        ), "Qdrant client should be initialized at this point"
+        assert self._client is not None, (
+            "Qdrant client should be initialized at this point"
+        )
 
         return typing.cast(
             BasePydanticVectorStore,

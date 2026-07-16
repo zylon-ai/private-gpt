@@ -1,4 +1,5 @@
 """Async priority queue with distributed concurrency control using Redis."""
+
 import asyncio
 import json
 import logging
@@ -8,7 +9,7 @@ from contextlib import suppress
 from typing import Any
 
 from redis.asyncio import Redis  # type: ignore[import-untyped]
-from redis_semaphore_async import Semaphore  # type: ignore
+from redis_semaphore_async import Semaphore  # ty:ignore[unresolved-import]
 
 from private_gpt.components.concurrency.semaphore_manager import (
     QueueShutdownError,
@@ -150,7 +151,7 @@ class RedisSemaphoreManager(SemaphoreManager):
                         payload_str = json.dumps(
                             {"request_id": request_id, "priority": priority}
                         )
-                        await redis.zadd(self.queue_key, {payload_str: priority})  # type: ignore
+                        await redis.zadd(self.queue_key, {payload_str: priority})
                         continue
 
                     if self._shutdown.is_set():
@@ -161,7 +162,7 @@ class RedisSemaphoreManager(SemaphoreManager):
                         payload_str = json.dumps(
                             {"request_id": request_id, "priority": priority}
                         )
-                        await redis.zadd(self.queue_key, {payload_str: priority})  # type: ignore
+                        await redis.zadd(self.queue_key, {payload_str: priority})
                         break
 
                     await self._execute_task(request_id, priority)
@@ -215,7 +216,7 @@ class RedisSemaphoreManager(SemaphoreManager):
 
         self._tasks[request_id] = (task_func, kwargs, future)
 
-        await redis.zadd(self.queue_key, {payload_str: priority})  # type: ignore
+        await redis.zadd(self.queue_key, {payload_str: priority})
         logger.debug("Enqueued task %s (priority=%d)", request_id, priority)
 
         try:
@@ -223,7 +224,7 @@ class RedisSemaphoreManager(SemaphoreManager):
 
         except asyncio.CancelledError:
             self._tasks.pop(request_id, None)
-            await redis.zrem(self.queue_key, payload_str)  # type: ignore
+            await redis.zrem(self.queue_key, payload_str)
             raise
 
     async def close(self) -> None:

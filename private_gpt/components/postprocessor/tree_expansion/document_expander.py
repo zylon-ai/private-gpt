@@ -30,8 +30,7 @@ class ExpansionDirection(Enum):
 
 
 class ExpansionDirectionProtocol(Protocol):
-    def __call__(self, current_node: TreeNode, **kwargs: Any) -> ExpansionResult:
-        ...
+    def __call__(self, current_node: TreeNode, **kwargs: Any) -> ExpansionResult: ...
 
 
 class DocumentTreeExpander:

@@ -138,23 +138,21 @@ def test_tldr_block_metadata_serialization_deserialization(
     # Test round-trip: serialize then deserialize using dict
     roundtrip_block = TLDRBlock(**dict_result)
     roundtrip_result = roundtrip_block.model_dump()
-    assert (
-        roundtrip_result == expected_serialized
-    ), f"Round-trip serialization failed: {description}"
+    assert roundtrip_result == expected_serialized, (
+        f"Round-trip serialization failed: {description}"
+    )
 
     # Test metadata field presence/absence in serialized output for TLDRBlock level
     input_metadata = input_data.get("metadata") or input_data.get("_meta")
     has_metadata = input_metadata is not None and bool(input_metadata)
-    assert (
-        "_meta" in dict_result
-    ) == has_metadata, (
+    assert ("_meta" in dict_result) == has_metadata, (
         f"TLDRBlock metadata field presence assertion failed: {description}"
     )
 
     # Test that original metadata field is excluded from serialization
-    assert (
-        "metadata" not in dict_result
-    ), f"Original metadata field should be excluded: {description}"
+    assert "metadata" not in dict_result, (
+        f"Original metadata field should be excluded: {description}"
+    )
 
     # Test string representations don't raise exceptions
     str_repr = str(block)
@@ -547,9 +545,9 @@ def test_datetime_serialization_deserialization(
     # Test round-trip: serialize then deserialize using dict
     roundtrip_block = TextBlock(**dict_result)
     roundtrip_result = json.loads(roundtrip_block.model_dump_json())
-    assert (
-        roundtrip_result == expected_serialized
-    ), f"Round-trip serialization failed: {description}"
+    assert roundtrip_result == expected_serialized, (
+        f"Round-trip serialization failed: {description}"
+    )
 
     # Test timestamp field presence/absence in serialized output
     input_start = input_data.get("start_timestamp")
@@ -558,35 +556,35 @@ def test_datetime_serialization_deserialization(
     has_start = input_start is not None
     has_stop = input_stop is not None
 
-    assert (
-        "start_timestamp" in dict_result
-    ) == has_start, f"start_timestamp field presence assertion failed: {description}"
+    assert ("start_timestamp" in dict_result) == has_start, (
+        f"start_timestamp field presence assertion failed: {description}"
+    )
 
-    assert (
-        "stop_timestamp" in dict_result
-    ) == has_stop, f"stop_timestamp field presence assertion failed: {description}"
+    assert ("stop_timestamp" in dict_result) == has_stop, (
+        f"stop_timestamp field presence assertion failed: {description}"
+    )
 
     # Test that datetime objects are properly converted to strings in serialization
     if has_start and isinstance(input_start, datetime.datetime):
-        assert isinstance(
-            dict_result["start_timestamp"], str
-        ), f"start_timestamp should be serialized as string: {description}"
+        assert isinstance(dict_result["start_timestamp"], str), (
+            f"start_timestamp should be serialized as string: {description}"
+        )
 
     if has_stop and isinstance(input_stop, datetime.datetime):
-        assert isinstance(
-            dict_result["stop_timestamp"], str
-        ), f"stop_timestamp should be serialized as string: {description}"
+        assert isinstance(dict_result["stop_timestamp"], str), (
+            f"stop_timestamp should be serialized as string: {description}"
+        )
 
     # Test that deserialized objects have proper datetime types
     if has_start:
-        assert isinstance(
-            block.start_timestamp, datetime.datetime
-        ), f"Deserialized start_timestamp should be datetime object: {description}"
+        assert isinstance(block.start_timestamp, datetime.datetime), (
+            f"Deserialized start_timestamp should be datetime object: {description}"
+        )
 
     if has_stop:
-        assert isinstance(
-            block.stop_timestamp, datetime.datetime
-        ), f"Deserialized stop_timestamp should be datetime object: {description}"
+        assert isinstance(block.stop_timestamp, datetime.datetime), (
+            f"Deserialized stop_timestamp should be datetime object: {description}"
+        )
 
     # Test string representations don't raise exceptions
     str_repr = str(block)
@@ -608,9 +606,9 @@ def test_datetime_serialization_deserialization(
 def test_environment_independence(timezone_offset: int, expected_result: str) -> None:
     naive_dt = datetime.datetime(2024, 1, 15, 10, 30, 0)
     result = serialize_datetime(naive_dt)
-    assert (
-        result == expected_result
-    ), f"Environment independence failed for UTC{timezone_offset:+d}"
+    assert result == expected_result, (
+        f"Environment independence failed for UTC{timezone_offset:+d}"
+    )
 
 
 @pytest.mark.parametrize(

@@ -17,11 +17,9 @@ class ChatRunner(Protocol):
         stream_type: str,
         metadata: dict[str, Any],
         execution_id: str | None = None,
-    ) -> tuple[str, AsyncGenerator[Event, None]]:
-        ...
+    ) -> tuple[str, AsyncGenerator[Event, None]]: ...
 
-    async def cancel(self, execution_id: str) -> bool:
-        ...
+    async def cancel(self, execution_id: str) -> bool: ...
 
     async def start(
         self,
@@ -31,16 +29,14 @@ class ChatRunner(Protocol):
         request_data: dict[str, Any],
         stream_type: str,
         metadata: dict[str, Any],
-    ) -> None:
-        ...
+    ) -> None: ...
 
     async def resume(
         self,
         *,
         engine: "AsyncChatEngine",
         execution_id: str,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     async def callback(
         self,
@@ -48,11 +44,9 @@ class ChatRunner(Protocol):
         execution_id: str,
         tool_id: str,
         result: dict[str, Any],
-    ) -> None:
-        ...
+    ) -> None: ...
 
-    async def timeout(self, *, execution_id: str, checkpoint_id: str) -> None:
-        ...
+    async def timeout(self, *, execution_id: str, checkpoint_id: str) -> None: ...
 
 
 @singleton

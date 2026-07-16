@@ -68,10 +68,10 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
         """Get prompts."""
         return {"summary_template": self._summary_template}
 
-    def _update_prompts(self, prompts: PromptDictType) -> None:
+    def _update_prompts(self, prompts_dict: PromptDictType) -> None:
         """Update prompts."""
-        if "summary_template" in prompts:
-            self._summary_template = prompts["summary_template"]
+        if "summary_template" in prompts_dict:
+            self._summary_template = prompts_dict["summary_template"]
 
     async def aget_response(
         self,
@@ -116,6 +116,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
 
         else:
             # summarize each chunk
+            tasks: list[Coroutine[Any, Any, Any]]
             if self._output_cls is None:
                 tasks = [
                     self._llm.apredict(
@@ -142,7 +143,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                 jitter=(0.0, 10.0),
             )
             if self._output_cls is not None:
-                summaries = [summary.model_dump_json() for summary in summary_responses]  # type: ignore
+                summaries = [summary.model_dump_json() for summary in summary_responses]
             else:
                 summaries = summary_responses
 
@@ -196,6 +197,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
         else:
             # summarize each chunk
             if self._use_async:
+                tasks: list[Coroutine[Any, Any, Any]]
                 if self._output_cls is None:
                     tasks = [
                         self._llm.apredict(
@@ -248,7 +250,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                         )
                         for text_chunk in text_chunks
                     ]
-                    summaries = [summary.model_dump_json() for summary in summaries]  # type: ignore
+                    summaries = [summary.model_dump_json() for summary in summaries]
 
             # recursively summarize the summaries
             return self.get_response(

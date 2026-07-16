@@ -6,7 +6,7 @@ import re
 import time
 from typing import Any
 
-import html2text
+import html2text  # ty:ignore[unresolved-import]
 from injector import inject, singleton
 from pydantic import BaseModel
 

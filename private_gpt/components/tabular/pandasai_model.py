@@ -3,9 +3,9 @@ from datetime import datetime
 
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from llama_index.core.llms import LLM
-from pandasai.agent.state import AgentState  # type: ignore
-from pandasai.core.prompts import BasePrompt  # type: ignore
-from pandasai.llm import LLM as PandasAILLM  # type: ignore
+from pandasai.agent.state import AgentState  # ty:ignore[unresolved-import]
+from pandasai.core.prompts import BasePrompt  # ty:ignore[unresolved-import]
+from pandasai.llm import LLM as PandasAILLM  # ty:ignore[unresolved-import]
 
 
 class PGPTPandasAILLM(PandasAILLM):  # type: ignore[misc]
@@ -31,7 +31,7 @@ class PGPTPandasAILLM(PandasAILLM):  # type: ignore[misc]
             "Import "
         )
 
-    def call(self, instruction: BasePrompt, context: AgentState = None) -> str:
+    def call(self, instruction: BasePrompt, context: AgentState | None = None) -> str:
         prompt = f"{self._custom_prompt}\n" if self._custom_prompt else ""
         prompt += instruction.to_string()
 

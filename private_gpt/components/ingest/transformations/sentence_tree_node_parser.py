@@ -1,4 +1,5 @@
 """Simple node parser."""
+
 import copy
 import logging
 import re
@@ -38,10 +39,10 @@ def split_by_regex_sentence_internal(text: str) -> list[str]:
 
 
 def split_by_nltk_sentence_internal(text: str) -> list[str]:
-    from llama_index.core.node_parser.text.utils import (  # type: ignore
+    from llama_index.core.node_parser.text.utils import (
         split_by_sentence_tokenizer_internal,
     )
-    from nltk.tokenize import PunktSentenceTokenizer  # type: ignore
+    from nltk.tokenize import PunktSentenceTokenizer
 
     tokenizer = PunktSentenceTokenizer()
     return split_by_sentence_tokenizer_internal(text, tokenizer)
@@ -151,14 +152,18 @@ class SentenceTreeNodeParser(NodeParser):
         sentence_splitter = sentence_splitter or split_by_sentence_tokenizer()
         embedding_component = get_global_injector().get(EmbeddingComponent)
         embed_context_window = embedding_component.get_config().context_window
-        fallback_text_splitter = fallback_text_splitter or TokenTextSplitterWithoutStripping(
-            # Config:
-            # 1. Chunk size should be half of the context window size to
-            #    allow to add metadata to the original text.
-            # 2. Chunk overlap should be 0 to avoid overlapping chunks.
-            #    If we overlap content, it will store the same content in couple chunks.
-            chunk_size=int(embed_context_window * 0.9),
-            chunk_overlap=0,
+        fallback_text_splitter = (
+            fallback_text_splitter
+            or TokenTextSplitterWithoutStripping(
+                # Config:
+                # 1. Chunk size should be half of the context window size to
+                #    allow to add metadata to the original text.
+                # 2. Chunk overlap should be 0 to avoid overlapping chunks.
+                #    If we overlap content, it will store the same content in
+                #    multiple chunks.
+                chunk_size=int(embed_context_window * 0.9),
+                chunk_overlap=0,
+            )
         )
 
         id_func = id_func or default_id_func

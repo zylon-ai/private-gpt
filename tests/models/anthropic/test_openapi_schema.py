@@ -109,8 +109,8 @@ def _normalize_schema(node: Any, parent_key: str | None = None) -> Any:
 def _schema_diff(local_node: Any, remote_node: Any, path: str) -> list[str]:
     if type(local_node) is not type(remote_node):
         if (
-            isinstance(local_node, (int, float))
-            and isinstance(remote_node, (int, float))
+            isinstance(local_node, int | float)
+            and isinstance(remote_node, int | float)
             and float(local_node) == float(remote_node)
         ):
             return []
@@ -174,8 +174,8 @@ def _schema_diff(local_node: Any, remote_node: Any, path: str) -> list[str]:
         return differences
 
     if (
-        isinstance(local_node, (int, float))
-        and isinstance(remote_node, (int, float))
+        isinstance(local_node, int | float)
+        and isinstance(remote_node, int | float)
         and float(local_node) == float(remote_node)
     ):
         return []
@@ -353,9 +353,9 @@ class TestOpenAPISchemaCompatibility:
                     f"details:\n{chr(10).join(details) or '<none>'}"
                 )
 
-        assert (
-            not failures
-        ), "OpenAPI contract drift changed unexpectedly.\n\n" + "\n\n".join(failures)
+        assert not failures, (
+            "OpenAPI contract drift changed unexpectedly.\n\n" + "\n\n".join(failures)
+        )
 
     def test_endpoint_request_response_samples_pass_openapi_schema_validation(
         self,

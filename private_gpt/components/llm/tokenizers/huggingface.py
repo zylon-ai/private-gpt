@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, TypeVar, cast
 
-from transformers import (  # type: ignore[import-not-found]
+from transformers import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
     PreTrainedTokenizerBase,
     ProcessorMixin,
 )
@@ -64,7 +64,7 @@ class HuggingFaceTokenizer(TokenizerBase):
             **kwargs: Additional arguments for AutoProcessor
         """
         try:
-            from transformers import AutoProcessor
+            from transformers import AutoProcessor  # ty:ignore[unresolved-import]
         except ImportError as e:
             raise ImportError(
                 format_missing_dependency_message(
@@ -75,7 +75,7 @@ class HuggingFaceTokenizer(TokenizerBase):
         try:
             is_multimodal = False
             processor = None
-            loaded: Any = AutoProcessor.from_pretrained(  # type: ignore
+            loaded: Any = AutoProcessor.from_pretrained(
                 pretrained_model_name_or_path=model_id,
                 local_files_only=local_files_only,
                 cache_dir=cache_dir,
@@ -111,12 +111,12 @@ class HuggingFaceTokenizer(TokenizerBase):
 
     @property
     def all_special_tokens(self) -> list[str]:
-        tokens: list[str] = self._tokenizer.all_special_tokens  # type: ignore
+        tokens: list[str] = self._tokenizer.all_special_tokens
         return tokens
 
     @property
     def all_special_ids(self) -> list[int]:
-        ids: list[int] = self._tokenizer.all_special_ids  # type: ignore
+        ids: list[int] = self._tokenizer.all_special_ids
         return ids
 
     @property
@@ -217,14 +217,16 @@ class HuggingFaceTokenizer(TokenizerBase):
         return [int(id) for id in total_input_ids if id not in baseline_input_ids]
 
     def get_vocab(self) -> dict[str, int]:
-        vocab: dict[str, int] = self._tokenizer.get_vocab()  # type: ignore
+        vocab: dict[str, int] = self._tokenizer.get_vocab()
         return vocab
 
     def get_added_vocab(self) -> dict[str, int]:
         raise NotImplementedError()
 
     def encode(self, text: str, add_special_tokens: bool | None = None) -> list[int]:
-        encoded: list[int] = self._tokenizer.encode(text, add_special_tokens=add_special_tokens or True)  # type: ignore
+        encoded: list[int] = self._tokenizer.encode(
+            text, add_special_tokens=add_special_tokens or True
+        )
         return encoded
 
     def support_chat_template(self, tokenizer: Any) -> bool:
@@ -237,18 +239,22 @@ class HuggingFaceTokenizer(TokenizerBase):
         documents: list[dict[str, str]] | None = None,
         **kwargs: Any,
     ) -> list[int] | str:
-        result: list[int] | str = self._tokenizer.apply_chat_template(
-            conversation, tools=tools, documents=documents, **kwargs  # type: ignore
+        apply_chat_template = cast(Any, self._tokenizer.apply_chat_template)
+        return cast(
+            list[int] | str,
+            apply_chat_template(
+                conversation, tools=tools, documents=documents, **kwargs
+            ),
         )
-        return result
 
     def convert_tokens_to_string(self, tokens: list[str]) -> str:
-        converted: str = self._tokenizer.convert_tokens_to_string(tokens)
-        return converted
+        return cast(str, self._tokenizer.convert_tokens_to_string(tokens))
 
     def decode(self, ids: list[int] | int, skip_special_tokens: bool = True) -> str:
-        decoded: str = self._tokenizer.decode(ids, skip_special_tokens=skip_special_tokens)  # type: ignore
-        return decoded
+        return cast(
+            str,
+            self._tokenizer.decode(ids, skip_special_tokens=skip_special_tokens),
+        )
 
     def convert_ids_to_tokens(
         self, ids: list[int], skip_special_tokens: bool = True

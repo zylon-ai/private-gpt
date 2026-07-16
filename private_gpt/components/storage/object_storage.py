@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import magic
+import magic  # ty:ignore[unresolved-import]
 from anyio import to_thread
 
 from private_gpt.components.storage.models import FileInfo
@@ -18,16 +18,13 @@ if TYPE_CHECKING:
 
 class ObjectStorage(ABC):
     @abstractmethod
-    async def write_bundle(self, prefix: str, files: list[StoredFile]) -> None:
-        ...
+    async def write_bundle(self, prefix: str, files: list[StoredFile]) -> None: ...
 
     @abstractmethod
-    async def delete_prefix(self, prefix: str) -> None:
-        ...
+    async def delete_prefix(self, prefix: str) -> None: ...
 
     @abstractmethod
-    async def read_file(self, prefix: str, path: str) -> bytes:
-        ...
+    async def read_file(self, prefix: str, path: str) -> bytes: ...
 
     @abstractmethod
     async def list_files(self, prefix: str) -> list[str]:

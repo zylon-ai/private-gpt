@@ -12,7 +12,6 @@ from private_gpt.server.chat.chat_service import ChatService
 
 @singleton
 class ChatFacadeService:
-
     _chat_service: ChatService
     _stream_manager: StreamManager
 

@@ -1,5 +1,6 @@
 import enum
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 
 from sqlalchemy import Connection, Engine, create_engine
 
@@ -45,7 +46,7 @@ class DatabaseObjectInspector(ABC):
         self._connection = connection
 
     @abstractmethod
-    def get_objects(self, schema: str) -> list[InspectedDatabaseObject]:
+    def get_objects(self, schema: str) -> Sequence[InspectedDatabaseObject]:
         pass
 
     @abstractmethod

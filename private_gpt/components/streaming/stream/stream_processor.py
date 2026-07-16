@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -108,9 +109,12 @@ class StreamProcessor:
     ) -> None:
         """Handle cancellation of the stream generator."""
         try:
-            if hasattr(event_generator, "cancel"):
-                await event_generator.cancel()
-            elif hasattr(event_generator, "aclose"):
+            cancel = getattr(event_generator, "cancel", None)
+            if callable(cancel):
+                result = cancel()
+                if inspect.isawaitable(result):
+                    await result
+            else:
                 await event_generator.aclose()
         except Exception:
             pass

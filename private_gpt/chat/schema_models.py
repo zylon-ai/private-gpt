@@ -205,7 +205,7 @@ def _resolve_json_type(field_schema: dict[str, Any]) -> type[Any] | UnionType:
         for sub_schema in field_schema["allOf"]:
             if "type" in sub_schema:
                 return _resolve_json_type(sub_schema)
-        return Any  # type: ignore
+        return Any
 
     json_type = field_schema.get("type", "string")
     json_type = json_type[0] if isinstance(json_type, list) else json_type
@@ -236,9 +236,9 @@ def _create_array_model(
         list_type = list[item_type]  # type: ignore
 
     class ArrayModel(BaseModel):
-        items: list_type = Field(default_factory=list)  # type: ignore
+        items: list_type = Field(default_factory=list)
 
-        def model_dump(  # type: ignore
+        def model_dump(
             self,
             *,
             mode: Literal["json", "python"] | str = "python",
@@ -260,7 +260,7 @@ def _create_array_model(
             for item in self.items:
                 if isinstance(item, BaseModel):
                     dumped_items.append(
-                        item.model_dump(  # type: ignore
+                        item.model_dump(
                             mode=mode,
                             include=include,
                             exclude=exclude,
@@ -276,7 +276,7 @@ def _create_array_model(
                     )
                 else:
                     dumped_items.append(item)
-            return dumped_items  # type: ignore
+            return dumped_items
 
         def model_dump_json(
             self,

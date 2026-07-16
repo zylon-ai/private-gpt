@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from llama_index.core.schema import MetadataMode
 from pydantic import BaseModel, Field
 
 from private_gpt.components.ingest.utils import get_extension, get_file_name
@@ -341,6 +342,9 @@ def convert_content(request: Request, body: ConvertBody) -> ConvertResponse:
         if body.format == ContentFormat.Markdown
         else TreeMetadataMode.NONE
     )
+    generic_metadata_mode = (
+        MetadataMode.ALL if body.format == ContentFormat.Markdown else MetadataMode.NONE
+    )
     roots = [n for n in result.nodes if isinstance(n, TreeNode) and n.parent is None]
     if roots:
         tree = ContentTree.from_node(roots[0], mode=metadata_mode)
@@ -353,7 +357,7 @@ def convert_content(request: Request, body: ConvertBody) -> ConvertResponse:
                 ContentTree(
                     id=n.id_,
                     type=n.get_type() if hasattr(n, "get_type") else "text",
-                    content=n.get_content(metadata_mode=metadata_mode),  # type: ignore[arg-type]
+                    content=n.get_content(metadata_mode=generic_metadata_mode),
                     children=[],
                 )
                 for n in result.nodes

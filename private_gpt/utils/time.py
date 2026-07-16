@@ -18,6 +18,7 @@ T = TypeVar("T")
 
 def timeit(func: Callable[P, T]) -> Callable[P, T]:
     """Decorator to measure execution time of both sync and async functions."""
+    function_name = getattr(func, "__name__", func.__class__.__name__)
 
     @functools.wraps(func)
     def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -28,9 +29,9 @@ def timeit(func: Callable[P, T]) -> Callable[P, T]:
         finally:
             elapsed_time = time.perf_counter() - start_time
             logger.info(
-                f"{func.__name__} executed in {elapsed_time:.4f} seconds",
+                f"{function_name} executed in {elapsed_time:.4f} seconds",
                 extra={
-                    "function": func.__name__,
+                    "function": function_name,
                     "execution_time": elapsed_time,
                     "function_module": func.__module__,  # Changed from "module"
                 },
@@ -45,9 +46,9 @@ def timeit(func: Callable[P, T]) -> Callable[P, T]:
         finally:
             elapsed_time = time.perf_counter() - start_time
             logger.info(
-                f"{func.__name__} executed in {elapsed_time:.4f} seconds",
+                f"{function_name} executed in {elapsed_time:.4f} seconds",
                 extra={
-                    "function": func.__name__,
+                    "function": function_name,
                     "execution_time": elapsed_time,
                     "function_module": func.__module__,  # Changed from "module"
                 },

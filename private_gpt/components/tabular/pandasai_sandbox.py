@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any, ClassVar, TypeVar
 
 import pandas as pd
-from pandasai import Sandbox  # type: ignore
-from pandasai.exceptions import CodeExecutionError  # type: ignore
+from pandasai import Sandbox  # ty:ignore[unresolved-import]
+from pandasai.exceptions import CodeExecutionError  # ty:ignore[unresolved-import]
 
 from private_gpt.components.sandbox.base import (
     SandboxCodeOptions,
@@ -59,7 +59,6 @@ def get_clean_exception_info(exc: Exception) -> str:
 
 
 class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
-
     _user_id: str
     _timeout: int
     _client: SandboxSession | None

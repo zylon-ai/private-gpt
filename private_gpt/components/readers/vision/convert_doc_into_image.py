@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import logging
+import os
 import re
 import shutil
 import tempfile
@@ -12,7 +13,7 @@ from typing import Any
 
 from llama_index.core.ingestion import arun_transformations
 from llama_index.core.schema import BaseNode, Document
-from pptx2md import convert  # type: ignore
+from pptx2md import convert  # ty:ignore[unresolved-import]
 
 from private_gpt.celery.notify import NotifyProtocol
 from private_gpt.components.ingest.progress.errors import IngestionParseErrors
@@ -219,7 +220,6 @@ class VisionReader(IngestionReader):
         *args: Any,
         **load_kwargs: Any,
     ) -> AsyncIterable[BaseNode]:
-
         # Calculate the mode of the transformation
         vision_mode: str = "none"
         if self._reader_settings and self._reader_settings.vision.is_enabled:
@@ -236,7 +236,9 @@ class VisionReader(IngestionReader):
             )
 
         temp_dir = Path(
-            await asyncio.to_thread(tempfile.mkdtemp, prefix="pptx_converter_")
+            os.fsdecode(
+                await asyncio.to_thread(tempfile.mkdtemp, prefix="pptx_converter_")
+            )
         )
         docs: list[Document] = []
 

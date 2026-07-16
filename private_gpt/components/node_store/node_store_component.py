@@ -40,11 +40,11 @@ def _simple_index_store(settings: Settings, collection: str) -> BaseIndexStore:
 
 def _postgres_index_store(settings: Settings, collection: str) -> BaseIndexStore:
     try:
-        from llama_index.storage.index_store.postgres import (  # type: ignore
+        from llama_index.storage.index_store.postgres import (  # ty:ignore[unresolved-import]
             PostgresIndexStore,
         )
 
-        from private_gpt.components.node_store.patched_postgres_kv_store import (  # type: ignore
+        from private_gpt.components.node_store.patched_postgres_kv_store import (
             PatchedPostgresKVStore,
         )
     except ImportError as e:
@@ -159,7 +159,7 @@ class NodeStoreComponent:
         unsorted_nodes = self.get_nodes(collection, artifacts, node_ids, filters, limit)
         index = {node.id_: node for node in unsorted_nodes}
         sorted_nodes = [
-            index[node_id] for node_id in node_ids if node_id in index  # type: ignore
+            index[node_id] for node_id in node_ids or [] if node_id in index
         ]
         return sorted_nodes
 
