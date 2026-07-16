@@ -101,7 +101,9 @@ class ExtractCitationInterceptor(ChatResponseLoopInterceptor):
                     if self._last_delta_type == "text":
                         delta = TextDelta.from_citations(new_delta_text, new_citations)
                     elif self._last_delta_type == "thinking":
-                        delta = ThinkingDelta.from_citations(new_delta_text, new_citations)
+                        delta = ThinkingDelta.from_citations(
+                            new_delta_text, new_citations
+                        )
                     else:
                         delta = TextDelta.from_citations(new_delta_text, new_citations)
 

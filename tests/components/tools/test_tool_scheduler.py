@@ -35,10 +35,13 @@ async def test_local_tool_scheduler_logs_execution_failure(
         execute_tool_request,
     )
 
-    with caplog.at_level(
-        logging.ERROR,
-        logger="private_gpt.components.tools.tool_scheduler",
-    ), pytest.raises(RuntimeError, match="boom"):
+    with (
+        caplog.at_level(
+            logging.ERROR,
+            logger="private_gpt.components.tools.tool_scheduler",
+        ),
+        pytest.raises(RuntimeError, match="boom"),
+    ):
         await LocalToolScheduler().execute(tool_request())
 
     assert "Local tool 'bash' execution failed" in caplog.text

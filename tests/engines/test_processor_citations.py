@@ -147,6 +147,7 @@ async def test_process_citations_trailing_backtick() -> None:
     documents = [doc]
 
     cb_text = []
+
     def my_cb(t, c):
         cb_text.append(t)
 
@@ -154,7 +155,7 @@ async def test_process_citations_trailing_backtick() -> None:
     events = [
         create_text_delta("This is a test with a trailing backtick `"),
     ]
-    async for event in process_citations(
+    async for _event in process_citations(
         generate_events(*events), lambda **kwargs: documents, callback=my_cb
     ):
         pass

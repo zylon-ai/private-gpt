@@ -170,8 +170,12 @@ class CondensationRequestInterceptor(ChatRequestLoopInterceptor):
         if not self._enabled or not history:
             return
 
+        token_limit = state.runtime.effective_token_limit
+        if token_limit is None:
+            return
+
         max_length = _token_limit_with_buffer(
-            context.state.runtime.effective_token_limit,
+            token_limit,
             state.input.request.condensation.token_buffer,
         )
 
