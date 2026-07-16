@@ -253,10 +253,13 @@ bash:
 
 web_fetch:
   enabled: ${PGPT_WEBFETCH_ENABLED:false}
+  provider: ${PGPT_WEBFETCH_PROVIDER:local}
   timeout_seconds: ${PGPT_WEBFETCH_TIMEOUT_SECONDS:15}
   pool_size: ${PGPT_WEBFETCH_POOL_SIZE:8}
   pool_idle_timeout_seconds: ${PGPT_WEBFETCH_POOL_IDLE_TIMEOUT:300}
-  pool_max_pages_per_browser: ${PGPT_WEBFETCH_POOL_MAX_PAGES:4}
+  max_requests_per_session: ${PGPT_WEBFETCH_MAX_REQUESTS_PER_SESSION:1}
+  batch_size: ${PGPT_WEBFETCH_BATCH_SIZE:5}
+  batch_wait_ms: ${PGPT_WEBFETCH_BATCH_WAIT_MS:250}
 
 database_query:
   timeout_seconds: ${PGPT_DATABASE_QUERY_TIMEOUT_SECONDS:1000}

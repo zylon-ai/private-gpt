@@ -181,9 +181,11 @@ class LocalSandboxSession(BashExecutorSandbox):
 class LocalSandboxProvider(SandboxProvider):
     """Local sandbox provider for development and OSS defaults."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self, settings: Settings, executor: LocalBashExecutor | None = None
+    ) -> None:
         super().__init__(settings)
-        self._executor = LocalBashExecutor(
+        self._executor = executor or LocalBashExecutor(
             cpu_limit_seconds=settings.bash.cpu_limit_seconds,
             memory_limit_mb=settings.bash.memory_limit_mb,
             fsize_limit_mb=settings.bash.fsize_limit_mb,
