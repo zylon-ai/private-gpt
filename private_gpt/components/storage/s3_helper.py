@@ -65,7 +65,7 @@ class S3Helper:
         return client
 
     def _get_async_s3_client(self) -> Any:
-        from aiobotocore.session import get_session  # type: ignore[import-untyped]
+        from aiobotocore.session import get_session  # ty:ignore[unresolved-import]
 
         return get_session().create_client(
             "s3",

@@ -47,7 +47,7 @@ def cleanup_temporal_files(func: Callable[..., T]) -> Callable[..., T]:
     return wrapper
 
 
-@celery_app.task(  # type: ignore[call-overload,misc]
+@celery_app.task(  # ty:ignore[no-matching-overload]
     name=VECTOR_INDEX_TASK_NAME,
     base=StatelessBackgroundTask,
     callback_task_name=VECTOR_INDEX_CALLBACK_TASK_NAME,

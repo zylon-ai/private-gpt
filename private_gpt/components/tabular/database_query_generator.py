@@ -10,7 +10,7 @@ from collections.abc import Generator, Sequence
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-from Levenshtein import distance
+from Levenshtein import distance  # ty:ignore[unresolved-import]
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from pandas import DataFrame
 from pydantic import BaseModel, Field
