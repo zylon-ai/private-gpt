@@ -242,6 +242,8 @@ def _extract_citations_from_text(
     return cites
 
 
+
+
 def extract_citations_by_original_text(
     text: str,
     documents: list[Document],
@@ -256,63 +258,96 @@ def extract_citations_by_original_text(
     citation_indices = citation_indices or {}
 
     result = ""
-    buffer = ""
     start_len = len(start_token)
     end_len = len(end_token)
 
     # Model can generate brackets not normalized 【
     text = text.replace("【", start_token).replace("】", end_token)
 
-    # Iterate through the text to remove malformed citations and save correct citations
+    # Iterate through the text to remove malformed citations and save correct citations.
+    # Backticks directly wrapping a citation are formatting noise and are not emitted.
     i = 0
     docs = []
+    citation_placeholders: list[str] = []
+    code_delimiter: str | None = None
+    citation_wrapper_delimiter: str | None = None
+
     while i < len(text):
-        # If we have a buffer, try to process it first
-        if buffer and start_token in buffer and end_token in buffer:
-            citation_start = buffer.find(start_token)
-            citation_end = buffer.find(end_token) + end_len
-
-            citation_text = buffer[citation_start:citation_end]
-            node_ids = [
-                id.strip()
-                for id in citation_text[len(start_token) : -len(end_token)].split(
-                    split_token
-                )
-            ]
-
-            valid_docs = []
-            for node_id in node_ids:
-                doc = next(
-                    (doc for doc in documents if doc.id.lower() == node_id.lower()),
-                    None,
-                )
-                if doc:
-                    valid_docs.append(doc)
-
-            if valid_docs:
-                docs.extend(valid_docs)
-                result += split_token.join(
-                    f"{start_token}{doc.id}{end_token}" for doc in valid_docs
-                )
-                # Clear buffer and continue from after citation
-                rest_of_buffer = buffer[citation_end:]
-                if rest_of_buffer and rest_of_buffer[0] == "`":
-                    buffer = rest_of_buffer[1:]
-                else:
-                    buffer = rest_of_buffer
-                continue
-            else:
-                # No valid docs in citation, treat as regular text
-                result += buffer
-                buffer = ""
-                continue
-
         if text[i] == "`":
-            if buffer:
-                buffer += text[i]
-            else:
-                buffer = text[i]
-            i += 1
+            delimiter_end = i + 1
+            while delimiter_end < len(text) and text[delimiter_end] == "`":
+                delimiter_end += 1
+            delimiter = text[i:delimiter_end]
+
+            if citation_wrapper_delimiter == delimiter:
+                citation_wrapper_delimiter = None
+                i = delimiter_end
+                continue
+
+            if code_delimiter == delimiter:
+                result += delimiter
+                code_delimiter = None
+                i = delimiter_end
+                continue
+
+            if delimiter_end == len(text):
+                if is_final:
+                    result += delimiter
+                break
+
+            if text[delimiter_end : delimiter_end + start_len] == start_token:
+                citation_start = delimiter_end
+                citation_end = citation_start + start_len
+                while (
+                    citation_end < len(text)
+                    and text[citation_end : citation_end + end_len] != end_token
+                ):
+                    citation_end += 1
+
+                if citation_end >= len(text):
+                    break
+
+                node_ids = [
+                    node_id.strip()
+                    for node_id in text[
+                        citation_start + start_len : citation_end
+                    ].split(split_token)
+                ]
+                valid_docs = [
+                    doc
+                    for node_id in node_ids
+                    if (
+                        doc := next(
+                            (
+                                document
+                                for document in documents
+                                if document.id.lower() == node_id.lower()
+                            ),
+                            None,
+                        )
+                    )
+                ]
+                if valid_docs:
+                    placeholders = []
+                    for doc in valid_docs:
+                        placeholder_index = "".join(
+                            f"n{digit}" for digit in str(len(docs))
+                        )
+                        placeholder = f"\ue000citation{placeholder_index}\ue001"
+                        docs.append(doc)
+                        citation_placeholders.append(placeholder)
+                        placeholders.append(placeholder)
+                    result += split_token.join(placeholders)
+                    i = citation_end + end_len
+                    if text[i : i + len(delimiter)] == delimiter:
+                        i += len(delimiter)
+                    else:
+                        citation_wrapper_delimiter = delimiter
+                    continue
+
+            result += delimiter
+            code_delimiter = delimiter
+            i = delimiter_end
         elif text[i : i + start_len] == start_token:
             # Check if we have a complete citation
             j = i + start_len
@@ -332,22 +367,18 @@ def extract_citations_by_original_text(
                     if doc:
                         valid_docs.append(doc)
                 if valid_docs:
-                    if buffer and buffer != "`":
-                        result += buffer
-                    buffer = ""
-                    docs.extend(valid_docs)
-                    result += split_token.join(
-                        f"{start_token}{doc.id}{end_token}" for doc in valid_docs
-                    )
-                    next_pos = j + end_len
-                    if next_pos < len(text) and text[next_pos] == "`":
-                        i = next_pos + 1
-                    else:
-                        i = j + end_len
+                    placeholders = []
+                    for doc in valid_docs:
+                        placeholder_index = "".join(
+                            f"n{digit}" for digit in str(len(docs))
+                        )
+                        placeholder = f"\ue000citation{placeholder_index}\ue001"
+                        docs.append(doc)
+                        citation_placeholders.append(placeholder)
+                        placeholders.append(placeholder)
+                    result += split_token.join(placeholders)
+                    i = j + end_len
                 else:
-                    if buffer and buffer != "`":
-                        result += buffer
-                    buffer = ""
                     # No valid docs in citation, treat as regular text
                     result += text[i : j + end_len]
                     i = j + end_len
@@ -359,18 +390,8 @@ def extract_citations_by_original_text(
                 i = len(text)
                 continue
         else:
-            if not buffer:
-                result += text[i]
-            else:
-                buffer += text[i]
+            result += text[i]
             i += 1
-
-    # Don't output buffer if:
-    # 1. It's just a backtick (could be start of citation) and we are not final
-    # 2. It contains start token but not end token (incomplete citation)
-    if buffer and start_token not in buffer:
-        if is_final or buffer != "`":
-            result += buffer
 
     # Process citations
     pattern = re.compile(
@@ -395,7 +416,9 @@ def extract_citations_by_original_text(
     max_index = max(citation_indices.values(), default=-1)
     current_index = max_index + 1
     processed_docs = []
-    for i, doc in enumerate(docs):
+    for i, (doc, placeholder) in enumerate(
+        zip(docs, citation_placeholders, strict=True)
+    ):
         if doc.id_ not in processed_docs:
             processed_docs.append(doc.id_)
 
@@ -409,11 +432,7 @@ def extract_citations_by_original_text(
         citation_indices[doc.id_] = index
 
         citation = format_cite(i, doc, index)
-        result = result.replace(
-            f"{start_token}{doc.id}{end_token}",
-            citation,
-            1,
-        )
+        result = result.replace(placeholder, citation, 1)
 
     return result, _extract_citations_from_text(result), citation_indices
 
