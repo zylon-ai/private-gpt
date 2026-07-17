@@ -1,6 +1,8 @@
+from unittest.mock import MagicMock
+
 import pytest
 
-from private_gpt.arq.runner import _queue_name, _task_packages
+from private_gpt.arq.runner import _keep_result_seconds, _queue_name, _task_packages
 
 
 def test_task_packages_are_loaded_from_environment(
@@ -35,3 +37,17 @@ def test_queue_is_required(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(ValueError, match="PGPT_ARQ_QUEUE"):
         _queue_name()
+
+
+def test_keep_result_outlives_tool_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("PGPT_ARQ_KEEP_RESULT", raising=False)
+    current_settings = MagicMock()
+    current_settings.scheduler.chat.callback_timeout_seconds = 120
+
+    assert _keep_result_seconds(current_settings) == 420
+
+
+def test_keep_result_can_be_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PGPT_ARQ_KEEP_RESULT", "900")
+
+    assert _keep_result_seconds(MagicMock()) == 900

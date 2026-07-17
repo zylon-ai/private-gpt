@@ -18,16 +18,20 @@ async def test_enqueue_resume_iteration_job_allows_multiple_rounds(
     monkeypatch.setattr("private_gpt.arq.tasks.chat.resume.enqueue_job", enqueue_job)
 
     await enqueue_resume_iteration_job(
-        correlation_id="chat-1", job_id="chat-1:resume:checkpoint-1"
+        correlation_id="chat-1",
+        checkpoint_id="checkpoint-1",
+        job_id="chat-1:resume:checkpoint-1",
     )
     await enqueue_resume_iteration_job(
-        correlation_id="chat-1", job_id="chat-1:resume:checkpoint-2"
+        correlation_id="chat-1",
+        checkpoint_id="checkpoint-2",
+        job_id="chat-1:resume:checkpoint-2",
     )
 
     assert enqueue_job.await_count == 2
     job_ids = []
-    for call in enqueue_job.await_args_list:
-        assert call.kwargs["args"] == ("chat-1",)
+    for index, call in enumerate(enqueue_job.await_args_list, start=1):
+        assert call.kwargs["args"] == ("chat-1", f"checkpoint-{index}")
         assert call.kwargs["correlation_id"] == "chat-1"
         assert call.kwargs["job_id"].startswith("chat-1:resume:checkpoint-")
         job_ids.append(call.kwargs["job_id"])
@@ -87,9 +91,9 @@ async def test_real_result_and_timeout_publish_the_same_tool_result_job(
 
     assert real_accepted is True
     assert timeout_accepted is False
-    assert {
-        call.kwargs["job_id"] for call in enqueue_job.await_args_list
-    } == {"chat-1:tool-result:tool-1"}
+    assert {call.kwargs["job_id"] for call in enqueue_job.await_args_list} == {
+        "chat-1:tool-result:tool-1"
+    }
 
 
 @pytest.mark.anyio
@@ -139,11 +143,7 @@ async def test_timeout_cancels_real_tool_only_when_timeout_result_wins(
         lambda **_: injector,
     )
 
-    await timeout_tool_job(
-        {}, "chat-1", "tool-1", "search", "celery-task-1", 30
-    )
-    await timeout_tool_job(
-        {}, "chat-1", "tool-1", "search", "celery-task-1", 30
-    )
+    await timeout_tool_job({}, "chat-1", "tool-1", "search", "celery-task-1", 30)
+    await timeout_tool_job({}, "chat-1", "tool-1", "search", "celery-task-1", 30)
 
     scheduler.cancel_task.assert_awaited_once_with("celery-task-1")

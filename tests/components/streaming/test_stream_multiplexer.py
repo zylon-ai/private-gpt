@@ -701,3 +701,19 @@ async def test_block_ms_none_is_non_blocking(
         timeout=2.0,
     )
     assert events == []
+
+
+@pytest.mark.asyncio
+async def test_concurrent_stream_creation_allows_only_one_replica() -> None:
+    service = InMemoryStreamService()
+
+    results = await asyncio.gather(
+        *(
+            service.create_stream("chat_completion", correlation_id="same-message")
+            for _ in range(10)
+        ),
+        return_exceptions=True,
+    )
+
+    assert results.count("same-message") == 1
+    assert sum(isinstance(result, ValueError) for result in results) == 9

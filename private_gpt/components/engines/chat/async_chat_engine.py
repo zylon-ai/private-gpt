@@ -473,9 +473,15 @@ class AsyncChatEngine:
             metadata=metadata,
         )
 
-    async def execute_scheduled_resume(self, *, execution_id: str) -> None:
+    async def execute_scheduled_resume(
+        self, *, execution_id: str, checkpoint_id: str
+    ) -> None:
         runner = self._require_runner()
-        await runner.resume(engine=self, execution_id=execution_id)
+        await runner.resume(
+            engine=self,
+            execution_id=execution_id,
+            checkpoint_id=checkpoint_id,
+        )
 
     async def record_callback(
         self, *, execution_id: str, tool_id: str, result: dict[str, Any]
@@ -971,6 +977,7 @@ class AsyncChatEngine:
         self._ensure_update_tool_ids_in_tool_selection(
             run, assistant_message, stream_delta_state.tool_state.tool_id_map
         )
+        self._validate_unique_tool_call_ids(assistant_message)
         self._accumulate_usage(run, assistant_message)
 
         run.state = run.state.model_copy(deep=True)
@@ -1007,9 +1014,12 @@ class AsyncChatEngine:
                 elif result.status == _ToolExecutionStatus.PENDING:
                     has_pending_tool = True
                     assert result.tool_selection is not None
-                    pending_async[result.tool_selection.tool_id] = (
-                        result.async_handle or ""
-                    )
+                    tool_id = result.tool_selection.tool_id
+                    if tool_id in pending_async:
+                        raise RuntimeError(
+                            f"Duplicate internal tool call ID '{tool_id}'"
+                        )
+                    pending_async[tool_id] = result.async_handle or ""
 
         if has_pending_tool:
             run.state = run.state.model_copy(deep=True)
@@ -1601,6 +1611,22 @@ class AsyncChatEngine:
                 raw_id = tool_call.tool_id
                 if raw_id and raw_id in tool_id_map:
                     tool_call.tool_id = tool_id_map[raw_id]
+
+    @staticmethod
+    def _validate_unique_tool_call_ids(message: ChatMessage) -> None:
+        tool_calls = message.additional_kwargs.get("tool_calls", [])
+        if not isinstance(tool_calls, list):
+            return
+        seen: set[str] = set()
+        for tool_call in tool_calls:
+            if not isinstance(tool_call, ToolSelection):
+                continue
+            tool_id = tool_call.tool_id
+            if not tool_id:
+                raise RuntimeError("Tool call is missing an ID")
+            if tool_id in seen:
+                raise RuntimeError(f"Duplicate tool call ID '{tool_id}'")
+            seen.add(tool_id)
 
     @staticmethod
     def _accumulate_usage(run: _Run, message: ChatMessage) -> None:

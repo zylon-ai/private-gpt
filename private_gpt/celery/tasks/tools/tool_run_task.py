@@ -10,6 +10,9 @@ from celery import current_task
 
 from private_gpt.celery.base import StatefulBackgroundTask
 from private_gpt.celery.celery import celery_app
+from private_gpt.components.engines.chat.checkpoint_store import (
+    ChatCheckpointStoreFactory,
+)
 from private_gpt.components.tools.remote_execution import (
     ToolExecutionRequest,
     ToolExecutionResponse,
@@ -45,6 +48,17 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
     correlation_id = request.context.get("correlation_id")
     message_id = request.context.get("message_id") or correlation_id
     task_id = current_task.request.id
+    if not await _claim_tool_execution(request):
+        logger.warning(
+            "Duplicate tool execution suppressed correlation_id=%s message_id=%s "
+            "task_id=%s tool_id=%s tool_name=%s",
+            correlation_id,
+            message_id,
+            task_id,
+            request.tool_id,
+            request.tool_name,
+        )
+        return _duplicate_execution_response(request).model_dump(mode="json")
     logger.info(
         "Tool execution started correlation_id=%s message_id=%s tool_id=%s",
         correlation_id,
@@ -115,6 +129,31 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
         _result_fragment(response),
     )
     return response.model_dump(mode="json")
+
+
+async def _claim_tool_execution(request: ToolExecutionRequest) -> bool:
+    correlation_id = request.context.get("correlation_id")
+    if not correlation_id or not request.tool_id:
+        return True
+    injector = get_global_injector(allow_to_generate_new_injectors=True)
+    store = injector.get(ChatCheckpointStoreFactory).get()
+    return await store.claim_action(
+        correlation_id,
+        f"tool:{request.tool_id}",
+    )
+
+
+def _duplicate_execution_response(
+    request: ToolExecutionRequest,
+) -> ToolExecutionResponse:
+    message = "Duplicate tool execution was suppressed."
+    return ToolExecutionResponse(
+        tool_name=request.tool_name,
+        tool_id=request.tool_id,
+        result_content=[TextBlock(text=message)],
+        is_error=True,
+        tool_message=request_error_message(request, message),
+    )
 
 
 async def _notify_completion(

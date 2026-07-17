@@ -23,7 +23,7 @@ logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
 
 
 async def enqueue_resume_iteration_job(
-    *, correlation_id: str, job_id: str
+    *, correlation_id: str, checkpoint_id: str, job_id: str
 ) -> None:
     logger.debug(
         "Dispatching chat resume correlation_id=%s message_id=%s job_id=%s",
@@ -34,7 +34,7 @@ async def enqueue_resume_iteration_job(
     await enqueue_job(
         task_name=RESUME_ITERATION_TASK_NAME,
         queue_name=get_queue_name(settings()),
-        args=(correlation_id,),
+        args=(correlation_id, checkpoint_id),
         job_id=job_id,
         correlation_id=correlation_id,
     )
@@ -143,13 +143,16 @@ async def tool_resume_job(
 
 
 @arq_task(name=RESUME_ITERATION_TASK_NAME)
-async def resume_iteration_job(ctx: dict[Any, Any], correlation_id: str) -> None:
+async def resume_iteration_job(
+    ctx: dict[Any, Any], correlation_id: str, checkpoint_id: str
+) -> None:
     await _run_logged(
         ctx,
         action="resume",
         correlation_id=correlation_id,
         operation=lambda: _engine(ctx).execute_scheduled_resume(
-            execution_id=correlation_id
+            execution_id=correlation_id,
+            checkpoint_id=checkpoint_id,
         ),
     )
 

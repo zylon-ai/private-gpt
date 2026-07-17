@@ -40,6 +40,11 @@ def _queue_name() -> str:
     return get_queue_name(queue)
 
 
+def _keep_result_seconds(current_settings: Settings) -> int:
+    default = current_settings.scheduler.chat.callback_timeout_seconds + 300
+    return int(os.environ.get("PGPT_ARQ_KEEP_RESULT", str(default)))
+
+
 def run_arq_worker(
     *,
     settings_resolver: Callable[[], Settings] = settings,
@@ -52,6 +57,7 @@ def run_arq_worker(
     queue_name = _queue_name()
     max_jobs = int(os.environ.get("PGPT_ARQ_MAX_JOBS", str(_default_concurrency())))
     job_timeout = int(os.environ.get("PGPT_ARQ_JOB_TIMEOUT", "21600"))
+    keep_result = _keep_result_seconds(current_settings)
     api_enabled = os.environ.get("API_ENABLED", "true").lower() == "true"
     api_port = os.environ.get("API_PORT", "8091")
     healthcheck_app = f"{app_module}.arq.healthcheck:app"
@@ -105,7 +111,7 @@ def run_arq_worker(
             max_jobs=max_jobs,
             max_tries=1,
             retry_jobs=False,
-            keep_result=0,
+            keep_result=keep_result,
             job_timeout=job_timeout,
             health_check_interval=30,
             job_completion_wait=5,
@@ -128,7 +134,7 @@ def run_arq_worker(
 
     print(
         f"Starting arq worker queue={queue_name} task_packages={','.join(task_packages)} "
-        f"max_jobs={max_jobs} job_timeout={job_timeout}"
+        f"max_jobs={max_jobs} job_timeout={job_timeout} keep_result={keep_result}"
     )
     try:
         asyncio.run(_main())

@@ -15,6 +15,19 @@ from private_gpt.components.tools.remote_execution import ToolExecutionResponse
 from private_gpt.settings.settings import Settings
 
 
+def normalize_tool_result(
+    tool_id: str, result: dict[str, Any]
+) -> ToolExecutionResponse:
+    response = ToolExecutionResponse.model_validate(result)
+    if response.tool_id == tool_id:
+        return response
+    tool_message = response.tool_message.model_copy(deep=True)
+    tool_message.additional_kwargs["tool_call_id"] = tool_id
+    return response.model_copy(
+        update={"tool_id": tool_id, "tool_message": tool_message}
+    )
+
+
 class ChatCheckpoint(BaseModel):
     correlation_id: str
     request_data: dict[str, Any]
@@ -33,7 +46,7 @@ class ChatCheckpoint(BaseModel):
 
 class ChatCheckpointStore(ABC):
     @abstractmethod
-    async def save(self, checkpoint: ChatCheckpoint) -> None: ...
+    async def save(self, checkpoint: ChatCheckpoint) -> bool: ...
 
     @abstractmethod
     async def load(self, execution_id: str) -> ChatCheckpoint | None: ...
@@ -57,6 +70,12 @@ class ChatCheckpointStore(ABC):
     async def claim_resume(self, execution_id: str) -> bool: ...
 
     @abstractmethod
+    async def claim_action(self, execution_id: str, action_id: str) -> bool: ...
+
+    @abstractmethod
+    async def mark_terminal(self, execution_id: str, status: str) -> bool: ...
+
+    @abstractmethod
     async def release_resume(self, execution_id: str) -> None: ...
 
     @abstractmethod
@@ -71,12 +90,17 @@ class InMemoryChatCheckpointStore(ChatCheckpointStore):
         self._checkpoints: dict[str, ChatCheckpoint] = {}
         self._results: dict[str, dict[str, ToolExecutionResponse]] = {}
         self._resumed: set[str] = set()
+        self._actions: set[tuple[str, str]] = set()
+        self._terminal: dict[str, str] = {}
         self._lock = asyncio.Lock()
 
-    async def save(self, checkpoint: ChatCheckpoint) -> None:
+    async def save(self, checkpoint: ChatCheckpoint) -> bool:
         async with self._lock:
+            if checkpoint.correlation_id in self._terminal:
+                return False
             self._checkpoints[checkpoint.correlation_id] = checkpoint
             self._resumed.discard(checkpoint.correlation_id)
+            return True
 
     async def load(self, execution_id: str) -> ChatCheckpoint | None:
         async with self._lock:
@@ -90,19 +114,22 @@ class InMemoryChatCheckpointStore(ChatCheckpointStore):
         *,
         allow_claimed: bool = False,
     ) -> dict[str, ToolExecutionResponse] | None:
+        response = normalize_tool_result(tool_id, result)
         async with self._lock:
             if execution_id in self._resumed and not allow_claimed:
+                return None
+            if execution_id in self._terminal:
                 return None
             checkpoint = self._checkpoints.get(execution_id)
             results = self._results.setdefault(execution_id, {})
             if tool_id in results:
                 return None
             if checkpoint is None:
-                results[tool_id] = ToolExecutionResponse.model_validate(result)
+                results[tool_id] = response
                 return None
+            results[tool_id] = response
             if tool_id not in checkpoint.checkpoint_payload.pending_async_tools:
                 return None
-            results[tool_id] = ToolExecutionResponse.model_validate(result)
             expected = set(checkpoint.checkpoint_payload.pending_async_tools)
             return dict(results) if expected.issubset(results) else None
 
@@ -115,6 +142,21 @@ class InMemoryChatCheckpointStore(ChatCheckpointStore):
             if execution_id in self._resumed:
                 return False
             self._resumed.add(execution_id)
+            return True
+
+    async def claim_action(self, execution_id: str, action_id: str) -> bool:
+        async with self._lock:
+            action = (execution_id, action_id)
+            if action in self._actions:
+                return False
+            self._actions.add(action)
+            return True
+
+    async def mark_terminal(self, execution_id: str, status: str) -> bool:
+        async with self._lock:
+            if execution_id in self._terminal:
+                return False
+            self._terminal[execution_id] = status
             return True
 
     async def release_resume(self, execution_id: str) -> None:

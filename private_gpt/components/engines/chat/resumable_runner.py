@@ -98,6 +98,7 @@ class ResumableChatRunner:
         return execution_id, events
 
     async def cancel(self, execution_id: str) -> bool:
+        await self._state.mark_terminal(execution_id, "cancelled")
         checkpoint = await self._state.load(execution_id)
         tool_task_ids = (
             list(checkpoint.checkpoint_payload.pending_async_tools.values())
@@ -135,6 +136,8 @@ class ResumableChatRunner:
         stream_type: str,
         metadata: dict[str, Any],
     ) -> None:
+        if not await self._state.claim_action(execution_id, "start"):
+            return
         channel = BrokerEventChannel(self._events, execution_id)
         try:
             request = self._request(request_data)
@@ -150,9 +153,17 @@ class ResumableChatRunner:
             await self._fail(execution_id, exc, channel)
             raise
 
-    async def resume(self, *, engine: AsyncChatEngine, execution_id: str) -> None:
+    async def resume(
+        self,
+        *,
+        engine: AsyncChatEngine,
+        execution_id: str,
+        checkpoint_id: str,
+    ) -> None:
         saved = await self._state.load(execution_id)
-        if saved is None:
+        if saved is None or saved.checkpoint_id != checkpoint_id:
+            return
+        if not await self._state.claim_action(execution_id, f"resume:{checkpoint_id}"):
             return
         channel = BrokerEventChannel(self._events, execution_id)
         try:
@@ -183,7 +194,6 @@ class ResumableChatRunner:
                 channel=channel,
             )
             await channel.close()
-            await self._state.cleanup(execution_id)
             await self._handle_state(
                 execution_id=execution_id,
                 state=state,
@@ -209,13 +219,14 @@ class ResumableChatRunner:
         metadata: dict[str, Any],
     ) -> None:
         if state.output.status != ChatStatus.WAITING:
+            await self._state.mark_terminal(execution_id, "completed")
             await self._state.cleanup(execution_id)
             await self._events.finish(execution_id)
             return
 
         checkpoint_id = uuid4().hex
         timeout_seconds = self._settings.scheduler.chat.callback_timeout_seconds
-        await self._state.save(
+        saved = await self._state.save(
             ChatCheckpoint(
                 correlation_id=execution_id,
                 request_data=state.input.request.model_dump(mode="json"),
@@ -230,6 +241,15 @@ class ResumableChatRunner:
                 deadline=datetime.now(UTC) + timedelta(seconds=timeout_seconds),
             )
         )
+        if not saved:
+            await asyncio.gather(
+                *(
+                    self._tool_scheduler.cancel_task(task_id=task_id)
+                    for task_id in state.output.pending_async_tools.values()
+                ),
+                return_exceptions=True,
+            )
+            return
         checkpoint = await self._state.load(execution_id)
         assert checkpoint is not None
         await asyncio.gather(
@@ -271,6 +291,10 @@ class ResumableChatRunner:
         exc: Exception,
         channel: BrokerEventChannel | None = None,
     ) -> None:
+        if not await self._state.mark_terminal(execution_id, "failed"):
+            await self._state.cleanup(execution_id)
+            await self._events.finish(execution_id)
+            return
         event = StreamingEventHandler().error_event(execution_id, exc)
         if channel is None:
             await self._events.publish(execution_id, event)

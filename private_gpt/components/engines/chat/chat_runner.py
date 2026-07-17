@@ -36,6 +36,7 @@ class ChatRunner(Protocol):
         *,
         engine: "AsyncChatEngine",
         execution_id: str,
+        checkpoint_id: str,
     ) -> None: ...
 
     async def callback(

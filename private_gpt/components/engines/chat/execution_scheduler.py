@@ -83,13 +83,15 @@ class LocalChatExecutionScheduler(ChatExecutionScheduler):
         )
 
     async def resume(self, *, execution_id: str, checkpoint_id: str) -> None:
-        del checkpoint_id
         from private_gpt.di import get_global_injector
         from private_gpt.server.chat.chat_service import ChatService
 
         engine = get_global_injector().get(ChatService).build_async_engine()
         self._schedule(
-            engine.execute_scheduled_resume(execution_id=execution_id),
+            engine.execute_scheduled_resume(
+                execution_id=execution_id,
+                checkpoint_id=checkpoint_id,
+            ),
             name=f"chat_{execution_id}",
         )
 
@@ -125,8 +127,11 @@ class LocalChatExecutionScheduler(ChatExecutionScheduler):
 
         async def _timeout() -> None:
             await asyncio.sleep(delay_seconds)
-            await get_global_injector().get(ToolSchedulerFactory).get().cancel_task(
-                task_id
+            await (
+                get_global_injector()
+                .get(ToolSchedulerFactory)
+                .get()
+                .cancel_task(task_id)
             )
             engine = get_global_injector().get(ChatService).build_async_engine()
             await engine.record_callback(
@@ -182,6 +187,7 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
 
         await enqueue_resume_iteration_job(
             correlation_id=execution_id,
+            checkpoint_id=checkpoint_id,
             job_id=f"{execution_id}:resume:{checkpoint_id}",
         )
 
