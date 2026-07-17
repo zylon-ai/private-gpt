@@ -21,12 +21,6 @@ if TYPE_CHECKING:
 DEBUG_MODE = settings().server.debug_mode
 
 
-def _resolve_mime_type(filename: str, mime_type: str | None) -> str:
-    if mime_type:
-        return mime_type
-    return get_guest_mime_type(Path(filename)) or "application/octet-stream"
-
-
 def _remove_expect_header(params: dict[str, Any], **_: Any) -> None:
     params["headers"].pop("Expect", None)
 
@@ -104,7 +98,11 @@ class S3Helper:
             raise RuntimeError("Failed to create S3 client")
         if object_name is None:
             object_name = filename
-        resolved_mime_type = _resolve_mime_type(filename, mime_type)
+        resolved_mime_type = (
+            mime_type
+            or get_guest_mime_type(Path(filename))
+            or "application/octet-stream"
+        )
 
         put_args: dict[str, Any] = {
             "Bucket": bucket_name,
@@ -130,7 +128,11 @@ class S3Helper:
     ) -> str:
         if object_name is None:
             object_name = filename
-        resolved_mime_type = _resolve_mime_type(filename, mime_type)
+        resolved_mime_type = (
+            mime_type
+            or get_guest_mime_type(Path(filename))
+            or "application/octet-stream"
+        )
 
         async with self._get_async_s3_client() as s3_client:
             s3_client.meta.events.register_last(
