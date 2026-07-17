@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from asyncio import to_thread
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
+
 
 ToolSchedulerProvider = (
     type["BaseToolScheduler"] | Callable[[Injector], "BaseToolScheduler"]
@@ -131,10 +133,23 @@ class CeleryToolScheduler(BaseToolScheduler):
         state_ctx: ChatState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
-        del request, state_ctx, interceptors
-        raise NotImplementedError(
-            "CeleryToolScheduler only supports async_execute() in resumable chat mode."
+        del state_ctx
+        request = request.model_copy(
+            update={"interceptor_paths": tool_execution_interceptor_paths(interceptors)}
         )
+        result = dispatch_task(
+            task_name=TOOL_TASK_NAME,
+            kwargs={"request_data": request.model_dump(mode="json")},
+            queue=self._settings.scheduler.tools.celery_queue,
+            ignore_result=False,
+        )
+        response_data = await to_thread(
+            result.get,
+            timeout=self._settings.scheduler.tools.callback_timeout_seconds,
+        )
+        from private_gpt.components.tools.remote_execution import ToolExecutionResponse
+
+        return ToolExecutionResponse.model_validate(response_data)
 
     async def cancel(
         self,

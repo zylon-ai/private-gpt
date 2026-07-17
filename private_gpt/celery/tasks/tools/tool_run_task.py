@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
     base=StatefulBackgroundTask,
     ignore_result=True,
 )
-async def tool_run_task(*, request_data: dict[str, Any]) -> None:
+async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
     try:
         request = ToolExecutionRequest.model_validate(request_data)
     except Exception:
@@ -37,7 +37,6 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> None:
             request,
             interceptors=resolve_tool_execution_interceptors(request.interceptor_paths),
         )
-        await _notify_completion(request, response)
     except Exception as exc:
         logger.exception("Tool '%s' execution failed", request.tool_name)
         response = ToolExecutionResponse(
@@ -47,7 +46,9 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> None:
             is_error=True,
             tool_message=request_error_message(request, str(exc)),
         )
-        await _notify_completion(request, response)
+
+    await _notify_completion(request, response)
+    return response.model_dump(mode="json")
 
 
 async def _notify_completion(
@@ -57,11 +58,8 @@ async def _notify_completion(
     correlation_id = request.context.get("correlation_id")
     if not correlation_id or not request.tool_id:
         return
-    try:
-        scheduler = get_global_injector(True).get(ToolSchedulerFactory).get()
-        await scheduler.complete(request, response)
-    except Exception:
-        logger.exception("Tool completion notify failed for %s", request.tool_id)
+    scheduler = get_global_injector(True).get(ToolSchedulerFactory).get()
+    await scheduler.complete(request, response)
 
 
 def request_error_message(

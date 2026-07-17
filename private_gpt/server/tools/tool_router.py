@@ -1,9 +1,15 @@
 from typing import Literal
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from private_gpt.chat.extensions.context_filter import ContextFilter
+from private_gpt.components.chat.models.chat_config_models import ToolSpec
+from private_gpt.components.tools.remote_execution import ToolExecutionRequest
+from private_gpt.components.tools.tool_scheduler import (
+    ToolSchedulerFactory,
+)
 from private_gpt.events.models import ResultContentBlockType
 from private_gpt.server.tools.tool_service import ToolService
 from private_gpt.server.utils.artifact_input import ArtifactType, SqlDatabaseArtifact
@@ -251,12 +257,12 @@ async def semantic_search(
     - Return ContentBlocks as MCP does
        - It returns Zylon custom content blocks, be careful if you use directly with MCP
     """
-    service: ToolService = request.state.injector.get(ToolService)
-    result = await service.semantic_search_tool(
-        body.query,
+    service = request.state.injector.get(ToolService)
+    tool = await service.build_semantic_search_tool(
         context_filter=body.context_filter,
         generate_citations=body.format == "citations",
     )
+    result = await _execute_tool(request, tool, {"query": body.query})
     return ToolResponse(content=result.content, is_error=result.is_error)
 
 
@@ -359,11 +365,11 @@ async def tabular_data_analysis(
     - Return ContentBlocks as MCP does
        - It returns Zylon custom content blocks, be careful if you use directly with MCP
     """
-    service: ToolService = request.state.injector.get(ToolService)
-    result = await service.tabular_data_analysis_tool(
-        body.query,
+    service = request.state.injector.get(ToolService)
+    tool = await service.build_tabular_data_analysis_tool(
         context_filter=body.context_filter,
     )
+    result = await _execute_tool(request, tool, {"query": body.query})
     return ToolResponse(content=result.content, is_error=result.is_error)
 
 
@@ -466,13 +472,15 @@ async def database_query(
     - Return ContentBlocks as MCP does
        - It returns Zylon custom content blocks, be careful if you use directly with MCP
     """
-    service: ToolService = request.state.injector.get(ToolService)
-    result = await service.database_query_tool(
-        body.query,
+    service = request.state.injector.get(ToolService)
+    tool = await service.build_database_query_tool(
         sql_artifacts=[
-            ctx for ctx in body.artifacts if isinstance(ctx, SqlDatabaseArtifact)
+            artifact
+            for artifact in body.artifacts
+            if isinstance(artifact, SqlDatabaseArtifact)
         ],
     )
+    result = await _execute_tool(request, tool, {"query": body.query})
     return ToolResponse(content=result.content, is_error=result.is_error)
 
 
@@ -550,8 +558,12 @@ async def web_fetch(
     - Return ContentBlocks as MCP does
        - It returns Zylon custom content blocks, be careful if you use directly with MCP
     """
-    service: ToolService = request.state.injector.get(ToolService)
-    result = await service.web_fetch_tool(body.url)
+    service = request.state.injector.get(ToolService)
+    result = await _execute_tool(
+        request,
+        service.build_web_fetch_tool(),
+        {"url": body.url},
+    )
     return ToolResponse(content=result.content, is_error=result.is_error)
 
 
@@ -651,6 +663,28 @@ async def web_search(
     Returns search results in a structured format with both source objects
     and text representations for easy consumption.
     """
-    service: ToolService = request.state.injector.get(ToolService)
-    result = await service.web_search_tool(body.query)
+    service = request.state.injector.get(ToolService)
+    result = await _execute_tool(
+        request,
+        await service.build_web_search_tool(),
+        {"query": body.query},
+    )
     return ToolResponse(content=result.content, is_error=result.is_error)
+
+
+async def _execute_tool(
+    request: Request,
+    tool: ToolSpec,
+    tool_kwargs: dict[str, object],
+) -> ToolResponse:
+    tool_name = tool.name or tool.get_original_tool_name()
+    scheduler = request.state.injector.get(ToolSchedulerFactory).get()
+    response = await scheduler.execute(
+        ToolExecutionRequest(
+            tool_id=f"api-{uuid4().hex}",
+            tool_name=tool_name,
+            tool_kwargs=tool_kwargs,
+            tool_spec=tool,
+        )
+    )
+    return ToolResponse(content=response.result_content, is_error=response.is_error)

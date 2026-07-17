@@ -7,9 +7,11 @@ import pytest
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.tools.remote_execution import ToolExecutionRequest
 from private_gpt.components.tools.tool_scheduler import (
+    TOOL_TASK_NAME,
     CeleryToolScheduler,
     LocalToolScheduler,
 )
+from private_gpt.events.models import TextBlock
 
 
 def tool_request() -> ToolExecutionRequest:
@@ -49,15 +51,51 @@ async def test_local_tool_scheduler_logs_execution_failure(
 
 
 @pytest.mark.anyio
-async def test_celery_tool_scheduler_execute_raises_not_implemented() -> None:
+async def test_celery_tool_scheduler_execute_dispatches_and_waits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async_result = MagicMock()
+    dispatch_task = MagicMock(return_value=async_result)
+    response_data = {
+        "tool_name": "bash",
+        "tool_id": "tool-1",
+        "result_content": [TextBlock(text="worker result").model_dump(mode="json")],
+        "is_error": False,
+        "tool_message": {
+            "role": "tool",
+            "content": "worker result",
+            "additional_kwargs": {"tool_call_id": "tool-1"},
+        },
+    }
+    to_thread = AsyncMock(return_value=response_data)
+    monkeypatch.setattr(
+        "private_gpt.components.tools.tool_scheduler.dispatch_task", dispatch_task
+    )
+    monkeypatch.setattr(
+        "private_gpt.components.tools.tool_scheduler.to_thread", to_thread
+    )
     scheduler = CeleryToolScheduler(
         settings=SimpleNamespace(
-            scheduler=SimpleNamespace(tools=SimpleNamespace(celery_queue="tools"))
+            scheduler=SimpleNamespace(
+                tools=SimpleNamespace(
+                    celery_queue="tools",
+                    callback_timeout_seconds=42,
+                )
+            )
         ),
     )
+    request = tool_request()
 
-    with pytest.raises(NotImplementedError):
-        await scheduler.execute(tool_request())
+    response = await scheduler.execute(request)
+
+    assert response.result_content == [TextBlock(text="worker result")]
+    dispatch_task.assert_called_once_with(
+        task_name=TOOL_TASK_NAME,
+        kwargs={"request_data": request.model_dump(mode="json")},
+        queue="tools",
+        ignore_result=False,
+    )
+    to_thread.assert_awaited_once_with(async_result.get, timeout=42)
 
 
 @pytest.mark.anyio
