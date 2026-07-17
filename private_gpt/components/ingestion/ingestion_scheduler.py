@@ -4,7 +4,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from injector import Injector, inject, singleton
 
@@ -14,6 +14,8 @@ from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.settings.settings import Settings, settings
 
 if TYPE_CHECKING:
+    from celery.result import AsyncResult
+
     from private_gpt.server.ingest.ingest_router import (
         DeleteIngestedDocumentAsyncBody,
         IngestAsyncBody,
@@ -189,7 +191,7 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
             raise ValueError("Delete ingestion task did not return a valid task_id")
         return task_id
 
-    def _dispatch_sync_ingest(self, ingest_body: IngestBody) -> object:
+    def _dispatch_sync_ingest(self, ingest_body: IngestBody) -> AsyncResult[Any]:
         import uuid
 
         from private_gpt.celery.dispatch import dispatch_task

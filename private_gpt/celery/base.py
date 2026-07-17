@@ -30,6 +30,7 @@ logger.setLevel("DEBUG")
 REDIS_FAILURE_RETRIES_PREFIX = "failure_retries"
 REDIS_FAILURE_RETRIES_EXPIRY = 86400
 
+
 def release_unused_worker_memory() -> None:
     """Release unreachable Python objects and unused glibc heap pages."""
     gc.collect()

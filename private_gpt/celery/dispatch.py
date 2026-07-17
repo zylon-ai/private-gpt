@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 from typing import Any
+
+from celery.result import AsyncResult
 
 
 def dispatch_task(
@@ -9,7 +13,7 @@ def dispatch_task(
     kwargs: dict[str, Any] | None = None,
     task_id: str | None = None,
     ignore_result: bool | None = None,
-) -> Any:
+) -> AsyncResult[Any]:
     from private_gpt.celery.celery import celery_app
 
     options: dict[str, Any] = {"queue": queue}

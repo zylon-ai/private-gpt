@@ -51,7 +51,7 @@ class RedisChatCheckpointStore(ChatCheckpointStore):
         return f"{self._prefix}:terminal:{execution_id}"
 
     async def save(self, checkpoint: ChatCheckpoint) -> bool:
-        saved = await self._redis.eval(
+        saved = await cast(Any, self._redis.eval)(
             """
             if redis.call('exists', KEYS[1]) == 1 then
                 return 0
@@ -83,7 +83,7 @@ class RedisChatCheckpointStore(ChatCheckpointStore):
     ) -> dict[str, ToolExecutionResponse] | None:
         response = normalize_tool_result(tool_id, result)
         results_key = self._results_key(execution_id)
-        recorded = await self._redis.eval(
+        recorded = await cast(Any, self._redis.eval)(
             """
             if redis.call('exists', KEYS[1]) == 1 then
                 return 0

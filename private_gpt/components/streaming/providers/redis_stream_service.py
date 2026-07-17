@@ -97,7 +97,7 @@ class RedisStreamService(StreamService):
 
         mapping = await asyncio.to_thread(stream_metadata.model_dump_json_fields)
         status_key = self._get_status_key(correlation_id)
-        created = await self._client.eval(
+        created = await cast(Any, self._client.eval)(
             """
             if redis.call('exists', KEYS[1]) == 1 then
                 return 0
