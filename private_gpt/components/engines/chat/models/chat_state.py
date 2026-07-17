@@ -39,6 +39,7 @@ class ChatInputState(BaseModel):
 class ChatRuntimeState(BaseModel):
     """Store runtime counters."""
 
+    model_id: str | None = None
     effective_token_limit: int | None = None
     tokenizer_fn: TokenizerFn | AsyncTokenizerFn | None = None
 

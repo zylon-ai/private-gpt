@@ -34,6 +34,9 @@ from private_gpt.components.engines.chat.utils.request_builder import (
     build_initial_context_stack,
 )
 from private_gpt.events.event_errors import Errors
+from private_gpt.server.chat.interceptors.runtime_model_interceptor import (
+    RuntimeModelRequestInterceptor,
+)
 from private_gpt.server.chat.interceptors.validator_request_interceptor import (
     ValidatorRequestInterceptor,
 )
@@ -141,6 +144,7 @@ async def _run_interceptor(
         phase=InterceptorPhase.VALIDATION,
         emit_fn=lambda _event: None,
     )
+    await RuntimeModelRequestInterceptor(interceptor._llm_component).intercept(context)
     await interceptor.intercept(context)
 
 

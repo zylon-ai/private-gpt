@@ -371,6 +371,7 @@ async def test_runner_schedules_one_timeout_timer_per_pending_tool() -> None:
     state.input.context_stack.checkpoint_dump.return_value = {}
     state.runtime.iteration = 1
     state.runtime.next_block_count = 3
+    state.runtime.model_id = "default"
     state.runtime.total_input_tokens = 0
     state.runtime.total_output_tokens = 0
     state.runtime.has_input_usage = False
@@ -575,6 +576,7 @@ async def test_cancelled_chat_cannot_resurrect_waiting_checkpoint() -> None:
     state.input.context_stack.checkpoint_dump.return_value = {}
     state.runtime.iteration = 1
     state.runtime.next_block_count = 0
+    state.runtime.model_id = "default"
     state.runtime.total_input_tokens = 0
     state.runtime.total_output_tokens = 0
     state.runtime.has_input_usage = False

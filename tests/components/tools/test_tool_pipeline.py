@@ -9,6 +9,7 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedChatRequest,
     ResolvedContextConfig,
     ResolvedToolConfig,
+    ToolRequirements,
     ToolSpec,
 )
 from private_gpt.components.skills.models.skill_entities import (
@@ -16,7 +17,7 @@ from private_gpt.components.skills.models.skill_entities import (
     SkillFrontmatter,
     SkillVersionEntity,
 )
-from private_gpt.components.tools.processors.base import _session_id
+from private_gpt.components.tools.processors.base import _replace_tool, _session_id
 from private_gpt.components.tools.processors.bash_processor import BashProcessor
 from private_gpt.components.tools.processors.code_execution_processor import (
     CodeExecutionProcessor,
@@ -37,6 +38,82 @@ def _request(tools: list[ToolSpec]) -> ResolvedChatRequest:
         messages=[ChatMessage(role=MessageRole.USER, content="hello")],
         tool_config=ResolvedToolConfig(tools=tools),
         context=ResolvedContextConfig(correlation_id="corr-123"),
+    )
+
+
+def test_replace_tool_preserves_single_replacement_properties() -> None:
+    original = ToolSpec(
+        name="semantic_search",
+        type="semantic_search_v1",
+        description="Custom search description",
+        defer_loading=True,
+        partial_params={"scope": "project"},
+        instructions="Use the project knowledge base.",
+        requirements=[ToolRequirements.SANDBOX],
+    )
+    replacement = ToolSpec.from_defaults(
+        name="semantic_search",
+        type="semantic_search_v1",
+        runtime="server",
+        description="Default search description",
+        async_fn=AsyncMock(return_value=[]),
+    )
+    request = _request([original])
+
+    assert _replace_tool(request, original, [replacement])
+
+    resolved = request.tool_config.tools[0]
+    assert resolved.description == "Custom search description"
+    assert resolved.defer_loading is True
+    assert resolved.partial_params == {"scope": "project"}
+    assert resolved.instructions == "Use the project knowledge base."
+    assert resolved.requirements == [ToolRequirements.SANDBOX]
+    assert resolved.runtime == "server"
+    assert resolved.async_fn is replacement.async_fn
+
+
+def test_replace_tool_preserves_shared_properties_across_expansion() -> None:
+    original = ToolSpec(
+        name="code_execution",
+        type="code_execution_v1",
+        description="Wrapper description",
+        defer_loading=True,
+        partial_params={"unsafe_for_children": True},
+        instructions="Use the shared sandbox carefully.",
+        requirements=[ToolRequirements.SANDBOX],
+    )
+    replacements = [
+        ToolSpec.from_defaults(
+            name="bash",
+            type="bash_v1",
+            runtime="server",
+            description="Bash description",
+            async_fn=AsyncMock(return_value=[]),
+        ),
+        ToolSpec.from_defaults(
+            name="text_editor",
+            type="text_editor_v1",
+            runtime="server",
+            description="Editor description",
+            async_fn=AsyncMock(return_value=[]),
+        ),
+    ]
+    request = _request([original])
+
+    assert _replace_tool(request, original, replacements)
+
+    bash, editor = request.tool_config.tools
+    assert bash.description == "Bash description"
+    assert editor.description == "Editor description"
+    assert bash.partial_params is None
+    assert editor.partial_params is None
+    assert all(tool.defer_loading for tool in (bash, editor))
+    assert all(
+        tool.instructions == "Use the shared sandbox carefully."
+        for tool in (bash, editor)
+    )
+    assert all(
+        tool.requirements == [ToolRequirements.SANDBOX] for tool in (bash, editor)
     )
 
 

@@ -215,6 +215,7 @@ class ChatRequestMapper:
                 if body.metadata and body.metadata.user_id
                 else str(uuid.uuid4()),
                 container=body.container,
+                maximum_context_length=self._settings.chat.maximum_context_length,
                 maximum_loaded_skills=(
                     body.maximum_loaded_skills
                     if body.maximum_loaded_skills is not None

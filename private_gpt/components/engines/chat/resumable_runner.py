@@ -399,6 +399,7 @@ class ResumableChatRunner:
         )
 
         return IterationCheckpointPayload(
+            model_id=state.runtime.model_id,
             pending_async_tools=state.output.pending_async_tools,
             pending_external_tool_calls=state.output.pending_external_tool_calls,
             total_input_tokens=state.runtime.total_input_tokens,

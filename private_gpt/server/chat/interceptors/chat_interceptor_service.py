@@ -44,6 +44,9 @@ from private_gpt.server.chat.interceptors.multimodal_interceptor import (
 from private_gpt.server.chat.interceptors.platform_guidelines_interceptor import (
     PlatformGuidelinesInterceptor,
 )
+from private_gpt.server.chat.interceptors.runtime_model_interceptor import (
+    RuntimeModelRequestInterceptor,
+)
 from private_gpt.server.chat.interceptors.skill_tool_visibility_interceptor import (
     SkillToolVisibilityInterceptor,
 )
@@ -81,6 +84,7 @@ class ChatInterceptorService:
         settings: Settings,
         prompt_builder_service: PromptBuilderService,
         # --- request interceptors (run once, order matters) ---
+        runtime_model_interceptor: RuntimeModelRequestInterceptor,
         validation_request_interceptor: ValidatorRequestInterceptor,
         default_values_interceptor: DefaultValuesRequestInterceptor,
         mcp_interceptor: McpRequestInterceptor,
@@ -109,7 +113,11 @@ class ChatInterceptorService:
             # Init interceptors
             .add_range(
                 "init",
-                requests=[validation_request_interceptor, default_values_interceptor],
+                requests=[
+                    runtime_model_interceptor,
+                    validation_request_interceptor,
+                    default_values_interceptor,
+                ],
             )
             # Init tools, internal tools & platform skills
             .add_range(

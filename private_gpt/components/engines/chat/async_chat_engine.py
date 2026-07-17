@@ -154,6 +154,7 @@ class _IterationCheckpoint:
 
 
 class IterationCheckpointPayload(BaseModel):
+    model_id: str | None = None
     pending_async_tools: dict[str, str] = Field(default_factory=dict)
     tool_responses: list[ToolExecutionResponse] = Field(default_factory=list)
     pending_external_tool_calls: list[ToolSelection] = Field(default_factory=list)
@@ -394,6 +395,7 @@ class AsyncChatEngine:
             context,
         )
         new_payload = IterationCheckpointPayload(
+            model_id=state.runtime.model_id,
             total_input_tokens=state.runtime.total_input_tokens,
             total_output_tokens=state.runtime.total_output_tokens,
             has_input_usage=state.runtime.has_input_usage,
@@ -580,6 +582,7 @@ class AsyncChatEngine:
                 request, iteration, next_block_count, payload, hooks, channel
             )
             new_payload = IterationCheckpointPayload(
+                model_id=state.runtime.model_id,
                 total_input_tokens=state.runtime.total_input_tokens,
                 total_output_tokens=state.runtime.total_output_tokens,
                 has_input_usage=state.runtime.has_input_usage,
@@ -1522,6 +1525,7 @@ class AsyncChatEngine:
     def _apply_payload_usage(
         self, run: _Run, payload: IterationCheckpointPayload
     ) -> None:
+        run.state.runtime.model_id = payload.model_id
         if payload.has_input_usage:
             run.total_input_tokens = payload.total_input_tokens
             run.has_input_usage = True

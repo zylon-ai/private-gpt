@@ -16,7 +16,6 @@ from private_gpt.components.engines.chat.models.chat_interceptor_context import 
 from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
-from private_gpt.components.llm.custom.base import ZylonLLM
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import (
     max_audios_supported,
@@ -106,19 +105,9 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
                     Errors.Codes.INVALID_REQUEST_AUDIO_MAX_NUM_ERROR,
                 )
 
-        metadata = (
-            llm.get_metadata(**context.state.input.llm_kwargs)
-            if isinstance(llm, ZylonLLM)
-            else llm.metadata
-        )
-        token_limit = self._token_limit(
-            llm.metadata.context_window, metadata.num_output
-        )
-        if token_limit is None:
-            return
-
-        tokenize = self._llm_component.get_tokenizer(model_id)
-        if tokenize is None:
+        token_limit = context.state.runtime.effective_token_limit
+        tokenize = context.state.runtime.tokenizer_fn
+        if token_limit is None or tokenize is None:
             return
 
         user_message_tokens = len(tokenize(user_text))
@@ -166,27 +155,7 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
                 f"exceed the maximum token limit {token_limit}."
             )
 
-        # Update state with effective token limit for downstream components
-        state = context.state
-        state.runtime.effective_token_limit = token_limit
-        state.runtime.tokenizer_fn = tokenize
-        context.set_state(state)
-
         return
-
-    @staticmethod
-    def _token_limit(
-        context_window: int | None,
-        num_output: int | None,
-    ) -> int | None:
-        """Compute effective token limit from model metadata."""
-        if context_window is None or context_window <= 0:
-            return None
-        reserved_output = num_output or 0
-        effective = context_window - reserved_output - 256
-        if effective > 0:
-            return effective
-        return context_window
 
     @staticmethod
     def _extract_text(message: ChatMessage) -> str:

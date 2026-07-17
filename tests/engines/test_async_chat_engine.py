@@ -21,6 +21,13 @@ from private_gpt.components.engines.chat.async_chat_engine import (
     LocalEventChannel,
 )
 from private_gpt.components.engines.chat.chat_engine import ChatLoopEngine
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
+    ChatRequestLoopInterceptor,
+)
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
+)
+from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
 from private_gpt.components.engines.chat.models.chat_state import (
     ChatInputState,
     ChatState,
@@ -41,6 +48,9 @@ from private_gpt.events.models import (
     RawContentBlockStartEvent,
     TextBlock,
     ToolResultBlock,
+)
+from private_gpt.server.chat.interceptors.runtime_model_interceptor import (
+    RuntimeModelRequestInterceptor,
 )
 from tests.fixtures.mock_function_llm import get_mock_function_calling_llm
 
@@ -149,6 +159,28 @@ class _FakeChatScheduler:
 
 
 @dataclass
+class _RuntimeObservation:
+    phase: InterceptorPhase
+    model_id: str | None
+    effective_token_limit: int | None
+    has_tokenizer: bool
+
+
+class _RuntimeRecordingInterceptor(ChatRequestLoopInterceptor):
+    observations: list[_RuntimeObservation]
+
+    async def intercept(self, context: ChatInterceptorContext) -> None:
+        self.observations.append(
+            _RuntimeObservation(
+                phase=context.phase,
+                model_id=context.state.runtime.model_id,
+                effective_token_limit=context.state.runtime.effective_token_limit,
+                has_tokenizer=context.state.runtime.tokenizer_fn is not None,
+            )
+        )
+
+
+@dataclass
 class _AsyncRunResult:
     events: list[Any]
     states: list[ChatState]
@@ -235,10 +267,13 @@ async def _run_async_engine(
     request: ResolvedChatRequest,
     mock_llm: Any,
     tool_scheduler: BaseToolScheduler,
+    request_interceptors: list[ChatRequestLoopInterceptor] | None = None,
+    llm_component: LLMComponent | None = None,
 ) -> _AsyncRunResult:
+    resolved_llm_component = llm_component or _make_llm_component(mock_llm)
     engine = AsyncChatEngine(
-        llm_component=_make_llm_component(mock_llm),
-        request_interceptors=[],
+        llm_component=resolved_llm_component,
+        request_interceptors=request_interceptors or [],
         response_interceptors=[],
         max_iterations=6,
         tool_scheduler=tool_scheduler,
@@ -273,6 +308,7 @@ async def _run_async_engine(
                 iteration=state.runtime.iteration,
                 next_block_count=state.runtime.next_block_count,
                 payload=IterationCheckpointPayload(
+                    model_id=state.runtime.model_id,
                     pending_async_tools=state.output.pending_async_tools,
                     tool_responses=responses,
                     pending_external_tool_calls=state.output.pending_external_tool_calls,
@@ -289,6 +325,18 @@ async def _run_async_engine(
         states.append(state)
 
     return _AsyncRunResult(events=all_events, states=states)
+
+
+class _RecordingRequestInterceptor(ChatRequestLoopInterceptor):
+    observations: list[tuple[InterceptorPhase, list[MessageRole]]]
+
+    async def intercept(self, context: ChatInterceptorContext) -> None:
+        self.observations.append(
+            (
+                context.phase,
+                [message.role for message in context.state.input.request.messages],
+            )
+        )
 
 
 @pytest.mark.asyncio
@@ -395,6 +443,92 @@ async def test_async_engine_matches_sync_one_server_tool_and_resumes_same_point(
     assert _tool_result_texts(async_result.events) == ["ok:x"]
     assert _tool_result_texts(sync_events) == ["ok:x"]
     assert _normalize_events(async_result.events) == _normalize_events(sync_events)
+
+
+@pytest.mark.asyncio
+async def test_async_engine_reruns_before_iteration_with_resumed_tool_results(
+    base_request: ResolvedChatRequest,
+) -> None:
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(tools=[_server_tool("echo")])
+    recorder = _RecordingRequestInterceptor(observations=[])
+
+    await _run_async_engine(
+        request,
+        get_mock_function_calling_llm(
+            [
+                [
+                    ToolSelection(
+                        tool_id="tool_1",
+                        tool_name="echo",
+                        tool_kwargs={"value": "x"},
+                    )
+                ],
+                ["done"],
+            ]
+        ),
+        tool_scheduler=_FakeAsyncToolScheduler(),
+        request_interceptors=[recorder],
+    )
+
+    before_iteration_roles = [
+        roles
+        for phase, roles in recorder.observations
+        if phase == InterceptorPhase.BEFORE_ITERATION
+    ]
+
+    assert before_iteration_roles == [
+        [MessageRole.USER],
+        [MessageRole.USER, MessageRole.ASSISTANT, MessageRole.TOOL],
+    ]
+
+
+@pytest.mark.asyncio
+async def test_async_engine_rebuilds_runtime_before_condensation_after_tool_resume(
+    base_request: ResolvedChatRequest,
+) -> None:
+    request = base_request.model_copy(deep=True)
+    request.system.model = "model-a"
+    request.tool_config = ResolvedToolConfig(tools=[_server_tool("echo")])
+    mock_llm = get_mock_function_calling_llm(
+        [
+            [
+                ToolSelection(
+                    tool_id="tool_1",
+                    tool_name="echo",
+                    tool_kwargs={"value": "x"},
+                )
+            ],
+            ["done"],
+        ]
+    )
+    llm_component = _make_llm_component(mock_llm)
+    llm_component.get_tokenizer.return_value = lambda text: list(text)
+    runtime_interceptor = RuntimeModelRequestInterceptor(llm_component)
+    condensation_observer = _RuntimeRecordingInterceptor(observations=[])
+
+    await _run_async_engine(
+        request,
+        mock_llm,
+        tool_scheduler=_FakeAsyncToolScheduler(),
+        request_interceptors=[runtime_interceptor, condensation_observer],
+        llm_component=llm_component,
+    )
+
+    before_iteration = [
+        observation
+        for observation in condensation_observer.observations
+        if observation.phase == InterceptorPhase.BEFORE_ITERATION
+    ]
+
+    assert len(before_iteration) == 2
+    assert all(observation.model_id == "model-a" for observation in before_iteration)
+    assert all(
+        observation.effective_token_limit is not None
+        for observation in before_iteration
+    )
+    assert all(observation.has_tokenizer for observation in before_iteration)
+    assert llm_component.get_tokenizer.call_count == 3
 
 
 @pytest.mark.asyncio
