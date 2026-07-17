@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from celery.result import AsyncResult
+if TYPE_CHECKING:
+    from celery.result import AsyncResult
 
 
 def dispatch_task(
