@@ -207,7 +207,19 @@ class ResumableChatRunner:
     async def callback(
         self, *, execution_id: str, tool_id: str, result: dict[str, Any]
     ) -> None:
+        checkpoint = await self._state.load(execution_id)
         await self._state.record_result(execution_id, tool_id, result)
+        recorded_results = await self._state.get_results(execution_id)
+        if (
+            checkpoint is not None
+            and tool_id in checkpoint.checkpoint_payload.pending_async_tools
+            and tool_id in recorded_results
+        ):
+            await self._scheduler.cancel_tool_timeout(
+                execution_id=execution_id,
+                checkpoint_id=checkpoint.checkpoint_id,
+                tool_id=tool_id,
+            )
         await self._resume_if_ready(execution_id)
 
     async def _handle_state(

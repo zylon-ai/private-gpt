@@ -41,6 +41,15 @@ class ChatExecutionScheduler(ABC):
     ) -> None: ...
 
     @abstractmethod
+    async def cancel_tool_timeout(
+        self,
+        *,
+        execution_id: str,
+        checkpoint_id: str,
+        tool_id: str,
+    ) -> bool: ...
+
+    @abstractmethod
     async def cancel(
         self,
         execution_id: str,
@@ -146,6 +155,22 @@ class LocalChatExecutionScheduler(ChatExecutionScheduler):
 
         self._schedule(_timeout(), name=f"chat_tool_timeout_{execution_id}_{tool_id}")
 
+    async def cancel_tool_timeout(
+        self,
+        *,
+        execution_id: str,
+        checkpoint_id: str,
+        tool_id: str,
+    ) -> bool:
+        del checkpoint_id
+        task_name = f"chat_tool_timeout_{execution_id}_{tool_id}"
+        cancelled = False
+        for task in asyncio.all_tasks():
+            if task.get_name() == task_name and not task.done():
+                task.cancel()
+                cancelled = True
+        return cancelled
+
     async def cancel(
         self,
         execution_id: str,
@@ -221,6 +246,21 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
             tool_name=tool_name,
             task_id=task_id,
             delay_seconds=delay_seconds,
+        )
+
+    async def cancel_tool_timeout(
+        self,
+        *,
+        execution_id: str,
+        checkpoint_id: str,
+        tool_id: str,
+    ) -> bool:
+        from private_gpt.arq.tasks.chat.resume import abort_tool_timeout_job
+
+        return await abort_tool_timeout_job(
+            correlation_id=execution_id,
+            checkpoint_id=checkpoint_id,
+            tool_id=tool_id,
         )
 
     async def cancel(

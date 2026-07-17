@@ -2,7 +2,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from private_gpt.arq.enqueue import enqueue_job
+from private_gpt.arq.enqueue import abort_job, enqueue_job
 from private_gpt.arq.tasks import arq_task
 from private_gpt.arq.tasks.chat.settings import (
     RESUME_ITERATION_TASK_NAME,
@@ -68,6 +68,22 @@ async def enqueue_tool_timeout_job(
         correlation_id=correlation_id,
         defer_seconds=delay_seconds,
     )
+
+
+async def abort_tool_timeout_job(
+    *, correlation_id: str, checkpoint_id: str, tool_id: str
+) -> bool:
+    job_id = f"{correlation_id}:tool-timeout:{checkpoint_id}:{tool_id}"
+    logger.debug(
+        "Aborting obsolete tool timeout correlation_id=%s message_id=%s "
+        "checkpoint_id=%s tool_id=%s job_id=%s",
+        correlation_id,
+        correlation_id,
+        checkpoint_id,
+        tool_id,
+        job_id,
+    )
+    return await abort_job(job_id=job_id, queue_name=get_queue_name(settings()))
 
 
 async def enqueue_tool_resume_job(
