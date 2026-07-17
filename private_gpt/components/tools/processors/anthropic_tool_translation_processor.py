@@ -30,9 +30,9 @@ class AnthropicToolTranslationProcessor(ToolProcessor):
     - Server tools with a known translation (web_search_*, web_fetch_*,
       code_execution_*): replaced with an unresolved internal ToolSpec so
       downstream processors resolve them.
-    - Client tools (bash_*, text_editor_*, computer_*, memory_*): replaced
-      with a pass-through ToolSpec (type=None) carrying the canonical
-      description and input_schema. The API caller executes these tools.
+    - Client tools (bash_*, text_editor_*, computer_*, memory_*): enriched
+      once with the canonical description and input_schema while preserving
+      their Anthropic type. The API caller executes these tools.
     - Unknown date-suffix types: discarded with a warning.
     """
 
@@ -59,6 +59,8 @@ class AnthropicToolTranslationProcessor(ToolProcessor):
                     description=tool.description or client_spec.description,
                     input_schema=tool.input_schema or client_spec.input_schema,
                 )
+                if pass_through == tool:
+                    continue
                 _replace_tool(request, tool, [pass_through])
                 return True
 
