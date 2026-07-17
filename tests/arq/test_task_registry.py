@@ -15,6 +15,6 @@ def test_chat_package_discovers_only_chat_tasks() -> None:
     } == {
         "private_gpt.chat.resume_iteration",
         "private_gpt.chat.start",
-        "private_gpt.chat.timeout",
         "private_gpt.tool.resume",
+        "private_gpt.tool.timeout",
     }

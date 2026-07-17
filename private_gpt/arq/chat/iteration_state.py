@@ -57,12 +57,36 @@ class RedisChatCheckpointStore(ChatCheckpointStore):
         return ChatCheckpoint.model_validate_json(data) if data else None
 
     async def record_result(
-        self, execution_id: str, tool_id: str, result: dict[str, Any]
+        self,
+        execution_id: str,
+        tool_id: str,
+        result: dict[str, Any],
+        *,
+        allow_claimed: bool = False,
     ) -> dict[str, ToolExecutionResponse] | None:
-        checkpoint = await self.load(execution_id)
         results_key = self._results_key(execution_id)
-        await cast(Any, self._redis.hset(results_key, tool_id, json.dumps(result)))
-        await cast(Any, self._redis.expire(results_key, self._ttl))
+        recorded = await self._redis.eval(
+            """
+            if ARGV[4] == '0' and redis.call('exists', KEYS[1]) == 1 then
+                return 0
+            end
+            if redis.call('hsetnx', KEYS[2], ARGV[1], ARGV[2]) == 0 then
+                return 0
+            end
+            redis.call('expire', KEYS[2], ARGV[3])
+            return 1
+            """,
+            2,
+            self._resumed_key(execution_id),
+            results_key,
+            tool_id,
+            json.dumps(result),
+            self._ttl,
+            "1" if allow_claimed else "0",
+        )
+        if not recorded:
+            return None
+        checkpoint = await self.load(execution_id)
         if checkpoint is None:
             return None
         expected = set(checkpoint.checkpoint_payload.pending_async_tools)
@@ -88,6 +112,9 @@ class RedisChatCheckpointStore(ChatCheckpointStore):
                 self._resumed_key(execution_id), "1", ex=self._ttl, nx=True
             )
         )
+
+    async def release_resume(self, execution_id: str) -> None:
+        await self._redis.delete(self._resumed_key(execution_id))
 
     async def cleanup(self, execution_id: str) -> None:
         await self._redis.delete(

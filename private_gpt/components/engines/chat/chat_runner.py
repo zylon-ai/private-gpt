@@ -46,8 +46,6 @@ class ChatRunner(Protocol):
         result: dict[str, Any],
     ) -> None: ...
 
-    async def timeout(self, *, execution_id: str, checkpoint_id: str) -> None: ...
-
 
 @singleton
 class ChatRunnerFactory:

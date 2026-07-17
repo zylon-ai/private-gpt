@@ -5,13 +5,16 @@ from typing import Any
 from private_gpt.arq.enqueue import enqueue_job
 from private_gpt.arq.tasks import arq_task
 from private_gpt.arq.tasks.chat.settings import (
-    CHAT_TIMEOUT_TASK_NAME,
     RESUME_ITERATION_TASK_NAME,
     TOOL_RESUME_TASK_NAME,
+    TOOL_TIMEOUT_TASK_NAME,
     get_queue_name,
 )
 from private_gpt.components.engines.chat.async_chat_engine import AsyncChatEngine
+from private_gpt.components.tools.remote_execution import ToolExecutionResponse
+from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
 from private_gpt.di import get_global_injector
+from private_gpt.events.models import TextBlock
 from private_gpt.server.chat.chat_service import ChatService
 from private_gpt.settings.settings import settings
 
@@ -20,44 +23,47 @@ logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
 
 
 async def enqueue_resume_iteration_job(
-    *, correlation_id: str, job_id: str | None = None
+    *, correlation_id: str, job_id: str
 ) -> None:
-    resolved_job_id = job_id or f"{correlation_id}:resume"
     logger.debug(
         "Dispatching chat resume correlation_id=%s message_id=%s job_id=%s",
         correlation_id,
         correlation_id,
-        resolved_job_id,
+        job_id,
     )
     await enqueue_job(
         task_name=RESUME_ITERATION_TASK_NAME,
         queue_name=get_queue_name(settings()),
         args=(correlation_id,),
-        job_id=resolved_job_id,
+        job_id=job_id,
         correlation_id=correlation_id,
     )
 
 
-async def enqueue_chat_timeout_job(
+async def enqueue_tool_timeout_job(
     *,
     correlation_id: str,
     checkpoint_id: str,
+    tool_id: str,
+    tool_name: str,
+    task_id: str,
     delay_seconds: int,
-    job_id: str,
 ) -> None:
+    job_id = f"{correlation_id}:tool-timeout:{checkpoint_id}:{tool_id}"
     logger.debug(
-        "Dispatching chat timeout correlation_id=%s message_id=%s "
-        "checkpoint_id=%s job_id=%s delay_seconds=%s",
+        "Dispatching tool timeout correlation_id=%s message_id=%s "
+        "checkpoint_id=%s tool_id=%s job_id=%s delay_seconds=%s",
         correlation_id,
         correlation_id,
         checkpoint_id,
+        tool_id,
         job_id,
         delay_seconds,
     )
     await enqueue_job(
-        task_name=CHAT_TIMEOUT_TASK_NAME,
+        task_name=TOOL_TIMEOUT_TASK_NAME,
         queue_name=get_queue_name(settings()),
-        args=(correlation_id, checkpoint_id),
+        args=(correlation_id, tool_id, tool_name, task_id, delay_seconds),
         job_id=job_id,
         correlation_id=correlation_id,
         defer_seconds=delay_seconds,
@@ -66,18 +72,48 @@ async def enqueue_chat_timeout_job(
 
 async def enqueue_tool_resume_job(
     *, correlation_id: str, tool_id: str, result: dict[str, Any]
-) -> None:
+) -> bool:
+    job_id = f"{correlation_id}:tool-result:{tool_id}"
     logger.debug(
-        "Dispatching tool callback correlation_id=%s message_id=%s tool_id=%s",
+        "Dispatching tool callback correlation_id=%s message_id=%s tool_id=%s "
+        "job_id=%s",
         correlation_id,
         correlation_id,
         tool_id,
+        job_id,
     )
-    await enqueue_job(
+    return await enqueue_job(
         task_name=TOOL_RESUME_TASK_NAME,
         queue_name=get_queue_name(settings()),
         args=(correlation_id, tool_id, result),
+        job_id=job_id,
         correlation_id=correlation_id,
+    )
+
+
+def _timeout_response(
+    *, tool_id: str, tool_name: str, delay_seconds: int
+) -> ToolExecutionResponse:
+    from llama_index.core.base.llms.types import ChatMessage
+
+    message = (
+        f"Tool execution timed out after {delay_seconds} seconds and was cancelled "
+        "before returning a result."
+    )
+    return ToolExecutionResponse(
+        tool_name=tool_name,
+        tool_id=tool_id,
+        result_content=[TextBlock(text=message)],
+        is_error=True,
+        tool_message=ChatMessage(
+            role="tool",
+            content=message,
+            additional_kwargs={
+                "tool_call_id": tool_id,
+                "tool_call_name": tool_name,
+                "raw_output": message,
+            },
+        ),
     )
 
 
@@ -118,18 +154,29 @@ async def resume_iteration_job(ctx: dict[Any, Any], correlation_id: str) -> None
     )
 
 
-@arq_task(name=CHAT_TIMEOUT_TASK_NAME)
-async def timeout_chat_job(
-    ctx: dict[Any, Any], correlation_id: str, checkpoint_id: str
+@arq_task(name=TOOL_TIMEOUT_TASK_NAME)
+async def timeout_tool_job(
+    ctx: dict[Any, Any],
+    correlation_id: str,
+    tool_id: str,
+    tool_name: str,
+    task_id: str,
+    delay_seconds: int,
 ) -> None:
-    await _run_logged(
-        ctx,
-        action="timeout",
-        correlation_id=correlation_id,
-        operation=lambda: _engine(ctx).execute_timeout(
-            execution_id=correlation_id, checkpoint_id=checkpoint_id
-        ),
+    del ctx
+    response = _timeout_response(
+        tool_id=tool_id,
+        tool_name=tool_name,
+        delay_seconds=delay_seconds,
     )
+    accepted = await enqueue_tool_resume_job(
+        correlation_id=correlation_id,
+        tool_id=tool_id,
+        result=response.model_dump(mode="json"),
+    )
+    if accepted:
+        injector = get_global_injector(allow_to_generate_new_injectors=True)
+        await injector.get(ToolSchedulerFactory).get().cancel_task(task_id)
 
 
 async def _run_logged(

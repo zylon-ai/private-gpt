@@ -21,7 +21,7 @@ class ChatExecutionScheduler(ABC):
     ) -> None: ...
 
     @abstractmethod
-    async def resume(self, *, execution_id: str) -> None: ...
+    async def resume(self, *, execution_id: str, checkpoint_id: str) -> None: ...
 
     @abstractmethod
     async def callback(
@@ -29,12 +29,25 @@ class ChatExecutionScheduler(ABC):
     ) -> None: ...
 
     @abstractmethod
-    async def timeout(
-        self, *, execution_id: str, checkpoint_id: str, delay_seconds: int
+    async def tool_timeout(
+        self,
+        *,
+        execution_id: str,
+        checkpoint_id: str,
+        tool_id: str,
+        tool_name: str,
+        task_id: str,
+        delay_seconds: int,
     ) -> None: ...
 
     @abstractmethod
-    async def cancel(self, execution_id: str) -> bool: ...
+    async def cancel(
+        self,
+        execution_id: str,
+        *,
+        checkpoint_id: str | None = None,
+        tool_ids: tuple[str, ...] = (),
+    ) -> bool: ...
 
 
 @singleton
@@ -69,7 +82,8 @@ class LocalChatExecutionScheduler(ChatExecutionScheduler):
             name=f"chat_{execution_id}",
         )
 
-    async def resume(self, *, execution_id: str) -> None:
+    async def resume(self, *, execution_id: str, checkpoint_id: str) -> None:
+        del checkpoint_id
         from private_gpt.di import get_global_injector
         from private_gpt.server.chat.chat_service import ChatService
 
@@ -93,22 +107,48 @@ class LocalChatExecutionScheduler(ChatExecutionScheduler):
             result=result,
         )
 
-    async def timeout(
-        self, *, execution_id: str, checkpoint_id: str, delay_seconds: int
+    async def tool_timeout(
+        self,
+        *,
+        execution_id: str,
+        checkpoint_id: str,
+        tool_id: str,
+        tool_name: str,
+        task_id: str,
+        delay_seconds: int,
     ) -> None:
+        del checkpoint_id
+        from private_gpt.arq.tasks.chat.resume import _timeout_response
+        from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
         from private_gpt.di import get_global_injector
         from private_gpt.server.chat.chat_service import ChatService
 
         async def _timeout() -> None:
             await asyncio.sleep(delay_seconds)
+            await get_global_injector().get(ToolSchedulerFactory).get().cancel_task(
+                task_id
+            )
             engine = get_global_injector().get(ChatService).build_async_engine()
-            await engine.execute_timeout(
-                execution_id=execution_id, checkpoint_id=checkpoint_id
+            await engine.record_callback(
+                execution_id=execution_id,
+                tool_id=tool_id,
+                result=_timeout_response(
+                    tool_id=tool_id,
+                    tool_name=tool_name,
+                    delay_seconds=delay_seconds,
+                ).model_dump(mode="json"),
             )
 
-        self._schedule(_timeout(), name=f"chat_timeout_{execution_id}_{checkpoint_id}")
+        self._schedule(_timeout(), name=f"chat_tool_timeout_{execution_id}_{tool_id}")
 
-    async def cancel(self, execution_id: str) -> bool:
+    async def cancel(
+        self,
+        execution_id: str,
+        *,
+        checkpoint_id: str | None = None,
+        tool_ids: tuple[str, ...] = (),
+    ) -> bool:
+        del checkpoint_id, tool_ids
         cancelled = False
         for task in asyncio.all_tasks():
             if task.get_name().startswith(f"chat_{execution_id}"):
@@ -137,12 +177,12 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
             job_id=f"{execution_id}:start",
         )
 
-    async def resume(self, *, execution_id: str) -> None:
+    async def resume(self, *, execution_id: str, checkpoint_id: str) -> None:
         from private_gpt.arq.tasks.chat.resume import enqueue_resume_iteration_job
 
         await enqueue_resume_iteration_job(
             correlation_id=execution_id,
-            job_id=f"{execution_id}:resume",
+            job_id=f"{execution_id}:resume:{checkpoint_id}",
         )
 
     async def callback(
@@ -156,22 +196,41 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
             result=result,
         )
 
-    async def timeout(
-        self, *, execution_id: str, checkpoint_id: str, delay_seconds: int
+    async def tool_timeout(
+        self,
+        *,
+        execution_id: str,
+        checkpoint_id: str,
+        tool_id: str,
+        tool_name: str,
+        task_id: str,
+        delay_seconds: int,
     ) -> None:
-        from private_gpt.arq.tasks.chat.resume import enqueue_chat_timeout_job
+        from private_gpt.arq.tasks.chat.resume import enqueue_tool_timeout_job
 
-        await enqueue_chat_timeout_job(
+        await enqueue_tool_timeout_job(
             correlation_id=execution_id,
             checkpoint_id=checkpoint_id,
+            tool_id=tool_id,
+            tool_name=tool_name,
+            task_id=task_id,
             delay_seconds=delay_seconds,
-            job_id=f"{execution_id}:timeout:{checkpoint_id}",
         )
 
-    async def cancel(self, execution_id: str) -> bool:
+    async def cancel(
+        self,
+        execution_id: str,
+        *,
+        checkpoint_id: str | None = None,
+        tool_ids: tuple[str, ...] = (),
+    ) -> bool:
         from private_gpt.arq.tasks.chat import abort_chat_job
 
-        return await abort_chat_job(correlation_id=execution_id)
+        return await abort_chat_job(
+            correlation_id=execution_id,
+            checkpoint_id=checkpoint_id,
+            tool_ids=tool_ids,
+        )
 
 
 @singleton

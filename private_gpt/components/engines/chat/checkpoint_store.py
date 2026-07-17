@@ -40,7 +40,12 @@ class ChatCheckpointStore(ABC):
 
     @abstractmethod
     async def record_result(
-        self, execution_id: str, tool_id: str, result: dict[str, Any]
+        self,
+        execution_id: str,
+        tool_id: str,
+        result: dict[str, Any],
+        *,
+        allow_claimed: bool = False,
     ) -> dict[str, ToolExecutionResponse] | None: ...
 
     @abstractmethod
@@ -50,6 +55,9 @@ class ChatCheckpointStore(ABC):
 
     @abstractmethod
     async def claim_resume(self, execution_id: str) -> bool: ...
+
+    @abstractmethod
+    async def release_resume(self, execution_id: str) -> None: ...
 
     @abstractmethod
     async def cleanup(self, execution_id: str) -> None: ...
@@ -75,17 +83,25 @@ class InMemoryChatCheckpointStore(ChatCheckpointStore):
             return self._checkpoints.get(execution_id)
 
     async def record_result(
-        self, execution_id: str, tool_id: str, result: dict[str, Any]
+        self,
+        execution_id: str,
+        tool_id: str,
+        result: dict[str, Any],
+        *,
+        allow_claimed: bool = False,
     ) -> dict[str, ToolExecutionResponse] | None:
         async with self._lock:
+            if execution_id in self._resumed and not allow_claimed:
+                return None
             checkpoint = self._checkpoints.get(execution_id)
+            results = self._results.setdefault(execution_id, {})
+            if tool_id in results:
+                return None
             if checkpoint is None:
-                results = self._results.setdefault(execution_id, {})
                 results[tool_id] = ToolExecutionResponse.model_validate(result)
                 return None
             if tool_id not in checkpoint.checkpoint_payload.pending_async_tools:
                 return None
-            results = self._results.setdefault(execution_id, {})
             results[tool_id] = ToolExecutionResponse.model_validate(result)
             expected = set(checkpoint.checkpoint_payload.pending_async_tools)
             return dict(results) if expected.issubset(results) else None
@@ -100,6 +116,10 @@ class InMemoryChatCheckpointStore(ChatCheckpointStore):
                 return False
             self._resumed.add(execution_id)
             return True
+
+    async def release_resume(self, execution_id: str) -> None:
+        async with self._lock:
+            self._resumed.discard(execution_id)
 
     async def cleanup(self, execution_id: str) -> None:
         async with self._lock:

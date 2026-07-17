@@ -108,12 +108,23 @@ class ResumableChatRunner:
             *(
                 self._tool_scheduler.cancel_task(task_id=task_id)
                 for task_id in tool_task_ids
-            )
+            ),
+            return_exceptions=True,
         )
-        chat_cancelled = await self._scheduler.cancel(execution_id)
-        await self._state.cleanup(execution_id)
-        await self._events.finish(execution_id)
-        return chat_cancelled or any(tool_cancellations)
+        try:
+            chat_cancelled = await self._scheduler.cancel(
+                execution_id,
+                checkpoint_id=checkpoint.checkpoint_id if checkpoint else None,
+                tool_ids=(
+                    tuple(checkpoint.checkpoint_payload.pending_async_tools)
+                    if checkpoint
+                    else ()
+                ),
+            )
+        finally:
+            await self._state.cleanup(execution_id)
+            await self._events.finish(execution_id)
+        return chat_cancelled or any(result is True for result in tool_cancellations)
 
     async def start(
         self,
@@ -186,23 +197,8 @@ class ResumableChatRunner:
     async def callback(
         self, *, execution_id: str, tool_id: str, result: dict[str, Any]
     ) -> None:
-        ready = await self._state.record_result(execution_id, tool_id, result)
-        if ready is None:
-            return
+        await self._state.record_result(execution_id, tool_id, result)
         await self._resume_if_ready(execution_id)
-
-    async def timeout(self, *, execution_id: str, checkpoint_id: str) -> None:
-        saved = await self._state.load(execution_id)
-        if saved is None or saved.checkpoint_id != checkpoint_id:
-            return
-        if not await self._state.claim_resume(execution_id):
-            return
-        await self._fail(
-            execution_id,
-            TimeoutError(
-                f"Chat callback timed out after {self._settings.scheduler.chat.callback_timeout_seconds} seconds"
-            ),
-        )
 
     async def _handle_state(
         self,
@@ -234,12 +230,22 @@ class ResumableChatRunner:
                 deadline=datetime.now(UTC) + timedelta(seconds=timeout_seconds),
             )
         )
-        await self._resume_if_ready(execution_id)
-        await self._scheduler.timeout(
-            execution_id=execution_id,
-            checkpoint_id=checkpoint_id,
-            delay_seconds=timeout_seconds,
+        checkpoint = await self._state.load(execution_id)
+        assert checkpoint is not None
+        await asyncio.gather(
+            *(
+                self._scheduler.tool_timeout(
+                    execution_id=execution_id,
+                    checkpoint_id=checkpoint_id,
+                    tool_id=tool_id,
+                    tool_name=self._tool_name(checkpoint, tool_id),
+                    task_id=task_id,
+                    delay_seconds=timeout_seconds,
+                )
+                for tool_id, task_id in checkpoint.checkpoint_payload.pending_async_tools.items()
+            )
         )
+        await self._resume_if_ready(execution_id)
 
     async def _resume_if_ready(self, execution_id: str) -> None:
         checkpoint = await self._state.load(execution_id)
@@ -250,7 +256,14 @@ class ResumableChatRunner:
         if not expected or not expected.issubset(results):
             return
         if await self._state.claim_resume(execution_id):
-            await self._scheduler.resume(execution_id=execution_id)
+            try:
+                await self._scheduler.resume(
+                    execution_id=execution_id,
+                    checkpoint_id=checkpoint.checkpoint_id,
+                )
+            except Exception:
+                await self._state.release_resume(execution_id)
+                raise
 
     async def _fail(
         self,
@@ -277,6 +290,23 @@ class ResumableChatRunner:
             for tool_id in checkpoint.checkpoint_payload.pending_async_tools
             if tool_id in results
         ]
+
+    @staticmethod
+    def _tool_name(checkpoint: ChatCheckpoint, tool_id: str) -> str:
+        request = ResumableChatRunner._request(checkpoint.request_data)
+        for message in reversed(request.messages):
+            tool_calls = message.additional_kwargs.get("tool_calls", [])
+            if not isinstance(tool_calls, list):
+                continue
+            for tool_call in tool_calls:
+                selection = (
+                    tool_call
+                    if isinstance(tool_call, ToolSelection)
+                    else ToolSelection.model_validate(tool_call)
+                )
+                if selection.tool_id == tool_id:
+                    return selection.tool_name or "unknown"
+        return "unknown"
 
     @staticmethod
     def _request(request_data: dict[str, Any]) -> ResolvedChatRequest:

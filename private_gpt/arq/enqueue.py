@@ -36,7 +36,7 @@ async def enqueue_job(
     correlation_id: str,
     job_id: str | None = None,
     defer_seconds: int | None = None,
-) -> None:
+) -> bool:
     current_settings = _settings()
     _log_dispatch(
         task_name=task_name,
@@ -52,7 +52,7 @@ async def enqueue_job(
             options["_job_id"] = job_id
         if defer_seconds is not None:
             options["_defer_by"] = defer_seconds
-        await redis.enqueue_job(task_name, *args, **options)
+        return await redis.enqueue_job(task_name, *args, **options) is not None
     finally:
         await redis.aclose()
 

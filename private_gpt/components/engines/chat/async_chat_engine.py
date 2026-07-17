@@ -487,13 +487,6 @@ class AsyncChatEngine:
             result=result,
         )
 
-    async def execute_timeout(self, *, execution_id: str, checkpoint_id: str) -> None:
-        runner = self._require_runner()
-        await runner.timeout(
-            execution_id=execution_id,
-            checkpoint_id=checkpoint_id,
-        )
-
     async def validate(self, request: ResolvedChatRequest) -> None:
         await self.run_interceptor_phase(
             run=self.initialize_run(request),
