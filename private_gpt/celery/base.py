@@ -18,6 +18,8 @@ from private_gpt.celery.config import celery_settings
 from private_gpt.di import (
     clean_global_injector,
     create_application_injector,
+    create_loop_injector,
+    discard_inherited_injectors,
     get_global_injector,
     set_global_injector,
 )
@@ -322,6 +324,16 @@ class StatefulBackgroundTask(_BackgroundTask):
     _warmed = False
 
     @classmethod
+    def reset_after_fork(cls) -> None:
+        """Discard runtime state inherited from the parent process."""
+        inherited_loop = cls._loop
+        cls._loop = None
+        cls._thread = None
+        cls._lock = threading.RLock()
+        cls._warmed = False
+        discard_inherited_injectors(inherited_loop)
+
+    @classmethod
     def _ensure_runtime(cls) -> asyncio.AbstractEventLoop:
         with cls._lock:
             if cls._loop is not None and cls._thread is not None:
@@ -356,7 +368,7 @@ class StatefulBackgroundTask(_BackgroundTask):
     async def _warm_async(cls) -> None:
         from private_gpt.eager_loading import warm
 
-        injector = get_global_injector(allow_to_generate_new_injectors=True)
+        injector = create_loop_injector()
         profile = os.environ.get("PGPT_WORKER_WARM_PROFILE", "").strip()
         if not profile:
             raise ValueError(
@@ -384,7 +396,7 @@ class StatefulBackgroundTask(_BackgroundTask):
         if run_method is None:
             raise NotImplementedError("Subclass must implement 'run' method")
 
-        get_global_injector(allow_to_generate_new_injectors=True)
+        get_global_injector(allow_to_generate_new_injectors=False)
 
         if asyncio.iscoroutinefunction(run_method):
             result = await run_method(*args, **kwargs)

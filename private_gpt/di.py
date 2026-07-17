@@ -36,6 +36,28 @@ def create_application_injector() -> Injector:
     return _injector
 
 
+def create_loop_injector() -> Injector:
+    """Create and attach a fresh injector to the current running loop."""
+    loop = asyncio.get_running_loop()
+    injector = create_application_injector()
+    with _loop_injector_lock:
+        setattr(loop, _INJECTOR_KEY, injector)
+    return injector
+
+
+def discard_inherited_injectors(loop: AbstractEventLoop | None = None) -> None:
+    """Drop injector references copied by fork without closing their resources."""
+    global _global_injector
+
+    with _global_injector_lock:
+        _global_injector = None
+
+    if loop is not None:
+        with _loop_injector_lock:
+            if hasattr(loop, _INJECTOR_KEY):
+                delattr(loop, _INJECTOR_KEY)
+
+
 def get_injector(
     allow_to_generate_new_injectors: bool = _ALLOWED_CREATION_NEW_INJECTORS,
 ) -> Injector:

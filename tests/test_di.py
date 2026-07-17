@@ -8,6 +8,7 @@ from private_gpt.components.vector_store.vector_store_component import (
 )
 from private_gpt.di import (
     clean_global_injector,
+    create_loop_injector,
     get_global_injector,
     get_injector,
 )
@@ -166,3 +167,14 @@ def test_clean_global_injector() -> None:
         assert new_injector == old_global_injector
 
     loop.run_until_complete(run_in_loop())
+
+
+def test_create_loop_injector_does_not_reuse_global_injector() -> None:
+    global_injector = get_global_injector()
+
+    async def create_fresh_injector() -> None:
+        loop_injector = create_loop_injector()
+        assert loop_injector is not global_injector
+        assert get_injector(allow_to_generate_new_injectors=False) is loop_injector
+
+    asyncio.run(create_fresh_injector())

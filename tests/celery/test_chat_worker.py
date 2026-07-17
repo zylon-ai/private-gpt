@@ -14,7 +14,14 @@ def test_stateful_task_reuses_one_event_loop() -> None:
         @classmethod
         def warm_up(cls) -> None:
             cls._ensure_runtime()
+            cls.run_coroutine(cls._create_test_injector())
             cls._warmed = True
+
+        @classmethod
+        async def _create_test_injector(cls) -> None:
+            from private_gpt.di import create_loop_injector
+
+            create_loop_injector()
 
         async def run(self, *args: Any, **kwargs: Any) -> int:
             return id(asyncio.get_running_loop())
@@ -38,7 +45,7 @@ async def test_stateful_worker_uses_explicit_warm_profile(
     monkeypatch.setenv("PGPT_STATEFUL_WORKER_TYPE", "stateful-type")
     monkeypatch.setenv("PGPT_WORKER_WARM_PROFILE", "tools")
     monkeypatch.setattr(
-        "private_gpt.celery.base.get_global_injector",
+        "private_gpt.celery.base.create_loop_injector",
         Mock(return_value=injector),
     )
     monkeypatch.setattr("private_gpt.eager_loading.warm", warm)
@@ -46,6 +53,28 @@ async def test_stateful_worker_uses_explicit_warm_profile(
     await StatefulBackgroundTask._warm_async()
 
     warm.assert_called_once_with(injector, profile="tools")
+
+
+def test_stateful_worker_discards_inherited_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inherited_loop = Mock()
+    inherited_thread = Mock()
+    discard_inherited_injectors = Mock()
+    monkeypatch.setattr(
+        "private_gpt.celery.base.discard_inherited_injectors",
+        discard_inherited_injectors,
+    )
+    StatefulBackgroundTask._loop = inherited_loop
+    StatefulBackgroundTask._thread = inherited_thread
+    StatefulBackgroundTask._warmed = True
+
+    StatefulBackgroundTask.reset_after_fork()
+
+    assert StatefulBackgroundTask._loop is None
+    assert StatefulBackgroundTask._thread is None
+    assert StatefulBackgroundTask._warmed is False
+    discard_inherited_injectors.assert_called_once_with(inherited_loop)
 
 
 async def test_stateful_worker_requires_explicit_warm_profile(
