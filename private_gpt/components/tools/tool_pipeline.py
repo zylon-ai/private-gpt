@@ -74,8 +74,7 @@ class ToolPipeline:
         self, request: ResolvedChatRequest
     ) -> ResolvedChatRequest:
         request_copy = request.model_copy(deep=True)
-        while await self._intercept_once(request_copy):
-            pass
+        await self._intercept_once(request_copy)
         return request_copy
 
     async def _intercept_once(self, request: ResolvedChatRequest) -> bool:
