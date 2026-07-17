@@ -21,5 +21,8 @@ class VectorStoreFactory(ABC):
         self.settings = settings
         self.embed_dim = embed_dim
 
+    def warm_up(self) -> None:
+        return None
+
     @abstractmethod
     def vector_store(self, collection: str) -> BasePydanticVectorStore: ...
