@@ -6,8 +6,6 @@ import json
 import logging
 from typing import Any
 
-from celery import current_task
-
 from private_gpt.celery.base import StatefulBackgroundTask
 from private_gpt.celery.celery import celery_app
 from private_gpt.components.engines.chat.checkpoint_store import (
@@ -39,22 +37,17 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
     try:
         request = ToolExecutionRequest.model_validate(request_data)
     except Exception:
-        logger.exception(
-            "Invalid tool execution request task_id=%s",
-            current_task.request.id,
-        )
+        logger.exception("Invalid tool execution request")
         raise
 
     correlation_id = request.context.get("correlation_id")
     message_id = request.context.get("message_id") or correlation_id
-    task_id = current_task.request.id
     if not await _claim_tool_execution(request):
         logger.warning(
             "Duplicate tool execution suppressed correlation_id=%s message_id=%s "
-            "task_id=%s tool_id=%s tool_name=%s",
+            "tool_id=%s tool_name=%s",
             correlation_id,
             message_id,
-            task_id,
             request.tool_id,
             request.tool_name,
         )
@@ -88,10 +81,9 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
     else:
         logger.debug(
             "Tool execution completed correlation_id=%s "
-            "message_id=%s task_id=%s tool_id=%s tool_name=%s is_error=%s",
+            "message_id=%s tool_id=%s tool_name=%s is_error=%s",
             correlation_id,
             message_id,
-            task_id,
             request.tool_id,
             request.tool_name,
             response.is_error,
@@ -99,10 +91,9 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
 
     logger.debug(
         "Notifying tool completion correlation_id=%s "
-        "message_id=%s task_id=%s tool_id=%s tool_name=%s is_error=%s",
+        "message_id=%s tool_id=%s tool_name=%s is_error=%s",
         correlation_id,
         message_id,
-        task_id,
         request.tool_id,
         request.tool_name,
         response.is_error,
