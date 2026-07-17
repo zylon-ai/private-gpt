@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from abc import ABC, abstractmethod
-from asyncio import to_thread
+from asyncio import CancelledError, to_thread
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -165,10 +166,14 @@ class CeleryToolScheduler(BaseToolScheduler):
             request.tool_name,
             self._settings.scheduler.tools.celery_queue,
         )
-        response_data = await to_thread(
-            result.get,
-            timeout=self._settings.scheduler.tools.callback_timeout_seconds,
-        )
+        try:
+            response_data = await to_thread(
+                result.get,
+                timeout=self._settings.scheduler.tools.callback_timeout_seconds,
+            )
+        except CancelledError:
+            await self.cancel_task(str(result.id))
+            raise
         from private_gpt.components.tools.remote_execution import ToolExecutionResponse
 
         return ToolExecutionResponse.model_validate(response_data)
@@ -182,6 +187,9 @@ class CeleryToolScheduler(BaseToolScheduler):
         return await self.cancel_task(task_id) if task_id else False
 
     async def cancel_task(self, task_id: str) -> bool:
+        return await asyncio.to_thread(self._cancel_task_sync, task_id)
+
+    def _cancel_task_sync(self, task_id: str) -> bool:
         from private_gpt.celery.celery import celery_app
 
         logger.info(

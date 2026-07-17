@@ -14,6 +14,7 @@ from private_gpt.server.ingest.model import IngestedDoc
 from private_gpt.server.utils.artifact_input import IngestableArtifactType
 from private_gpt.server.utils.auth import authenticated
 from private_gpt.server.utils.callback import BaseCallbackInput
+from private_gpt.server.utils.http_disconnect import cancel_on_http_disconnect
 
 try:
     from private_gpt.celery.celery import celery_app
@@ -409,7 +410,7 @@ class DeleteIngestedDocumentAsyncBody(BaseCallbackInput):
         ],
     },
 )
-def ingest_content(
+async def ingest_content(
     request: Request,
     body: Annotated[
         IngestBody,
@@ -434,7 +435,10 @@ def ingest_content(
     in-process or is dispatched to a worker.
     """
     scheduler = request.state.injector.get(IngestionSchedulerFactory).get()
-    result: IngestResponse = scheduler.ingest(body)
+    result: IngestResponse = await cancel_on_http_disconnect(
+        request,
+        scheduler.ingest_for_request(body),
+    )
     return result
 
 

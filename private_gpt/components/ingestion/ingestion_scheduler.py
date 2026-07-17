@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -56,6 +57,9 @@ class BaseIngestionScheduler(ABC):
 
     @abstractmethod
     def ingest(self, ingest_body: IngestBody) -> IngestResponse: ...
+
+    async def ingest_for_request(self, ingest_body: IngestBody) -> IngestResponse:
+        return await asyncio.to_thread(self.ingest, ingest_body)
 
     def ingest_async(self, ingest_body: IngestAsyncBody) -> str:
         del ingest_body
@@ -185,17 +189,14 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
             raise ValueError("Delete ingestion task did not return a valid task_id")
         return task_id
 
-    def ingest(self, ingest_body: IngestBody) -> IngestResponse:
+    def _dispatch_sync_ingest(self, ingest_body: IngestBody) -> object:
         import uuid
 
         from private_gpt.celery.dispatch import dispatch_task
         from private_gpt.celery.tasks.ingestion.extraction_tasks import (
             VECTOR_INDEX_TASK_NAME,
         )
-        from private_gpt.server.ingest.ingest_router import (
-            IngestAsyncBody,
-            IngestResponse,
-        )
+        from private_gpt.server.ingest.ingest_router import IngestAsyncBody
         from private_gpt.server.utils.artifact_input import UriArtifact
         from private_gpt.server.utils.callback import AMQP, Callback
 
@@ -242,10 +243,40 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
             args=(async_body,),
             queue=config.scheduler.ingestion.celery_queue,
         )
+        return result
+
+    def ingest(self, ingest_body: IngestBody) -> IngestResponse:
+        from private_gpt.server.ingest.ingest_router import IngestResponse
+
+        result = self._dispatch_sync_ingest(ingest_body)
         while not result.ready():
             import time
 
             time.sleep(0.1)
+        if result.failed():
+            raise result.result
+        return IngestResponse.model_validate(result.result)
+
+    async def ingest_for_request(self, ingest_body: IngestBody) -> IngestResponse:
+        from private_gpt.server.ingest.ingest_router import IngestResponse
+
+        dispatch = asyncio.create_task(
+            asyncio.to_thread(self._dispatch_sync_ingest, ingest_body)
+        )
+        result = None
+        try:
+            result = await asyncio.shield(dispatch)
+            while not result.ready():
+                await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            if result is None:
+                result = await asyncio.shield(dispatch)
+            logger.info(
+                "Cancelling Celery ingestion after HTTP disconnect task_id=%s",
+                result.task_id,
+            )
+            result.revoke(terminate=True)
+            raise
         if result.failed():
             raise result.result
         return IngestResponse.model_validate(result.result)

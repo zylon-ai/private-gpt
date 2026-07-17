@@ -14,6 +14,7 @@ from private_gpt.events.models import ResultContentBlockType
 from private_gpt.server.tools.tool_service import ToolService
 from private_gpt.server.utils.artifact_input import ArtifactType, SqlDatabaseArtifact
 from private_gpt.server.utils.auth import authenticated
+from private_gpt.server.utils.http_disconnect import cancel_on_http_disconnect
 from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
 tool_router = APIRouter(
@@ -679,12 +680,15 @@ async def _execute_tool(
 ) -> ToolResponse:
     tool_name = tool.name or tool.get_original_tool_name()
     scheduler = request.state.injector.get(ToolSchedulerFactory).get()
-    response = await scheduler.execute(
-        ToolExecutionRequest(
-            tool_id=f"api-{uuid4().hex}",
-            tool_name=tool_name,
-            tool_kwargs=tool_kwargs,
-            tool_spec=tool,
-        )
+    response = await cancel_on_http_disconnect(
+        request,
+        scheduler.execute(
+            ToolExecutionRequest(
+                tool_id=f"api-{uuid4().hex}",
+                tool_name=tool_name,
+                tool_kwargs=tool_kwargs,
+                tool_spec=tool,
+            )
+        ),
     )
     return ToolResponse(content=response.result_content, is_error=response.is_error)
