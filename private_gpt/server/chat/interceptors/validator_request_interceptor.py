@@ -24,6 +24,7 @@ from private_gpt.components.llm.llm_helper import (
     supports_images,
 )
 from private_gpt.events.event_errors import Errors
+from private_gpt.utils.tokens import async_tokenizer
 
 
 @singleton
@@ -110,7 +111,9 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
         if token_limit is None or tokenize is None:
             return
 
-        user_message_tokens = len(tokenize(user_text))
+        user_message_tokens = len(
+            await async_tokenizer(texts=user_text, tokenizer_fn=tokenize)
+        )
         if user_message_tokens > token_limit:
             raise Errors.RequestTooLarge(
                 f"The message length {user_message_tokens} exceeds the maximum token limit {token_limit}.",
@@ -141,7 +144,11 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
             if system_prompt_block
             else None
         )
-        system_tokens = len(tokenize(system_prompt)) if system_prompt else 0
+        system_tokens = (
+            len(await async_tokenizer(texts=system_prompt, tokenizer_fn=tokenize))
+            if system_prompt
+            else 0
+        )
         if system_tokens > token_limit:
             raise Errors.RequestTooLarge(
                 f"The system prompt length {system_tokens} exceeds the maximum token limit {token_limit}.",
