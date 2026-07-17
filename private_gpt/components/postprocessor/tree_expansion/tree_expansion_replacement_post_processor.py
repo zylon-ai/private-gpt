@@ -36,7 +36,6 @@ config = settings()
 debug_mode = config.server.debug_mode
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
 
 
 class ReentrantThreadPoolExecutor(ThreadPoolExecutor):

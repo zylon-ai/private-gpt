@@ -12,7 +12,6 @@ from private_gpt.settings.settings import settings
 debug_mode = settings().server.debug_mode or True
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
 
 
 @lru_cache(maxsize=1)
