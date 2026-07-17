@@ -234,6 +234,9 @@ class EventChannel(ABC):
     @abstractmethod
     def emit(self, event: Event) -> None: ...
 
+    async def flush(self) -> None:
+        return None
+
     @abstractmethod
     async def close(self) -> None: ...
 
@@ -688,6 +691,7 @@ class AsyncChatEngine:
             request, context_stack=checkpoint_context.context_stack, hooks=hooks
         )
         channel.emit(RawMessageStartEvent.from_defaults())
+        await channel.flush()
         run.state = self._snapshot(run.state, TimelinePhase.START)
         run.state = run.state.model_copy(deep=True)
         await self.run_interceptor_phase(
