@@ -31,6 +31,8 @@ def _resumable_runner(
     event_factory = MagicMock()
     event_factory.get.return_value = InMemoryEngineEventBroker()
     scheduler_factory = MagicMock()
+    if not isinstance(chat_scheduler.cancel_tool_timeout, AsyncMock):
+        chat_scheduler.cancel_tool_timeout = AsyncMock(return_value=True)
     scheduler_factory.get.return_value = chat_scheduler
     tool_scheduler_factory = MagicMock()
     tool_scheduler_factory.get.return_value = MagicMock()
@@ -267,6 +269,17 @@ async def test_runner_waits_for_all_parallel_tools_before_resuming() -> None:
         execution_id="execution-parallel",
         checkpoint_id="parallel-checkpoint",
     )
+    assert chat_scheduler.cancel_tool_timeout.await_count == 2
+    chat_scheduler.cancel_tool_timeout.assert_any_await(
+        execution_id="execution-parallel",
+        checkpoint_id="parallel-checkpoint",
+        tool_id="tool-1",
+    )
+    chat_scheduler.cancel_tool_timeout.assert_any_await(
+        execution_id="execution-parallel",
+        checkpoint_id="parallel-checkpoint",
+        tool_id="tool-2",
+    )
 
     await runner.callback(
         execution_id="execution-parallel",
@@ -274,6 +287,38 @@ async def test_runner_waits_for_all_parallel_tools_before_resuming() -> None:
         result=_tool_response("tool-2").model_dump(mode="json"),
     )
     assert chat_scheduler.resume.await_count == 1
+    assert chat_scheduler.cancel_tool_timeout.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_runner_does_not_cancel_timeout_for_unknown_tool_result() -> None:
+    checkpoint_store = InMemoryChatCheckpointStore()
+    await checkpoint_store.save(
+        ChatCheckpoint(
+            correlation_id="execution-unknown-timeout",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=0,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={"tool-expected": "job-expected"}
+            ),
+            checkpoint_id="checkpoint-current",
+        )
+    )
+    chat_scheduler = MagicMock()
+    chat_scheduler.resume = AsyncMock()
+    runner = _resumable_runner(checkpoint_store, chat_scheduler)
+
+    await runner.callback(
+        execution_id="execution-unknown-timeout",
+        tool_id="tool-unknown",
+        result=_tool_response("tool-unknown").model_dump(mode="json"),
+    )
+
+    chat_scheduler.cancel_tool_timeout.assert_not_awaited()
+    chat_scheduler.resume.assert_not_awaited()
 
 
 @pytest.mark.asyncio

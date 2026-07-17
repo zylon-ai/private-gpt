@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from private_gpt.arq.tasks.chat.resume import (
+    abort_tool_timeout_job,
     enqueue_resume_iteration_job,
     enqueue_tool_resume_job,
     enqueue_tool_timeout_job,
@@ -121,6 +122,26 @@ async def test_enqueue_tool_timeout_job_is_deferred_and_separate_from_result_job
         "search",
         "celery-task-1",
         30,
+    )
+
+
+@pytest.mark.anyio
+async def test_abort_tool_timeout_job_targets_exact_checkpoint_and_tool(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    abort_job = AsyncMock(return_value=True)
+    monkeypatch.setattr("private_gpt.arq.tasks.chat.resume.abort_job", abort_job)
+
+    cancelled = await abort_tool_timeout_job(
+        correlation_id="chat-1",
+        checkpoint_id="checkpoint-2",
+        tool_id="tool-3",
+    )
+
+    assert cancelled is True
+    abort_job.assert_awaited_once()
+    assert abort_job.await_args.kwargs["job_id"] == (
+        "chat-1:tool-timeout:checkpoint-2:tool-3"
     )
 
 
