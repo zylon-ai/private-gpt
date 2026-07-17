@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncGenerator, Generator
+from contextlib import asynccontextmanager
 from typing import Any, cast
 
 from injector import inject, singleton
@@ -25,6 +26,10 @@ from private_gpt.di import get_global_injector
 from private_gpt.settings.settings import Settings
 
 
+class ContentRequestLimitError(ValueError):
+    pass
+
+
 @singleton
 class ContentService:
     @inject
@@ -44,6 +49,16 @@ class ContentService:
         self.node_store_component = node_store_component
         self.ingest_component = ingest_component
         self.parse_component = parse_component
+        self.max_content_nodes = settings.data.max_content_nodes
+        self.max_content_artifacts = settings.data.max_content_artifacts
+        self.max_content_depth = settings.data.max_content_depth
+        self.max_content_response_bytes = settings.data.max_content_response_bytes
+        self._content_limiter = asyncio.Semaphore(settings.data.max_content_concurrency)
+
+    @asynccontextmanager
+    async def content_slot(self) -> AsyncGenerator[None]:
+        async with self._content_limiter:
+            yield
 
     async def _format_nodes(
         self,
@@ -57,7 +72,7 @@ class ContentService:
 
         prompt_builder_service = get_global_injector().get(PromptBuilderService)
 
-        async def format_result(
+        def format_result(
             n: list[NodeWithScore],
         ) -> str:
             prompt, _ = prompt_builder_service.create_context_prompt(
@@ -68,13 +83,16 @@ class ContentService:
             )
             return prompt.format() or "No content is available."
 
-        formatted_result = await format_result(nodes)
         from private_gpt.events.models import SourceBlock, TextBlock
 
-        return [
-            SourceBlock.from_nodes(nodes),
-            TextBlock(text=formatted_result),
-        ]
+        def build_blocks() -> list[Any]:
+            formatted_result = format_result(nodes)
+            return [
+                SourceBlock.from_nodes(nodes),
+                TextBlock(text=formatted_result),
+            ]
+
+        return await asyncio.to_thread(build_blocks)
 
     def _get_root_node(
         self,
@@ -114,7 +132,16 @@ class ContentService:
         include_ancestors: bool = False,
     ) -> Generator[str, None, None]:
         """Flatten tree and apply type filters."""
-        all_nodes = list(root.flatten())
+        all_nodes: list[TreeNode] = []
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            all_nodes.append(node)
+            if len(all_nodes) > self.max_content_nodes:
+                raise ContentRequestLimitError(
+                    f"Artifact exceeds the {self.max_content_nodes} node limit"
+                )
+            stack.extend(reversed(node.children))
         node_map = {node.id_: node for node in all_nodes}
 
         nodes_to_include: set[str] | None = None
@@ -129,13 +156,11 @@ class ContentService:
                     nodes_to_include.add(node_id)
 
                     if include_children:
-
-                        def add_descendants(current_node: TreeNode) -> None:
-                            for child in current_node.children:
-                                nodes_to_include.add(child.id_)
-                                add_descendants(child)
-
-                        add_descendants(node)
+                        descendants = list(reversed(node.children))
+                        while descendants:
+                            descendant = descendants.pop()
+                            nodes_to_include.add(descendant.id_)
+                            descendants.extend(reversed(descendant.children))
 
                     if include_ancestors:
                         current_node = node
@@ -173,6 +198,7 @@ class ContentService:
                     context_filter.collection,
                     [artifact],
                     context_filter.metadata_filter,
+                    limit=self.max_content_nodes + 1,
                 )
             ]
 
@@ -223,6 +249,10 @@ class ContentService:
         if not artifacts:
             artifacts = self.node_store_component.get_list_of_artifact_ids(collection)
         artifacts = list(set(artifacts))
+        if len(artifacts) > self.max_content_artifacts:
+            raise ContentRequestLimitError(
+                f"Content request exceeds the {self.max_content_artifacts} artifact limit"
+            )
 
         # If artifacts are provided, verify the related required indexes are ready
         # or throw an error
@@ -252,6 +282,10 @@ class ContentService:
             )
             if not nodes:
                 continue
+            if len(nodes) > self.max_content_nodes:
+                raise ContentRequestLimitError(
+                    f"Artifact {artifact} exceeds the {self.max_content_nodes} node limit"
+                )
 
             # Sort nodes by their position in the tree
             nodes = sorted(
@@ -264,6 +298,10 @@ class ContentService:
             root_node = root_nodes[0] if root_nodes else None
             if not root_node:
                 continue
+            if max((node.depth for node in nodes), default=0) > self.max_content_depth:
+                raise ContentRequestLimitError(
+                    f"Artifact {artifact} exceeds the {self.max_content_depth} depth limit"
+                )
 
             yield artifact, root_node
 
@@ -280,19 +318,24 @@ class ContentService:
         include_children: bool = True,
         include_ancestors: bool = False,
     ) -> AsyncGenerator[tuple[str, TreeNode]]:
-        # This is a workaround to avoid blocking the event loop with synchronous code
-        async def coro() -> AsyncGenerator[tuple[str, TreeNode]]:
-            for artifact, root_node in self._retrieve_document_node(
-                context_filter=context_filter,
-                include=include,
-                exclude=exclude,
-                node_ids=node_ids,
-                include_children=include_children,
-                include_ancestors=include_ancestors,
-            ):
-                yield artifact, root_node
+        iterator = self._retrieve_document_node(
+            context_filter=context_filter,
+            include=include,
+            exclude=exclude,
+            node_ids=node_ids,
+            include_children=include_children,
+            include_ancestors=include_ancestors,
+        )
+        sentinel = object()
 
-        return await asyncio.to_thread(coro)
+        async def iterate() -> AsyncGenerator[tuple[str, TreeNode]]:
+            while True:
+                item = await asyncio.to_thread(next, iterator, sentinel)
+                if item is sentinel:
+                    break
+                yield cast(tuple[str, TreeNode], item)
+
+        return iterate()
 
     def retrieve_document_content(
         self,
@@ -368,35 +411,41 @@ class ContentService:
                 root_node,
             )
 
-            # Concat the content of each subtree until the maximum chunk size is reached
-            current_chunk: list[BaseNode] = []
-            current_chunk_tokens = 0
-            for subtree in subtrees:
-                subtree_content = subtree.get_content(TreeMetadataMode.LLM)
-                subtree_tokens = (
-                    len(tokenizer_fn(subtree_content)) if tokenizer_fn else None
-                )
+            def build_chunks(
+                subtrees_for_artifact: list[TreeNode] = subtrees,
+            ) -> list[list[BaseNode]]:
+                chunks: list[list[BaseNode]] = []
+                current_chunk: list[BaseNode] = []
+                current_chunk_tokens = 0
+                for subtree in subtrees_for_artifact:
+                    subtree_content = subtree.get_content(TreeMetadataMode.LLM)
+                    subtree_tokens = (
+                        len(tokenizer_fn(subtree_content)) if tokenizer_fn else None
+                    )
 
-                if (
-                    max_length is not None
-                    and subtree_tokens is not None
-                    and (current_chunk_tokens + subtree_tokens > max_length)
-                ):
-                    # Yield the current chunk and reset it
-                    yield artifact, await _format_nodes(current_chunk)
-                    current_chunk = []
-                    current_chunk_tokens = 0
+                    if (
+                        current_chunk
+                        and max_length is not None
+                        and subtree_tokens is not None
+                        and current_chunk_tokens + subtree_tokens > max_length
+                    ):
+                        chunks.append(current_chunk)
+                        current_chunk = []
+                        current_chunk_tokens = 0
 
-                # Add the subtree content to the current chunk
-                current_chunk.append(subtree)
-                if subtree_tokens is not None:
-                    current_chunk_tokens += subtree_tokens
+                    current_chunk.append(subtree)
+                    if subtree_tokens is not None:
+                        current_chunk_tokens += subtree_tokens
 
-            # Yield the last chunk if it has content
-            if current_chunk:
-                yield artifact, await _format_nodes(current_chunk)
+                if current_chunk:
+                    chunks.append(current_chunk)
+                return chunks
+
+            chunks = await asyncio.to_thread(build_chunks)
+            for chunk in chunks:
+                yield artifact, await _format_nodes(chunk)
 
             # Cleanup
             del root_node
             del subtrees
-            del current_chunk
+            del chunks

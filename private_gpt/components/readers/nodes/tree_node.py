@@ -218,15 +218,22 @@ class TreeNode(BaseNode, ABC):
 
     def flatten(self) -> Iterator["TreeNode"]:
         """Perform a DFS to flatten the tree."""
-        yield self
-        for child in self.children:
-            yield from child.flatten()
+        stack = [self]
+        while stack:
+            node = stack.pop()
+            yield node
+            stack.extend(reversed(node.children))
 
     def late_flatten(self) -> Iterator["TreeNode"]:
         """Perform a DFS to flatten the tree."""
-        for child in self.children:
-            yield from child.late_flatten()
-        yield self
+        stack: list[tuple[TreeNode, bool]] = [(self, False)]
+        while stack:
+            node, visited = stack.pop()
+            if visited:
+                yield node
+                continue
+            stack.append((node, True))
+            stack.extend((child, False) for child in reversed(node.children))
 
     @classmethod
     def version(cls) -> str:
