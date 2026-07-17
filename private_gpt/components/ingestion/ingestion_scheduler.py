@@ -198,24 +198,13 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
         )
         from private_gpt.server.ingest.ingest_router import IngestAsyncBody
         from private_gpt.server.utils.artifact_input import UriArtifact
-        from private_gpt.server.utils.callback import AMQP, Callback
 
         config = settings()
         self._ingest_service.initialize_artifact_indices(
             collection=ingest_body.collection,
             artifact=ingest_body.artifact,
         )
-        async_body = IngestAsyncBody(
-            ingest_body=ingest_body,
-            callback=Callback(
-                amqp=AMQP(
-                    exchange="ingestion_events",
-                    routing_key_done="ingest.completed",
-                    routing_key_error="ingest.failed",
-                    routing_key_progress="ingest.progress",
-                )
-            ),
-        )
+        async_body = IngestAsyncBody(ingest_body=ingest_body)
 
         if async_body.ingest_body.input:
             s3_helper = self._require_s3_helper()
