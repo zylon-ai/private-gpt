@@ -14,7 +14,7 @@ from private_gpt.components.tools.remote_execution import (
     invoke_execution_hook,
     tool_execution_interceptor_paths,
 )
-from private_gpt.settings.settings import Settings
+from private_gpt.settings.settings import Settings, settings
 
 TOOL_TASK_NAME = "private_gpt.tools.run"
 
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
 
 
 ToolSchedulerProvider = (
@@ -137,11 +138,32 @@ class CeleryToolScheduler(BaseToolScheduler):
         request = request.model_copy(
             update={"interceptor_paths": tool_execution_interceptor_paths(interceptors)}
         )
+        correlation_id = request.context.get("correlation_id")
+        message_id = request.context.get("message_id") or correlation_id
+        logger.debug(
+            "Dispatching blocking tool execution correlation_id=%s "
+            "message_id=%s tool_id=%s tool_name=%s queue=%s",
+            correlation_id,
+            message_id,
+            request.tool_id,
+            request.tool_name,
+            self._settings.scheduler.tools.celery_queue,
+        )
         result = dispatch_task(
             task_name=TOOL_TASK_NAME,
             kwargs={"request_data": request.model_dump(mode="json")},
             queue=self._settings.scheduler.tools.celery_queue,
             ignore_result=False,
+        )
+        logger.debug(
+            "Blocking tool execution dispatched correlation_id=%s "
+            "message_id=%s task_id=%s tool_id=%s tool_name=%s queue=%s",
+            correlation_id,
+            message_id,
+            result.id,
+            request.tool_id,
+            request.tool_name,
+            self._settings.scheduler.tools.celery_queue,
         )
         response_data = await to_thread(
             result.get,
@@ -162,7 +184,19 @@ class CeleryToolScheduler(BaseToolScheduler):
     async def cancel_task(self, task_id: str) -> bool:
         from private_gpt.celery.celery import celery_app
 
-        celery_app.control.revoke(task_id, terminate=True)
+        logger.info(
+            "Tool cancellation started task_id=%s",
+            task_id,
+        )
+        try:
+            celery_app.control.revoke(task_id, terminate=True)
+        except Exception:
+            logger.exception("Tool cancellation failed task_id=%s", task_id)
+            raise
+        logger.info(
+            "Tool cancellation finished task_id=%s",
+            task_id,
+        )
         return True
 
     async def async_execute(
@@ -178,12 +212,33 @@ class CeleryToolScheduler(BaseToolScheduler):
         )
 
         correlation_id = request.context.get("correlation_id")
+        message_id = request.context.get("message_id") or correlation_id
         task_id = f"{correlation_id}:{request.tool_id}" if correlation_id else None
+        logger.debug(
+            "Dispatching async tool execution correlation_id=%s "
+            "message_id=%s task_id=%s tool_id=%s tool_name=%s queue=%s",
+            correlation_id,
+            message_id,
+            task_id,
+            request.tool_id,
+            request.tool_name,
+            self._settings.scheduler.tools.celery_queue,
+        )
         result = dispatch_task(
             task_name=TOOL_TASK_NAME,
             kwargs={"request_data": request.model_dump(mode="json")},
             queue=self._settings.scheduler.tools.celery_queue,
             task_id=task_id,
+        )
+        logger.debug(
+            "Async tool execution dispatched correlation_id=%s "
+            "message_id=%s task_id=%s tool_id=%s tool_name=%s queue=%s",
+            correlation_id,
+            message_id,
+            result.id,
+            request.tool_id,
+            request.tool_name,
+            self._settings.scheduler.tools.celery_queue,
         )
         return str(result.id)
 
