@@ -128,7 +128,6 @@ class ChatInterceptorService:
                     skills_interceptor,
                     internal_tools_interceptor,
                     skill_tool_visibility_interceptor,
-                    platform_guidelines_interceptor,
                     tool_choice_interceptor,
                     configure_tool_interceptor,
                     platform_guidelines_interceptor,
@@ -178,6 +177,7 @@ class ChatInterceptorService:
                     DocumentProcessingRequestInterceptor(
                         add_context_to_system_prompt=True
                     ),
+                    platform_guidelines_interceptor,
                     SystemPromptRequestInterceptor(
                         prompt_builder_service=prompt_builder_service,
                         add_context_to_system_prompt=True,

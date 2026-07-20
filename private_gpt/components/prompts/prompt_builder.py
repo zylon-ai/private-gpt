@@ -603,6 +603,12 @@ class PromptBuilderService:
             few_shots=few_shots,
         )
 
+    def create_math_guidelines(self) -> BasePromptTemplate:
+        """Create the LaTeX math formatting guidelines prompt."""
+        return self.template_service.create_prompt_template(
+            "chat/guidelines/math.j2",
+        )
+
     def seed_tool_instructions(self, tools: list["ToolSpec"]) -> list["ToolSpec"]:
         """Seed tool instructions from Jinja templates for tools that lack them.
 

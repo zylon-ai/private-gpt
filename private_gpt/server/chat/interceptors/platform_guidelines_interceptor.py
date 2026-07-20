@@ -58,8 +58,6 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
     ) -> None:
         self._prompt_builder = prompt_builder
         self._skill_injection_mode = settings.skills.skill_injection_mode
-        self._thinking_content: str | None = None
-        self._citation_guidelines_content: str | None = None
 
     async def intercept(self, context: ChatInterceptorContext) -> None:
         if context.phase != InterceptorPhase.BEFORE_ITERATION:
@@ -208,19 +206,11 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
     # ------------------------------------------------------------------
 
     def _get_thinking_content(self) -> str:
-        if self._thinking_content is None:
-            self._thinking_content = (
-                self._prompt_builder.create_thinking_guidelines().format()
-            )
-        return self._thinking_content
+        return self._prompt_builder.create_thinking_guidelines().format()
 
     def _get_citation_guidelines_content(
         self, documents: list[Document] | None = None
     ) -> str:
-        if self._citation_guidelines_content is None:
-            self._citation_guidelines_content = (
-                self._prompt_builder.create_citation_guidelines(
-                    documents=documents
-                ).format()
-            )
-        return self._citation_guidelines_content
+        return self._prompt_builder.create_citation_guidelines(
+            documents=documents
+        ).format()
