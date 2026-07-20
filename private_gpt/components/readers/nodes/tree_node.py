@@ -218,7 +218,7 @@ class TreeNode(BaseNode, ABC):
 
     def flatten(self) -> Iterator["TreeNode"]:
         """Perform a DFS to flatten the tree."""
-        stack = [self]
+        stack: list[TreeNode] = [self]
         while stack:
             node = stack.pop()
             yield node
