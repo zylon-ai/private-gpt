@@ -78,7 +78,9 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
         #    Seeded by InternalToolRequestInterceptor for internal tools, or provided
         #    explicitly by the caller for external tools.
         if prompt.tools:
-            stack = self._inject_tool_instructions(stack, tools, _SOURCE_TOOL_INSTRUCTIONS)
+            stack = self._inject_tool_instructions(
+                stack, tools, _SOURCE_TOOL_INSTRUCTIONS
+            )
 
         # 2. Citation formatting guidelines
         documents = stack.all_documents()

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from llama_index.core.base.llms.types import ChatMessage, ChatResponse, MessageRole
+
+if TYPE_CHECKING:
+    from private_gpt.components.llm.tokenizers.tokenizer_base import TokenizerBase
 
 
 class TextParserBase:
