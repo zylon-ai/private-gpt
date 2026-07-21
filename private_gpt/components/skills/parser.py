@@ -46,7 +46,9 @@ class SkillFrontmatter(BaseModel):
 
     @field_validator("metadata", mode="before")
     @classmethod
-    def validate_metadata(cls, value: dict[str, object] | None) -> dict[str, str] | None:
+    def validate_metadata(
+        cls, value: dict[str, object] | None
+    ) -> dict[str, str] | None:
         if value is None:
             return value
         return {
