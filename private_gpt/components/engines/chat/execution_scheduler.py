@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
 from injector import Injector, inject, singleton
 
 from private_gpt.settings.settings import Settings
+
+logger = logging.getLogger(__name__)
 
 
 class ChatExecutionScheduler(ABC):
@@ -189,6 +192,14 @@ class LocalChatExecutionScheduler(ChatExecutionScheduler):
 
 @singleton
 class ArqChatExecutionScheduler(ChatExecutionScheduler):
+    def __init__(self) -> None:
+        self._background_tasks: set[asyncio.Task[Any]] = set()
+
+    def _fire_and_forget(self, coro: Any, *, name: str) -> None:
+        task = asyncio.create_task(coro, name=name)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+
     async def start(
         self,
         *,
@@ -257,11 +268,27 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
     ) -> bool:
         from private_gpt.arq.tasks.chat.resume import abort_tool_timeout_job
 
-        return await abort_tool_timeout_job(
-            correlation_id=execution_id,
-            checkpoint_id=checkpoint_id,
-            tool_id=tool_id,
+        async def _abort() -> None:
+            try:
+                await abort_tool_timeout_job(
+                    correlation_id=execution_id,
+                    checkpoint_id=checkpoint_id,
+                    tool_id=tool_id,
+                )
+            except Exception:
+                logger.warning(
+                    "Best-effort tool timeout abort failed correlation_id=%s "
+                    "checkpoint_id=%s tool_id=%s",
+                    execution_id,
+                    checkpoint_id,
+                    tool_id,
+                    exc_info=True,
+                )
+
+        self._fire_and_forget(
+            _abort(), name=f"cancel_tool_timeout_{execution_id}_{tool_id}"
         )
+        return True
 
     async def cancel(
         self,
