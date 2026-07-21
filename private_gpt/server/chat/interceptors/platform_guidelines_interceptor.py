@@ -78,24 +78,24 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
         #    Seeded by InternalToolRequestInterceptor for internal tools, or provided
         #    explicitly by the caller for external tools.
         if prompt.tools:
-            stack = self._inject_tool_instructions(stack, tools)
+            stack = self._inject_tool_instructions(stack, tools, _SOURCE_TOOL_INSTRUCTIONS)
 
         # 2. Citation formatting guidelines
         documents = stack.all_documents()
         if prompt.citations and documents:
-            stack = self._inject_citations(stack)
+            stack = self._inject_citations(stack, _SOURCE_CITATIONS)
 
         # 3. Thinking guidelines (only when reasoning is enabled)
         if prompt.thinking and request.thinking.enabled:
-            stack = self._inject_thinking(stack)
+            stack = self._inject_thinking(stack, _SOURCE_THINKING)
 
         # 4. Code execution environment instructions
         if prompt.code_execution and self._has_code_execution_tool(tools):
-            stack = self._inject_code_execution(stack, tools)
+            stack = self._inject_code_execution(stack, tools, _SOURCE_CODE_EXECUTION)
 
         # 5. Skill management instructions
         if prompt.skills and self._has_skill_management_tool(tools):
-            stack = self._inject_skills(stack, tools)
+            stack = self._inject_skills(stack, tools, _SOURCE_SKILLS)
 
         state.input.context_stack = stack
         context.set_state(state)
@@ -105,8 +105,12 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
     # ------------------------------------------------------------------
 
     def _inject_tool_instructions(
-        self, stack: ContextStack, tools: list[ToolSpec]
+        self, stack: ContextStack, tools: list[ToolSpec], source: str
     ) -> ContextStack:
+        # Remove any old tool-instruction layers from prior iterations
+        # to prevent prompt accumulation across chain repeats.
+        stack = stack.remove_layers_of_source(source)
+
         for tool in tools:
             if tool.name is None or not tool.instructions:
                 continue
@@ -120,13 +124,17 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
                 ToolInstructionsLayer(
                     tool_name=canonical,
                     instructions=tool.instructions,
-                    source=_SOURCE_TOOL_INSTRUCTIONS,
+                    source=source,
                 )
             )
 
         return stack
 
-    def _inject_citations(self, stack: ContextStack) -> ContextStack:
+    def _inject_citations(self, stack: ContextStack, source: str) -> ContextStack:
+        # Remove any old citation layer from prior iterations
+        # to prevent prompt accumulation across chain repeats.
+        stack = stack.remove_layers_of_source(source)
+
         documents = stack.all_documents()
         content = self._get_citation_guidelines_content(documents=documents)
         if content:
@@ -134,47 +142,59 @@ class PlatformGuidelinesInterceptor(ChatRequestLoopInterceptor):
                 ToolInstructionsLayer(
                     tool_name="citations",
                     instructions=content,
-                    source=_SOURCE_CITATIONS,
+                    source=source,
                 )
             )
         return stack
 
-    def _inject_thinking(self, stack: ContextStack) -> ContextStack:
+    def _inject_thinking(self, stack: ContextStack, source: str) -> ContextStack:
+        # Remove any old thinking layer from prior iterations
+        # to prevent prompt accumulation across chain repeats.
+        stack = stack.remove_layers_of_source(source)
+
         content = self._get_thinking_content()
         if content:
             stack = stack.append_layer(
                 ToolInstructionsLayer(
                     tool_name="thinking",
                     instructions=content,
-                    source=_SOURCE_THINKING,
+                    source=source,
                 )
             )
         return stack
 
     def _inject_code_execution(
-        self, stack: ContextStack, tools: list[ToolSpec]
+        self, stack: ContextStack, tools: list[ToolSpec], source: str
     ) -> ContextStack:
+        # Remove any old code-execution layer from prior iterations
+        # to prevent prompt accumulation across chain repeats.
+        stack = stack.remove_layers_of_source(source)
+
         content = self._prompt_builder.create_code_execution_prompt(tools).format()
         if content:
             stack = stack.append_layer(
                 ToolInstructionsLayer(
                     tool_name="bash",
                     instructions=content,
-                    source=_SOURCE_CODE_EXECUTION,
+                    source=source,
                 )
             )
         return stack
 
     def _inject_skills(
-        self, stack: ContextStack, tools: list[ToolSpec]
+        self, stack: ContextStack, tools: list[ToolSpec], source: str
     ) -> ContextStack:
+        # Remove any old skill-instructions layer from prior iterations
+        # to prevent prompt accumulation across chain repeats.
+        stack = stack.remove_layers_of_source(source)
+
         content = self._prompt_builder.create_skills_prompt(tools).format()
         if content:
             stack = stack.append_layer(
                 ToolInstructionsLayer(
                     tool_name="skills",
                     instructions=content,
-                    source=_SOURCE_SKILLS,
+                    source=source,
                 )
             )
         return stack
