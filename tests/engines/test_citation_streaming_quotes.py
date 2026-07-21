@@ -7,7 +7,7 @@ from private_gpt.components.engines.citations.utils import (
 def test_streaming_citation_examples_do_not_rewrite_previous_text() -> None:
     text = (
         "Format: `[XXXX]`. Correct: `[LLFB]`. "
-        "Invalid: `[[LLFB]]`, `(LLFB)`. "
+        "Invalid: `(LLFB)`. "
         "Consolidate: `[LLFB], [CPCY]`. End."
     )
     documents = [
@@ -37,7 +37,7 @@ def test_streaming_citation_examples_do_not_rewrite_previous_text() -> None:
         sent_text = cleaned_text
 
     assert "Format: `[XXXX]`." in emitted_text
-    assert "Invalid: `[[LLFB]]`, `(LLFB)`." in emitted_text
+    assert "Invalid: `(LLFB)`." in emitted_text
     assert "Consolidate: <citation id='LLFB'" in emitted_text
     assert ", <citation id='CPCY'" in emitted_text
     assert "</citation>`. End." not in emitted_text

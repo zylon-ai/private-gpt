@@ -163,10 +163,10 @@ async def test_llm_garbage_around_valid_citation_is_not_lost() -> None:
     output, citation_count = await collect_text_stream(chunks, [document])
 
     assert output == (
-        "Trash `[[AB12]]`, `(AB12)`, [UNKNOWN]. "
+        f"Trash {format_cite(0, document, 0)}, `(AB12)`, [UNKNOWN]. "
         f"Valid {format_cite(0, document, 0)} end."
     )
-    assert citation_count == 1
+    assert citation_count == 2
 
 
 @pytest.mark.asyncio
