@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import re
+from typing import Any
 
 from llama_index.core.base.llms.types import ChatMessage, ChatResponse, MessageRole
-
-if TYPE_CHECKING:
-    from private_gpt.components.llm.tokenizers.tokenizer_base import TokenizerBase
 
 
 class TextParserBase:
@@ -14,10 +12,35 @@ class TextParserBase:
     Provided and methods should be used in derived classes.
 
     It is used to extract text content from the model output.
+
+    Parameters
+    ----------
+    special_tokens
+        Per-model list of special-token strings to strip from the generated
+        text (e.g. ``["<|im_start|>", "<|im_end|>", "<|endoftext|>"]`` for
+        Qwen).  When *None* (the default) no stripping is performed.
     """
 
     def __init__(self, tokenizer: TokenizerBase, **kwargs: Any) -> None:
         self.model_tokenizer = tokenizer
+
+        self._special_tokens: list[str] | None = kwargs.pop("special_tokens", None)
+        self._special_token_re = self._build_re(self._special_tokens)
+
+    def _build_re(self, tokens: list[str] | None) -> re.Pattern[str]:
+        if not tokens:
+            return re.compile(r"(?!)")  # never matches
+
+        # longest-first so multi-character tokens like <|endoftext|> are
+        # tried before shorter substrings that could be inside them.
+        tokens = sorted(tokens, key=len, reverse=True)
+        escaped = [re.escape(t) for t in tokens if t]
+        return re.compile("|".join(escaped))
+
+    def _strip_special_tokens(self, text: str) -> str:
+        if not text:
+            return text
+        return self._special_token_re.sub("", text)
 
     @classmethod
     def from_prototype(
@@ -26,7 +49,10 @@ class TextParserBase:
         **kwargs: Any,
     ) -> TextParserBase:
         """Create a new instance of the ToolParser class."""
-        return prototype.__class__(prototype.model_tokenizer, **kwargs)
+        return prototype.__class__(
+            prototype.model_tokenizer,
+            special_tokens=prototype._special_tokens,
+        )
 
     def extract_text_content(
         self,
@@ -41,14 +67,11 @@ class TextParserBase:
         model_output: str
             The model-generated string to extract text content from.
 
-        request: ChatCompletionRequest
-            The request object that was used to generate the model_output.
-
         Returns:
         str
             The extracted text content.
         """
-        return model_output
+        return self._strip_special_tokens(model_output)
 
     def extract_text_content_streaming(
         self,
@@ -56,17 +79,21 @@ class TextParserBase:
         current_text: str,
         delta_text: str,
     ) -> ChatResponse | None:
-        """Method to extract text content from a delta message.
+        """Extract text content from a streaming delta.
 
-        Instance method that should be implemented for extracting text
-        from an incomplete response; for use when handling text calls and
-        streaming. Has to be an instance method because  it requires state -
-        the current tokens/diffs, but also the information about what has
-        previously been parsed and extracted (see constructor)
+        Strips per-model special tokens from *delta_text* using a compiled
+        regex — no tokenizer round-trips.
         """
+        if not delta_text:
+            return None
+
+        delta = self._strip_special_tokens(delta_text)
+        if not delta:
+            return None
+
         return ChatResponse(
             message=ChatMessage(role=MessageRole.ASSISTANT, content=current_text),
-            delta=delta_text,
+            delta=delta,
             raw=current_text,
         )
 
