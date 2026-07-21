@@ -4,11 +4,11 @@ from dataclasses import dataclass
 from typing import Any
 from unittest.mock import MagicMock
 
-from pydantic import Field
-
 import pytest
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from llama_index.core.llms.llm import ToolSelection
+from llama_index.core.schema import NodeWithScore, TextNode
+from pydantic import Field
 
 from private_gpt.components.chat.models.chat_config_models import (
     CitationConfig,
@@ -52,11 +52,6 @@ from private_gpt.events.models import (
     TextBlock,
     ToolResultBlock,
 )
-from private_gpt.server.chat.interceptors.runtime_model_interceptor import (
-    RuntimeModelRequestInterceptor,
-)
-from llama_index.core.schema import NodeWithScore, TextNode
-
 from private_gpt.server.chat.interceptors.citation_interceptor import (
     CitationRequestInterceptor,
 )
@@ -65,6 +60,9 @@ from private_gpt.server.chat.interceptors.document_processing_interceptor import
 )
 from private_gpt.server.chat.interceptors.extract_citation_interceptor import (
     ExtractCitationInterceptor,
+)
+from private_gpt.server.chat.interceptors.runtime_model_interceptor import (
+    RuntimeModelRequestInterceptor,
 )
 from tests.fixtures.mock_function_llm import get_mock_function_calling_llm
 
@@ -721,9 +719,7 @@ def _server_source_tool(name: str) -> ToolSpec:
         type=name,
         runtime="server",
         async_fn=_source_tool,
-        execution_metadata=build_rebuild_metadata(
-            _rebuild_source_tool, {"name": name}
-        ),
+        execution_metadata=build_rebuild_metadata(_rebuild_source_tool, {"name": name}),
     )
 
 
@@ -781,16 +777,15 @@ async def test_document_processing_interceptor_runs_with_documents_on_resume(
     )
 
     # BEFORE_ITERATION must run twice: initial + after resume
-    assert (
-        recorder.before_iteration_count == 2
-    ), f"Expected 2 BEFORE_ITERATION calls, got {recorder.before_iteration_count}"
+    assert recorder.before_iteration_count == 2, (
+        f"Expected 2 BEFORE_ITERATION calls, got {recorder.before_iteration_count}"
+    )
 
     # First BEFORE_ITERATION: no tool has run yet → 0 documents
     # Second BEFORE_ITERATION: tool result added sources → docs available
     assert len(recorder.document_counts) == 2
     assert recorder.document_counts[0] == 0, (
-        f"Expected 0 docs on first BEFORE_ITERATION, "
-        f"got {recorder.document_counts[0]}"
+        f"Expected 0 docs on first BEFORE_ITERATION, got {recorder.document_counts[0]}"
     )
     assert recorder.document_counts[1] > 0, (
         f"Expected docs on second BEFORE_ITERATION (after resume), "
@@ -893,9 +888,9 @@ async def test_extract_citation_interceptor_converts_bracket_refs_on_resume(
             full_text += event.delta.text or ""
 
     # The raw [ab12] bracket ref MUST be converted to <citation> tags
-    assert (
-        "[ab12]" not in full_text
-    ), f"Raw citation marker found in output: {full_text!r}"
+    assert "[ab12]" not in full_text, (
+        f"Raw citation marker found in output: {full_text!r}"
+    )
     assert "<citation" in full_text, (
         f"Expected <citation> XML tag in output, got: {full_text!r}"
     )
