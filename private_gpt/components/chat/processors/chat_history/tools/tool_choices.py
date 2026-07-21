@@ -65,7 +65,11 @@ def _add_suffix_to_last_user_message(
         if isinstance(block, LITextBlock) and not added_suffix:
             if block.text.endswith(suffix):
                 return chat_history
-            final_blocks.append(LITextBlock(text=f"{block.text}. {suffix}"))
+            text = block.text.rstrip()
+            if text and text[-1] in ".!?":
+                final_blocks.append(LITextBlock(text=f"{text} {suffix}"))
+            else:
+                final_blocks.append(LITextBlock(text=f"{text}. {suffix}"))
             added_suffix = True
         else:
             final_blocks.append(block)
