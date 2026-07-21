@@ -44,7 +44,9 @@ class DelimitedReferenceRule:
 
         # Skip consecutive start tokens (e.g., [[[ for [[[XXXX]]])
         content_start = position + len(self.start_token)
-        while content_start < len(text) and text.startswith(self.start_token, content_start):
+        while content_start < len(text) and text.startswith(
+            self.start_token, content_start
+        ):
             content_start += len(self.start_token)
 
         end = text.find(self.end_token, content_start)
@@ -59,9 +61,7 @@ class DelimitedReferenceRule:
         consumed = end_offset - position
         identifiers = [
             identifier.strip()
-            for identifier in text[content_start:end].split(
-                self.separator
-            )
+            for identifier in text[content_start:end].split(self.separator)
         ]
         references = self.resolve(identifiers, context)
         if not references:
