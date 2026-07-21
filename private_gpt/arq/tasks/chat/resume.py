@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -152,6 +153,7 @@ async def tool_resume_job(
         action="tool_callback",
         correlation_id=correlation_id,
         tool_id=tool_id,
+        function_name=TOOL_RESUME_TASK_NAME,
         operation=lambda: _engine(ctx).record_callback(
             execution_id=correlation_id, tool_id=tool_id, result=result
         ),
@@ -166,6 +168,7 @@ async def resume_iteration_job(
         ctx,
         action="resume",
         correlation_id=correlation_id,
+        function_name=RESUME_ITERATION_TASK_NAME,
         operation=lambda: _engine(ctx).execute_scheduled_resume(
             execution_id=correlation_id,
             checkpoint_id=checkpoint_id,
@@ -205,6 +208,7 @@ async def _run_logged(
     correlation_id: str,
     operation: Callable[[], Awaitable[None]],
     tool_id: str | None = None,
+    function_name: str = "unknown",
 ) -> None:
     logger.info(
         "Chat action started action=%s correlation_id=%s message_id=%s tool_id=%s",
@@ -215,6 +219,15 @@ async def _run_logged(
     )
     try:
         await operation()
+    except asyncio.CancelledError:
+        logger.warning(
+            "Chat action cancelled action=%s correlation_id=%s message_id=%s tool_id=%s",
+            action,
+            correlation_id,
+            correlation_id,
+            tool_id,
+        )
+        raise
     except Exception:
         logger.exception(
             "Chat action failed action=%s correlation_id=%s message_id=%s tool_id=%s",
@@ -224,6 +237,7 @@ async def _run_logged(
             tool_id,
         )
         raise
+
     logger.info(
         "Chat action finished action=%s correlation_id=%s message_id=%s tool_id=%s",
         action,

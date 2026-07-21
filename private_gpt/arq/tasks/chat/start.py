@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any
 
@@ -62,6 +63,13 @@ async def start_chat_job(
                 metadata=metadata,
             )
         )
+    except asyncio.CancelledError:
+        logger.warning(
+            "Chat start cancelled correlation_id=%s message_id=%s",
+            correlation_id,
+            correlation_id,
+        )
+        raise
     except Exception:
         logger.exception(
             "Chat start failed correlation_id=%s message_id=%s",
@@ -69,6 +77,7 @@ async def start_chat_job(
             correlation_id,
         )
         raise
+
     logger.info(
         "Chat start finished correlation_id=%s message_id=%s",
         correlation_id,

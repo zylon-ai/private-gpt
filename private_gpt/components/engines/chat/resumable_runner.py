@@ -39,7 +39,7 @@ from private_gpt.events.models import ContentBlockType
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Sequence
 
     from private_gpt.components.engines.chat.async_chat_engine import AsyncChatEngine
     from private_gpt.components.engines.chat.models.chat_state import ChatState
@@ -149,6 +149,9 @@ class ResumableChatRunner:
                 stream_type=stream_type,
                 metadata=metadata,
             )
+        except asyncio.CancelledError:
+            await self._cancel_pending_tools(execution_id)
+            raise
         except Exception as exc:
             await self._fail(execution_id, exc, channel)
             raise
@@ -200,6 +203,9 @@ class ResumableChatRunner:
                 stream_type=saved.stream_type,
                 metadata=saved.metadata,
             )
+        except asyncio.CancelledError:
+            await self._cancel_pending_tools(execution_id)
+            raise
         except Exception as exc:
             await self._fail(execution_id, exc, channel)
             raise
@@ -296,6 +302,23 @@ class ResumableChatRunner:
             except Exception:
                 await self._state.release_resume(execution_id)
                 raise
+
+    async def _cancel_pending_tools(self, execution_id: str) -> None:
+        checkpoint = await self._state.load(execution_id)
+        if checkpoint is None:
+            return
+        tool_task_ids: Sequence[str] = list(
+            checkpoint.checkpoint_payload.pending_async_tools.values()
+        )
+        if not tool_task_ids:
+            return
+        await asyncio.gather(
+            *(
+                self._tool_scheduler.cancel_task(task_id=task_id)
+                for task_id in tool_task_ids
+            ),
+            return_exceptions=True,
+        )
 
     async def _fail(
         self,
