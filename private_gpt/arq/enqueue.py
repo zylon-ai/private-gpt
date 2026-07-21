@@ -66,6 +66,16 @@ async def abort_job(*, job_id: str, queue_name: str) -> bool:
             redis=redis,
             _queue_name=queue_name,
         )
-        return await job.abort(timeout=2)
+        try:
+            return await job.abort()
+        except TimeoutError:
+            # Best-effort cancellation: the job may have already finished or
+            # been picked up, so failing to confirm the abort isn't fatal.
+            logger.warning(
+                "Timed out confirming abort for job_id=%s queue=%s",
+                job_id,
+                queue_name,
+            )
+            return False
     finally:
         await redis.aclose()
