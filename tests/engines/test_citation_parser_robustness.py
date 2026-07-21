@@ -16,7 +16,6 @@ def create_document(citation_id: str) -> Document:
         text=f"Content for {citation_id}",
     )
 
-
 def test_repeated_citation_keeps_index_but_emits_each_occurrence() -> None:
     document = create_document("AB12")
 
@@ -31,7 +30,6 @@ def test_repeated_citation_keeps_index_but_emits_each_occurrence() -> None:
     assert [citation.value["index"] for citation in citations] == ["0", "0"]
     assert indices == {document.id_: 0}
 
-
 def test_mixed_known_and_unknown_consolidated_citation_keeps_known_only() -> None:
     document = create_document("AB12")
 
@@ -42,7 +40,6 @@ def test_mixed_known_and_unknown_consolidated_citation_keeps_known_only() -> Non
 
     assert formatted == f"Claim {format_cite(0, document, 0)}."
     assert len(citations) == 1
-
 
 def test_citation_lookup_is_case_insensitive() -> None:
     document = create_document("AB12")
@@ -55,18 +52,16 @@ def test_citation_lookup_is_case_insensitive() -> None:
     assert formatted == f"Claim {format_cite(0, document, 0)}."
     assert len(citations) == 1
 
-
 def test_unicode_citation_brackets_are_normalized() -> None:
     document = create_document("AB12")
 
     formatted, citations, _ = extract_citations_by_original_text(
-        "Claim 【AB12】.",
+        "Claim \u3010AB12\u3011.",
         [document],
     )
 
     assert formatted == f"Claim {format_cite(0, document, 0)}."
     assert len(citations) == 1
-
 
 @pytest.mark.parametrize("delimiter", ["`", "``", "```"])
 def test_backtick_wrapped_citation_removes_matching_delimiter(delimiter: str) -> None:
@@ -80,13 +75,11 @@ def test_backtick_wrapped_citation_removes_matching_delimiter(delimiter: str) ->
     assert formatted == f"Claim {format_cite(0, document, 0)}."
     assert len(citations) == 1
 
-
 @pytest.mark.parametrize(
     "garbage",
     [
         "[]",
         "[ ]",
-        "[[AB12]]",
         "(AB12)",
         "[AB-12]",
         "[TOO-LONG]",
@@ -105,7 +98,6 @@ def test_non_citation_garbage_is_preserved(garbage: str) -> None:
     assert formatted == garbage
     assert citations == []
 
-
 def test_incomplete_citation_is_withheld_with_no_false_citation() -> None:
     document = create_document("AB12")
 
@@ -116,7 +108,6 @@ def test_incomplete_citation_is_withheld_with_no_false_citation() -> None:
 
     assert formatted == "Safe prefix "
     assert citations == []
-
 
 def test_placeholder_like_model_output_does_not_capture_real_citation() -> None:
     document = create_document("AB12")
@@ -131,6 +122,65 @@ def test_placeholder_like_model_output_does_not_capture_real_citation() -> None:
         f"Literal \ue000citationn0\ue001 then {format_cite(0, document, 0)}."
     )
     assert len(citations) == 1
+
+def test_repeated_bracket_tokens_are_accepted() -> None:
+    document = create_document("AB12")
+
+    formatted, citations, _ = extract_citations_by_original_text(
+        "[[AB12]]",
+        [document],
+    )
+
+    assert formatted == format_cite(0, document, 0)
+    assert len(citations) == 1
+
+
+def test_many_nested_brackets_resolve_citation() -> None:
+    document = create_document("AB12")
+
+    formatted, citations, _ = extract_citations_by_original_text(
+        "[[[[[AB12]]]]]]",
+        [document],
+    )
+
+    assert formatted == format_cite(0, document, 0)
+    assert len(citations) == 1
+
+
+def test_backtick_with_repeated_brackets() -> None:
+    document = create_document("AB12")
+
+    formatted, citations, _ = extract_citations_by_original_text(
+        "`[[[[[AB12]]]]]]`",
+        [document],
+    )
+
+    assert formatted == format_cite(0, document, 0)
+    assert len(citations) == 1
+
+
+def test_double_brackets_with_consolidated_known_only() -> None:
+    document = create_document("AB12")
+
+    formatted, citations, _ = extract_citations_by_original_text(
+        "[[UNKNOWN, AB12, MISSING]]",
+        [document],
+    )
+
+    assert formatted == format_cite(0, document, 0)
+    assert len(citations) == 1
+
+
+def test_double_brackets_unknown_citation_preserved_as_is() -> None:
+    document = create_document("AB12")
+
+    formatted, citations, _ = extract_citations_by_original_text(
+        "[[ABCD]]",
+        [document],
+    )
+
+    assert formatted == "[[ABCD]]"
+    assert citations == []
 
 
 def test_existing_indices_continue_without_renumbering() -> None:

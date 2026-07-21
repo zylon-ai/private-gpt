@@ -42,14 +42,24 @@ class DelimitedReferenceRule:
         if not text.startswith(self.start_token, position):
             return ProbeResult.no_match()
 
-        end = text.find(self.end_token, position + len(self.start_token))
+        # Skip consecutive start tokens (e.g., [[[ for [[[XXXX]]])
+        content_start = position + len(self.start_token)
+        while content_start < len(text) and text.startswith(self.start_token, content_start):
+            content_start += len(self.start_token)
+
+        end = text.find(self.end_token, content_start)
         if end == -1:
             return ProbeResult.need_more()
 
-        consumed = end + len(self.end_token) - position
+        # Skip consecutive end tokens (e.g., ]]] for [[[XXXX]]])
+        end_offset = end + len(self.end_token)
+        while end_offset < len(text) and text.startswith(self.end_token, end_offset):
+            end_offset += len(self.end_token)
+
+        consumed = end_offset - position
         identifiers = [
             identifier.strip()
-            for identifier in text[position + len(self.start_token) : end].split(
+            for identifier in text[content_start:end].split(
                 self.separator
             )
         ]
