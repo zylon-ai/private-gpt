@@ -4,6 +4,9 @@ from typing import Any, Protocol
 
 from private_gpt.components.readers.nodes.section_node import SectionNode
 from private_gpt.components.readers.nodes.tree_node import TreeNode
+from private_gpt.settings.settings import settings
+
+debug_mode = settings().server.debug_mode
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +41,8 @@ class DocumentTreeExpander:
     within specified limits. It uses different failure handling strategies for different
     expansion phases.
     """
+
+    debug: bool = debug_mode
 
     node: TreeNode
     max_tokens: int
