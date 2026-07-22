@@ -31,7 +31,7 @@ RESULT_FRAGMENT_LENGTH = 200
 @celery_app.task(
     name="private_gpt.tools.run",
     base=StatefulBackgroundTask,
-    ignore_result=True,
+    ignore_result=False,
 )
 async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
     try:

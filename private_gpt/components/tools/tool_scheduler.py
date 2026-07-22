@@ -5,8 +5,9 @@ import logging
 from abc import ABC, abstractmethod
 from asyncio import CancelledError, to_thread
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from celery.exceptions import TimeoutError as CeleryTimeoutError
 from injector import Injector, inject, singleton
 
 from private_gpt.celery.dispatch import dispatch_task
@@ -20,6 +21,8 @@ from private_gpt.settings.settings import Settings, settings
 TOOL_TASK_NAME = "private_gpt.tools.run"
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
     from private_gpt.components.engines.chat.models.chat_state import ChatState
     from private_gpt.components.tools.remote_execution import (
         ToolExecutionInterceptor,
@@ -124,6 +127,8 @@ class CeleryToolScheduler(BaseToolScheduler):
     @inject
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
+        self._async_cancel = True
+        self._background_tasks: set[asyncio.Task[Any]] = set()
 
     @property
     def is_async(self) -> bool:
@@ -171,9 +176,10 @@ class CeleryToolScheduler(BaseToolScheduler):
                 result.get,
                 timeout=self._settings.scheduler.tools.callback_timeout_seconds,
             )
-        except CancelledError:
+        except (CancelledError, CeleryTimeoutError):
             await self.cancel_task(str(result.id))
             raise
+
         from private_gpt.components.tools.remote_execution import ToolExecutionResponse
 
         return ToolExecutionResponse.model_validate(response_data)
@@ -186,8 +192,22 @@ class CeleryToolScheduler(BaseToolScheduler):
         del request
         return await self.cancel_task(task_id) if task_id else False
 
+    def _spawn(self, coro: Coroutine[Any, Any, Any], *, name: str) -> None:
+        task = asyncio.create_task(coro, name=name)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+
     async def cancel_task(self, task_id: str) -> bool:
-        return await asyncio.to_thread(self._cancel_task_sync, task_id)
+        return await (
+            self._cancel_task_async(task_id)
+            if self._async_cancel
+            else asyncio.to_thread(self._cancel_task_sync, task_id)
+        )
+
+    async def _cancel_task_async(self, task_id: str) -> bool:
+        coro = asyncio.to_thread(self._cancel_task_sync, task_id)
+        self._spawn(coro, name=f"cancel_tool_task_{task_id}")
+        return True
 
     def _cancel_task_sync(self, task_id: str) -> bool:
         from private_gpt.celery.celery import celery_app
@@ -237,6 +257,7 @@ class CeleryToolScheduler(BaseToolScheduler):
             kwargs={"request_data": request.model_dump(mode="json")},
             queue=self._settings.scheduler.tools.celery_queue,
             task_id=task_id,
+            ignore_result=True,
         )
         logger.debug(
             "Async tool execution dispatched correlation_id=%s "

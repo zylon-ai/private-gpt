@@ -99,6 +99,36 @@ async def test_celery_tool_scheduler_execute_dispatches_and_waits(
 
 
 @pytest.mark.anyio
+async def test_celery_tool_scheduler_async_execute_ignores_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async_result = MagicMock(id="task-abc")
+    dispatch_task = MagicMock(return_value=async_result)
+    monkeypatch.setattr(
+        "private_gpt.components.tools.tool_scheduler.dispatch_task", dispatch_task
+    )
+    scheduler = CeleryToolScheduler(
+        settings=SimpleNamespace(
+            scheduler=SimpleNamespace(
+                tools=SimpleNamespace(celery_queue="tools"),
+            )
+        ),
+    )
+    request = tool_request()
+
+    task_id = await scheduler.async_execute(request)
+
+    assert task_id == "task-abc"
+    dispatch_task.assert_called_once_with(
+        task_name=TOOL_TASK_NAME,
+        kwargs={"request_data": request.model_dump(mode="json")},
+        queue="tools",
+        task_id="msg-1:tool-1",
+        ignore_result=True,
+    )
+
+
+@pytest.mark.anyio
 async def test_celery_tool_scheduler_cancel_revokes_task(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
