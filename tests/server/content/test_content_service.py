@@ -9,6 +9,7 @@ from private_gpt.server.content.content_router import ContentTree
 from private_gpt.server.content.content_service import (
     ContentRequestLimitError,
     ContentService,
+    _split_subtree_to_fit,
 )
 
 
@@ -83,3 +84,23 @@ def test_content_tree_conversion_handles_deep_trees() -> None:
 
     assert converted.content == "root"
     assert len(list(root.flatten())) == 1_501
+
+
+def test_oversized_subtree_is_split_without_losing_content() -> None:
+    content = "one two three four five six seven eight nine ten"
+    subtree = TextNode(text=content)
+    tokenizer = str.split
+
+    chunks = _split_subtree_to_fit(subtree, max_length=3, tokenizer_fn=tokenizer)
+
+    assert len(chunks) > 1
+    assert all(len(tokenizer(chunk.get_content())) <= 3 for chunk in chunks)
+    assert " ".join(chunk.get_content().strip() for chunk in chunks) == content
+
+
+def test_subtree_within_limit_preserves_original_node() -> None:
+    subtree = TextNode(text="one two three")
+
+    chunks = _split_subtree_to_fit(subtree, max_length=3, tokenizer_fn=str.split)
+
+    assert chunks == [subtree]

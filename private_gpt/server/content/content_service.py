@@ -11,13 +11,16 @@ from private_gpt.chat.extensions.context_filter import ContextFilter
 from private_gpt.components.embedding.embedding_component import EmbeddingComponent
 from private_gpt.components.ingest.ingest_component import IngestComponent
 from private_gpt.components.ingest.parse_component import ParseComponent
+from private_gpt.components.ingest.transformations.sentence_tree_node_parser import (
+    TokenTextSplitterWithoutStripping,
+)
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import TokenizerFn, get_tokenizer
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.postprocessor.tree_expansion.split_subtrees import (
     SplitSubtreeAlg,
 )
-from private_gpt.components.readers.nodes import NodeType
+from private_gpt.components.readers.nodes import NodeType, TextNode
 from private_gpt.components.readers.nodes.tree_node import TreeMetadataMode, TreeNode
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
@@ -28,6 +31,46 @@ from private_gpt.settings.settings import Settings
 
 class ContentRequestLimitError(ValueError):
     pass
+
+
+def _split_subtree_to_fit(
+    subtree: TreeNode,
+    max_length: int | None,
+    tokenizer_fn: TokenizerFn | None,
+) -> list[BaseNode]:
+    if max_length is None or tokenizer_fn is None:
+        return [subtree]
+
+    content = subtree.get_content(TreeMetadataMode.LLM)
+    if len(tokenizer_fn(content)) <= max_length:
+        return [subtree]
+
+    splitter_class = cast(Any, TokenTextSplitterWithoutStripping)
+    splitter = splitter_class(
+        chunk_size=max_length,
+        chunk_overlap=0,
+        tokenizer=tokenizer_fn,
+        keep_whitespaces=True,
+    )
+    chunks = splitter.split_text(content)
+    if not chunks:
+        raise ContentRequestLimitError("Unable to split oversized document subtree")
+
+    split_nodes = [
+        TextNode(
+            text=chunk,
+            extra_info=dict(subtree.metadata),
+            abs_idx=subtree.abs_idx,
+            idx=subtree.idx,
+        )
+        for chunk in chunks
+        if chunk
+    ]
+    if any(len(tokenizer_fn(node.text)) > max_length for node in split_nodes):
+        raise ContentRequestLimitError(
+            "Document subtree could not be split within the requested token limit"
+        )
+    return cast(list[BaseNode], split_nodes)
 
 
 @singleton
@@ -417,25 +460,41 @@ class ContentService:
                 chunks: list[list[BaseNode]] = []
                 current_chunk: list[BaseNode] = []
                 current_chunk_tokens = 0
-                for subtree in subtrees_for_artifact:
-                    subtree_content = subtree.get_content(TreeMetadataMode.LLM)
-                    subtree_tokens = (
-                        len(tokenizer_fn(subtree_content)) if tokenizer_fn else None
+                bounded_nodes = [
+                    bounded_node
+                    for subtree in subtrees_for_artifact
+                    for bounded_node in _split_subtree_to_fit(
+                        subtree,
+                        max_length,
+                        tokenizer_fn,
+                    )
+                ]
+                for bounded_node in bounded_nodes:
+                    if not isinstance(bounded_node, TreeNode):
+                        raise TypeError("Chunked document nodes must be tree nodes")
+                    bounded_content = (
+                        bounded_node.text
+                        if isinstance(bounded_node, TextNode)
+                        and not bounded_node.children
+                        else bounded_node.get_content(TreeMetadataMode.LLM)
+                    )
+                    bounded_tokens = (
+                        len(tokenizer_fn(bounded_content)) if tokenizer_fn else None
                     )
 
                     if (
                         current_chunk
                         and max_length is not None
-                        and subtree_tokens is not None
-                        and current_chunk_tokens + subtree_tokens > max_length
+                        and bounded_tokens is not None
+                        and current_chunk_tokens + bounded_tokens > max_length
                     ):
                         chunks.append(current_chunk)
                         current_chunk = []
                         current_chunk_tokens = 0
 
-                    current_chunk.append(subtree)
-                    if subtree_tokens is not None:
-                        current_chunk_tokens += subtree_tokens
+                    current_chunk.append(bounded_node)
+                    if bounded_tokens is not None:
+                        current_chunk_tokens += bounded_tokens
 
                 if current_chunk:
                     chunks.append(current_chunk)
