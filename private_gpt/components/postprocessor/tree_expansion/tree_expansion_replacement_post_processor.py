@@ -390,6 +390,7 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
 
                 return ExpansionResult(node_ids=set(), token_count=0)
 
+            logger.debug("_expand_nodes: expanding %d nodes", len(work_items))
             return list(executor.map(process_node, work_items))
 
     def _calculate_configuration_score(
@@ -609,8 +610,13 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
                 for hit_node, root_node, subtree in processed_nodes.filtered_items
             ]
 
+            logger.debug("_generate_result_nodes: waiting for %d futures", len(futures))
             for future in as_completed(futures):
                 result_nodes.extend(future.result())
+            logger.debug(
+                "_generate_result_nodes: collected %d result nodes",
+                len(result_nodes),
+            )
 
         # Sort by score
         return sorted(result_nodes, key=lambda x: float(x.score or 0), reverse=True)
@@ -633,19 +639,32 @@ class TreeExpansionReplacementPostProcessor(BaseNodePostprocessor, ABC):
         )
 
         # Post-process the nodes to remove irrelevant content and add diffs
+        logger.debug("_process_node: rebuild_tree with root=%s", root_node.node_id)
         final_nodes = [n for n in self._rebuild_tree(root_node, sorted_nodes) if n]
 
         # Prune the content of the final node
+        logger.debug("_process_node: prune_content on %d nodes", len(final_nodes))
         final_nodes = [n for n in self._prune_content(final_nodes) if n]
 
         # Split the final node into smaller subtrees
+        logger.debug("_process_node: split_subtrees on %d nodes", len(final_nodes))
         final_nodes = [n for n in self._split_subtrees(final_nodes) if n]
 
         # Update metadata for the final node
+        logger.debug("_process_node: update_node on %d nodes", len(final_nodes))
         final_nodes = [self._update_node(hit_node.node, n) for n in final_nodes if n]
 
         # Frozen and deduplicate the final nodes
+        logger.debug(
+            "_process_node: deduplicate_subtrees on %d nodes", len(final_nodes)
+        )
         final_nodes = self._deduplicate_subtrees(final_nodes)
+
+        logger.debug(
+            "_process_node: done, returning %d final nodes (hit_node=%s)",
+            len(final_nodes),
+            hit_node.node.id_,
+        )
 
         return [
             NodeWithScore(

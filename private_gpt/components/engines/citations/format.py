@@ -1,4 +1,5 @@
 import json
+import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -17,6 +18,12 @@ from private_gpt.components.ingest.metadata_helper import (
 )
 from private_gpt.components.llm.llm_helper import TokenizerFn
 from private_gpt.settings.settings import settings
+
+config = settings()
+debug_mode = config.server.debug_mode
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
 
 
 def format_llm_source_str(
@@ -478,6 +485,9 @@ def format_context(
     tokenizer_fn: TokenizerFn | None = None,
 ) -> tuple[list[Document], str]:
     """Format context for the LLM prompt."""
+    logger.debug(
+        "format_context: starting with %d documents", len(documents) if documents else 0
+    )
     if documents is None and nodes is not None:
         tmp: list[NodeWithScore] = nodes or []
         docs = sorted(tmp, key=lambda x: float(x.score or 0), reverse=True)
@@ -519,4 +529,7 @@ def format_context(
         formatted_documents.extend(limited_docs)
         formatted_content += content
 
+    logger.debug(
+        "format_context: done, returning %d documents", len(formatted_documents)
+    )
     return formatted_documents, formatted_content
