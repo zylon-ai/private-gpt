@@ -746,7 +746,8 @@ Header controls (in the composer toolbar below the textarea):
 
 - Model selector — a custom glass dropdown populated from `GET /v1/models`, showing the current model name with an animated chevron. Selecting a model updates `state.selectedModel`.
 - Refresh models icon button next to the model selector.
-- Extended Thinking toggle — a `ghost-button` chip showing a zap icon and the label `Thinking`. Activating it enables extended thinking mode for the active chat. Active state uses a purple tint and glow.
+- Reasoning effort is selected inside the model dropdown rather than through a standalone Thinking button. The dropdown places searchable models on the left and a capability-aware effort rail on the right with None, Low, Medium, High, Max, and XHigh choices.
+- The selected effort is stored per chat and sent to the messages API as `thinking: { enabled: Boolean(effort), type: effort }`. Unsupported effort choices are disabled using the selected model's `capabilities.effort` metadata.
 - Tools button — opens the Tools menu popup with per-category toggles:
   - Documents
   - Web

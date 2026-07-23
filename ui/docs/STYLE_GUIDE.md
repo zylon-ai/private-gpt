@@ -145,13 +145,22 @@ Use `chat-tools-composer.png` as the main composer reference.
 
 The composer should include:
 
-- Large text input area.
-- Send icon button on the right.
-- Compact controls below the textarea:
-  - Model selector (custom glass dropdown — see Model Selector section).
-  - Refresh models icon button.
-  - Thinking toggle button.
-  - Tools selector button opening the Tools menu.
+- Compact two-row glass input inspired by the reference composer. Copy only its visual treatment and interaction patterns; do not introduce labels, modes, context syntax, or capabilities that PrivateGPT does not implement.
+- A text area above a single toolbar row.
+- Left-side toolbar controls for a consolidated add/actions menu, searchable model and reasoning-effort selection, and model refresh.
+- Right-side circular send control.
+- Use a slightly taller composer input and 32px toolbar controls with medium-weight labels so the primary input remains visually substantial without becoming a large card.
+- Composer controls use self-contained inline SVGs so global icon hydration and sizing cannot distort them.
+- The add/actions control starts as a centered circular plus button and smoothly expands to reveal a short “Add” label on hover or keyboard focus. Its menu contains file attachment first, followed by the existing PrivateGPT context/tool configuration.
+- Toolbar icons use restrained hover motion: refresh rotates, send lifts, and dropdown chevrons respond to hover/open state.
+- Composer dropdowns morph outward from their trigger using a spring-like scale and corner-radius transition, then reverse into the trigger when closed.
+- The model effort rail reveals after the main model list with a short lateral clip transition, while model and effort rows enter with a restrained stagger. Filtering repeats the row transition so list changes remain legible.
+- Respect `prefers-reduced-motion` by disabling composer menu, rail, and row animations.
+- Floating composer menus must clamp their width, height, and horizontal position to the current viewport. Their internal lists scroll without allowing the panel itself to render beyond the window.
+- File attachment uploads to the active code-execution session when Code Execution is enabled; otherwise it ingests files into the configured Documents collection.
+- The model dropdown includes a focused search field and filters loaded models by display name.
+- The model dropdown uses a two-column layout: searchable models on the left and a reasoning-effort rail on the right. Effort choices are None, Low, Medium, High, Max, and XHigh, with unsupported model capabilities disabled.
+- Reasoning effort replaces the standalone Thinking composer button and is stored per chat.
 
 The `Tools` control should expose chat-specific toggles:
 
