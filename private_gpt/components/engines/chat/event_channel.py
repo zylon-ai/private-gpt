@@ -28,6 +28,9 @@ class BrokerEventChannel(EventChannel):
 
         self._tail = asyncio.create_task(_publish())
 
-    async def close(self) -> None:
+    async def flush(self) -> None:
         if self._tail is not None:
             await self._tail
+
+    async def close(self) -> None:
+        await self.flush()

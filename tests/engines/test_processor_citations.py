@@ -16,6 +16,9 @@ from private_gpt.events.models import (
     Event,
     FatalError,
     RawContentBlockDeltaEvent,
+    RawContentBlockStartEvent,
+    RawContentBlockStopEvent,
+    TextBlock,
     TextDelta,
 )
 
@@ -136,3 +139,53 @@ async def test_multiple_citations_processing() -> None:
             all_citations.extend(event.delta.citations)
 
     assert len(all_citations) == 2
+
+
+@pytest.mark.asyncio
+async def test_process_citations_trailing_backtick() -> None:
+    doc = create_document("DOC1", "Test document content")
+    documents = [doc]
+
+    cb_text = []
+
+    def my_cb(t, c):
+        cb_text.append(t)
+
+    # Use fresh event list to avoid mutation reuse
+    events = [
+        create_text_delta("This is a test with a trailing backtick `"),
+    ]
+    async for _event in process_citations(
+        generate_events(*events), lambda **kwargs: documents, callback=my_cb
+    ):
+        pass
+
+    assert cb_text[0] == "This is a test with a trailing backtick `"
+
+
+@pytest.mark.asyncio
+async def test_process_citations_trailing_backtick_with_stop_event() -> None:
+    doc = create_document("DOC1", "Test document content")
+    documents = [doc]
+
+    events = [
+        RawContentBlockStartEvent(block_id="0", content_block=TextBlock(text="")),
+        create_text_delta("This is a test with a trailing backtick `"),
+        RawContentBlockStopEvent(block_id="0"),
+    ]
+
+    result: list[Event] = []
+    async for event in process_citations(
+        generate_events(*events), lambda **kwargs: documents
+    ):
+        result.append(event)
+
+    # start, delta (without backtick), delta (with backtick), stop
+    assert len(result) == 4
+
+    combined = ""
+    for r in result:
+        if isinstance(r, RawContentBlockDeltaEvent) and isinstance(r.delta, TextDelta):
+            combined += r.delta.text or ""
+
+    assert combined == "This is a test with a trailing backtick `"

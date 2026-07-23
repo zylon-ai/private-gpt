@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from typing import Any
 
 from private_gpt.arq.enqueue import enqueue_job
@@ -6,6 +8,9 @@ from private_gpt.arq.tasks.chat.settings import START_CHAT_TASK_NAME, get_queue_
 from private_gpt.di import get_global_injector
 from private_gpt.server.chat.chat_service import ChatService
 from private_gpt.settings.settings import settings
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
 
 
 async def enqueue_start_chat_job(
@@ -16,6 +21,12 @@ async def enqueue_start_chat_job(
     metadata: dict[str, Any],
     job_id: str | None = None,
 ) -> None:
+    logger.debug(
+        "Dispatching chat start correlation_id=%s message_id=%s job_id=%s",
+        correlation_id,
+        correlation_id,
+        job_id or f"{correlation_id}:start",
+    )
     await enqueue_job(
         task_name=START_CHAT_TASK_NAME,
         queue_name=get_queue_name(settings()),
@@ -33,16 +44,42 @@ async def start_chat_job(
     stream_type: str,
     metadata: dict[str, Any],
 ) -> None:
+    logger.info(
+        "Chat start started correlation_id=%s message_id=%s",
+        correlation_id,
+        correlation_id,
+    )
     injector = ctx.get("injector") or get_global_injector(
         allow_to_generate_new_injectors=True
     )
-    await (
-        injector.get(ChatService)
-        .build_async_engine()
-        .execute_scheduled_start(
-            execution_id=correlation_id,
-            request_data=request_data,
-            stream_type=stream_type,
-            metadata=metadata,
+    try:
+        await (
+            injector.get(ChatService)
+            .build_async_engine()
+            .execute_scheduled_start(
+                execution_id=correlation_id,
+                request_data=request_data,
+                stream_type=stream_type,
+                metadata=metadata,
+            )
         )
+    except asyncio.CancelledError:
+        logger.warning(
+            "Chat start cancelled correlation_id=%s message_id=%s",
+            correlation_id,
+            correlation_id,
+        )
+        raise
+    except Exception:
+        logger.exception(
+            "Chat start failed correlation_id=%s message_id=%s",
+            correlation_id,
+            correlation_id,
+        )
+        raise
+
+    logger.info(
+        "Chat start finished correlation_id=%s message_id=%s",
+        correlation_id,
+        correlation_id,
     )

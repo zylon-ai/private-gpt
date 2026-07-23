@@ -12,7 +12,7 @@ TEST_LOCAL_DATA_DIR ?= $(TEST_PGPT_HOME)/local_data/tests
 WIPE_PGPT_HOME := $(if $(PGPT_HOME),$(PGPT_HOME),$(HOME)/.local/share/private-gpt)
 WIPE_LOCAL_DATA_DIR := $(WIPE_PGPT_HOME)/local_data
 
-.PHONY: test test-coverage quality-dependencies format lint typecheck fix check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower celery-worker arq-worker chat-worker tools-worker
+.PHONY: test test-changed test-coverage quality-dependencies format lint typecheck fix check auto-discover-models update-openapi-spec run dev-windows dev prod-run api-docs docs ingest wipe celery flower celery-worker arq-worker chat-worker tools-worker
 
 ########################################################################################################################
 # Quality checks
@@ -20,7 +20,11 @@ WIPE_LOCAL_DATA_DIR := $(WIPE_PGPT_HOME)/local_data
 
 test:
 	rm -rf "$(TEST_LOCAL_DATA_DIR)"/*
-	PGPT_HOME=$(TEST_PGPT_HOME) PYTHONPATH=. uv run pytest tests
+	PGPT_HOME=$(TEST_PGPT_HOME) PYTHONPATH=. uv run pytest tests $(PYTEST_ARGS)
+
+test-changed:
+	rm -rf "$(TEST_LOCAL_DATA_DIR)"/*
+	PGPT_HOME=$(TEST_PGPT_HOME) PYTHONPATH=. uv run pytest tests --git-diff $(PYTEST_ARGS)
 
 test-coverage:
 	rm -rf "$(TEST_LOCAL_DATA_DIR)"/*

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from injector import Injector, inject, singleton
 
@@ -13,6 +14,8 @@ from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.settings.settings import Settings, settings
 
 if TYPE_CHECKING:
+    from celery.result import AsyncResult
+
     from private_gpt.server.ingest.ingest_router import (
         DeleteIngestedDocumentAsyncBody,
         IngestAsyncBody,
@@ -56,6 +59,9 @@ class BaseIngestionScheduler(ABC):
 
     @abstractmethod
     def ingest(self, ingest_body: IngestBody) -> IngestResponse: ...
+
+    async def ingest_for_request(self, ingest_body: IngestBody) -> IngestResponse:
+        return await asyncio.to_thread(self.ingest, ingest_body)
 
     def ingest_async(self, ingest_body: IngestAsyncBody) -> str:
         del ingest_body
@@ -136,7 +142,9 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
             )
             s3_helper = self._require_s3_helper()
             if should_upload and s3_helper.is_available():
-                content = ingest_body.ingest_body.input.to_binary_content()
+                content = ingest_body.ingest_body.input.to_binary_content(
+                    get_file_name(ingest_body.ingest_body.metadata)
+                )
                 object_name = str(uuid.uuid4())
                 s3_url = s3_helper.upload_file_to_s3(
                     filename=content.filename,
@@ -146,6 +154,10 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
                 )
                 if not s3_url:
                     raise ValueError("Failed to upload file to S3 for async ingestion")
+                ingest_body.ingest_body.metadata = {
+                    **(ingest_body.ingest_body.metadata or {}),
+                    "file_name": content.filename,
+                }
                 ingest_body.ingest_body.input = UriArtifact(value=s3_url)
 
         result = dispatch_task(
@@ -185,36 +197,22 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
             raise ValueError("Delete ingestion task did not return a valid task_id")
         return task_id
 
-    def ingest(self, ingest_body: IngestBody) -> IngestResponse:
+    def _dispatch_sync_ingest(self, ingest_body: IngestBody) -> AsyncResult[Any]:
         import uuid
 
         from private_gpt.celery.dispatch import dispatch_task
         from private_gpt.celery.tasks.ingestion.extraction_tasks import (
             VECTOR_INDEX_TASK_NAME,
         )
-        from private_gpt.server.ingest.ingest_router import (
-            IngestAsyncBody,
-            IngestResponse,
-        )
+        from private_gpt.server.ingest.ingest_router import IngestAsyncBody
         from private_gpt.server.utils.artifact_input import UriArtifact
-        from private_gpt.server.utils.callback import AMQP, Callback
 
         config = settings()
         self._ingest_service.initialize_artifact_indices(
             collection=ingest_body.collection,
             artifact=ingest_body.artifact,
         )
-        async_body = IngestAsyncBody(
-            ingest_body=ingest_body,
-            callback=Callback(
-                amqp=AMQP(
-                    exchange="ingestion_events",
-                    routing_key_done="ingest.completed",
-                    routing_key_error="ingest.failed",
-                    routing_key_progress="ingest.progress",
-                )
-            ),
-        )
+        async_body = IngestAsyncBody(ingest_body=ingest_body)
 
         if async_body.ingest_body.input:
             s3_helper = self._require_s3_helper()
@@ -235,6 +233,10 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
                     raise ValueError(
                         "Failed to upload file to S3 for sync celery ingest"
                     )
+                async_body.ingest_body.metadata = {
+                    **(async_body.ingest_body.metadata or {}),
+                    "file_name": content.filename,
+                }
                 async_body.ingest_body.input = UriArtifact(value=s3_url)
 
         result = dispatch_task(
@@ -242,10 +244,40 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
             args=(async_body,),
             queue=config.scheduler.ingestion.celery_queue,
         )
+        return result
+
+    def ingest(self, ingest_body: IngestBody) -> IngestResponse:
+        from private_gpt.server.ingest.ingest_router import IngestResponse
+
+        result = self._dispatch_sync_ingest(ingest_body)
         while not result.ready():
             import time
 
             time.sleep(0.1)
+        if result.failed():
+            raise result.result
+        return IngestResponse.model_validate(result.result)
+
+    async def ingest_for_request(self, ingest_body: IngestBody) -> IngestResponse:
+        from private_gpt.server.ingest.ingest_router import IngestResponse
+
+        dispatch = asyncio.create_task(
+            asyncio.to_thread(self._dispatch_sync_ingest, ingest_body)
+        )
+        result = None
+        try:
+            result = await asyncio.shield(dispatch)
+            while not result.ready():
+                await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            if result is None:
+                result = await asyncio.shield(dispatch)
+            logger.info(
+                "Cancelling Celery ingestion after HTTP disconnect task_id=%s",
+                result.task_id,
+            )
+            result.revoke(terminate=True)
+            raise
         if result.failed():
             raise result.result
         return IngestResponse.model_validate(result.result)

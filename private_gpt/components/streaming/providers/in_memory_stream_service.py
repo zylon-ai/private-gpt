@@ -38,10 +38,6 @@ class InMemoryStreamService(StreamService):
         """Create a new stream and return correlation ID."""
         if correlation_id is None:
             correlation_id = str(uuid.uuid4())
-        elif correlation_id and await self.stream_exists(correlation_id):
-            raise ValueError(
-                f"Stream with correlation_id {correlation_id} already exists"
-            )
 
         now = datetime.now(UTC)
         stream_metadata = StreamMetadata(
@@ -54,6 +50,10 @@ class InMemoryStreamService(StreamService):
         )
 
         async with self._lock:
+            if correlation_id in self._metadata:
+                raise ValueError(
+                    f"Stream with correlation_id {correlation_id} already exists"
+                )
             self._metadata[correlation_id] = stream_metadata
             self._events[correlation_id] = []
             self._event_counters[correlation_id] = 0

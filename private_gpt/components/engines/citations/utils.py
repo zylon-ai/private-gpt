@@ -12,6 +12,7 @@ from llama_index.core.schema import MetadataMode, NodeWithScore
 from private_gpt.components.chat.processors.chat_history.memory.utils.splitting import (
     get_user_blocks,
 )
+from private_gpt.components.engines.citations.parser import CitationTextParser
 from private_gpt.components.engines.citations.types import Citation, Document
 from private_gpt.components.ingest.metadata_helper import (
     MetadataFlags,
@@ -250,170 +251,19 @@ def extract_citations_by_original_text(
     split_token: str = DEFAULT_SPLIT_CITATION_TOKEN,
     shorter_id_length: int = SHORTER_ID_LENGTH,
     citation_indices: dict[str, int] | None = None,
+    is_final: bool = False,
 ) -> tuple[str, list[Citation], dict[str, int]]:
-    # Initialize an empty string to store the cleaned text
-    citation_indices = citation_indices or {}
-
-    result = ""
-    buffer = ""
-    start_len = len(start_token)
-    end_len = len(end_token)
-
-    # Model can generate brackets not normalized 【
-    text = text.replace("【", start_token).replace("】", end_token)
-
-    # Iterate through the text to remove malformed citations and save correct citations
-    i = 0
-    docs = []
-    while i < len(text):
-        # If we have a buffer, try to process it first
-        if buffer and start_token in buffer and end_token in buffer:
-            citation_start = buffer.find(start_token)
-            citation_end = buffer.find(end_token) + end_len
-
-            citation_text = buffer[citation_start:citation_end]
-            node_ids = [
-                id.strip()
-                for id in citation_text[len(start_token) : -len(end_token)].split(
-                    split_token
-                )
-            ]
-
-            valid_docs = []
-            for node_id in node_ids:
-                doc = next(
-                    (doc for doc in documents if doc.id.lower() == node_id.lower()),
-                    None,
-                )
-                if doc:
-                    valid_docs.append(doc)
-
-            if valid_docs:
-                docs.extend(valid_docs)
-                result += split_token.join(
-                    f"{start_token}{doc.id}{end_token}" for doc in valid_docs
-                )
-                # Clear buffer and continue from after citation
-                rest_of_buffer = buffer[citation_end:]
-                if rest_of_buffer and rest_of_buffer[0] == "`":
-                    buffer = rest_of_buffer[1:]
-                else:
-                    buffer = rest_of_buffer
-                continue
-            else:
-                # No valid docs in citation, treat as regular text
-                result += buffer
-                buffer = ""
-                continue
-
-        if text[i] == "`":
-            if buffer:
-                buffer += text[i]
-            else:
-                buffer = text[i]
-            i += 1
-        elif text[i : i + start_len] == start_token:
-            # Check if we have a complete citation
-            j = i + start_len
-            while j < len(text) and text[j : j + end_len] != end_token:
-                j += 1
-
-            if j < len(text) and text[j : j + end_len] == end_token:
-                node_ids = [
-                    id.strip() for id in text[i + start_len : j].split(split_token)
-                ]
-                valid_docs = []
-                for node_id in node_ids:
-                    doc = next(
-                        (doc for doc in documents if doc.id.lower() == node_id.lower()),
-                        None,
-                    )
-                    if doc:
-                        valid_docs.append(doc)
-                if valid_docs:
-                    if buffer and buffer != "`":
-                        result += buffer
-                    buffer = ""
-                    docs.extend(valid_docs)
-                    result += split_token.join(
-                        f"{start_token}{doc.id}{end_token}" for doc in valid_docs
-                    )
-                    next_pos = j + end_len
-                    if next_pos < len(text) and text[next_pos] == "`":
-                        i = next_pos + 1
-                    else:
-                        i = j + end_len
-                else:
-                    if buffer and buffer != "`":
-                        result += buffer
-                    buffer = ""
-                    # No valid docs in citation, treat as regular text
-                    result += text[i : j + end_len]
-                    i = j + end_len
-            else:
-                # Incomplete citation detected: drop the
-                # citation content and stop processing further.
-                # This change fixes the issue by not
-                # appending any incomplete citation text.
-                i = len(text)
-                continue
-        else:
-            if not buffer:
-                result += text[i]
-            else:
-                buffer += text[i]
-            i += 1
-
-    # Don't output buffer if:
-    # 1. It's just a backtick (could be start of citation)
-    # 2. It contains start token but not end token (incomplete citation)
-    if buffer and buffer != "`" and start_token not in buffer:
-        result += buffer
-
-    # Process citations
-    pattern = re.compile(
-        rf"{re.escape(start_token)}?[A-Z0-9]{shorter_id_length}{re.escape(end_token)}?"
+    parser = CitationTextParser(
+        documents,
+        format_cite,
+        start_token=start_token,
+        end_token=end_token,
+        separator=split_token,
+        identifier_length=shorter_id_length,
+        citation_indices=citation_indices,
     )
-    for match in pattern.finditer(result):
-        # If citation is well-formed, skip
-        word = match.group(0) if match.groups() else ""
-        if not word or (word.startswith(start_token) and word.endswith(end_token)):
-            continue
-
-        # Try to find the related document, if no document found, skip
-        doc = next((doc for doc in documents if doc.id in word), None)
-        if not doc:
-            continue
-
-        # Remove doc reference
-        new_token = word.replace(doc.id, "", 1).lstrip().rstrip()
-        result = result[: match.start()] + new_token + result[match.end() :]
-
-    # Replace citations with sequential numbers, just first occurrence
-    max_index = max(citation_indices.values(), default=-1)
-    current_index = max_index + 1
-    processed_docs = []
-    for i, doc in enumerate(docs):
-        if doc.id_ not in processed_docs:
-            processed_docs.append(doc.id_)
-
-        if doc.id_ in citation_indices:
-            # If we already have this document, use the existing index
-            index = citation_indices[doc.id_]
-        else:
-            # Otherwise, assign a new index
-            index = current_index
-            current_index += 1
-        citation_indices[doc.id_] = index
-
-        citation = format_cite(i, doc, index)
-        result = result.replace(
-            f"{start_token}{doc.id}{end_token}",
-            citation,
-            1,
-        )
-
-    return result, _extract_citations_from_text(result), citation_indices
+    result, updated_indices = parser.parse(text, final=is_final)
+    return result, _extract_citations_from_text(result), updated_indices
 
 
 async def deduplicate_documents_in_history(

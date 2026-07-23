@@ -90,9 +90,6 @@ def _shutdown_stateful_worker() -> None:
 @worker_ready.connect
 def handle_worker_ready(**kwargs: dict[str, Any]) -> None:
     """Signal handler for worker ready event."""
-    if _is_stateful():
-        _warm_stateful_worker()
-
     READINESS_FILE.touch()
 
 
@@ -104,6 +101,9 @@ def handle_worker_process_init(**kwargs: dict[str, Any]) -> None:
     one at a time, avoiding OOM from simultaneous loading.
     """
     if _is_stateful():
+        from private_gpt.celery.base import StatefulBackgroundTask
+
+        StatefulBackgroundTask.reset_after_fork()
         _warm_stateful_worker()
 
 

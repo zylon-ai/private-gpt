@@ -81,6 +81,21 @@ class PromptStyleBase(ABC):
         """
         return False
 
+    @property
+    def special_tokens(self) -> list[str]:
+        """Special tokens to strip from generated text for this model family.
+
+        The text parser uses this list to build a fast regex that removes
+        special tokens from model output without tokenizer round-trips.
+
+        The default returns an empty list (nothing stripped).  Subclasses
+        that have access to a tokenizer should query
+        ``tokenizer.all_special_tokens``; subclasses that use a remote
+        tokenizer (e.g. Triton) should hardcode the model's known special
+        tokens.
+        """
+        return []
+
     @abstractmethod
     def _messages_to_prompt(
         self,

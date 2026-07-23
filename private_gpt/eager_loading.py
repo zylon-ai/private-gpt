@@ -40,7 +40,7 @@ def _warm_base(injector: Injector) -> None:
 def _warm_stores(injector: Injector) -> None:
     logger.debug("Warming stores")
     injector.get(NodeStoreComponent)
-    injector.get(VectorStoreComponent)
+    injector.get(VectorStoreComponent).warm_up()
 
 
 def _warm_streaming(injector: Injector) -> None:

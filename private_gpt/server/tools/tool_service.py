@@ -5,6 +5,7 @@ from llama_index.core.base.llms.types import ChatMessage
 from pydantic import BaseModel
 
 from private_gpt.chat.extensions.context_filter import ContextFilter
+from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.tools.tool_factories import (
     DatabaseQueryToolBuilderFactory,
     SemanticSearchToolBuilderFactory,
@@ -50,6 +51,40 @@ class ToolService:
         self._database_query_tool_builder_factory = database_query_tool_builder_factory
         self._web_fetch_tool_builder_factory = web_fetch_tool_builder_factory
         self._web_search_tool_builder_factory = web_search_tool_builder_factory
+
+    async def build_semantic_search_tool(
+        self,
+        context_filter: ContextFilter,
+        generate_citations: bool = False,
+    ) -> ToolSpec:
+        token_limit = self.settings.chat.maximum_context_length or None
+        return await self._semantic_search_tool_builder_factory.create().build_tool(
+            context_filter=context_filter,
+            generate_citations=generate_citations,
+            token_limit=token_limit,
+        )
+
+    async def build_tabular_data_analysis_tool(
+        self,
+        context_filter: ContextFilter,
+    ) -> ToolSpec:
+        return await self._tabular_data_tool_builder_factory.create().build_tool(
+            context_filter=context_filter,
+        )
+
+    async def build_database_query_tool(
+        self,
+        sql_artifacts: list[SqlDatabaseArtifact],
+    ) -> ToolSpec:
+        return await self._database_query_tool_builder_factory.create().build_tool(
+            sql_artifacts=sql_artifacts,
+        )
+
+    def build_web_fetch_tool(self) -> ToolSpec:
+        return self._web_fetch_tool_builder_factory.create().build_tool()
+
+    async def build_web_search_tool(self) -> ToolSpec:
+        return await self._web_search_tool_builder_factory.create().build_tool()
 
     async def semantic_search_tool(
         self,

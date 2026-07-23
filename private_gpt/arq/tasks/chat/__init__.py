@@ -7,25 +7,39 @@ from private_gpt.settings.settings import settings
 
 if TYPE_CHECKING:
     from private_gpt.arq.tasks.chat.resume import (
-        enqueue_chat_timeout_job,
         enqueue_resume_iteration_job,
         enqueue_tool_resume_job,
+        enqueue_tool_timeout_job,
     )
     from private_gpt.arq.tasks.chat.start import enqueue_start_chat_job
 
 
-async def abort_chat_job(*, correlation_id: str) -> bool:
+async def abort_chat_job(
+    *,
+    correlation_id: str,
+    checkpoint_id: str | None = None,
+    tool_ids: tuple[str, ...] = (),
+) -> bool:
+    job_ids = [f"{correlation_id}:start"]
+    if checkpoint_id:
+        job_ids.extend(
+            (
+                f"{correlation_id}:resume:{checkpoint_id}",
+                *(
+                    f"{correlation_id}:tool-timeout:{checkpoint_id}:{tool_id}"
+                    for tool_id in tool_ids
+                ),
+            )
+        )
+    job_ids.extend(f"{correlation_id}:tool-result:{tool_id}" for tool_id in tool_ids)
     results = await asyncio.gather(
-        abort_job(
-            job_id=f"{correlation_id}:start",
-            queue_name=get_queue_name(settings()),
+        *(
+            abort_job(job_id=job_id, queue_name=get_queue_name(settings()))
+            for job_id in job_ids
         ),
-        abort_job(
-            job_id=f"{correlation_id}:resume",
-            queue_name=get_queue_name(settings()),
-        ),
+        return_exceptions=True,
     )
-    return any(results)
+    return any(result is True for result in results)
 
 
 def __getattr__(name: str) -> Any:
@@ -34,9 +48,9 @@ def __getattr__(name: str) -> Any:
 
         return enqueue_start_chat_job
     if name in {
-        "enqueue_chat_timeout_job",
         "enqueue_resume_iteration_job",
         "enqueue_tool_resume_job",
+        "enqueue_tool_timeout_job",
     }:
         from private_gpt.arq.tasks.chat import resume
 
@@ -46,8 +60,8 @@ def __getattr__(name: str) -> Any:
 
 __all__ = [
     "abort_chat_job",
-    "enqueue_chat_timeout_job",
     "enqueue_resume_iteration_job",
     "enqueue_start_chat_job",
     "enqueue_tool_resume_job",
+    "enqueue_tool_timeout_job",
 ]

@@ -7,8 +7,10 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from queue import Queue
 from typing import Any, ClassVar, Union, cast
 
+from grpc import RpcError
 from llama_index.core.bridge.pydantic import PrivateAttr
 from llama_index.core.schema import BaseNode
+from llama_index.core.utils import iter_batch
 from llama_index.core.vector_stores.types import (
     ExactMatchFilter,
     FilterCondition,
@@ -48,6 +50,7 @@ from qdrant_client.conversions.common_types import (  # type: ignore[import-not-
 from qdrant_client.http import (  # ty:ignore[unresolved-import]
     models as rest,  # type: ignore[import-not-found]
 )
+from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
     Filter,
     HasIdCondition,
@@ -103,6 +106,7 @@ class PatchedQdrantVectorStore(QdrantVectorStore):
     _logical_multitenancy: bool = PrivateAttr()
     _group_id: str | None = PrivateAttr()
     _group_id_field: str = PrivateAttr(DEFAULT_GROUP_ID_FIELD)
+    _upload_parallel: int = PrivateAttr(1)
 
     def __init__(
         self,
@@ -844,21 +848,105 @@ class PatchedQdrantVectorStore(QdrantVectorStore):
 
     @retry(is_async=False, tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
     def add(self, nodes: list[BaseNode], **add_kwargs: Any) -> list[str]:
-        """Override to add retry logic to the add method."""
-        parent: list[str] = super().add(nodes, **add_kwargs)
-        return parent
+        """Add nodes using threads instead of Qdrant upload processes."""
+        shard_identifier = add_kwargs.pop("shard_identifier", None)
+
+        if nodes and not self._collection_initialized:
+            self._create_collection(
+                collection_name=self.collection_name,
+                vector_size=len(nodes[0].get_embedding()),
+            )
+
+        if self._collection_initialized and self._legacy_vector_format is None:
+            self._detect_vector_format(self.collection_name)
+
+        points, ids = self._build_points(nodes, self.sparse_vector_name)
+        shard_key_selector = (
+            self._generate_shard_key_selector(shard_identifier)
+            if shard_identifier is not None
+            else None
+        )
+        batches = list(iter_batch(points, self.batch_size))
+
+        def upload(batch: list[Any]) -> None:
+            self._client.upload_points(
+                collection_name=self.collection_name,
+                points=batch,
+                batch_size=self.batch_size,
+                # Qdrant interprets parallel > 1 as multiprocessing. Keep every
+                # upload fork-free and parallelize batches with our thread pool.
+                parallel=1,
+                max_retries=self.max_retries,
+                wait=True,
+                shard_key_selector=shard_key_selector,
+            )
+
+        executor = self.executor(max_workers=min(self.parallel, len(batches)))
+        if executor is None:
+            for batch in batches:
+                upload(batch)
+        else:
+            list(executor.map(upload, batches))
+        return ids
 
     @retry(is_async=True, tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
     async def async_add(self, nodes: list[BaseNode], **kwargs: Any) -> list[str]:
-        """Override to add retry logic to the async_add method."""
-        # TODO: To pass tests: As we don't migrate to async yet, we need to
-        # to use the sync method until we migrate to async
+        """Add nodes with bounded async upload consumers."""
         if isinstance(self._client._client, QdrantLocal):
-            # If we are using QdrantLocal, we need to use the sync method
-            return cast(list[str], super().add(nodes, **kwargs))  # type: ignore[redundant-cast]
+            return await asyncio.to_thread(self.add, nodes, **kwargs)
 
-        parent: list[str] = await super().async_add(nodes, **kwargs)
-        return parent
+        self._ensure_async_client()
+        collection_initialized = await self._acollection_exists(self.collection_name)
+        if nodes and not collection_initialized:
+            await self._acreate_collection(
+                collection_name=self.collection_name,
+                vector_size=len(nodes[0].get_embedding()),
+            )
+            collection_initialized = True
+
+        if collection_initialized and self._legacy_vector_format is None:
+            await self._adetect_vector_format(self.collection_name)
+
+        points, ids = self._build_points(nodes, self.sparse_vector_name)
+        shard_identifier = kwargs.pop("shard_identifier", None)
+        shard_key_selector = (
+            self._generate_shard_key_selector(shard_identifier)
+            if shard_identifier is not None
+            else None
+        )
+        queue = asyncio.Queue[list[Any] | None]()
+        batches = list(iter_batch(points, self.batch_size))
+        num_consumers = min(self.parallel, len(batches))
+
+        async def consumer() -> None:
+            while True:
+                batch = await queue.get()
+                if batch is None:
+                    return
+                retries = 0
+                while True:
+                    try:
+                        await self._aclient.upsert(
+                            collection_name=self.collection_name,
+                            points=batch,
+                            wait=True,
+                            shard_key_selector=shard_key_selector,
+                        )
+                        break
+                    except (RpcError, UnexpectedResponse):
+                        retries += 1
+                        if retries >= self.max_retries:
+                            raise
+
+        for batch in batches:
+            await queue.put(batch)
+        for _ in range(num_consumers):
+            await queue.put(None)
+        async with asyncio.TaskGroup() as task_group:
+            for _ in range(num_consumers):
+                task_group.create_task(consumer())
+
+        return ids
 
     @retry(is_async=False, tries=_MAX_RETRIES, jitter=_JITTER, logger=logger)
     def delete(self, ref_doc_id: str, **delete_kwargs: Any) -> None:

@@ -412,6 +412,31 @@ class DataSettings(BaseModel):
         description="The maximum number of nodes to ingest.",
         default=None,
     )
+    max_content_nodes: int = Field(
+        description="Maximum nodes processed by one artifact content request.",
+        default=10_000,
+        ge=1,
+    )
+    max_content_artifacts: int = Field(
+        description="Maximum artifacts processed by one content request.",
+        default=20,
+        ge=1,
+    )
+    max_content_depth: int = Field(
+        description="Maximum tree depth processed by one content request.",
+        default=200,
+        ge=1,
+    )
+    max_content_response_bytes: int = Field(
+        description="Maximum estimated content payload size returned by one request.",
+        default=50 * 1024 * 1024,
+        ge=1,
+    )
+    max_content_concurrency: int = Field(
+        description="Maximum concurrent artifact content operations per process.",
+        default=2,
+        ge=1,
+    )
     use_async: bool = Field(
         description="Flag indicating if async mode should be used for ingestion.",
         default=True,

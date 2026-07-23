@@ -44,17 +44,18 @@ class SkillFrontmatter(BaseModel):
             raise ValueError("name cannot contain consecutive hyphens")
         return value
 
-    @field_validator("metadata")
+    @field_validator("metadata", mode="before")
     @classmethod
-    def validate_metadata(cls, value: dict[str, str] | None) -> dict[str, str] | None:
+    def validate_metadata(
+        cls, value: dict[str, object] | None
+    ) -> dict[str, str] | None:
         if value is None:
             return value
-        for key, item in value.items():
-            if not key:
-                raise ValueError("metadata keys must be non-empty")
-            if not isinstance(item, str):
-                raise ValueError("metadata values must be strings")
-        return value
+        return {
+            key: str(val) if not isinstance(val, str) else val
+            for key, val in value.items()
+            if key
+        }
 
     @field_validator("allowed_tools_raw", mode="before")
     @classmethod

@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import io
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO
+from urllib.parse import quote
 
 from injector import inject, singleton
 
+from private_gpt.components.ingest.utils import get_guest_mime_type
 from private_gpt.settings.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -21,6 +24,10 @@ DEBUG_MODE = settings().server.debug_mode
 
 def _remove_expect_header(params: dict[str, Any], **_: Any) -> None:
     params["headers"].pop("Expect", None)
+
+
+def _encode_metadata_value(value: str) -> str:
+    return quote(value, safe="")
 
 
 @singleton
@@ -89,22 +96,27 @@ class S3Helper:
         :param bytes_data: File content as bytes
         :param bucket_name: Name of the S3 bucket
         :param object_name: S3 object name. If not specified then filename is used
-        :param content_type: MIME type of the file.
+        :param mime_type: MIME type of the file.
         """
         s3_client = self._s3_client
         if not s3_client:
             raise RuntimeError("Failed to create S3 client")
         if object_name is None:
             object_name = filename
+        resolved_mime_type = (
+            mime_type
+            or get_guest_mime_type(Path(filename))
+            or "application/octet-stream"
+        )
 
         put_args: dict[str, Any] = {
             "Bucket": bucket_name,
             "Key": object_name,
             "Body": bytes_data,
-            "ContentType": mime_type,
+            "ContentType": resolved_mime_type,
             "Metadata": {
-                "file_name": filename,
-                "content_type": mime_type,
+                "file_name": _encode_metadata_value(filename),
+                "content_type": resolved_mime_type,
             },
         }
 
@@ -121,7 +133,11 @@ class S3Helper:
     ) -> str:
         if object_name is None:
             object_name = filename
-        resolved_mime_type = mime_type or "application/octet-stream"
+        resolved_mime_type = (
+            mime_type
+            or get_guest_mime_type(Path(filename))
+            or "application/octet-stream"
+        )
 
         async with self._get_async_s3_client() as s3_client:
             s3_client.meta.events.register_last(
@@ -134,7 +150,7 @@ class S3Helper:
                 Body=bytes_data,
                 ContentType=resolved_mime_type,
                 Metadata={
-                    "file_name": filename,
+                    "file_name": _encode_metadata_value(filename),
                     "content_type": resolved_mime_type,
                 },
             )

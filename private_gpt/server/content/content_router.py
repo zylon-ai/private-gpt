@@ -1,7 +1,8 @@
+import asyncio
 import enum
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from private_gpt.chat.extensions.context_filter import ContextFilter
@@ -16,7 +17,10 @@ from private_gpt.components.readers.nodes.table_node import TableNode, TableRowN
 from private_gpt.components.readers.nodes.text_node import TextNode
 from private_gpt.components.readers.nodes.tree_node import TreeMetadataMode, TreeNode
 from private_gpt.events.models import ResultContentBlockType
-from private_gpt.server.content.content_service import ContentService
+from private_gpt.server.content.content_service import (
+    ContentRequestLimitError,
+    ContentService,
+)
 from private_gpt.server.utils.auth import authenticated
 from private_gpt.server.utils.openapi_models import OpenAPIValidationErrorResponse
 
@@ -63,16 +67,37 @@ class ContentTree(BaseModel):
     def from_node(
         cls, node: TreeNode, mode: TreeMetadataMode = TreeMetadataMode.USER
     ) -> "ContentTree":
-        """Recursively convert a TreeNode into a ContentTree."""
-        node_type = getattr(node, "type", None)
-        if not isinstance(node_type, str):
-            node_type = node.get_type()
-        return cls(
-            id=node.id_,
-            type=node_type,
-            content=node.get_content(mode),
-            children=[cls.from_node(child, mode=mode) for child in node.children],
-        )
+        """Convert a TreeNode without relying on Python recursion."""
+        converted: dict[str, ContentTree] = {}
+        stack: list[tuple[TreeNode, bool]] = [(node, False)]
+        while stack:
+            current, visited = stack.pop()
+            if not visited:
+                stack.append((current, True))
+                stack.extend((child, False) for child in reversed(current.children))
+                continue
+
+            node_type = getattr(current, "type", None)
+            if not isinstance(node_type, str):
+                node_type = current.get_type()
+            converted[current.id_] = cls(
+                id=current.id_,
+                type=node_type,
+                content=current.get_content(mode),
+                children=[converted[child.id_] for child in current.children],
+            )
+        return converted[node.id_]
+
+
+def _response_size(response: BaseModel) -> int:
+    return len(response.model_dump_json().encode("utf-8"))
+
+
+def _raise_payload_too_large(message: str) -> None:
+    raise HTTPException(
+        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        detail=message,
+    )
 
 
 content_router = APIRouter(
@@ -370,7 +395,7 @@ class ChunkedContentResponse(BaseModel):
         }
     },
 )
-def content_retrieval(request: Request, body: ContentBody) -> ContentResponse:
+async def content_retrieval(request: Request, body: ContentBody) -> ContentResponse:
     """Retrieve the full content of filtered documents.
 
     This endpoint provides access to complete document content rather than
@@ -419,27 +444,43 @@ def content_retrieval(request: Request, body: ContentBody) -> ContentResponse:
     if not body.filter:
         body.filter = ContentFilter()
 
-    for artifact_id, root_node in service.retrieve_document_content(
-        context_filter=body.context_filter,
-        include=body.filter.get_include_types(),
-        exclude=body.filter.get_exclude_types(),
-        node_ids=body.filter.node_ids,
-        include_children=body.filter.include_children,
-        include_ancestors=body.filter.include_ancestors,
-    ):
-        if body.format == ContentFormat.Object:
-            tree_object = ContentTree.from_node(root_node, mode=mode)
-            responses.append(
-                ContentDocumentResponse(artifact_id=artifact_id, content=tree_object)
-            )
-        else:
-            frozen_node = FrozenNode.from_node(root_node, modes=[mode])
-            responses.append(
-                ContentDocumentResponse(
-                    artifact_id=artifact_id, content=frozen_node.get_content(mode)
+    response_bytes = 0
+    try:
+        async with service.content_slot():
+            async for (
+                artifact_id,
+                root_node,
+            ) in await service.retrieve_document_nodes_async(
+                context_filter=body.context_filter,
+                include=body.filter.get_include_types(),
+                exclude=body.filter.get_exclude_types(),
+                node_ids=body.filter.node_ids,
+                include_children=body.filter.include_children,
+                include_ancestors=body.filter.include_ancestors,
+            ):
+                if body.format == ContentFormat.Object:
+                    content = await asyncio.to_thread(
+                        ContentTree.from_node, root_node, mode
+                    )
+                else:
+                    frozen_node = await asyncio.to_thread(
+                        FrozenNode.from_node, root_node, [mode]
+                    )
+                    content = frozen_node.get_content(mode)
+                    del frozen_node
+
+                document = ContentDocumentResponse(
+                    artifact_id=artifact_id,
+                    content=content,
                 )
-            )
-            del frozen_node
+                response_bytes += _response_size(document)
+                if response_bytes > service.max_content_response_bytes:
+                    _raise_payload_too_large(
+                        "Artifact content exceeds the configured response size limit"
+                    )
+                responses.append(document)
+    except ContentRequestLimitError as exc:
+        _raise_payload_too_large(str(exc))
 
     return ContentResponse(data=responses)
 
@@ -603,23 +644,32 @@ async def chunked_content_retrieval(
         body.filter = ContentFilter()
 
     max_length = body.max_tokens or llm_component.metadata().context_window
-    content_blocks = [
-        (artifact_id, content_blocks)
-        async for artifact_id, content_blocks in service.retrieve_chunked_document_content(
-            context_filter=body.context_filter,
-            include=body.filter.get_include_types(),
-            exclude=body.filter.get_exclude_types(),
-            max_length=max_length - (max_length // 10) if max_length else None,
-            tokenizer_fn=get_tokenizer(),
-            generate_citations=True,
-        )
-    ]
-    return ChunkedContentResponse(
-        data=[
-            ChunkedContentDocumentResponse(
-                artifact_id=artifact_id,
-                content=content,
-            )
-            for artifact_id, content in content_blocks
-        ]
-    )
+    responses: list[ChunkedContentDocumentResponse] = []
+    response_bytes = 0
+    try:
+        async with service.content_slot():
+            async for artifact_id, content in service.retrieve_chunked_document_content(
+                context_filter=body.context_filter,
+                include=body.filter.get_include_types(),
+                exclude=body.filter.get_exclude_types(),
+                node_ids=body.filter.node_ids,
+                include_children=body.filter.include_children,
+                include_ancestors=body.filter.include_ancestors,
+                max_length=max_length - (max_length // 10) if max_length else None,
+                tokenizer_fn=get_tokenizer(),
+                generate_citations=True,
+            ):
+                document = ChunkedContentDocumentResponse(
+                    artifact_id=artifact_id,
+                    content=content,
+                )
+                response_bytes += _response_size(document)
+                if response_bytes > service.max_content_response_bytes:
+                    _raise_payload_too_large(
+                        "Chunked artifact content exceeds the configured response size limit"
+                    )
+                responses.append(document)
+    except ContentRequestLimitError as exc:
+        _raise_payload_too_large(str(exc))
+
+    return ChunkedContentResponse(data=responses)

@@ -4,7 +4,7 @@ from typing import Any
 from llama_index.core.schema import BaseNode, MetadataMode, TransformComponent
 
 from private_gpt.components.ingest.metadata_helper import MetadataNode
-from private_gpt.components.llm.llm_helper import TokenizerFn
+from private_gpt.components.llm.llm_helper import TokenizerFn, get_tokenizer
 from private_gpt.components.readers.nodes.tree_node import TreeMetadataMode, TreeNode
 
 
@@ -17,7 +17,7 @@ class IncludeTokenCountIntoNodesTransform(TransformComponent):
     def from_defaults(
         cls, tokenizer: TokenizerFn | None = None
     ) -> "IncludeTokenCountIntoNodesTransform":
-        return cls(tokenizer=tokenizer)
+        return cls(tokenizer=tokenizer or get_tokenizer())
 
     def __call__(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:
         if not self.tokenizer:

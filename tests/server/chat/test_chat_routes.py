@@ -275,6 +275,47 @@ async def test_chat_with_non_existent_artifact_context_fails_even_in_lazy_mode(
 
 
 @pytest.mark.anyio
+async def test_chat_semantic_search_without_query_returns_error_and_continues(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id=SEMANTIC_SEARCH_TOOL_NAME,
+                    tool_name=SEMANTIC_SEARCH_TOOL_NAME,
+                    tool_kwargs={},
+                )
+            ],
+            ["I could not search because the query was missing."],
+        ],
+    )
+
+    body = ChatBody(
+        messages=[MessageInput(content="Lorem ipsum", role="user")],
+        stream=False,
+        tools=tools(use_context=True),
+        tool_choice=tool_choice(use_context=True, validation_mode="lazy"),
+        tool_context=tool_context(use_context=True),
+    )
+
+    result = await async_test_client.post("/v1/messages", json=body.model_dump())
+
+    assert result.status_code == 200
+    completion = Message.model_validate(result.json())
+    tool_result = next(
+        block for block in completion.content if isinstance(block, ToolResultBlock)
+    )
+    assert tool_result.is_error
+    assert any(
+        isinstance(block, TextBlock)
+        and block.text == "I could not search because the query was missing."
+        for block in completion.content
+    )
+
+
+@pytest.mark.anyio
 async def test_chat_with_metadata_context(
     async_test_client: AsyncClient, injector: MockInjector
 ) -> None:

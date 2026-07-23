@@ -51,6 +51,11 @@ data:
   enable_vision_fallback: ${PGPT_ENABLE_VISION_FALLBACK:false}
   enable_term_extractor: ${PGPT_ENABLE_TERM_EXTRACTOR:false}
   max_num_nodes: ${PGPT_MAX_NUM_NODES:0}
+  max_content_nodes: ${PGPT_MAX_CONTENT_NODES:10000}
+  max_content_artifacts: ${PGPT_MAX_CONTENT_ARTIFACTS:20}
+  max_content_depth: ${PGPT_MAX_CONTENT_DEPTH:200}
+  max_content_response_bytes: ${PGPT_MAX_CONTENT_RESPONSE_BYTES:52428800}
+  max_content_concurrency: ${PGPT_MAX_CONTENT_CONCURRENCY:2}
   use_async: ${PGPT_USE_ASYNC:false}
 
 observability:

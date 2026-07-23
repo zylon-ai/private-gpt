@@ -1,4 +1,5 @@
 import asyncio
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -17,6 +18,135 @@ from private_gpt.components.tools.remote_execution import ToolExecutionResponse
 from private_gpt.events.models import PingEvent, TextBlock
 
 
+def _resumable_runner(
+    checkpoint_store: InMemoryChatCheckpointStore,
+    chat_scheduler: MagicMock,
+    *,
+    settings: MagicMock | None = None,
+):
+    from private_gpt.components.engines.chat.resumable_runner import ResumableChatRunner
+
+    checkpoint_factory = MagicMock()
+    checkpoint_factory.get.return_value = checkpoint_store
+    event_factory = MagicMock()
+    event_factory.get.return_value = InMemoryEngineEventBroker()
+    scheduler_factory = MagicMock()
+    if not isinstance(chat_scheduler.cancel_tool_timeout, AsyncMock):
+        chat_scheduler.cancel_tool_timeout = AsyncMock(return_value=True)
+    scheduler_factory.get.return_value = chat_scheduler
+    tool_scheduler_factory = MagicMock()
+    tool_scheduler_factory.get.return_value = MagicMock()
+    return ResumableChatRunner(
+        settings=settings or MagicMock(),
+        checkpoint_store_factory=checkpoint_factory,
+        event_broker_factory=event_factory,
+        scheduler_factory=scheduler_factory,
+        tool_scheduler_factory=tool_scheduler_factory,
+    )
+
+
+def _tool_response(tool_id: str) -> ToolExecutionResponse:
+    return ToolExecutionResponse(
+        tool_name=f"tool-{tool_id}",
+        tool_id=tool_id,
+        result_content=[TextBlock(text=f"result-{tool_id}")],
+        tool_message={
+            "role": "tool",
+            "content": f"result-{tool_id}",
+            "additional_kwargs": {"tool_call_id": tool_id},
+        },
+    )
+
+
+@pytest.mark.asyncio
+async def test_runner_executes_duplicate_start_only_once() -> None:
+    from private_gpt.components.chat.models.chat_config_models import (
+        ResolvedChatRequest,
+    )
+    from private_gpt.components.engines.chat.models.chat_state import ChatStatus
+
+    checkpoint_store = InMemoryChatCheckpointStore()
+    chat_scheduler = MagicMock()
+    runner = _resumable_runner(checkpoint_store, chat_scheduler)
+    engine = MagicMock()
+    completed_state = MagicMock()
+    completed_state.output.status = ChatStatus.COMPLETED
+    engine.execute = AsyncMock(return_value=completed_state)
+    request_data = ResolvedChatRequest(messages=[]).model_dump(mode="json")
+
+    await asyncio.gather(
+        *(
+            runner.start(
+                engine=engine,
+                execution_id="execution-start-once",
+                request_data=request_data,
+                stream_type="chat_completion",
+                metadata={},
+            )
+            for _ in range(10)
+        )
+    )
+
+    assert engine.execute.await_count == 1
+
+
+def test_duplicate_tool_call_ids_are_rejected_but_names_may_repeat() -> None:
+    from llama_index.core.base.llms.types import ChatMessage
+    from llama_index.core.tools import ToolSelection
+
+    from private_gpt.components.engines.chat.async_chat_engine import AsyncChatEngine
+
+    duplicate_ids = ChatMessage(
+        role="assistant",
+        additional_kwargs={
+            "tool_calls": [
+                ToolSelection(tool_id="duplicate", tool_name="search", tool_kwargs={}),
+                ToolSelection(
+                    tool_id="duplicate", tool_name="database", tool_kwargs={}
+                ),
+            ]
+        },
+    )
+    same_name = ChatMessage(
+        role="assistant",
+        additional_kwargs={
+            "tool_calls": [
+                ToolSelection(tool_id="tool-1", tool_name="search", tool_kwargs={}),
+                ToolSelection(tool_id="tool-2", tool_name="search", tool_kwargs={}),
+            ]
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="Duplicate tool call ID"):
+        AsyncChatEngine._validate_unique_tool_call_ids(duplicate_ids)
+    AsyncChatEngine._validate_unique_tool_call_ids(same_name)
+
+
+@pytest.mark.asyncio
+async def test_result_envelope_cannot_write_a_different_tool_id() -> None:
+    service = InMemoryChatCheckpointStore()
+    await service.save(
+        ChatCheckpoint(
+            correlation_id="execution-envelope",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=0,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={"expected-tool": "task-1"}
+            ),
+        )
+    )
+    malformed = _tool_response("wrong-tool").model_dump(mode="json")
+
+    await service.record_result("execution-envelope", "expected-tool", malformed)
+
+    result = (await service.get_results("execution-envelope"))["expected-tool"]
+    assert result.tool_id == "expected-tool"
+    assert result.tool_message.additional_kwargs["tool_call_id"] == "expected-tool"
+
+
 @pytest.mark.asyncio
 async def test_memory_event_broker_preserves_publish_order_and_finishes() -> None:
     broker = InMemoryEngineEventBroker()
@@ -29,6 +159,23 @@ async def test_memory_event_broker_preserves_publish_order_and_finishes() -> Non
     events = [event async for event in broker.listen("execution-1")]
 
     assert [event.type for event in events] == ["ping", "ping"]
+
+
+@pytest.mark.asyncio
+async def test_broker_event_channel_flush_publishes_without_closing() -> None:
+    broker = MagicMock()
+    broker.publish = AsyncMock()
+    channel = BrokerEventChannel(broker, "execution-1")
+    first = PingEvent()
+    second = PingEvent()
+
+    channel.emit(first)
+    await channel.flush()
+    broker.publish.assert_awaited_once_with("execution-1", first)
+
+    channel.emit(second)
+    await channel.close()
+    assert broker.publish.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -86,6 +233,208 @@ async def test_memory_iteration_state_aggregates_once_and_cleans_up() -> None:
 
 
 @pytest.mark.asyncio
+async def test_runner_waits_for_all_parallel_tools_before_resuming() -> None:
+    checkpoint_store = InMemoryChatCheckpointStore()
+    await checkpoint_store.save(
+        ChatCheckpoint(
+            correlation_id="execution-parallel",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=0,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={"tool-1": "job-1", "tool-2": "job-2"}
+            ),
+            checkpoint_id="parallel-checkpoint",
+        )
+    )
+    chat_scheduler = MagicMock()
+    chat_scheduler.resume = AsyncMock()
+    runner = _resumable_runner(checkpoint_store, chat_scheduler)
+
+    await asyncio.gather(
+        runner.callback(
+            execution_id="execution-parallel",
+            tool_id="tool-1",
+            result=_tool_response("tool-1").model_dump(mode="json"),
+        ),
+        runner.callback(
+            execution_id="execution-parallel",
+            tool_id="tool-2",
+            result=_tool_response("tool-2").model_dump(mode="json"),
+        ),
+    )
+    chat_scheduler.resume.assert_awaited_once_with(
+        execution_id="execution-parallel",
+        checkpoint_id="parallel-checkpoint",
+    )
+    assert chat_scheduler.cancel_tool_timeout.await_count == 2
+    chat_scheduler.cancel_tool_timeout.assert_any_await(
+        execution_id="execution-parallel",
+        checkpoint_id="parallel-checkpoint",
+        tool_id="tool-1",
+    )
+    chat_scheduler.cancel_tool_timeout.assert_any_await(
+        execution_id="execution-parallel",
+        checkpoint_id="parallel-checkpoint",
+        tool_id="tool-2",
+    )
+
+    await runner.callback(
+        execution_id="execution-parallel",
+        tool_id="tool-2",
+        result=_tool_response("tool-2").model_dump(mode="json"),
+    )
+    assert chat_scheduler.resume.await_count == 1
+    assert chat_scheduler.cancel_tool_timeout.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_runner_does_not_cancel_timeout_for_unknown_tool_result() -> None:
+    checkpoint_store = InMemoryChatCheckpointStore()
+    await checkpoint_store.save(
+        ChatCheckpoint(
+            correlation_id="execution-unknown-timeout",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=0,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={"tool-expected": "job-expected"}
+            ),
+            checkpoint_id="checkpoint-current",
+        )
+    )
+    chat_scheduler = MagicMock()
+    chat_scheduler.resume = AsyncMock()
+    runner = _resumable_runner(checkpoint_store, chat_scheduler)
+
+    await runner.callback(
+        execution_id="execution-unknown-timeout",
+        tool_id="tool-unknown",
+        result=_tool_response("tool-unknown").model_dump(mode="json"),
+    )
+
+    chat_scheduler.cancel_tool_timeout.assert_not_awaited()
+    chat_scheduler.resume.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_runner_schedules_one_timeout_timer_per_pending_tool() -> None:
+    from llama_index.core.base.llms.types import ChatMessage
+    from llama_index.core.tools import ToolSelection
+
+    from private_gpt.components.chat.models.chat_config_models import (
+        ResolvedChatRequest,
+    )
+    from private_gpt.components.engines.chat.models.chat_state import ChatStatus
+
+    checkpoint_store = InMemoryChatCheckpointStore()
+    chat_scheduler = MagicMock()
+    chat_scheduler.tool_timeout = AsyncMock()
+    settings = MagicMock()
+    settings.scheduler.chat.callback_timeout_seconds = 45
+    runner = _resumable_runner(checkpoint_store, chat_scheduler, settings=settings)
+    state = MagicMock()
+    state.output.status = ChatStatus.WAITING
+    state.output.pause_type = "tools"
+    state.output.pending_async_tools = {
+        "tool-1": "celery-task-1",
+        "tool-2": "celery-task-2",
+    }
+    state.output.pending_external_tool_calls = []
+    request = ResolvedChatRequest(
+        messages=[
+            ChatMessage(
+                role="assistant",
+                content=None,
+                additional_kwargs={
+                    "tool_calls": [
+                        ToolSelection(
+                            tool_id="tool-1",
+                            tool_name="first_tool",
+                            tool_kwargs={},
+                        ),
+                        ToolSelection(
+                            tool_id="tool-2",
+                            tool_name="second_tool",
+                            tool_kwargs={},
+                        ),
+                    ]
+                },
+            )
+        ]
+    )
+    state.input.request.model_dump.return_value = request.model_dump(mode="json")
+    state.input.context_stack.checkpoint_dump.return_value = {}
+    state.runtime.iteration = 1
+    state.runtime.next_block_count = 3
+    state.runtime.model_id = "default"
+    state.runtime.total_input_tokens = 0
+    state.runtime.total_output_tokens = 0
+    state.runtime.has_input_usage = False
+    state.runtime.has_output_usage = False
+
+    await runner._handle_state(
+        execution_id="execution-timers",
+        state=state,
+        stream_type="chat_completion",
+        metadata={},
+    )
+
+    assert chat_scheduler.tool_timeout.await_count == 2
+    calls = {
+        call.kwargs["tool_id"]: call.kwargs
+        for call in chat_scheduler.tool_timeout.await_args_list
+    }
+    assert calls["tool-1"]["task_id"] == "celery-task-1"
+    assert calls["tool-2"]["task_id"] == "celery-task-2"
+    assert calls["tool-1"]["delay_seconds"] == 45
+    assert calls["tool-2"]["delay_seconds"] == 45
+    assert calls["tool-1"]["tool_name"] == "first_tool"
+    assert calls["tool-2"]["tool_name"] == "second_tool"
+    assert calls["tool-1"]["checkpoint_id"] == calls["tool-2"]["checkpoint_id"]
+
+
+@pytest.mark.asyncio
+async def test_runner_releases_resume_claim_when_dispatch_fails() -> None:
+    checkpoint_store = InMemoryChatCheckpointStore()
+    await checkpoint_store.save(
+        ChatCheckpoint(
+            correlation_id="execution-retry",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=0,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={"tool-1": "job-1"}
+            ),
+            checkpoint_id="retry-checkpoint",
+        )
+    )
+    chat_scheduler = MagicMock()
+    chat_scheduler.resume = AsyncMock(
+        side_effect=[RuntimeError("ARQ unavailable"), None]
+    )
+    runner = _resumable_runner(checkpoint_store, chat_scheduler)
+    result = _tool_response("tool-1").model_dump(mode="json")
+
+    with pytest.raises(RuntimeError, match="ARQ unavailable"):
+        await runner.callback(
+            execution_id="execution-retry", tool_id="tool-1", result=result
+        )
+
+    await runner.callback(
+        execution_id="execution-retry", tool_id="tool-1", result=result
+    )
+
+    assert chat_scheduler.resume.await_count == 2
+
+
+@pytest.mark.asyncio
 async def test_memory_iteration_state_preserves_result_received_before_checkpoint() -> (
     None
 ):
@@ -125,7 +474,7 @@ async def test_memory_iteration_state_preserves_result_received_before_checkpoin
 
 
 @pytest.mark.asyncio
-async def test_memory_iteration_state_ignores_unknown_tool_result() -> None:
+async def test_memory_iteration_state_preserves_next_iteration_result() -> None:
     service = InMemoryChatCheckpointStore()
     await service.save(
         ChatCheckpoint(
@@ -157,7 +506,94 @@ async def test_memory_iteration_state_ignores_unknown_tool_result() -> None:
         )
         is None
     )
-    assert await service.get_results("execution-unknown") == {}
+    assert await service.get_results("execution-unknown") == {"tool-unknown": response}
+
+    await service.save(
+        ChatCheckpoint(
+            correlation_id="execution-unknown",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=1,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={"tool-unknown": "job-next"}
+            ),
+        )
+    )
+
+    assert await service.get_results("execution-unknown") == {"tool-unknown": response}
+
+
+@pytest.mark.asyncio
+async def test_terminal_execution_rejects_new_checkpoints_and_late_results() -> None:
+    service = InMemoryChatCheckpointStore()
+    assert await service.mark_terminal("execution-terminal", "cancelled") is True
+
+    saved = await service.save(
+        ChatCheckpoint(
+            correlation_id="execution-terminal",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=1,
+            checkpoint="tools",
+        )
+    )
+    recorded = await service.record_result(
+        "execution-terminal",
+        "tool-late",
+        _tool_response("tool-late").model_dump(mode="json"),
+    )
+
+    assert saved is False
+    assert recorded is None
+    assert await service.load("execution-terminal") is None
+    assert await service.get_results("execution-terminal") == {}
+
+
+@pytest.mark.asyncio
+async def test_cancelled_chat_cannot_resurrect_waiting_checkpoint() -> None:
+    from private_gpt.components.engines.chat.models.chat_state import ChatStatus
+
+    checkpoint_store = InMemoryChatCheckpointStore()
+    await checkpoint_store.mark_terminal("execution-no-resurrection", "cancelled")
+    chat_scheduler = MagicMock()
+    chat_scheduler.tool_timeout = AsyncMock()
+    settings = MagicMock()
+    settings.scheduler.chat.callback_timeout_seconds = 30
+    runner = _resumable_runner(checkpoint_store, chat_scheduler, settings=settings)
+    runner._tool_scheduler.cancel_task = AsyncMock(return_value=True)
+    state = MagicMock()
+    state.output.status = ChatStatus.WAITING
+    state.output.pause_type = "tools"
+    state.output.pending_async_tools = {
+        "tool-1": "celery-task-1",
+        "tool-2": "celery-task-2",
+    }
+    state.output.pending_external_tool_calls = []
+    state.input.request.model_dump.return_value = {"messages": []}
+    state.input.context_stack.checkpoint_dump.return_value = {}
+    state.runtime.iteration = 1
+    state.runtime.next_block_count = 0
+    state.runtime.model_id = "default"
+    state.runtime.total_input_tokens = 0
+    state.runtime.total_output_tokens = 0
+    state.runtime.has_input_usage = False
+    state.runtime.has_output_usage = False
+
+    await runner._handle_state(
+        execution_id="execution-no-resurrection",
+        state=state,
+        stream_type="chat_completion",
+        metadata={},
+    )
+
+    assert runner._tool_scheduler.cancel_task.await_count == 2
+    runner._tool_scheduler.cancel_task.assert_any_await(task_id="celery-task-1")
+    runner._tool_scheduler.cancel_task.assert_any_await(task_id="celery-task-2")
+    chat_scheduler.tool_timeout.assert_not_awaited()
+    assert await checkpoint_store.load("execution-no-resurrection") is None
 
 
 @pytest.mark.asyncio
@@ -181,6 +617,7 @@ async def test_runner_cancel_revokes_pending_tool_tasks() -> None:
                     "tool-2": "celery-task-2",
                 }
             ),
+            checkpoint_id="cancel-checkpoint",
         )
     )
     event_broker = InMemoryEngineEventBroker()
@@ -212,7 +649,11 @@ async def test_runner_cancel_revokes_pending_tool_tasks() -> None:
     assert tool_scheduler.cancel_task.await_count == 2
     tool_scheduler.cancel_task.assert_any_await(task_id="celery-task-1")
     tool_scheduler.cancel_task.assert_any_await(task_id="celery-task-2")
-    chat_scheduler.cancel.assert_awaited_once_with("execution-cancel")
+    chat_scheduler.cancel.assert_awaited_once_with(
+        "execution-cancel",
+        checkpoint_id="cancel-checkpoint",
+        tool_ids=("tool-1", "tool-2"),
+    )
     assert await checkpoint_store.load("execution-cancel") is None
 
 

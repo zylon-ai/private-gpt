@@ -33,7 +33,11 @@ from private_gpt.components.engines.chat.models.chat_state import (
 from private_gpt.components.engines.chat.utils.request_builder import (
     build_initial_context_stack,
 )
+from private_gpt.components.llm.tokenizers.tokenizer_base import TokenizedInput
 from private_gpt.events.event_errors import Errors
+from private_gpt.server.chat.interceptors.runtime_model_interceptor import (
+    RuntimeModelRequestInterceptor,
+)
 from private_gpt.server.chat.interceptors.validator_request_interceptor import (
     ValidatorRequestInterceptor,
 )
@@ -48,10 +52,10 @@ class DummyTokenizer:
         images: object | None = None,
         audios: object | None = None,
         **kwargs: object,
-    ) -> list[int]:
+    ) -> TokenizedInput:
         if texts is None:
-            return []
-        return texts.split()
+            return TokenizedInput([])
+        return TokenizedInput(list(range(len(texts.split()))))
 
 
 async def _dummy_tool_async_fn(**kwargs: object) -> None:
@@ -141,6 +145,7 @@ async def _run_interceptor(
         phase=InterceptorPhase.VALIDATION,
         emit_fn=lambda _event: None,
     )
+    await RuntimeModelRequestInterceptor(interceptor._llm_component).intercept(context)
     await interceptor.intercept(context)
 
 

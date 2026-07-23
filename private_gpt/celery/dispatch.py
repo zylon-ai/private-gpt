@@ -1,4 +1,9 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from celery.result import AsyncResult
 
 
 def dispatch_task(
@@ -8,12 +13,15 @@ def dispatch_task(
     args: tuple[Any, ...] | list[Any] | None = None,
     kwargs: dict[str, Any] | None = None,
     task_id: str | None = None,
-) -> Any:
+    ignore_result: bool | None = None,
+) -> AsyncResult[Any]:
     from private_gpt.celery.celery import celery_app
 
     options: dict[str, Any] = {"queue": queue}
     if task_id is not None:
         options["task_id"] = task_id
+    if ignore_result is not None:
+        options["ignore_result"] = ignore_result
 
     return celery_app.send_task(
         task_name,

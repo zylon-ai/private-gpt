@@ -1,4 +1,5 @@
 import typing
+from threading import Lock
 from typing import Any
 
 from llama_index.core.vector_stores.types import BasePydanticVectorStore
@@ -15,6 +16,7 @@ class QdrantVectorStoreFactory(VectorStoreFactory):
     def __init__(self, settings: Settings, embed_dim: int | None = None) -> None:
         super().__init__(settings)
         self._client: Any | None = None
+        self._client_lock = Lock()
         self._embed_dim = embed_dim
 
     def _build_client(self) -> Any:
@@ -33,8 +35,14 @@ class QdrantVectorStoreFactory(VectorStoreFactory):
         return QdrantClientBuilder.build_clients(self.settings)
 
     def _ensure_client(self) -> None:
-        if self._client is None:
-            self._client = self._build_client()
+        if self._client is not None:
+            return
+        with self._client_lock:
+            if self._client is None:
+                self._client = self._build_client()
+
+    def warm_up(self) -> None:
+        self._ensure_client()
 
     def vector_store(self, collection: str) -> BasePydanticVectorStore:
         try:

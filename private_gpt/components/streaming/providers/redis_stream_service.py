@@ -84,10 +84,6 @@ class RedisStreamService(StreamService):
         """Create a new stream and return correlation ID."""
         if correlation_id is None:
             correlation_id = str(uuid.uuid4())
-        elif correlation_id and await self.stream_exists(correlation_id):
-            raise ValueError(
-                f"Stream with correlation_id {correlation_id} already exists"
-            )
 
         now = datetime.now(UTC)
         stream_metadata = StreamMetadata(
@@ -101,10 +97,27 @@ class RedisStreamService(StreamService):
 
         mapping = await asyncio.to_thread(stream_metadata.model_dump_json_fields)
         status_key = self._get_status_key(correlation_id)
-        async with self._client.pipeline(transaction=False) as pipe:
-            await pipe.hset(status_key, mapping=mapping)  # type: ignore
-            await pipe.expire(status_key, self._config.expiry_seconds)
-            await pipe.execute()
+        created = await cast(Any, self._client.eval)(
+            """
+            if redis.call('exists', KEYS[1]) == 1 then
+                return 0
+            end
+            local fields = cjson.decode(ARGV[1])
+            for key, value in pairs(fields) do
+                redis.call('hset', KEYS[1], key, value)
+            end
+            redis.call('expire', KEYS[1], ARGV[2])
+            return 1
+            """,
+            1,
+            status_key,
+            json.dumps(mapping),
+            self._config.expiry_seconds,
+        )
+        if not created:
+            raise ValueError(
+                f"Stream with correlation_id {correlation_id} already exists"
+            )
 
         return correlation_id
 

@@ -36,6 +36,7 @@ class ChatRunner(Protocol):
         *,
         engine: "AsyncChatEngine",
         execution_id: str,
+        checkpoint_id: str,
     ) -> None: ...
 
     async def callback(
@@ -45,8 +46,6 @@ class ChatRunner(Protocol):
         tool_id: str,
         result: dict[str, Any],
     ) -> None: ...
-
-    async def timeout(self, *, execution_id: str, checkpoint_id: str) -> None: ...
 
 
 @singleton

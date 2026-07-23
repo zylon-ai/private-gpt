@@ -65,6 +65,7 @@ def _replace_tool(
     original: ToolSpec,
     replacements: list[ToolSpec],
 ) -> bool:
+    replacements = _inherit_tool_properties(original, replacements)
     tools = request.tool_config.tools
     for index, candidate in enumerate(tools):
         if candidate is original:
@@ -75,3 +76,43 @@ def _replace_tool(
             ]
             return True
     return False
+
+
+def _inherit_tool_properties(
+    original: ToolSpec,
+    replacements: list[ToolSpec],
+) -> list[ToolSpec]:
+    if not replacements:
+        return replacements
+
+    inherited = [
+        replacement.model_copy(
+            update={
+                "context": original.context
+                if original.context is not None
+                else replacement.context,
+                "defer_loading": original.defer_loading or replacement.defer_loading,
+                "instructions": original.instructions
+                if original.instructions is not None
+                else replacement.instructions,
+                "requirements": list(
+                    dict.fromkeys([*replacement.requirements, *original.requirements])
+                ),
+            }
+        )
+        for replacement in replacements
+    ]
+
+    if len(inherited) == 1:
+        inherited[0] = inherited[0].model_copy(
+            update={
+                "description": original.description
+                if original.description is not None
+                else inherited[0].description,
+                "partial_params": original.partial_params
+                if original.partial_params is not None
+                else inherited[0].partial_params,
+            }
+        )
+
+    return inherited

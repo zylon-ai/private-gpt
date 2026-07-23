@@ -77,6 +77,9 @@ class VectorStoreComponent:
     def vector_store(self, collection: str) -> BasePydanticVectorStore:
         return self._factory.vector_store(collection)
 
+    def warm_up(self) -> None:
+        self._factory.warm_up()
+
     def get_filters(
         self,
         artifacts: list[str] | None = None,

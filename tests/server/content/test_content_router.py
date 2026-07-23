@@ -81,5 +81,9 @@ def test_retrieve_chunked_content(
     assert response.status_code == 200
     chunk_response = ChunkedContentResponse.model_validate(response.json())
     assert len(chunk_response.data) > 2
+    assert {chunk.artifact_id for chunk in chunk_response.data} == {
+        artifact_1,
+        artifact_2,
+    }
     first_element = chunk_response.data[0]
     assert len(first_element.content) == 2

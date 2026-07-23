@@ -1441,25 +1441,25 @@
 
     .composer {
       width: min(860px, 100%);
-      border-radius: 24px;
-      padding: 12px;
+      border-radius: 22px;
+      padding: 10px 12px 9px;
     }
 
     .composer-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 10px;
-      align-items: end;
+      display: block;
     }
 
     .composer textarea {
-      min-height: 54px;
+      width: 100%;
+      min-height: 48px;
       max-height: 180px;
-      padding: 13px 14px;
+      padding: 6px 3px 8px;
       border: 0;
       background: transparent;
       font-family: var(--font);
-      font-size: 18px;
+      font-size: 15px;
+      font-weight: 540;
+      line-height: 1.5;
       resize: none;
     }
 
@@ -1476,11 +1476,113 @@
     .composer-tools {
       display: flex;
       align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      padding: 8px 4px 0;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      justify-content: space-between;
+      gap: 10px;
+      padding-top: 2px;
     }
+
+    .composer-tool-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .composer .compact-control {
+      min-height: 32px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 620;
+      transition: color 160ms ease, background 160ms ease, border-color 160ms ease, transform 160ms ease;
+    }
+
+    .composer .composer-circle {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      min-height: 32px;
+      border-radius: 50%;
+      padding: 0;
+      overflow: hidden;
+      transition: width 220ms cubic-bezier(.2,.8,.2,1), min-width 220ms cubic-bezier(.2,.8,.2,1), padding 220ms cubic-bezier(.2,.8,.2,1), background 160ms ease, border-color 160ms ease, transform 160ms ease;
+    }
+
+    .composer .add-files-control { gap: 0; }
+
+    .composer svg.composer-control-icon {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+      display: block;
+      transition: transform 200ms cubic-bezier(.2,.8,.2,1), opacity 160ms ease;
+    }
+
+    .composer-control-label {
+      max-width: 0;
+      opacity: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 620;
+      line-height: 1;
+      transform: translateX(-4px);
+      transition: max-width 220ms cubic-bezier(.2,.8,.2,1), opacity 150ms ease, transform 220ms cubic-bezier(.2,.8,.2,1);
+    }
+
+    .composer .add-files-control:hover,
+    .composer .add-files-control:focus-visible {
+      width: 112px;
+      min-width: 112px;
+      padding: 0 9px;
+      gap: 6px;
+      border-radius: 999px;
+    }
+
+    .composer .add-files-control:hover .composer-control-label,
+    .composer .add-files-control:focus-visible .composer-control-label {
+      max-width: 64px;
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .composer .add-files-control:hover .composer-control-icon { transform: rotate(90deg); }
+
+    .composer .compact-control:hover,
+    .composer .composer-circle:hover,
+    .composer .send:hover { transform: translateY(-1px); }
+
+    .composer .compact-control:active,
+    .composer .composer-circle:active,
+    .composer .send:active { transform: translateY(0) scale(.96); }
+
+    .model-select-btn:hover .model-chevron { transform: translateY(1px); }
+
+    #refreshModelsButton:hover .composer-control-icon { transform: rotate(150deg); }
+    .composer .send:hover .composer-control-icon { transform: translateY(-2px); }
+
+    .composer .send {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      min-height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      align-self: auto;
+      margin-top: 0;
+    }
+
+    .composer .send:not(:disabled) {
+      background: rgba(255, 255, 255, 0.92);
+      color: #11131a;
+    }
+
+    .composer button:focus-visible {
+      outline: 1px solid rgba(255, 255, 255, 0.32);
+      outline-offset: 1px;
+    }
+
+    .composer-file-input { display: none; }
 
     .tool-menu-wrap {
       position: relative;
@@ -1491,18 +1593,22 @@
       left: 0;
       bottom: calc(100% + 10px);
       display: none;
-      width: 300px;
-      max-height: 460px;
+      width: min(300px, calc(100vw - 16px));
+      max-height: min(360px, calc(100vh - 24px));
       overflow-y: auto;
       padding: 8px;
       border-radius: 18px;
       z-index: 20;
+      box-sizing: border-box;
+      overscroll-behavior: contain;
     }
 
     .menu-panel.open {
       display: flex;
       flex-direction: column;
       gap: 2px;
+      transform-origin: left bottom;
+      animation: composerPopoverMorphIn 320ms cubic-bezier(.16, 1, .3, 1) both;
     }
 
     .menu-group {
@@ -1535,6 +1641,36 @@
       font-size: 12px;
       color: rgba(255, 255, 255, 0.28);
       font-style: italic;
+    }
+
+    .menu-action {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      min-height: 36px;
+      padding: 7px 10px;
+      border: 0;
+      border-radius: 10px;
+      color: var(--muted-strong);
+      background: transparent;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 620;
+      text-align: left;
+      transition: color 120ms ease, background 120ms ease, transform 120ms ease;
+    }
+
+    .menu-action:hover {
+      color: var(--text);
+      background: rgba(255,255,255,.08);
+      transform: translateX(1px);
+    }
+
+    .menu-action + .menu-group {
+      margin-top: 5px;
+      padding-top: 7px;
+      border-top: 1px solid rgba(255,255,255,.08);
     }
 
     /* toggle rows inside menu — lighter, no border */
@@ -1601,18 +1737,159 @@
       left: 0;
       bottom: calc(100% + 8px);
       display: none;
-      min-width: 240px;
-      max-width: 320px;
-      max-height: 300px;
-      overflow-y: auto;
+      width: min(520px, calc(100vw - 24px));
+      max-height: 360px;
+      overflow: hidden;
       padding: 6px;
       border-radius: 16px;
       z-index: 30;
+      box-sizing: border-box;
+      overscroll-behavior: contain;
     }
 
     .model-dropdown.open {
-      display: block;
-      animation: menuIn 0.14s ease-out both;
+      display: flex;
+      flex-direction: column;
+      transform-origin: left bottom;
+      animation: composerPopoverMorphIn 340ms cubic-bezier(.16, 1, .3, 1) both;
+    }
+
+    .model-dropdown.closing,
+    .menu-panel.closing {
+      display: flex;
+      pointer-events: none;
+      transform-origin: left bottom;
+      animation: composerPopoverMorphOut 150ms cubic-bezier(.4, 0, 1, 1) both;
+    }
+
+    @keyframes composerPopoverMorphIn {
+      0% {
+        opacity: 0;
+        transform: translateY(8px) scale(.28, .12);
+        border-radius: 999px;
+        filter: blur(3px);
+      }
+      58% {
+        opacity: 1;
+        transform: translateY(-1px) scale(1.015, 1.01);
+        border-radius: 15px;
+        filter: blur(0);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        border-radius: 16px;
+        filter: blur(0);
+      }
+    }
+
+    @keyframes composerPopoverMorphOut {
+      from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      to { opacity: 0; transform: translateY(6px) scale(.55, .2); filter: blur(2px); border-radius: 999px; }
+    }
+
+    .model-search-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 8px 7px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .model-search-wrap svg { width: 15px; height: 15px; opacity: .62; }
+
+    .model-search-wrap .model-search,
+    .model-search-wrap .model-search:focus {
+      width: 100%;
+      padding: 3px 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      outline: none;
+      box-shadow: none;
+    }
+
+    .model-options { overflow-y: auto; padding-top: 4px; }
+
+    .model-menu-body {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) 150px;
+      min-height: 160px;
+      overflow: hidden;
+    }
+
+    .model-options { min-width: 0; }
+
+    .effort-panel {
+      padding: 8px 6px 6px;
+      border-left: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.025);
+      overflow-y: auto;
+      transform-origin: left center;
+      animation: effortRailIn 300ms 95ms cubic-bezier(.16, 1, .3, 1) both;
+    }
+
+    @keyframes effortRailIn {
+      from { opacity: 0; transform: translateX(-14px) scaleX(.88); clip-path: inset(0 100% 0 0 round 10px); }
+      to { opacity: 1; transform: translateX(0) scaleX(1); clip-path: inset(0 0 0 0 round 10px); }
+    }
+
+    .effort-title {
+      padding: 2px 8px 7px;
+      color: rgba(255,255,255,.42);
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .effort-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      min-height: 32px;
+      padding: 6px 8px;
+      border: 0;
+      border-radius: 9px;
+      color: var(--muted-strong);
+      background: transparent;
+      font: inherit;
+      font-size: 12px;
+      text-align: left;
+      transition: color 120ms ease, background 120ms ease, transform 120ms ease;
+      animation: composerRowIn 230ms cubic-bezier(.2,.8,.2,1) both;
+    }
+
+    .effort-option:hover:not(:disabled) {
+      color: var(--text);
+      background: rgba(255,255,255,.09);
+      transform: translateX(1px);
+    }
+
+    .effort-option.selected {
+      color: var(--text);
+      background: rgba(255,255,255,.08);
+    }
+
+    .effort-option:disabled { opacity: .28; cursor: not-allowed; }
+
+    .effort-check { width: 13px; height: 13px; opacity: 0; }
+    .effort-option.selected .effort-check { opacity: 1; }
+
+    @media (max-width: 620px) {
+      .model-menu-body { grid-template-columns: 1fr; }
+      .effort-panel { border-left: 0; border-top: 1px solid rgba(255,255,255,.08); }
+    }
+
+    .model-empty {
+      padding: 18px 12px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
     }
 
     .model-option {
@@ -1629,6 +1906,22 @@
       border: 0;
       cursor: pointer;
       transition: background 0.1s, color 0.1s;
+      animation: composerRowIn 230ms cubic-bezier(.2,.8,.2,1) both;
+    }
+
+    @keyframes composerRowIn {
+      from { opacity: 0; transform: translateY(5px) scale(.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .model-dropdown.open,
+      .menu-panel.open,
+      .model-dropdown.closing,
+      .menu-panel.closing,
+      .effort-panel,
+      .model-option,
+      .effort-option { animation: none !important; }
     }
 
     .model-option:hover {
@@ -2060,7 +2353,7 @@
 
     /* ── Menu panel slide-in ─────────────────────────────────────────────── */
     .menu-panel.open {
-      animation: menuIn 0.14s ease-out both;
+      animation: composerPopoverMorphIn 320ms cubic-bezier(.16, 1, .3, 1) both;
     }
     @keyframes menuIn {
       from { opacity: 0; transform: translateY(6px) scale(0.98); }
@@ -2600,7 +2893,7 @@
       position: absolute;
       inset: 0;
       z-index: -1;
-      border-radius: 24px;
+      border-radius: 20px;
       background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.055));
       border: 1px solid var(--border);
       box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
@@ -3474,22 +3767,28 @@
           <form class="composer" id="composer">
             <div class="composer-row">
               <textarea id="composerInput" placeholder="How can I help?" rows="1"></textarea>
-              <button class="icon-button send" type="submit" aria-label="Send"><span data-icon="send"></span></button>
             </div>
             <div class="composer-tools">
-              <div class="model-select-wrap" id="modelSelectWrap">
-                <button class="ghost-button model-select-btn" id="modelSelectBtn" type="button">
-                  <span data-icon="cpu"></span>
-                  <span id="modelSelectLabel">Model</span>
-                  <span data-icon="chevron-down" class="model-chevron"></span>
-                </button>
-                <div class="model-dropdown" id="modelDropdown"></div>
+              <div class="composer-tool-group">
+                <input class="composer-file-input" id="composerFileInput" type="file" multiple>
+                <div class="tool-menu-wrap">
+                  <button class="icon-button composer-circle add-files-control" id="composerAddMenuButton" type="button" aria-label="Open composer actions">
+                    <svg class="composer-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                    <span class="composer-control-label">Configure</span>
+                  </button>
+                  <div class="menu-panel" id="toolsMenu"></div>
+                </div>
+                <div class="model-select-wrap" id="modelSelectWrap">
+                  <button class="ghost-button compact-control model-select-btn" id="modelSelectBtn" type="button">
+                    <span id="modelSelectLabel">Model</span>
+                    <svg class="composer-control-icon model-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg>
+                  </button>
+                  <div class="model-dropdown" id="modelDropdown"></div>
+                </div>
+                <button class="icon-button composer-circle" id="refreshModelsButton" type="button" aria-label="Refresh models" title="Refresh models"><svg class="composer-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 11.9-2"/></svg></button>
               </div>
-              <button class="icon-button" id="refreshModelsButton" type="button" aria-label="Refresh models" title="Refresh models"><span data-icon="refresh"></span></button>
-              <button class="ghost-button thinking-chip" id="thinkingToggle" type="button" title="Enable extended thinking"><span data-icon="zap"></span>Thinking</button>
-              <div class="tool-menu-wrap">
-                <button class="ghost-button" id="toolsMenuButton" type="button"><span data-icon="sliders"></span>Tools</button>
-                <div class="menu-panel" id="toolsMenu"></div>
+              <div class="composer-tool-group">
+                <button class="icon-button send" type="submit" aria-label="Send"><svg class="composer-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m7 11 5-5 5 5M12 6v12"/></svg></button>
               </div>
             </div>
           </form>
@@ -3648,6 +3947,9 @@
       refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.8L21 8"/><path d="M21 3v5h-5"/></svg>',
       upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8 12 3 7 8"/><path d="M12 3v12"/></svg>',
       send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>',
+      'arrow-up': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 10 6-6 6 6"/><path d="M12 4v16"/></svg>',
+      mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg>',
+      search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
       sliders: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M2 14h4"/><path d="M10 8h4"/><path d="M18 16h4"/></svg>',
       info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none"/></svg>',
       github: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.57.1.78-.25.78-.55v-2.1c-3.18.7-3.85-1.36-3.85-1.36-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.33.95.1-.74.4-1.24.72-1.52-2.54-.29-5.2-1.27-5.2-5.64 0-1.25.45-2.26 1.18-3.06-.12-.29-.51-1.45.11-3.02 0 0 .96-.31 3.14 1.17a10.8 10.8 0 0 1 5.72 0c2.18-1.48 3.14-1.17 3.14-1.17.62 1.57.23 2.73.11 3.02.74.8 1.18 1.81 1.18 3.06 0 4.38-2.67 5.35-5.22 5.63.41.36.77 1.05.77 2.12v3.14c0 .31.2.66.79.55A11.3 11.3 0 0 0 12 .7Z"/></svg>',
@@ -3847,6 +4149,15 @@
         return tool;
       });
       if (!Array.isArray(merged.chats)) merged.chats = [];
+      merged.chats = merged.chats.map(chat => {
+        const previousSettings = chat.settings || {};
+        const settings = { ...defaultChatSettings(), ...(chat.settings || {}) };
+        if (!("reasoningEffort" in previousSettings)) {
+          settings.reasoningEffort = null;
+        }
+        delete settings.enabledThinking;
+        return { ...chat, settings };
+      });
       if (typeof merged.onboarding.step !== "number" || ![1, 2].includes(merged.onboarding.step)) {
         merged.onboarding.step = 1;
       }
@@ -4152,7 +4463,7 @@
         enabledMcpServers: [],
         enabledSkills: [],
         enabledCustomTools: [],
-        enabledThinking: false
+        reasoningEffort: null
       };
     }
 
@@ -4800,7 +5111,6 @@
       $("#apiDebuggerScreen").classList.toggle("active", runtime.view === "apiDebugger");
       $("#chatScreen").classList.toggle("active", runtime.view === "chat");
       if (runtime.view === "apiDebugger") renderDebugger();
-      renderThinkingChip();
       if (runtime.view !== "chat") return;
       let chat = activeChat();
       if (!chat) {
@@ -4825,32 +5135,121 @@
       const current = state.selectedModel;
       const models = state.models;
       const modelName = m => (m.display_name && m.display_name !== m.id) ? m.display_name : m.id;
-      const active = models.find(m => m.id === current);
-      label.textContent = active ? modelName(active) : (models.length ? "Select model" : "No models");
+      const updateButtonLabel = () => {
+        const active = models.find(model => model.id === state.selectedModel);
+        const selectedEffort = activeChat()?.settings?.reasoningEffort || null;
+        const effortLabel = selectedEffort ? selectedEffort.charAt(0).toUpperCase() + selectedEffort.slice(1) : "";
+        label.textContent = active ? `${modelName(active)}${effortLabel ? ` · ${effortLabel}` : ""}` : (models.length ? "Select model" : "No models");
+      };
+      updateButtonLabel();
       btn.disabled = !models.length;
       btn.title = models.length ? "Models loaded from PrivateGPT" : "Refresh models to load from PrivateGPT";
       const sendBtn = $(".icon-button.send");
       if (sendBtn) sendBtn.disabled = !state.selectedModel;
-      dropdown.innerHTML = "";
-      models.forEach(model => {
+      dropdown.innerHTML = `<label class="model-search-wrap"><span data-icon="search"></span><input class="model-search" id="modelSearchInput" type="search" placeholder="Search models" autocomplete="off" aria-label="Search models"></label><div class="model-menu-body"><div class="model-options" id="modelOptions"></div><div class="effort-panel" id="effortPanel"></div></div>`;
+      const options = $("#modelOptions", dropdown);
+      const effortPanel = $("#effortPanel", dropdown);
+      const supportedEfforts = model => ["low", "medium", "high", "max", "xhigh"].filter(effort => model?.capabilities?.effort?.[effort]?.supported === true);
+      const renderEfforts = () => {
+        const selectedModel = models.find(model => model.id === state.selectedModel);
+        const supported = state.enableThinking === false ? [] : supportedEfforts(selectedModel);
+        const choices = [{ value: null, label: "None" }, ...["low", "medium", "high", "max", "xhigh"].map(value => ({ value, label: value === "xhigh" ? "XHigh" : value.charAt(0).toUpperCase() + value.slice(1) }))];
+        effortPanel.innerHTML = `<div class="effort-title">Effort</div>`;
+        choices.forEach((choice, index) => {
+          const row = document.createElement("button");
+          row.type = "button";
+          row.className = `effort-option${choice.value === (activeChat()?.settings?.reasoningEffort || null) ? " selected" : ""}`;
+          row.dataset.effort = choice.value || "";
+          row.disabled = choice.value !== null && !supported.includes(choice.value);
+          row.style.animationDelay = `${110 + index * 22}ms`;
+          row.innerHTML = `<span>${choice.label}</span><span data-icon="check" class="effort-check"></span>`;
+          row.addEventListener("click", event => {
+            event.stopPropagation();
+            const currentChat = activeChat();
+            if (!currentChat) return;
+            currentChat.settings.reasoningEffort = choice.value;
+            touchChat(currentChat);
+            saveState();
+            effortPanel.querySelectorAll(".effort-option").forEach(option => {
+              option.classList.toggle("selected", option.dataset.effort === (choice.value || ""));
+            });
+            updateButtonLabel();
+          });
+          effortPanel.appendChild(row);
+        });
+        renderIcons(effortPanel);
+      };
+      const renderOptions = (query = "") => {
+        const filtered = models.filter(model => modelName(model).toLowerCase().includes(query.trim().toLowerCase()));
+        options.innerHTML = "";
+        if (!filtered.length) {
+          options.innerHTML = `<div class="model-empty">No matching models</div>`;
+          return;
+        }
+        filtered.forEach((model, index) => {
         const row = document.createElement("button");
         row.type = "button";
-        row.className = `model-option${model.id === current ? " selected" : ""}`;
-        row.innerHTML = `<span data-icon="check" class="opt-check"></span><span class="opt-name">${escapeHtml(modelName(model))}</span>`;
-        row.addEventListener("click", () => {
+        row.className = `model-option${model.id === state.selectedModel ? " selected" : ""}`;
+        row.dataset.modelId = model.id;
+        row.style.animationDelay = `${55 + Math.min(index, 8) * 24}ms`;
+        row.innerHTML = `<span class="opt-name">${escapeHtml(modelName(model))}</span><span data-icon="check" class="opt-check"></span>`;
+        row.addEventListener("click", event => {
+          event.stopPropagation();
           state.selectedModel = model.id;
+          const currentChat = activeChat();
+          const supported = supportedEfforts(model);
+          if (currentChat?.settings?.reasoningEffort && !supported.includes(currentChat.settings.reasoningEffort)) {
+            currentChat.settings.reasoningEffort = null;
+          }
           saveState();
-          renderModelSelect();
-          closeModelDropdown();
+          options.querySelectorAll(".model-option").forEach(option => {
+            option.classList.toggle("selected", option.dataset.modelId === model.id);
+          });
+          renderEfforts();
+          updateButtonLabel();
         });
-        dropdown.appendChild(row);
-      });
+          options.appendChild(row);
+        });
+        renderIcons(options);
+      };
+      renderOptions();
+      renderEfforts();
+      $("#modelSearchInput", dropdown).addEventListener("input", event => renderOptions(event.currentTarget.value));
       renderIcons(dropdown);
     }
 
     function closeModelDropdown() {
-      $("#modelDropdown")?.classList.remove("open");
+      const dropdown = $("#modelDropdown");
+      if (dropdown?.classList.contains("open")) {
+        dropdown.classList.remove("open");
+        dropdown.classList.add("closing");
+        setTimeout(() => dropdown.classList.remove("closing"), 160);
+      }
       $("#modelSelectWrap")?.classList.remove("open");
+    }
+
+    function closeToolsMenu() {
+      const menu = $("#toolsMenu");
+      if (!menu?.classList.contains("open")) return;
+      menu.classList.remove("open");
+      menu.classList.add("closing");
+      setTimeout(() => menu.classList.remove("closing"), 160);
+    }
+
+    function positionComposerPopover(panel, trigger, maximumHeight) {
+      const rect = trigger.getBoundingClientRect();
+      const viewportPadding = 8;
+      const availableAbove = Math.max(160, rect.top - viewportPadding * 2);
+      const maxHeight = Math.min(maximumHeight, availableAbove);
+      const desiredWidth = Math.min(parseFloat(getComputedStyle(panel).width) || 300, window.innerWidth - viewportPadding * 2);
+      const left = Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - desiredWidth - viewportPadding));
+      panel.style.position = "fixed";
+      panel.style.left = `${left}px`;
+      panel.style.right = "auto";
+      panel.style.top = "auto";
+      panel.style.bottom = `${window.innerHeight - rect.top + 8}px`;
+      panel.style.maxHeight = `${maxHeight}px`;
+      document.body.appendChild(panel);
     }
 
     function hasAvailableDocuments() {
@@ -4920,6 +5319,17 @@
       const hasDocs = normalizeDocumentBackedSettings(chat);
       menu.innerHTML = "";
 
+      const addFiles = document.createElement("button");
+      addFiles.type = "button";
+      addFiles.className = "menu-action";
+      addFiles.innerHTML = `<span data-icon="paperclip"></span><span>Add files</span>`;
+      addFiles.addEventListener("click", event => {
+        event.stopPropagation();
+        closeToolsMenu();
+        $("#composerFileInput").click();
+      });
+      menu.appendChild(addFiles);
+
       const knowledgeRows = [
         toggleRow("Documents", Boolean(chat.settings.enabledDocuments), checked => {
           chat.settings.enabledDocuments = checked; touchChat(chat); saveState();
@@ -4945,6 +5355,7 @@
       if (featureEnabled("mcp")) menu.appendChild(selectableGroup("MCP", state.context.mcpServers, chat.settings.enabledMcpServers, ids => chat.settings.enabledMcpServers = ids));
       if (featureEnabled("skills")) menu.appendChild(selectableGroup("Skills", state.context.skills, chat.settings.enabledSkills, ids => chat.settings.enabledSkills = ids));
       if (featureEnabled("customTools")) menu.appendChild(selectableGroup("Custom Tools", state.context.customTools, chat.settings.enabledCustomTools, ids => chat.settings.enabledCustomTools = ids));
+      renderIcons(menu);
     }
 
     function menuGroup(label, rows) {
@@ -4956,14 +5367,6 @@
       wrap.appendChild(title);
       rows.forEach(r => wrap.appendChild(r));
       return wrap;
-    }
-
-    function renderThinkingChip() {
-      const chat = activeChat();
-      const btn = $("#thinkingToggle");
-      if (!btn) return;
-      btn.hidden = state.enableThinking === false;
-      btn.classList.toggle("active", state.enableThinking !== false && Boolean(chat?.settings?.enabledThinking));
     }
 
     function toggleRow(label, checked, onChange, disabled = false) {
@@ -6651,6 +7054,7 @@
         });
       }
       const systemText = combinedSystemPrompt();
+      const reasoningEffort = state.enableThinking !== false ? chat.settings.reasoningEffort || null : null;
       const body = {
         model: state.selectedModel,
         messages: sanitizeMessages(chat.messages),
@@ -6659,7 +7063,7 @@
         mcp_servers: mcpServers,
         stream: true,
         max_tokens: 4096,
-        thinking: { enabled: state.enableThinking !== false && Boolean(chat.settings.enabledThinking) }
+        thinking: { enabled: Boolean(reasoningEffort), type: reasoningEffort }
       };
       if (chat.settings.enabledCodeExecution) {
         body.container = chat.id;
@@ -6667,7 +7071,7 @@
       const citationsEnabled = Boolean(documentsEnabled && state.useCitations !== false);
       const extensions = state.extensions || [];
       const hasBuiltinTools = tools.some(t => t.type);
-      const thinkingEnabled = state.enableThinking !== false && Boolean(chat.settings.enabledThinking);
+      const thinkingEnabled = Boolean(reasoningEffort);
       const defaultPrompt = state.useDefaultPrompt !== false;
       if (systemText || citationsEnabled || extensions.length > 0 || hasBuiltinTools || thinkingEnabled) {
         body.system = {
@@ -7333,41 +7737,37 @@
         event.stopPropagation();
         const dropdown = $("#modelDropdown");
         const isOpen = dropdown.classList.contains("open");
-        $("#toolsMenu").classList.remove("open");
+        closeToolsMenu();
         if (!isOpen) {
-          const rect = event.currentTarget.getBoundingClientRect();
-          dropdown.style.position = "fixed";
-          dropdown.style.left = rect.left + "px";
-          dropdown.style.bottom = (window.innerHeight - rect.top + 8) + "px";
-          dropdown.style.top = "auto";
-          document.body.appendChild(dropdown);
+          dropdown.classList.remove("closing");
+          positionComposerPopover(dropdown, event.currentTarget, 360);
         }
-        dropdown.classList.toggle("open", !isOpen);
-        $("#modelSelectWrap").classList.toggle("open", !isOpen);
+        if (isOpen) closeModelDropdown();
+        else {
+          dropdown.classList.add("open");
+          $("#modelSelectWrap").classList.add("open");
+          setTimeout(() => $("#modelSearchInput", dropdown)?.focus(), 0);
+        }
       });
       $("#refreshModelsButton").addEventListener("click", loadModels);
-      $("#toolsMenuButton").addEventListener("click", event => {
+      $("#composerFileInput").addEventListener("change", async event => {
+        const files = Array.from(event.target.files || []);
+        const chat = activeChat();
+        if (chat?.settings?.enabledCodeExecution) await uploadToSession(files);
+        else await uploadFiles(files);
+        event.target.value = "";
+      });
+      $("#composerAddMenuButton").addEventListener("click", event => {
         event.stopPropagation();
         closeModelDropdown();
         const menu = $("#toolsMenu");
         const isOpen = menu.classList.contains("open");
         if (!isOpen) {
-          const rect = event.currentTarget.getBoundingClientRect();
-          menu.style.position = "fixed";
-          menu.style.left = rect.left + "px";
-          menu.style.bottom = (window.innerHeight - rect.top + 8) + "px";
-          menu.style.top = "auto";
-          document.body.appendChild(menu);
+          menu.classList.remove("closing");
+          positionComposerPopover(menu, event.currentTarget, 360);
         }
-        menu.classList.toggle("open", !isOpen);
-      });
-      $("#thinkingToggle").addEventListener("click", () => {
-        const chat = activeChat();
-        if (!chat) return;
-        chat.settings.enabledThinking = !chat.settings.enabledThinking;
-        touchChat(chat);
-        saveState();
-        renderThinkingChip();
+        if (isOpen) closeToolsMenu();
+        else menu.classList.add("open");
       });
       document.addEventListener("click", event => {
         const citationButton = event.target.closest("[data-citation-ref]");
@@ -7383,7 +7783,7 @@
           else if (action === "delete-message") deleteMessage(chatId, messageId);
           return;
         }
-        if (!event.target.closest(".tool-menu-wrap") && !event.target.closest(".menu-panel")) $("#toolsMenu").classList.remove("open");
+        if (!event.target.closest(".tool-menu-wrap") && !event.target.closest(".menu-panel")) closeToolsMenu();
         if (!event.target.closest(".model-select-wrap") && !event.target.closest(".model-dropdown")) closeModelDropdown();
       });
       $("#clearDebuggerButton").addEventListener("click", () => {
@@ -7398,7 +7798,7 @@
         if (event.key !== "Escape") return;
         if ($("#modalBackdrop").classList.contains("open")) { closeModal(); return; }
         if ($("#modelDropdown")?.classList.contains("open")) { closeModelDropdown(); return; }
-        if ($("#toolsMenu").classList.contains("open")) { $("#toolsMenu").classList.remove("open"); return; }
+        if ($("#toolsMenu").classList.contains("open")) { closeToolsMenu(); return; }
       });
 
       // Browser back/forward restores the view

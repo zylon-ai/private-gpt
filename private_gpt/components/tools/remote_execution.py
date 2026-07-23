@@ -186,8 +186,10 @@ async def execute_tool_request(
 
 
 def build_tool_execution_context(state: ChatState) -> dict[str, Any]:
+    correlation_id = state.input.request.context.correlation_id
     return {
-        "correlation_id": state.input.request.context.correlation_id,
+        "correlation_id": correlation_id,
+        "message_id": correlation_id,
         "messages": [
             msg.model_dump(mode="json", exclude_none=True)
             for msg in state.input.request.messages

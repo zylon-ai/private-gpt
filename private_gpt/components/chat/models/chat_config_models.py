@@ -468,6 +468,14 @@ class CondensationConfig(BaseModel):
         default=True,
         description="Whether to enable condensation in the chat.",
     )
+    token_buffer: float = Field(
+        default=0.05,
+        ge=0.0,
+        lt=1.0,
+        description=(
+            "Fraction of the model token limit to reserve when condensing chat history."
+        ),
+    )
 
 
 class ThinkingConfig(BaseModel):

@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from collections.abc import Coroutine
 from typing import Any
 
 from arq import create_pool
@@ -8,6 +10,8 @@ from private_gpt.arq.settings import get_redis_settings
 from private_gpt.settings.settings import settings as _settings
 
 logger = logging.getLogger(__name__)
+
+_background_tasks: set[asyncio.Task[Any]] = set()
 
 
 def _log_dispatch(
@@ -36,7 +40,7 @@ async def enqueue_job(
     correlation_id: str,
     job_id: str | None = None,
     defer_seconds: int | None = None,
-) -> None:
+) -> bool:
     current_settings = _settings()
     _log_dispatch(
         task_name=task_name,
@@ -52,12 +56,18 @@ async def enqueue_job(
             options["_job_id"] = job_id
         if defer_seconds is not None:
             options["_defer_by"] = defer_seconds
-        await redis.enqueue_job(task_name, *args, **options)
+        return await redis.enqueue_job(task_name, *args, **options) is not None
     finally:
         await redis.aclose()
 
 
-async def abort_job(*, job_id: str, queue_name: str) -> bool:
+def _spawn(coro: Coroutine[Any, Any, Any], *, name: str) -> None:
+    task = asyncio.create_task(coro, name=name)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+
+async def _abort_job(*, job_id: str, queue_name: str, timeout: int) -> bool:
     current_settings = _settings()
     redis = await create_pool(get_redis_settings(current_settings))
     try:
@@ -66,6 +76,40 @@ async def abort_job(*, job_id: str, queue_name: str) -> bool:
             redis=redis,
             _queue_name=queue_name,
         )
-        return await job.abort(timeout=2)
+
+        try:
+            return await job.abort(timeout=timeout)
+        except TimeoutError:
+            logger.warning(
+                "Timed out confirming abort for job_id=%s queue=%s",
+                job_id,
+                queue_name,
+            )
+            return False
     finally:
         await redis.aclose()
+
+
+async def abort_job(
+    *,
+    job_id: str,
+    queue_name: str,
+    wait: bool = False,
+    timeout: int = 5,
+) -> bool:
+    if wait:
+        return await _abort_job(
+            job_id=job_id,
+            queue_name=queue_name,
+            timeout=timeout,
+        )
+
+    _spawn(
+        _abort_job(
+            job_id=job_id,
+            queue_name=queue_name,
+            timeout=timeout,
+        ),
+        name=f"abort_job_{job_id}",
+    )
+    return True
