@@ -1,5 +1,44 @@
 # Changelog
 
+## [1.1.0](https://github.com/zylon-ai/private-gpt/compare/v1.0.1...v1.1.0) (2026-07-23)
+
+
+### Features
+
+* add code execution ui ([#2289](https://github.com/zylon-ai/private-gpt/issues/2289)) ([bfd2633](https://github.com/zylon-ai/private-gpt/commit/bfd2633d89468d9038abd2079474d80c2c466c8e))
+* add validation skill endpoint + skill prompt ([#2272](https://github.com/zylon-ai/private-gpt/issues/2272)) ([42a6c04](https://github.com/zylon-ai/private-gpt/commit/42a6c047d0c63ae862bf4981d1adf9d359df646b))
+* add websearch in a sandbox ([#2300](https://github.com/zylon-ai/private-gpt/issues/2300)) ([576589b](https://github.com/zylon-ai/private-gpt/commit/576589bdc5970813d60d3dd3295a6d6c9d5f8e8f))
+* allow to attach files as Anthropic does ([#2265](https://github.com/zylon-ai/private-gpt/issues/2265)) ([4cca7d0](https://github.com/zylon-ai/private-gpt/commit/4cca7d0b97007f720d62c32d8ccce350f54a64e3))
+* code execution v2 ([#2278](https://github.com/zylon-ai/private-gpt/issues/2278)) ([f2cffd1](https://github.com/zylon-ai/private-gpt/commit/f2cffd1ab93be08175c19613cd65e90d64130b38))
+* code execution v4 ([#2295](https://github.com/zylon-ai/private-gpt/issues/2295)) ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* control docs parser ([#2273](https://github.com/zylon-ai/private-gpt/issues/2273)) ([78a1e8b](https://github.com/zylon-ai/private-gpt/commit/78a1e8b9f64a1c2b2dc5223f800519a62cf0d8a6))
+* improve web search ([#2274](https://github.com/zylon-ai/private-gpt/issues/2274)) ([5d60141](https://github.com/zylon-ai/private-gpt/commit/5d60141f08f9f4a274915c5149049aa832b4d8de))
+* resumable chat worker + tool worker + async tokenizer ([#2298](https://github.com/zylon-ai/private-gpt/issues/2298)) ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+
+
+### Bug Fixes
+
+* async_playwright for test ([5d60141](https://github.com/zylon-ai/private-gpt/commit/5d60141f08f9f4a274915c5149049aa832b4d8de))
+* chat engine ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* chat engine ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* CVE-2026-44209 security vulnerability ([#2283](https://github.com/zylon-ai/private-gpt/issues/2283)) ([4641db3](https://github.com/zylon-ai/private-gpt/commit/4641db358c9655ecf0e345be9350e5533f5c6950))
+* fix deps ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* fix deps ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* loop ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* loop ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* mypy ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* mypy ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* mypy ([5d60141](https://github.com/zylon-ai/private-gpt/commit/5d60141f08f9f4a274915c5149049aa832b4d8de))
+* random bugs ([#2301](https://github.com/zylon-ai/private-gpt/issues/2301)) ([091d5f7](https://github.com/zylon-ai/private-gpt/commit/091d5f7020bf5612190c4b3220935918dee83f7b))
+* random bugs v3 ([#2307](https://github.com/zylon-ai/private-gpt/issues/2307)) ([cdf0b35](https://github.com/zylon-ai/private-gpt/commit/cdf0b35b77a04d5875012255155d4f075a454221))
+* refactor ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* refactor ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* remove parent chat job ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* remove parent chat job ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* revert usleess changes ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* revert usleess changes ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* update fern & resolve fern preview ([#2288](https://github.com/zylon-ai/private-gpt/issues/2288)) ([f3d24b5](https://github.com/zylon-ai/private-gpt/commit/f3d24b54138360429ee637ee9645e1eb957b0992))
+
 ## [1.0.1](https://github.com/zylon-ai/private-gpt/compare/v1.0.0...v1.0.1) (2026-06-16)
 
 
