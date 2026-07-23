@@ -80,6 +80,9 @@ navigation:
           - page: vLLM
             slug: providers/vllm
             path: ./docs/pages/providers/vllm.mdx
+          - page: DaoXE
+            slug: providers/daoxe
+            path: ./docs/pages/providers/daoxe.mdx
       - section: Integrations
         skip-slug: true
         contents:
