@@ -1,3 +1,4 @@
+import base64
 import io
 import uuid
 import zipfile
@@ -679,3 +680,68 @@ def test_skill_upload_no_wrapper_still_works(
     assert version_resp.status_code == 200
     version = version_resp.json()
     assert version["name"] == "normal-skill"
+
+
+def test_list_and_download_skill_version_files(
+    test_client: TestClient, injector: MockInjector
+) -> None:
+    collection = _collection()
+    helper_bytes = b"def help(): pass\n"
+    zip_bytes = _skill_zip(
+        name="file-retrieval-skill",
+        description="Skill used to test file retrieval",
+        body="Retrieve me",
+        extra_files={"scripts/helper.py": helper_bytes},
+    )
+
+    create_resp = test_client.post(
+        "/v1/skills",
+        data={"display_title": "File Retrieval", "collection": collection},
+        files=[("files", ("skill.zip", zip_bytes, "application/zip"))],
+    )
+    assert create_resp.status_code == 200
+    skill = create_resp.json()
+    version = skill["latest_version"]
+
+    list_resp = test_client.get(
+        f"/v1/skills/{skill['id']}/versions/{version}/files",
+        params={"collection": collection},
+    )
+    assert list_resp.status_code == 200
+    files = {item["path"]: item for item in list_resp.json()["data"]}
+    assert set(files) == {"SKILL.md", "scripts/helper.py"}
+    assert files["scripts/helper.py"]["content_base64"] is not None
+    assert (
+        base64.b64decode(files["scripts/helper.py"]["content_base64"]) == helper_bytes
+    )
+
+    meta_only = test_client.get(
+        f"/v1/skills/{skill['id']}/versions/{version}/files",
+        params={"collection": collection, "include_content": "false"},
+    )
+    assert meta_only.status_code == 200
+    meta_files = meta_only.json()["data"]
+    assert all(item["content_base64"] is None for item in meta_files)
+    assert {item["path"] for item in meta_files} == {
+        "SKILL.md",
+        "scripts/helper.py",
+    }
+
+    content_resp = test_client.get(
+        f"/v1/skills/{skill['id']}/versions/{version}/files/scripts/helper.py/content",
+        params={"collection": collection},
+    )
+    assert content_resp.status_code == 200
+    assert content_resp.content == helper_bytes
+
+    missing = test_client.get(
+        f"/v1/skills/{skill['id']}/versions/{version}/files/missing.txt/content",
+        params={"collection": collection},
+    )
+    assert missing.status_code == 404
+
+    traversal = test_client.get(
+        f"/v1/skills/{skill['id']}/versions/{version}/files/../secret/content",
+        params={"collection": collection},
+    )
+    assert traversal.status_code in {400, 404}

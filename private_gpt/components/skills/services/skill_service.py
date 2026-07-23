@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from injector import inject, singleton
@@ -311,6 +311,87 @@ class SkillService:
         """Relative paths of all files bundled in a skill version."""
         files = await self._storage_component.list_files(version.storage_prefix)
         return sorted(files)
+
+    async def get_version_files(
+        self,
+        version: SkillVersionEntity,
+        *,
+        include_content: bool = True,
+    ) -> list[tuple[str, int, str | None, bytes | None]]:
+        """Return skill version files as (path, size_bytes, mime_type, content?)."""
+        paths = await self.list_version_files(version)
+        results: list[tuple[str, int, str | None, bytes | None]] = []
+        for path in paths:
+            stat = await self._storage_component.stat_file(
+                version.storage_prefix, path
+            )
+            content: bytes | None = None
+            if include_content:
+                content = await self._storage_component.read_file(
+                    version.storage_prefix, path
+                )
+            size_bytes = (
+                len(content)
+                if content is not None
+                else (stat.size_bytes if stat else 0)
+            )
+            results.append(
+                (
+                    path,
+                    size_bytes,
+                    stat.mime_type if stat else None,
+                    content,
+                )
+            )
+        return results
+
+    async def read_version_file(
+        self, version: SkillVersionEntity, path: str
+    ) -> StoredFile:
+        """Read a single file from a skill version bundle.
+
+        Raises:
+            SkillDomainError: if the path is invalid or the file does not exist.
+        """
+        safe_path = _safe_relative_path(path)
+        stat = await self._storage_component.stat_file(
+            version.storage_prefix, safe_path
+        )
+        if stat is None:
+            raise SkillDomainError(
+                SkillErrorCode.FILE_NOT_FOUND,
+                f"File '{safe_path}' not found in skill version {version.version}",
+                params={"path": safe_path},
+            )
+        content = await self._storage_component.read_file(
+            version.storage_prefix, safe_path
+        )
+        return StoredFile(
+            path=safe_path,
+            content=content,
+            mime_type=stat.mime_type,
+        )
+
+
+def _safe_relative_path(path: str) -> str:
+    normalized = path.replace("\\", "/")
+    parsed = PurePosixPath(normalized)
+    if parsed.is_absolute():
+        raise SkillDomainError(
+            SkillErrorCode.UNSAFE_PATH_ABSOLUTE,
+            f"Unsafe file path (absolute): {path!r}",
+            params={"path": path},
+        )
+    if ".." in parsed.parts:
+        raise SkillDomainError(
+            SkillErrorCode.UNSAFE_PATH_TRAVERSAL,
+            f"Unsafe file path (path traversal): {path!r}",
+            params={"path": path},
+        )
+    parts = list(parsed.parts)
+    if parts and parts[-1].lower() == "skill.md":
+        parts[-1] = "SKILL.md"
+    return "/".join(parts)
 
 
 def _extract_skill_md(files: list[StoredFile]) -> str:

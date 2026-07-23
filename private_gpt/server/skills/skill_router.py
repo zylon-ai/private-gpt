@@ -1,8 +1,15 @@
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Form, Header, HTTPException, Query, Request
+import base64
 
-from private_gpt.components.skills.errors import SkillDomainError, SkillValidationErrors
+from fastapi import APIRouter, Depends, Form, Header, HTTPException, Query, Request
+from fastapi.responses import Response
+
+from private_gpt.components.skills.errors import (
+    SkillDomainError,
+    SkillErrorCode,
+    SkillValidationErrors,
+)
 from private_gpt.components.skills.models.skill_entities import (
     SkillEntity,
     SkillVersionEntity,
@@ -10,12 +17,14 @@ from private_gpt.components.skills.models.skill_entities import (
 from private_gpt.components.skills.services.skill_service import SkillService
 from private_gpt.server.skills.skill_models import (
     ListSkillsResponse,
+    ListSkillVersionFilesResponse,
     ListSkillVersionsResponse,
     SkillDeletedResponse,
     SkillResponse,
     SkillValidationError,
     SkillValidationResponse,
     SkillVersionDeletedResponse,
+    SkillVersionFileResponse,
     SkillVersionResponse,
 )
 from private_gpt.server.skills.skills_files import (
@@ -572,6 +581,139 @@ async def list_skill_versions(
 
 
 @skill_router.get(
+    "/{skill_id}/versions/{version}/files/{file_path:path}/content",
+    summary="Download a skill version file",
+    description=(
+        "Download the raw bytes of a single file from a skill version bundle. "
+        "Paths are relative to the skill root (e.g. `SKILL.md` or `scripts/run.py`)."
+    ),
+    responses={
+        200: {
+            "description": "Raw file bytes.",
+            "content": {"application/octet-stream": {}},
+        },
+        400: {"description": "Invalid file path."},
+        404: {"description": "Skill, version, or file not found."},
+    },
+)
+async def get_skill_version_file_content(
+    request: Request,
+    skill_id: str,
+    version: str,
+    file_path: str,
+    collection: str = Query(
+        ...,
+        min_length=1,
+        max_length=255,
+        examples=["acme-prod"],
+    ),
+    anthropic_beta: Annotated[list[str] | None, Header(alias="anthropic-beta")] = None,
+) -> Response:
+    """Return raw bytes for one file in a skill version."""
+    del anthropic_beta
+    skill_version = await _require_skill_version(
+        request, skill_id=skill_id, version=version, collection=collection
+    )
+    service: SkillService = request.state.injector.get(SkillService)
+    try:
+        stored = await service.read_version_file(skill_version, file_path)
+    except SkillDomainError as exc:
+        status = (
+            404 if exc.code == SkillErrorCode.FILE_NOT_FOUND else 400
+        )
+        raise HTTPException(status_code=status, detail=exc.message) from exc
+
+    filename = stored.path.rsplit("/", 1)[-1]
+    return Response(
+        content=stored.content,
+        media_type=stored.mime_type or "application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@skill_router.get(
+    "/{skill_id}/versions/{version}/files",
+    response_model=ListSkillVersionFilesResponse,
+    summary="List files in a skill version",
+    description=(
+        "List all files stored for a skill version. "
+        "Set `include_content=true` (default) to receive base64-encoded file bodies."
+    ),
+    responses={
+        200: {
+            "description": "Skill version files.",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "with_content": {
+                            "summary": "Files with content",
+                            "value": {
+                                "data": [
+                                    {
+                                        "path": "SKILL.md",
+                                        "size_bytes": 120,
+                                        "mime_type": "text/markdown",
+                                        "content_base64": "LS0tCm5hbWU6IGV4YW1wbGUK...",
+                                    },
+                                    {
+                                        "path": "scripts/run.py",
+                                        "size_bytes": 32,
+                                        "mime_type": "text/x-python",
+                                        "content_base64": "cHJpbnQoJ2hlbGxvJykK",
+                                    },
+                                ]
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        404: {"description": "Skill or version not found."},
+    },
+)
+async def list_skill_version_files(
+    request: Request,
+    skill_id: str,
+    version: str,
+    collection: str = Query(
+        ...,
+        min_length=1,
+        max_length=255,
+        examples=["acme-prod"],
+    ),
+    include_content: bool = Query(
+        default=True,
+        description="When true, each file includes a content_base64 field.",
+    ),
+    anthropic_beta: Annotated[list[str] | None, Header(alias="anthropic-beta")] = None,
+) -> ListSkillVersionFilesResponse:
+    """List (and optionally return) all files for a skill version."""
+    del anthropic_beta
+    skill_version = await _require_skill_version(
+        request, skill_id=skill_id, version=version, collection=collection
+    )
+    service: SkillService = request.state.injector.get(SkillService)
+    files = await service.get_version_files(
+        skill_version, include_content=include_content
+    )
+    return ListSkillVersionFilesResponse(
+        data=[
+            SkillVersionFileResponse(
+                path=path,
+                size_bytes=size_bytes,
+                mime_type=mime_type,
+                content_base64=(
+                    base64.b64encode(content).decode("ascii")
+                    if content is not None
+                    else None
+                ),
+            )
+            for path, size_bytes, mime_type, content in files
+        ]
+    )
+
+
+@skill_router.get(
     "/{skill_id}/versions/{version}",
     response_model=SkillVersionResponse,
     description="Retrieve a specific version for a skill.",
@@ -614,22 +756,9 @@ async def get_skill_version(
 ) -> SkillVersionResponse:
     """Get one skill version by version token inside a collection."""
     del anthropic_beta
-    service: SkillService = request.state.injector.get(SkillService)
-    skill = await service.get_skill(skill_id=skill_id, collection=collection)
-    if not skill:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Skill with id {skill_id} not found in collection {collection}",
-        )
-
-    skill_version = await service.get_version(
-        skill_id=skill_id, version=version, collection=collection
+    skill_version = await _require_skill_version(
+        request, skill_id=skill_id, version=version, collection=collection
     )
-    if not skill_version:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Skill with id {skill_id} not found in collection {collection}",
-        )
     return _version_response(skill_version)
 
 
@@ -682,6 +811,34 @@ async def delete_skill_version(
         skill_id=skill_id, version=version, collection=collection
     )
     return SkillVersionDeletedResponse(id=version)
+
+
+async def _require_skill_version(
+    request: Request,
+    *,
+    skill_id: str,
+    version: str,
+    collection: str,
+) -> SkillVersionEntity:
+    service: SkillService = request.state.injector.get(SkillService)
+    skill = await service.get_skill(skill_id=skill_id, collection=collection)
+    if not skill:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Skill with id {skill_id} not found in collection {collection}",
+        )
+    skill_version = await service.get_version(
+        skill_id=skill_id, version=version, collection=collection
+    )
+    if not skill_version:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Version {version} for skill {skill_id} "
+                f"not found in collection {collection}"
+            ),
+        )
+    return skill_version
 
 
 def _skill_response(skill: SkillEntity) -> SkillResponse:
