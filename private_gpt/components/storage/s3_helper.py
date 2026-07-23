@@ -4,6 +4,7 @@ import io
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO
+from urllib.parse import quote
 
 from injector import inject, singleton
 
@@ -23,6 +24,10 @@ DEBUG_MODE = settings().server.debug_mode
 
 def _remove_expect_header(params: dict[str, Any], **_: Any) -> None:
     params["headers"].pop("Expect", None)
+
+
+def _encode_metadata_value(value: str) -> str:
+    return quote(value, safe="")
 
 
 @singleton
@@ -110,7 +115,7 @@ class S3Helper:
             "Body": bytes_data,
             "ContentType": resolved_mime_type,
             "Metadata": {
-                "file_name": filename,
+                "file_name": _encode_metadata_value(filename),
                 "content_type": resolved_mime_type,
             },
         }
@@ -145,7 +150,7 @@ class S3Helper:
                 Body=bytes_data,
                 ContentType=resolved_mime_type,
                 Metadata={
-                    "file_name": filename,
+                    "file_name": _encode_metadata_value(filename),
                     "content_type": resolved_mime_type,
                 },
             )

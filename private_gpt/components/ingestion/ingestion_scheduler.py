@@ -142,7 +142,9 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
             )
             s3_helper = self._require_s3_helper()
             if should_upload and s3_helper.is_available():
-                content = ingest_body.ingest_body.input.to_binary_content()
+                content = ingest_body.ingest_body.input.to_binary_content(
+                    get_file_name(ingest_body.ingest_body.metadata)
+                )
                 object_name = str(uuid.uuid4())
                 s3_url = s3_helper.upload_file_to_s3(
                     filename=content.filename,
@@ -152,6 +154,10 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
                 )
                 if not s3_url:
                     raise ValueError("Failed to upload file to S3 for async ingestion")
+                ingest_body.ingest_body.metadata = {
+                    **(ingest_body.ingest_body.metadata or {}),
+                    "file_name": content.filename,
+                }
                 ingest_body.ingest_body.input = UriArtifact(value=s3_url)
 
         result = dispatch_task(
@@ -227,6 +233,10 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
                     raise ValueError(
                         "Failed to upload file to S3 for sync celery ingest"
                     )
+                async_body.ingest_body.metadata = {
+                    **(async_body.ingest_body.metadata or {}),
+                    "file_name": content.filename,
+                }
                 async_body.ingest_body.input = UriArtifact(value=s3_url)
 
         result = dispatch_task(
