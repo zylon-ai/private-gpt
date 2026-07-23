@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -144,4 +145,7 @@ async def test_celery_tool_scheduler_cancel_revokes_task(
     cancelled = await scheduler.cancel(tool_request(), task_id="task-abc")
 
     assert cancelled is True
+    async with asyncio.timeout(2):
+        while not celery_app.control.revoke.called:
+            await asyncio.sleep(0.01)
     celery_app.control.revoke.assert_called_once_with("task-abc", terminate=True)

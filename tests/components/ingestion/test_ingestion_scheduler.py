@@ -47,8 +47,6 @@ def test_sync_celery_ingest_preserves_filename_and_extension(
     )
 
     assert dispatched_body is not None
-    assert dispatched_body.ingest_body.metadata == {
-        "file_name": expected_filename
-    }
+    assert dispatched_body.ingest_body.metadata == {"file_name": expected_filename}
     assert isinstance(dispatched_body.ingest_body.input, UriArtifact)
     assert s3_helper.upload_file_to_s3.call_args.kwargs["filename"] == expected_filename
