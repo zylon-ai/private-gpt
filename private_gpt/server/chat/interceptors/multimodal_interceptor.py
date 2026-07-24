@@ -24,10 +24,10 @@ from private_gpt.components.engines.chat.models.chat_state import (
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import supports_audio, supports_images
 from private_gpt.events.models import (
+    ClientToolResultBlock,
+    ClientToolUseBlock,
     RawContentBlockStartEvent,
     RawContentBlockStopEvent,
-    ToolResultBlock,
-    ToolUseBlock,
     to_llama_index_blocks,
 )
 from private_gpt.settings.settings import Settings
@@ -74,7 +74,7 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
                     tool_ids[processing.type] = tool_id
                     use_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
-                        content_block=ToolUseBlock(
+                        content_block=ClientToolUseBlock(
                             id=tool_id,
                             name=self._tool_name,
                             input={"type": processing.type},
@@ -91,7 +91,7 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
                     )
                     result_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
-                        content_block=ToolResultBlock(
+                        content_block=ClientToolResultBlock(
                             tool_use_id=tool_id,
                             content=content,
                             is_error=processing.status == "failed",

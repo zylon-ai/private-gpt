@@ -183,6 +183,12 @@ class ToolSpec(BaseModel):
         description="Execution runtime for the tool. 'server' means "
         "the tool is executed by the server; 'client' means the call is passed back to the caller.",
     )
+    server_tool_name: Literal[
+        "bash_code_execution", "text_editor_code_execution"
+    ] | None = Field(
+        default=None,
+        description="Anthropic-compatible public server tool presentation name.",
+    )
     description: str | None = Field(
         default=None, description="Human-readable description of what the tool does"
     )
@@ -258,6 +264,9 @@ class ToolSpec(BaseModel):
         name: str,
         type: str | None = None,
         runtime: Literal["client", "server"] = "client",
+        server_tool_name: Literal[
+            "bash_code_execution", "text_editor_code_execution"
+        ] | None = None,
         description: str | None = None,
         input_schema: dict[str, Any] | None = None,
         context: list[ArtifactType] | None = None,
@@ -283,6 +292,7 @@ class ToolSpec(BaseModel):
             name=name,
             type=type,
             runtime=runtime,
+            server_tool_name=server_tool_name,
             description=description,
             input_schema=input_schema,
             context=context,

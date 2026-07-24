@@ -18,10 +18,10 @@ from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.events.models import (
+    ClientToolResultBlock,
+    ClientToolUseBlock,
     RawContentBlockStartEvent,
     RawContentBlockStopEvent,
-    ToolResultBlock,
-    ToolUseBlock,
     to_llama_index_blocks,
 )
 from private_gpt.server.ingest.convert_service import ConvertService
@@ -66,7 +66,7 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
                     tool_ids[processing.doc_index] = tool_id
                     use_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
-                        content_block=ToolUseBlock(
+                        content_block=ClientToolUseBlock(
                             id=tool_id,
                             name=self._tool_name,
                             input={
@@ -87,7 +87,7 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
                     )
                     result_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
-                        content_block=ToolResultBlock(
+                        content_block=ClientToolResultBlock(
                             tool_use_id=tool_id,
                             content=content,
                             is_error=processing.status == "failed",

@@ -7,7 +7,14 @@ from private_gpt.events.models._base import (
     CacheableContentBlock,
     StandardContentProtocol,
 )
-from private_gpt.events.models._content_blocks import ResultContentBlockType
+from private_gpt.events.models._content_blocks import (
+    BashCodeExecutionResultBlock,
+    CodeExecutionToolResultErrorBlock,
+    ResultContentBlockType,
+    TextEditorCodeExecutionCreateResultBlock,
+    TextEditorCodeExecutionStrReplaceResultBlock,
+    TextEditorCodeExecutionViewResultBlock,
+)
 
 
 class ToolReferenceBlock(CacheableContentBlock, StandardContentProtocol):
@@ -26,7 +33,7 @@ ToolResultContentBlockType = ResultContentBlockType | ToolReferenceBlock
 
 
 class ToolResultBlock(CacheableContentBlock, StandardContentProtocol):
-    """Result produced by a prior tool_use block."""
+    """Shared interface for results produced by tool-use blocks."""
 
     type: Literal["tool_result"] = Field(default="tool_result")
     tool_use_id: str = Field(
@@ -58,4 +65,39 @@ class ToolResultBlock(CacheableContentBlock, StandardContentProtocol):
         return None
 
 
-ContentBlockType = ResultContentBlockType | ToolResultBlock
+class ClientToolResultBlock(ToolResultBlock):
+    """Result supplied for a client-executed tool call."""
+
+    type: Literal["tool_result"] = Field(default="tool_result")
+
+
+TextEditorCodeExecutionResultContent = Annotated[
+    TextEditorCodeExecutionViewResultBlock
+    | TextEditorCodeExecutionCreateResultBlock
+    | TextEditorCodeExecutionStrReplaceResultBlock
+    | CodeExecutionToolResultErrorBlock,
+    Field(discriminator="type"),
+]
+
+
+class BashCodeExecutionToolResultBlock(ToolResultBlock):
+    type: Literal["bash_code_execution_tool_result"] = "bash_code_execution_tool_result"
+    tool_use_id: str
+    content: BashCodeExecutionResultBlock | CodeExecutionToolResultErrorBlock
+    is_error: bool = Field(default=False, exclude=True)
+
+
+class TextEditorCodeExecutionToolResultBlock(ToolResultBlock):
+    type: Literal["text_editor_code_execution_tool_result"] = (
+        "text_editor_code_execution_tool_result"
+    )
+    tool_use_id: str
+    content: TextEditorCodeExecutionResultContent
+    is_error: bool = Field(default=False, exclude=True)
+
+
+ServerToolResultBlock = (
+    BashCodeExecutionToolResultBlock | TextEditorCodeExecutionToolResultBlock
+)
+
+ContentBlockType = ResultContentBlockType | ToolResultBlock | ServerToolResultBlock

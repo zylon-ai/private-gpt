@@ -383,7 +383,7 @@ class RedactedThinkingBlock(CacheableContentBlock, StandardContentProtocol):
 
 
 class ToolUseBlock(CacheableContentBlock, StandardContentProtocol):
-    """Represents a model-initiated tool call."""
+    """Shared interface for model-initiated tool calls."""
 
     type: Literal["tool_use"] = Field(default="tool_use")
     id: str = Field(
@@ -400,7 +400,13 @@ class ToolUseBlock(CacheableContentBlock, StandardContentProtocol):
     caller: ToolCaller | None = Field(default=None)
 
 
-class ServerToolUseBlock(CacheableContentBlock, StandardContentProtocol):
+class ClientToolUseBlock(ToolUseBlock):
+    """Represents a client-executed model tool call."""
+
+    type: Literal["tool_use"] = Field(default="tool_use")
+
+
+class ServerToolUseBlock(ToolUseBlock):
     """Represents a server-side (built-in) tool call initiated by the model."""
 
     type: Literal["server_tool_use"] = Field(default="server_tool_use")
@@ -694,4 +700,68 @@ class TLDRBlock(BaseContentBlock, ExtendedContentProtocol):
     tldr_side: Literal["left", "right"] = Field(default="left")
 
 
-ResultContentBlockType = BasicContentBlockType | TLDRBlock
+class BashCodeExecutionResultBlock(BaseContentBlock, StandardContentProtocol):
+    type: Literal["bash_code_execution_result"] = "bash_code_execution_result"
+    stdout: str = ""
+    stderr: str = ""
+    return_code: int = 0
+    content: list[BasicContentBlockType] = Field(default_factory=list)
+
+
+class CodeExecutionToolResultErrorBlock(BaseContentBlock, StandardContentProtocol):
+    type: Literal[
+        "bash_code_execution_tool_result_error",
+        "text_editor_code_execution_tool_result_error",
+    ]
+    error_code: Literal[
+        "unavailable",
+        "execution_time_exceeded",
+        "invalid_tool_input",
+        "too_many_requests",
+    ]
+
+
+class TextEditorCodeExecutionViewResultBlock(BaseContentBlock, StandardContentProtocol):
+    type: Literal["text_editor_code_execution_view_result"] = (
+        "text_editor_code_execution_view_result"
+    )
+    file_type: Literal["text"] = "text"
+    content: str
+    num_lines: int
+    start_line: int
+    total_lines: int
+
+
+class TextEditorCodeExecutionCreateResultBlock(
+    BaseContentBlock, StandardContentProtocol
+):
+    type: Literal["text_editor_code_execution_create_result"] = (
+        "text_editor_code_execution_create_result"
+    )
+    is_file_update: bool = False
+
+
+class TextEditorCodeExecutionStrReplaceResultBlock(
+    BaseContentBlock, StandardContentProtocol
+):
+    type: Literal["text_editor_code_execution_str_replace_result"] = (
+        "text_editor_code_execution_str_replace_result"
+    )
+    old_start: int = 0
+    old_lines: int = 0
+    new_start: int = 0
+    new_lines: int = 0
+    lines: list[str] = Field(default_factory=list)
+
+
+CodeExecutionResultContentBlockType = (
+    BashCodeExecutionResultBlock
+    | CodeExecutionToolResultErrorBlock
+    | TextEditorCodeExecutionViewResultBlock
+    | TextEditorCodeExecutionCreateResultBlock
+    | TextEditorCodeExecutionStrReplaceResultBlock
+)
+
+ResultContentBlockType = (
+    BasicContentBlockType | TLDRBlock | CodeExecutionResultContentBlockType
+)
