@@ -21,6 +21,7 @@ from private_gpt.events.models import (
     WebFetchResultBlock,
     WebFetchToolResultBlock,
     WebSearchResultBlock,
+    WebSearchToolResultError,
     WebSearchToolResultBlock,
 )
 
@@ -174,13 +175,9 @@ class WebSearchEventAdapter(ServerToolEventAdapter):
 
     def build_tool_result(self, *, tool_use_id: str, outcome: ToolExecutionOutcome) -> ToolResultBlock:
         if isinstance(outcome, ToolExecutionFailure):
-            from private_gpt.events.models import CodeExecutionToolResultErrorBlock
             return WebSearchToolResultBlock(
                 tool_use_id=tool_use_id,
-                content=CodeExecutionToolResultErrorBlock(
-                    type="bash_code_execution_tool_result_error",
-                    error_code="unavailable",
-                ),
+                content=WebSearchToolResultError(error_code="unavailable"),
             )
         return WebSearchToolResultBlock(
             tool_use_id=tool_use_id,

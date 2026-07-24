@@ -47,6 +47,7 @@ from private_gpt.events.models import (
     WebFetchToolResultBlock,
     WebSearchResultBlock,
     WebSearchToolResultBlock,
+    WebSearchToolResultError,
 )
 from private_gpt.events.models._callers import ServerToolCaller20260120
 
@@ -519,7 +520,8 @@ ZYLON_ONLY_REGISTRY: list[TypeMapping] = [
         our_type=WebSearchResultBlock,
         sdk_schema_name="WebSearchResultBlock",
         openapi_schema_name=None,
-        zylon_only_fields=_BASE_ZYLON_FIELDS | {"content", "description", "favicon_url"},
+        zylon_only_fields=_BASE_ZYLON_FIELDS
+        | {"content", "description", "favicon_url"},
         sdk_only_fields=frozenset(),
         sdk_sample={
             "type": "web_search_result",
@@ -562,7 +564,11 @@ ZYLON_ONLY_REGISTRY: list[TypeMapping] = [
             "url": "https://example.com",
             "content": {
                 "type": "document",
-                "source": {"type": "text", "media_type": "text/plain", "data": "page content"},
+                "source": {
+                    "type": "text",
+                    "media_type": "text/plain",
+                    "data": "page content",
+                },
             },
         },
         notes="No SDK type yet — follows Anthropic docs shape. markdown is a Zylon extension.",
@@ -582,7 +588,11 @@ ZYLON_ONLY_REGISTRY: list[TypeMapping] = [
                 "url": "https://example.com",
                 "content": {
                     "type": "document",
-                    "source": {"type": "text", "media_type": "text/plain", "data": "page content"},
+                    "source": {
+                        "type": "text",
+                        "media_type": "text/plain",
+                        "data": "page content",
+                    },
                 },
             },
         },
@@ -601,6 +611,18 @@ ZYLON_ONLY_REGISTRY: list[TypeMapping] = [
             "tool_use_id": "toolu_01abc",
             "content": "ok",
             "is_error": False,
+        },
+    ),
+    TypeMapping(
+        sdk_type=sdk_types.WebSearchToolResultError,
+        our_type=WebSearchToolResultError,
+        sdk_schema_name="WebSearchToolResultError",
+        openapi_schema_name=None,
+        zylon_only_fields=frozenset(),
+        sdk_only_fields=frozenset(),
+        sdk_sample={
+            "type": "web_search_tool_result_error",
+            "error_code": "unavailable",
         },
     ),
     # -- Deltas -------------------------------------------------------------

@@ -39,6 +39,7 @@ from private_gpt.events.models._content_blocks import (
     ToolUseBlock,
     WebFetchResultBlock,
     WebSearchResultBlock,
+    WebSearchToolResultError,
 )
 from private_gpt.events.models._converters import (
     from_tool_output,
@@ -168,6 +169,7 @@ __all__ = [
     "WebFetchResultBlock",
     "WebFetchToolResultBlock",
     "WebSearchResultBlock",
+    "WebSearchToolResultError",
     "WebSearchToolResultBlock",
     "CodeExecutionToolResultErrorBlock",
     "Container",

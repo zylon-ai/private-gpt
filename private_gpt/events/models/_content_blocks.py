@@ -869,3 +869,11 @@ ResultContentBlockType = (
     | CodeExecutionResultContentBlockType
     | WebToolResultContentBlockType
 )
+class WebSearchToolResultError(BaseModel):
+    """SDK-compatible error result for a web_search tool call."""
+
+    type: Literal["web_search_tool_result_error"] = "web_search_tool_result_error"
+    error_code: Literal[
+        "invalid_tool_input", "unavailable", "max_uses_exceeded",
+        "too_many_requests", "query_too_long", "request_too_large",
+    ]

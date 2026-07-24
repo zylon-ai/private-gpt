@@ -19,6 +19,7 @@ from private_gpt.events.models._content_blocks import (
     TextEditorCodeExecutionViewResultBlock,
     WebFetchResultBlock,
     WebSearchResultBlock,
+    WebSearchToolResultError,
 )
 
 
@@ -102,7 +103,7 @@ class WebSearchToolResultBlock(ServerToolResultBlock):
     """
 
     type: Literal["web_search_tool_result"] = "web_search_tool_result"
-    content: list[WebSearchResultBlock] | CodeExecutionToolResultErrorBlock
+    content: list[WebSearchResultBlock] | WebSearchToolResultError
     is_error: bool = Field(default=False, exclude=True)
 
     def for_response_mode(
