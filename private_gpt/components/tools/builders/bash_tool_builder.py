@@ -74,7 +74,7 @@ class BashToolBuilder:
             name=name,
             type=type,
             runtime="server",
-            server_tool_name="bash_code_execution",
+            event_adapter_key="code_execution.bash",
             description=description,
             async_fn=run_bash,
             requirements=[ToolRequirements.SANDBOX],

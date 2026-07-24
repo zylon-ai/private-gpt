@@ -51,7 +51,7 @@ async def test_bash_tool_builder_executes_session_command() -> None:
     assert result[0].stdout == "ok"
     assert result[0].stderr == ""
     assert result[0].return_code == 0
-    assert tool.server_tool_name == "bash_code_execution"
+    assert tool.event_adapter_key == "code_execution.bash"
 
 
 @pytest.mark.asyncio
@@ -105,4 +105,4 @@ async def test_text_editor_tool_builder_wraps_file_operations() -> None:
     assert not create_result[0].is_file_update
     assert insert_result[0].type == "text_editor_code_execution_str_replace_result"
     assert insert_result[0].new_lines == 1
-    assert view_tool.server_tool_name == "text_editor_code_execution"
+    assert view_tool.event_adapter_key == "code_execution.text_editor"

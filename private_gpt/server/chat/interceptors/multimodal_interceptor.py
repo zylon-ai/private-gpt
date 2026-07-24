@@ -23,11 +23,16 @@ from private_gpt.components.engines.chat.models.chat_state import (
 )
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import supports_audio, supports_images
+from private_gpt.components.tools.events.adapters import ServerToolEventAdapter
+from private_gpt.components.tools.tool_execution_outcome import (
+    ToolExecutionError,
+    ToolExecutionFailure,
+    ToolExecutionSuccess,
+)
 from private_gpt.events.models import (
     RawContentBlockStartEvent,
     RawContentBlockStopEvent,
-    ServerToolResultBlock,
-    ServerToolUseBlock,
+    TextBlock,
     to_llama_index_blocks,
 )
 from private_gpt.settings.settings import Settings
@@ -36,6 +41,7 @@ if TYPE_CHECKING:
     from private_gpt.events.models import ResultContentBlockType
 
 MULTIMODAL_TOOL_NAME = "multimodal_preprocessing"
+_EVENT_ADAPTER = ServerToolEventAdapter()
 
 
 @singleton
@@ -70,20 +76,22 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
             processing = response.processing_status
             if processing is not None:
                 if processing.status == "processing":
-                    tool_id = f"srvtoolu_{uuid4().hex}"
+                    tool_id = _EVENT_ADAPTER.new_tool_use_id()
                     tool_ids[processing.type] = tool_id
                     use_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
-                        content_block=ServerToolUseBlock(
-                            id=tool_id,
-                            name=self._tool_name,
-                            input={"type": processing.type},
+                        content_block=_EVENT_ADAPTER.build_tool_use(
+                            tool_id=tool_id,
+                            tool_name=self._tool_name,
+                            tool_input={"type": processing.type},
                         ),
                     )
                     context.emit_event(use_start)
                     context.emit_event(RawContentBlockStopEvent.from_start(use_start))
                 elif processing.status in {"completed", "failed"}:
-                    tool_id = tool_ids.get(processing.type, f"srvtoolu_{uuid4().hex}")
+                    tool_id = tool_ids.get(
+                        processing.type, _EVENT_ADAPTER.new_tool_use_id()
+                    )
                     content: str | list[ResultContentBlockType] = (
                         processing.content
                         or processing.error_detail
@@ -91,10 +99,21 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
                     )
                     result_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
-                        content_block=ServerToolResultBlock(
+                        content_block=_EVENT_ADAPTER.build_tool_result(
                             tool_use_id=tool_id,
-                            content=content,
-                            is_error=processing.status == "failed",
+                            outcome=(
+                                ToolExecutionFailure(
+                                    error=ToolExecutionError(message=str(content))
+                                )
+                                if processing.status == "failed"
+                                else ToolExecutionSuccess(
+                                    content=(
+                                        content
+                                        if isinstance(content, list)
+                                        else [TextBlock(text=content)]
+                                    )
+                                )
+                            ),
                         ),
                     )
                     context.emit_event(result_start)

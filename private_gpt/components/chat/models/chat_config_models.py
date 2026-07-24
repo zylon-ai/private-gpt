@@ -3,7 +3,7 @@ import enum
 import inspect
 import re
 from collections.abc import Awaitable, Callable, Mapping
-from typing import Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock
 from llama_index.core.llms import LLM
@@ -28,6 +28,9 @@ from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.server.mcp.config import McpServerConfig
 from private_gpt.server.utils.artifact_input import ArtifactType
 from private_gpt.settings.settings import LLMModelConfig
+
+if TYPE_CHECKING:
+    from private_gpt.components.tools.events import ToolEventAdapter
 
 
 class LLMInstanceConfig(BaseModel):
@@ -183,11 +186,9 @@ class ToolSpec(BaseModel):
         description="Execution runtime for the tool. 'server' means "
         "the tool is executed by the server; 'client' means the call is passed back to the caller.",
     )
-    server_tool_name: Literal[
-        "bash_code_execution", "text_editor_code_execution"
-    ] | None = Field(
+    event_adapter_key: str | None = Field(
         default=None,
-        description="Anthropic-compatible public server tool presentation name.",
+        description="Stable key for specialized external tool event behavior.",
     )
     description: str | None = Field(
         default=None, description="Human-readable description of what the tool does"
@@ -258,15 +259,18 @@ class ToolSpec(BaseModel):
             return resolved_internal_name
         return re.sub(r"_v\d+$", "", potential_tool_name)
 
+    def resolve_event_adapter(self) -> "ToolEventAdapter":
+        from private_gpt.components.tools.events import resolve_tool_event_adapter
+
+        return resolve_tool_event_adapter(self)
+
     @classmethod
     def from_defaults(
         cls,
         name: str,
         type: str | None = None,
         runtime: Literal["client", "server"] = "client",
-        server_tool_name: Literal[
-            "bash_code_execution", "text_editor_code_execution"
-        ] | None = None,
+        event_adapter_key: str | None = None,
         description: str | None = None,
         input_schema: dict[str, Any] | None = None,
         context: list[ArtifactType] | None = None,
@@ -292,7 +296,7 @@ class ToolSpec(BaseModel):
             name=name,
             type=type,
             runtime=runtime,
-            server_tool_name=server_tool_name,
+            event_adapter_key=event_adapter_key,
             description=description,
             input_schema=input_schema,
             context=context,

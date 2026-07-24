@@ -97,11 +97,6 @@ from private_gpt.components.tools.remote_execution import (
     ToolExecutionResponse,
     build_tool_execution_context,
 )
-from private_gpt.components.tools.server_tool_events import (
-    build_tool_result_block,
-    build_tool_use_block,
-    new_tool_use_id,
-)
 from private_gpt.components.tools.tool_scheduler import (
     BaseToolScheduler,
     LocalToolScheduler,
@@ -759,14 +754,16 @@ class AsyncChatEngine:
 
             for response in payload.tool_responses:
                 tool_spec = tool_specs_by_name.get(response.tool_name)
+                if tool_spec is None:
+                    raise RuntimeError(
+                        f"Missing tool spec for resumed tool {response.tool_name!r}"
+                    )
                 result_start = RawContentBlockStartEvent(
                     index=run.block_count,
                     block_id=f"block_{uuid4().hex}",
-                    content_block=build_tool_result_block(
-                        tool_spec,
+                    content_block=tool_spec.resolve_event_adapter().build_tool_result(
                         tool_use_id=response.tool_id,
-                        content=response.result_content,
-                        is_error=response.is_error,
+                        outcome=response.outcome,
                     ),
                 )
                 run.block_count += 1
@@ -1146,8 +1143,11 @@ class AsyncChatEngine:
                 tool_state = stream_delta_state.tool_state
 
                 if raw_id not in tool_state.tool_id_map:
-                    tool_state.tool_id_map[raw_id] = new_tool_use_id(
-                        tool_specs_by_name.get(tool_call.tool_name or "")
+                    tool_spec = tool_specs_by_name.get(tool_call.tool_name or "")
+                    tool_state.tool_id_map[raw_id] = (
+                        tool_spec.resolve_event_adapter().new_tool_use_id()
+                        if tool_spec
+                        else f"tool_{uuid4().hex}"
                     )
 
                 if raw_id in tool_state.finished_tool_raw_ids:
@@ -1171,11 +1171,14 @@ class AsyncChatEngine:
                         use_start = RawContentBlockStartEvent(
                             index=run.block_count,
                             block_id=f"block_{uuid4().hex}",
-                            content_block=build_tool_use_block(
-                                tool_specs_by_name.get(tool_call.tool_name or ""),
-                                tool_id=unique_id,
-                                tool_name=tool_call.tool_name or "",
-                                tool_input={},
+                            content_block=(
+                                tool_specs_by_name[tool_call.tool_name or ""]
+                                .resolve_event_adapter()
+                                .build_tool_use(
+                                    tool_id=unique_id,
+                                    tool_name=tool_call.tool_name or "",
+                                    tool_input={},
+                                )
                             ),
                         )
                         run.block_count += 1
@@ -1464,17 +1467,13 @@ class AsyncChatEngine:
                 response.tool_message,
             ]
 
-        result_content = response.result_content
-
         async with lock:
             result_start = RawContentBlockStartEvent(
                 index=run.block_count,
                 block_id=f"block_{uuid4().hex}",
-                content_block=build_tool_result_block(
-                    tool_spec,
+                content_block=tool_spec.resolve_event_adapter().build_tool_result(
                     tool_use_id=call_id,
-                    content=result_content,
-                    is_error=response.is_error,
+                    outcome=response.outcome,
                 ),
             )
             run.block_count += 1
