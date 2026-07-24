@@ -13,6 +13,9 @@ from llama_index.core.base.llms.types import (
 from private_gpt.chat.input_models import BlobVisibilityMode
 from private_gpt.components.cache import CacheService
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
+from private_gpt.components.database.connection_factory import (
+    mask_connection_secrets,
+)
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.tools.binary_block_decorators import (
     auto_resolve_media_blocks,
@@ -310,7 +313,7 @@ class DatabaseQueryToolBuilder:
                 result_as_block_list: list[list[ResultContentBlockType]] = []
                 for sql_artifact, db_query_result in results:
                     prefix = (
-                        f"Database: {sql_artifact.connection_string}\n"
+                        f"Database: {mask_connection_secrets(sql_artifact.connection_string)}\n"
                         if len(results) > 1
                         else ""
                     )

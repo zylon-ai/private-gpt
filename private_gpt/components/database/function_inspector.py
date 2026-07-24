@@ -1,6 +1,7 @@
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from private_gpt.components.database.connection_factory import DatabaseDialect
 from private_gpt.components.database.inspected_schema import (
     InspectedFunction,
     InspectedFunctionParams,
@@ -17,13 +18,13 @@ class DatabaseFunctionsInspector(DatabaseObjectInspector):
 
     def get_objects(self, schema: str) -> list[InspectedFunction]:
         try:
-            if self._db_type in ["mssql", "microsoft"]:
+            if self.dialect == DatabaseDialect.MSSQL:
                 return self._get_sqlserver_functions(schema)
-            if self._db_type in ["db2", "ibm_db_sa"]:
+            if self.dialect == DatabaseDialect.DB2:
                 return self._get_db2_functions(schema)
 
             # TODO: Postgres support is not complete
-            # elif self._db_type == "postgresql":
+            # elif self.dialect == DatabaseDialect.POSTGRES:
             #    return self._get_postgresql_functions(schema)
             else:
                 return []
