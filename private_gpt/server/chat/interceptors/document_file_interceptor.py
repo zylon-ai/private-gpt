@@ -18,10 +18,10 @@ from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.events.models import (
-    ClientToolResultBlock,
-    ClientToolUseBlock,
     RawContentBlockStartEvent,
     RawContentBlockStopEvent,
+    ServerToolResultBlock,
+    ServerToolUseBlock,
     to_llama_index_blocks,
 )
 from private_gpt.server.ingest.convert_service import ConvertService
@@ -62,11 +62,11 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
             processing = response.processing_status
             if processing is not None:
                 if processing.status == "processing":
-                    tool_id = f"tool_{uuid4().hex}"
+                    tool_id = f"srvtoolu_{uuid4().hex}"
                     tool_ids[processing.doc_index] = tool_id
                     use_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
-                        content_block=ClientToolUseBlock(
+                        content_block=ServerToolUseBlock(
                             id=tool_id,
                             name=self._tool_name,
                             input={
@@ -79,7 +79,9 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
                     context.emit_event(use_start)
                     context.emit_event(RawContentBlockStopEvent.from_start(use_start))
                 elif processing.status in {"completed", "failed"}:
-                    tool_id = tool_ids.get(processing.doc_index, f"tool_{uuid4().hex}")
+                    tool_id = tool_ids.get(
+                        processing.doc_index, f"srvtoolu_{uuid4().hex}"
+                    )
                     content: str | list[ResultContentBlockType] = (
                         processing.content
                         or processing.error_detail
@@ -87,7 +89,7 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
                     )
                     result_start = RawContentBlockStartEvent(
                         block_id=f"block_{uuid4().hex}",
-                        content_block=ClientToolResultBlock(
+                        content_block=ServerToolResultBlock(
                             tool_use_id=tool_id,
                             content=content,
                             is_error=processing.status == "failed",

@@ -9,23 +9,24 @@ from private_gpt.events.models import (
     BashCodeExecutionToolResultBlock,
     ClientToolResultBlock,
     ClientToolUseBlock,
+    ServerToolResultBlock,
     ServerToolUseBlock,
     ToolResultBlock,
     ToolUseBlock,
 )
 
 
-def _tool(server_tool_name: str | None = None) -> ToolSpec:
+def _tool(server_tool_name: str | None = None, *, runtime: str = "server") -> ToolSpec:
     return ToolSpec.from_defaults(
         name="internal_tool",
-        runtime="server",
+        runtime=runtime,
         server_tool_name=server_tool_name,
         input_schema={"type": "object", "properties": {}},
     )
 
 
 def test_client_blocks_implement_shared_interfaces() -> None:
-    tool = _tool()
+    tool = _tool(runtime="client")
     tool_id = new_tool_use_id(tool)
     use = build_tool_use_block(
         tool, tool_id=tool_id, tool_name="internal_tool", tool_input={}
@@ -39,6 +40,30 @@ def test_client_blocks_implement_shared_interfaces() -> None:
     assert isinstance(result, ClientToolResultBlock)
     assert isinstance(result, ToolResultBlock)
     assert tool_id.startswith("tool_")
+
+
+def test_generic_server_blocks_use_default_server_result() -> None:
+    tool = _tool()
+    tool_id = new_tool_use_id(tool)
+    use = build_tool_use_block(
+        tool,
+        tool_id=tool_id,
+        tool_name="semantic_search",
+        tool_input={"query": "test"},
+    )
+    result = build_tool_result_block(
+        tool,
+        tool_use_id=tool_id,
+        content="found",
+        is_error=False,
+    )
+
+    assert isinstance(use, ServerToolUseBlock)
+    assert use.name == "semantic_search"
+    assert isinstance(result, ServerToolResultBlock)
+    assert result.type == "server_tool_result"
+    assert result.content == "found"
+    assert tool_id.startswith("srvtoolu_")
 
 
 def test_bash_server_blocks_implement_shared_interfaces() -> None:

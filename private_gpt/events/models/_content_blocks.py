@@ -414,15 +414,11 @@ class ServerToolUseBlock(ToolUseBlock):
         description="Unique identifier for this server tool use",
         pattern=r"^srvtoolu_[a-zA-Z0-9_]+$",
     )
-    name: Literal[
-        "web_search",
-        "web_fetch",
-        "code_execution",
-        "bash_code_execution",
-        "text_editor_code_execution",
-        "tool_search_tool_regex",
-        "tool_search_tool_bm25",
-    ] = Field(description="Name of the server tool being called")
+    name: str = Field(
+        description="Name of the server tool being called",
+        min_length=1,
+        max_length=200,
+    )
     input: dict[str, Any] = Field(
         description="Input payload for the server tool call",
         title="ServerToolUseInput",

@@ -2391,9 +2391,9 @@ def _parse_sse_tool_blocks(sse_text: str) -> tuple[list[dict], list[dict]]:
             continue
         payload = json.loads(data_line.split("data:", 1)[1].strip())
         block = payload.get("content_block", {})
-        if block.get("type") == "tool_use":
+        if block.get("type") in {"tool_use", "server_tool_use"}:
             tool_uses.append(block)
-        elif block.get("type") == "tool_result":
+        elif block.get("type") in {"tool_result", "server_tool_result"}:
             tool_results.append(block)
     return tool_uses, tool_results
 
@@ -2426,7 +2426,7 @@ async def test_chat_with_single_document_file(
 async def test_chat_with_multiple_document_files_emits_one_tool_pair_per_document(
     async_test_client: AsyncClient,
 ) -> None:
-    """3 document blocks → 3 ToolUseBlock + 3 ToolResultBlock pairs in the stream."""
+    """3 documents emit 3 paired server tool blocks in the stream."""
     body = {
         "model": "default",
         "messages": [
@@ -2455,6 +2455,9 @@ async def test_chat_with_multiple_document_files_emits_one_tool_pair_per_documen
 
     # Each result must reference a use that was emitted for this message.
     use_ids = {b["id"] for b in doc_uses}
+    assert all(b["type"] == "server_tool_use" for b in doc_uses)
+    assert all(b["id"].startswith("srvtoolu_") for b in doc_uses)
+    assert all(b["type"] == "server_tool_result" for b in tool_results)
     for result in tool_results:
         assert result["tool_use_id"] in use_ids, (
             f"tool_result references unknown tool_use_id {result['tool_use_id']!r}"

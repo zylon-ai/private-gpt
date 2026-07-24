@@ -75,6 +75,7 @@ from private_gpt.events.models._tool_result_blocks import (
     ClientToolResultBlock,
     ContentBlockType,
     ServerToolResultBlock,
+    ServerToolResultBlockType,
     TextEditorCodeExecutionToolResultBlock,
     ToolResultBlock,
 )
@@ -191,6 +192,7 @@ __all__ = [
     "SearchResultBlock",
     "ServerToolCaller",
     "ServerToolResultBlock",
+    "ServerToolResultBlockType",
     "ServerToolUseBlock",
     "SignatureDelta",
     "SourceBlock",

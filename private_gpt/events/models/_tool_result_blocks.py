@@ -80,14 +80,20 @@ TextEditorCodeExecutionResultContent = Annotated[
 ]
 
 
-class BashCodeExecutionToolResultBlock(ToolResultBlock):
+class ServerToolResultBlock(ToolResultBlock):
+    """Default result produced by a server-executed tool."""
+
+    type: Literal["server_tool_result"] = Field(default="server_tool_result")
+
+
+class BashCodeExecutionToolResultBlock(ServerToolResultBlock):
     type: Literal["bash_code_execution_tool_result"] = "bash_code_execution_tool_result"
     tool_use_id: str
     content: BashCodeExecutionResultBlock | CodeExecutionToolResultErrorBlock
     is_error: bool = Field(default=False, exclude=True)
 
 
-class TextEditorCodeExecutionToolResultBlock(ToolResultBlock):
+class TextEditorCodeExecutionToolResultBlock(ServerToolResultBlock):
     type: Literal["text_editor_code_execution_tool_result"] = (
         "text_editor_code_execution_tool_result"
     )
@@ -96,8 +102,10 @@ class TextEditorCodeExecutionToolResultBlock(ToolResultBlock):
     is_error: bool = Field(default=False, exclude=True)
 
 
-ServerToolResultBlock = (
-    BashCodeExecutionToolResultBlock | TextEditorCodeExecutionToolResultBlock
+ServerToolResultBlockType = (
+    ServerToolResultBlock
+    | BashCodeExecutionToolResultBlock
+    | TextEditorCodeExecutionToolResultBlock
 )
 
-ContentBlockType = ResultContentBlockType | ToolResultBlock | ServerToolResultBlock
+ContentBlockType = ResultContentBlockType | ToolResultBlock | ServerToolResultBlockType
