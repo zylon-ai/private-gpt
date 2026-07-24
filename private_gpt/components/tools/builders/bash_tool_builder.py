@@ -11,6 +11,7 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.tools.events.adapters import BashCodeExecutionEventAdapter
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import BASH_TOOL_FN
@@ -74,7 +75,7 @@ class BashToolBuilder:
             name=name,
             type=type,
             runtime="server",
-            event_adapter_key="code_execution.bash",
+            event_adapter=BashCodeExecutionEventAdapter,
             description=description,
             async_fn=run_bash,
             requirements=[ToolRequirements.SANDBOX],

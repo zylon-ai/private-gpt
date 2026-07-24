@@ -11,6 +11,9 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.tools.events.adapters import (
+    TextEditorCodeExecutionEventAdapter,
+)
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import (
     TEXT_EDITOR_CREATE_TOOL_NAME,
@@ -106,7 +109,7 @@ class TextEditorToolBuilder:
             name=name,
             type=type,
             runtime="server",
-            event_adapter_key="code_execution.text_editor",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
             description=description,
             async_fn=view,
             requirements=[ToolRequirements.SANDBOX],
@@ -146,7 +149,7 @@ class TextEditorToolBuilder:
             name=name,
             type=type,
             runtime="server",
-            event_adapter_key="code_execution.text_editor",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
             description=description,
             async_fn=str_replace,
             requirements=[ToolRequirements.SANDBOX],
@@ -182,7 +185,7 @@ class TextEditorToolBuilder:
             name=name,
             type=type,
             runtime="server",
-            event_adapter_key="code_execution.text_editor",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
             description=description,
             async_fn=create,
             requirements=[ToolRequirements.SANDBOX],
@@ -230,7 +233,7 @@ class TextEditorToolBuilder:
             name=name,
             type=type,
             runtime="server",
-            event_adapter_key="code_execution.text_editor",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
             description=description,
             async_fn=insert,
             requirements=[ToolRequirements.SANDBOX],
