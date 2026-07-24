@@ -13,8 +13,13 @@ from private_gpt.chat.input_models import MessageInput, ToolSpecBody
 from private_gpt.components.chunk.models import Chunk
 from private_gpt.components.engines.citations.utils import process_history_citations
 from private_gpt.events.models import (
+    BashCodeExecutionResultBlock,
+    BashCodeExecutionToolResultBlock,
+    ClientToolResultBlock,
+    ClientToolUseBlock,
     ImageBlock,
     MidConvSystemBlock,
+    ServerToolUseBlock,
     SourceBlock,
     TextBlock,
     ThinkingBlock,
@@ -167,6 +172,53 @@ def test_tool_message_with_result_blocks() -> None:
     assert result[0].content == "Result: 3"
     assert result[0].additional_kwargs["tool_call_id"] == "tool1"
     assert result[0].additional_kwargs["tool_call_name"] == "calculator"
+
+
+def test_client_and_server_tool_blocks_convert_to_same_messages() -> None:
+    tool_id = "srvtoolu_equal"
+    tool_input = {"command": "echo ok"}
+    result_content = BashCodeExecutionResultBlock(
+        stdout="ok\n",
+        stderr="",
+        return_code=0,
+    )
+
+    client_messages = [
+        MessageInput(
+            role="assistant",
+            content=[
+                ClientToolUseBlock(
+                    id=tool_id,
+                    name="bash_code_execution",
+                    input=tool_input,
+                ),
+                ClientToolResultBlock(
+                    tool_use_id=tool_id,
+                    content=[result_content],
+                ),
+            ],
+        )
+    ]
+    server_messages = [
+        MessageInput(
+            role="assistant",
+            content=[
+                ServerToolUseBlock(
+                    id=tool_id,
+                    name="bash_code_execution",
+                    input=tool_input,
+                ),
+                BashCodeExecutionToolResultBlock(
+                    tool_use_id=tool_id,
+                    content=result_content,
+                ),
+            ],
+        )
+    ]
+
+    assert MessageInput.convert_from_llama_index_messages(
+        client_messages
+    ) == MessageInput.convert_from_llama_index_messages(server_messages)
 
 
 def test_tool_result_with_empty_content() -> None:

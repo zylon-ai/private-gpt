@@ -3,7 +3,7 @@ import warnings
 from collections.abc import Callable, Sequence
 from datetime import datetime
 from itertools import groupby
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
 
 from annotated_types import Ge, Le
 from llama_index.core.base.llms.types import (
@@ -877,55 +877,61 @@ class MessageInput(BaseModel):
             )
 
     def _extract_content(
-        self, content: str | list[ContentBlockType] | None
+        self,
+        content: str | BaseContentBlock | Sequence[ContentBlockType] | None,
     ) -> tuple[list[LIContentBlock] | None, dict[str, list[ContentBlockType]] | None]:
         """Extract text content from various content types."""
         blocks: list[LIContentBlock] = []
         custom_blocks: dict[str, list[ContentBlockType]] = {}
         if isinstance(content, str):
             blocks.append(LITextBlock(text=content))
-        elif isinstance(content, list):
-            for block in content:
-                if isinstance(block, TextBlock):
-                    blocks.append(LITextBlock(text=block.text))
-                elif isinstance(block, MidConvSystemBlock):
-                    text = "\n".join(b.text for b in block.content)
-                    blocks.append(LITextBlock(text=text))
-                elif isinstance(block, ImageBlock):
-                    image_bytes = load_file_from_uri(block.source.get_data())
-                    image_size = len(image_bytes.read())
-                    if image_size > settings().chat.maximum_blob_size:
-                        raise ValueError(
-                            f"Image size {image_size} exceeds maximum "
-                            f"allowed size of {settings().chat.maximum_blob_size} bytes."
-                        )
+            content_blocks: Sequence[ContentBlockType] = []
+        elif isinstance(content, BaseContentBlock):
+            content_blocks = [cast(ContentBlockType, content)]
+        else:
+            content_blocks = content or []
 
-                    image_bytes.seek(0)
-                    blocks.append(
-                        LIImageBlock(
-                            image=image_bytes.read(),
-                            image_mimetype=block.source.get_media_type(),
-                        )
+        for block in content_blocks:
+            if isinstance(block, TextBlock):
+                blocks.append(LITextBlock(text=block.text))
+            elif isinstance(block, MidConvSystemBlock):
+                text = "\n".join(b.text for b in block.content)
+                blocks.append(LITextBlock(text=text))
+            elif isinstance(block, ImageBlock):
+                image_bytes = load_file_from_uri(block.source.get_data())
+                image_size = len(image_bytes.read())
+                if image_size > settings().chat.maximum_blob_size:
+                    raise ValueError(
+                        f"Image size {image_size} exceeds maximum "
+                        f"allowed size of {settings().chat.maximum_blob_size} bytes."
                     )
-                elif isinstance(block, AudioBlock):
-                    audio_bytes = load_file_from_uri(block.source.get_data())
-                    audio_size = len(audio_bytes.read())
-                    if audio_size > settings().chat.maximum_blob_size:
-                        raise ValueError(
-                            f"Audio size {audio_size} exceeds maximum "
-                            f"allowed size of {settings().chat.maximum_blob_size} bytes."
-                        )
-                    audio_bytes.seek(0)
-                    blocks.append(
-                        LIAudioBlock(
-                            audio=audio_bytes.read(),
-                            format=block.source.get_media_type(),
-                        )
+
+                image_bytes.seek(0)
+                blocks.append(
+                    LIImageBlock(
+                        image=image_bytes.read(),
+                        image_mimetype=block.source.get_media_type(),
                     )
-                elif isinstance(block, ContentBlockType):
-                    if block.type not in custom_blocks:
-                        custom_blocks[block.type] = []
-                    custom_blocks[block.type].append(block)
+                )
+            elif isinstance(block, AudioBlock):
+                audio_bytes = load_file_from_uri(block.source.get_data())
+                audio_size = len(audio_bytes.read())
+                if audio_size > settings().chat.maximum_blob_size:
+                    raise ValueError(
+                        f"Audio size {audio_size} exceeds maximum "
+                        f"allowed size of {settings().chat.maximum_blob_size} bytes."
+                    )
+                audio_bytes.seek(0)
+                blocks.append(
+                    LIAudioBlock(
+                        audio=audio_bytes.read(),
+                        format=block.source.get_media_type(),
+                    )
+                )
+            elif isinstance(block, ContentBlockType):
+                if block.type not in custom_blocks:
+                    custom_blocks[block.type] = []
+                custom_blocks[block.type].append(block)
 
         return blocks if blocks else None, custom_blocks if custom_blocks else None
 
