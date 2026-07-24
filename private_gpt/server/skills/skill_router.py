@@ -617,9 +617,7 @@ async def get_skill_version_file_content(
     try:
         stored = await service.read_version_file(skill_version, file_path)
     except SkillDomainError as exc:
-        status = (
-            404 if exc.code == SkillErrorCode.FILE_NOT_FOUND else 400
-        )
+        status = 404 if exc.code == SkillErrorCode.FILE_NOT_FOUND else 400
         raise HTTPException(status_code=status, detail=exc.message) from exc
 
     filename = stored.path.rsplit("/", 1)[-1]
@@ -872,10 +870,7 @@ def _version_response(version: SkillVersionEntity) -> SkillVersionResponse:
 
 def _attachment_content_disposition(filename: str) -> str:
     safe = (
-        filename.replace("\\", "")
-        .replace('"', "")
-        .replace("\r", "")
-        .replace("\n", "")
+        filename.replace("\\", "").replace('"', "").replace("\r", "").replace("\n", "")
         or "download"
     )
     return f'attachment; filename="{safe}"'

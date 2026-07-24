@@ -107,7 +107,7 @@ class SkillFilter(BaseModel):
 
 
 class SkillVersionFile(BaseModel):
-    """A file entry inside a skill version bundle (metadata, optionally with content)."""
+    """A file entry inside a skill version bundle (metadata, optional content)."""
 
     path: str = Field(description="Relative path from the skill root.")
     size_bytes: int = Field(description="File size in bytes.")
