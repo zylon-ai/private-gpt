@@ -85,6 +85,8 @@ class ClientToolEventAdapter(ToolEventAdapter):
 class ServerToolEventAdapter(ToolEventAdapter):
     id_prefix = "srvtoolu"
 
+    _FALLBACK = None
+
     def build_tool_use(
         self, *, tool_id: str, tool_name: str, tool_input: dict
     ) -> ToolUseBlock:
@@ -100,8 +102,14 @@ class ServerToolEventAdapter(ToolEventAdapter):
         self, *, tool_use_id: str, outcome: ToolExecutionOutcome
     ) -> ToolResultBlock:
         if not self.public_tool_name:
-            return ClientToolEventAdapter.build_tool_result(
-                self, tool_use_id=tool_use_id, outcome=outcome
+            if isinstance(outcome, ToolExecutionFailure):
+                return ClientToolResultBlock(
+                    tool_use_id=tool_use_id,
+                    content=outcome.error.message,
+                    is_error=True,
+                )
+            return ClientToolResultBlock(
+                tool_use_id=tool_use_id, content=outcome.content
             )
         return self._build_server_result(tool_use_id=tool_use_id, outcome=outcome)
 

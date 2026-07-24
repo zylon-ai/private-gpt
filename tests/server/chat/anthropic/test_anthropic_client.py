@@ -217,14 +217,14 @@ def validate_response_structure(
 
     if has_tools:
         tool_use_blocks = [
-            b for b in response.content
-            if b.type in {"tool_use", "server_tool_use"}
+            b for b in response.content if b.type in {"tool_use", "server_tool_use"}
         ]
         assert len(tool_use_blocks) == 1
 
     if has_internal_tools:
         tool_result_blocks = [
-            b for b in response.content
+            b
+            for b in response.content
             if b.type in {"tool_result", "server_tool_result"}
         ]
         assert len(tool_result_blocks) == 1
@@ -342,7 +342,10 @@ def test_sync_chat_streaming(
                 ):
                     if event.content_block.type in {"tool_use", "server_tool_use"}:
                         tool_use_count += 1
-                    elif event.content_block.type in {"tool_result", "server_tool_result"}:
+                    elif event.content_block.type in {
+                        "tool_result",
+                        "server_tool_result",
+                    }:
                         tool_result_count += 1
 
     validate_streaming_response(
@@ -439,7 +442,10 @@ async def test_async_chat_streaming(
                 ):
                     if event.content_block.type in {"tool_use", "server_tool_use"}:
                         tool_use_count += 1
-                    elif event.content_block.type in {"tool_result", "server_tool_result"}:
+                    elif event.content_block.type in {
+                        "tool_result",
+                        "server_tool_result",
+                    }:
                         tool_result_count += 1
 
     validate_streaming_response(

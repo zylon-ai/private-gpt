@@ -6,6 +6,8 @@ from anthropic.types.raw_message_delta_event import Delta as SDKMessageDelta
 
 from private_gpt.events.models import (
     AudioBlock,
+    BashCodeExecutionResultBlock,
+    BashCodeExecutionToolResultBlock,
     BinaryBlock,
     CitationsDelta,
     ContainerUploadBlock,
@@ -36,6 +38,10 @@ from private_gpt.events.models import (
     SourceDelta,
     TextBlock,
     TextDelta,
+    TextEditorCodeExecutionCreateResultBlock,
+    TextEditorCodeExecutionStrReplaceResultBlock,
+    TextEditorCodeExecutionToolResultBlock,
+    TextEditorCodeExecutionViewResultBlock,
     ThinkingBlock,
     ThinkingDelta,
     TLDRBlock,
@@ -46,12 +52,6 @@ from private_gpt.events.models import (
     WebFetchResultBlock,
     WebFetchToolResultBlock,
     WebSearchResultBlock,
-    BashCodeExecutionResultBlock,
-    BashCodeExecutionToolResultBlock,
-    TextEditorCodeExecutionViewResultBlock,
-    TextEditorCodeExecutionCreateResultBlock,
-    TextEditorCodeExecutionStrReplaceResultBlock,
-    TextEditorCodeExecutionToolResultBlock,
     WebSearchToolResultBlock,
     WebSearchToolResultError,
 )

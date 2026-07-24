@@ -1,7 +1,5 @@
 import pytest
 
-import pytest
-
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.tools.events.adapters import (
     BashCodeExecutionEventAdapter,
@@ -19,7 +17,6 @@ from private_gpt.events.models import (
     BashCodeExecutionToolResultBlock,
     ClientToolResultBlock,
     ClientToolUseBlock,
-    ServerToolResultBlock,
     ServerToolUseBlock,
     ToolResultBlock,
     ToolUseBlock,
@@ -78,10 +75,12 @@ def test_client_tool_resolves_default_client_adapter() -> None:
     assert tool_id.startswith("tool_")
 
 
-@pytest.mark.skip(reason="Internal server tools without an Anthropic-native name now use ToolUseBlock/ToolResultBlock "
-                         "(client-style) for SDK Message.content compatibility. "
-                         "Only Anthropic-native server tools (web_search, bash_code_execution, etc.) "
-                         "use ServerToolUseBlock.")
+@pytest.mark.skip(
+    reason="Internal server tools without an Anthropic-native name now use ToolUseBlock/ToolResultBlock "
+    "(client-style) for SDK Message.content compatibility. "
+    "Only Anthropic-native server tools (web_search, bash_code_execution, etc.) "
+    "use ServerToolUseBlock."
+)
 def test_server_tool_resolves_default_server_adapter() -> None:
     tool = _tool()
     adapter = tool.resolve_event_adapter()
