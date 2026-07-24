@@ -21,8 +21,8 @@ from private_gpt.events.models import (
     WebFetchResultBlock,
     WebFetchToolResultBlock,
     WebSearchResultBlock,
-    WebSearchToolResultError,
     WebSearchToolResultBlock,
+    WebSearchToolResultError,
 )
 
 if TYPE_CHECKING:
@@ -88,13 +88,24 @@ class ServerToolEventAdapter(ToolEventAdapter):
     def build_tool_use(
         self, *, tool_id: str, tool_name: str, tool_input: dict
     ) -> ToolUseBlock:
-        return ServerToolUseBlock(
-            id=tool_id,
-            name=self.public_tool_name or tool_name,
-            input=tool_input,
-        )
+        if self.public_tool_name:
+            return ServerToolUseBlock(
+                id=f"srvtoolu_{self._id_factory()}",
+                name=self.public_tool_name,
+                input=tool_input,
+            )
+        return ClientToolUseBlock(id=tool_id, name=tool_name, input=tool_input)
 
     def build_tool_result(
+        self, *, tool_use_id: str, outcome: ToolExecutionOutcome
+    ) -> ToolResultBlock:
+        if not self.public_tool_name:
+            return ClientToolEventAdapter.build_tool_result(
+                self, tool_use_id=tool_use_id, outcome=outcome
+            )
+        return self._build_server_result(tool_use_id=tool_use_id, outcome=outcome)
+
+    def _build_server_result(
         self, *, tool_use_id: str, outcome: ToolExecutionOutcome
     ) -> ToolResultBlock:
         if isinstance(outcome, ToolExecutionFailure):
@@ -109,7 +120,7 @@ class ServerToolEventAdapter(ToolEventAdapter):
 class BashCodeExecutionEventAdapter(ServerToolEventAdapter):
     public_tool_name = "bash_code_execution"
 
-    def build_tool_result(
+    def _build_server_result(
         self, *, tool_use_id: str, outcome: ToolExecutionOutcome
     ) -> ToolResultBlock:
         if isinstance(outcome, ToolExecutionFailure):
@@ -141,7 +152,7 @@ TextEditorResult = (
 class TextEditorCodeExecutionEventAdapter(ServerToolEventAdapter):
     public_tool_name = "text_editor_code_execution"
 
-    def build_tool_result(
+    def _build_server_result(
         self, *, tool_use_id: str, outcome: ToolExecutionOutcome
     ) -> ToolResultBlock:
         if isinstance(outcome, ToolExecutionFailure):
@@ -173,7 +184,9 @@ def _single_result(
 class WebSearchEventAdapter(ServerToolEventAdapter):
     public_tool_name = "web_search"
 
-    def build_tool_result(self, *, tool_use_id: str, outcome: ToolExecutionOutcome) -> ToolResultBlock:
+    def _build_server_result(
+        self, *, tool_use_id: str, outcome: ToolExecutionOutcome
+    ) -> ToolResultBlock:
         if isinstance(outcome, ToolExecutionFailure):
             return WebSearchToolResultBlock(
                 tool_use_id=tool_use_id,
@@ -182,7 +195,8 @@ class WebSearchEventAdapter(ServerToolEventAdapter):
         return WebSearchToolResultBlock(
             tool_use_id=tool_use_id,
             content=[
-                block for block in outcome.content
+                block
+                for block in outcome.content
                 if isinstance(block, WebSearchResultBlock)
             ],
         )
@@ -191,9 +205,12 @@ class WebSearchEventAdapter(ServerToolEventAdapter):
 class WebFetchEventAdapter(ServerToolEventAdapter):
     public_tool_name = "web_fetch"
 
-    def build_tool_result(self, *, tool_use_id: str, outcome: ToolExecutionOutcome) -> ToolResultBlock:
+    def _build_server_result(
+        self, *, tool_use_id: str, outcome: ToolExecutionOutcome
+    ) -> ToolResultBlock:
         if isinstance(outcome, ToolExecutionFailure):
             from private_gpt.events.models import CodeExecutionToolResultErrorBlock
+
             return WebFetchToolResultBlock(
                 tool_use_id=tool_use_id,
                 content=CodeExecutionToolResultErrorBlock(
