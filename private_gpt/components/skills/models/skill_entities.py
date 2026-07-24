@@ -104,3 +104,17 @@ class SkillFilter(BaseModel):
             "Each item may be a skill id (resolved to latest version) or a skill version id."
         ),
     )
+
+
+class SkillVersionFile(BaseModel):
+    """A file entry inside a skill version bundle (metadata, optionally with content)."""
+
+    path: str = Field(description="Relative path from the skill root.")
+    size_bytes: int = Field(description="File size in bytes.")
+    mime_type: str | None = Field(
+        default=None, description="Detected MIME type, when available."
+    )
+    content: bytes | None = Field(
+        default=None,
+        description="Raw file bytes when content was requested.",
+    )

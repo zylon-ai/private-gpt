@@ -1,6 +1,5 @@
-from typing import Annotated, Literal
-
 import base64
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Form, Header, HTTPException, Query, Request
 from fastapi.responses import Response
@@ -627,7 +626,7 @@ async def get_skill_version_file_content(
     return Response(
         content=stored.content,
         media_type=stored.mime_type or "application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": _attachment_content_disposition(filename)},
     )
 
 
@@ -636,8 +635,9 @@ async def get_skill_version_file_content(
     response_model=ListSkillVersionFilesResponse,
     summary="List files in a skill version",
     description=(
-        "List all files stored for a skill version. "
-        "Set `include_content=true` (default) to receive base64-encoded file bodies."
+        "List all files stored for a skill version (metadata only by default). "
+        "Set `include_content=true` to receive base64-encoded file bodies. "
+        "Prefer the per-file `/content` endpoint for downloading individual files."
     ),
     responses={
         200: {
@@ -645,21 +645,21 @@ async def get_skill_version_file_content(
             "content": {
                 "application/json": {
                     "examples": {
-                        "with_content": {
-                            "summary": "Files with content",
+                        "metadata_only": {
+                            "summary": "Files without content",
                             "value": {
                                 "data": [
                                     {
                                         "path": "SKILL.md",
                                         "size_bytes": 120,
                                         "mime_type": "text/markdown",
-                                        "content_base64": "LS0tCm5hbWU6IGV4YW1wbGUK...",
+                                        "content_base64": None,
                                     },
                                     {
                                         "path": "scripts/run.py",
                                         "size_bytes": 32,
                                         "mime_type": "text/x-python",
-                                        "content_base64": "cHJpbnQoJ2hlbGxvJykK",
+                                        "content_base64": None,
                                     },
                                 ]
                             },
@@ -682,12 +682,15 @@ async def list_skill_version_files(
         examples=["acme-prod"],
     ),
     include_content: bool = Query(
-        default=True,
-        description="When true, each file includes a content_base64 field.",
+        default=False,
+        description=(
+            "When true, each file includes a content_base64 field. "
+            "Defaults to false; use the per-file content endpoint for downloads."
+        ),
     ),
     anthropic_beta: Annotated[list[str] | None, Header(alias="anthropic-beta")] = None,
 ) -> ListSkillVersionFilesResponse:
-    """List (and optionally return) all files for a skill version."""
+    """List files for a skill version (metadata by default)."""
     del anthropic_beta
     skill_version = await _require_skill_version(
         request, skill_id=skill_id, version=version, collection=collection
@@ -699,16 +702,16 @@ async def list_skill_version_files(
     return ListSkillVersionFilesResponse(
         data=[
             SkillVersionFileResponse(
-                path=path,
-                size_bytes=size_bytes,
-                mime_type=mime_type,
+                path=item.path,
+                size_bytes=item.size_bytes,
+                mime_type=item.mime_type,
                 content_base64=(
-                    base64.b64encode(content).decode("ascii")
-                    if content is not None
+                    base64.b64encode(item.content).decode("ascii")
+                    if item.content is not None
                     else None
                 ),
             )
-            for path, size_bytes, mime_type, content in files
+            for item in files
         ]
     )
 
@@ -865,3 +868,14 @@ def _version_response(version: SkillVersionEntity) -> SkillVersionResponse:
         skill_id=version.skill_id,
         version=version.version,
     )
+
+
+def _attachment_content_disposition(filename: str) -> str:
+    safe = (
+        filename.replace("\\", "")
+        .replace('"', "")
+        .replace("\r", "")
+        .replace("\n", "")
+        or "download"
+    )
+    return f'attachment; filename="{safe}"'

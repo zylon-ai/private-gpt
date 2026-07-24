@@ -1,5 +1,6 @@
+import asyncio
 from datetime import UTC, datetime
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Literal
 
 from injector import inject, singleton
@@ -11,13 +12,17 @@ from private_gpt.components.skills.models.skill_entities import (
     SkillFilter,
     SkillFrontmatter,
     SkillVersionEntity,
+    SkillVersionFile,
     SkillVersionWithSkillEntity,
 )
 from private_gpt.components.skills.parser import (
     ParsedSkillDocument,
     parse_skill_markdown,
 )
-from private_gpt.components.skills.paths import skill_path
+from private_gpt.components.skills.paths import (
+    normalize_skill_relative_path,
+    skill_path,
+)
 from private_gpt.components.skills.repositories.skill_repository import (
     CreateSkillInput,
     SkillPage,
@@ -316,34 +321,38 @@ class SkillService:
         self,
         version: SkillVersionEntity,
         *,
-        include_content: bool = True,
-    ) -> list[tuple[str, int, str | None, bytes | None]]:
-        """Return skill version files as (path, size_bytes, mime_type, content?)."""
-        paths = await self.list_version_files(version)
-        results: list[tuple[str, int, str | None, bytes | None]] = []
-        for path in paths:
-            stat = await self._storage_component.stat_file(
-                version.storage_prefix, path
-            )
-            content: bytes | None = None
-            if include_content:
-                content = await self._storage_component.read_file(
-                    version.storage_prefix, path
+        include_content: bool = False,
+    ) -> list[SkillVersionFile]:
+        """Return skill version files with metadata, optionally including content."""
+        metas = await self._storage_component.list_files_meta(
+            version.storage_prefix, recursive=True
+        )
+        metas = sorted(metas, key=lambda item: item.path)
+        if not include_content:
+            return [
+                SkillVersionFile(
+                    path=item.path,
+                    size_bytes=item.size_bytes,
+                    mime_type=item.mime_type,
                 )
-            size_bytes = (
-                len(content)
-                if content is not None
-                else (stat.size_bytes if stat else 0)
+                for item in metas
+            ]
+
+        contents = await asyncio.gather(
+            *[
+                self._storage_component.read_file(version.storage_prefix, item.path)
+                for item in metas
+            ]
+        )
+        return [
+            SkillVersionFile(
+                path=item.path,
+                size_bytes=len(content),
+                mime_type=item.mime_type,
+                content=content,
             )
-            results.append(
-                (
-                    path,
-                    size_bytes,
-                    stat.mime_type if stat else None,
-                    content,
-                )
-            )
-        return results
+            for item, content in zip(metas, contents, strict=True)
+        ]
 
     async def read_version_file(
         self, version: SkillVersionEntity, path: str
@@ -353,7 +362,7 @@ class SkillService:
         Raises:
             SkillDomainError: if the path is invalid or the file does not exist.
         """
-        safe_path = _safe_relative_path(path)
+        safe_path = normalize_skill_relative_path(path)
         stat = await self._storage_component.stat_file(
             version.storage_prefix, safe_path
         )
@@ -371,27 +380,6 @@ class SkillService:
             content=content,
             mime_type=stat.mime_type,
         )
-
-
-def _safe_relative_path(path: str) -> str:
-    normalized = path.replace("\\", "/")
-    parsed = PurePosixPath(normalized)
-    if parsed.is_absolute():
-        raise SkillDomainError(
-            SkillErrorCode.UNSAFE_PATH_ABSOLUTE,
-            f"Unsafe file path (absolute): {path!r}",
-            params={"path": path},
-        )
-    if ".." in parsed.parts:
-        raise SkillDomainError(
-            SkillErrorCode.UNSAFE_PATH_TRAVERSAL,
-            f"Unsafe file path (path traversal): {path!r}",
-            params={"path": path},
-        )
-    parts = list(parsed.parts)
-    if parts and parts[-1].lower() == "skill.md":
-        parts[-1] = "SKILL.md"
-    return "/".join(parts)
 
 
 def _extract_skill_md(files: list[StoredFile]) -> str:

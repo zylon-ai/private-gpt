@@ -162,7 +162,10 @@ class SkillVersionFileResponse(BaseModel):
     )
     content_base64: str | None = Field(
         default=None,
-        description="Base64-encoded file content when include_content=true.",
+        description=(
+            "Base64-encoded file content when include_content=true "
+            "(list endpoint defaults to metadata only)."
+        ),
     )
 
 

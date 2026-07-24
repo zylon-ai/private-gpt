@@ -710,22 +710,20 @@ def test_list_and_download_skill_version_files(
     assert list_resp.status_code == 200
     files = {item["path"]: item for item in list_resp.json()["data"]}
     assert set(files) == {"SKILL.md", "scripts/helper.py"}
-    assert files["scripts/helper.py"]["content_base64"] is not None
-    assert (
-        base64.b64decode(files["scripts/helper.py"]["content_base64"]) == helper_bytes
-    )
+    assert all(item["content_base64"] is None for item in files.values())
+    assert files["scripts/helper.py"]["size_bytes"] == len(helper_bytes)
 
-    meta_only = test_client.get(
+    with_content = test_client.get(
         f"/v1/skills/{skill['id']}/versions/{version}/files",
-        params={"collection": collection, "include_content": "false"},
+        params={"collection": collection, "include_content": "true"},
     )
-    assert meta_only.status_code == 200
-    meta_files = meta_only.json()["data"]
-    assert all(item["content_base64"] is None for item in meta_files)
-    assert {item["path"] for item in meta_files} == {
-        "SKILL.md",
-        "scripts/helper.py",
-    }
+    assert with_content.status_code == 200
+    content_files = {item["path"]: item for item in with_content.json()["data"]}
+    assert content_files["scripts/helper.py"]["content_base64"] is not None
+    assert (
+        base64.b64decode(content_files["scripts/helper.py"]["content_base64"])
+        == helper_bytes
+    )
 
     content_resp = test_client.get(
         f"/v1/skills/{skill['id']}/versions/{version}/files/scripts/helper.py/content",
@@ -741,7 +739,7 @@ def test_list_and_download_skill_version_files(
     assert missing.status_code == 404
 
     traversal = test_client.get(
-        f"/v1/skills/{skill['id']}/versions/{version}/files/../secret/content",
+        f"/v1/skills/{skill['id']}/versions/{version}/files/foo%2F..%2Fsecret/content",
         params={"collection": collection},
     )
-    assert traversal.status_code in {400, 404}
+    assert traversal.status_code == 400
