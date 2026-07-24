@@ -216,11 +216,17 @@ def validate_response_structure(
     assert len(response.content) > 0
 
     if has_tools:
-        tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
+        tool_use_blocks = [
+            b for b in response.content
+            if b.type in {"tool_use", "server_tool_use"}
+        ]
         assert len(tool_use_blocks) == 1
 
     if has_internal_tools:
-        tool_result_blocks = [b for b in response.content if b.type == "tool_result"]
+        tool_result_blocks = [
+            b for b in response.content
+            if b.type in {"tool_result", "server_tool_result"}
+        ]
         assert len(tool_result_blocks) == 1
 
     if expected_text is not None:
@@ -334,9 +340,9 @@ def test_sync_chat_streaming(
                 elif event.type == "content_block_start" and hasattr(
                     event.content_block, "type"
                 ):
-                    if event.content_block.type == "tool_use":
+                    if event.content_block.type in {"tool_use", "server_tool_use"}:
                         tool_use_count += 1
-                    elif event.content_block.type == "tool_result":
+                    elif event.content_block.type in {"tool_result", "server_tool_result"}:
                         tool_result_count += 1
 
     validate_streaming_response(
@@ -431,9 +437,9 @@ async def test_async_chat_streaming(
                 elif event.type == "content_block_start" and hasattr(
                     event.content_block, "type"
                 ):
-                    if event.content_block.type == "tool_use":
+                    if event.content_block.type in {"tool_use", "server_tool_use"}:
                         tool_use_count += 1
-                    elif event.content_block.type == "tool_result":
+                    elif event.content_block.type in {"tool_result", "server_tool_result"}:
                         tool_result_count += 1
 
     validate_streaming_response(
