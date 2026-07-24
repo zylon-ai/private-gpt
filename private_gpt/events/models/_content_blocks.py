@@ -705,19 +705,16 @@ class BashCodeExecutionResultBlock(BaseContentBlock, StandardContentProtocol):
         description="Exit code of the bash command. 0 indicates success."
     )
     content: list[BashExecutionFileEntry] = Field(
-        default_factory=list, description="Files created during execution."
+        description="Files created during execution."
     )
 
 
 class BashExecutionFileEntry(BaseModel):
     """A file created during bash code execution, retrievable via the Files API."""
 
-    type: Literal["bash_code_execution_output"] = "bash_code_execution_output"
+    type: Literal["bash_code_execution_output"]
     file_id: str = Field(
         description="Identifier for the created file, retrievable via the Files API."
-    )
-    index: int | None = Field(
-        default=None, description="Index of the file among multiple outputs."
     )
 
 
@@ -731,6 +728,7 @@ class CodeExecutionToolResultErrorBlock(BaseContentBlock, StandardContentProtoco
         "execution_time_exceeded",
         "invalid_tool_input",
         "too_many_requests",
+        "output_file_too_large",
     ]
 
 
@@ -780,9 +778,7 @@ class WebSearchResultBlock(BaseContentBlock, StandardContentProtocol):
     type: Literal["web_search_result"] = "web_search_result"
     url: str
     title: str
-    encrypted_content: str = Field(
-        description="Anthropic-compatible field; contains the result text when Zylon executes locally."
-    )
+    encrypted_content: str
     page_age: str | None = None
     # Zylon extension: same payload as encrypted_content but in plain form
     content: str | None = Field(
@@ -869,11 +865,17 @@ ResultContentBlockType = (
     | CodeExecutionResultContentBlockType
     | WebToolResultContentBlockType
 )
+
+
 class WebSearchToolResultError(BaseModel):
     """SDK-compatible error result for a web_search tool call."""
 
     type: Literal["web_search_tool_result_error"] = "web_search_tool_result_error"
     error_code: Literal[
-        "invalid_tool_input", "unavailable", "max_uses_exceeded",
-        "too_many_requests", "query_too_long", "request_too_large",
+        "invalid_tool_input",
+        "unavailable",
+        "max_uses_exceeded",
+        "too_many_requests",
+        "query_too_long",
+        "request_too_large",
     ]
