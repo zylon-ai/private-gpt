@@ -37,6 +37,8 @@ from private_gpt.events.models._content_blocks import (
     ThinkingBlock,
     TLDRBlock,
     ToolUseBlock,
+    WebFetchResultBlock,
+    WebSearchResultBlock,
 )
 from private_gpt.events.models._converters import (
     from_tool_output,
@@ -76,6 +78,8 @@ from private_gpt.events.models._tool_result_blocks import (
     ContentBlockType,
     ServerToolResultBlock,
     ServerToolResultBlockType,
+    WebFetchToolResultBlock,
+    WebSearchToolResultBlock,
     TextEditorCodeExecutionToolResultBlock,
     ToolResultBlock,
 )
@@ -161,6 +165,10 @@ __all__ = [
     "CitationsDelta",
     "ClientToolResultBlock",
     "ClientToolUseBlock",
+    "WebFetchResultBlock",
+    "WebFetchToolResultBlock",
+    "WebSearchResultBlock",
+    "WebSearchToolResultBlock",
     "CodeExecutionToolResultErrorBlock",
     "Container",
     "ContainerUploadBlock",

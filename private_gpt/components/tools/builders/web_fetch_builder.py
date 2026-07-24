@@ -9,9 +9,10 @@ from private_gpt.components.tools.tool_names import WEB_FETCH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import WEB_FETCH_TOOL_FN
 from private_gpt.components.web.web_scraper_service import WebScraperService
 from private_gpt.di import get_global_injector
+from private_gpt.components.tools.events.adapters import WebFetchEventAdapter
 from private_gpt.events.models import (
+    WebFetchResultBlock,
     ResultContentBlockType,
-    TextBlock,
 )
 
 
@@ -45,23 +46,16 @@ class WebFetchToolBuilder:
             result = await self.web_scraper.scrape_max_compress(url)
 
             if not result.markdown_content:
-                return [
-                    TextBlock(
-                        text="No content could be fetched from the provided URL.",
-                    )
-                ]
+                from private_gpt.events.models import TextBlock
+                return [TextBlock(text="No content could be fetched from the provided URL.")]
 
-            page_content = result.markdown_content
-            return [
-                TextBlock(
-                    text=page_content,
-                )
-            ]
+            return [WebFetchResultBlock.from_markdown(url=url, markdown=result.markdown_content)]
 
         return ToolSpec.from_defaults(
             name=name,
             type=type,
             runtime=runtime,
+            event_adapter=WebFetchEventAdapter,
             description=description,
             async_fn=run_tool,
             execution_metadata=build_rebuild_metadata(

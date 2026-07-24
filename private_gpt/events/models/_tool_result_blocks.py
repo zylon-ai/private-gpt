@@ -8,6 +8,13 @@ from private_gpt.events.models._base import (
     StandardContentProtocol,
 )
 from private_gpt.events.models._content_blocks import (
+    DocumentBlock,
+    ResultContentBlockType,
+    SourceBlock,
+    TextBlock,
+    WebFetchResultBlock,
+    WebSearchResultBlock,
+
     BashCodeExecutionResultBlock,
     CodeExecutionToolResultErrorBlock,
     ResultContentBlockType,
@@ -86,6 +93,77 @@ class ServerToolResultBlock(ToolResultBlock):
     type: Literal["server_tool_result"] = Field(default="server_tool_result")
 
 
+
+class WebSearchToolResultBlock(ServerToolResultBlock):
+    """Anthropic-shaped result for an internally-executed web_search call.
+
+    ``anthropic`` mode: emitted as-is (matches Anthropic wire format).
+    ``zylon`` mode: downgrades to ToolResultBlock + SourceBlock/TextBlock entries.
+    """
+
+    type: Literal["web_search_tool_result"] = "web_search_tool_result"
+    tool_use_id: str
+    content: list[WebSearchResultBlock] | CodeExecutionToolResultErrorBlock
+    is_error: bool = Field(default=False, exclude=True)
+
+    def prune_content_block_by_response_mode(
+        self, response_mode: Literal["anthropic", "zylon"]
+    ) -> "Self | ToolResultBlock | None":
+        if response_mode == "anthropic":
+            return self
+        if isinstance(self.content, list):
+            from private_gpt.components.chunk.models import Website
+
+            websites = [Website.from_web_search_result(r) for r in self.content]
+            zylon_content: list[ResultContentBlockType] = [
+                SourceBlock.from_sources(websites),
+                *[TextBlock(text=r.content or r.encrypted_content) for r in self.content],
+            ]
+            is_err = False
+        else:
+            zylon_content = [TextBlock(text=f"Web search error: {self.content.error_code}")]
+            is_err = True
+        return ToolResultBlock(
+            tool_use_id=self.tool_use_id,
+            content=zylon_content,
+            is_error=is_err,
+        )
+
+
+class WebFetchToolResultBlock(ServerToolResultBlock):
+    """Anthropic-shaped result for an internally-executed web_fetch call.
+
+    ``anthropic`` mode: emitted as-is.
+    ``zylon`` mode: downgrades to ToolResultBlock with a TextBlock of the markdown.
+    """
+
+    type: Literal["web_fetch_tool_result"] = "web_fetch_tool_result"
+    tool_use_id: str
+    content: WebFetchResultBlock | CodeExecutionToolResultErrorBlock
+    is_error: bool = Field(default=False, exclude=True)
+
+    def prune_content_block_by_response_mode(
+        self, response_mode: Literal["anthropic", "zylon"]
+    ) -> "Self | ToolResultBlock | None":
+        if response_mode == "anthropic":
+            return self
+        if isinstance(self.content, WebFetchResultBlock):
+            src = self.content.content.source
+            text = self.content.markdown or (
+                src.data if isinstance(src, DocumentBlock.Base64Source) else src.url
+            )
+            zylon_content_: list[ResultContentBlockType] = [TextBlock(text=text or "")]
+            is_err = False
+        else:
+            zylon_content_ = [TextBlock(text=f"Web fetch error: {self.content.error_code}")]
+            is_err = True
+        return ToolResultBlock(
+            tool_use_id=self.tool_use_id,
+            content=zylon_content_,
+            is_error=is_err,
+        )
+
+
 class BashCodeExecutionToolResultBlock(ServerToolResultBlock):
     type: Literal["bash_code_execution_tool_result"] = "bash_code_execution_tool_result"
     tool_use_id: str
@@ -106,6 +184,8 @@ ServerToolResultBlockType = (
     ServerToolResultBlock
     | BashCodeExecutionToolResultBlock
     | TextEditorCodeExecutionToolResultBlock
+    | WebSearchToolResultBlock
+    | WebFetchToolResultBlock
 )
 
 ContentBlockType = ResultContentBlockType | ToolResultBlock | ServerToolResultBlockType

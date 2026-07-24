@@ -18,6 +18,10 @@ from private_gpt.events.models import (
     TextEditorCodeExecutionStrReplaceResultBlock,
     TextEditorCodeExecutionToolResultBlock,
     TextEditorCodeExecutionViewResultBlock,
+    WebFetchResultBlock,
+    WebFetchToolResultBlock,
+    WebSearchResultBlock,
+    WebSearchToolResultBlock,
 )
 
 if TYPE_CHECKING:
@@ -163,3 +167,44 @@ def _single_result(
             "Specialized tool adapter requires exactly one compatible result block"
         )
     return content[0]
+
+
+class WebSearchEventAdapter(ServerToolEventAdapter):
+    public_tool_name = "web_search"
+
+    def build_tool_result(self, *, tool_use_id: str, outcome: ToolExecutionOutcome) -> ToolResultBlock:
+        if isinstance(outcome, ToolExecutionFailure):
+            from private_gpt.events.models import CodeExecutionToolResultErrorBlock
+            return WebSearchToolResultBlock(
+                tool_use_id=tool_use_id,
+                content=CodeExecutionToolResultErrorBlock(
+                    type="bash_code_execution_tool_result_error",
+                    error_code="unavailable",
+                ),
+            )
+        return WebSearchToolResultBlock(
+            tool_use_id=tool_use_id,
+            content=[
+                block for block in outcome.content
+                if isinstance(block, WebSearchResultBlock)
+            ],
+        )
+
+
+class WebFetchEventAdapter(ServerToolEventAdapter):
+    public_tool_name = "web_fetch"
+
+    def build_tool_result(self, *, tool_use_id: str, outcome: ToolExecutionOutcome) -> ToolResultBlock:
+        if isinstance(outcome, ToolExecutionFailure):
+            from private_gpt.events.models import CodeExecutionToolResultErrorBlock
+            return WebFetchToolResultBlock(
+                tool_use_id=tool_use_id,
+                content=CodeExecutionToolResultErrorBlock(
+                    type="bash_code_execution_tool_result_error",
+                    error_code="unavailable",
+                ),
+            )
+        return WebFetchToolResultBlock(
+            tool_use_id=tool_use_id,
+            content=_single_result(outcome.content, WebFetchResultBlock),
+        )

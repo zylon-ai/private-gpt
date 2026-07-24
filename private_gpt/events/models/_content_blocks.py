@@ -750,6 +750,92 @@ class TextEditorCodeExecutionStrReplaceResultBlock(
     lines: list[str] = Field(default_factory=list)
 
 
+class WebSearchResultBlock(BaseContentBlock, StandardContentProtocol):
+    """Result from a single web search hit.
+
+    Mirrors Anthropic's WebSearchResultBlock.
+    ``encrypted_content`` is filled with the actual result text (Zylon executes
+    locally, so there is no encrypted payload). ``content`` is a Zylon extension
+    that carries the same text in plain form; Anthropic-only clients should use
+    ``encrypted_content``.
+    """
+
+    type: Literal["web_search_result"] = "web_search_result"
+    url: str
+    title: str
+    encrypted_content: str = Field(
+        description="Anthropic-compatible field; contains the result text when Zylon executes locally."
+    )
+    page_age: str | None = None
+    # Zylon extension: same payload as encrypted_content but in plain form
+    content: str | None = Field(
+        default=None,
+        description="[Zylon extension] Plain-text result content. "
+        "Mirrors encrypted_content for Zylon consumers.",
+    )
+    # Zylon extension: snippet / description from the search provider
+    description: str | None = Field(
+        default=None,
+        description="[Zylon extension] Short description or snippet from the search provider.",
+    )
+    favicon_url: str | None = Field(
+        default=None,
+        description="[Zylon extension] URL of the website favicon.",
+    )
+
+    @classmethod
+    def from_web_search_result(
+        cls,
+        result: Any,
+    ) -> "WebSearchResultBlock":
+        """Build from a WebSearchResult domain object."""
+        text = result.content or result.description or ""
+        return cls(
+            url=result.url,
+            title=result.title,
+            encrypted_content=text,
+            content=text,
+            page_age=result.age,
+            description=result.description,
+            favicon_url=result.favicon_url,
+        )
+
+
+class WebFetchResultBlock(BaseContentBlock, StandardContentProtocol):
+    """Fetched page content from web_fetch.
+
+    Mirrors Anthropic's web_fetch_tool_result content shape:
+    ``url`` + ``content`` (a document block).
+    """
+
+    type: Literal["web_fetch_result"] = "web_fetch_result"
+    url: str
+    content: DocumentBlock
+    # Zylon extension: raw markdown text before DocumentBlock wrapping
+    markdown: str | None = Field(
+        default=None,
+        description="[Zylon extension] Raw markdown content before DocumentBlock wrapping.",
+    )
+
+    @classmethod
+    def from_markdown(cls, url: str, markdown: str) -> "WebFetchResultBlock":
+        return cls(
+            url=url,
+            markdown=markdown,
+            content=DocumentBlock(
+                source=DocumentBlock.TextSource(
+                    type="text",
+                    media_type="text/plain",
+                    data=markdown,
+                )
+            ),
+        )
+
+
+WebToolResultContentBlockType = (
+    WebSearchResultBlock | WebFetchResultBlock
+)
+
 CodeExecutionResultContentBlockType = (
     BashCodeExecutionResultBlock
     | CodeExecutionToolResultErrorBlock
@@ -759,5 +845,8 @@ CodeExecutionResultContentBlockType = (
 )
 
 ResultContentBlockType = (
-    BasicContentBlockType | TLDRBlock | CodeExecutionResultContentBlockType
+    BasicContentBlockType
+    | TLDRBlock
+    | CodeExecutionResultContentBlockType
+    | WebToolResultContentBlockType
 )

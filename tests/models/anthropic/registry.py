@@ -43,6 +43,10 @@ from private_gpt.events.models import (
     ToolResultBlock,
     ToolUseBlock,
     Usage,
+    WebFetchResultBlock,
+    WebFetchToolResultBlock,
+    WebSearchResultBlock,
+    WebSearchToolResultBlock,
 )
 from private_gpt.events.models._callers import ServerToolCaller20260120
 
@@ -509,6 +513,80 @@ ZYLON_ONLY_REGISTRY: list[TypeMapping] = [
         sdk_sample={},
         notes="Zylon-only condensed summary block",
         skip=True,
+    ),
+    TypeMapping(
+        sdk_type=sdk_types.WebSearchResultBlock,
+        our_type=WebSearchResultBlock,
+        sdk_schema_name="WebSearchResultBlock",
+        openapi_schema_name=None,
+        zylon_only_fields=_BASE_ZYLON_FIELDS | {"content", "description", "favicon_url"},
+        sdk_only_fields=frozenset(),
+        sdk_sample={
+            "type": "web_search_result",
+            "url": "https://example.com",
+            "title": "Example",
+            "encrypted_content": "some text",
+            "page_age": None,
+        },
+        notes="Zylon fills encrypted_content with plain text; content/description/favicon_url are Zylon extensions",
+    ),
+    TypeMapping(
+        sdk_type=None,
+        our_type=WebSearchToolResultBlock,
+        sdk_schema_name="WebSearchToolResultBlock",
+        openapi_schema_name=None,
+        zylon_only_fields=_CACHEABLE_ZYLON_FIELDS,
+        sdk_only_fields=frozenset(),
+        sdk_sample={
+            "type": "web_search_tool_result",
+            "tool_use_id": "srvtoolu_01",
+            "content": [
+                {
+                    "type": "web_search_result",
+                    "url": "https://example.com",
+                    "title": "Example",
+                    "encrypted_content": "some text",
+                }
+            ],
+        },
+    ),
+    TypeMapping(
+        sdk_type=None,
+        our_type=WebFetchResultBlock,
+        sdk_schema_name="",
+        openapi_schema_name=None,
+        zylon_only_fields=_BASE_ZYLON_FIELDS | {"markdown"},
+        sdk_only_fields=frozenset(),
+        sdk_sample={
+            "type": "web_fetch_result",
+            "url": "https://example.com",
+            "content": {
+                "type": "document",
+                "source": {"type": "text", "media_type": "text/plain", "data": "page content"},
+            },
+        },
+        notes="No SDK type yet — follows Anthropic docs shape. markdown is a Zylon extension.",
+    ),
+    TypeMapping(
+        sdk_type=None,
+        our_type=WebFetchToolResultBlock,
+        sdk_schema_name="",
+        openapi_schema_name=None,
+        zylon_only_fields=_CACHEABLE_ZYLON_FIELDS,
+        sdk_only_fields=frozenset(),
+        sdk_sample={
+            "type": "web_fetch_tool_result",
+            "tool_use_id": "srvtoolu_02",
+            "content": {
+                "type": "web_fetch_result",
+                "url": "https://example.com",
+                "content": {
+                    "type": "document",
+                    "source": {"type": "text", "media_type": "text/plain", "data": "page content"},
+                },
+            },
+        },
+        notes="No SDK type yet — follows Anthropic docs shape.",
     ),
     # -- Tool results -------------------------------------------------------
     TypeMapping(
