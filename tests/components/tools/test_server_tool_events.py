@@ -110,7 +110,9 @@ def test_bash_tool_resolves_specialized_adapter() -> None:
     result = adapter.build_tool_result(
         tool_use_id=tool_id,
         outcome=ToolExecutionSuccess(
-            content=[BashCodeExecutionResultBlock(stdout="ok")]
+            content=[
+                BashCodeExecutionResultBlock(stdout="ok", stderr="", return_code=0)
+            ]
         ),
     )
 

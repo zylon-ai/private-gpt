@@ -18,6 +18,7 @@ from pydantic import (
 
 from private_gpt.chat.extensions.citation import ZylonCitation  # noqa: TC001
 from private_gpt.components.chunk.models import Chunk, SourceType  # noqa: TC001
+from private_gpt.components.web.web_search.models import WebSearchResult  # noqa: TC001
 from private_gpt.events.models._base import (
     BaseContentBlock,
     CacheableContentBlock,
@@ -698,10 +699,26 @@ class TLDRBlock(BaseContentBlock, ExtendedContentProtocol):
 
 class BashCodeExecutionResultBlock(BaseContentBlock, StandardContentProtocol):
     type: Literal["bash_code_execution_result"] = "bash_code_execution_result"
-    stdout: str = ""
-    stderr: str = ""
-    return_code: int = 0
-    content: list[BasicContentBlockType] = Field(default_factory=list)
+    stdout: str = Field(description="Standard output from the bash command.")
+    stderr: str = Field(description="Standard error output from the bash command.")
+    return_code: int = Field(
+        description="Exit code of the bash command. 0 indicates success."
+    )
+    content: list[BashExecutionFileEntry] = Field(
+        default_factory=list, description="Files created during execution."
+    )
+
+
+class BashExecutionFileEntry(BaseModel):
+    """A file created during bash code execution, retrievable via the Files API."""
+
+    type: Literal["bash_code_execution_output"] = "bash_code_execution_output"
+    file_id: str = Field(
+        description="Identifier for the created file, retrievable via the Files API."
+    )
+    index: int | None = Field(
+        default=None, description="Index of the file among multiple outputs."
+    )
 
 
 class CodeExecutionToolResultErrorBlock(BaseContentBlock, StandardContentProtocol):
@@ -786,8 +803,8 @@ class WebSearchResultBlock(BaseContentBlock, StandardContentProtocol):
     @classmethod
     def from_web_search_result(
         cls,
-        result: Any,
-    ) -> "WebSearchResultBlock":
+        result: WebSearchResult,
+    ) -> WebSearchResultBlock:
         """Build from a WebSearchResult domain object."""
         text = result.content or result.description or ""
         return cls(
@@ -811,6 +828,10 @@ class WebFetchResultBlock(BaseContentBlock, StandardContentProtocol):
     type: Literal["web_fetch_result"] = "web_fetch_result"
     url: str
     content: DocumentBlock
+    retrieved_at: str | None = Field(
+        default=None,
+        description="ISO-8601 timestamp of when the page was fetched.",
+    )
     # Zylon extension: raw markdown text before DocumentBlock wrapping
     markdown: str | None = Field(
         default=None,
@@ -818,7 +839,7 @@ class WebFetchResultBlock(BaseContentBlock, StandardContentProtocol):
     )
 
     @classmethod
-    def from_markdown(cls, url: str, markdown: str) -> "WebFetchResultBlock":
+    def from_markdown(cls, url: str, markdown: str) -> WebFetchResultBlock:
         return cls(
             url=url,
             markdown=markdown,
@@ -832,9 +853,7 @@ class WebFetchResultBlock(BaseContentBlock, StandardContentProtocol):
         )
 
 
-WebToolResultContentBlockType = (
-    WebSearchResultBlock | WebFetchResultBlock
-)
+WebToolResultContentBlockType = WebSearchResultBlock | WebFetchResultBlock
 
 CodeExecutionResultContentBlockType = (
     BashCodeExecutionResultBlock

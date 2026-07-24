@@ -88,6 +88,10 @@ class ServerToolResultBlock(ToolResultBlock):
     """Default result produced by a server-executed tool."""
 
     type: Literal["server_tool_result"] = Field(default="server_tool_result")
+    tool_use_id: str = Field(
+        pattern=r"^srvtoolu_[a-zA-Z0-9_]+$",
+        description="ID of the server tool use this result answers.",
+    )
 
 
 class WebSearchToolResultBlock(ServerToolResultBlock):
@@ -98,7 +102,6 @@ class WebSearchToolResultBlock(ServerToolResultBlock):
     """
 
     type: Literal["web_search_tool_result"] = "web_search_tool_result"
-    tool_use_id: str
     content: list[WebSearchResultBlock] | CodeExecutionToolResultErrorBlock
     is_error: bool = Field(default=False, exclude=True)
 
@@ -139,7 +142,6 @@ class WebFetchToolResultBlock(ServerToolResultBlock):
     """
 
     type: Literal["web_fetch_tool_result"] = "web_fetch_tool_result"
-    tool_use_id: str
     content: WebFetchResultBlock | CodeExecutionToolResultErrorBlock
     is_error: bool = Field(default=False, exclude=True)
 
@@ -169,7 +171,6 @@ class WebFetchToolResultBlock(ServerToolResultBlock):
 
 class BashCodeExecutionToolResultBlock(ServerToolResultBlock):
     type: Literal["bash_code_execution_tool_result"] = "bash_code_execution_tool_result"
-    tool_use_id: str
     content: BashCodeExecutionResultBlock | CodeExecutionToolResultErrorBlock
     is_error: bool = Field(default=False, exclude=True)
 
@@ -178,7 +179,6 @@ class TextEditorCodeExecutionToolResultBlock(ServerToolResultBlock):
     type: Literal["text_editor_code_execution_tool_result"] = (
         "text_editor_code_execution_tool_result"
     )
-    tool_use_id: str
     content: TextEditorCodeExecutionResultContent
     is_error: bool = Field(default=False, exclude=True)
 
