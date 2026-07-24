@@ -1,5 +1,6 @@
 import uuid
 from abc import ABC, abstractmethod
+from typing import Literal
 
 from private_gpt.components.chat.models.chat_config_models import (
     ResolvedChatRequest,
@@ -52,11 +53,13 @@ def _wrapper_tool(
     name: str,
     description: str | None = None,
     tool_type: str | None = None,
+    runtime: Literal["client", "server"] = "server",
 ) -> ToolSpec:
     return ToolSpec(
         name=name,
         description=description or None,
         type=tool_type or f"{name}_v1",
+        runtime=runtime,
     )
 
 
