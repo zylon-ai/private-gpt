@@ -8,19 +8,17 @@ from private_gpt.events.models._base import (
     StandardContentProtocol,
 )
 from private_gpt.events.models._content_blocks import (
+    BashCodeExecutionResultBlock,
+    CodeExecutionToolResultErrorBlock,
     DocumentBlock,
     ResultContentBlockType,
     SourceBlock,
     TextBlock,
-    WebFetchResultBlock,
-    WebSearchResultBlock,
-
-    BashCodeExecutionResultBlock,
-    CodeExecutionToolResultErrorBlock,
-    ResultContentBlockType,
     TextEditorCodeExecutionCreateResultBlock,
     TextEditorCodeExecutionStrReplaceResultBlock,
     TextEditorCodeExecutionViewResultBlock,
+    WebFetchResultBlock,
+    WebSearchResultBlock,
 )
 
 
@@ -55,7 +53,7 @@ class ToolResultBlock(CacheableContentBlock, StandardContentProtocol):
         default=False, description="Whether the tool result indicates an error."
     )
 
-    def prune_content_block_by_response_mode(
+    def for_response_mode(
         self, response_mode: Literal["anthropic", "zylon"]
     ) -> Self | None:
         if isinstance(self.content, str):
@@ -63,8 +61,7 @@ class ToolResultBlock(CacheableContentBlock, StandardContentProtocol):
         pruned = [
             b
             for block in self.content
-            if (b := block.prune_content_block_by_response_mode(response_mode))
-            is not None
+            if (b := block.for_response_mode(response_mode)) is not None
         ]
         if pruned:
             self.content = pruned
@@ -93,7 +90,6 @@ class ServerToolResultBlock(ToolResultBlock):
     type: Literal["server_tool_result"] = Field(default="server_tool_result")
 
 
-
 class WebSearchToolResultBlock(ServerToolResultBlock):
     """Anthropic-shaped result for an internally-executed web_search call.
 
@@ -106,7 +102,7 @@ class WebSearchToolResultBlock(ServerToolResultBlock):
     content: list[WebSearchResultBlock] | CodeExecutionToolResultErrorBlock
     is_error: bool = Field(default=False, exclude=True)
 
-    def prune_content_block_by_response_mode(
+    def for_response_mode(
         self, response_mode: Literal["anthropic", "zylon"]
     ) -> "Self | ToolResultBlock | None":
         if response_mode == "anthropic":
@@ -117,11 +113,16 @@ class WebSearchToolResultBlock(ServerToolResultBlock):
             websites = [Website.from_web_search_result(r) for r in self.content]
             zylon_content: list[ResultContentBlockType] = [
                 SourceBlock.from_sources(websites),
-                *[TextBlock(text=r.content or r.encrypted_content) for r in self.content],
+                *[
+                    TextBlock(text=r.content or r.encrypted_content)
+                    for r in self.content
+                ],
             ]
             is_err = False
         else:
-            zylon_content = [TextBlock(text=f"Web search error: {self.content.error_code}")]
+            zylon_content = [
+                TextBlock(text=f"Web search error: {self.content.error_code}")
+            ]
             is_err = True
         return ToolResultBlock(
             tool_use_id=self.tool_use_id,
@@ -142,7 +143,7 @@ class WebFetchToolResultBlock(ServerToolResultBlock):
     content: WebFetchResultBlock | CodeExecutionToolResultErrorBlock
     is_error: bool = Field(default=False, exclude=True)
 
-    def prune_content_block_by_response_mode(
+    def for_response_mode(
         self, response_mode: Literal["anthropic", "zylon"]
     ) -> "Self | ToolResultBlock | None":
         if response_mode == "anthropic":
@@ -155,7 +156,9 @@ class WebFetchToolResultBlock(ServerToolResultBlock):
             zylon_content_: list[ResultContentBlockType] = [TextBlock(text=text or "")]
             is_err = False
         else:
-            zylon_content_ = [TextBlock(text=f"Web fetch error: {self.content.error_code}")]
+            zylon_content_ = [
+                TextBlock(text=f"Web fetch error: {self.content.error_code}")
+            ]
             is_err = True
         return ToolResultBlock(
             tool_use_id=self.tool_use_id,

@@ -26,7 +26,7 @@ class TestStandardContentBlocks:
     @pytest.mark.parametrize("response_mode", ["anthropic", "zylon"])
     def test_text_block_pruning(self, response_mode: Literal["anthropic", "zylon"]):
         block = TextBlock(text="Hello, world!")
-        result = block.prune_content_block_by_response_mode(response_mode)
+        result = block.for_response_mode(response_mode)
 
         assert result is not None
         assert isinstance(result, TextBlock)
@@ -35,7 +35,7 @@ class TestStandardContentBlocks:
     @pytest.mark.parametrize("response_mode", ["anthropic", "zylon"])
     def test_image_block_pruning(self, response_mode: Literal["anthropic", "zylon"]):
         block = ImageBlock.from_base64(data="base64data", mime_type="image/png")
-        result = block.prune_content_block_by_response_mode(response_mode)
+        result = block.for_response_mode(response_mode)
 
         assert result is not None
         assert isinstance(result, ImageBlock)
@@ -44,7 +44,7 @@ class TestStandardContentBlocks:
     @pytest.mark.parametrize("response_mode", ["anthropic", "zylon"])
     def test_audio_block_pruning(self, response_mode: Literal["anthropic", "zylon"]):
         block = AudioBlock.from_base64(data="base64audiodata", mime_type="audio/mpeg")
-        result = block.prune_content_block_by_response_mode(response_mode)
+        result = block.for_response_mode(response_mode)
 
         assert result is not None
         assert isinstance(result, AudioBlock)
@@ -57,7 +57,7 @@ class TestStandardContentBlocks:
         block = ResourceLinkBlock(
             uri="https://example.com/resource", name="Example Resource"
         )
-        result = block.prune_content_block_by_response_mode(response_mode)
+        result = block.for_response_mode(response_mode)
 
         assert result is not None
         assert isinstance(result, ResourceLinkBlock)
@@ -70,7 +70,7 @@ class TestStandardContentBlocks:
                 uri="https://example.com/doc", name="Example Document"
             )
         )
-        result = block.prune_content_block_by_response_mode(response_mode)
+        result = block.for_response_mode(response_mode)
 
         assert result is not None
         assert isinstance(result, ResourceBlock)
@@ -79,7 +79,7 @@ class TestStandardContentBlocks:
     @pytest.mark.parametrize("response_mode", ["anthropic", "zylon"])
     def test_tool_use_block_pruning(self, response_mode: Literal["anthropic", "zylon"]):
         block = ToolUseBlock(id="tool_123", name="search_tool", input={"query": "test"})
-        result = block.prune_content_block_by_response_mode(response_mode)
+        result = block.for_response_mode(response_mode)
 
         assert result is not None
         assert isinstance(result, ToolUseBlock)
@@ -90,7 +90,7 @@ class TestStandardContentBlocks:
         block = ThinkingBlock(
             thinking="Let me think about this...", signature="sig_test_123"
         )
-        result = block.prune_content_block_by_response_mode(response_mode)
+        result = block.for_response_mode(response_mode)
 
         assert result is not None
         assert isinstance(result, ThinkingBlock)
@@ -107,7 +107,7 @@ class TestExtendedContentBlocks:
                 "media_type": "application/pdf",
             },
         )
-        result = block.prune_content_block_by_response_mode("anthropic")
+        result = block.for_response_mode("anthropic")
 
         assert result is None
 
@@ -120,7 +120,7 @@ class TestExtendedContentBlocks:
                 "media_type": "application/pdf",
             },
         )
-        result = block.prune_content_block_by_response_mode("zylon")
+        result = block.for_response_mode("zylon")
 
         assert result is not None
         assert isinstance(result, BinaryBlock)
@@ -128,26 +128,26 @@ class TestExtendedContentBlocks:
 
     def test_source_block_pruning_anthropic_mode(self):
         block = SourceBlock(sources=[])
-        result = block.prune_content_block_by_response_mode("anthropic")
+        result = block.for_response_mode("anthropic")
 
         assert result is None
 
     def test_source_block_pruning_zylon_mode(self):
         block = SourceBlock(sources=[])
-        result = block.prune_content_block_by_response_mode("zylon")
+        result = block.for_response_mode("zylon")
 
         assert result is not None
         assert isinstance(result, SourceBlock)
 
     def test_tldr_block_pruning_anthropic_mode(self):
         block = TLDRBlock(content=[TextBlock(text="Summary")])
-        result = block.prune_content_block_by_response_mode("anthropic")
+        result = block.for_response_mode("anthropic")
 
         assert result is None
 
     def test_tldr_block_pruning_zylon_mode(self):
         block = TLDRBlock(content=[TextBlock(text="Summary")])
-        result = block.prune_content_block_by_response_mode("zylon")
+        result = block.for_response_mode("zylon")
 
         assert result is not None
         assert isinstance(result, TLDRBlock)
@@ -158,8 +158,8 @@ class TestToolResultBlockPruning:
     def test_tool_result_with_string_content(self):
         block = ToolResultBlock(tool_use_id="tool_123", content="Simple string result")
 
-        result_anthropic = block.prune_content_block_by_response_mode("anthropic")
-        result_zylon = block.prune_content_block_by_response_mode("zylon")
+        result_anthropic = block.for_response_mode("anthropic")
+        result_zylon = block.for_response_mode("zylon")
 
         assert result_anthropic is not None
         assert result_zylon is not None
@@ -176,7 +176,7 @@ class TestToolResultBlockPruning:
             ],
         )
 
-        result = block.prune_content_block_by_response_mode("anthropic")
+        result = block.for_response_mode("anthropic")
 
         assert result is not None
         assert isinstance(result.content, list)
@@ -194,7 +194,7 @@ class TestToolResultBlockPruning:
             ],
         )
 
-        result = block.prune_content_block_by_response_mode("zylon")
+        result = block.for_response_mode("zylon")
 
         assert result is not None
         assert isinstance(result.content, list)
@@ -212,7 +212,7 @@ class TestToolResultBlockPruning:
             ],
         )
 
-        result = block.prune_content_block_by_response_mode("anthropic")
+        result = block.for_response_mode("anthropic")
 
         assert result is None
 
@@ -223,8 +223,8 @@ class TestStreamingEventPruning:
             block_id="block_123", content_block=TextBlock(text="Starting...")
         )
 
-        result_anthropic = start.prune_content_block_by_response_mode("anthropic")
-        result_zylon = start.prune_content_block_by_response_mode("zylon")
+        result_anthropic = start.for_response_mode("anthropic")
+        result_zylon = start.for_response_mode("zylon")
 
         assert result_anthropic is not None
         assert result_zylon is not None
@@ -234,7 +234,7 @@ class TestStreamingEventPruning:
             block_id="block_123", content_block=SourceBlock(sources=[])
         )
 
-        result = start.prune_content_block_by_response_mode("anthropic")
+        result = start.for_response_mode("anthropic")
 
         assert result is None
 
@@ -243,7 +243,7 @@ class TestStreamingEventPruning:
             block_id="block_123", content_block=SourceBlock(sources=[])
         )
 
-        result = start.prune_content_block_by_response_mode("zylon")
+        result = start.for_response_mode("zylon")
 
         assert result is not None
         assert isinstance(result.content_block, SourceBlock)
@@ -253,8 +253,8 @@ class TestStreamingEventPruning:
             block_id="block_123", delta=TextDelta(text="more text...")
         )
 
-        result_anthropic = delta.prune_content_block_by_response_mode("anthropic")
-        result_zylon = delta.prune_content_block_by_response_mode("zylon")
+        result_anthropic = delta.for_response_mode("anthropic")
+        result_zylon = delta.for_response_mode("zylon")
 
         assert result_anthropic is not None
         assert result_zylon is not None
@@ -264,7 +264,7 @@ class TestStreamingEventPruning:
             block_id="block_123", delta=SourceDelta(sources=[])
         )
 
-        result = delta.prune_content_block_by_response_mode("anthropic")
+        result = delta.for_response_mode("anthropic")
 
         assert result is None
 
@@ -273,7 +273,7 @@ class TestStreamingEventPruning:
             block_id="block_123", delta=SourceDelta(sources=[])
         )
 
-        result = delta.prune_content_block_by_response_mode("zylon")
+        result = delta.for_response_mode("zylon")
 
         assert result is not None
         assert isinstance(result.delta, SourceDelta)
@@ -283,33 +283,33 @@ class TestDeltaBlockPruning:
     @pytest.mark.parametrize("response_mode", ["anthropic", "zylon"])
     def test_text_delta_pruning(self, response_mode: Literal["anthropic", "zylon"]):
         delta = TextDelta(text="delta text")
-        result = delta.prune_content_block_by_response_mode(response_mode)
+        result = delta.for_response_mode(response_mode)
 
         assert result is not None
         assert isinstance(result, TextDelta)
 
     def test_source_delta_pruning_anthropic_mode(self):
         delta = SourceDelta(sources=[])
-        result = delta.prune_content_block_by_response_mode("anthropic")
+        result = delta.for_response_mode("anthropic")
 
         assert result is None
 
     def test_source_delta_pruning_zylon_mode(self):
         delta = SourceDelta(sources=[])
-        result = delta.prune_content_block_by_response_mode("zylon")
+        result = delta.for_response_mode("zylon")
 
         assert result is not None
         assert isinstance(result, SourceDelta)
 
     def test_tldr_delta_pruning_anthropic_mode(self):
         delta = TLDRDelta(tldr=TextBlock(text="Summary"))
-        result = delta.prune_content_block_by_response_mode("anthropic")
+        result = delta.for_response_mode("anthropic")
 
         assert result is None
 
     def test_tldr_delta_pruning_zylon_mode(self):
         delta = TLDRDelta(tldr=TextBlock(text="Summary"))
-        result = delta.prune_content_block_by_response_mode("zylon")
+        result = delta.for_response_mode("zylon")
 
         assert result is not None
         assert isinstance(result, TLDRDelta)
