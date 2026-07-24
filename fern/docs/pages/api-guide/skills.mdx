@@ -65,6 +65,23 @@ curl http://localhost:8080/v1/skills/skill_01abc.../versions
 
 ---
 
+## Retrieve skill files
+
+List files stored for a skill version (metadata only by default):
+
+```bash
+curl "http://localhost:8080/v1/skills/skill_01abc.../versions/v1/files?collection=my-org"
+```
+
+Include base64 bodies with `include_content=true`. Download a single file as raw bytes:
+
+```bash
+curl "http://localhost:8080/v1/skills/skill_01abc.../versions/v1/files/SKILL.md/content?collection=my-org" \
+  -o SKILL.md
+```
+
+---
+
 ## Delete a skill
 
 ```bash

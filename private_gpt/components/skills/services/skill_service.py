@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -11,13 +12,17 @@ from private_gpt.components.skills.models.skill_entities import (
     SkillFilter,
     SkillFrontmatter,
     SkillVersionEntity,
+    SkillVersionFile,
     SkillVersionWithSkillEntity,
 )
 from private_gpt.components.skills.parser import (
     ParsedSkillDocument,
     parse_skill_markdown,
 )
-from private_gpt.components.skills.paths import skill_path
+from private_gpt.components.skills.paths import (
+    normalize_skill_relative_path,
+    skill_path,
+)
 from private_gpt.components.skills.repositories.skill_repository import (
     CreateSkillInput,
     SkillPage,
@@ -311,6 +316,70 @@ class SkillService:
         """Relative paths of all files bundled in a skill version."""
         files = await self._storage_component.list_files(version.storage_prefix)
         return sorted(files)
+
+    async def get_version_files(
+        self,
+        version: SkillVersionEntity,
+        *,
+        include_content: bool = False,
+    ) -> list[SkillVersionFile]:
+        """Return skill version files with metadata, optionally including content."""
+        metas = await self._storage_component.list_files_meta(
+            version.storage_prefix, recursive=True
+        )
+        metas = sorted(metas, key=lambda item: item.path)
+        if not include_content:
+            return [
+                SkillVersionFile(
+                    path=item.path,
+                    size_bytes=item.size_bytes,
+                    mime_type=item.mime_type,
+                )
+                for item in metas
+            ]
+
+        contents = await asyncio.gather(
+            *[
+                self._storage_component.read_file(version.storage_prefix, item.path)
+                for item in metas
+            ]
+        )
+        return [
+            SkillVersionFile(
+                path=item.path,
+                size_bytes=len(content),
+                mime_type=item.mime_type,
+                content=content,
+            )
+            for item, content in zip(metas, contents, strict=True)
+        ]
+
+    async def read_version_file(
+        self, version: SkillVersionEntity, path: str
+    ) -> StoredFile:
+        """Read a single file from a skill version bundle.
+
+        Raises:
+            SkillDomainError: if the path is invalid or the file does not exist.
+        """
+        safe_path = normalize_skill_relative_path(path)
+        stat = await self._storage_component.stat_file(
+            version.storage_prefix, safe_path
+        )
+        if stat is None:
+            raise SkillDomainError(
+                SkillErrorCode.FILE_NOT_FOUND,
+                f"File '{safe_path}' not found in skill version {version.version}",
+                params={"path": safe_path},
+            )
+        content = await self._storage_component.read_file(
+            version.storage_prefix, safe_path
+        )
+        return StoredFile(
+            path=safe_path,
+            content=content,
+            mime_type=stat.mime_type,
+        )
 
 
 def _extract_skill_md(files: list[StoredFile]) -> str:

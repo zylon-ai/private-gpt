@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import mimetypes
 import shutil
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
@@ -48,14 +49,25 @@ class ObjectStorage(ABC):
         ...
 
     @abstractmethod
-    async def list_files_meta(self, prefix: str) -> list[FileInfo]:
-        """List files under prefix with metadata (non-recursive, top-level only)."""
+    async def list_files_meta(
+        self, prefix: str, *, recursive: bool = False
+    ) -> list[FileInfo]:
+        """List files under prefix with metadata.
+
+        When ``recursive`` is False, only top-level files are returned.
+        When True, nested files are included (paths relative to ``prefix``).
+        """
         ...
 
     @abstractmethod
     async def delete_file(self, prefix: str, path: str) -> bool:
         """Delete a single file. Returns True if the file existed and was deleted."""
         ...
+
+
+def _guess_mime_type(path: str) -> str:
+    mime, _ = mimetypes.guess_type(path)
+    return mime or "application/octet-stream"
 
 
 class LocalObjectStorage(ObjectStorage):
@@ -116,43 +128,40 @@ class LocalObjectStorage(ObjectStorage):
         target = Path(self._root_path) / prefix / path
         if not target.exists() or not target.is_file():
             return None
+        return self._file_info_from_path(target, path)
+
+    async def list_files_meta(
+        self, prefix: str, *, recursive: bool = False
+    ) -> list[FileInfo]:
+        return await to_thread.run_sync(self._list_files_meta_sync, prefix, recursive)
+
+    def _list_files_meta_sync(self, prefix: str, recursive: bool) -> list[FileInfo]:
+        root = Path(self._root_path) / prefix
+        if not root.exists():
+            return []
+        entries = root.rglob("*") if recursive else root.iterdir()
+        results: list[FileInfo] = []
+        for entry in entries:
+            if not entry.is_file():
+                continue
+            results.append(
+                self._file_info_from_path(entry, str(entry.relative_to(root)))
+            )
+        return results
+
+    @staticmethod
+    def _file_info_from_path(target: Path, path: str) -> FileInfo:
         stat = target.stat()
         try:
             mime = magic.Magic(mime=True).from_file(str(target))
         except Exception:
-            mime = "application/octet-stream"
+            mime = _guess_mime_type(path)
         return FileInfo(
             path=path,
             size_bytes=stat.st_size,
             created_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
             mime_type=mime,
         )
-
-    async def list_files_meta(self, prefix: str) -> list[FileInfo]:
-        return await to_thread.run_sync(self._list_files_meta_sync, prefix)
-
-    def _list_files_meta_sync(self, prefix: str) -> list[FileInfo]:
-        root = Path(self._root_path) / prefix
-        if not root.exists():
-            return []
-        results: list[FileInfo] = []
-        for entry in root.iterdir():
-            if not entry.is_file():
-                continue
-            stat = entry.stat()
-            try:
-                mime = magic.Magic(mime=True).from_file(str(entry))
-            except Exception:
-                mime = "application/octet-stream"
-            results.append(
-                FileInfo(
-                    path=str(entry.relative_to(root)),
-                    size_bytes=stat.st_size,
-                    created_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
-                    mime_type=mime,
-                )
-            )
-        return results
 
     async def delete_file(self, prefix: str, path: str) -> bool:
         return await to_thread.run_sync(self._delete_file_sync, prefix, path)
@@ -224,20 +233,28 @@ class S3ObjectStorage(ObjectStorage):
         )
         return self._file_info(path, meta)
 
-    async def list_files_meta(self, prefix: str) -> list[FileInfo]:
-        keys = await self._s3_helper.async_list_objects_by_prefix(
+    async def list_files_meta(
+        self, prefix: str, *, recursive: bool = False
+    ) -> list[FileInfo]:
+        objects = await self._s3_helper.async_list_objects_meta_by_prefix(
             bucket_name=self._bucket_name,
             prefix=prefix,
         )
         results: list[FileInfo] = []
-        for key in keys:
-            relative_path = key[len(prefix) :].lstrip("/")
+        for obj in objects:
+            relative_path = obj.key[len(prefix) :].lstrip("/")
             if not relative_path:
                 continue
-            meta = await self._s3_helper.async_head_object(self._bucket_name, key)
-            file_info = self._file_info(relative_path, meta)
-            if file_info is not None:
-                results.append(file_info)
+            if not recursive and "/" in relative_path:
+                continue
+            results.append(
+                FileInfo(
+                    path=relative_path,
+                    size_bytes=obj.size,
+                    created_at=obj.last_modified or datetime.now(tz=UTC),
+                    mime_type=_guess_mime_type(relative_path),
+                )
+            )
         return results
 
     async def delete_file(self, prefix: str, path: str) -> bool:

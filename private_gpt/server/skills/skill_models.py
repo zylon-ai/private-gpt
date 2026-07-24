@@ -152,6 +152,32 @@ class SkillVersionDeletedResponse(BaseModel):
     )
 
 
+class SkillVersionFileResponse(BaseModel):
+    """A single file inside a skill version bundle."""
+
+    path: str = Field(description="Relative path from the skill root.")
+    size_bytes: int = Field(description="File size in bytes.")
+    mime_type: str | None = Field(
+        default=None, description="Detected MIME type, when available."
+    )
+    content_base64: str | None = Field(
+        default=None,
+        description=(
+            "Base64-encoded file content when include_content=true "
+            "(list endpoint defaults to metadata only)."
+        ),
+    )
+
+
+class ListSkillVersionFilesResponse(BaseModel):
+    """All files stored for a skill version."""
+
+    data: list[SkillVersionFileResponse] = Field(
+        default_factory=list,
+        description="Files in the skill version bundle.",
+    )
+
+
 class RecoverSkillsBody(BaseModel):
     skill_filter: SkillFilter = Field(
         description="Filter used to recover active skills by collection and optional whitelist.",

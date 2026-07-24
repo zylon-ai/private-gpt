@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import io
 import logging
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO
 from urllib.parse import quote
@@ -20,6 +22,13 @@ if TYPE_CHECKING:
 
 
 DEBUG_MODE = settings().server.debug_mode
+
+
+@dataclass(frozen=True, slots=True)
+class S3ObjectMeta:
+    key: str
+    size: int
+    last_modified: datetime | None
 
 
 def _remove_expect_header(params: dict[str, Any], **_: Any) -> None:
@@ -275,16 +284,33 @@ class S3Helper:
     async def async_list_objects_by_prefix(
         self, bucket_name: str, prefix: str
     ) -> list[str]:
+        objects = await self.async_list_objects_meta_by_prefix(bucket_name, prefix)
+        return [obj.key for obj in objects]
+
+    async def async_list_objects_meta_by_prefix(
+        self, bucket_name: str, prefix: str
+    ) -> list[S3ObjectMeta]:
         async with self._get_async_s3_client() as s3_client:
             paginator = s3_client.get_paginator("list_objects_v2")
-            keys: list[str] = []
+            objects: list[S3ObjectMeta] = []
             async for page in paginator.paginate(Bucket=bucket_name, Prefix=prefix):
-                keys.extend(
-                    str(item["Key"])
-                    for item in page.get("Contents", [])
-                    if item.get("Key")
-                )
-        return keys
+                for item in page.get("Contents", []):
+                    key = item.get("Key")
+                    if not key:
+                        continue
+                    last_modified = item.get("LastModified")
+                    objects.append(
+                        S3ObjectMeta(
+                            key=str(key),
+                            size=int(item.get("Size", 0) or 0),
+                            last_modified=(
+                                last_modified
+                                if isinstance(last_modified, datetime)
+                                else None
+                            ),
+                        )
+                    )
+        return objects
 
     @staticmethod
     def _parse_s3_url(s3_url: str) -> tuple[str, str]:

@@ -2,11 +2,11 @@ import io
 import mimetypes
 import zipfile
 from io import BytesIO
-from pathlib import PurePosixPath
 
 from starlette.datastructures import Headers, UploadFile
 
 from private_gpt.components.skills.errors import SkillDomainError, SkillErrorCode
+from private_gpt.components.skills.paths import normalize_skill_relative_path
 from private_gpt.components.storage.models import StoredFile
 
 
@@ -53,12 +53,12 @@ async def stored_files_from_uploads(
 
         if _is_zip(upload):
             for path, content in _extract_zip(upload, payload):
-                normalized = _normalize_path(path)
+                normalized = normalize_skill_relative_path(path)
                 resolved[normalized] = StoredFile(
                     path=normalized, content=content, mime_type=None
                 )
         else:
-            name = _normalize_path(upload.filename or "")
+            name = normalize_skill_relative_path(upload.filename or "")
             resolved[name] = StoredFile(
                 path=name, content=payload, mime_type=upload.content_type
             )
@@ -100,30 +100,6 @@ async def stored_files_from_uploads(
         )
 
     return list(resolved.values())
-
-
-def _normalize_path(path: str) -> str:
-    # Normalize backslashes to forward slashes
-    path = path.replace("\\", "/")
-
-    parsed = PurePosixPath(path)
-
-    if parsed.is_absolute():
-        raise SkillDomainError(
-            SkillErrorCode.UNSAFE_PATH_ABSOLUTE,
-            f"Unsafe file path (absolute): {path!r}",
-        )
-
-    if ".." in parsed.parts:
-        raise SkillDomainError(
-            SkillErrorCode.UNSAFE_PATH_TRAVERSAL,
-            f"Unsafe file path (path traversal): {path!r}",
-        )
-
-    parts = list(parsed.parts)
-    if parts and parts[-1].lower() == "skill.md":
-        parts[-1] = "SKILL.md"
-    return "/".join(parts)
 
 
 _DEFAULT_MIME_TYPE = "application/octet-stream"
