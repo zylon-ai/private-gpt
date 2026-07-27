@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import re
+from collections.abc import Sequence  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Protocol, cast
 
 from llama_index.core.base.llms.types import AudioBlock as LIAudioBlock
@@ -665,7 +666,7 @@ class SourceBlock(BaseContentBlock, ExtendedContentProtocol):
         return cls(sources=[Chunk.from_node(node) for node in nodes])
 
     @classmethod
-    def from_sources(cls, sources: list[SourceType]) -> SourceBlock:
+    def from_sources(cls, sources: Sequence[SourceType]) -> SourceBlock:
         return cls(sources=sources)
 
 
@@ -840,7 +841,7 @@ class WebFetchResultBlock(BaseContentBlock, StandardContentProtocol):
             url=url,
             markdown=markdown,
             content=DocumentBlock(
-                source=DocumentBlock.TextSource(
+                source=DocumentBlock.PlainTextSource(
                     type="text",
                     media_type="text/plain",
                     data=markdown,

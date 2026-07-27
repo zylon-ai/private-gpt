@@ -4,7 +4,7 @@ import builtins
 import enum
 import inspect
 import re
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping  # noqa: TC003
 from typing import Any, ClassVar, Literal
 
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock
