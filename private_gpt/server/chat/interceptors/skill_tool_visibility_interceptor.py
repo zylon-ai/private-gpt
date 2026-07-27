@@ -132,6 +132,10 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
         if tool.defer_loading and not has_loaded_skill:
             return False
 
+        # Non-deferred tools are explicitly requested and always visible.
+        if not tool.defer_loading:
+            return True
+
         if not allowed_tools:
             return True
 
