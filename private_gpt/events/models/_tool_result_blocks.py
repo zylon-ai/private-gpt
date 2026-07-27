@@ -89,10 +89,6 @@ class ServerToolResultBlock(ToolResultBlock):
     """Default result produced by a server-executed tool."""
 
     type: Literal["server_tool_result"] = Field(default="server_tool_result")
-    tool_use_id: str = Field(
-        pattern=r"^srvtoolu_[a-zA-Z0-9_]+$",
-        description="ID of the server tool use this result answers.",
-    )
 
     def for_response_mode(
         self, response_mode: Literal["anthropic", "zylon"]

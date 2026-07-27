@@ -414,7 +414,7 @@ class ServerToolUseBlock(ToolUseBlock):
     type: Literal["server_tool_use"] = Field(default="server_tool_use")
     id: str = Field(
         description="Unique identifier for this server tool use",
-        pattern=r"^srvtoolu_[a-zA-Z0-9_]+$",
+        pattern=r"^[a-zA-Z0-9_]+$",
     )
     name: str = Field(
         description="Name of the server tool being called",
