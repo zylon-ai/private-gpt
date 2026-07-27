@@ -30,30 +30,44 @@ class TextEditorProcessor(ToolProcessor):
         self._builder = text_editor_tool_builder
 
     async def intercept(self, request: ResolvedChatRequest) -> bool:
-        session_id = _session_id(request)
+        self._expand(request)
+        return await self._build(request)
+
+    def _expand(self, request: ResolvedChatRequest) -> None:
+        expanded = True
+        while expanded:
+            expanded = False
+            for tool in request.tool_config.tools:
+                if _is_unresolved_tool(tool) and _tool_matches(
+                    tool, TEXT_EDITOR_TOOL_NAME
+                ):
+                    _replace_tool(
+                        request,
+                        tool,
+                        [
+                            _wrapper_tool(TEXT_EDITOR_VIEW_TOOL_NAME),
+                            _wrapper_tool(TEXT_EDITOR_STR_REPLACE_TOOL_NAME),
+                            _wrapper_tool(TEXT_EDITOR_CREATE_TOOL_NAME),
+                            _wrapper_tool(TEXT_EDITOR_INSERT_TOOL_NAME),
+                        ],
+                    )
+                    expanded = True
+                    break
+
+    async def _build(self, request: ResolvedChatRequest) -> bool:
+        config = CodeExecutionSessionConfig(
+            session_id=_session_id(request),
+            extra_bundles=request.context.content_bundles or [],
+            bundles_to_remove=request.context.bundles_to_remove or [],
+            env=Principal.current().as_env() or {},
+        )
+
+        built_any = False
         for tool in request.tool_config.tools:
             if not _is_unresolved_tool(tool):
                 continue
-
-            if _tool_matches(tool, TEXT_EDITOR_TOOL_NAME):
-                return _replace_tool(
-                    request,
-                    tool,
-                    [
-                        _wrapper_tool(TEXT_EDITOR_VIEW_TOOL_NAME),
-                        _wrapper_tool(TEXT_EDITOR_STR_REPLACE_TOOL_NAME),
-                        _wrapper_tool(TEXT_EDITOR_CREATE_TOOL_NAME),
-                        _wrapper_tool(TEXT_EDITOR_INSERT_TOOL_NAME),
-                    ],
-                )
-            config = CodeExecutionSessionConfig(
-                session_id=session_id,
-                extra_bundles=request.context.content_bundles or [],
-                bundles_to_remove=request.context.bundles_to_remove or [],
-                env=Principal.current().as_env() or {},
-            )
             if _tool_matches(tool, TEXT_EDITOR_VIEW_TOOL_NAME):
-                return _replace_tool(
+                built_any |= _replace_tool(
                     request,
                     tool,
                     [
@@ -64,8 +78,8 @@ class TextEditorProcessor(ToolProcessor):
                         )
                     ],
                 )
-            if _tool_matches(tool, TEXT_EDITOR_STR_REPLACE_TOOL_NAME):
-                return _replace_tool(
+            elif _tool_matches(tool, TEXT_EDITOR_STR_REPLACE_TOOL_NAME):
+                built_any |= _replace_tool(
                     request,
                     tool,
                     [
@@ -76,8 +90,8 @@ class TextEditorProcessor(ToolProcessor):
                         )
                     ],
                 )
-            if _tool_matches(tool, TEXT_EDITOR_CREATE_TOOL_NAME):
-                return _replace_tool(
+            elif _tool_matches(tool, TEXT_EDITOR_CREATE_TOOL_NAME):
+                built_any |= _replace_tool(
                     request,
                     tool,
                     [
@@ -88,8 +102,8 @@ class TextEditorProcessor(ToolProcessor):
                         )
                     ],
                 )
-            if _tool_matches(tool, TEXT_EDITOR_INSERT_TOOL_NAME):
-                return _replace_tool(
+            elif _tool_matches(tool, TEXT_EDITOR_INSERT_TOOL_NAME):
+                built_any |= _replace_tool(
                     request,
                     tool,
                     [
@@ -100,4 +114,4 @@ class TextEditorProcessor(ToolProcessor):
                         )
                     ],
                 )
-        return False
+        return built_any
