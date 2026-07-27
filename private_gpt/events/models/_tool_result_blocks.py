@@ -94,6 +94,27 @@ class ServerToolResultBlock(ToolResultBlock):
         description="ID of the server tool use this result answers.",
     )
 
+    def for_response_mode(
+        self, response_mode: Literal["anthropic", "zylon"]
+    ) -> Self | None:
+        if isinstance(self.content, str):
+            return self
+        if not isinstance(self.content, Sequence):
+            block = self.content.for_response_mode(response_mode)
+            if block is not None:
+                self.content = block
+                return self
+            return None
+        pruned = [
+            b
+            for block in self.content
+            if (b := block.for_response_mode(response_mode)) is not None
+        ]
+        if pruned:
+            self.content = pruned
+            return self
+        return None
+
 
 class WebSearchToolResultBlock(ServerToolResultBlock):
     """Anthropic-shaped result for an internally-executed web_search call.

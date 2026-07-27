@@ -209,6 +209,7 @@ class _ToolDeltaState:
     active_tool_block: RawContentBlockStartEvent | None = None
     active_tool_raw_id: str | None = None
     tool_id_map: dict[str, str] = field(default_factory=dict)
+    tool_name_map: dict[str, str] = field(default_factory=dict)
     finished_tool_raw_ids: set[str] = field(default_factory=set)
     last_serialized: dict[str, str] = field(default_factory=dict)
     pending_tasks: list[asyncio.Task[_ToolExecutionResult]] = field(
@@ -990,7 +991,10 @@ class AsyncChatEngine:
 
         assistant_message = llm_response.message
         self._ensure_update_tool_ids_in_tool_selection(
-            run, assistant_message, stream_delta_state.tool_state.tool_id_map
+            run,
+            assistant_message,
+            stream_delta_state.tool_state.tool_id_map,
+            stream_delta_state.tool_state.tool_name_map,
         )
         self._validate_unique_tool_call_ids(assistant_message)
         self._accumulate_usage(run, assistant_message)
@@ -1186,6 +1190,7 @@ class AsyncChatEngine:
 
                     tool_state.active_tool_block = use_start
                     tool_state.active_tool_raw_id = raw_id
+                    tool_state.tool_name_map[raw_id] = tool_call.tool_name or ""
                     tool_state.last_serialized[raw_id] = ""
 
                 if tool_call.tool_kwargs and tool_state.active_tool_block is not None:
@@ -1278,7 +1283,7 @@ class AsyncChatEngine:
         final_json = tool_state.last_serialized.get(prev_raw_id, "")
         final_obj: Any = json.loads(final_json) if final_json else {}
 
-        tool_name = getattr(tool_state.active_tool_block.content_block, "name", None)
+        tool_name = tool_state.tool_name_map.get(prev_raw_id)
         if not isinstance(tool_name, str):
             raise TypeError("Active tool block must define a name")
         tool_schema = schema_by_name.get(tool_name, {})
@@ -1623,7 +1628,10 @@ class AsyncChatEngine:
 
     @staticmethod
     def _ensure_update_tool_ids_in_tool_selection(
-        run: _Run, message: ChatMessage, tool_id_map: dict[str, str]
+        run: _Run,
+        message: ChatMessage,
+        tool_id_map: dict[str, str],
+        tool_name_map: dict[str, str] | None = None,
     ) -> None:
         tool_calls = message.additional_kwargs.get("tool_calls", [])
         if not isinstance(tool_calls, list):
@@ -1633,6 +1641,8 @@ class AsyncChatEngine:
                 raw_id = tool_call.tool_id
                 if raw_id and raw_id in tool_id_map:
                     tool_call.tool_id = tool_id_map[raw_id]
+                if tool_name_map and raw_id and raw_id in tool_name_map:
+                    tool_call.tool_name = tool_name_map[raw_id]
 
     @staticmethod
     def _validate_unique_tool_call_ids(message: ChatMessage) -> None:
