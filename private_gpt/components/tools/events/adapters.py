@@ -230,3 +230,11 @@ class WebFetchEventAdapter(ServerToolEventAdapter):
             tool_use_id=tool_use_id,
             content=_single_result(outcome.content, WebFetchResultBlock),
         )
+
+
+class PresentFilesEventAdapter(ServerToolEventAdapter):
+    public_tool_name = "present_files"
+
+
+class PresentServerEventAdapter(ServerToolEventAdapter):
+    public_tool_name = "present_server"
