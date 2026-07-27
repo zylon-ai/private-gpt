@@ -1,3 +1,5 @@
+from typing import Any
+
 from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ResolvedChatRequest
@@ -31,51 +33,39 @@ class SkillManagementProcessor(ToolProcessor):
         self._skill_service = skill_service
 
     async def intercept(self, request: ResolvedChatRequest) -> bool:
+        self._expand(request)
+        return self._build(request)
+
+    def _expand(self, request: ResolvedChatRequest) -> None:
+        expanded = True
+        while expanded:
+            expanded = False
+            for tool in request.tool_config.tools:
+                if _is_unresolved_tool(tool) and _tool_matches(tool, SKILLS_TOOL_NAME):
+                    _replace_tool(
+                        request,
+                        tool,
+                        [
+                            _wrapper_tool(SKILL_LOAD_TOOL_NAME),
+                            _wrapper_tool(SKILL_UNLOAD_TOOL_NAME),
+                            _wrapper_tool(SKILL_LIST_TOOL_NAME),
+                        ],
+                    )
+                    expanded = True
+                    break
+
+    def _build(self, request: ResolvedChatRequest) -> bool:
+        built_any = False
         for tool in request.tool_config.tools:
-            if not _tool_matches(
-                tool,
-                SKILLS_TOOL_NAME,
-                SKILL_LOAD_TOOL_NAME,
-                SKILL_UNLOAD_TOOL_NAME,
-                SKILL_LIST_TOOL_NAME,
-            ) or not _is_unresolved_tool(tool):
+            if not _is_unresolved_tool(tool) or not _tool_matches(
+                tool, SKILL_LOAD_TOOL_NAME, SKILL_UNLOAD_TOOL_NAME, SKILL_LIST_TOOL_NAME
+            ):
                 continue
 
-            tool_context = _get_tool_context(request, tool)
-            skill_artifacts = [a for a in tool_context if isinstance(a, SkillArtifact)]
-            if not skill_artifacts:
-                raise ValueError(
-                    "Skill management tools require a SkillArtifact in the tool context."
-                )
-            if len(skill_artifacts) > 1:
-                raise ValueError(
-                    "Only one SkillArtifact is supported per skill management tool."
-                )
+            builder = self._make_builder(request, tool)
 
-            builder = SkillManagementToolBuilder(
-                skill_service=self._skill_service,
-                skill_filter=skill_artifacts[0].skill_filter,
-                skill_injection_mode=self._settings.skills.skill_injection_mode,
-            )
-
-            if _tool_matches(tool, SKILLS_TOOL_NAME):
-                return _replace_tool(
-                    request,
-                    tool,
-                    [
-                        _wrapper_tool(
-                            SKILL_LOAD_TOOL_NAME,
-                        ),
-                        _wrapper_tool(
-                            SKILL_UNLOAD_TOOL_NAME,
-                        ),
-                        _wrapper_tool(
-                            SKILL_LIST_TOOL_NAME,
-                        ),
-                    ],
-                )
             if _tool_matches(tool, SKILL_LOAD_TOOL_NAME):
-                return _replace_tool(
+                built_any |= _replace_tool(
                     request,
                     tool,
                     [
@@ -85,8 +75,8 @@ class SkillManagementProcessor(ToolProcessor):
                         )
                     ],
                 )
-            if _tool_matches(tool, SKILL_UNLOAD_TOOL_NAME):
-                return _replace_tool(
+            elif _tool_matches(tool, SKILL_UNLOAD_TOOL_NAME):
+                built_any |= _replace_tool(
                     request,
                     tool,
                     [
@@ -96,8 +86,8 @@ class SkillManagementProcessor(ToolProcessor):
                         )
                     ],
                 )
-            if _tool_matches(tool, SKILL_LIST_TOOL_NAME):
-                return _replace_tool(
+            elif _tool_matches(tool, SKILL_LIST_TOOL_NAME):
+                built_any |= _replace_tool(
                     request,
                     tool,
                     [
@@ -107,4 +97,23 @@ class SkillManagementProcessor(ToolProcessor):
                         )
                     ],
                 )
-        return False
+        return built_any
+
+    def _make_builder(
+        self, request: ResolvedChatRequest, tool: Any
+    ) -> SkillManagementToolBuilder:
+        tool_context = _get_tool_context(request, tool)
+        skill_artifacts = [a for a in tool_context if isinstance(a, SkillArtifact)]
+        if not skill_artifacts:
+            raise ValueError(
+                "Skill management tools require a SkillArtifact in the tool context."
+            )
+        if len(skill_artifacts) > 1:
+            raise ValueError(
+                "Only one SkillArtifact is supported per skill management tool."
+            )
+        return SkillManagementToolBuilder(
+            skill_service=self._skill_service,
+            skill_filter=skill_artifacts[0].skill_filter,
+            skill_injection_mode=self._settings.skills.skill_injection_mode,
+        )
