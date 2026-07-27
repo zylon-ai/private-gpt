@@ -21,6 +21,8 @@ from private_gpt.components.engines.chat.models.chat_phase import (
 from private_gpt.components.engines.chat.utils.request_builder import (
     build_request_from_context_stack,
 )
+from llama_index.core.base.llms.types import TextBlock
+
 from private_gpt.components.llm.llm_helper import as_sync_tokenizer_fn
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
 
@@ -44,6 +46,7 @@ class SystemPromptRequestInterceptor(ChatRequestLoopInterceptor):
 
         state = context.state.model_copy(deep=True)
         stack = state.input.context_stack
+
         stack = stack.remove_layers_of_source("platform_header")
         stack = stack.remove_layers_of_type(LayerType.CONTEXT)
 
