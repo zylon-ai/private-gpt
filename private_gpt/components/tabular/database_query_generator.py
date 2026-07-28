@@ -768,8 +768,15 @@ class DatabaseQueryGenerator:
         system_prompt += (
             "Use views or procedures instead of underlying tables whenever possible. "
         )
-        system_prompt += "If there is no relevant tables that can answer the question. "
-        system_prompt += "Return replying 'NO_QUERY'. "
+        system_prompt += (
+            "If the request is about the database's own structure "
+            "(e.g., listing tables, describing columns, indexes or constraints), "
+            "query the database's standard system catalog "
+            "(e.g., INFORMATION_SCHEMA views, or SYSCAT in DB2) instead of the "
+            "tables listed above. The column-existence and relationship rules "
+            "below only apply to the business tables/views/procedures listed "
+            "above, not to the system catalog. "
+        )
         system_prompt += "When asked about data that mostly contains IDs or non-informative data (e.g. boolean, timestamps, UUIDs) "
         system_prompt += "attempt to add a relevant column that is human-readable (eg. name, title...) "
         system_prompt += "to the query unless explicitly told not to. "
