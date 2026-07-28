@@ -25,10 +25,15 @@ from private_gpt.chat.input_models import (
     ModelInfoOutput,
     ModelListOutput,
 )
+from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.tools.tool_names import (
+    BASH_TOOL_NAME,
+    CODE_EXECUTION_TOOL_NAME,
     INTERNAL_TOOLS,
     SEMANTIC_SEARCH_TOOL_NAME,
+    WEB_FETCH_TOOL_NAME,
+    WEB_SEARCH_TOOL_NAME,
 )
 from private_gpt.events.interceptors.ping_event_interceptor import (
     _DEFAULT_PING_INTERVAL,
@@ -48,6 +53,18 @@ WEATHER_TOOL_SCHEMA = {
     "properties": {"city": {"type": "string"}},
 }
 
+WEB_SEARCH_TOOL_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {"query": {"type": "string"}},
+    "required": ["query"],
+}
+
+WEB_FETCH_TOOL_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {"url": {"type": "string"}},
+    "required": ["url"],
+}
+
 
 class ToolConfig:
     def __init__(
@@ -55,10 +72,13 @@ class ToolConfig:
         name: str,
         input_schema: dict[str, Any] | None = None,
         context: list[ArtifactType] | None = None,
+        *,
+        server_mode: bool = False,
     ) -> None:
         self.name = name
         self.input_schema = input_schema
         self.context = context or []
+        self.server_mode = server_mode
 
 
 def create_weather_tool(context: list[ArtifactType] | None = None) -> ToolConfig:
@@ -67,6 +87,110 @@ def create_weather_tool(context: list[ArtifactType] | None = None) -> ToolConfig
 
 def create_semantic_tool(context: list[ArtifactType] | None = None) -> ToolConfig:
     return ToolConfig(SEMANTIC_SEARCH_TOOL_NAME, None, context)
+
+
+CODE_EXECUTION_CLIENT_TYPE = "bash_20250124"
+CODE_EXECUTION_SERVER_TYPE = "code_execution_20250825"
+CODE_EXECUTION_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "command": {"type": "string"},
+        "timeout": {"type": ["integer", "null"]},
+    },
+    "required": ["command"],
+}
+
+
+def create_code_execution_client_tool() -> ToolConfig:
+    return ToolConfig(BASH_TOOL_NAME, CODE_EXECUTION_SCHEMA)
+
+
+def create_code_execution_server_tool() -> ToolConfig:
+    return ToolConfig(CODE_EXECUTION_TOOL_NAME, CODE_EXECUTION_SCHEMA)
+
+
+def create_web_search_client_tool() -> ToolConfig:
+    return ToolConfig(WEB_SEARCH_TOOL_NAME, WEB_SEARCH_TOOL_SCHEMA)
+
+
+def create_web_search_server_tool() -> ToolConfig:
+    return ToolConfig(WEB_SEARCH_TOOL_NAME, WEB_SEARCH_TOOL_SCHEMA, server_mode=True)
+
+
+def create_web_fetch_client_tool() -> ToolConfig:
+    return ToolConfig(WEB_FETCH_TOOL_NAME, WEB_FETCH_TOOL_SCHEMA)
+
+
+def create_web_fetch_server_tool() -> ToolConfig:
+    return ToolConfig(WEB_FETCH_TOOL_NAME, WEB_FETCH_TOOL_SCHEMA, server_mode=True)
+
+
+def _setup_code_execution_mock(injector: MockInjector) -> None:
+    from unittest.mock import AsyncMock, MagicMock
+
+    from private_gpt.components.code_execution.code_execution_component import (
+        CodeExecutionComponent,
+    )
+
+    mock_session = MagicMock()
+    mock_session.execute_bash = AsyncMock(
+        return_value=MagicMock(stdout="ok\n", stderr="", exit_code=0, files=[])
+    )
+    mock_component = MagicMock(spec=CodeExecutionComponent)
+    mock_component.get_or_create_session = AsyncMock(return_value=mock_session)
+    injector.bind_mock(CodeExecutionComponent, mock_component)
+
+
+def _setup_web_search_mock(injector: MockInjector) -> None:
+    from unittest.mock import AsyncMock
+
+    from private_gpt.components.tools.builders.web_search_builder import (
+        WebSearchToolBuilder,
+    )
+    from private_gpt.components.tools.events.adapters import WebSearchEventAdapter
+    from private_gpt.events.models import TextBlock
+
+    async def _fake_search(query: str) -> list[Any]:
+        return [TextBlock(text="mock search result")]
+
+    mock_builder = AsyncMock(spec=WebSearchToolBuilder)
+    mock_builder.build_tool = AsyncMock(
+        return_value=ToolSpec.from_defaults(
+            name="web_search",
+            type="web_search_v1",
+            runtime="server",
+            event_adapter=WebSearchEventAdapter,
+            description="Mock web search",
+            async_fn=_fake_search,
+        )
+    )
+    injector.bind_mock(WebSearchToolBuilder, mock_builder)
+
+
+def _setup_web_fetch_mock(injector: MockInjector) -> None:
+    from unittest.mock import MagicMock
+
+    from private_gpt.components.tools.builders.web_fetch_builder import (
+        WebFetchToolBuilder,
+    )
+    from private_gpt.components.tools.events.adapters import WebFetchEventAdapter
+    from private_gpt.events.models import TextBlock
+
+    async def _fake_fetch(url: str) -> list[Any]:
+        return [TextBlock(text="mock fetch result")]
+
+    mock_builder = MagicMock(spec=WebFetchToolBuilder)
+    mock_builder.build_tool = MagicMock(
+        return_value=ToolSpec.from_defaults(
+            name="web_fetch",
+            type="web_fetch_v1",
+            runtime="server",
+            event_adapter=WebFetchEventAdapter,
+            description="Mock web fetch",
+            async_fn=_fake_fetch,
+        )
+    )
+    injector.bind_mock(WebFetchToolBuilder, mock_builder)
 
 
 def generate_tool_deltas(tools: list[ToolConfig]) -> list[list[str | ToolSelection]]:
@@ -84,6 +208,24 @@ def generate_tool_deltas(tools: list[ToolConfig]) -> list[list[str | ToolSelecti
                     tool_name=SEMANTIC_SEARCH_TOOL_NAME,
                     tool_kwargs={"query": "Lorem ipsum dolor sit amet"},
                 )
+            elif tool.name == WEB_SEARCH_TOOL_NAME:
+                yield ToolSelection(
+                    tool_id=f"{WEB_SEARCH_TOOL_NAME}_1",
+                    tool_name=WEB_SEARCH_TOOL_NAME,
+                    tool_kwargs={"query": "test query"},
+                )
+            elif tool.name == WEB_FETCH_TOOL_NAME:
+                yield ToolSelection(
+                    tool_id=f"{WEB_FETCH_TOOL_NAME}_1",
+                    tool_name=WEB_FETCH_TOOL_NAME,
+                    tool_kwargs={"url": "https://example.com"},
+                )
+            elif tool.name in {BASH_TOOL_NAME, CODE_EXECUTION_TOOL_NAME}:
+                yield ToolSelection(
+                    tool_id=f"{BASH_TOOL_NAME}_1",
+                    tool_name=BASH_TOOL_NAME,
+                    tool_kwargs={"command": "echo ok"},
+                )
             else:
                 raise ValueError(f"Unknown tool: {tool.name}")
 
@@ -92,9 +234,22 @@ def generate_tool_deltas(tools: list[ToolConfig]) -> list[list[str | ToolSelecti
 
 
 def convert_to_anthropic_tools(tools: list[ToolConfig]) -> list[ToolParam]:
+    def _type_for(tool: ToolConfig) -> str | None:
+        if tool.name == BASH_TOOL_NAME:
+            return CODE_EXECUTION_CLIENT_TYPE
+        if tool.name == CODE_EXECUTION_TOOL_NAME:
+            return CODE_EXECUTION_SERVER_TYPE
+        if tool.name == WEB_SEARCH_TOOL_NAME and tool.server_mode:
+            return "web_search_20250305"
+        if tool.name == WEB_FETCH_TOOL_NAME and tool.server_mode:
+            return "web_fetch_20250305"
+        if tool.name in INTERNAL_TOOLS:
+            return tool.name + "_v1"
+        return None
+
     return [
         ToolParam(
-            type=tool.name + "_v1" if tool.name in INTERNAL_TOOLS else None,
+            type=_type_for(tool),
             name=tool.name,
             input_schema=tool.input_schema,
             context=[artifact.model_dump() for artifact in tool.context]
@@ -1536,3 +1691,275 @@ async def test_all_create_parameter_combinations(
 
     assert response.role == "assistant"
     assert len(response.content) > 0
+
+
+# ---------------------------------------------------------------------------
+# Code execution tool tests — client mode (bash_20250124)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_code_execution_client_non_streaming(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    tool = create_code_execution_client_tool()
+    setup_mock_llm(injector, [tool])
+
+    client = anthropic.Anthropic(**CLIENT_KWARGS)
+    client._client = create_mock_http_client(test_client, httpx_mock)
+
+    response = client.messages.create(
+        model="default",
+        max_tokens=1024,
+        messages=[MessageParam(role="user", content="Run echo ok")],
+        tools=convert_to_anthropic_tools([tool]),
+    )
+
+    validate_response_structure(
+        response,
+        has_tools=True,
+        has_internal_tools=False,
+    )
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_code_execution_client_streaming(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    tool = create_code_execution_client_tool()
+    setup_mock_llm(injector, [tool])
+
+    client = anthropic.Anthropic(**CLIENT_KWARGS)
+    client._client = create_mock_http_client(test_client, httpx_mock)
+
+    collected_text: list[str] = []
+    tool_use_count = 0
+    tool_result_count = 0
+
+    with client.messages.stream(
+        model="default",
+        max_tokens=1024,
+        messages=[MessageParam(role="user", content="Run echo ok")],
+        tools=convert_to_anthropic_tools([tool]),
+    ) as stream:
+        for event in stream:
+            if hasattr(event, "type"):
+                if event.type == "content_block_delta" and hasattr(event.delta, "text"):
+                    collected_text.append(event.delta.text)
+                elif event.type == "content_block_start" and hasattr(
+                    event.content_block, "type"
+                ):
+                    if event.content_block.type in {"tool_use", "server_tool_use"}:
+                        tool_use_count += 1
+                    elif event.content_block.type in {
+                        "tool_result",
+                        "server_tool_result",
+                    }:
+                        tool_result_count += 1
+
+    validate_streaming_response(
+        collected_text="".join(collected_text),
+        tool_use_count=tool_use_count,
+        tool_result_count=tool_result_count,
+        has_tools=True,
+        has_internal_tools=False,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Code execution tool tests — server/full mode (code_execution_20250825)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_code_execution_server_non_streaming(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    _setup_code_execution_mock(injector)
+    tool = create_code_execution_server_tool()
+    setup_mock_llm(injector, [tool])
+
+    client = anthropic.Anthropic(**CLIENT_KWARGS)
+    client._client = create_mock_http_client(test_client, httpx_mock)
+
+    response = client.messages.create(
+        model="default",
+        max_tokens=1024,
+        messages=[MessageParam(role="user", content="Run echo ok")],
+        tools=convert_to_anthropic_tools([tool]),
+    )
+
+    validate_response_structure(
+        response,
+        has_tools=True,
+        has_internal_tools=True,
+    )
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_code_execution_server_streaming(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    _setup_code_execution_mock(injector)
+    tool = create_code_execution_server_tool()
+    setup_mock_llm(injector, [tool])
+
+    client = anthropic.Anthropic(**CLIENT_KWARGS)
+    client._client = create_mock_http_client(test_client, httpx_mock)
+
+    collected_text: list[str] = []
+    tool_use_count = 0
+    tool_result_count = 0
+
+    with client.messages.stream(
+        model="default",
+        max_tokens=1024,
+        messages=[MessageParam(role="user", content="Run echo ok")],
+        tools=convert_to_anthropic_tools([tool]),
+    ) as stream:
+        for event in stream:
+            if hasattr(event, "type"):
+                if event.type == "content_block_delta" and hasattr(event.delta, "text"):
+                    collected_text.append(event.delta.text)
+                elif event.type == "content_block_start" and hasattr(
+                    event.content_block, "type"
+                ):
+                    if event.content_block.type in {"tool_use", "server_tool_use"}:
+                        tool_use_count += 1
+                    elif event.content_block.type in {
+                        "tool_result",
+                        "server_tool_result",
+                    }:
+                        tool_result_count += 1
+
+    validate_streaming_response(
+        collected_text="".join(collected_text),
+        tool_use_count=tool_use_count,
+        tool_result_count=tool_result_count,
+        has_tools=True,
+        has_internal_tools=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Web search tool tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_web_search_client_non_streaming(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    tool = create_web_search_client_tool()
+    setup_mock_llm(injector, [tool])
+
+    client = anthropic.Anthropic(**CLIENT_KWARGS)
+    client._client = create_mock_http_client(test_client, httpx_mock)
+
+    response = client.messages.create(
+        model="default",
+        max_tokens=1024,
+        messages=[MessageParam(role="user", content="Search for something")],
+        tools=convert_to_anthropic_tools([tool]),
+    )
+
+    validate_response_structure(
+        response,
+        has_tools=True,
+        has_internal_tools=False,
+    )
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_web_search_server_non_streaming(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    _setup_web_search_mock(injector)
+    tool = create_web_search_server_tool()
+    setup_mock_llm(injector, [tool])
+
+    client = anthropic.Anthropic(**CLIENT_KWARGS)
+    client._client = create_mock_http_client(test_client, httpx_mock)
+
+    response = client.messages.create(
+        model="default",
+        max_tokens=1024,
+        messages=[MessageParam(role="user", content="Search for something")],
+        tools=convert_to_anthropic_tools([tool]),
+    )
+
+    validate_response_structure(
+        response,
+        has_tools=True,
+        has_internal_tools=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Web fetch tool tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_web_fetch_client_non_streaming(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    tool = create_web_fetch_client_tool()
+    setup_mock_llm(injector, [tool])
+
+    client = anthropic.Anthropic(**CLIENT_KWARGS)
+    client._client = create_mock_http_client(test_client, httpx_mock)
+
+    response = client.messages.create(
+        model="default",
+        max_tokens=1024,
+        messages=[MessageParam(role="user", content="Fetch a URL")],
+        tools=convert_to_anthropic_tools([tool]),
+    )
+
+    validate_response_structure(
+        response,
+        has_tools=True,
+        has_internal_tools=False,
+    )
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_web_fetch_server_non_streaming(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    _setup_web_fetch_mock(injector)
+    tool = create_web_fetch_server_tool()
+    setup_mock_llm(injector, [tool])
+
+    client = anthropic.Anthropic(**CLIENT_KWARGS)
+    client._client = create_mock_http_client(test_client, httpx_mock)
+
+    response = client.messages.create(
+        model="default",
+        max_tokens=1024,
+        messages=[MessageParam(role="user", content="Fetch a URL")],
+        tools=convert_to_anthropic_tools([tool]),
+    )
+
+    validate_response_structure(
+        response,
+        has_tools=True,
+        has_internal_tools=True,
+    )
