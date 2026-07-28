@@ -3,6 +3,8 @@ import pathlib
 import subprocess
 from glob import glob
 
+import pytest
+
 root_path = pathlib.Path(__file__).parents[1]
 # This is to prevent a bug in intellij that uses the wrong working directory
 os.chdir(root_path)
@@ -166,3 +168,15 @@ def pytest_collection_modifyitems(config, items):
         if deselected:
             items[:] = selected
             config.hook.pytest_deselected(items=deselected)
+
+        if not selected:
+            config._git_diff_no_impacted_tests = True
+            print("\n[pytest-git-diff] No impacted tests detected. Skipping tests.")
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if (
+        getattr(session.config, "_git_diff_no_impacted_tests", False)
+        and exitstatus == pytest.ExitCode.NO_TESTS_COLLECTED
+    ):
+        session.exitstatus = pytest.ExitCode.OK
