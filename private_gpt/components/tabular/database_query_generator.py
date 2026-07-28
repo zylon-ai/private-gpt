@@ -98,6 +98,19 @@ class ErrorType(enum.StrEnum):
     )
 
 
+# Sentinel markers the LLM can reply with instead of a SQL query.
+NO_QUERY_SENTINEL = "NO_QUERY"
+CONTEXT_ANSWER_PREFIX = "CONTEXT_ANSWER:"
+
+
+class QueryResultType(enum.StrEnum):
+    SQL = "SQL"  # A SQL query was generated and (attempted to be) executed.
+    NO_QUERY = "NO_QUERY"  # No relevant table/view/procedure could answer the request.
+    CONTEXT_ANSWER = (
+        "CONTEXT_ANSWER"  # Answered directly from the schema info already in context.
+    )
+
+
 class ErrorQueryResult(BaseModel):
     description: str = Field(description="Error message if an error occurred.")
     type: ErrorType = Field(description="The type of error.")
@@ -122,6 +135,11 @@ class ErrorQueryResult(BaseModel):
 
 
 class QueryResult(BaseModel):
+    result_type: QueryResultType = Field(
+        default=QueryResultType.SQL,
+        description="Whether this result is a SQL query, a NO_QUERY answer, or a "
+        "direct answer taken from the schema context.",
+    )
     query: str | None = Field(
         default=None, description="The SQL query that was executed."
     )
@@ -684,8 +702,18 @@ class DatabaseQueryGenerator:
                 last_generated_query=last_generated_query,
                 last_error=last_error,
             )
-            if "NO_QUERY" in sql_query.strip().upper():
+            stripped_response = sql_query.strip()
+            if stripped_response.upper().startswith(CONTEXT_ANSWER_PREFIX):
+                answer = stripped_response[len(CONTEXT_ANSWER_PREFIX) :].strip()
                 return QueryResult(
+                    result_type=QueryResultType.CONTEXT_ANSWER,
+                    query=None,
+                    rows_text=answer,
+                    row_count=0,
+                )
+            if NO_QUERY_SENTINEL in stripped_response.upper():
+                return QueryResult(
+                    result_type=QueryResultType.NO_QUERY,
                     query=None,
                     rows_text="No relevant tables found to answer the question.",
                     row_count=0,
@@ -769,18 +797,25 @@ class DatabaseQueryGenerator:
             "Use views or procedures instead of underlying tables whenever possible. "
         )
         system_prompt += (
-            "If the request is about the database's own structure "
-            "(e.g., listing tables, describing columns, indexes or constraints), "
-            "query the database's standard system catalog "
-            "(e.g., INFORMATION_SCHEMA views, or SYSCAT in DB2) instead of the "
-            "tables listed above. The column-existence and relationship rules "
-            "below only apply to the business tables/views/procedures listed "
-            "above, not to the system catalog. "
+            "You must respond with exactly one of the following: "
+            "1) A valid SQL query that answers the request. "
+            "2) If the request is about the database's own structure "
+            "(e.g., listing tables, describing columns, indexes or constraints) "
+            "and the schema information given above already contains the answer, "
+            f"respond with '{CONTEXT_ANSWER_PREFIX}' followed by the answer in "
+            "plain text, using only the schema information given above. Do not "
+            "generate SQL and do not query any system catalog for this case. "
+            "3) If none of the tables/views/procedures listed above can answer "
+            f"the request, reply exactly '{NO_QUERY_SENTINEL}'. "
         )
         system_prompt += "When asked about data that mostly contains IDs or non-informative data (e.g. boolean, timestamps, UUIDs) "
         system_prompt += "attempt to add a relevant column that is human-readable (eg. name, title...) "
         system_prompt += "to the query unless explicitly told not to. "
-        system_prompt += "The output MUST be valid SQL, no other text or explanations. "
+        system_prompt += (
+            f"The output MUST be either valid SQL, or '{CONTEXT_ANSWER_PREFIX}' "
+            f"followed by plain text, or exactly '{NO_QUERY_SENTINEL}'. "
+            "No other explanations. "
+        )
 
         example = (
             "(e.g., TableName.ColumnName)"
@@ -788,6 +823,10 @@ class DatabaseQueryGenerator:
             else ""
         )
 
+        system_prompt += (
+            "The following rules apply only when generating a SQL query "
+            "(option 1 above): "
+        )
         system_prompt += f"Before referencing any column {example}, verify that column exists in that specific table's column list. "
         system_prompt += "If a column does not exist in Table A but exists in related Table B, you MUST JOIN Table B first to access it. "
         system_prompt += "If no direct foreign key exists between two tables, use intermediate tables to connect them. "
