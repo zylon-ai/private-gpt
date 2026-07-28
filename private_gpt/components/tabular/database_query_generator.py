@@ -100,14 +100,16 @@ class ErrorType(enum.StrEnum):
 
 # Sentinel markers the LLM can reply with instead of a SQL query.
 NO_QUERY_SENTINEL = "NO_QUERY"
-CONTEXT_ANSWER_PREFIX = "CONTEXT_ANSWER:"
+CONTEXT_ANSWER_TAG = "CONTEXT_ANSWER"
 
 
 class QueryResultType(enum.StrEnum):
     SQL = "SQL"  # A SQL query was generated and (attempted to be) executed.
-    NO_QUERY = "NO_QUERY"  # No relevant table/view/procedure could answer the request.
+    NO_QUERY = (
+        NO_QUERY_SENTINEL  # No relevant table/view/procedure could answer the request.
+    )
     CONTEXT_ANSWER = (
-        "CONTEXT_ANSWER"  # Answered directly from the schema info already in context.
+        CONTEXT_ANSWER_TAG  # Answered directly from the schema info already in context.
     )
 
 
@@ -703,8 +705,8 @@ class DatabaseQueryGenerator:
                 last_error=last_error,
             )
             stripped_response = sql_query.strip()
-            if stripped_response.upper().startswith(CONTEXT_ANSWER_PREFIX):
-                answer = stripped_response[len(CONTEXT_ANSWER_PREFIX) :].strip()
+            if stripped_response.upper().startswith(CONTEXT_ANSWER_TAG):
+                answer = stripped_response[len(CONTEXT_ANSWER_TAG) :].strip()
                 return QueryResult(
                     result_type=QueryResultType.CONTEXT_ANSWER,
                     query=None,
@@ -802,8 +804,8 @@ class DatabaseQueryGenerator:
             "2) If the request is about the database's own structure "
             "(e.g., listing tables, describing columns, indexes or constraints) "
             "and the schema information given above already contains the answer, "
-            f"respond with '{CONTEXT_ANSWER_PREFIX}' followed by the answer in "
-            "plain text, using only the schema information given above. Do not "
+            f"respond starting with '{CONTEXT_ANSWER_TAG}' followed by the answer "
+            "in plain text, using only the schema information given above. Do not "
             "generate SQL and do not query any system catalog for this case. "
             "3) If none of the tables/views/procedures listed above can answer "
             f"the request, reply exactly '{NO_QUERY_SENTINEL}'. "
@@ -812,7 +814,7 @@ class DatabaseQueryGenerator:
         system_prompt += "attempt to add a relevant column that is human-readable (eg. name, title...) "
         system_prompt += "to the query unless explicitly told not to. "
         system_prompt += (
-            f"The output MUST be either valid SQL, or '{CONTEXT_ANSWER_PREFIX}' "
+            f"The output MUST be either valid SQL, or start with '{CONTEXT_ANSWER_TAG}' "
             f"followed by plain text, or exactly '{NO_QUERY_SENTINEL}'. "
             "No other explanations. "
         )
