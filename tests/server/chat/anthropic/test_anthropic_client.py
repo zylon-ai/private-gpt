@@ -1694,17 +1694,35 @@ async def test_all_create_parameter_combinations(
 
 
 # ---------------------------------------------------------------------------
-# Code execution tool tests — client mode (bash_20250124)
+# Code execution / web_search / web_fetch — client & server modes
 # ---------------------------------------------------------------------------
 
 
+_CODE_EXECUTION_MODE_PARAMS = [
+    pytest.param("client", False, id="code_execution_client"),
+    pytest.param("server", True, id="code_execution_server"),
+]
+
+
+@pytest.mark.parametrize(
+    ("mode", "has_internal_tools"),
+    _CODE_EXECUTION_MODE_PARAMS,
+)
 @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-def test_code_execution_client_non_streaming(
+def test_code_execution_tool(
     injector: MockInjector,
     test_client: TestClient,
     httpx_mock: HTTPXMock,
+    mode: str,
+    has_internal_tools: bool,
 ) -> None:
-    tool = create_code_execution_client_tool()
+    if mode == "server":
+        _setup_code_execution_mock(injector)
+    tool = (
+        create_code_execution_server_tool()
+        if mode == "server"
+        else create_code_execution_client_tool()
+    )
     setup_mock_llm(injector, [tool])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
@@ -1720,147 +1738,35 @@ def test_code_execution_client_non_streaming(
     validate_response_structure(
         response,
         has_tools=True,
-        has_internal_tools=False,
+        has_internal_tools=has_internal_tools,
     )
 
 
+_WEB_SEARCH_MODE_PARAMS = [
+    pytest.param("client", False, id="web_search_client"),
+    pytest.param("server", True, id="web_search_server"),
+]
+
+
+@pytest.mark.parametrize(
+    ("mode", "has_internal_tools"),
+    _WEB_SEARCH_MODE_PARAMS,
+)
 @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-def test_code_execution_client_streaming(
+def test_web_search_tool(
     injector: MockInjector,
     test_client: TestClient,
     httpx_mock: HTTPXMock,
+    mode: str,
+    has_internal_tools: bool,
 ) -> None:
-    tool = create_code_execution_client_tool()
-    setup_mock_llm(injector, [tool])
-
-    client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
-
-    collected_text: list[str] = []
-    tool_use_count = 0
-    tool_result_count = 0
-
-    with client.messages.stream(
-        model="default",
-        max_tokens=1024,
-        messages=[MessageParam(role="user", content="Run echo ok")],
-        tools=convert_to_anthropic_tools([tool]),
-    ) as stream:
-        for event in stream:
-            if hasattr(event, "type"):
-                if event.type == "content_block_delta" and hasattr(event.delta, "text"):
-                    collected_text.append(event.delta.text)
-                elif event.type == "content_block_start" and hasattr(
-                    event.content_block, "type"
-                ):
-                    if event.content_block.type in {"tool_use", "server_tool_use"}:
-                        tool_use_count += 1
-                    elif event.content_block.type in {
-                        "tool_result",
-                        "server_tool_result",
-                    }:
-                        tool_result_count += 1
-
-    validate_streaming_response(
-        collected_text="".join(collected_text),
-        tool_use_count=tool_use_count,
-        tool_result_count=tool_result_count,
-        has_tools=True,
-        has_internal_tools=False,
+    if mode == "server":
+        _setup_web_search_mock(injector)
+    tool = (
+        create_web_search_server_tool()
+        if mode == "server"
+        else create_web_search_client_tool()
     )
-
-
-# ---------------------------------------------------------------------------
-# Code execution tool tests — server/full mode (code_execution_20250825)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-def test_code_execution_server_non_streaming(
-    injector: MockInjector,
-    test_client: TestClient,
-    httpx_mock: HTTPXMock,
-) -> None:
-    _setup_code_execution_mock(injector)
-    tool = create_code_execution_server_tool()
-    setup_mock_llm(injector, [tool])
-
-    client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
-
-    response = client.messages.create(
-        model="default",
-        max_tokens=1024,
-        messages=[MessageParam(role="user", content="Run echo ok")],
-        tools=convert_to_anthropic_tools([tool]),
-    )
-
-    validate_response_structure(
-        response,
-        has_tools=True,
-        has_internal_tools=True,
-    )
-
-
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-def test_code_execution_server_streaming(
-    injector: MockInjector,
-    test_client: TestClient,
-    httpx_mock: HTTPXMock,
-) -> None:
-    _setup_code_execution_mock(injector)
-    tool = create_code_execution_server_tool()
-    setup_mock_llm(injector, [tool])
-
-    client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
-
-    collected_text: list[str] = []
-    tool_use_count = 0
-    tool_result_count = 0
-
-    with client.messages.stream(
-        model="default",
-        max_tokens=1024,
-        messages=[MessageParam(role="user", content="Run echo ok")],
-        tools=convert_to_anthropic_tools([tool]),
-    ) as stream:
-        for event in stream:
-            if hasattr(event, "type"):
-                if event.type == "content_block_delta" and hasattr(event.delta, "text"):
-                    collected_text.append(event.delta.text)
-                elif event.type == "content_block_start" and hasattr(
-                    event.content_block, "type"
-                ):
-                    if event.content_block.type in {"tool_use", "server_tool_use"}:
-                        tool_use_count += 1
-                    elif event.content_block.type in {
-                        "tool_result",
-                        "server_tool_result",
-                    }:
-                        tool_result_count += 1
-
-    validate_streaming_response(
-        collected_text="".join(collected_text),
-        tool_use_count=tool_use_count,
-        tool_result_count=tool_result_count,
-        has_tools=True,
-        has_internal_tools=True,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Web search tool tests
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-def test_web_search_client_non_streaming(
-    injector: MockInjector,
-    test_client: TestClient,
-    httpx_mock: HTTPXMock,
-) -> None:
-    tool = create_web_search_client_tool()
     setup_mock_llm(injector, [tool])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
@@ -1876,49 +1782,35 @@ def test_web_search_client_non_streaming(
     validate_response_structure(
         response,
         has_tools=True,
-        has_internal_tools=False,
+        has_internal_tools=has_internal_tools,
     )
 
 
+_WEB_FETCH_MODE_PARAMS = [
+    pytest.param("client", False, id="web_fetch_client"),
+    pytest.param("server", True, id="web_fetch_server"),
+]
+
+
+@pytest.mark.parametrize(
+    ("mode", "has_internal_tools"),
+    _WEB_FETCH_MODE_PARAMS,
+)
 @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-def test_web_search_server_non_streaming(
+def test_web_fetch_tool(
     injector: MockInjector,
     test_client: TestClient,
     httpx_mock: HTTPXMock,
+    mode: str,
+    has_internal_tools: bool,
 ) -> None:
-    _setup_web_search_mock(injector)
-    tool = create_web_search_server_tool()
-    setup_mock_llm(injector, [tool])
-
-    client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
-
-    response = client.messages.create(
-        model="default",
-        max_tokens=1024,
-        messages=[MessageParam(role="user", content="Search for something")],
-        tools=convert_to_anthropic_tools([tool]),
+    if mode == "server":
+        _setup_web_fetch_mock(injector)
+    tool = (
+        create_web_fetch_server_tool()
+        if mode == "server"
+        else create_web_fetch_client_tool()
     )
-
-    validate_response_structure(
-        response,
-        has_tools=True,
-        has_internal_tools=True,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Web fetch tool tests
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-def test_web_fetch_client_non_streaming(
-    injector: MockInjector,
-    test_client: TestClient,
-    httpx_mock: HTTPXMock,
-) -> None:
-    tool = create_web_fetch_client_tool()
     setup_mock_llm(injector, [tool])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
@@ -1934,32 +1826,5 @@ def test_web_fetch_client_non_streaming(
     validate_response_structure(
         response,
         has_tools=True,
-        has_internal_tools=False,
-    )
-
-
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-def test_web_fetch_server_non_streaming(
-    injector: MockInjector,
-    test_client: TestClient,
-    httpx_mock: HTTPXMock,
-) -> None:
-    _setup_web_fetch_mock(injector)
-    tool = create_web_fetch_server_tool()
-    setup_mock_llm(injector, [tool])
-
-    client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
-
-    response = client.messages.create(
-        model="default",
-        max_tokens=1024,
-        messages=[MessageParam(role="user", content="Fetch a URL")],
-        tools=convert_to_anthropic_tools([tool]),
-    )
-
-    validate_response_structure(
-        response,
-        has_tools=True,
-        has_internal_tools=True,
+        has_internal_tools=has_internal_tools,
     )
