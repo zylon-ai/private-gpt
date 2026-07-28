@@ -36,6 +36,7 @@ if TYPE_CHECKING:
         DatabaseQueryGenerator,
         ErrorQueryResult,
         QueryResult,
+        QueryResultType,
     )
 
 
@@ -43,12 +44,14 @@ def _load_database_query_dependencies() -> tuple[
     type["DatabaseQueryGenerator"],
     type["ErrorQueryResult"],
     type["QueryResult"],
+    type["QueryResultType"],
 ]:
     try:
         from private_gpt.components.tabular.database_query_generator import (
             DatabaseQueryGenerator,
             ErrorQueryResult,
             QueryResult,
+            QueryResultType,
         )
     except ImportError as e:
         raise ImportError(
@@ -64,7 +67,7 @@ def _load_database_query_dependencies() -> tuple[
             )
         ) from e
 
-    return DatabaseQueryGenerator, ErrorQueryResult, QueryResult
+    return DatabaseQueryGenerator, ErrorQueryResult, QueryResult, QueryResultType
 
 
 @singleton
@@ -194,6 +197,7 @@ class DatabaseQueryToolBuilder:
             database_query_generator_cls,
             error_query_result_cls,
             query_result_cls,
+            query_result_type_cls,
         ) = _load_database_query_dependencies()
 
         sample_size = self.sample_size  # capture for closure
@@ -314,6 +318,15 @@ class DatabaseQueryToolBuilder:
                         if len(results) > 1
                         else ""
                     )
+                    if (
+                        db_query_result.result_type
+                        == query_result_type_cls.CONTEXT_ANSWER
+                    ):
+                        result_as_block_list.append(
+                            [TextBlock(text=prefix + (db_query_result.rows_text or ""))]
+                        )
+                        continue
+
                     blocks: list[ResultContentBlockType] = [
                         TextBlock(
                             text=prefix
