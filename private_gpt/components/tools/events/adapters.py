@@ -14,6 +14,7 @@ from private_gpt.events.models import (
     CodeExecutionToolResultErrorBlock,
     ServerToolResultBlock,
     ServerToolUseBlock,
+    TextBlock,
     TextEditorCodeExecutionCreateResultBlock,
     TextEditorCodeExecutionStrReplaceResultBlock,
     TextEditorCodeExecutionToolResultBlock,
@@ -24,6 +25,7 @@ from private_gpt.events.models import (
     WebSearchToolResultBlock,
     WebSearchToolResultError,
 )
+from private_gpt.events.models._tool_result_blocks import Renderable
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -64,6 +66,15 @@ class ToolEventAdapter:
         raise NotImplementedError
 
 
+def _render_blocks(
+    blocks: list[ResultContentBlockType],
+) -> list[ResultContentBlockType]:
+    return [
+        TextBlock(text=block.render()) if isinstance(block, Renderable) else block
+        for block in blocks
+    ]
+
+
 class ClientToolEventAdapter(ToolEventAdapter):
     def build_tool_use(
         self, *, tool_id: str, tool_name: str, tool_input: dict
@@ -79,7 +90,8 @@ class ClientToolEventAdapter(ToolEventAdapter):
                 content=outcome.error.message,
                 is_error=True,
             )
-        return ClientToolResultBlock(tool_use_id=tool_use_id, content=outcome.content)
+        content = _render_blocks(outcome.content)
+        return ClientToolResultBlock(tool_use_id=tool_use_id, content=content)
 
 
 class ServerToolEventAdapter(ToolEventAdapter):

@@ -18,8 +18,12 @@ from private_gpt.events.models import (
     ClientToolResultBlock,
     ClientToolUseBlock,
     ServerToolUseBlock,
+    TextBlock,
+    TextEditorCodeExecutionViewResultBlock,
     ToolResultBlock,
     ToolUseBlock,
+    WebFetchResultBlock,
+    WebSearchResultBlock,
 )
 
 
@@ -191,3 +195,99 @@ class _CustomAdapter(ServerToolEventAdapter):
     """Module-level adapter proving extensibility without central source changes."""
 
     public_tool_name = "custom_public_tool"
+
+
+def test_client_adapter_renders_bash_result_to_text_block() -> None:
+    adapter = ClientToolEventAdapter()
+    result = adapter.build_tool_result(
+        tool_use_id="tool_abc",
+        outcome=ToolExecutionSuccess(
+            content=[
+                BashCodeExecutionResultBlock(
+                    stdout="Python 3.11.2",
+                    stderr="openjdk version 17",
+                    return_code=0,
+                    content=[],
+                )
+            ]
+        ),
+    )
+
+    assert isinstance(result, ClientToolResultBlock)
+    assert isinstance(result.content, list)
+    assert len(result.content) == 1
+    block = result.content[0]
+    assert isinstance(block, TextBlock)
+    assert "exit_code: 0" in block.text
+    assert "stdout:\nPython 3.11.2" in block.text
+    assert "stderr:\nopenjdk version 17" in block.text
+
+
+def test_client_adapter_renders_text_editor_view_to_text_block() -> None:
+    adapter = ClientToolEventAdapter()
+    result = adapter.build_tool_result(
+        tool_use_id="tool_abc",
+        outcome=ToolExecutionSuccess(
+            content=[
+                TextEditorCodeExecutionViewResultBlock(
+                    content="# Hello\nworld",
+                    num_lines=2,
+                    start_line=1,
+                    total_lines=2,
+                )
+            ]
+        ),
+    )
+
+    assert isinstance(result, ClientToolResultBlock)
+    assert isinstance(result.content, list)
+    assert len(result.content) == 1
+    block = result.content[0]
+    assert isinstance(block, TextBlock)
+    assert block.text == "# Hello\nworld"
+
+
+def test_client_adapter_renders_web_fetch_to_text_block() -> None:
+    adapter = ClientToolEventAdapter()
+    result = adapter.build_tool_result(
+        tool_use_id="tool_abc",
+        outcome=ToolExecutionSuccess(
+            content=[
+                WebFetchResultBlock.from_markdown(
+                    url="https://example.com", markdown="# Example"
+                )
+            ]
+        ),
+    )
+
+    assert isinstance(result, ClientToolResultBlock)
+    assert isinstance(result.content, list)
+    block = result.content[0]
+    assert isinstance(block, TextBlock)
+    assert block.text == "# Example"
+
+
+def test_client_adapter_renders_web_search_to_text_block() -> None:
+    adapter = ClientToolEventAdapter()
+    result = adapter.build_tool_result(
+        tool_use_id="tool_abc",
+        outcome=ToolExecutionSuccess(
+            content=[
+                WebSearchResultBlock(
+                    url="https://example.com",
+                    title="Example",
+                    encrypted_content="some content",
+                    content="some content",
+                    description="A site",
+                )
+            ]
+        ),
+    )
+
+    assert isinstance(result, ClientToolResultBlock)
+    assert isinstance(result.content, list)
+    block = result.content[0]
+    assert isinstance(block, TextBlock)
+    assert "Example" in block.text
+    assert "https://example.com" in block.text
+    assert "some content" in block.text

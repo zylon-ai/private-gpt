@@ -709,6 +709,14 @@ class BashCodeExecutionResultBlock(BaseContentBlock, StandardContentProtocol):
         description="Files created during execution."
     )
 
+    def render(self) -> str:
+        sections = [f"exit_code: {self.return_code}"]
+        if self.stdout:
+            sections.append(f"stdout:\n{self.stdout}")
+        if self.stderr:
+            sections.append(f"stderr:\n{self.stderr}")
+        return "\n\n".join(sections)
+
 
 class BashExecutionFileEntry(BaseModel):
     """A file created during bash code execution, retrievable via the Files API."""
@@ -732,6 +740,9 @@ class CodeExecutionToolResultErrorBlock(BaseContentBlock, StandardContentProtoco
         "output_file_too_large",
     ]
 
+    def render(self) -> str:
+        return f"Error: {self.error_code}"
+
 
 class TextEditorCodeExecutionViewResultBlock(BaseContentBlock, StandardContentProtocol):
     type: Literal["text_editor_code_execution_view_result"] = (
@@ -743,6 +754,9 @@ class TextEditorCodeExecutionViewResultBlock(BaseContentBlock, StandardContentPr
     start_line: int
     total_lines: int
 
+    def render(self) -> str:
+        return self.content
+
 
 class TextEditorCodeExecutionCreateResultBlock(
     BaseContentBlock, StandardContentProtocol
@@ -751,6 +765,9 @@ class TextEditorCodeExecutionCreateResultBlock(
         "text_editor_code_execution_create_result"
     )
     is_file_update: bool = False
+
+    def render(self) -> str:
+        return self.model_dump_json()
 
 
 class TextEditorCodeExecutionStrReplaceResultBlock(
@@ -764,6 +781,9 @@ class TextEditorCodeExecutionStrReplaceResultBlock(
     new_start: int = 0
     new_lines: int = 0
     lines: list[str] = Field(default_factory=list)
+
+    def render(self) -> str:
+        return self.model_dump_json()
 
 
 class WebSearchResultBlock(BaseContentBlock, StandardContentProtocol):
@@ -796,6 +816,15 @@ class WebSearchResultBlock(BaseContentBlock, StandardContentProtocol):
         default=None,
         description="[Zylon extension] URL of the website favicon.",
     )
+
+    def render(self) -> str:
+        entry = f"{self.title}\n"
+        entry += f"Description: {self.description or ''}\n"
+        entry += f"URL: {self.url}\n"
+        text = self.content or self.encrypted_content
+        if text:
+            entry += f"Content: {text}\n"
+        return entry
 
     @classmethod
     def from_web_search_result(
@@ -834,6 +863,9 @@ class WebFetchResultBlock(BaseContentBlock, StandardContentProtocol):
         default=None,
         description="[Zylon extension] Raw markdown content before DocumentBlock wrapping.",
     )
+
+    def render(self) -> str:
+        return self.markdown or "No content could be fetched from the provided URL."
 
     @classmethod
     def from_markdown(cls, url: str, markdown: str) -> WebFetchResultBlock:

@@ -8,6 +8,7 @@ from private_gpt.components.tools.events.adapters import (
     ServerToolEventAdapter,
     ToolEventAdapter,
 )
+from private_gpt.settings.settings import settings
 
 if TYPE_CHECKING:
     from private_gpt.components.chat.models.chat_config_models import ToolSpec
@@ -25,6 +26,9 @@ def load_tool_event_adapter_class(path: str) -> type[ToolEventAdapter]:
 
 
 def resolve_tool_event_adapter(tool_spec: ToolSpec) -> ToolEventAdapter:
+    mode = settings().code_execution.tools.server_tool_result_mode
+    if mode == "client":
+        return ClientToolEventAdapter()
     adapter_cls = tool_spec.event_adapter
     if adapter_cls is None:
         return (
