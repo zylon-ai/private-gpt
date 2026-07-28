@@ -181,7 +181,6 @@ def test_client_and_server_tool_blocks_convert_to_same_messages() -> None:
         stdout="ok\n",
         stderr="",
         return_code=0,
-        content=[],
     )
 
     client_messages = [

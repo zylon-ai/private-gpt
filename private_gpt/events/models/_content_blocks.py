@@ -705,8 +705,8 @@ class BashCodeExecutionResultBlock(BaseContentBlock, StandardContentProtocol):
     return_code: int = Field(
         description="Exit code of the bash command. 0 indicates success."
     )
-    content: list[BashExecutionFileEntry] = Field(
-        description="Files created during execution."
+    content: list[BashExecutionFileEntry] | None = Field(
+        default=None, description="Files created during execution."
     )
 
     def render(self) -> str:

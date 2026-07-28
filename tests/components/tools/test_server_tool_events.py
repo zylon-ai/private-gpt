@@ -123,9 +123,7 @@ def test_bash_tool_resolves_specialized_adapter() -> None:
         tool_use_id=tool_id,
         outcome=ToolExecutionSuccess(
             content=[
-                BashCodeExecutionResultBlock(
-                    stdout="ok", stderr="", return_code=0, content=[]
-                )
+                BashCodeExecutionResultBlock(stdout="ok", stderr="", return_code=0)
             ]
         ),
     )
@@ -207,7 +205,6 @@ def test_client_adapter_renders_bash_result_to_text_block() -> None:
                     stdout="Python 3.11.2",
                     stderr="openjdk version 17",
                     return_code=0,
-                    content=[],
                 )
             ]
         ),

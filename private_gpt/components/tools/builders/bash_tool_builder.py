@@ -59,7 +59,6 @@ class BashToolBuilder:
             )
             return [
                 BashCodeExecutionResultBlock(
-                    content=[],
                     stdout=truncate_output(
                         result.stdout,
                         self._settings.code_execution.max_output_bytes,
