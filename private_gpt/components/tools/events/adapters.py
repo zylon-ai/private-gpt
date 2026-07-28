@@ -92,7 +92,7 @@ class ServerToolEventAdapter(ToolEventAdapter):
     ) -> ToolUseBlock:
         if self.public_tool_name:
             return ServerToolUseBlock(
-                id=f"srvtoolu_{self._id_factory()}",
+                id=tool_id,
                 name=self.public_tool_name,
                 input=tool_input,
             )
