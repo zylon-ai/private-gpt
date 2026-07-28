@@ -600,13 +600,16 @@ class ChatLoopEngine:
                         existing = assistant_message.additional_kwargs.get("tool_calls")
                         if not isinstance(existing, list):
                             existing = []
-                        seen_ids = {tc.tool_id for tc in existing if tc.tool_id}
-                        merged = list(existing)
+                        by_id = {}
+                        for tc in existing:
+                            if tc.tool_id:
+                                by_id[tc.tool_id] = tc
                         for tc in value:
-                            if tc.tool_id and tc.tool_id not in seen_ids:
-                                merged.append(tc)
-                                seen_ids.add(tc.tool_id)
-                        assistant_message.additional_kwargs["tool_calls"] = merged
+                            if tc.tool_id:
+                                by_id[tc.tool_id] = tc
+                        assistant_message.additional_kwargs["tool_calls"] = list(
+                            by_id.values()
+                        )
                     continue
                 assistant_message.additional_kwargs[key] = value
 
