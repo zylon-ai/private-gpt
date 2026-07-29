@@ -11,7 +11,6 @@ prompt delivered to the LLM:
   an older version of it.
 """
 
-from dataclasses import dataclass
 from typing import Any
 from unittest.mock import MagicMock
 

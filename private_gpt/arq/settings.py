@@ -1,7 +1,6 @@
+from arq.connections import RedisSettings
 from redis.asyncio.retry import Retry
 from redis.backoff import ExponentialBackoff
-
-from arq.connections import RedisSettings
 
 from private_gpt.settings.settings import Settings
 

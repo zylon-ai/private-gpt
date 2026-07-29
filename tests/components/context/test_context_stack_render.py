@@ -13,7 +13,6 @@ contract enforced here:
   survive over any stale aggregate that embeds an older version of them.
 """
 
-import pytest
 
 from private_gpt.components.context.models.context_layer import (
     ContextPromptLayer,
@@ -61,8 +60,6 @@ class TestRenderTimeDeduplication:
         )
 
         rendered = _render(stack)
-
-        joined = "\n".join(rendered)
         assert rendered.count(header) == 1
         assert rendered.count(guideline) == 1
         # The bloated aggregate must NOT survive: only the isolated layers do
@@ -88,8 +85,6 @@ class TestRenderTimeDeduplication:
         )
 
         rendered = _render(stack)
-
-        joined = "\n".join(rendered)
         assert fresh_ctx in rendered, "Latest context prompt must survive"
         assert stale_ctx not in rendered, "Stale context prompt must be dropped"
         assert bloated not in rendered, "Snowballed aggregate must be dropped"
