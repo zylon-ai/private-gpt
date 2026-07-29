@@ -1828,3 +1828,129 @@ def test_web_fetch_tool(
         has_tools=True,
         has_internal_tools=has_internal_tools,
     )
+
+
+# ---------------------------------------------------------------------------
+# Multi-turn history with server_tool_use — internal_name translation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_multi_turn_server_tool_use_history_with_internal_name(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Sending history that contains a server_tool_use block with internal_name
+    (as emitted by PrivateGPT) must not crash and must produce a valid response.
+
+    This reproduces the bug where the second LLM call failed because the
+    server_tool_use block in history kept the public name ('bash_code_execution')
+    instead of the internal tool name ('bash').
+    """
+    _setup_code_execution_mock(injector)
+    setup_mock_llm(injector, [], sleep_between_blocks=0)
+
+    client = anthropic.Anthropic(**CLIENT_KWARGS)
+    client._client = create_mock_http_client(test_client, httpx_mock)
+
+    tool_use_id = "srvtoolu_5ce5f7ffca47420b9fa126c570f72a35"
+
+    messages = [
+        MessageParam(role="user", content="get the java version"),
+        MessageParam(
+            role="assistant",
+            content=[
+                {
+                    "type": "server_tool_use",
+                    "id": tool_use_id,
+                    "name": "bash_code_execution",
+                    "input": {"command": "java -version", "timeout": None},
+                    "internal_name": "bash",
+                }
+            ],
+        ),
+        MessageParam(
+            role="assistant",
+            content=[
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use_id,
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "exit_code: 0\n\nstderr:\nopenjdk version \"17.0.19\"",
+                        }
+                    ],
+                    "is_error": False,
+                }
+            ],
+        ),
+        MessageParam(role="user", content="hey"),
+    ]
+
+    response = client.messages.create(
+        model="default",
+        max_tokens=1024,
+        messages=messages,
+        tools=convert_to_anthropic_tools([create_code_execution_server_tool()]),
+    )
+
+    assert response.role == "assistant"
+    assert len(response.content) > 0
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+def test_multi_turn_server_tool_use_history_without_internal_name(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Sending history that contains a server_tool_use block WITHOUT internal_name
+    (as emitted by the native Anthropic API) must also work — falling back to the
+    public name ('bash_code_execution').
+    """
+    _setup_code_execution_mock(injector)
+    setup_mock_llm(injector, [], sleep_between_blocks=0)
+
+    client = anthropic.Anthropic(**CLIENT_KWARGS)
+    client._client = create_mock_http_client(test_client, httpx_mock)
+
+    tool_use_id = "srvtoolu_f87591591b7f4f8fa3f448f954334ed7"
+
+    messages = [
+        MessageParam(role="user", content="get node version"),
+        MessageParam(
+            role="assistant",
+            content=[
+                {
+                    "type": "server_tool_use",
+                    "id": tool_use_id,
+                    "name": "bash_code_execution",
+                    "input": {"command": "node --version", "timeout": None},
+                }
+            ],
+        ),
+        MessageParam(
+            role="assistant",
+            content=[
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use_id,
+                    "content": [{"type": "text", "text": "exit_code: 0\n\nstdout:\nv18.20.4"}],
+                    "is_error": False,
+                }
+            ],
+        ),
+        MessageParam(role="user", content="hey"),
+    ]
+
+    response = client.messages.create(
+        model="default",
+        max_tokens=1024,
+        messages=messages,
+        tools=convert_to_anthropic_tools([create_code_execution_server_tool()]),
+    )
+
+    assert response.role == "assistant"
+    assert len(response.content) > 0

@@ -39,6 +39,7 @@ from private_gpt.events.models import (
     ContentBlockType,
     ImageBlock,
     MidConvSystemBlock,
+    ServerToolUseBlock,
     TextBlock,
     TLDRBlock,
     ToolResultBlock,
@@ -965,10 +966,15 @@ class MessageInput(BaseModel):
                     if "tool_calls" not in current_additional_kwargs:
                         current_additional_kwargs["tool_calls"] = []
 
+                    resolved_name = (
+                        block.internal_name
+                        if isinstance(block, ServerToolUseBlock) and block.internal_name
+                        else block.name
+                    )
                     current_additional_kwargs["tool_calls"].append(
                         ToolSelection(
                             tool_id=block.id,
-                            tool_name=block.name,
+                            tool_name=resolved_name,
                             tool_kwargs=block.input,
                         )
                     )

@@ -107,6 +107,7 @@ class ServerToolEventAdapter(ToolEventAdapter):
                 id=tool_id,
                 name=self.public_tool_name,
                 input=tool_input,
+                internal_name=tool_name,
             )
         return ClientToolUseBlock(id=tool_id, name=tool_name, input=tool_input)
 
