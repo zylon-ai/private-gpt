@@ -11,10 +11,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from PIL import UnidentifiedImageError
 from llama_index.core.ingestion import arun_transformations
 from llama_index.core.schema import BaseNode, Document
-from pptx.exc import PackageNotFoundError
 from pptx2md import convert  # ty:ignore[unresolved-import]
 
 from private_gpt.celery.notify import NotifyProtocol
@@ -179,10 +177,11 @@ class PPTX2MdReader(IngestionReader):
         output_md = temp_dir / "output.md"
         image_dir = temp_dir / "img"
 
-        convert_kwargs = dict(
+        convert(
             pptx_path=str(file_info.file_data.absolute()),
             output=str(output_md),
             image_dir=str(image_dir),
+            disable_image=False,
             disable_wmf=False,
             disable_notes=True,
             disable_escaping=True,
@@ -190,24 +189,6 @@ class PPTX2MdReader(IngestionReader):
             enable_slides=True,
             min_block_size=5,
         )
-
-        try:
-            convert(disable_image=False, **convert_kwargs)
-        except UnidentifiedImageError as e:
-            logger.warning(
-                "Image extraction failed for %s due to an unsupported/corrupt "
-                "embedded image (%s). Retrying conversion with images disabled.",
-                file_info.file_name,
-                e,
-            )
-            convert(disable_image=True, **convert_kwargs)
-        except PackageNotFoundError as e:
-            logger.error(
-                "File %s could not be opened as a valid PPTX package: %s",
-                file_info.file_name,
-                e,
-            )
-            raise
 
         with open(output_md, encoding="utf-8") as f:
             text = f.read()
