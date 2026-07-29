@@ -134,8 +134,10 @@ class ParseComponent:
             raise InvalidFileError(errors=[IngestionParseErrors.PARSING_FAILURE]) from e
         except Exception as e:
             logger.error("Error loading file: %s", e, exc_info=True)
+
             converted_fallback = convert_unsupported_file_as_fallback(file_info)
             if converted_fallback:
+                resolved_reader = self._resolve_reader(converted_fallback.extension)
                 if notification:
                     notification(
                         percentage=0,
