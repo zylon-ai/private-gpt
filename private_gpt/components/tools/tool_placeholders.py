@@ -12,6 +12,8 @@ from private_gpt.components.tools.tool_names import (
     SKILLS_TOOL_NAME,
     SUMMARIZE_TOOL_NAME,
     TABULAR_DATA_ANALYSIS,
+    BASH_CODE_EXECUTION_TOOL_NAME,
+    TEXT_EDITOR_CODE_EXECUTION_TOOL_NAME,
     TEXT_EDITOR_CREATE_TOOL_NAME,
     TEXT_EDITOR_INSERT_TOOL_NAME,
     TEXT_EDITOR_STR_REPLACE_TOOL_NAME,
@@ -87,9 +89,19 @@ BASH_TOOL_FN = _placeholder_tool(
     "Execute bash commands in the session workspace.",
 )
 
+BASH_CODE_EXECUTION_TOOL_FN = _placeholder_tool(
+    BASH_CODE_EXECUTION_TOOL_NAME,
+    "Execute bash commands in the session workspace.",
+)
+
 TEXT_EDITOR_TOOL_FN = _placeholder_tool(
     TEXT_EDITOR_TOOL_NAME,
     "View and edit files in the session workspace.",
+)
+
+TEXT_EDITOR_CODE_EXECUTION_TOOL_FN = _placeholder_tool(
+    TEXT_EDITOR_CODE_EXECUTION_TOOL_NAME,
+    "View and edit files in the session workspace using view, str_replace, create, or insert commands.",
 )
 
 TEXT_EDITOR_VIEW_TOOL_FN = _placeholder_tool(

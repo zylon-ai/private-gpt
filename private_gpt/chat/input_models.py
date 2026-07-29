@@ -39,7 +39,6 @@ from private_gpt.events.models import (
     ContentBlockType,
     ImageBlock,
     MidConvSystemBlock,
-    ServerToolUseBlock,
     TextBlock,
     TLDRBlock,
     ToolResultBlock,
@@ -54,6 +53,7 @@ def to_camel(string: str) -> str:
     """Convert snake_case to camelCase."""
     components = string.split("_")
     return components[0] + "".join(x.title() for x in components[1:])
+
 
 
 class Citations(BaseModel):
@@ -966,11 +966,7 @@ class MessageInput(BaseModel):
                     if "tool_calls" not in current_additional_kwargs:
                         current_additional_kwargs["tool_calls"] = []
 
-                    resolved_name = (
-                        block.internal_name
-                        if isinstance(block, ServerToolUseBlock) and block.internal_name
-                        else block.name
-                    )
+                    resolved_name = block.name
                     current_additional_kwargs["tool_calls"].append(
                         ToolSelection(
                             tool_id=block.id,

@@ -40,7 +40,6 @@ if TYPE_CHECKING:
 
 class ToolEventAdapter:
     id_prefix = "tool"
-    public_tool_name: str | None = None
 
     def __init__(self, id_factory: Callable[[], str] | None = None) -> None:
         self._id_factory = id_factory or (lambda: uuid4().hex)
@@ -97,33 +96,14 @@ class ClientToolEventAdapter(ToolEventAdapter):
 class ServerToolEventAdapter(ToolEventAdapter):
     id_prefix = "srvtoolu"
 
-    _FALLBACK = None
-
     def build_tool_use(
         self, *, tool_id: str, tool_name: str, tool_input: dict
     ) -> ToolUseBlock:
-        if self.public_tool_name:
-            return ServerToolUseBlock(
-                id=tool_id,
-                name=self.public_tool_name,
-                input=tool_input,
-                internal_name=tool_name,
-            )
-        return ClientToolUseBlock(id=tool_id, name=tool_name, input=tool_input)
+        return ServerToolUseBlock(id=tool_id, name=tool_name, input=tool_input)
 
     def build_tool_result(
         self, *, tool_use_id: str, outcome: ToolExecutionOutcome
     ) -> ToolResultBlock:
-        if not self.public_tool_name:
-            if isinstance(outcome, ToolExecutionFailure):
-                return ClientToolResultBlock(
-                    tool_use_id=tool_use_id,
-                    content=outcome.error.message,
-                    is_error=True,
-                )
-            return ClientToolResultBlock(
-                tool_use_id=tool_use_id, content=outcome.content
-            )
         return self._build_server_result(tool_use_id=tool_use_id, outcome=outcome)
 
     def _build_server_result(
@@ -139,8 +119,6 @@ class ServerToolEventAdapter(ToolEventAdapter):
 
 
 class BashCodeExecutionEventAdapter(ServerToolEventAdapter):
-    public_tool_name = "bash_code_execution"
-
     def _build_server_result(
         self, *, tool_use_id: str, outcome: ToolExecutionOutcome
     ) -> ToolResultBlock:
@@ -171,8 +149,6 @@ TextEditorResult = (
 
 
 class TextEditorCodeExecutionEventAdapter(ServerToolEventAdapter):
-    public_tool_name = "text_editor_code_execution"
-
     def _build_server_result(
         self, *, tool_use_id: str, outcome: ToolExecutionOutcome
     ) -> ToolResultBlock:
@@ -203,8 +179,6 @@ def _single_result(
 
 
 class WebSearchEventAdapter(ServerToolEventAdapter):
-    public_tool_name = "web_search"
-
     def _build_server_result(
         self, *, tool_use_id: str, outcome: ToolExecutionOutcome
     ) -> ToolResultBlock:
@@ -224,8 +198,6 @@ class WebSearchEventAdapter(ServerToolEventAdapter):
 
 
 class WebFetchEventAdapter(ServerToolEventAdapter):
-    public_tool_name = "web_fetch"
-
     def _build_server_result(
         self, *, tool_use_id: str, outcome: ToolExecutionOutcome
     ) -> ToolResultBlock:
@@ -246,8 +218,8 @@ class WebFetchEventAdapter(ServerToolEventAdapter):
 
 
 class PresentFilesEventAdapter(ServerToolEventAdapter):
-    public_tool_name = "present_files"
+    pass
 
 
 class PresentServerEventAdapter(ServerToolEventAdapter):
-    public_tool_name = "present_server"
+    pass
