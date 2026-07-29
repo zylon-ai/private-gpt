@@ -237,9 +237,7 @@ class TestSystemPromptInterceptorIdempotency:
 
         interceptor = _make_interceptor()
         # Header template renders the same header the client already embedded
-        interceptor._prompt_builder_service.create_chat_header_prompt.return_value.format.return_value = (
-            header
-        )
+        interceptor._prompt_builder_service.create_chat_header_prompt.return_value.format.return_value = header
         request = _make_request(system_prompt=bloated_prompt)
         context = _make_context(request)
         await interceptor.intercept(context)

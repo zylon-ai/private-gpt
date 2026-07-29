@@ -748,6 +748,11 @@ class AsyncChatEngine:
             payload = checkpoint_payload or IterationCheckpointPayload()
             self._apply_payload_usage(run, payload)
             pending_external = payload.pending_external_tool_calls
+            tool_specs_by_name = {
+                tool.name: tool
+                for tool in run.state.input.context_stack.all_tools()
+                if tool.name is not None
+            }
 
             async def _emit_tool_results(handler: _EventHandler) -> None:
                 try:
@@ -760,10 +765,7 @@ class AsyncChatEngine:
                         result_start = RawContentBlockStartEvent(
                             index=run.block_count,
                             block_id=f"block_{uuid4().hex}",
-                            content_block=tool_spec.resolve_event_adapter().build_tool_result(
-                                tool_use_id=response.tool_id,
-                                outcome=response.outcome,
-                            ),
+                            content_block=response.result_content,
                         )
                         run.block_count += 1
                         handler.emit(result_start)

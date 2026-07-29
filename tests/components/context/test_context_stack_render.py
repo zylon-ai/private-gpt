@@ -13,7 +13,6 @@ contract enforced here:
   survive over any stale aggregate that embeds an older version of them.
 """
 
-
 from private_gpt.components.context.models.context_layer import (
     ContextPromptLayer,
     RuntimeInstructionsLayer,
@@ -79,7 +78,9 @@ class TestRenderTimeDeduplication:
         stack = ContextStack(
             layers=[
                 UserInstructionsLayer(text=bloated, source="request"),
-                RuntimeInstructionsLayer(text="You are Zylon.", source="platform_header"),
+                RuntimeInstructionsLayer(
+                    text="You are Zylon.", source="platform_header"
+                ),
                 ContextPromptLayer(text=fresh_ctx, source="system_prompt"),
             ]
         )

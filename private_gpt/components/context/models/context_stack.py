@@ -95,9 +95,7 @@ class ContextStack(BaseModel):
             # while the latest isolated layers — including the ContextPrompt
             # rebuilt with the latest documents — survive.
             is_stale_duplicate = any(text in candidate for candidate in kept)
-            is_snowballed_aggregate = any(
-                candidate in text for candidate in kept
-            )
+            is_snowballed_aggregate = any(candidate in text for candidate in kept)
             if is_stale_duplicate or is_snowballed_aggregate:
                 continue
             blocks.append(TextBlock(text=text))
