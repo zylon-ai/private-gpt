@@ -219,6 +219,59 @@ class TestSystemPromptInterceptorIdempotency:
         )
 
     @pytest.mark.asyncio
+    async def test_round_tripped_prompt_does_not_duplicate_rendered_blocks(
+        self,
+    ) -> None:
+        """A request whose ``system.prompt`` already carries the rendered
+        stack (client echoes back a previous response) must not produce a
+        system message whose content blocks repeat the header or guidelines
+        that the interceptors regenerate as isolated layers.
+
+        Layers stay isolated in the stack; at render time duplicate rendered
+        text is discarded so the snowball never reaches the LLM.
+        """
+        header = "You are Zylon, an AI assistant.\nCurrent date: 2026-07-28."
+        guideline = "<response_formatting>\nWrite clearly.\n</response_formatting>"
+        # Client re-sends the fully rendered prompt (header + guideline baked in)
+        bloated_prompt = f"{header}\n\n{guideline}"
+
+        interceptor = _make_interceptor()
+        # Header template renders the same header the client already embedded
+        interceptor._prompt_builder_service.create_chat_header_prompt.return_value.format.return_value = (
+            header
+        )
+        request = _make_request(system_prompt=bloated_prompt)
+        context = _make_context(request)
+        await interceptor.intercept(context)
+
+        prompt = context.state.input.request.system.prompt
+        if isinstance(prompt, str):
+            texts = [prompt]
+        elif isinstance(prompt, list):
+            texts = [b.text for b in prompt if isinstance(b, TextBlock) and b.text]
+        else:
+            texts = []
+
+        full = "\n".join(texts)
+        # Header must appear at most once across all rendered blocks
+        assert full.count(header) <= 1, (
+            f"Header rendered {full.count(header)} times after round-trip: {texts!r}"
+        )
+        # Guideline must appear at most once
+        assert full.count(guideline) <= 1, (
+            f"Guideline rendered {full.count(guideline)} times: {texts!r}"
+        )
+        # No rendered block may fully duplicate another kept block
+        stripped = [t.strip() for t in texts if t.strip()]
+        for i, block in enumerate(stripped):
+            for j, other in enumerate(stripped):
+                if i != j and block and block in other:
+                    raise AssertionError(
+                        f"Rendered block #{i} is contained in block #{j} — "
+                        "duplicate content reached the rendered prompt."
+                    )
+
+    @pytest.mark.asyncio
     async def test_fallback_build_with_mutated_prompt_is_safe(self) -> None:
         """Defensive: even if build_initial is called on a mutated request,
         the system prompt should not explode (snowball test)."""
