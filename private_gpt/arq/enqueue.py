@@ -87,7 +87,10 @@ async def _abort_job(*, job_id: str, queue_name: str, timeout: int) -> bool:
             )
             return False
     finally:
-        await redis.aclose()
+        try:
+            await redis.aclose()
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
 
 
 async def abort_job(
