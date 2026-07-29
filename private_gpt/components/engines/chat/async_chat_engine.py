@@ -765,7 +765,11 @@ class AsyncChatEngine:
                         result_start = RawContentBlockStartEvent(
                             index=run.block_count,
                             block_id=f"block_{uuid4().hex}",
-                            content_block=response.result_content,
+                            content_block=ToolResultBlock(
+                                tool_use_id=response.tool_id,
+                                content=response.result_content,
+                                is_error=response.is_error,
+                            ),
                         )
                         run.block_count += 1
                         handler.emit(result_start)

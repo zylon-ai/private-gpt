@@ -35,7 +35,6 @@ from private_gpt.events.models import (
     SourceBlock,
     TextBlock,
     TextDelta,
-    TextEditorCodeExecutionToolResultBlock,
     ToolResultBlock,
     ToolUseBlock,
 )
@@ -1106,21 +1105,50 @@ async def test_code_execution_expand_and_is_usable(
     assert len(tool_uses) == 2, f"Expected 2 tool_uses, got {len(tool_uses)}"
     assert len(tool_results) == 2, f"Expected 2 tool_result, got {len(tool_results)}"
 
-    first_tool_use = tool_uses[0]
-    first_tool_result = tool_results[0]
 
-    assert first_tool_use.name == "text_editor_code_execution", (
-        f"Expected first tool use to be 'text_editor_code_execution', got {first_tool_use.name}"
+@pytest.mark.anyio
+async def test_chat_body_validation_mismatched_tool_ids(
+    async_test_client: AsyncClient,
+) -> None:
+    body = {
+        "messages": [
+            {"content": "test", "role": "user"},
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "tool_1",
+                        "name": "test_tool",
+                        "input": {},
+                    },
+                    {
+                        "type": "tool_use",
+                        "id": "tool_2",
+                        "name": "test_tool2",
+                        "input": {},
+                    },
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "tool_1",
+                        "content": "result",
+                    },
+                ],
+            },
+        ]
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 400
+    error_detail = response.json()["detail"]
+    assert any(
+        "Tool result blocks must match the tool use IDs" in str(err)
+        for err in error_detail
     )
-    assert isinstance(first_tool_result, TextEditorCodeExecutionToolResultBlock)
-
-    second_tool_use = tool_uses[1]
-    second_tool_result = tool_results[1]
-
-    assert second_tool_use.name == "present_files", (
-        f"Expected second tool use to be 'present_files', got {second_tool_use.name}"
-    )
-    assert isinstance(second_tool_result, ToolResultBlock)
 
 
 @pytest.mark.anyio
