@@ -27,10 +27,10 @@ _DEFAULT_EXTENSION_READERS: dict[str, list[str]] = {
 _EXTENSION_READER_OVERRIDES: dict[str, list[str]] = {}
 
 
-def override_extension_readers(extension: str, reader_names: list[str]) -> None:
+def register_extension_readers(extension: str, reader_names: list[str]) -> None:
     normalized_extension = _normalize_extension(extension)
-    self_names = [_normalize_reader_name(n) for n in reader_names]
-    _EXTENSION_READER_OVERRIDES[normalized_extension] = self_names
+    normalized_reader_names = [_normalize_reader_name(n) for n in reader_names]
+    _DEFAULT_EXTENSION_READERS[normalized_extension] = normalized_reader_names
 
 
 def _normalize_reader_name(name: str) -> str:
@@ -51,9 +51,9 @@ def _normalize_extension(extension: str) -> str:
 class ReaderRegistry:
     @inject
     def __init__(self) -> None:
-        merged = {**_DEFAULT_EXTENSION_READERS, **_EXTENSION_READER_OVERRIDES}
         self._registry = {
-            extension: reader_names.copy() for extension, reader_names in merged.items()
+            extension: reader_names.copy()
+            for extension, reader_names in _DEFAULT_EXTENSION_READERS.items()
         }
 
     def register_extension_reader(self, extension: str, reader_name: str) -> None:
