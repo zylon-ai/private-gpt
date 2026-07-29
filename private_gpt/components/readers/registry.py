@@ -25,6 +25,12 @@ _DEFAULT_EXTENSION_READERS: dict[str, list[str]] = {
 }
 
 
+def register_extension_readers(extension: str, reader_names: list[str]) -> None:
+    normalized_extension = _normalize_extension(extension)
+    normalized_reader_names = [_normalize_reader_name(n) for n in reader_names]
+    _DEFAULT_EXTENSION_READERS[normalized_extension] = normalized_reader_names
+
+
 def _normalize_reader_name(name: str) -> str:
     normalized = name.strip().lower()
     if not normalized:
