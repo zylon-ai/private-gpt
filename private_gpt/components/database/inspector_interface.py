@@ -2,7 +2,13 @@ import enum
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from sqlalchemy import Connection, Engine, create_engine
+from sqlalchemy import Connection, Engine
+
+from private_gpt.components.database.connection_factory import (
+    DatabaseDialect,
+    classify_dialect,
+    create_engine_for_connection_string,
+)
 
 
 class DatabaseObjectType(enum.StrEnum):
@@ -31,6 +37,7 @@ class DatabaseObjectInspector(ABC):
     _is_readonly: bool
     _connection: Connection | None = None
     connection_string: str
+    dialect: DatabaseDialect
 
     def __init__(
         self,
@@ -41,6 +48,7 @@ class DatabaseObjectInspector(ABC):
     ):
         self._engine = engine
         self._db_type = engine.dialect.name.lower() if engine else "unknown"
+        self.dialect = classify_dialect(self._db_type)
         self._is_readonly = is_readonly
         self.connection_string = connection_string
         self._connection = connection
@@ -57,7 +65,7 @@ class DatabaseObjectInspector(ABC):
         if self._connection and not self._connection.closed:
             return self._connection
 
-        self._engine = create_engine(
+        self._engine = create_engine_for_connection_string(
             self.connection_string
             # TODO: SSL Certificates
         )
