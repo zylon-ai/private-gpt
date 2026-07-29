@@ -13,6 +13,9 @@ from llama_index.core.base.llms.types import (
 from private_gpt.chat.input_models import BlobVisibilityMode
 from private_gpt.components.cache import CacheService
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
+from private_gpt.components.database.connection_factory import (
+    mask_connection_secrets,
+)
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.tools.binary_block_decorators import (
     auto_resolve_media_blocks,
@@ -36,6 +39,7 @@ if TYPE_CHECKING:
         DatabaseQueryGenerator,
         ErrorQueryResult,
         QueryResult,
+        QueryResultType,
     )
 
 
@@ -43,12 +47,14 @@ def _load_database_query_dependencies() -> tuple[
     type["DatabaseQueryGenerator"],
     type["ErrorQueryResult"],
     type["QueryResult"],
+    type["QueryResultType"],
 ]:
     try:
         from private_gpt.components.tabular.database_query_generator import (
             DatabaseQueryGenerator,
             ErrorQueryResult,
             QueryResult,
+            QueryResultType,
         )
     except ImportError as e:
         raise ImportError(
@@ -64,7 +70,7 @@ def _load_database_query_dependencies() -> tuple[
             )
         ) from e
 
-    return DatabaseQueryGenerator, ErrorQueryResult, QueryResult
+    return DatabaseQueryGenerator, ErrorQueryResult, QueryResult, QueryResultType
 
 
 @singleton
@@ -194,6 +200,7 @@ class DatabaseQueryToolBuilder:
             database_query_generator_cls,
             error_query_result_cls,
             query_result_cls,
+            query_result_type_cls,
         ) = _load_database_query_dependencies()
 
         sample_size = self.sample_size  # capture for closure
@@ -310,10 +317,19 @@ class DatabaseQueryToolBuilder:
                 result_as_block_list: list[list[ResultContentBlockType]] = []
                 for sql_artifact, db_query_result in results:
                     prefix = (
-                        f"Database: {sql_artifact.connection_string}\n"
+                        f"Database: {mask_connection_secrets(sql_artifact.connection_string)}\n"
                         if len(results) > 1
                         else ""
                     )
+                    if (
+                        db_query_result.result_type
+                        == query_result_type_cls.CONTEXT_ANSWER
+                    ):
+                        result_as_block_list.append(
+                            [TextBlock(text=prefix + (db_query_result.rows_text or ""))]
+                        )
+                        continue
+
                     blocks: list[ResultContentBlockType] = [
                         TextBlock(
                             text=prefix

@@ -14,7 +14,7 @@ from Levenshtein import distance  # ty:ignore[unresolved-import]
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from pandas import DataFrame
 from pydantic import BaseModel, Field
-from sqlalchemy import Connection, Engine, create_engine, inspect, text
+from sqlalchemy import Connection, Engine, inspect, text
 from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 
 from private_gpt.components.cache import Cache, MemoryCache
@@ -25,6 +25,13 @@ from private_gpt.components.chat.models.chat_config_models import (
 )
 from private_gpt.components.chat.processors.chat_history.memory.utils.content import (
     messages_to_history_str,
+)
+from private_gpt.components.database.connection_factory import (
+    DatabaseDialect,
+    build_db2_native_connection_string,
+    classify_dialect,
+    create_engine_for_connection_string,
+    mask_connection_secrets,
 )
 from private_gpt.components.database.function_inspector import (
     DatabaseFunctionsInspector,
@@ -98,6 +105,21 @@ class ErrorType(enum.StrEnum):
     )
 
 
+# Sentinel markers the LLM can reply with instead of a SQL query.
+NO_QUERY_SENTINEL = "NO_QUERY"
+CONTEXT_ANSWER_TAG = "CONTEXT_ANSWER"
+
+
+class QueryResultType(enum.StrEnum):
+    SQL = "SQL"  # A SQL query was generated and (attempted to be) executed.
+    NO_QUERY = (
+        NO_QUERY_SENTINEL  # No relevant table/view/procedure could answer the request.
+    )
+    CONTEXT_ANSWER = (
+        CONTEXT_ANSWER_TAG  # Answered directly from the schema info already in context.
+    )
+
+
 class ErrorQueryResult(BaseModel):
     description: str = Field(description="Error message if an error occurred.")
     type: ErrorType = Field(description="The type of error.")
@@ -122,6 +144,11 @@ class ErrorQueryResult(BaseModel):
 
 
 class QueryResult(BaseModel):
+    result_type: QueryResultType = Field(
+        default=QueryResultType.SQL,
+        description="Whether this result is a SQL query, a NO_QUERY answer, or a "
+        "direct answer taken from the schema context.",
+    )
     query: str | None = Field(
         default=None, description="The SQL query that was executed."
     )
@@ -432,17 +459,19 @@ class DatabaseQueryGenerator:
         """
         try:
             conn = self._ensure_connected()
-            match self._engine.dialect.name.lower() if self._engine else "unknown":
-                case "db2" | "ibm_db_sa":
-                    conn.execute(text("SELECT 1 FROM SYSIBM.SYSDUMMY1"))
-                case _:
-                    conn.execute(text("SELECT 1"))
+            dialect = classify_dialect(
+                self._engine.dialect.name if self._engine else None
+            )
+            if dialect == DatabaseDialect.DB2:
+                conn.execute(text("SELECT 1 FROM SYSIBM.SYSDUMMY1"))
+            else:
+                conn.execute(text("SELECT 1"))
             return None
         except (SQLAlchemyError, ProgrammingError) as e:
-            logging.error(e)
+            logging.error(mask_connection_secrets(str(e)))
             return f"Failed to connect to database '{self._extract_database_name()}'"
         except Exception as e:
-            logging.error(e)
+            logging.error(mask_connection_secrets(str(e)))
             return f"Failed to connect to database '{self._extract_database_name()}'"
         finally:
             self._disconnect()
@@ -684,8 +713,18 @@ class DatabaseQueryGenerator:
                 last_generated_query=last_generated_query,
                 last_error=last_error,
             )
-            if "NO_QUERY" in sql_query.strip().upper():
+            stripped_response = sql_query.strip()
+            if stripped_response.upper().startswith(CONTEXT_ANSWER_TAG):
+                answer = stripped_response[len(CONTEXT_ANSWER_TAG) :].strip()
                 return QueryResult(
+                    result_type=QueryResultType.CONTEXT_ANSWER,
+                    query=None,
+                    rows_text=answer,
+                    row_count=0,
+                )
+            if NO_QUERY_SENTINEL in stripped_response.upper():
+                return QueryResult(
+                    result_type=QueryResultType.NO_QUERY,
                     query=None,
                     rows_text="No relevant tables found to answer the question.",
                     row_count=0,
@@ -708,7 +747,7 @@ class DatabaseQueryGenerator:
         if self._connection and not self._connection.closed:
             return self._connection
 
-        self._engine = create_engine(
+        self._engine = create_engine_for_connection_string(
             self.connection_string
             # TODO: SSL Certificates
         )
@@ -728,12 +767,11 @@ class DatabaseQueryGenerator:
         value = self._engine.dialect.name.lower() if self._engine else self._dialect
         system_prompt = f"The database SQL dialect is: {value}."
 
-        match value:
-            case "db2" | "ibm_db_sa":
-                system_prompt += (
-                    " For DB2 procedures: input parameters (Params) use literal values, output parameters (Returns) use '?' placeholders."
-                    " Example with 1 input + 3 outputs: CALL schema.procedure_name('value1', ?, ?, ?);"
-                )
+        if classify_dialect(value) == DatabaseDialect.DB2:
+            system_prompt += (
+                " For DB2 procedures: input parameters (Params) use literal values, output parameters (Returns) use '?' placeholders."
+                " Example with 1 input + 3 outputs: CALL schema.procedure_name('value1', ?, ?, ?);"
+            )
         return system_prompt
 
     async def generate_sql_query(
@@ -768,12 +806,26 @@ class DatabaseQueryGenerator:
         system_prompt += (
             "Use views or procedures instead of underlying tables whenever possible. "
         )
-        system_prompt += "If there is no relevant tables that can answer the question. "
-        system_prompt += "Return replying 'NO_QUERY'. "
+        system_prompt += (
+            "You must respond with exactly one of the following: "
+            "1) A valid SQL query that answers the request. "
+            "2) If the request is about the database's own structure "
+            "(e.g., listing tables, describing columns, indexes or constraints) "
+            "and the schema information given above already contains the answer, "
+            f"respond starting with '{CONTEXT_ANSWER_TAG}' followed by the answer "
+            "in plain text, using only the schema information given above. Do not "
+            "generate SQL and do not query any system catalog for this case. "
+            "3) If none of the tables/views/procedures listed above can answer "
+            f"the request, reply exactly '{NO_QUERY_SENTINEL}'. "
+        )
         system_prompt += "When asked about data that mostly contains IDs or non-informative data (e.g. boolean, timestamps, UUIDs) "
         system_prompt += "attempt to add a relevant column that is human-readable (eg. name, title...) "
         system_prompt += "to the query unless explicitly told not to. "
-        system_prompt += "The output MUST be valid SQL, no other text or explanations. "
+        system_prompt += (
+            f"The output MUST be either valid SQL, or start with '{CONTEXT_ANSWER_TAG}' "
+            f"followed by plain text, or exactly '{NO_QUERY_SENTINEL}'. "
+            "No other explanations. "
+        )
 
         example = (
             "(e.g., TableName.ColumnName)"
@@ -781,6 +833,10 @@ class DatabaseQueryGenerator:
             else ""
         )
 
+        system_prompt += (
+            "The following rules apply only when generating a SQL query "
+            "(option 1 above): "
+        )
         system_prompt += f"Before referencing any column {example}, verify that column exists in that specific table's column list. "
         system_prompt += "If a column does not exist in Table A but exists in related Table B, you MUST JOIN Table B first to access it. "
         system_prompt += "If no direct foreign key exists between two tables, use intermediate tables to connect them. "
@@ -1206,7 +1262,7 @@ class DatabaseQueryGenerator:
             return QueryResult(
                 query=call_statement,
                 error=ErrorQueryResult(
-                    description=f"DB2 procedure execution failed: {e!s}",
+                    description=f"DB2 procedure execution failed: {mask_connection_secrets(str(e))}",
                     type=ErrorType.UNKNOWN,
                 ),
                 row_count=-1,
@@ -1238,21 +1294,7 @@ class DatabaseQueryGenerator:
         return proc_name, param_values, out_indices
 
     def _create_db2_connection(self) -> Any:
-        conn_str = self.connection_string.split("://")[1]
-        user_pass, host_db = conn_str.split("@")
-        user, password = user_pass.split(":")
-        host_port, database = host_db.split("/")
-        host, port = host_port.split(":")
-
-        db2_conn_str = (
-            f"DATABASE={database};"
-            f"HOSTNAME={host};"
-            f"PORT={port};"
-            f"PROTOCOL=TCPIP;"
-            f"UID={user};"
-            f"PWD={password};"
-        )
-
+        db2_conn_str = build_db2_native_connection_string(self.connection_string)
         return _load_ibm_db().connect(db2_conn_str, "", "")
 
     def _execute_procedure(
