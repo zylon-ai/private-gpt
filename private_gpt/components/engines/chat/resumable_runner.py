@@ -389,7 +389,9 @@ class ResumableChatRunner:
         return request
 
     @staticmethod
-    def _dump_original_input(original_input: ChatInputState | None) -> dict[str, Any] | None:
+    def _dump_original_input(
+        original_input: ChatInputState | None,
+    ) -> dict[str, Any] | None:
         if original_input is None or not isinstance(original_input, ChatInputState):
             return None
         return original_input.model_dump(mode="json")

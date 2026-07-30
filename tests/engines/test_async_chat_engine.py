@@ -898,62 +898,63 @@ async def test_extract_citation_interceptor_converts_bracket_refs_on_resume(
     )
 
 
-
 @pytest.mark.asyncio
 async def test_initialize_run_reuses_provided_original_input() -> None:
     """_initialize_run must not resnapshot original_input on later checkpoints."""
     from llama_index.core.base.llms.types import TextBlock
     from llama_index.core.llms.function_calling import FunctionCallingLLM
 
-    from private_gpt.components.context.models.context_layer import UserInstructionsLayer
+    from private_gpt.components.context.models.context_layer import (
+        UserInstructionsLayer,
+    )
     from private_gpt.components.context.models.context_stack import ContextStack
     from private_gpt.components.context.models.layer_type import LayerType
 
     class _FakeFunctionLLM(FunctionCallingLLM):
         @property
-        def metadata(self):  # noqa: ANN201
+        def metadata(self):
             return MagicMock(is_function_calling_model=True, context_window=8192)
 
-        def _prepare_chat_with_tools(self, *a, **k):  # noqa: ANN002, ANN003
+        def _prepare_chat_with_tools(self, *a, **k):
             return {}
 
-        async def achat(self, *a, **k):  # noqa: ANN002, ANN003
+        async def achat(self, *a, **k):
             raise NotImplementedError
 
-        def chat(self, *a, **k):  # noqa: ANN002, ANN003
+        def chat(self, *a, **k):
             raise NotImplementedError
 
-        def stream_chat(self, *a, **k):  # noqa: ANN002, ANN003
+        def stream_chat(self, *a, **k):
             raise NotImplementedError
 
-        async def astream_chat(self, *a, **k):  # noqa: ANN002, ANN003
+        async def astream_chat(self, *a, **k):
             raise NotImplementedError
 
-        def complete(self, *a, **k):  # noqa: ANN002, ANN003
+        def complete(self, *a, **k):
             raise NotImplementedError
 
-        async def acomplete(self, *a, **k):  # noqa: ANN002, ANN003
+        async def acomplete(self, *a, **k):
             raise NotImplementedError
 
-        def stream_complete(self, *a, **k):  # noqa: ANN002, ANN003
+        def stream_complete(self, *a, **k):
             raise NotImplementedError
 
-        async def astream_complete(self, *a, **k):  # noqa: ANN002, ANN003
+        async def astream_complete(self, *a, **k):
             raise NotImplementedError
 
-        def chat_with_tools(self, *a, **k):  # noqa: ANN002, ANN003
+        def chat_with_tools(self, *a, **k):
             raise NotImplementedError
 
-        async def achat_with_tools(self, *a, **k):  # noqa: ANN002, ANN003
+        async def achat_with_tools(self, *a, **k):
             raise NotImplementedError
 
-        def stream_chat_with_tools(self, *a, **k):  # noqa: ANN002, ANN003
+        def stream_chat_with_tools(self, *a, **k):
             raise NotImplementedError
 
-        async def astream_chat_with_tools(self, *a, **k):  # noqa: ANN002, ANN003
+        async def astream_chat_with_tools(self, *a, **k):
             raise NotImplementedError
 
-        def get_tool_calls_from_response(self, *a, **k):  # noqa: ANN002, ANN003
+        def get_tool_calls_from_response(self, *a, **k):
             return []
 
     first_request = ResolvedChatRequest(
