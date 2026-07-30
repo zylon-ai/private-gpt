@@ -681,42 +681,6 @@ async def test_unit_duplicate_content_block_deltas_are_dropped() -> None:
     assert deltas[1].delta.partial_json_obj == {"object": "deals", "query": "x"}
 
 
-def test_unit_content_block_delta_equality_ignores_object_identity() -> None:
-    """Two distinct RawContentBlockDeltaEvent objects compare equal when their
-    field values match, and unequal when they differ -- this is what
-    DeduplicateEventInterceptor relies on instead of model_dump_json()."""
-    from private_gpt.events.models import InputJSONDelta
-
-    bid = _block_id()
-
-    equal_a = RawContentBlockDeltaEvent(
-        index=1,
-        block_id=bid,
-        delta=InputJSONDelta(
-            partial_json="", partial_json_obj={"object": "deals", "query": None}
-        ),
-    )
-    equal_b = RawContentBlockDeltaEvent(
-        index=1,
-        block_id=bid,
-        delta=InputJSONDelta(
-            partial_json="", partial_json_obj={"object": "deals", "query": None}
-        ),
-    )
-    assert equal_a is not equal_b
-    assert equal_a == equal_b
-
-    different = RawContentBlockDeltaEvent(
-        index=1,
-        block_id=bid,
-        delta=InputJSONDelta(
-            partial_json='{"object":"deals","query":"x"}',
-            partial_json_obj={"object": "deals", "query": "x"},
-        ),
-    )
-    assert equal_a != different
-
-
 @pytest.mark.asyncio
 async def test_unit_ping_events_are_never_deduplicated() -> None:
     """Ping keepalives always pass through even when consecutive."""

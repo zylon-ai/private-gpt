@@ -17,20 +17,16 @@ class DeduplicateEventInterceptor(ChatResponseLoopInterceptor):
     ``input_json_delta`` with an unchanged ``partial_json_obj``). Those
     duplicates add noise for clients without changing state, so they are
     suppressed. Ping keepalives are always forwarded.
-
-    Equality is checked via pydantic's structural ``__eq__`` (field-by-field
-    comparison) rather than ``model_dump_json``, since serializing every
-    streamed event just to compare it adds significant latency.
     """
 
     def __init__(self) -> None:
-        self._last_event: Event | None = None
+        self._last_fingerprint: str | None = None
 
     async def on_iteration_start(self, context: ChatInterceptorContext) -> None:
-        self._last_event = None
+        self._last_fingerprint = None
 
     async def on_iteration_end(self, context: ChatInterceptorContext) -> None:
-        self._last_event = None
+        self._last_fingerprint = None
 
     async def intercept_event(
         self,
@@ -40,10 +36,11 @@ class DeduplicateEventInterceptor(ChatResponseLoopInterceptor):
         if isinstance(event, PingEvent):
             return event
 
-        if event == self._last_event:
+        fingerprint = event.model_dump_json()
+        if fingerprint == self._last_fingerprint:
             return None
 
-        self._last_event = event
+        self._last_fingerprint = fingerprint
         return event
 
     def model_copy(
