@@ -3,6 +3,7 @@ from typing import Any
 from llama_index.core.tools import FunctionTool
 
 from private_gpt.components.tools.tool_names import (
+    BASH_CODE_EXECUTION_TOOL_NAME,
     BASH_TOOL_NAME,
     CODE_EXECUTION_TOOL_NAME,
     DATABASE_QUERY_TOOL_NAME,
@@ -12,7 +13,6 @@ from private_gpt.components.tools.tool_names import (
     SKILLS_TOOL_NAME,
     SUMMARIZE_TOOL_NAME,
     TABULAR_DATA_ANALYSIS,
-    BASH_CODE_EXECUTION_TOOL_NAME,
     TEXT_EDITOR_CODE_EXECUTION_TOOL_NAME,
     TEXT_EDITOR_CREATE_TOOL_NAME,
     TEXT_EDITOR_INSERT_TOOL_NAME,

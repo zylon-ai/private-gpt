@@ -1879,7 +1879,7 @@ def test_multi_turn_server_tool_use_history_with_internal_name(
                     "content": [
                         {
                             "type": "text",
-                            "text": "exit_code: 0\n\nstderr:\nopenjdk version \"17.0.19\"",
+                            "text": 'exit_code: 0\n\nstderr:\nopenjdk version "17.0.19"',
                         }
                     ],
                     "is_error": False,
@@ -1937,7 +1937,9 @@ def test_multi_turn_server_tool_use_history_without_internal_name(
                 {
                     "type": "tool_result",
                     "tool_use_id": tool_use_id,
-                    "content": [{"type": "text", "text": "exit_code: 0\n\nstdout:\nv18.20.4"}],
+                    "content": [
+                        {"type": "text", "text": "exit_code: 0\n\nstdout:\nv18.20.4"}
+                    ],
                     "is_error": False,
                 }
             ],

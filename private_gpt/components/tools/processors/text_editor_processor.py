@@ -63,7 +63,8 @@ class TextEditorProcessor(ToolProcessor):
                         await self._unified_builder.build_tool(
                             config,
                             name=tool.name or TEXT_EDITOR_CODE_EXECUTION_TOOL_NAME,
-                            type=tool.type or TEXT_EDITOR_CODE_EXECUTION_TOOL_NAME + "_v1",
+                            type=tool.type
+                            or TEXT_EDITOR_CODE_EXECUTION_TOOL_NAME + "_v1",
                         )
                     ],
                 )

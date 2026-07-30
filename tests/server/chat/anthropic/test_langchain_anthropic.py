@@ -1072,7 +1072,9 @@ async def test_langchain_multi_turn_server_tool_use_without_internal_name(
                 {
                     "type": "tool_result",
                     "tool_use_id": tool_use_id,
-                    "content": [{"type": "text", "text": "exit_code: 0\n\nstdout:\nv18.20.4"}],
+                    "content": [
+                        {"type": "text", "text": "exit_code: 0\n\nstdout:\nv18.20.4"}
+                    ],
                     "is_error": False,
                 },
             ]

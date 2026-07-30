@@ -55,7 +55,6 @@ def to_camel(string: str) -> str:
     return components[0] + "".join(x.title() for x in components[1:])
 
 
-
 class Citations(BaseModel):
     """Configuration for citation generation in AI responses."""
 

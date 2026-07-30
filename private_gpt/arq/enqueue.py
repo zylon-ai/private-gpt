@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 from collections.abc import Coroutine
 from typing import Any
@@ -87,10 +88,8 @@ async def _abort_job(*, job_id: str, queue_name: str, timeout: int) -> bool:
             )
             return False
     finally:
-        try:
+        with contextlib.suppress(BrokenPipeError, ConnectionResetError, OSError):
             await redis.aclose()
-        except (BrokenPipeError, ConnectionResetError, OSError):
-            pass
 
 
 async def abort_job(
