@@ -55,9 +55,6 @@ from private_gpt.events.models import (
     ToolUseBlock,
     Usage,
 )
-from private_gpt.server.chat.interceptors.deduplicate_event_interceptor import (
-    DeduplicateEventInterceptor,
-)
 from private_gpt.server.chat.interceptors.filter_event_by_type_interceptor import (
     FilterZylonInterceptor,
 )
@@ -84,10 +81,7 @@ async def _collect_from_gen(
     ping_interval: float | None = None,
 ) -> list:
     """Pipe a hand-crafted event generator through the interceptor pipeline."""
-    interceptors: list[ChatResponseLoopInterceptor] = [
-        FilterZylonInterceptor(),
-        DeduplicateEventInterceptor(),
-    ]
+    interceptors: list[ChatResponseLoopInterceptor] = [FilterZylonInterceptor()]
     if ping_interval:
         gen = await PingEventInterceptor(ping_interval).intercept(gen)
 
@@ -146,10 +140,7 @@ def _make_engine(
 ) -> ChatLoopEngine:
     llm_component = MagicMock(spec=LLMComponent)
     llm_component.get_llm.return_value = mock_llm
-    interceptors: list[ChatResponseLoopInterceptor] = [
-        FilterZylonInterceptor(),
-        DeduplicateEventInterceptor(),
-    ]
+    interceptors: list[ChatResponseLoopInterceptor] = [FilterZylonInterceptor()]
     return ChatLoopEngine(
         llm_component=llm_component,
         response_interceptors=interceptors,
@@ -637,62 +628,6 @@ async def test_integration_ping_injected_between_slow_llm_chunks() -> None:
     )
     events = await _collect_engine(engine, _base_request(), ping_interval=1.0)
     assert sum(1 for e in events if isinstance(e, PingEvent)) >= 1
-
-
-@pytest.mark.asyncio
-async def test_unit_duplicate_content_block_deltas_are_dropped() -> None:
-    """Identical consecutive content_block_delta events are suppressed."""
-    from private_gpt.events.models import InputJSONDelta
-
-    bid = _block_id()
-    delta = InputJSONDelta(
-        partial_json="",
-        partial_json_obj={"object": "deals", "query": None},
-    )
-
-    async def gen() -> AsyncGenerator:
-        yield RawMessageStartEvent.from_defaults()
-        yield RawContentBlockStartEvent(
-            index=1,
-            block_id=bid,
-            content_block=ToolUseBlock(id="tool_1", name="search", input={}),
-        )
-        for _ in range(5):
-            yield RawContentBlockDeltaEvent(
-                index=1,
-                block_id=bid,
-                delta=delta.model_copy(deep=True),
-            )
-        yield RawContentBlockDeltaEvent(
-            index=1,
-            block_id=bid,
-            delta=InputJSONDelta(
-                partial_json='{"object":"deals","query":"x"}',
-                partial_json_obj={"object": "deals", "query": "x"},
-            ),
-        )
-        yield RawContentBlockStopEvent(index=1, block_id=bid)
-        yield RawMessageStopEvent()
-
-    events = await _collect_from_gen(gen())
-    deltas = [e for e in events if isinstance(e, RawContentBlockDeltaEvent)]
-    assert len(deltas) == 2
-    assert deltas[0].delta.partial_json_obj == {"object": "deals", "query": None}
-    assert deltas[1].delta.partial_json_obj == {"object": "deals", "query": "x"}
-
-
-@pytest.mark.asyncio
-async def test_unit_ping_events_are_never_deduplicated() -> None:
-    """Ping keepalives always pass through even when consecutive."""
-
-    async def gen() -> AsyncGenerator:
-        yield PingEvent()
-        yield PingEvent()
-        yield PingEvent()
-
-    events = await _collect_from_gen(gen())
-    assert len(events) == 3
-    assert all(isinstance(e, PingEvent) for e in events)
 
 
 # ---------------------------------------------------------------------------

@@ -19,9 +19,6 @@ from private_gpt.server.chat.interceptors.configure_tool_execution_interceptor i
 from private_gpt.server.chat.interceptors.configure_tool_interceptor import (
     ConfigureToolRequestInterceptor,
 )
-from private_gpt.server.chat.interceptors.deduplicate_event_interceptor import (
-    DeduplicateEventInterceptor,
-)
 from private_gpt.server.chat.interceptors.default_values_interceptor import (
     DefaultValuesRequestInterceptor,
 )
@@ -108,7 +105,6 @@ class ChatInterceptorService:
         # --- response interceptors (run each iteration, order matters) ---
         extract_citation_response_interceptor: ExtractCitationInterceptor,
         filter_event_by_type_interceptor: FilterZylonInterceptor,
-        deduplicate_event_interceptor: DeduplicateEventInterceptor,
     ) -> None:
         self._prompt_builder_service = prompt_builder_service
 
@@ -202,7 +198,6 @@ class ChatInterceptorService:
                 "sanity",
                 responses=[
                     filter_event_by_type_interceptor,
-                    deduplicate_event_interceptor,
                 ],
             )
         )
