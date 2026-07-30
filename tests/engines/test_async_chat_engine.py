@@ -329,6 +329,7 @@ async def _run_async_engine(
                     has_input_usage=state.runtime.has_input_usage,
                     has_output_usage=state.runtime.has_output_usage,
                 ),
+                original_input=state.original_input,
             ),
             channel=channel2,
         )
@@ -869,6 +870,7 @@ async def test_extract_citation_interceptor_converts_bracket_refs_on_resume(
                     has_input_usage=state.runtime.has_input_usage,
                     has_output_usage=state.runtime.has_output_usage,
                 ),
+                original_input=state.original_input,
             ),
             channel=channel2,
         )
@@ -894,3 +896,109 @@ async def test_extract_citation_interceptor_converts_bracket_refs_on_resume(
     assert "<citation" in full_text, (
         f"Expected <citation> XML tag in output, got: {full_text!r}"
     )
+
+
+
+@pytest.mark.asyncio
+async def test_initialize_run_reuses_provided_original_input() -> None:
+    """_initialize_run must not resnapshot original_input on later checkpoints."""
+    from llama_index.core.base.llms.types import TextBlock
+    from llama_index.core.llms.function_calling import FunctionCallingLLM
+
+    from private_gpt.components.context.models.context_layer import UserInstructionsLayer
+    from private_gpt.components.context.models.context_stack import ContextStack
+    from private_gpt.components.context.models.layer_type import LayerType
+
+    class _FakeFunctionLLM(FunctionCallingLLM):
+        @property
+        def metadata(self):  # noqa: ANN201
+            return MagicMock(is_function_calling_model=True, context_window=8192)
+
+        def _prepare_chat_with_tools(self, *a, **k):  # noqa: ANN002, ANN003
+            return {}
+
+        async def achat(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        def chat(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        def stream_chat(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        async def astream_chat(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        def complete(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        async def acomplete(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        def stream_complete(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        async def astream_complete(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        def chat_with_tools(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        async def achat_with_tools(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        def stream_chat_with_tools(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        async def astream_chat_with_tools(self, *a, **k):  # noqa: ANN002, ANN003
+            raise NotImplementedError
+
+        def get_tool_calls_from_response(self, *a, **k):  # noqa: ANN002, ANN003
+            return []
+
+    first_request = ResolvedChatRequest(
+        messages=[ChatMessage(role=MessageRole.USER, content="hello")],
+        system=ResolvedSystemConfig(
+            model="default",
+            prompt=[TextBlock(text="USER PROMPT")],
+        ),
+    )
+    later_request = first_request.model_copy(deep=True)
+    later_request.system.prompt = [TextBlock(text="FULL RENDERED PROMPT")]
+    later_request.messages = [
+        *later_request.messages,
+        ChatMessage(role=MessageRole.ASSISTANT, content="tool-turn"),
+    ]
+
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = _FakeFunctionLLM()
+    engine = AsyncChatEngine(
+        llm_component=llm_component,
+        chat_scheduler=MagicMock(),
+    )
+
+    first_run = engine.initialize_run(first_request)
+    original = first_run.state.original_input
+    assert original is not None
+    first_layers = original.context_stack.layers_of_type(LayerType.USER_INSTRUCTIONS)
+    assert first_layers
+    assert first_layers[0].text == [TextBlock(text="USER PROMPT")]
+
+    second_run = engine.initialize_run(
+        later_request,
+        context_stack=ContextStack(
+            layers=[
+                UserInstructionsLayer(
+                    text=[TextBlock(text="FULL RENDERED PROMPT")],
+                    source="request",
+                )
+            ]
+        ),
+        original_input=original,
+    )
+    assert second_run.state.original_input is original
+    second_layers = second_run.state.original_input.context_stack.layers_of_type(
+        LayerType.USER_INSTRUCTIONS
+    )
+    assert second_layers
+    assert second_layers[0].text == [TextBlock(text="USER PROMPT")]

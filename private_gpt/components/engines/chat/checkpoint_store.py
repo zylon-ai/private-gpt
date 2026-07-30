@@ -32,6 +32,7 @@ class ChatCheckpoint(BaseModel):
     correlation_id: str
     request_data: dict[str, Any]
     context_stack_data: dict[str, Any] = Field(default_factory=dict)
+    original_input_data: dict[str, Any] | None = None
     stream_type: str
     metadata: dict[str, Any]
     iteration: int

@@ -172,6 +172,7 @@ class AsyncChatCheckpoint(BaseModel):
     payload: IterationCheckpointPayload = Field(
         default_factory=IterationCheckpointPayload
     )
+    original_input: ChatInputState | None = None
 
 
 @dataclass
@@ -182,6 +183,7 @@ class _CheckpointContext:
     payload: IterationCheckpointPayload = field(
         default_factory=IterationCheckpointPayload
     )
+    original_input: ChatInputState | None = None
 
 
 @dataclass
@@ -371,6 +373,7 @@ class AsyncChatEngine:
             IterationCheckpointPayload(),
             hooks,
             channel,
+            original_input=state.original_input,
         )
 
     async def resume(
@@ -385,6 +388,7 @@ class AsyncChatEngine:
             checkpoint=checkpoint.checkpoint,
             payload=checkpoint.payload,
             context_stack=checkpoint.input.context_stack,
+            original_input=checkpoint.original_input,
         )
         handler = self._resolve_checkpoint_handler(checkpoint.checkpoint)
         state = await handler(
@@ -411,6 +415,7 @@ class AsyncChatEngine:
                 new_payload,
                 hooks,
                 channel,
+                original_input=state.original_input,
             )
             if state.output.pending_external_tool_calls:
                 close_state = close_state.model_copy(deep=True)
@@ -425,6 +430,7 @@ class AsyncChatEngine:
             new_payload,
             hooks,
             channel,
+            original_input=state.original_input,
         )
 
     async def run(
@@ -539,10 +545,12 @@ class AsyncChatEngine:
         payload: IterationCheckpointPayload,
         hooks: ExecutionHooks | None,
         channel: EventChannel,
+        original_input: ChatInputState | None = None,
     ) -> ChatState:
         context = self._build_checkpoint_context(
             checkpoint=_IterationCheckpoint.BEFORE_ITERATION,
             payload=payload,
+            original_input=original_input,
         )
         return await self._execute_before_iteration_checkpoint(
             request, iteration, next_block_count, channel, hooks, context
@@ -555,11 +563,13 @@ class AsyncChatEngine:
         payload: IterationCheckpointPayload,
         hooks: ExecutionHooks | None,
         channel: EventChannel,
+        original_input: ChatInputState | None = None,
     ) -> ChatState:
         context = self._build_checkpoint_context(
             checkpoint=_IterationCheckpoint.CLOSE,
             stop_reason=stop_reason,
             payload=payload,
+            original_input=original_input,
         )
         return await self._execute_close_checkpoint(
             request, 0, 0, channel, hooks, context
@@ -573,15 +583,31 @@ class AsyncChatEngine:
         payload: IterationCheckpointPayload,
         hooks: ExecutionHooks | None,
         channel: EventChannel,
+        original_input: ChatInputState | None = None,
     ) -> ChatState:
         while True:
             if iteration >= self._max_iterations:
                 return await self._execute_close(
-                    request, StopReasonEnum.MAX_TOKENS.value, payload, hooks, channel
+                    request,
+                    StopReasonEnum.MAX_TOKENS.value,
+                    payload,
+                    hooks,
+                    channel,
+                    original_input=original_input,
                 )
             state = await self._execute_before_iteration(
-                request, iteration, next_block_count, payload, hooks, channel
+                request,
+                iteration,
+                next_block_count,
+                payload,
+                hooks,
+                channel,
+                original_input=original_input,
             )
+            # Keep the first-iteration snapshot for the whole loop. Later
+            # checkpoints rebuild run state from the materialized request, so
+            # re-snapshotting here would poison restore/system-prompt rebuilds.
+            original_input = state.original_input or original_input
             new_payload = IterationCheckpointPayload(
                 model_id=state.runtime.model_id,
                 total_input_tokens=state.runtime.total_input_tokens,
@@ -598,6 +624,7 @@ class AsyncChatEngine:
                     new_payload,
                     hooks,
                     channel,
+                    original_input=original_input,
                 )
                 if state.output.pending_external_tool_calls:
                     close_state = close_state.model_copy(deep=True)
@@ -621,12 +648,14 @@ class AsyncChatEngine:
         stop_reason: str | None = None,
         payload: IterationCheckpointPayload | None = None,
         context_stack: ContextStack | None = None,
+        original_input: ChatInputState | None = None,
     ) -> _CheckpointContext:
         return _CheckpointContext(
             checkpoint=checkpoint,
             stop_reason=stop_reason,
             context_stack=context_stack,
             payload=payload or IterationCheckpointPayload(),
+            original_input=original_input,
         )
 
     def _resolve_checkpoint_handler(
@@ -669,7 +698,10 @@ class AsyncChatEngine:
         checkpoint_context: _CheckpointContext,
     ) -> ChatState:
         run = self._initialize_run(
-            request, context_stack=checkpoint_context.context_stack, hooks=hooks
+            request,
+            context_stack=checkpoint_context.context_stack,
+            hooks=hooks,
+            original_input=checkpoint_context.original_input,
         )
         run.state.runtime.iteration = iteration
         run.state.runtime.next_block_count = next_block_count
@@ -692,7 +724,10 @@ class AsyncChatEngine:
     ) -> ChatState:
         del iteration, next_block_count
         run = self._initialize_run(
-            request, context_stack=checkpoint_context.context_stack, hooks=hooks
+            request,
+            context_stack=checkpoint_context.context_stack,
+            hooks=hooks,
+            original_input=checkpoint_context.original_input,
         )
         channel.emit(RawMessageStartEvent.from_defaults())
         await channel.flush()
@@ -725,6 +760,7 @@ class AsyncChatEngine:
             context_stack=checkpoint_context.context_stack,
             hooks=hooks,
             checkpoint_payload=checkpoint_context.payload,
+            original_input=checkpoint_context.original_input,
         )
 
     async def _continue_tools_checkpoint(
@@ -736,11 +772,15 @@ class AsyncChatEngine:
         context_stack: ContextStack | None = None,
         hooks: ExecutionHooks | None = None,
         checkpoint_payload: IterationCheckpointPayload | None = None,
+        original_input: ChatInputState | None = None,
     ) -> ChatState:
         """Continue from the tools checkpoint without re-running the LLM call."""
         try:
             run = self._initialize_run(
-                request, context_stack=context_stack, hooks=hooks
+                request,
+                context_stack=context_stack,
+                hooks=hooks,
+                original_input=original_input,
             )
             run.state.runtime.iteration = iteration
             run.state.runtime.next_block_count = next_block_count
@@ -843,7 +883,10 @@ class AsyncChatEngine:
     ) -> ChatState:
         del iteration, next_block_count
         run = self._initialize_run(
-            request, context_stack=checkpoint_context.context_stack, hooks=hooks
+            request,
+            context_stack=checkpoint_context.context_stack,
+            hooks=hooks,
+            original_input=checkpoint_context.original_input,
         )
         self._apply_payload_usage(run, checkpoint_context.payload)
         stop_reason = checkpoint_context.stop_reason
@@ -872,8 +915,14 @@ class AsyncChatEngine:
         request: ChatRequest,
         context_stack: ContextStack | None = None,
         hooks: ExecutionHooks | None = None,
+        original_input: ChatInputState | None = None,
     ) -> _Run:
-        return self._initialize_run(request, context_stack=context_stack, hooks=hooks)
+        return self._initialize_run(
+            request,
+            context_stack=context_stack,
+            hooks=hooks,
+            original_input=original_input,
+        )
 
     async def _pipe_events_through_interceptors(
         self,
@@ -1547,6 +1596,7 @@ class AsyncChatEngine:
         request: ChatRequest,
         context_stack: ContextStack | None = None,
         hooks: ExecutionHooks | None = None,
+        original_input: ChatInputState | None = None,
     ) -> _Run:
         llm = self._llm_component.get_llm(request.system.model)
         if not isinstance(llm, FunctionCallingLLM):
@@ -1581,7 +1631,14 @@ class AsyncChatEngine:
             output=ChatOutputState(),
             timeline=[],
         )
-        state.original_input = state.input.model_copy(deep=True)
+        # original_input is a first-iteration snapshot. Rebuilding it from later
+        # checkpoint request materializations would make restore/system-prompt
+        # interceptors treat intermediate prompt state as the user original.
+        state.original_input = (
+            original_input
+            if original_input is not None
+            else state.input.model_copy(deep=True)
+        )
         run = _Run(
             state=state,
             llm=llm,
