@@ -192,6 +192,7 @@ class ResumableChatRunner:
                     payload=saved.checkpoint_payload.model_copy(
                         update={"tool_responses": responses}
                     ),
+                    original_input=self._original_input(saved),
                 ),
                 hooks=_RESUME_HOOKS,
                 channel=channel,
@@ -249,6 +250,7 @@ class ResumableChatRunner:
                 correlation_id=execution_id,
                 request_data=state.input.request.model_dump(mode="json"),
                 context_stack_data=state.input.context_stack.checkpoint_dump(),
+                original_input_data=self._dump_original_input(state.original_input),
                 stream_type=stream_type,
                 metadata=metadata,
                 iteration=state.runtime.iteration,
@@ -385,6 +387,27 @@ class ResumableChatRunner:
                 for key, value in message.additional_kwargs.items()
             }
         return request
+
+    @staticmethod
+    def _dump_original_input(
+        original_input: ChatInputState | None,
+    ) -> dict[str, Any] | None:
+        if original_input is None or not isinstance(original_input, ChatInputState):
+            return None
+        return original_input.model_dump(mode="json")
+
+    @staticmethod
+    def _original_input(checkpoint: ChatCheckpoint) -> ChatInputState | None:
+        if not checkpoint.original_input_data:
+            return None
+        data = dict(checkpoint.original_input_data)
+        request_data = data.get("request")
+        if isinstance(request_data, dict):
+            data["request"] = ResumableChatRunner._request(request_data)
+        context_stack_data = data.get("context_stack")
+        if isinstance(context_stack_data, dict):
+            data["context_stack"] = ContextStack.model_validate(context_stack_data)
+        return ChatInputState.model_validate(data)
 
     @staticmethod
     def _context_stack(

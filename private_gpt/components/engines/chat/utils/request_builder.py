@@ -10,6 +10,7 @@ from private_gpt.components.context.models.context_layer import (
     UserInstructionsLayer,
 )
 from private_gpt.components.context.models.context_stack import ContextStack
+from private_gpt.components.context.models.layer_type import LayerType
 
 
 def build_initial_context_stack(
@@ -23,11 +24,13 @@ def build_initial_context_stack(
         # in the context stack if they are present in the request.
 
         if request.system.prompt:
+            stack = stack.remove_layers_of_type(LayerType.USER_INSTRUCTIONS)
             stack = stack.append_layer(
                 UserInstructionsLayer(text=request.system.prompt, source=source)
             )
 
         if request.tool_config.tools:
+            stack = stack.remove_layers_of_type(LayerType.TOOL_DEFINITIONS)
             stack = stack.append_layer(
                 ToolDefinitionsLayer(
                     tools=list(request.tool_config.tools),
@@ -36,6 +39,7 @@ def build_initial_context_stack(
             )
 
         if request.context.documents:
+            stack = stack.remove_layers_of_type(LayerType.DOCUMENT)
             for document in request.context.documents:
                 stack = stack.append_layer(
                     DocumentLayer(document=document, source=source)
