@@ -34,9 +34,16 @@ _SCALAR_COERCIONS: dict[str, type] = {
     "string": str,
 }
 
+
 _NULL_STRINGS: frozenset[str] = frozenset({"null", "none", "nil", "undefined"})
 _TRUE_STRINGS: frozenset[str] = frozenset({"true", "1", "yes", "on"})
 _FALSE_STRINGS: frozenset[str] = frozenset({"false", "0", "no", "off"})
+
+# JSON Schema composition keywords whose sub-schemas are flattened during coercion.
+# For coercion purposes all three are treated identically: collect every possible
+# type and merge all declared properties (best-effort — we want to coerce as much
+# as possible without rejecting valid values).
+_COMPOSITION_KEYS: tuple[str, ...] = ("allOf", "anyOf", "oneOf")
 
 
 class SchemaCoercionError(ValueError):
@@ -55,27 +62,99 @@ def _type_name(expected: type | tuple[type, ...]) -> str:
     return expected.__name__
 
 
+class _NormalizedSchema:
+    """Flat view of a JSON Schema after resolving composition keywords.
+
+    Handles ``allOf`` / ``anyOf`` / ``oneOf`` uniformly: all sub-schemas are
+    merged so that downstream coercion helpers only ever read from a single,
+    predictable structure.
+    """
+
+    __slots__ = ("items", "properties", "required", "types")
+
+    def __init__(
+        self,
+        types: list[str],
+        properties: dict[str, dict[str, Any]],
+        required: set[str],
+        items: dict[str, Any],
+    ) -> None:
+        self.types = types
+        self.properties = properties
+        self.required = required
+        self.items = items
+
+
+def _normalize_schema(schema: dict[str, Any]) -> _NormalizedSchema:
+    """Produce a flat coercion-view of *schema*.
+
+    Merges every sub-schema found under ``allOf``, ``anyOf``, and ``oneOf``
+    into the top-level fields so callers never need to inspect composition
+    keywords directly.
+
+    Boolean schemas (JSON Schema ``true`` / ``false``) are silently skipped —
+    ``true`` means "accept anything" and ``false`` means "reject everything";
+    neither carries structural coercion information.
+    """
+    # Boolean schemas (JSON Schema spec allows true/false as valid schemas).
+    if not isinstance(schema, dict):
+        return _NormalizedSchema(types=[], properties={}, required=set(), items={})
+
+    # Collect type(s) declared at the top level first.
+    raw_type = schema.get("type")
+    if isinstance(raw_type, list):
+        types: list[str] = [t for t in raw_type if isinstance(t, str)]
+    elif isinstance(raw_type, str):
+        types = [raw_type]
+    else:
+        types = []
+
+    properties: dict[str, dict[str, Any]] = dict(schema.get("properties") or {})
+    required: set[str] = set(schema.get("required") or [])
+    items: dict[str, Any] = schema.get("items") or {}
+
+    # Flatten composition keywords recursively — order: allOf, anyOf, oneOf.
+    # Each sub-schema is itself normalised first so that nested composition
+    # (e.g. anyOf containing allOf) is resolved transitively.
+    for key in _COMPOSITION_KEYS:
+        for entry in schema.get(key) or []:
+            # Skip boolean sub-schemas.
+            if not isinstance(entry, dict):
+                continue
+
+            sub = _normalize_schema(entry)
+
+            # Merge types (union — broadest possible for coercion).
+            for t in sub.types:
+                if t not in types:
+                    types.append(t)
+
+            # Merge properties — top-level schema wins on conflicts.
+            for prop_key, prop_schema in sub.properties.items():
+                if prop_key not in properties:
+                    properties[prop_key] = prop_schema
+
+            # Merge required fields.
+            required.update(sub.required)
+
+            # Inherit items schema if not already set.
+            if not items and sub.items:
+                items = sub.items
+
+    return _NormalizedSchema(
+        types=types,
+        properties=properties,
+        required=required,
+        items=items,
+    )
+
+
 def _resolve_types(prop_schema: dict[str, Any]) -> list[str]:
-    raw = prop_schema.get("type")
-    if isinstance(raw, list):
-        return raw
-    if isinstance(raw, str):
-        return [raw]
-    for union_key in ("anyOf", "oneOf"):
-        if union_key in prop_schema:
-            resolved: list[str] = []
-            for entry in prop_schema[union_key]:
-                entry_type = entry.get("type")
-                if isinstance(entry_type, str):
-                    resolved.append(entry_type)
-                elif isinstance(entry_type, list):
-                    resolved.extend(entry_type)
-            return resolved
-    return []
+    return _normalize_schema(prop_schema).types
 
 
 def _item_schema(prop_schema: dict[str, Any]) -> dict[str, Any]:
-    return prop_schema.get("items") or {}
+    return _normalize_schema(prop_schema).items
 
 
 def _is_non_finite_float(value: Any) -> bool:
@@ -151,7 +230,9 @@ def _coerce_object(
         if strict:
             raise SchemaCoercionError(key, value, "object")
         return value
-    if "properties" in prop_schema:
+
+    norm = _normalize_schema(prop_schema)
+    if norm.properties:
         return _coerce_kwargs(parsed, prop_schema, strict=strict)
     return parsed
 
@@ -246,6 +327,18 @@ def _coerce_value(
         if stripped == "" and nullable:
             return None
 
+    # If the value is a string and "string" is one of the declared types, it is already
+    # valid — return it immediately without trying to coerce or parse it.
+    # This prevents e.g. '{"k":1}' being parsed to a dict when the schema is
+    # anyOf [string, object], and "42" being cast to float when schema is
+    # anyOf [string, number].
+    if isinstance(value, str) and "string" in effective_types:
+        return value
+
+    # A bool value is already valid for "boolean" — skip further dispatch.
+    if isinstance(value, bool) and "boolean" in effective_types:
+        return value
+
     if "array" in effective_types:
         return _coerce_array(key, value, prop_schema, strict)
 
@@ -253,6 +346,17 @@ def _coerce_value(
         return _coerce_object(key, value, prop_schema, strict)
 
     if not effective_types:
+        # Free-form / untyped property: parse JSON-looking strings into native
+        # structures. Prefer JSON, then Python literals (LLMs sometimes emit
+        # single-quoted dict/list syntax).
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped.startswith(("{", "[")):
+                with contextlib.suppress(json.JSONDecodeError, ValueError):
+                    return json.loads(stripped)
+                parsed = _parse_literal_string(key, stripped, (dict, list, tuple))
+                if parsed is not None:
+                    return list(parsed) if isinstance(parsed, tuple) else parsed
         return value
 
     return _coerce_scalar(key, value, effective_types, nullable, strict)
@@ -264,16 +368,15 @@ def _coerce_kwargs(
     *,
     strict: bool = False,
 ) -> dict[str, Any]:
-    properties: dict[str, dict[str, Any]] = input_schema.get("properties") or {}
-    required: set[str] = set(input_schema.get("required") or [])
+    norm = _normalize_schema(input_schema)
     coerced: dict[str, Any] = {}
 
-    for key, prop_schema in properties.items():
+    for key, prop_schema in norm.properties.items():
         types = _resolve_types(prop_schema)
         nullable = "null" in types
 
         if key not in kwargs:
-            if key in required:
+            if key in norm.required:
                 if strict:
                     raise SchemaCoercionError(key, None, "required field missing")
                 continue
