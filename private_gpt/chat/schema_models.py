@@ -136,6 +136,13 @@ def _validate_json_schema(schema: dict[str, Any]) -> None:
     if not schema:
         return
 
+    # Composition keywords at the top level are valid without a "type" field.
+    for composition_key in ("allOf", "anyOf", "oneOf"):
+        if composition_key in schema:
+            for sub_schema in schema[composition_key]:
+                _validate_json_schema_item(sub_schema, strict=False)
+            return
+
     if "type" not in schema:
         raise ValueError("Schema must define a 'type' field")
 
@@ -207,7 +214,12 @@ def _resolve_json_type(field_schema: dict[str, Any]) -> type[Any] | UnionType:
                 return _resolve_json_type(sub_schema)
         return Any
 
-    json_type = field_schema.get("type", "string")
+    # Untyped properties are free-form (common in MCP/n8n schemas). Defaulting to
+    # "string" would force later model_json_schema() regeneration to emit
+    # type:string and break object/array payloads.
+    if "type" not in field_schema:
+        return Any
+    json_type = field_schema.get("type")
     json_type = json_type[0] if isinstance(json_type, list) else json_type
 
     if json_type == "array":

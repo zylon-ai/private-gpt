@@ -63,8 +63,8 @@ class McpRequestInterceptor(ChatRequestLoopInterceptor):
                     """Fetch tools from a single MCP server."""
                     client = self._mcp_service.create_client(config)
                     try:
-                        li_tools = await client.list_tools()
-                        return [mcp_tool_to_spec(config, tool) for tool in li_tools]
+                        mcp_tools = await client.list_tools()
+                        return [mcp_tool_to_spec(config, tool) for tool in mcp_tools]
                     finally:
                         await client.close()
 

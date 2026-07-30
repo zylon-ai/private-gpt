@@ -2551,3 +2551,795 @@ async def test_chat_with_multiple_document_files_with_concurrency_limit(
             assert result["tool_use_id"] in use_ids
     finally:
         settings().chat.preprocess.documents.max_concurrency = original
+
+
+# =============================================================================
+# Schema coercion integration tests
+#
+# These tests verify that the SchemaCoercingToolInterceptor correctly transforms
+# stringified / mistyped kwargs into the types declared by the tool's inputSchema
+# before the values are embedded in the ToolUseBlock returned to the client.
+#
+# Strategy: use client-runtime tools (no async_fn needed) and assert
+# ToolUseBlock.input contains properly-typed values after coercion.
+# =============================================================================
+
+
+def _tool_use_inputs(completion: Message) -> list[dict]:
+    """Return the `input` dict from every ToolUseBlock in the completion."""
+    return [
+        block.input for block in completion.content if isinstance(block, ToolUseBlock)
+    ]
+
+
+@pytest.mark.anyio
+async def test_schema_coercion_integer_and_boolean_from_strings(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """Integer and boolean fields sent as strings are coerced to native types."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="query_tool",
+                    tool_name="query_tool",
+                    tool_kwargs={
+                        "limit": "25",
+                        "offset": "0",
+                        "include_deleted": "false",
+                    },
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "list items", "role": "user"}],
+        "tools": [
+            {
+                "name": "query_tool",
+                "description": "Query records",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50,
+                            "default": 10,
+                        },
+                        "offset": {"type": "integer", "minimum": 0, "default": 0},
+                        "include_deleted": {"type": "boolean", "default": False},
+                    },
+                    "additionalProperties": False,
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+    completion = Message.model_validate(response.json())
+    inputs = _tool_use_inputs(completion)
+    assert len(inputs) == 1
+    assert inputs[0]["limit"] == 25
+    assert inputs[0]["offset"] == 0
+    assert inputs[0]["include_deleted"] is False
+
+
+@pytest.mark.anyio
+async def test_schema_coercion_sort_array_from_json_string(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """Sort array sent as a JSON string is parsed and the object fields are coerced."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="list_tool",
+                    tool_name="list_tool",
+                    tool_kwargs={
+                        "object": "people",
+                        "sort": '[{"attribute": "name", "direction": "asc"}]',
+                        "limit": "10",
+                    },
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "list people sorted by name", "role": "user"}],
+        "tools": [
+            {
+                "name": "list_tool",
+                "description": "List records",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "object": {"type": "string"},
+                        "sort": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "attribute": {"type": "string"},
+                                    "direction": {
+                                        "type": "string",
+                                        "enum": ["asc", "desc"],
+                                    },
+                                },
+                                "required": ["attribute", "direction"],
+                                "additionalProperties": False,
+                            },
+                            "maxItems": 2,
+                            "default": [],
+                        },
+                        "limit": {
+                            "type": "number",
+                            "minimum": 1,
+                            "maximum": 50,
+                            "default": 10,
+                        },
+                        "offset": {"type": "number", "minimum": 0, "default": 0},
+                    },
+                    "required": ["object"],
+                    "additionalProperties": False,
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+    completion = Message.model_validate(response.json())
+    inputs = _tool_use_inputs(completion)
+    assert len(inputs) == 1
+    inp = inputs[0]
+    assert inp["object"] == "people"
+    assert isinstance(inp["sort"], list), (
+        f"sort should be a list, got {type(inp['sort'])}"
+    )
+    assert inp["sort"] == [{"attribute": "name", "direction": "asc"}]
+    assert inp["limit"] == 10.0
+
+
+@pytest.mark.anyio
+async def test_schema_coercion_untyped_object_param_from_json_string(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """Untyped property (no 'type' field): JSON string is parsed to the native type."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="test_tool_object",
+                    tool_name="Call_test_tool_object_",
+                    tool_kwargs={"object_param": '{"key": "value", "count": 3}'},
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "call the object tool", "role": "user"}],
+        "tools": [
+            {
+                "name": "Call_test_tool_object_",
+                "description": "Call this tool when prompted to do so",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "object_param": {
+                            "description": "send whatever input the user gave you in the form of a json array"
+                        }
+                    },
+                    "required": ["object_param"],
+                    "additionalProperties": True,
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+    completion = Message.model_validate(response.json())
+    inputs = _tool_use_inputs(completion)
+    assert len(inputs) == 1
+    assert inputs[0]["object_param"] == {"key": "value", "count": 3}, (
+        f"object_param should be a dict, got {inputs[0]['object_param']!r}"
+    )
+
+
+@pytest.mark.anyio
+async def test_schema_coercion_untyped_array_param_from_json_string(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """Untyped array property: JSON string is parsed to a list."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="test_tool_array",
+                    tool_name="Call_test_tool_array_",
+                    tool_kwargs={"array_param": "[1, 2, 3]"},
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "call the array tool", "role": "user"}],
+        "tools": [
+            {
+                "name": "Call_test_tool_array_",
+                "description": "Call this tool when prompted to do so",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "array_param": {
+                            "description": "send whatever input the user gave you in the form of a json array"
+                        }
+                    },
+                    "required": ["array_param"],
+                    "additionalProperties": True,
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+    completion = Message.model_validate(response.json())
+    inputs = _tool_use_inputs(completion)
+    assert len(inputs) == 1
+    assert inputs[0]["array_param"] == [1, 2, 3], (
+        f"array_param should be a list, got {inputs[0]['array_param']!r}"
+    )
+
+
+@pytest.mark.anyio
+async def test_schema_coercion_anyof_string_object_preserves_string(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """anyOf [string, object]: a JSON-looking string body must stay as string."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="http_tool",
+                    tool_name="http_request",
+                    tool_kwargs={
+                        "url": "https://api.example.com/data",
+                        "body": '{"payload": "test"}',
+                        "timeout": "5000",
+                    },
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "make an HTTP request", "role": "user"}],
+        "tools": [
+            {
+                "name": "http_request",
+                "description": "Make an HTTP request",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "url": {"type": "string"},
+                        "body": {
+                            "anyOf": [
+                                {"type": "string"},
+                                {"type": "object", "additionalProperties": True},
+                            ],
+                            "description": "Request body — string or object",
+                        },
+                        "timeout": {"type": "number", "default": 10000},
+                    },
+                    "required": ["url"],
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+    completion = Message.model_validate(response.json())
+    inputs = _tool_use_inputs(completion)
+    assert len(inputs) == 1
+    assert inputs[0]["body"] == '{"payload": "test"}', (
+        f"body should stay as string (anyOf str|obj), got {inputs[0]['body']!r}"
+    )
+    assert inputs[0]["timeout"] == 5000.0
+
+
+@pytest.mark.anyio
+async def test_schema_coercion_allof_schema(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """allOf top-level schema: properties inside allOf entries are coerced."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="allof_tool",
+                    tool_name="allof_tool",
+                    tool_kwargs={"count": "7", "active": "true"},
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "use allOf tool", "role": "user"}],
+        "tools": [
+            {
+                "name": "allof_tool",
+                "description": "Tool with allOf schema",
+                "inputSchema": {
+                    "allOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "count": {"type": "integer"},
+                                "active": {"type": "boolean"},
+                            },
+                            "required": ["count"],
+                        }
+                    ],
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+    completion = Message.model_validate(response.json())
+    inputs = _tool_use_inputs(completion)
+    assert len(inputs) == 1
+    assert inputs[0]["count"] == 7
+    assert inputs[0]["active"] is True
+
+
+@pytest.mark.anyio
+async def test_schema_coercion_nested_filters_from_json_string(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """Deeply nested object sent as JSON string is parsed and inner fields coerced."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="sheets_tool",
+                    tool_name="sheets_read",
+                    tool_kwargs={
+                        "documentId": "abc123",
+                        "filters": '{"conditions": [{"column": "Age", "condition": "greaterThan", "value": "18"}], "combineConditions": "AND"}',
+                        "limit": "20",
+                        "returnAll": "false",
+                    },
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "read sheet", "role": "user"}],
+        "tools": [
+            {
+                "name": "sheets_read",
+                "description": "Read from Google Sheets",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "documentId": {"type": "string"},
+                        "filters": {
+                            "type": "object",
+                            "properties": {
+                                "conditions": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "column": {"type": "string"},
+                                            "condition": {"type": "string"},
+                                            "value": {
+                                                "anyOf": [
+                                                    {"type": "string"},
+                                                    {"type": "number"},
+                                                    {"type": "boolean"},
+                                                ]
+                                            },
+                                        },
+                                        "required": ["column", "condition", "value"],
+                                    },
+                                },
+                                "combineConditions": {
+                                    "type": "string",
+                                    "enum": ["AND", "OR"],
+                                },
+                            },
+                        },
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 1000},
+                        "returnAll": {"type": "boolean"},
+                    },
+                    "required": ["documentId"],
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+    completion = Message.model_validate(response.json())
+    inputs = _tool_use_inputs(completion)
+    assert len(inputs) == 1
+    inp = inputs[0]
+    assert isinstance(inp["filters"], dict), (
+        f"filters should be dict, got {type(inp['filters'])}"
+    )
+    condition = inp["filters"]["conditions"][0]
+    assert condition["value"] == "18", (
+        f"anyOf [str, num, bool] with str first: '18' should stay string, got {condition['value']!r}"
+    )
+    assert inp["limit"] == 20
+    assert inp["returnAll"] is False
+
+
+# =============================================================================
+# Streaming-specific schema coercion integration tests
+#
+# These verify that the SSE stream delivers correctly-coerced tool inputs
+# — checking both partial_json_obj (per-chunk dict) and partial_json (wire string)
+# in the final content_block_delta emitted when a tool block closes.
+# =============================================================================
+
+
+def _parse_sse_final_tool_inputs(sse_text: str) -> dict[str, dict]:
+    """
+    Return the final coerced input for each tool block seen in the SSE stream.
+
+    For each tool block, the last content_block_delta for that block_id carries
+    both partial_json (the complete JSON string) and partial_json_obj (the typed
+    dict). We return partial_json_obj keyed by tool name, and also assert that
+    partial_json round-trips correctly.
+    """
+    tool_block_ids: dict[str, str] = {}  # block_id -> tool_name
+    last_delta_obj: dict[str, dict] = {}  # block_id -> partial_json_obj
+    last_delta_json: dict[str, str] = {}  # block_id -> partial_json
+
+    for chunk in sse_text.split("\n\n"):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        data_line = next(
+            (line for line in chunk.splitlines() if line.startswith("data:")), None
+        )
+        if not data_line:
+            continue
+        try:
+            payload = json.loads(data_line.split("data:", 1)[1].strip())
+        except json.JSONDecodeError:
+            continue
+
+        event_type = payload.get("type")
+        block_id = payload.get("block_id", "")
+
+        if event_type == "content_block_start":
+            block = payload.get("content_block", {})
+            if block.get("type") in {"tool_use", "server_tool_use"}:
+                tool_block_ids[block_id] = block.get("name", "")
+
+        elif event_type == "content_block_delta" and block_id in tool_block_ids:
+            delta = payload.get("delta", {})
+            if delta.get("type") == "input_json_delta":
+                obj = delta.get("partial_json_obj")
+                raw = delta.get("partial_json", "")
+                if obj is not None:
+                    last_delta_obj[block_id] = obj
+                if raw:
+                    last_delta_json[block_id] = raw
+
+    result: dict[str, dict] = {}
+    for block_id, tool_name in tool_block_ids.items():
+        obj = last_delta_obj.get(block_id)
+        if obj is not None:
+            result[tool_name] = obj
+            # Also verify partial_json round-trips to the same dict
+            raw = last_delta_json.get(block_id, "")
+            if raw:
+                parsed = json.loads(raw)
+                assert parsed == obj, (
+                    f"partial_json round-trip mismatch for {tool_name}: "
+                    f"{parsed!r} != {obj!r}"
+                )
+    return result
+
+
+@pytest.mark.anyio
+async def test_streaming_schema_coercion_integer_boolean_from_strings(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """Streaming: integer and boolean string kwargs are coerced in the SSE output."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="q",
+                    tool_name="query_tool",
+                    tool_kwargs={
+                        "limit": "25",
+                        "offset": "0",
+                        "include_deleted": "false",
+                    },
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "list", "role": "user"}],
+        "stream": True,
+        "tools": [
+            {
+                "name": "query_tool",
+                "description": "Query records",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+                        "offset": {"type": "integer", "minimum": 0},
+                        "include_deleted": {"type": "boolean"},
+                    },
+                    "additionalProperties": False,
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+    assert "text/event-stream" in response.headers["content-type"]
+
+    inputs = _parse_sse_final_tool_inputs(response.text)
+    assert "query_tool" in inputs, (
+        f"no tool inputs found in SSE stream. Keys: {list(inputs)}"
+    )
+    inp = inputs["query_tool"]
+    assert inp["limit"] == 25, f"limit should be int 25, got {inp['limit']!r}"
+    assert inp["offset"] == 0, f"offset should be int 0, got {inp['offset']!r}"
+    assert inp["include_deleted"] is False, (
+        f"include_deleted should be False, got {inp['include_deleted']!r}"
+    )
+
+
+@pytest.mark.anyio
+async def test_streaming_schema_coercion_sort_array_from_json_string(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """Streaming: sort array sent as JSON string is parsed and typed in SSE output."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="l",
+                    tool_name="list_tool",
+                    tool_kwargs={
+                        "object": "people",
+                        "sort": '[{"attribute": "name", "direction": "asc"}]',
+                        "limit": "10",
+                    },
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "list", "role": "user"}],
+        "stream": True,
+        "tools": [
+            {
+                "name": "list_tool",
+                "description": "List records",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "object": {"type": "string"},
+                        "sort": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "attribute": {"type": "string"},
+                                    "direction": {
+                                        "type": "string",
+                                        "enum": ["asc", "desc"],
+                                    },
+                                },
+                                "required": ["attribute", "direction"],
+                                "additionalProperties": False,
+                            },
+                            "maxItems": 2,
+                            "default": [],
+                        },
+                        "limit": {"type": "number", "minimum": 1, "maximum": 50},
+                        "offset": {"type": "number", "minimum": 0},
+                    },
+                    "required": ["object"],
+                    "additionalProperties": False,
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+
+    inputs = _parse_sse_final_tool_inputs(response.text)
+    assert "list_tool" in inputs, f"no tool inputs found. Keys: {list(inputs)}"
+    inp = inputs["list_tool"]
+    assert isinstance(inp["sort"], list), (
+        f"sort should be list in SSE output, got {type(inp['sort'])}: {inp['sort']!r}"
+    )
+    assert inp["sort"] == [{"attribute": "name", "direction": "asc"}]
+    assert inp["limit"] == 10.0
+
+
+@pytest.mark.anyio
+async def test_streaming_schema_coercion_untyped_object_from_json_string(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """Streaming: untyped property — JSON string is parsed to dict in SSE output."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="o",
+                    tool_name="Call_test_tool_object_",
+                    tool_kwargs={"object_param": '{"key": "value", "count": 3}'},
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "call it", "role": "user"}],
+        "stream": True,
+        "tools": [
+            {
+                "name": "Call_test_tool_object_",
+                "description": "Call this tool when prompted to do so",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "object_param": {
+                            "description": "send whatever input the user gave you in the form of a json array"
+                        }
+                    },
+                    "required": ["object_param"],
+                    "additionalProperties": True,
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+
+    inputs = _parse_sse_final_tool_inputs(response.text)
+    assert "Call_test_tool_object_" in inputs
+    inp = inputs["Call_test_tool_object_"]
+    assert inp["object_param"] == {"key": "value", "count": 3}, (
+        f"object_param should be dict in SSE output, got {inp['object_param']!r}"
+    )
+
+
+@pytest.mark.anyio
+async def test_streaming_schema_coercion_anyof_string_object_preserves_string(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """Streaming: anyOf [string, object] — JSON-looking string body stays string
+    in SSE."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="h",
+                    tool_name="http_request",
+                    tool_kwargs={
+                        "url": "https://api.example.com",
+                        "body": '{"payload": "test"}',
+                        "timeout": "5000",
+                    },
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "request", "role": "user"}],
+        "stream": True,
+        "tools": [
+            {
+                "name": "http_request",
+                "description": "HTTP request",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "url": {"type": "string"},
+                        "body": {
+                            "anyOf": [
+                                {"type": "string"},
+                                {"type": "object", "additionalProperties": True},
+                            ]
+                        },
+                        "timeout": {"type": "number", "default": 10000},
+                    },
+                    "required": ["url"],
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+
+    inputs = _parse_sse_final_tool_inputs(response.text)
+    assert "http_request" in inputs
+    inp = inputs["http_request"]
+    assert inp["body"] == '{"payload": "test"}', (
+        f"body anyOf [string, object]: string must stay string in SSE, got {inp['body']!r}"
+    )
+    assert inp["timeout"] == 5000.0
+
+
+@pytest.mark.anyio
+async def test_streaming_schema_coercion_partial_json_wire_format(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    """Streaming: final partial_json string in SSE is valid JSON matching
+    partial_json_obj."""
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="t",
+                    tool_name="typed_tool",
+                    tool_kwargs={
+                        "count": "42",
+                        "tags": '["a", "b", "c"]',
+                        "active": "true",
+                    },
+                )
+            ],
+        ],
+    )
+    body = {
+        "messages": [{"content": "go", "role": "user"}],
+        "stream": True,
+        "tools": [
+            {
+                "name": "typed_tool",
+                "description": "A strongly typed tool",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "count": {"type": "integer"},
+                        "tags": {"type": "array", "items": {"type": "string"}},
+                        "active": {"type": "boolean"},
+                    },
+                    "required": ["count"],
+                },
+            }
+        ],
+    }
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+
+    # _parse_sse_final_tool_inputs already asserts partial_json round-trips to
+    # partial_json_obj
+    inputs = _parse_sse_final_tool_inputs(response.text)
+    assert "typed_tool" in inputs
+    inp = inputs["typed_tool"]
+    assert inp["count"] == 42
+    assert inp["tags"] == ["a", "b", "c"]
+    assert inp["active"] is True

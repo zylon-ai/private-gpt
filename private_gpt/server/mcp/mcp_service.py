@@ -1,6 +1,6 @@
 import base64
-from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, cast
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, cast
 
 from injector import singleton
 from llama_index.core.base.llms.types import (
@@ -9,37 +9,32 @@ from llama_index.core.base.llms.types import (
     ImageBlock,
     TextBlock,
 )
-from llama_index.core.tools import FunctionTool
 
 from private_gpt.server.mcp.config import McpServerConfig
 from private_gpt.utils.dependencies import format_missing_dependency_message
 
 if TYPE_CHECKING:
-    from private_gpt.components.chat.models.chat_config_models import ToolSpec
-    from private_gpt.server.mcp._runtime import (
+    from mcp.types import (
         AudioContent,
         CallToolResult,
         ImageContent,
-        PersistentMCPClient,
         TextContent,
+        Tool,
     )
 
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+    from private_gpt.server.mcp._runtime import PersistentMCPClient
 
-def _load_runtime() -> tuple[
-    type["PersistentMCPClient"],
-    Callable[..., Awaitable[list[FunctionTool]]],
-]:
+
+def _load_runtime() -> type["PersistentMCPClient"]:
     try:
-        from private_gpt.server.mcp._runtime import (
-            PersistentMCPClient,
-            aget_tools_from_mcp_url,
-        )
+        from private_gpt.server.mcp._runtime import PersistentMCPClient
     except ImportError as e:
         raise ImportError(
             format_missing_dependency_message("MCP tools", extras="tool-mcp")
         ) from e
 
-    return PersistentMCPClient, aget_tools_from_mcp_url
+    return PersistentMCPClient
 
 
 def _load_content_types() -> tuple[
@@ -47,29 +42,28 @@ def _load_content_types() -> tuple[
     type["ImageContent"],
     type["AudioContent"],
 ]:
-    from private_gpt.server.mcp._runtime import AudioContent, ImageContent, TextContent
+    from mcp.types import AudioContent, ImageContent, TextContent
 
     return TextContent, ImageContent, AudioContent
 
 
 def _load_call_tool_result_type() -> type["CallToolResult"]:
-    from private_gpt.server.mcp._runtime import CallToolResult
+    from mcp.types import CallToolResult
 
     return CallToolResult
 
 
 def is_mcp_content_block(block: object) -> bool:
     try:
-        (
-            text_content_type,
-            image_content_type,
-            audio_content_type,
-        ) = _load_content_types()
+        text_content_type, image_content_type, audio_content_type = (
+            _load_content_types()
+        )
     except ImportError:
         return False
 
-    content_types = (text_content_type, image_content_type, audio_content_type)
-    return isinstance(block, content_types)
+    return isinstance(
+        block, (text_content_type, image_content_type, audio_content_type)
+    )
 
 
 def is_mcp_tool_result(value: object) -> bool:
@@ -85,20 +79,39 @@ def get_mcp_tool_result_content(value: object) -> list[object] | None:
     if not is_mcp_tool_result(value):
         return None
 
-    return cast("CallToolResult", value).content
+    result = cast("CallToolResult", value)
+    return list(result.content)
+
+
+@dataclass(frozen=True)
+class McpToolDefinition:
+    """Typed MCP tool definition with the original input schema preserved."""
+
+    name: str
+    description: str | None
+    input_schema: dict[str, Any]
+
+    @classmethod
+    def from_mcp_tool(cls, tool: "Tool") -> "McpToolDefinition":
+        schema = tool.input_schema
+        if not isinstance(schema, dict):
+            schema = {"type": "object", "properties": {}}
+        return cls(
+            name=tool.name,
+            description=tool.description,
+            # Preserve original schema as-is (including untyped properties).
+            input_schema=dict(schema),
+        )
 
 
 class McpClient:
-    """A simple MCP client that can be used to interact with an MCP server."""
+    """MCP client that preserves original tool schemas and invokes tools directly."""
 
-    def __init__(self, config: McpServerConfig):
+    def __init__(self, config: McpServerConfig) -> None:
         self.config = config
         self.client: PersistentMCPClient | None = None
-        self._aget_tools_from_mcp_url: (
-            Callable[..., Awaitable[list[FunctionTool]]] | None
-        ) = None
 
-        persistent_mcp_client_cls, aget_tools_from_mcp_url = _load_runtime()
+        persistent_mcp_client_cls = _load_runtime()
 
         headers: dict[str, str] = {}
         if config.authorization_token:
@@ -109,11 +122,10 @@ class McpClient:
             headers=headers,
             timeout=10 * 60,
         )
-        self._aget_tools_from_mcp_url = aget_tools_from_mcp_url
 
-    async def list_tools(self) -> list[FunctionTool]:
-        """Get tools from the MCP server."""
-        if self.client is None or self._aget_tools_from_mcp_url is None:
+    async def list_tools(self) -> list[McpToolDefinition]:
+        """List tools from the MCP server using the original input schema."""
+        if self.client is None:
             return []
 
         if (
@@ -122,19 +134,21 @@ class McpClient:
         ):
             return []
 
-        tool_list = await self._aget_tools_from_mcp_url(
-            command_or_url=self.config.url,
-            client=self.client,
-        )
+        response = await self.client.list_tools()
+        allowed = self.config.tool_configuration.allowed_tools
 
-        if self.config.tool_configuration.allowed_tools is not None:
-            enabled_tools = self.config.tool_configuration.allowed_tools
-            if enabled_tools:
-                tool_list = [
-                    tool for tool in tool_list if tool.metadata.name in enabled_tools
-                ]
+        tools: list[McpToolDefinition] = []
+        for remote_tool in response.tools:
+            if allowed is not None and remote_tool.name not in allowed:
+                continue
+            tools.append(McpToolDefinition.from_mcp_tool(remote_tool))
+        return tools
 
-        return tool_list
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> "CallToolResult":
+        """Invoke a tool on the MCP server with the given arguments."""
+        if self.client is None:
+            raise RuntimeError("MCP client is not initialized")
+        return await self.client.call_tool(name=name, arguments=arguments)
 
     async def close(self) -> None:
         """Close the underlying MCP session in the task that owns it."""
@@ -149,18 +163,15 @@ class McpService:
         return McpClient(config)
 
 
-def mcp_tool_to_spec(config: McpServerConfig, tool: FunctionTool) -> "ToolSpec":
+def mcp_tool_to_spec(config: McpServerConfig, tool: McpToolDefinition) -> "ToolSpec":
     """Convert a discovered MCP tool into a durable, rebuildable tool spec."""
-    from private_gpt.components.chat.models.chat_config_models import ToolSpec
-
-    discovered = ToolSpec.from_llama_index(tool)
     return rebuild_mcp_tool(
         config=config,
-        tool_name=tool.metadata.name or discovered.name or "mcp_tool",
-        name=discovered.name,
-        type=discovered.type,
-        description=discovered.description,
-        input_schema=discovered.input_schema,
+        tool_name=tool.name,
+        name=tool.name,
+        type=None,
+        description=tool.description,
+        input_schema=tool.input_schema,
     )
 
 
@@ -182,13 +193,13 @@ def rebuild_mcp_tool(
         client = McpClient(config)
         try:
             tools = await client.list_tools()
-            for tool in tools:
-                if tool.metadata.name == tool_name:
-                    return await tool.async_fn(**kwargs)
-            raise ValueError(
-                f"MCP tool {tool_name!r} is no longer available from "
-                f"server {config.name!r}."
-            )
+            available = {item.name for item in tools}
+            if tool_name not in available:
+                raise ValueError(
+                    f"MCP tool {tool_name!r} is no longer available from "
+                    f"server {config.name!r}."
+                )
+            return await client.call_tool(tool_name, dict(kwargs))
         finally:
             await client.close()
 
@@ -205,7 +216,7 @@ def rebuild_mcp_tool(
         type=type,
         runtime="server",
         description=description,
-        input_schema=input_schema,
+        input_schema=cast(dict[str, Any] | None, input_schema),
         async_fn=invoke_mcp_tool,
         execution_metadata=ToolExecutionMetadata(
             rebuild_callable="private_gpt.server.mcp.mcp_service:rebuild_mcp_tool",
@@ -216,20 +227,21 @@ def rebuild_mcp_tool(
 
 def convert_mcp_blocks_to_llama_index(block: object) -> ContentBlock | None:
     try:
-        (
-            text_content_type,
-            image_content_type,
-            audio_content_type,
-        ) = _load_content_types()
+        text_content_type, image_content_type, audio_content_type = (
+            _load_content_types()
+        )
     except ImportError:
         return None
 
     if isinstance(block, text_content_type):
-        return TextBlock(text=block.text)
+        text_block = cast("TextContent", block)
+        return TextBlock(text=text_block.text)
     if isinstance(block, image_content_type):
-        bytes_arr = base64.b64decode(block.data)
-        return ImageBlock(image=bytes_arr, image_mimetype=block.mimeType)
+        image_block = cast("ImageContent", block)
+        bytes_arr = base64.b64decode(image_block.data)
+        return ImageBlock(image=bytes_arr, image_mimetype=image_block.mime_type)
     if isinstance(block, audio_content_type):
-        bytes_arr = base64.b64decode(block.data)
-        return AudioBlock(audio=bytes_arr, format=block.mimeType)
+        audio_block = cast("AudioContent", block)
+        bytes_arr = base64.b64decode(audio_block.data)
+        return AudioBlock(audio=bytes_arr, format=audio_block.mime_type)
     return None

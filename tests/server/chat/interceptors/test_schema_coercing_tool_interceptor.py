@@ -750,3 +750,745 @@ def test_lenient_mode_is_default_and_does_not_raise() -> None:
 def test_lenient_mode_passes_through_invalid_array() -> None:
     schema = _schema(("ids", {"type": "array", "items": {"type": "string"}}))
     assert _coerce_kwargs({"ids": "hello"}, schema) == {"ids": "hello"}
+
+
+# =============================================================================
+# Untyped property schemas (no "type" field) — JSON string coercion
+# =============================================================================
+@pytest.mark.parametrize(
+    ("description", "kwargs", "schema", "expected"),
+    [
+        (
+            "Object JSON string coerced when param has no type",
+            {"object_param": '{"key": "value"}'},
+            _schema(
+                (
+                    "object_param",
+                    {"description": "send whatever input the user gave you"},
+                )
+            ),
+            {"object_param": {"key": "value"}},
+        ),
+        (
+            "Array JSON string coerced when param has no type",
+            {"array_param": "[1, 2, 3]"},
+            _schema(
+                (
+                    "array_param",
+                    {
+                        "description": "send whatever input the user gave you in the form of a json array"
+                    },
+                )
+            ),
+            {"array_param": [1, 2, 3]},
+        ),
+        (
+            "Nested object JSON string coerced when param has no type",
+            {"sort": '[{"attribute": "name", "direction": "asc"}]'},
+            _schema(("sort", {"description": "sorting to apply"})),
+            {"sort": [{"attribute": "name", "direction": "asc"}]},
+        ),
+        (
+            "Native dict unchanged when param has no type",
+            {"object_param": {"key": "value"}},
+            _schema(("object_param", {"description": "some param"})),
+            {"object_param": {"key": "value"}},
+        ),
+        (
+            "Native list unchanged when param has no type",
+            {"array_param": [1, 2, 3]},
+            _schema(("array_param", {"description": "some param"})),
+            {"array_param": [1, 2, 3]},
+        ),
+        (
+            "Plain string unchanged when param has no type",
+            {"text": "hello world"},
+            _schema(("text", {"description": "some text"})),
+            {"text": "hello world"},
+        ),
+        (
+            "Invalid JSON string unchanged when param has no type",
+            {"text": "{not valid json}"},
+            _schema(("text", {"description": "some text"})),
+            {"text": "{not valid json}"},
+        ),
+    ],
+)
+def test_untyped_property_json_string_coercion(
+    description: str,
+    kwargs: dict[str, Any],
+    schema: dict[str, Any],
+    expected: dict[str, Any],
+) -> None:
+    assert _coerce_kwargs(kwargs, schema) == expected, description
+
+
+# =============================================================================
+# JSON Schema composition keywords: allOf / anyOf / oneOf
+# All three are normalised uniformly — properties and types from sub-schemas
+# are merged so coercion can traverse into them.
+# =============================================================================
+@pytest.mark.parametrize(
+    ("description", "kwargs", "schema", "expected"),
+    [
+        # ---- allOf ----
+        (
+            "allOf top-level: integer field coerced from string",
+            {"n": "5"},
+            {
+                "allOf": [
+                    {
+                        "type": "object",
+                        "properties": {"n": {"type": "integer"}},
+                        "required": ["n"],
+                    }
+                ]
+            },
+            {"n": 5},
+        ),
+        (
+            "allOf top-level: array field coerced from JSON string",
+            {"data": '["a", "b"]'},
+            {
+                "allOf": [
+                    {
+                        "type": "object",
+                        "properties": {
+                            "data": {"type": "array", "items": {"type": "string"}}
+                        },
+                    }
+                ]
+            },
+            {"data": ["a", "b"]},
+        ),
+        (
+            "allOf top-level: multiple sub-schemas merged",
+            {"n": "3", "flag": "true"},
+            {
+                "allOf": [
+                    {"type": "object", "properties": {"n": {"type": "integer"}}},
+                    {"type": "object", "properties": {"flag": {"type": "boolean"}}},
+                ]
+            },
+            {"n": 3, "flag": True},
+        ),
+        (
+            "allOf property-level: inner object fields coerced from dict",
+            {"address": {"zip": "90210", "city": "LA"}},
+            {
+                "type": "object",
+                "properties": {
+                    "address": {
+                        "allOf": [
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "zip": {"type": "integer"},
+                                    "city": {"type": "string"},
+                                },
+                            }
+                        ]
+                    }
+                },
+            },
+            {"address": {"zip": 90210, "city": "LA"}},
+        ),
+        (
+            "allOf property-level: JSON string parsed and inner fields coerced",
+            {"address": '{"zip": "90210", "city": "LA"}'},
+            {
+                "type": "object",
+                "properties": {
+                    "address": {
+                        "allOf": [
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "zip": {"type": "integer"},
+                                    "city": {"type": "string"},
+                                },
+                            }
+                        ]
+                    }
+                },
+            },
+            {"address": {"zip": 90210, "city": "LA"}},
+        ),
+        (
+            "allOf required fields honoured in lenient mode",
+            {"extra": "ok"},
+            {
+                "allOf": [
+                    {
+                        "type": "object",
+                        "properties": {"n": {"type": "integer"}},
+                        "required": ["n"],
+                    }
+                ]
+            },
+            {"extra": "ok"},
+        ),
+        # ---- anyOf ----
+        (
+            "anyOf top-level: integer field coerced from string",
+            {"n": "7"},
+            {"anyOf": [{"type": "object", "properties": {"n": {"type": "integer"}}}]},
+            {"n": 7},
+        ),
+        (
+            "anyOf property-level object+null: inner fields coerced from dict",
+            {"filter": {"eq": "5"}},
+            {
+                "type": "object",
+                "properties": {
+                    "filter": {
+                        "anyOf": [
+                            {
+                                "type": "object",
+                                "properties": {"eq": {"type": "integer"}},
+                            },
+                            {"type": "null"},
+                        ]
+                    }
+                },
+            },
+            {"filter": {"eq": 5}},
+        ),
+        (
+            "anyOf property-level object+null: JSON string parsed and inner fields coerced",
+            {"filter": '{"eq": "5"}'},
+            {
+                "type": "object",
+                "properties": {
+                    "filter": {
+                        "anyOf": [
+                            {
+                                "type": "object",
+                                "properties": {"eq": {"type": "integer"}},
+                            },
+                            {"type": "null"},
+                        ]
+                    }
+                },
+            },
+            {"filter": {"eq": 5}},
+        ),
+        (
+            "anyOf property-level object+null: null value preserved",
+            {"filter": None},
+            {
+                "type": "object",
+                "properties": {
+                    "filter": {
+                        "anyOf": [
+                            {
+                                "type": "object",
+                                "properties": {"eq": {"type": "integer"}},
+                            },
+                            {"type": "null"},
+                        ]
+                    }
+                },
+            },
+            {"filter": None},
+        ),
+        # ---- oneOf ----
+        (
+            "oneOf top-level: boolean field coerced from string",
+            {"flag": "yes"},
+            {
+                "oneOf": [
+                    {"type": "object", "properties": {"flag": {"type": "boolean"}}}
+                ]
+            },
+            {"flag": True},
+        ),
+        (
+            "oneOf property-level: inner fields coerced",
+            {"item": {"count": "3"}},
+            {
+                "type": "object",
+                "properties": {
+                    "item": {
+                        "oneOf": [
+                            {
+                                "type": "object",
+                                "properties": {"count": {"type": "integer"}},
+                            }
+                        ]
+                    }
+                },
+            },
+            {"item": {"count": 3}},
+        ),
+        # ---- mixed composition ----
+        (
+            "allOf + anyOf combined: properties merged from both",
+            {"n": "3", "flag": "yes"},
+            {
+                "allOf": [{"type": "object", "properties": {"n": {"type": "integer"}}}],
+                "anyOf": [{"properties": {"flag": {"type": "boolean"}}}],
+            },
+            {"n": 3, "flag": True},
+        ),
+    ],
+)
+def test_composition_keyword_coercion(
+    description: str,
+    kwargs: dict[str, Any],
+    schema: dict[str, Any],
+    expected: dict[str, Any],
+) -> None:
+    assert _coerce_kwargs(kwargs, schema) == expected, description
+
+
+# =============================================================================
+# Boolean schemas (JSON Schema true/false as schema values)
+# =============================================================================
+def test_boolean_true_schema_no_crash() -> None:
+    schema = {"type": "object", "properties": {"anything": True}}
+    assert _coerce_kwargs({"anything": "hello"}, schema) == {"anything": "hello"}
+
+
+def test_boolean_false_schema_no_crash() -> None:
+    schema = {"type": "object", "properties": {"nothing": False}}
+    assert _coerce_kwargs({"nothing": "world"}, schema) == {"nothing": "world"}
+
+
+def test_array_items_true_schema_no_crash() -> None:
+    schema = {
+        "type": "object",
+        "properties": {"data": {"type": "array", "items": True}},
+    }
+    assert _coerce_kwargs({"data": [1, "a", None]}, schema) == {"data": [1, "a", None]}
+
+
+def test_anyof_bool_entries_no_crash() -> None:
+    schema = {"type": "object", "properties": {"x": {"anyOf": [True, False]}}}
+    assert _coerce_kwargs({"x": "hello"}, schema) == {"x": "hello"}
+
+
+# =============================================================================
+# Deep / recursive composition (anyOf containing allOf, etc.)
+# =============================================================================
+@pytest.mark.parametrize(
+    ("description", "kwargs", "schema", "expected"),
+    [
+        (
+            "anyOf containing allOf: inner properties coerced",
+            {"x": {"n": "5"}},
+            {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "anyOf": [
+                            {
+                                "allOf": [
+                                    {"type": "object"},
+                                    {"properties": {"n": {"type": "integer"}}},
+                                ]
+                            },
+                            {"type": "null"},
+                        ]
+                    }
+                },
+            },
+            {"x": {"n": 5}},
+        ),
+        (
+            "anyOf containing allOf: null value preserved",
+            {"x": None},
+            {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "anyOf": [
+                            {
+                                "allOf": [
+                                    {"type": "object"},
+                                    {"properties": {"n": {"type": "integer"}}},
+                                ]
+                            },
+                            {"type": "null"},
+                        ]
+                    }
+                },
+            },
+            {"x": None},
+        ),
+        (
+            "allOf containing anyOf: types and properties merged",
+            {"val": "42", "flag": "yes"},
+            {
+                "allOf": [
+                    {
+                        "anyOf": [
+                            {
+                                "type": "object",
+                                "properties": {"val": {"type": "integer"}},
+                            }
+                        ]
+                    },
+                    {"type": "object", "properties": {"flag": {"type": "boolean"}}},
+                ]
+            },
+            {"val": 42, "flag": True},
+        ),
+    ],
+)
+def test_deep_composition_coercion(
+    description: str,
+    kwargs: dict[str, Any],
+    schema: dict[str, Any],
+    expected: dict[str, Any],
+) -> None:
+    assert _coerce_kwargs(kwargs, schema) == expected, description
+
+
+# =============================================================================
+# Deeply nested structures
+# =============================================================================
+def test_nested_array_of_arrays() -> None:
+    schema = {
+        "type": "object",
+        "properties": {
+            "matrix": {
+                "type": "array",
+                "items": {"type": "array", "items": {"type": "integer"}},
+            }
+        },
+    }
+    assert _coerce_kwargs({"matrix": [["1", "2"], ["3", "4"]]}, schema) == {
+        "matrix": [[1, 2], [3, 4]]
+    }
+
+
+def test_nested_array_of_arrays_from_json_string() -> None:
+    schema = {
+        "type": "object",
+        "properties": {
+            "matrix": {
+                "type": "array",
+                "items": {"type": "array", "items": {"type": "integer"}},
+            }
+        },
+    }
+    assert _coerce_kwargs({"matrix": "[[1,2],[3,4]]"}, schema) == {
+        "matrix": [[1, 2], [3, 4]]
+    }
+
+
+# =============================================================================
+# anyOf / type-list with "string" declared — string values must NOT be parsed
+# as object or array, and must NOT be cast to other scalar types.
+# The LLM intentionally sends a string; we must honour the declared string type.
+# =============================================================================
+@pytest.mark.parametrize(
+    ("description", "kwargs", "schema", "expected"),
+    [
+        (
+            "anyOf [string, object]: JSON-looking string stays string",
+            {"body": '{"key": "value"}'},
+            _schema(("body", {"anyOf": [{"type": "string"}, {"type": "object"}]})),
+            {"body": '{"key": "value"}'},
+        ),
+        (
+            "anyOf [object, string]: JSON-looking string stays string (order irrelevant)",
+            {"body": '{"key": "value"}'},
+            _schema(("body", {"anyOf": [{"type": "object"}, {"type": "string"}]})),
+            {"body": '{"key": "value"}'},
+        ),
+        (
+            "anyOf [string, array]: array-looking string stays string",
+            {"ids": "[1, 2, 3]"},
+            _schema(("ids", {"anyOf": [{"type": "string"}, {"type": "array"}]})),
+            {"ids": "[1, 2, 3]"},
+        ),
+        (
+            "anyOf [string, number]: numeric string stays string",
+            {"val": "42"},
+            _schema(("val", {"anyOf": [{"type": "string"}, {"type": "number"}]})),
+            {"val": "42"},
+        ),
+        (
+            "anyOf [number, string]: numeric string stays string (order irrelevant)",
+            {"val": "42"},
+            _schema(("val", {"anyOf": [{"type": "number"}, {"type": "string"}]})),
+            {"val": "42"},
+        ),
+        (
+            "anyOf [string, boolean]: boolean-looking string stays string",
+            {"flag": "true"},
+            _schema(("flag", {"anyOf": [{"type": "string"}, {"type": "boolean"}]})),
+            {"flag": "true"},
+        ),
+        (
+            "anyOf [string, object]: dict value stays dict (not serialised)",
+            {"body": {"key": "value"}},
+            _schema(("body", {"anyOf": [{"type": "string"}, {"type": "object"}]})),
+            {"body": {"key": "value"}},
+        ),
+        (
+            "anyOf 6 types with string first: JSON string stays string",
+            {"val": '{"k": 1}'},
+            _schema(
+                (
+                    "val",
+                    {
+                        "anyOf": [
+                            {"type": "string"},
+                            {"type": "number"},
+                            {"type": "boolean"},
+                            {"type": "object"},
+                            {"type": "array"},
+                            {"type": "null"},
+                        ]
+                    },
+                )
+            ),
+            {"val": '{"k": 1}'},
+        ),
+        (
+            "type list ['string', 'object']: JSON string stays string",
+            {"data": '{"k": 1}'},
+            _schema(("data", {"type": ["string", "object"]})),
+            {"data": '{"k": 1}'},
+        ),
+        (
+            "anyOf [object, null] WITHOUT string: JSON string is parsed to dict",
+            {"meta": '{"k": 1}'},
+            _schema(("meta", {"anyOf": [{"type": "object"}, {"type": "null"}]})),
+            {"meta": {"k": 1}},
+        ),
+        (
+            "anyOf [string, null]: 'null' string -> null (null coercion still takes priority)",
+            {"x": "null"},
+            _schema(("x", {"anyOf": [{"type": "string"}, {"type": "null"}]})),
+            {"x": None},
+        ),
+        (
+            "anyOf [string, null]: empty string -> null for nullable",
+            {"x": ""},
+            _schema(("x", {"anyOf": [{"type": "string"}, {"type": "null"}]})),
+            {"x": None},
+        ),
+    ],
+)
+def test_string_type_declared_prevents_structural_coercion(
+    description: str,
+    kwargs: dict[str, Any],
+    schema: dict[str, Any],
+    expected: dict[str, Any],
+) -> None:
+    assert _coerce_kwargs(kwargs, schema) == expected, description
+
+
+# =============================================================================
+# n8n-style real-world schema patterns
+# =============================================================================
+def test_n8n_http_request_schema() -> None:
+    schema = {
+        "type": "object",
+        "properties": {
+            "url": {"type": "string"},
+            "method": {
+                "type": "string",
+                "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+            },
+            "headers": {"type": "object", "additionalProperties": {"type": "string"}},
+            "body": {
+                "anyOf": [
+                    {"type": "string"},
+                    {"type": "object", "additionalProperties": True},
+                ]
+            },
+            "timeout": {"type": "number", "default": 10000},
+            "followRedirects": {"type": "boolean", "default": True},
+        },
+        "required": ["url"],
+    }
+    result = _coerce_kwargs(
+        {
+            "url": "https://api.example.com/data",
+            "method": "POST",
+            "body": '{"payload": "test"}',
+            "headers": '{"Content-Type": "application/json"}',
+            "timeout": "5000",
+            "followRedirects": "true",
+        },
+        schema,
+    )
+    assert result["body"] == '{"payload": "test"}', (
+        "body: anyOf [string, object] — string stays string"
+    )
+    assert result["headers"] == {"Content-Type": "application/json"}, (
+        "headers: type object — JSON string parsed"
+    )
+    assert result["timeout"] == 5000.0
+    assert result["followRedirects"] is True
+
+
+def test_n8n_set_field_value_schema() -> None:
+    schema = {
+        "type": "object",
+        "properties": {
+            "fieldName": {"type": "string"},
+            "fieldValue": {
+                "anyOf": [
+                    {"type": "string"},
+                    {"type": "number"},
+                    {"type": "boolean"},
+                    {"type": "object"},
+                    {"type": "array"},
+                    {"type": "null"},
+                ]
+            },
+        },
+        "required": ["fieldName", "fieldValue"],
+    }
+    assert _coerce_kwargs({"fieldName": "x", "fieldValue": "hello"}, schema) == {
+        "fieldName": "x",
+        "fieldValue": "hello",
+    }
+    assert _coerce_kwargs({"fieldName": "x", "fieldValue": "42"}, schema) == {
+        "fieldName": "x",
+        "fieldValue": "42",
+    }
+    assert _coerce_kwargs({"fieldName": "x", "fieldValue": None}, schema) == {
+        "fieldName": "x",
+        "fieldValue": None,
+    }
+    assert _coerce_kwargs({"fieldName": "x", "fieldValue": "null"}, schema) == {
+        "fieldName": "x",
+        "fieldValue": None,
+    }
+    assert _coerce_kwargs({"fieldName": "x", "fieldValue": {"k": 1}}, schema) == {
+        "fieldName": "x",
+        "fieldValue": {"k": 1},
+    }
+    assert _coerce_kwargs({"fieldName": "x", "fieldValue": [1, 2]}, schema) == {
+        "fieldName": "x",
+        "fieldValue": [1, 2],
+    }
+
+
+def test_n8n_google_sheets_nested_filters() -> None:
+    schema = {
+        "type": "object",
+        "properties": {
+            "documentId": {"type": "string"},
+            "filters": {
+                "type": "object",
+                "properties": {
+                    "conditions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "column": {"type": "string"},
+                                "condition": {"type": "string"},
+                                "value": {
+                                    "anyOf": [
+                                        {"type": "string"},
+                                        {"type": "number"},
+                                        {"type": "boolean"},
+                                    ]
+                                },
+                            },
+                            "required": ["column", "condition", "value"],
+                        },
+                    },
+                    "combineConditions": {"type": "string", "enum": ["AND", "OR"]},
+                },
+            },
+            "limit": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 50},
+            "returnAll": {"type": "boolean", "default": False},
+        },
+        "required": ["documentId"],
+    }
+    result = _coerce_kwargs(
+        {
+            "documentId": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms",
+            "filters": '{"conditions": [{"column": "Name", "condition": "contains", "value": "John"}], "combineConditions": "AND"}',
+            "limit": "10",
+            "returnAll": "false",
+        },
+        schema,
+    )
+    assert isinstance(result["filters"], dict)
+    assert result["filters"]["conditions"][0]["value"] == "John", (
+        "anyOf str|num|bool: string value stays string"
+    )
+    assert result["limit"] == 10
+    assert result["returnAll"] is False
+
+
+def test_n8n_postgres_query_parameters() -> None:
+    schema = {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "parameters": {
+                "type": "array",
+                "items": {
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "number"},
+                        {"type": "boolean"},
+                        {"type": "null"},
+                    ]
+                },
+            },
+        },
+        "required": ["query"],
+    }
+    result = _coerce_kwargs(
+        {
+            "query": "SELECT * FROM users WHERE id = $1 AND active = $2",
+            "parameters": '[42, "active", true, null]',
+        },
+        schema,
+    )
+    assert result["parameters"] == [42, "active", True, None]
+
+
+def test_untyped_property_parses_python_literal_dict_string() -> None:
+    """LLMs sometimes emit single-quoted Python dict syntax for untyped params."""
+    schema = _schema(
+        (
+            "object_param",
+            {
+                "description": "send whatever input the user gave you in the form of a json array"
+            },
+        )
+    )
+    result = _coerce_kwargs(
+        {
+            "object_param": "{'animal': 'Lion', 'traits': ['Majestic', 'Powerful', 'Social']}"
+        },
+        schema,
+    )
+    assert result == {
+        "object_param": {
+            "animal": "Lion",
+            "traits": ["Majestic", "Powerful", "Social"],
+        }
+    }
+
+
+def test_create_model_from_json_schema_preserves_untyped_properties() -> None:
+    from private_gpt.chat.schema_models import create_model_from_json_schema
+
+    original = {
+        "type": "object",
+        "properties": {
+            "object_param": {
+                "description": "send whatever input the user gave you in the form of a json array"
+            }
+        },
+        "required": ["object_param"],
+        "additionalProperties": True,
+    }
+    model = create_model_from_json_schema(original, "Obj")
+    regenerated = model.model_json_schema()
+    assert "type" not in regenerated["properties"]["object_param"]
