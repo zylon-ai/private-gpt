@@ -1,4 +1,6 @@
 from arq.connections import RedisSettings
+from redis.asyncio.retry import Retry
+from redis.backoff import ExponentialBackoff
 
 from private_gpt.settings.settings import Settings
 
@@ -23,4 +25,8 @@ def get_redis_settings(settings: Settings) -> RedisSettings:
         database=database,
         username=settings.redis.username,
         password=settings.redis.password,
+        conn_retries=10,
+        conn_retry_delay=2,
+        retry_on_timeout=True,
+        retry=Retry(ExponentialBackoff(cap=30, base=1), retries=10),
     )

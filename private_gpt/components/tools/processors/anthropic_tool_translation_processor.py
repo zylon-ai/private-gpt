@@ -58,6 +58,8 @@ class AnthropicToolTranslationProcessor(ToolProcessor):
                     type=tool.type,
                     description=tool.description or client_spec.description,
                     input_schema=tool.input_schema or client_spec.input_schema,
+                    runtime=tool.runtime,
+                    defer_loading=tool.defer_loading,
                 )
                 if pass_through == tool:
                     continue

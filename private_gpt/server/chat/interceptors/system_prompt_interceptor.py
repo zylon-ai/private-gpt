@@ -5,8 +5,9 @@ from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ChatRequest
 from private_gpt.components.context.models.context_layer import (
+    AnyContextLayer,
     ContextPromptLayer,
-    UserInstructionsLayer,
+    RuntimeInstructionsLayer,
 )
 from private_gpt.components.context.models.layer_type import LayerType
 from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
@@ -44,7 +45,8 @@ class SystemPromptRequestInterceptor(ChatRequestLoopInterceptor):
 
         state = context.state.model_copy(deep=True)
         stack = state.input.context_stack
-        stack = stack.remove_layers_of_source("platform_header")
+
+        stack = stack.remove_layers_of_type(LayerType.RUNTIME_INSTRUCTIONS)
         stack = stack.remove_layers_of_type(LayerType.CONTEXT)
 
         generated_layers = await self._build_generated_layers(
@@ -66,13 +68,13 @@ class SystemPromptRequestInterceptor(ChatRequestLoopInterceptor):
         context: ChatInterceptorContext,
         request: ChatRequest,
         documents: list[Any],
-    ) -> list[UserInstructionsLayer | ContextPromptLayer]:
-        def build() -> list[UserInstructionsLayer | ContextPromptLayer]:
-            generated_layers: list[UserInstructionsLayer | ContextPromptLayer] = []
+    ) -> list[AnyContextLayer]:
+        def build() -> list[AnyContextLayer]:
+            generated_layers: list[AnyContextLayer] = []
             header = self._prompt_builder_service.create_chat_header_prompt().format()
             if header.strip():
                 generated_layers.append(
-                    UserInstructionsLayer(
+                    RuntimeInstructionsLayer(
                         text=header.strip(),
                         source="platform_header",
                     )

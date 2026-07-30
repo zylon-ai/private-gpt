@@ -1052,6 +1052,61 @@ async def test_chat_body_validation_tool_result_references_unknown_tool(
 
 
 @pytest.mark.anyio
+async def test_code_execution_expand_and_is_usable(
+    async_test_client: AsyncClient,
+    injector: MockInjector,
+) -> None:
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="call_001",
+                    tool_name="create",
+                    tool_kwargs={"path": "potato.md", "file_text": "# Potato"},
+                ),
+            ],
+            [
+                ToolSelection(
+                    tool_id="call_002",
+                    tool_name="present_files",
+                    tool_kwargs={"filepaths": ["potato.md"]},
+                )
+            ],
+            ["Created potato.md."],
+        ],
+    )
+
+    body = {
+        "messages": [
+            {"content": "Create a potato.md and present the file", "role": "user"}
+        ],
+        "tools": [
+            {
+                "name": "code_execution",
+                "type": "code_execution_v1",
+                "input_schema": {"type": "object", "properties": {}},
+            }
+        ],
+        "system": [{"extensions": ["zylon"]}],
+    }
+
+    response = await async_test_client.post("/v1/messages", json=body)
+    assert response.status_code == 200
+
+    completion: Message = Message.model_validate(response.json())
+    tool_uses = [
+        block for block in completion.content if isinstance(block, ToolUseBlock)
+    ]
+    tool_results = [
+        block for block in completion.content if isinstance(block, ToolResultBlock)
+    ]
+
+    assert len(tool_uses) == 2, f"Expected 2 tool_uses, got {len(tool_uses)}"
+    assert len(tool_results) == 2, f"Expected 2 tool_result, got {len(tool_results)}"
+
+
+@pytest.mark.anyio
 async def test_chat_body_validation_mismatched_tool_ids(
     async_test_client: AsyncClient,
 ) -> None:

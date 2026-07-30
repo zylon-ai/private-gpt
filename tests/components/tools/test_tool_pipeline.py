@@ -9,6 +9,7 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedChatRequest,
     ResolvedContextConfig,
     ResolvedToolConfig,
+    ToolExecutionMetadata,
     ToolRequirements,
     ToolSpec,
 )
@@ -16,6 +17,9 @@ from private_gpt.components.skills.models.skill_entities import (
     SkillFilter,
     SkillFrontmatter,
     SkillVersionEntity,
+)
+from private_gpt.components.tools.processors.anthropic_tool_translation_processor import (
+    AnthropicToolTranslationProcessor,
 )
 from private_gpt.components.tools.processors.base import _replace_tool, _session_id
 from private_gpt.components.tools.processors.bash_processor import BashProcessor
@@ -207,6 +211,172 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
         "create",
         "insert",
     ]
+
+
+_DUMMY_METADATA = ToolExecutionMetadata(
+    rebuild_callable="private_gpt.components.tools.builders.text_editor_tool_builder:rebuild_text_editor_create_tool",
+    rebuild_kwargs={},
+)
+
+
+def _built_tool(name: str, tool_type: str) -> ToolSpec:
+    """Return a fully-built ToolSpec (async_fn + execution_metadata set)."""
+    return ToolSpec.from_defaults(
+        name=name,
+        type=tool_type,
+        description=name,
+        async_fn=AsyncMock(return_value=[]),
+        execution_metadata=_DUMMY_METADATA,
+    )
+
+
+def _make_bash_builder() -> SimpleNamespace:
+    return SimpleNamespace(
+        build_tool=AsyncMock(return_value=_built_tool("bash", "bash_v1")),
+    )
+
+
+def _make_text_editor_builder() -> SimpleNamespace:
+    return SimpleNamespace(
+        build_view_tool=AsyncMock(return_value=_built_tool("view", "view_v1")),
+        build_str_replace_tool=AsyncMock(
+            return_value=_built_tool("str_replace", "str_replace_v1")
+        ),
+        build_create_tool=AsyncMock(return_value=_built_tool("create", "create_v1")),
+        build_insert_tool=AsyncMock(return_value=_built_tool("insert", "insert_v1")),
+    )
+
+
+def _make_skill_processor() -> SkillManagementProcessor:
+    return SkillManagementProcessor(
+        settings=_settings(),
+        skill_service=SimpleNamespace(
+            recover_versions=AsyncMock(return_value=[_skill_version()])
+        ),
+    )
+
+
+def _make_pipeline(
+    *,
+    anthropic: bool = False,
+    skill_processor: SkillManagementProcessor | None = None,
+) -> ToolPipeline:
+    noop = SimpleNamespace(intercept=AsyncMock(return_value=False))
+    return ToolPipeline(
+        anthropic_tool_translation_processor=(
+            AnthropicToolTranslationProcessor() if anthropic else noop
+        ),
+        semantic_search_processor=noop,
+        tabular_data_processor=noop,
+        database_query_processor=noop,
+        web_fetch_processor=noop,
+        web_search_processor=noop,
+        skill_management_processor=skill_processor or noop,
+        code_execution_processor=CodeExecutionProcessor(),
+        bash_processor=BashProcessor(_make_bash_builder()),
+        text_editor_processor=TextEditorProcessor(_make_text_editor_builder()),
+        present_files_processor=noop,
+        present_server_processor=noop,
+    )
+
+
+_SKILL_ARTIFACT = SkillArtifact(
+    skill_filter=SkillFilter(
+        collection="tenant-a",
+        skill_or_version_ids=["skill_1"],
+    )
+)
+
+_NESTED_EXPANSION_CASES = [
+    pytest.param(
+        # text_editor_v1 → expand → [view, str_replace, create, insert] stubs
+        #                 → build  → 4 built leaf tools
+        lambda: _make_pipeline(),
+        ToolSpec(
+            name="text_editor",
+            type="text_editor_v1",
+            input_schema={"type": "object", "properties": {}},
+        ),
+        None,
+        ["view", "str_replace", "create", "insert"],
+        id="text_editor_expands_to_built_leaf_tools",
+    ),
+    pytest.param(
+        # code_execution_v1 → expand → [bash, text_editor] stubs
+        #   bash           → build  → bash built
+        #   text_editor    → expand → [view, str_replace, create, insert] stubs
+        #                   → build  → 4 built leaf tools
+        lambda: _make_pipeline(),
+        ToolSpec(
+            name="code_execution",
+            type="code_execution_v1",
+            input_schema={"type": "object", "properties": {}},
+        ),
+        None,
+        ["bash", "view", "str_replace", "create", "insert"],
+        id="code_execution_fully_expands_all_levels",
+    ),
+    pytest.param(
+        # code_execution_20250825 (Anthropic wire type) → translate → code_execution_v1
+        #   … same tree as above
+        lambda: _make_pipeline(anthropic=True),
+        ToolSpec(
+            name="code_execution",
+            type="code_execution_20250825",
+            input_schema={"type": "object", "properties": {}},
+        ),
+        None,
+        ["bash", "view", "str_replace", "create", "insert"],
+        id="code_execution_anthropic_wire_type_fully_expands",
+    ),
+    pytest.param(
+        # skills_v1 → expand → [load_skill, unload_skill, list_skills] stubs
+        #           → build  → 3 built leaf tools
+        lambda: _make_pipeline(skill_processor=_make_skill_processor()),
+        ToolSpec(
+            name="skills",
+            type="skills_v1",
+            input_schema={"type": "object", "properties": {}},
+        ),
+        _SKILL_ARTIFACT,
+        ["load_skill", "unload_skill", "list_skills"],
+        id="skills_expands_to_built_leaf_tools",
+    ),
+]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("pipeline_factory", "input_tool", "tool_artifact", "expected_names"),
+    _NESTED_EXPANSION_CASES,
+)
+async def test_nested_tool_expansion_fully_builds_all_leaf_tools(
+    pipeline_factory: object,
+    input_tool: ToolSpec,
+    tool_artifact: SkillArtifact | None,
+    expected_names: list[str],
+) -> None:
+    """Every leaf tool produced by nested expand→build chains must be fully built.
+
+    Regression: the pipeline ran each processor once, so parent stubs expanded
+    to child stubs that were never fed back through the processors that build them.
+    Child stubs had execution_metadata=None, causing the LLM to receive an
+    unresolved tool (e.g. 'text_editor_code_execution') and respond with
+    "Tool not found." at runtime.
+    """
+    pipeline = pipeline_factory()
+    request = _request([input_tool])
+    if tool_artifact is not None:
+        request.tool_context = [tool_artifact]
+
+    resolved = await pipeline.contextualize_internal_tools(request)
+
+    assert [t.name for t in resolved.tool_config.tools] == expected_names
+    for tool in resolved.tool_config.tools:
+        assert tool.execution_metadata is not None, (
+            f"Tool {tool.name!r} (type={tool.type!r}) is missing execution_metadata "
+            "— it was left as an unbuilt stub"
+        )
 
 
 def test_tool_pipeline_uses_user_id_as_session_id() -> None:

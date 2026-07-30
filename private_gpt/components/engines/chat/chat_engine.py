@@ -598,7 +598,19 @@ class ChatLoopEngine:
                     continue
                 if key == "tool_calls":
                     if isinstance(value, list) and value:
-                        assistant_message.additional_kwargs["tool_calls"] = value
+                        existing = assistant_message.additional_kwargs.get("tool_calls")
+                        if not isinstance(existing, list):
+                            existing = []
+                        by_id = {}
+                        for tc in existing:
+                            if tc.tool_id:
+                                by_id[tc.tool_id] = tc
+                        for tc in value:
+                            if tc.tool_id:
+                                by_id[tc.tool_id] = tc
+                        assistant_message.additional_kwargs["tool_calls"] = list(
+                            by_id.values()
+                        )
                     continue
                 assistant_message.additional_kwargs[key] = value
 
