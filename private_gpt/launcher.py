@@ -37,7 +37,7 @@ from private_gpt.server.chat_async.chat_async_router import (
 from private_gpt.server.completion.completion_router import completion_router
 from private_gpt.server.content.content_router import content_router
 from private_gpt.server.embeddings.embeddings_router import embeddings_router
-from private_gpt.server.files.files_router import files_router
+from private_gpt.server.files.files_router import files_router, namespaced_files_router
 from private_gpt.server.health.health_router import health_router
 from private_gpt.server.ingest.convert_router import convert_router
 from private_gpt.server.ingest.ingest_router import ingest_router
@@ -201,6 +201,7 @@ def create_app(root_injector: Injector) -> FastAPI:
     app.include_router(tool_router)
     app.include_router(skill_router)
     app.include_router(files_router)
+    app.include_router(namespaced_files_router)
     app.include_router(health_router)
 
     if settings.server.ui.enabled:

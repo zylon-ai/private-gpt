@@ -314,6 +314,7 @@ class S3Helper:
                     "content_type", "application/octet-stream"
                 ),
             ),
+            "etag": response.get("ETag"),
         }
 
     def generate_presigned_download_url(self, uri: str, expiration: int = 3600) -> str:

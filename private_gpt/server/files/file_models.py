@@ -13,9 +13,9 @@ class FileScope(BaseModel):
         description="Session / container identifier that owns this file.",
         examples=["session-abc123"],
     )
-    type: Literal["session"] = Field(
+    type: str = Field(
         default="session",
-        description="Object type discriminator, always 'session'.",
+        description="Namespace type: 'session', 'artifacts', 'skills', or a custom namespace.",
         examples=["session"],
     )
 
@@ -71,6 +71,16 @@ class FileMetadata(BaseModel):
     downloadable: bool = Field(
         description="True for sandbox output files; False for uploaded input files.",
         examples=[False],
+    )
+    etag: str | None = Field(
+        default=None,
+        description="Content checksum (MD5 hex or S3 ETag). Present after stat; None if unavailable.",
+        examples=["d41d8cd98f00b204e9800998ecf8427e"],
+    )
+    namespace: str = Field(
+        default="session",
+        description="Namespace this file belongs to: 'session', 'artifacts', 'skills', etc.",
+        examples=["session"],
     )
     scope: FileScope = Field(
         description="Session scope this file belongs to.",
