@@ -1809,6 +1809,31 @@ class SemaphoreSettings(BaseModel):
     )
 
 
+class NamespaceConfig(BaseModel):
+    """Configuration for a single filesystem namespace."""
+
+    root: str = Field(
+        description="Absolute local path that backs this namespace. Must exist and be readable at startup.",
+    )
+    default_mode: Literal["rw", "ro"] = Field(
+        default="rw",
+        description="Default access mode: 'rw' (read-write) or 'ro' (read-only).",
+    )
+
+
+class FilesystemsSettings(BaseModel):
+    """Namespace registry: maps logical names to local filesystem roots."""
+
+    namespaces: dict[str, NamespaceConfig] = Field(
+        default_factory=dict,
+        description=(
+            "Map from namespace name to its configuration. "
+            "Well-known names: 'session', 'artifacts', 'skills'. "
+            "Additional namespaces may be added freely."
+        ),
+    )
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -1847,6 +1872,10 @@ class Settings(BaseModel):
     skills: SkillSettings
     transformation: TransformationSettings
     semaphore: SemaphoreSettings
+    filesystems: FilesystemsSettings = Field(
+        default_factory=FilesystemsSettings,
+        description="Namespace registry: maps logical names to local filesystem roots.",
+    )
     scheduler: SchedulerConfig = Field(
         default_factory=SchedulerConfig,
         description="Scheduler configuration for chat and tool workers.",
