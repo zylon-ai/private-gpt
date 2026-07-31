@@ -30,6 +30,7 @@ class BashProcessor(ToolProcessor):
                 extra_bundles=request.context.content_bundles or [],
                 bundles_to_remove=request.context.bundles_to_remove or [],
                 env=Principal.current().as_env() or {},
+                extra_volumes=request.context.extra_volumes or [],
             )
             resolved = await self._bash_builder.build_tool(
                 config,

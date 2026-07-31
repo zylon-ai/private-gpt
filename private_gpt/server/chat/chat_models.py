@@ -13,6 +13,7 @@ from private_gpt.chat.input_models import (
     System,
     validate_system_config,
 )
+from private_gpt.components.filesystems.mount_entry import MountEntry
 from private_gpt.events.models import TLDRBlock, ToolResultBlock, ToolUseBlock
 from private_gpt.server.mcp.config import McpServerConfig
 from private_gpt.server.utils.artifact_input import ArtifactType
@@ -37,6 +38,10 @@ class ChatBody(MessagesInputBase):
     container: str | None = Field(
         default=None,
         description="Container identifier for reuse across requests.",
+    )
+    mounts: list[MountEntry] | None = Field(
+        default=None,
+        description="Generic mount entries from the Backend mount plan.",
     )
     response_format: ResponseFormat = Field(
         default=ResponseFormat(),

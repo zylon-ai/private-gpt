@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from private_gpt.components.environment.mounter import LayoutMounter
     from private_gpt.components.sandbox.base import SandboxProvider, SandboxSession
     from private_gpt.components.sandbox.content_bundle import ContentBundle
+    from private_gpt.components.sandbox.mount import VolumeSpec
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,7 @@ class EnvironmentManager:
         extra_bundles: list[ContentBundle] | None = None,
         bundles_to_remove: list[str] | None = None,
         sandbox_env: dict[str, str] | None = None,
+        extra_volumes: list[VolumeSpec] | None = None,
     ) -> Environment:
         # Serialize per session_id so concurrent calls cannot race into
         # creating two backend sandboxes for the same session (one would leak).
@@ -95,7 +97,7 @@ class EnvironmentManager:
                         await env._flush_pending()
                     return env
             return await self._create(
-                session_id, extra_bundles, bundles_to_remove, sandbox_env
+                session_id, extra_bundles, bundles_to_remove, sandbox_env, extra_volumes
             )
 
     def release(self, session_id: str) -> None:
@@ -114,12 +116,15 @@ class EnvironmentManager:
         extra_bundles: list[ContentBundle] | None,
         bundles_to_remove: list[str] | None = None,
         sandbox_env: dict[str, str] | None = None,
+        extra_volumes: list[VolumeSpec] | None = None,
     ) -> Environment:
         await asyncio.to_thread(self._layout.ensure_ready)
 
         # Layout volumes (workspace, uploads, outputs).
         layout_volumes = self._layout.session_volumes(session_id)
         volumes = list(layout_volumes or [])
+        # Artifact mount refs from the Backend mount plan.
+        volumes.extend(extra_volumes or [])
 
         # Bundle mount specs — always added for writability enforcement.
         specs = self._layout.mount_specs()

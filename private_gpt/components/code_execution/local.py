@@ -87,6 +87,7 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
             config.extra_bundles or None,
             config.bundles_to_remove or None,
             config.env or None,
+            config.extra_volumes or None,
         )
         return SandboxCodeExecutionSession(env)
 
