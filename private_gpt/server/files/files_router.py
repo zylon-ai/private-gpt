@@ -9,7 +9,6 @@ from private_gpt.server.files.file_models import (
     FileMetadata,
 )
 from private_gpt.server.files.file_service import FileService
-from private_gpt.server.files.namespaced_file_service import NamespacedFileService
 from private_gpt.server.utils.auth import authenticated
 
 files_router = APIRouter(
@@ -39,9 +38,22 @@ async def upload_file(
         description="Session / container identifier (matches the `container` field in chat requests).",
         examples=["session-abc123"],
     ),
+    namespace: str = Query(
+        default="session",
+        description="Namespace for the file. Defaults to 'session'. Use 'artifacts' for durable storage.",
+        examples=["session"],
+    ),
 ) -> FileMetadata:
     service: FileService = request.state.injector.get(FileService)
-    return await service.upload_file(scope_id=scope_id, upload=file)
+    if namespace == "session":
+        return await service.upload_file(scope_id=scope_id, upload=file)
+    content_bytes = await file.read()
+    return await service.write_file_to_namespace(
+        namespace=namespace,
+        scope=scope_id,
+        path=file.filename or "upload",
+        content=content_bytes,
+    )
 
 
 @files_router.get(
@@ -78,10 +90,19 @@ async def list_files(
         description="Return files created before this file ID (exclusive). Used for backward pagination.",
         examples=["outputs/result.png"],
     ),
+    namespace: str = Query(
+        default="session",
+        description="Namespace to list files from. Defaults to 'session'.",
+        examples=["session"],
+    ),
 ) -> FileListResponse:
     service: FileService = request.state.injector.get(FileService)
     return await service.list_files(
-        scope_id=scope_id, limit=limit, after_id=after_id, before_id=before_id
+        scope_id=scope_id,
+        limit=limit,
+        after_id=after_id,
+        before_id=before_id,
+        namespace=namespace,
     )
 
 
@@ -112,10 +133,15 @@ async def get_file_content(
         description="Session / container identifier.",
         examples=["session-abc123"],
     ),
+    namespace: str = Query(
+        default="session",
+        description="Namespace the file belongs to. Defaults to 'session'.",
+        examples=["session"],
+    ),
 ) -> Response:
     service: FileService = request.state.injector.get(FileService)
     content, mime_type, display_name = await service.get_file_content(
-        scope_id=scope_id, file_id=file_id
+        scope_id=scope_id, file_id=file_id, namespace=namespace
     )
     return Response(
         content=content,
@@ -145,9 +171,16 @@ async def get_file_metadata(
         description="Session / container identifier.",
         examples=["session-abc123"],
     ),
+    namespace: str = Query(
+        default="session",
+        description="Namespace the file belongs to. Defaults to 'session'.",
+        examples=["session"],
+    ),
 ) -> FileMetadata:
     service: FileService = request.state.injector.get(FileService)
-    return await service.get_file_metadata(scope_id=scope_id, file_id=file_id)
+    return await service.get_file_metadata(
+        scope_id=scope_id, file_id=file_id, namespace=namespace
+    )
 
 
 @files_router.delete(
@@ -174,117 +207,13 @@ async def delete_file(
         description="Session / container identifier.",
         examples=["session-abc123"],
     ),
+    namespace: str = Query(
+        default="session",
+        description="Namespace the file belongs to. Defaults to 'session'.",
+        examples=["session"],
+    ),
 ) -> DeletedFile:
     service: FileService = request.state.injector.get(FileService)
-    return await service.delete_file(scope_id=scope_id, file_id=file_id)
-
-
-# ---------------------------------------------------------------------------
-# Namespace-aware Files API  (T1.3)
-# ---------------------------------------------------------------------------
-
-namespaced_files_router = APIRouter(
-    prefix="/v1/namespaces",
-    dependencies=[Depends(authenticated)],
-    tags=["Files (namespaced)"],
-    responses={401: {"description": "Unauthorized"}},
-)
-
-
-@namespaced_files_router.post(
-    "/{namespace}/{scope:path}/files",
-    response_model=FileMetadata,
-    summary="Upload a file into a namespace",
-    description=(
-        "Write a file at ``{namespace}/{scope}/{path}`` where ``path`` is taken from "
-        "the uploaded filename.  The caller must supply the ``namespace`` (e.g. "
-        "``session``, ``artifacts``) and an opaque ``scope`` identifier (e.g. session "
-        "id or org id).  Returns file metadata including etag."
-    ),
-)
-async def ns_upload_file(
-    request: Request,
-    namespace: str,
-    scope: str,
-    file: Annotated[UploadFile, File()],
-    path: str = Query(
-        ...,
-        description="Relative path within the scope (e.g. 'outputs/result.png').",
-    ),
-) -> FileMetadata:
-    service: NamespacedFileService = request.state.injector.get(NamespacedFileService)
-    return await service.upload_file(
-        namespace=namespace, scope=scope, path=path, upload=file
+    return await service.delete_file(
+        scope_id=scope_id, file_id=file_id, namespace=namespace
     )
-
-
-@namespaced_files_router.get(
-    "/{namespace}/{scope:path}/files",
-    response_model=FileListResponse,
-    summary="List files in a namespace scope",
-    description="List files under an optional prefix within ``{namespace}/{scope}``.",
-)
-async def ns_list_files(
-    request: Request,
-    namespace: str,
-    scope: str,
-    prefix: str = Query(default="", description="Prefix filter within the scope."),
-    limit: int = Query(default=100, ge=1, le=1000),
-) -> FileListResponse:
-    service: NamespacedFileService = request.state.injector.get(NamespacedFileService)
-    return await service.list_by_prefix(
-        namespace=namespace, scope=scope, prefix=prefix, limit=limit
-    )
-
-
-@namespaced_files_router.get(
-    "/{namespace}/{scope:path}/files/{file_path:path}/content",
-    summary="Download file content from a namespace",
-    responses={200: {"content": {"application/octet-stream": {}}}},
-)
-async def ns_get_file_content(
-    request: Request,
-    namespace: str,
-    scope: str,
-    file_path: str,
-) -> Response:
-    service: NamespacedFileService = request.state.injector.get(NamespacedFileService)
-    content = await service.read_file(namespace=namespace, scope=scope, path=file_path)
-    return Response(
-        content=content,
-        media_type="application/octet-stream",
-        headers={
-            "Content-Disposition": f'attachment; filename="{file_path.split("/")[-1]}"'
-        },
-    )
-
-
-@namespaced_files_router.get(
-    "/{namespace}/{scope:path}/files/{file_path:path}",
-    response_model=FileMetadata,
-    summary="Stat a file in a namespace",
-    description="Return metadata (including etag) for a file.",
-)
-async def ns_stat_file(
-    request: Request,
-    namespace: str,
-    scope: str,
-    file_path: str,
-) -> FileMetadata:
-    service: NamespacedFileService = request.state.injector.get(NamespacedFileService)
-    return await service.stat_file(namespace=namespace, scope=scope, path=file_path)
-
-
-@namespaced_files_router.delete(
-    "/{namespace}/{scope:path}/files/{file_path:path}",
-    response_model=DeletedFile,
-    summary="Delete a file from a namespace",
-)
-async def ns_delete_file(
-    request: Request,
-    namespace: str,
-    scope: str,
-    file_path: str,
-) -> DeletedFile:
-    service: NamespacedFileService = request.state.injector.get(NamespacedFileService)
-    return await service.delete_file(namespace=namespace, scope=scope, path=file_path)
