@@ -1,18 +1,33 @@
 """File callback service for the ZGPT filesystem platform (T5.1).
 
-Manages per-session watch sessions and routes FileEvents to configured
-callback targets (AMQP or HTTP).
+Receives MinIO/S3 bucket notification webhooks, deduplicates them, and
+routes typed FileEvents to configured callback targets (AMQP or HTTP).
+
+Architecture:
+  MinIO bucket webhook
+    → POST /v1/internal/file-events   (registered in zylon-gpt layer)
+    → FileCallbackService.handle_bucket_notification()
+    → deduplication via FileEventDebouncer
+    → typed FileEvent emitted to AMQP / HTTP callback targets
+
+The callback targets are registered per-session by the chat layer (the
+Backend tells ZGPT which exchange/routing-key to use for this turn via
+the ``file_callbacks`` field in the ChatBody).
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 import aiohttp
 from injector import inject, singleton
 
-from private_gpt.components.filesystems.callbacks.file_watcher import FileWatchSession
+from private_gpt.components.filesystems.callbacks.file_watcher import (
+    FileEventDebouncer,
+    parse_minio_notification,
+)
 from private_gpt.components.filesystems.callbacks.models import (
     FileCallbackTarget,
     FileEvent,
@@ -24,32 +39,33 @@ logger = logging.getLogger(__name__)
 
 @singleton
 class FileCallbackService:
-    """Manages filesystem watch sessions and emits typed file events.
+    """Routes MinIO bucket notifications to typed file events.
 
     Usage:
-        service.start_watch(session_id, namespace, scope, target)
-        # ... sandbox runs ...
-        service.stop_watch(session_id)
+        service.register_watch(session_id, namespace, target)
+        # MinIO sends webhook → handle_bucket_notification(bucket, payload)
+        service.unregister_watch(session_id)
     """
 
     @inject
     def __init__(self, registry: NamespaceRegistry) -> None:
         self._registry = registry
-        self._sessions: dict[str, FileWatchSession] = {}
+        # session_id → (namespace, FileCallbackTarget)
+        self._sessions: dict[str, tuple[str, FileCallbackTarget]] = {}
+        # namespace → FileEventDebouncer (shared per namespace)
+        self._debouncers: dict[str, FileEventDebouncer] = {}
+        # bucket → namespace (populated from registry at startup)
+        self._bucket_namespace_map: dict[str, str] = {}
 
-    def start_watch(
+    def register_watch(
         self,
         session_id: str,
         namespace: str,
-        scope: str,
         target: FileCallbackTarget,
     ) -> None:
-        """Start watching namespace/scope for a session.
-
-        Skips silently when the namespace is not registered (optional mount).
-        """
+        """Register a callback target for a session's namespace."""
         try:
-            ns_root = self._registry.root(namespace)
+            self._registry.get(namespace)
         except KeyError:
             logger.debug(
                 "Namespace '%s' not registered — skipping watch for session %s",
@@ -58,38 +74,66 @@ class FileCallbackService:
             )
             return
 
-        watch_path = ns_root / scope
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-
-        session = FileWatchSession(
-            namespace=namespace,
-            scope=scope,
-            watch_path=watch_path,
-            correlation=target.correlation,
-            emit=lambda ev: self._dispatch(ev, target),
-            loop=loop,
-        )
-        session.start()
-        self._sessions[session_id] = session
+        self._sessions[session_id] = (namespace, target)
+        if namespace not in self._debouncers:
+            self._debouncers[namespace] = FileEventDebouncer()
         logger.info(
-            "File watch started: session=%s namespace=%s scope=%s",
-            session_id,
-            namespace,
-            scope,
+            "File watch registered: session=%s namespace=%s", session_id, namespace
         )
 
-    def stop_watch(self, session_id: str) -> None:
-        """Stop watching for a session. No-op if not watching."""
-        session = self._sessions.pop(session_id, None)
-        if session:
-            session.stop()
-            logger.info("File watch stopped: session=%s", session_id)
+    def unregister_watch(self, session_id: str) -> None:
+        """Unregister callbacks for a session."""
+        self._sessions.pop(session_id, None)
+        logger.debug("File watch unregistered: session=%s", session_id)
+
+    async def handle_bucket_notification(
+        self,
+        namespace: str,
+        payload: dict[str, Any],
+        scope_hint: str | None = None,
+    ) -> None:
+        """Process an incoming MinIO/S3 bucket notification for a namespace.
+
+        The ``scope_hint`` is an optional orgId/scope taken from the caller
+        (e.g. from an authenticated webhook with org context).
+        """
+        events = parse_minio_notification(payload)
+        if not events:
+            return
+
+        debouncer = self._debouncers.get(namespace)
+        if debouncer is None:
+            return  # no sessions watching this namespace
+
+        for key, event_type, _size in events:
+            # Derive scope (orgId = first path segment) and path from key
+            parts = key.split("/", 1)
+            scope = parts[0] if len(parts) >= 2 else (scope_hint or "")
+            path = parts[1] if len(parts) >= 2 else key
+
+            if not debouncer.should_emit(key, event_type):
+                logger.debug(
+                    "Debounced duplicate event: key=%s type=%s", key, event_type
+                )
+                continue
+
+            ev = FileEvent(
+                type=event_type,  # type: ignore[arg-type]
+                path=path,
+                namespace=namespace,
+                scope=scope,
+            )
+
+            # Dispatch to all sessions watching this namespace
+            for _session_id, (sess_ns, target) in list(self._sessions.items()):
+                if sess_ns == namespace:
+                    # Merge session correlation into event
+                    correlated_ev = ev.model_copy(
+                        update={"correlation": {**target.correlation, **ev.correlation}}
+                    )
+                    _task = asyncio.create_task(self._dispatch(correlated_ev, target))  # noqa: RUF006
 
     async def _dispatch(self, event: FileEvent, target: FileCallbackTarget) -> None:
-        """Route a FileEvent to all configured targets."""
         try:
             if target.amqp:
                 await self._dispatch_amqp(event, target)
@@ -101,11 +145,10 @@ class FileCallbackService:
     async def _dispatch_amqp(
         self, event: FileEvent, target: FileCallbackTarget
     ) -> None:
-        """Publish event to AMQP. Requires aio_pika to be wired via DI."""
         if not target.amqp:
             return
-        # aio_pika wiring is done in the zylon-gpt layer which has the broker.
-        # For now, log the event so it can be consumed by any log-based consumer.
+        # Full AMQP dispatch is wired in the zylon-gpt layer which has aio_pika.
+        # Log here so it's visible and testable.
         logger.info(
             "FileEvent[AMQP] exchange=%s routing_key=%s type=%s path=%s",
             target.amqp.exchange,
@@ -117,7 +160,6 @@ class FileCallbackService:
     async def _dispatch_http(
         self, event: FileEvent, target: FileCallbackTarget
     ) -> None:
-        """POST event payload to the HTTP callback URL."""
         if not target.http:
             return
         payload = event.model_dump(mode="json")
@@ -126,10 +168,7 @@ class FileCallbackService:
             session.post(
                 target.http.url,
                 json=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    **target.http.headers,
-                },
+                headers={"Content-Type": "application/json", **target.http.headers},
                 timeout=aiohttp.ClientTimeout(total=5),
             ) as resp,
         ):

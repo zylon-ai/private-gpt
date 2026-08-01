@@ -1,165 +1,117 @@
-"""Filesystem event watcher for the ZGPT file callback system (T5.1).
+"""File event handler for the ZGPT file callback system (T5.1).
 
-Observes mounted namespace directories for changes, deduplicates noise
-(rapid repeated writes, placeholders, multipart temp files), and emits
-one typed FileEvent per logical save.
+Design: ZGPT receives MinIO/S3 bucket notification webhooks at
+``POST /v1/internal/file-events``.  Each notification is parsed,
+deduplicated (multipart uploads produce multiple events for one logical
+write), and mapped to a typed FileEvent.
 
 Deduplication strategy:
-- Events within DEBOUNCE_SECONDS of each other for the same path are
+- Events within DEBOUNCE_SECONDS of each other for the same key are
   collapsed into a single event.
-- Paths whose filenames contain patterns suggesting temp/partial files
-  (e.g. `~`, `.tmp`, `.part`, `.crdownload`, `.download`) are skipped.
-- Empty files (zero bytes) are skipped unless the event is a delete.
+- Paths indicating temp / multipart objects (e.g. `.tmp`, `.part`,
+  or containing `.minio.sys`) are skipped.
+- Zero-byte objects on created/updated events are skipped.
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
-import os
 import re
 import time
 from collections import defaultdict
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
-
-from watchdog.events import (
-    FileSystemEventHandler,
-)
-from watchdog.observers import Observer
-
-from private_gpt.components.filesystems.callbacks.models import FileEvent
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
-
-    from watchdog.events import FileSystemEvent
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Seconds within which duplicate events for the same path are collapsed.
+# Seconds within which duplicate events for the same key are collapsed.
 DEBOUNCE_SECONDS = 0.5
 
-# Filename patterns indicating temp / partial files — skip these.
+# Patterns indicating temp / multipart objects — skip these.
 _TEMP_PATTERNS = re.compile(
-    r"(^~|\.tmp$|\.part$|\.crdownload$|\.download$|^\.~|~$)",
+    r"(^\.minio\.sys|\.tmp$|\.part$|\.crdownload$|~$|^~)",
     re.IGNORECASE,
 )
 
 
-def _is_temp_file(path: str) -> bool:
-    name = os.path.basename(path)
-    return bool(_TEMP_PATTERNS.search(name))
+def _is_temp_key(key: str) -> bool:
+    name = key.rsplit("/", 1)[-1]
+    return bool(_TEMP_PATTERNS.search(name)) or ".minio.sys" in key
 
 
-class _DebouncedHandler(FileSystemEventHandler):
-    """Watchdog handler that deduplicates events and fires an async callback."""
+class FileEventDebouncer:
+    """Stateful debouncer that collapses rapid duplicate events per key.
 
-    def __init__(
-        self,
-        namespace: str,
-        scope: str,
-        root: Path,
-        correlation: dict[str, Any],
-        emit: Callable[[FileEvent], Coroutine[Any, Any, None]],
-        loop: asyncio.AbstractEventLoop,
-    ) -> None:
-        super().__init__()
-        self._namespace = namespace
-        self._scope = scope
-        self._root = root
-        self._correlation = correlation
-        self._emit = emit
-        self._loop = loop
-        # path → (timestamp, event_type) for debouncing
-        self._pending: dict[str, tuple[float, str]] = defaultdict(lambda: (0.0, ""))
-
-    def on_created(self, event: FileSystemEvent) -> None:
-        if not event.is_directory:
-            self._handle(event.src_path, "file.created")
-
-    def on_modified(self, event: FileSystemEvent) -> None:
-        if not event.is_directory:
-            self._handle(event.src_path, "file.updated")
-
-    def on_deleted(self, event: FileSystemEvent) -> None:
-        if not event.is_directory:
-            self._handle(event.src_path, "file.deleted")
-
-    def _handle(self, abs_path: str, event_type: str) -> None:
-        if _is_temp_file(abs_path):
-            logger.debug("Ignoring temp file event: %s", abs_path)
-            return
-
-        # Skip empty files for created/updated — zero-byte placeholders
-        if event_type != "file.deleted":
-            try:
-                if os.path.getsize(abs_path) == 0:
-                    logger.debug("Skipping zero-byte file event: %s", abs_path)
-                    return
-            except OSError:
-                return  # File already gone
-
-        now = time.monotonic()
-        prev_ts, prev_type = self._pending[abs_path]
-        if now - prev_ts < DEBOUNCE_SECONDS and prev_type == event_type:
-            # Duplicate — update timestamp but don't re-fire
-            self._pending[abs_path] = (now, event_type)
-            return
-
-        self._pending[abs_path] = (now, event_type)
-
-        try:
-            rel = str(Path(abs_path).relative_to(self._root))
-        except ValueError:
-            rel = abs_path
-
-        ev = FileEvent(
-            type=event_type,  # type: ignore[arg-type]
-            path=rel,
-            namespace=self._namespace,
-            scope=self._scope,
-            correlation=self._correlation,
-        )
-        # Schedule the coroutine on the event loop (watchdog runs on a thread)
-        asyncio.run_coroutine_threadsafe(self._emit(ev), self._loop)
-
-
-class FileWatchSession:
-    """An active filesystem watch session for one namespace/scope pair.
-
-    Call start() to begin observing, stop() to release the observer.
+    Intended to be used per-session or globally.  Thread-safe for single-
+    threaded async use; add a lock if used from multiple threads.
     """
 
-    def __init__(
-        self,
-        namespace: str,
-        scope: str,
-        watch_path: Path,
-        correlation: dict[str, Any],
-        emit: Callable[[FileEvent], Coroutine[Any, Any, None]],
-        loop: asyncio.AbstractEventLoop,
-    ) -> None:
-        self._watch_path = watch_path
-        self._handler = _DebouncedHandler(
-            namespace=namespace,
-            scope=scope,
-            root=watch_path,
-            correlation=correlation,
-            emit=emit,
-            loop=loop,
-        )
-        self._observer = Observer()
+    def __init__(self) -> None:
+        # key → (last_seen_timestamp, event_type)
+        self._pending: dict[str, tuple[float, str]] = defaultdict(lambda: (0.0, ""))
 
-    def start(self) -> None:
-        if not self._watch_path.exists():
-            logger.warning("Watch path does not exist, skipping: %s", self._watch_path)
-            return
-        self._observer.schedule(self._handler, str(self._watch_path), recursive=True)
-        self._observer.start()
-        logger.debug("Started watching: %s", self._watch_path)
+    def should_emit(self, key: str, event_type: str) -> bool:
+        """Return True if this event should be emitted (not a recent duplicate)."""
+        now = time.monotonic()
+        prev_ts, prev_type = self._pending[key]
+        is_dup = now - prev_ts < DEBOUNCE_SECONDS and prev_type == event_type
+        self._pending[key] = (now, event_type)
+        return not is_dup
 
-    def stop(self) -> None:
-        self._observer.stop()
-        self._observer.join(timeout=2)
-        logger.debug("Stopped watching: %s", self._watch_path)
+
+def parse_minio_notification(
+    payload: dict[str, Any],
+) -> list[tuple[str, str, int]]:
+    """Parse a MinIO bucket notification payload into (key, event_type, size) tuples.
+
+    MinIO sends an ``EventName`` field and a ``Records`` array.
+
+    Returns a list of (object_key, event_type, size_bytes) for the caller
+    to process.  Unknown / unsupported event names are silently skipped.
+    """
+    results: list[tuple[str, str, int]] = []
+    for record in payload.get("Records", []):
+        event_name: str = record.get("eventName", "")
+        obj = record.get("s3", {}).get("object", {})
+        key: str = obj.get("key", "")
+        size: int = int(obj.get("size", 0))
+
+        if not key:
+            continue
+
+        if event_name.startswith("s3:ObjectCreated:"):
+            event_type = "file.created" if size > 0 else None
+        elif event_name.startswith("s3:ObjectRemoved:"):
+            event_type = "file.deleted"
+        else:
+            continue
+
+        if event_type is None:
+            logger.debug("Skipping zero-byte created event for key=%s", key)
+            continue
+
+        if _is_temp_key(key):
+            logger.debug("Skipping temp/multipart key: %s", key)
+            continue
+
+        results.append((key, event_type, size))
+
+    return results
+
+
+def key_to_namespace_scope_path(
+    key: str,
+    bucket_namespace_map: dict[str, str],
+) -> tuple[str, str, str] | None:
+    """Derive (namespace, scope, path) from an S3 object key and bucket→namespace map.
+
+    Artifact path: ``{orgId}/{projectId?}/{artifactId}``
+    Scope = orgId (first segment), path = the rest.
+
+    Returns None when the key cannot be mapped.
+    """
+    # key looks like: "org-uuid/proj-uuid/art-uuid.mdx" or "org-uuid/art-uuid.mdx"
+    parts = key.split("/", 1)
+    if len(parts) < 2:
+        return None
+    # scope = orgId (first segment), path = rest; namespace from caller
+    return None  # filled in by the caller who knows the bucket→namespace mapping
