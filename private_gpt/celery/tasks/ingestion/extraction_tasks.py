@@ -25,10 +25,8 @@ VECTOR_INDEX_TASK_NAME = "private_gpt.ingestion.vector_index"
 VECTOR_INDEX_CALLBACK_TASK_NAME = "vector_index_task"
 
 PARSE_TASK_NAME = "private_gpt.ingestion.parse"
-PARSE_CALLBACK_TASK_NAME = "parse_task"
 
-EXTRACT_TASK_NAME = "private_gpt.ingestion.extract"
-EXTRACT_CALLBACK_TASK_NAME = "extract_task"
+STORE_VECTORS_TASK_NAME = "private_gpt.ingestion.store_vectors"
 
 T = TypeVar("T")
 
@@ -149,17 +147,27 @@ def vector_index_task(body: IngestAsyncBody) -> Any:
 @celery_app.task(  # ty:ignore[no-matching-overload]
     name=PARSE_TASK_NAME,
     base=StatelessBackgroundTask,
-    callback_task_name=PARSE_CALLBACK_TASK_NAME,
+    # Emit events under the same prefix as vector_index_task so consumers
+    # see a consistent pgpt.vector_index_task.* event stream.
+    callback_task_name=VECTOR_INDEX_CALLBACK_TASK_NAME,
     autoretry_for=AUTORETRY_EXCEPTIONS,
 )
 @cleanup_temporal_files
 def parse_task(body: IngestAsyncBody) -> Any:
-    """Parse a file into nodes and dispatch extract_task as a follow-up.
+    """Parse the source file into tree nodes.
 
-    This is the first half of the split ingestion pipeline.  It runs
-    atomically: validates and parses the source file, serialises the
-    resulting nodes into the body, then dispatches extract_task on the
-    same queue so that vectorisation happens in a separate step.
+    First half of the split ingestion pipeline.  Runs atomically:
+    validates and parses the file, serialises the resulting nodes into
+    ``body.nodes_json``, then optionally dispatches ``store_vectors_task``
+    on the same queue.
+
+    When ``body.parse_only`` is ``True`` the dispatch is skipped and the
+    serialised nodes are returned directly — this mode is used by the chat
+    document-processing path which only needs text extraction.
+
+    Progress and done/error events are published under the
+    ``vector_index_task`` callback name so downstream consumers see a
+    unified event stream regardless of which task produced it.
     """
     from private_gpt.celery.task_helper import IngestionTaskHelper
     from private_gpt.di import get_global_injector
@@ -185,7 +193,7 @@ def parse_task(body: IngestAsyncBody) -> Any:
         if body.callback is None:
             return
         logger.debug(
-            f"Parse task progress: current-step={status.current_step!s} "
+            f"Ingestion status progress: current-step={status.current_step!s} "
             f"percentage={status.percentage}, warnings={status.warnings}"
         )
         from private_gpt.celery.callback import run_callback
@@ -231,19 +239,19 @@ def parse_task(body: IngestAsyncBody) -> Any:
 
     nodes_json = [json.dumps(n.dict()) for n in nodes]
 
+    # parse_only mode: return nodes directly, no store_vectors dispatch.
+    # Used by the chat document-processing path (bytes_to_text via scheduler).
     if body.parse_only:
         return nodes_json
 
-    # Embed serialised nodes into the body and dispatch extract_task on the
-    # same queue so the two halves stay together without extra models.
-    extract_body = body.model_copy(deep=True)
-    extract_body.nodes_json = nodes_json
+    store_body = body.model_copy(deep=True)
+    store_body.nodes_json = nodes_json
 
     from private_gpt.celery.dispatch import dispatch_task
 
     dispatch_task(
-        task_name=EXTRACT_TASK_NAME,
-        args=(extract_body,),
+        task_name=STORE_VECTORS_TASK_NAME,
+        args=(store_body,),
         queue=settings().scheduler.ingestion.celery_queue,
     )
 
@@ -251,18 +259,27 @@ def parse_task(body: IngestAsyncBody) -> Any:
 
 
 @celery_app.task(  # ty:ignore[no-matching-overload]
-    name=EXTRACT_TASK_NAME,
+    name=STORE_VECTORS_TASK_NAME,
     base=StatelessBackgroundTask,
-    callback_task_name=EXTRACT_CALLBACK_TASK_NAME,
+    # Emit events under the same prefix as vector_index_task so consumers
+    # see a consistent pgpt.vector_index_task.* event stream.
+    callback_task_name=VECTOR_INDEX_CALLBACK_TASK_NAME,
     autoretry_for=AUTORETRY_EXCEPTIONS,
 )
-def extract_task(body: IngestAsyncBody) -> Any:
+def store_vectors_task(body: IngestAsyncBody) -> Any:
     """Vectorise pre-parsed nodes and persist them into the vector index.
 
-    This is the second half of the split ingestion pipeline, dispatched
-    automatically by parse_task.  It deserialises the nodes embedded in the
-    body and runs the load_index step — embedding generation and vector-store
-    persistence — independently from parsing.
+    Second half of the split ingestion pipeline, dispatched automatically
+    by ``parse_task``.  Deserialises the nodes from ``body.nodes_json`` and
+    runs the ``load_index`` step — embedding generation and vector-store
+    persistence — independently from the parsing step.
+
+    This is the terminal (done/error) task: its completion triggers the
+    final AMQP callback notification to the caller.
+
+    Progress and done/error events are published under the
+    ``vector_index_task`` callback name so downstream consumers see a
+    unified event stream regardless of which task produced it.
     """
     from private_gpt.celery.task_helper import IngestionTaskHelper
     from private_gpt.components.readers.nodes.utils import dict_to_tree_node
@@ -276,7 +293,7 @@ def extract_task(body: IngestAsyncBody) -> Any:
         artifact=body.ingest_body.artifact,
     ):
         logger.info(
-            f"Extract task for {body.ingest_body.artifact} was skipped. A delete task is scheduled or running."
+            f"Store-vectors task for {body.ingest_body.artifact} was skipped. A delete task is scheduled or running."
         )
         IngestionTaskHelper.revoke_deletion_task(
             celery_app=celery_app,
@@ -289,13 +306,13 @@ def extract_task(body: IngestAsyncBody) -> Any:
         if body.callback is None:
             return
         logger.debug(
-            f"Extract task progress: current-step={status.current_step!s} "
+            f"Store-vectors task progress: current-step={status.current_step!s} "
             f"percentage={status.percentage}, warnings={status.warnings}"
         )
         from private_gpt.celery.callback import run_callback
 
         run_callback(
-            task=extract_task,
+            task=store_vectors_task,
             state=custom_states.PROGRESS,
             result=status,
             callback=body.callback,
@@ -305,15 +322,15 @@ def extract_task(body: IngestAsyncBody) -> Any:
     if not nodes_json:
         return IngestResponse(object="list", model="private-gpt", data=[])
 
-    def _split(raw: str) -> tuple[str, str]:
+    def _class_parts(raw: str) -> tuple[str, str]:
         class_name: str = json.loads(raw).get("class_name", "")
         parts = class_name.rsplit("-", 1)
         return (parts[0], parts[1]) if len(parts) == 2 else (class_name, "v1")
 
     nodes = [
         dict_to_tree_node(
-            version=_split(raw)[1],
-            node_type=_split(raw)[0],
+            version=_class_parts(raw)[1],
+            node_type=_class_parts(raw)[0],
             node_dict=json.loads(raw),
         )
         for raw in nodes_json
@@ -355,7 +372,7 @@ def extract_task(body: IngestAsyncBody) -> Any:
             use_async=settings().data.use_async,
         )
     except SystemExit:
-        logger.info("Extract task was cancelled, cleaning up")
+        logger.info("Store-vectors task was cancelled, cleaning up")
         service.delete(
             collection=body.ingest_body.collection,
             artifact=body.ingest_body.artifact,
