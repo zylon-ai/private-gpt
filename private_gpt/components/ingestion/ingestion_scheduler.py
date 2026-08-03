@@ -312,10 +312,36 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
         return IngestResponse.model_validate(result.result)
 
     def bytes_to_text(self, raw: bytes, ext: str) -> str:
-        from private_gpt.server.ingest.convert_service import ConvertService
+        import base64
+        import time
+        import uuid
 
-        convert = ConvertService(self._ingest_service.parse_component)
-        return convert.bytes_to_text(raw, ext)
+        from private_gpt.celery.dispatch import dispatch_task
+        from private_gpt.celery.tasks.ingestion.extraction_tasks import PARSE_TASK_NAME
+        from private_gpt.server.ingest.ingest_router import IngestAsyncBody, IngestBody
+        from private_gpt.server.utils.artifact_input import FileArtifact
+
+        config = settings()
+        parse_body = IngestAsyncBody(
+            ingest_body=IngestBody(
+                artifact=f"__convert_{uuid.uuid4().hex}",
+                collection="__convert",
+                input=FileArtifact(value=base64.b64encode(raw).decode()),
+                metadata={"file_name": f"document{ext}"},
+            ),
+        )
+        result = dispatch_task(
+            task_name=PARSE_TASK_NAME,
+            args=(parse_body,),
+            kwargs={"dispatch_store": False},
+            queue=config.scheduler.ingestion.celery_queue,
+        )
+        while not result.ready():
+            time.sleep(0.1)
+        if result.failed():
+            raise result.result
+        assert isinstance(result.result, str)
+        return result.result
 
 
 register_ingestion_scheduler("local", LocalIngestionScheduler)

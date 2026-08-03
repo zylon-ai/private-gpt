@@ -201,6 +201,49 @@ class IngestAsyncBody(BaseCallbackInput):
         description="Parsed nodes produced by parse_task, consumed by store_vectors_task.",
     )
 
+    def __getstate__(self) -> dict[str, Any]:
+        """Pickle hook: TreeNode has circular parent/children references.
+
+        Celery transports task args with pickle, which chokes on the circular
+        tree references of ``TreeNode``. The public model stays fully typed
+        (``list[BaseNode]``); this hook only serialises the nodes to their
+        clean ``model_dump()`` dicts for the wire and restores them on
+        receipt, keeping the Celery limitation inside the abstraction.
+        """
+        state = self.__dict__.copy()
+        if state.get("nodes"):
+            state["nodes"] = [node.dict() for node in state["nodes"]]
+        return {
+            "__dict__": state,
+            "__pydantic_fields_set__": self.__pydantic_fields_set__,
+            "__pydantic_private__": self.__pydantic_private__,
+        }
+
+    def __setstate__(self, state: dict[str, Any]) -> None:
+        """Pickle hook counterpart of :meth:`__getstate__`."""
+        node_dicts = state["__dict__"].get("nodes")
+        if node_dicts:
+            from private_gpt.components.readers.nodes.utils import dict_to_tree_node
+
+            nodes: list[BaseNode] = []
+            for node_dict in node_dicts:
+                class_name: str = node_dict.get("class_name", "")
+                parts = class_name.rsplit("-", 1)
+                node_type, version = (
+                    (parts[0], parts[1]) if len(parts) == 2 else (class_name, "v1")
+                )
+                nodes.append(
+                    dict_to_tree_node(
+                        version=version,
+                        node_type=node_type,
+                        node_dict=node_dict,
+                    )
+                )
+            state["__dict__"]["nodes"] = nodes
+        self.__dict__.update(state["__dict__"])
+        self.__pydantic_fields_set__ = state["__pydantic_fields_set__"]
+        self.__pydantic_private__ = state["__pydantic_private__"]
+
     model_config = {  # noqa: RUF012
         "json_schema_extra": {
             "examples": [

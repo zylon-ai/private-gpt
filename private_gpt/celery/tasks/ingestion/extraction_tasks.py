@@ -32,9 +32,9 @@ AUTORETRY_EXCEPTIONS = (IndexNotReadyException,)
 
 def cleanup_temporal_files(func: Callable[..., T]) -> Callable[..., T]:
     @wraps(func)
-    def wrapper(body: IngestAsyncBody) -> T:
+    def wrapper(body: IngestAsyncBody, *args: Any, **kwargs: Any) -> T:
         try:
-            result = func(body)
+            result = func(body, *args, **kwargs)
             ensure_to_remove_temporal_files(body)
             return result
         except Exception as e:
@@ -56,13 +56,17 @@ def cleanup_temporal_files(func: Callable[..., T]) -> Callable[..., T]:
     autoretry_for=AUTORETRY_EXCEPTIONS,
 )
 @cleanup_temporal_files
-def parse_task(body: IngestAsyncBody) -> Any:
+def parse_task(body: IngestAsyncBody, dispatch_store: bool = True) -> Any:
     """Parse the source file into tree nodes.
 
     First half of the two-step ingestion pipeline.  Runs atomically:
-    validates and parses the file, attaches the resulting node dicts to a
-    copy of the body, then dispatches ``store_vectors_task`` on the same
-    queue and returns its task-id so the caller can poll completion.
+    validates and parses the file, attaches the resulting nodes to a copy
+    of the body, then dispatches ``store_vectors_task`` on the same queue
+    and returns its task-id so the caller can poll completion.
+
+    When ``dispatch_store`` is ``False`` the pipeline is used in
+    parse-only mode (e.g. chat document conversion): the parsed content is
+    returned as plain text and no ``store_vectors_task`` is dispatched.
 
     Progress and done/error events are published under the
     ``vector_index_task`` callback name so downstream consumers see a
@@ -109,6 +113,16 @@ def parse_task(body: IngestAsyncBody) -> Any:
     content = body.ingest_body.input.to_binary_content(
         filename=get_file_name(body.ingest_body.metadata)
     )
+
+    if not dispatch_store:
+        # Parse-only mode (chat document conversion): reuse the shared
+        # ConvertService logic and return plain text, no store dispatch.
+        from private_gpt.server.ingest.convert_service import ConvertService
+
+        convert = ConvertService(service.parse_component)
+        extension = get_extension(content.filename) or ""
+        return convert.bytes_to_text(content.data.read(), extension)
+
     with service.temporary_file(
         lambda: service.data_path_from_bin_data(
             content.data, get_extension(content.filename)
