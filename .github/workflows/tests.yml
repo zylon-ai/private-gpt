@@ -47,7 +47,7 @@ jobs:
         if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
         env:
           GIT_TARGET: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || 'HEAD^' }}
-        run: make test-changed PYTEST_ARGS="--git-target $GIT_TARGET --junit-xml=tests-results.xml"
+        run: make test PYTEST_ARGS="--git-target $GIT_TARGET --junit-xml=tests-results.xml"
       - name: Run full test suite with coverage
         if: ${{ startsWith(github.head_ref, 'release-please--branches--') }}
         run: make test-coverage
