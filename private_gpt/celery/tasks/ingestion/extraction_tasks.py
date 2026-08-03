@@ -1,4 +1,3 @@
-import json
 import logging
 from collections.abc import Callable
 from functools import wraps
@@ -12,20 +11,18 @@ from private_gpt.celery.base import StatelessBackgroundTask
 from private_gpt.celery.celery import celery_app
 from private_gpt.components.ingest.utils import get_extension, get_file_name
 from private_gpt.components.storage.s3_helper import S3Helper
-from private_gpt.server.ingest.ingest_router import (
-    IngestAsyncBody,
-)
+from private_gpt.server.ingest.ingest_router import IngestAsyncBody
 from private_gpt.server.utils.artifact_input import UriArtifact
 from private_gpt.settings.settings import settings
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
 
-VECTOR_INDEX_TASK_NAME = "private_gpt.ingestion.vector_index"
+# Shared callback name: both tasks emit events under this prefix so consumers
+# see a unified pgpt.vector_index_task.* stream regardless of which step runs.
 VECTOR_INDEX_CALLBACK_TASK_NAME = "vector_index_task"
 
 PARSE_TASK_NAME = "private_gpt.ingestion.parse"
-
 STORE_VECTORS_TASK_NAME = "private_gpt.ingestion.store_vectors"
 
 T = TypeVar("T")
@@ -42,10 +39,9 @@ def cleanup_temporal_files(func: Callable[..., T]) -> Callable[..., T]:
             return result
         except Exception as e:
             # Since we cannot know if the exception will trigger an auto-retry,
-            # we only remove temporal files if the exception
-            # is not in the auto-retry list.
-            # Otherwise, it will be deleted on the next
-            # successful attempt or after bucket retention period.
+            # we only remove temporal files if the exception is not in the
+            # auto-retry list (it will be deleted on the next successful attempt
+            # or after the bucket retention period).
             if not isinstance(e, AUTORETRY_EXCEPTIONS):
                 ensure_to_remove_temporal_files(body)
             raise
@@ -54,101 +50,8 @@ def cleanup_temporal_files(func: Callable[..., T]) -> Callable[..., T]:
 
 
 @celery_app.task(  # ty:ignore[no-matching-overload]
-    name=VECTOR_INDEX_TASK_NAME,
-    base=StatelessBackgroundTask,
-    callback_task_name=VECTOR_INDEX_CALLBACK_TASK_NAME,
-    autoretry_for=AUTORETRY_EXCEPTIONS,
-)
-@cleanup_temporal_files
-def vector_index_task(body: IngestAsyncBody) -> Any:
-    from private_gpt.celery.notify import ProgressStatus
-    from private_gpt.celery.task_helper import IngestionTaskHelper
-
-    # Firstly, we need to check if there is another task
-    # that it will roll back the current task.
-    from private_gpt.di import get_global_injector
-    from private_gpt.server.ingest.ingest_router import IngestResponse
-    from private_gpt.server.ingest.ingest_service import IngestService
-
-    if IngestionTaskHelper.is_ingestion_cancel_task_scheduled(
-        celery_app=celery_app,
-        collection=body.ingest_body.collection,
-        artifact=body.ingest_body.artifact,
-    ):
-        logger.info(
-            f"Ingestion task for {body.ingest_body.artifact} was skipped. A delete task is scheduled or running."
-        )
-
-        IngestionTaskHelper.revoke_deletion_task(
-            celery_app=celery_app,
-            collection=body.ingest_body.collection,
-            artifact=body.ingest_body.artifact,
-        )
-
-        return IngestResponse(
-            object="list",
-            model="private-gpt",
-            data=[],
-        )
-
-    def notify(status: ProgressStatus) -> None:
-        if body.callback is None:
-            return
-
-        logger.debug(
-            f"Ingestion status progress: current-step={status.current_step!s} "
-            f"percentage={status.percentage}, warnings={status.warnings}"
-        )
-
-        from private_gpt.celery.callback import run_callback
-
-        run_callback(
-            task=vector_index_task,
-            state=custom_states.PROGRESS,
-            result=status,
-            callback=body.callback,
-        )
-
-    service = get_global_injector().get(IngestService)
-    content = body.ingest_body.input.to_binary_content(
-        filename=get_file_name(body.ingest_body.metadata)
-    )
-    with service.temporary_file(
-        lambda: service.data_path_from_bin_data(
-            content.data, get_extension(content.filename)
-        )
-    ) as file_path:
-        try:
-            ingested_documents = service.populate_vector_index(
-                collection=body.ingest_body.collection,
-                artifact=body.ingest_body.artifact,
-                file_data=file_path,
-                file_metadata=body.ingest_body.metadata,
-                notify=notify,
-                use_async=settings().data.use_async,
-            )
-        except SystemExit:
-            logger.info("Ingestion task was cancelled, cleaning up")
-            # Clean up any partial ingestion if task was cancelled
-            service.delete(
-                collection=body.ingest_body.collection,
-                artifact=body.ingest_body.artifact,
-                force=True,  # Force deletion of the index
-            )
-            raise
-
-    return IngestResponse(
-        object="list",
-        model="private-gpt",
-        data=ingested_documents,
-    )
-
-
-@celery_app.task(  # ty:ignore[no-matching-overload]
     name=PARSE_TASK_NAME,
     base=StatelessBackgroundTask,
-    # Emit events under the same prefix as vector_index_task so consumers
-    # see a consistent pgpt.vector_index_task.* event stream.
     callback_task_name=VECTOR_INDEX_CALLBACK_TASK_NAME,
     autoretry_for=AUTORETRY_EXCEPTIONS,
 )
@@ -156,18 +59,14 @@ def vector_index_task(body: IngestAsyncBody) -> Any:
 def parse_task(body: IngestAsyncBody) -> Any:
     """Parse the source file into tree nodes.
 
-    First half of the split ingestion pipeline.  Runs atomically:
-    validates and parses the file, serialises the resulting nodes into
-    ``body.nodes_json``, then optionally dispatches ``store_vectors_task``
-    on the same queue.
-
-    When ``body.parse_only`` is ``True`` the dispatch is skipped and the
-    serialised nodes are returned directly — this mode is used by the chat
-    document-processing path which only needs text extraction.
+    First half of the two-step ingestion pipeline.  Runs atomically:
+    validates and parses the file, attaches the resulting node dicts to a
+    copy of the body, then dispatches ``store_vectors_task`` on the same
+    queue and returns its task-id so the caller can poll completion.
 
     Progress and done/error events are published under the
     ``vector_index_task`` callback name so downstream consumers see a
-    unified event stream regardless of which task produced it.
+    unified event stream regardless of which task produced them.
     """
     from private_gpt.celery.task_helper import IngestionTaskHelper
     from private_gpt.di import get_global_injector
@@ -180,7 +79,8 @@ def parse_task(body: IngestAsyncBody) -> Any:
         artifact=body.ingest_body.artifact,
     ):
         logger.info(
-            f"Parse task for {body.ingest_body.artifact} was skipped. A delete task is scheduled or running."
+            f"Parse task for {body.ingest_body.artifact} was skipped. "
+            "A delete task is scheduled or running."
         )
         IngestionTaskHelper.revoke_deletion_task(
             celery_app=celery_app,
@@ -237,52 +137,42 @@ def parse_task(body: IngestAsyncBody) -> Any:
             )
             raise
 
-    nodes_json = [json.dumps(n.dict()) for n in nodes]
-
-    # parse_only mode: return nodes directly, no store_vectors dispatch.
-    # Used by the chat document-processing path (bytes_to_text via scheduler).
-    if body.parse_only:
-        return nodes_json
-
     store_body = body.model_copy(deep=True)
-    store_body.nodes_json = nodes_json
+    store_body.nodes = nodes
 
     from private_gpt.celery.dispatch import dispatch_task
 
-    dispatch_task(
+    store_result = dispatch_task(
         task_name=STORE_VECTORS_TASK_NAME,
         args=(store_body,),
         queue=settings().scheduler.ingestion.celery_queue,
     )
-
-    return IngestResponse(object="list", model="private-gpt", data=[])
+    # Return the store_vectors task id so the synchronous caller can poll it.
+    return store_result.task_id
 
 
 @celery_app.task(  # ty:ignore[no-matching-overload]
     name=STORE_VECTORS_TASK_NAME,
     base=StatelessBackgroundTask,
-    # Emit events under the same prefix as vector_index_task so consumers
-    # see a consistent pgpt.vector_index_task.* event stream.
     callback_task_name=VECTOR_INDEX_CALLBACK_TASK_NAME,
     autoretry_for=AUTORETRY_EXCEPTIONS,
 )
 def store_vectors_task(body: IngestAsyncBody) -> Any:
     """Vectorise pre-parsed nodes and persist them into the vector index.
 
-    Second half of the split ingestion pipeline, dispatched automatically
-    by ``parse_task``.  Deserialises the nodes from ``body.nodes_json`` and
-    runs the ``load_index`` step — embedding generation and vector-store
-    persistence — independently from the parsing step.
+    Second half of the two-step ingestion pipeline, dispatched automatically
+    by ``parse_task``.  Reads the node dicts from ``body.nodes``, rebuilds
+    the tree-node objects, and runs the ``load_index`` step — embedding
+    generation and vector-store persistence.
 
-    This is the terminal (done/error) task: its completion triggers the
-    final AMQP callback notification to the caller.
+    This is the terminal task: its completion triggers the final
+    done/error AMQP callback notification to the caller.
 
     Progress and done/error events are published under the
     ``vector_index_task`` callback name so downstream consumers see a
-    unified event stream regardless of which task produced it.
+    unified event stream regardless of which task produced them.
     """
     from private_gpt.celery.task_helper import IngestionTaskHelper
-    from private_gpt.components.readers.nodes.utils import dict_to_tree_node
     from private_gpt.di import get_global_injector
     from private_gpt.server.ingest.ingest_router import IngestResponse
     from private_gpt.server.ingest.ingest_service import IngestService
@@ -293,7 +183,8 @@ def store_vectors_task(body: IngestAsyncBody) -> Any:
         artifact=body.ingest_body.artifact,
     ):
         logger.info(
-            f"Store-vectors task for {body.ingest_body.artifact} was skipped. A delete task is scheduled or running."
+            f"Store-vectors task for {body.ingest_body.artifact} was skipped. "
+            "A delete task is scheduled or running."
         )
         IngestionTaskHelper.revoke_deletion_task(
             celery_app=celery_app,
@@ -306,7 +197,7 @@ def store_vectors_task(body: IngestAsyncBody) -> Any:
         if body.callback is None:
             return
         logger.debug(
-            f"Store-vectors task progress: current-step={status.current_step!s} "
+            f"Ingestion status progress: current-step={status.current_step!s} "
             f"percentage={status.percentage}, warnings={status.warnings}"
         )
         from private_gpt.celery.callback import run_callback
@@ -318,23 +209,9 @@ def store_vectors_task(body: IngestAsyncBody) -> Any:
             callback=body.callback,
         )
 
-    nodes_json = body.nodes_json or []
-    if not nodes_json:
+    nodes = body.nodes or []
+    if not nodes:
         return IngestResponse(object="list", model="private-gpt", data=[])
-
-    def _class_parts(raw: str) -> tuple[str, str]:
-        class_name: str = json.loads(raw).get("class_name", "")
-        parts = class_name.rsplit("-", 1)
-        return (parts[0], parts[1]) if len(parts) == 2 else (class_name, "v1")
-
-    nodes = [
-        dict_to_tree_node(
-            version=_class_parts(raw)[1],
-            node_type=_class_parts(raw)[0],
-            node_dict=json.loads(raw),
-        )
-        for raw in nodes_json
-    ]
 
     service = get_global_injector().get(IngestService)
     vector_artifact_index = service._make_vector_artifact_index(
@@ -390,11 +267,7 @@ def store_vectors_task(body: IngestAsyncBody) -> Any:
 
 
 def ensure_to_remove_temporal_files(body: IngestAsyncBody) -> None:
-    """Remove temporal files from S3 if the input was a URI.
-
-    Since we might have uploaded files to a temporary S3 bucket during ingestion,
-    we need to ensure they are removed after the ingestion task is done.
-    """
+    """Remove temporal files from S3 if the input was a URI."""
     try:
         from private_gpt.di import get_global_injector
 

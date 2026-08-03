@@ -4,6 +4,7 @@ from typing import Annotated, Any, Literal, cast
 
 from fastapi import APIRouter, Body, Depends, Request
 from fastapi.openapi.models import Example
+from llama_index.core.schema import BaseNode
 from pydantic import BaseModel, Field
 
 from private_gpt.components.ingestion.ingestion_scheduler import (
@@ -195,13 +196,9 @@ class IngestAsyncBody(BaseCallbackInput):
         ...,
         description="Document ingestion parameters including artifact, collection, input data, and optional metadata",
     )
-    nodes_json: list[str] | None = Field(
+    nodes: list[BaseNode] | None = Field(
         default=None,
-        description="Serialised nodes produced by parse_task, consumed by extract_task.",
-    )
-    parse_only: bool = Field(
-        default=False,
-        description="When True, parse_task returns nodes_json without dispatching extract_task.",
+        description="Parsed nodes produced by parse_task, consumed by store_vectors_task.",
     )
 
     model_config = {  # noqa: RUF012

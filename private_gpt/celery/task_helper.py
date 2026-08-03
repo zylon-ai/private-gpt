@@ -93,15 +93,10 @@ class IngestionTaskHelper:
         from private_gpt.celery.tasks.ingestion.extraction_tasks import (
             PARSE_TASK_NAME,
             STORE_VECTORS_TASK_NAME,
-            VECTOR_INDEX_TASK_NAME,
         )
         from private_gpt.server.ingest.ingest_router import IngestAsyncBody
 
-        for task_name in (
-            VECTOR_INDEX_TASK_NAME,
-            PARSE_TASK_NAME,
-            STORE_VECTORS_TASK_NAME,
-        ):
+        for task_name in (PARSE_TASK_NAME, STORE_VECTORS_TASK_NAME):
             for task in find_tasks(celery_app, task_name=task_name):
                 if not task.args or not isinstance(task.args[0], IngestAsyncBody):
                     continue
