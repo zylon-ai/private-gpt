@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 if TYPE_CHECKING:
+    import httpx2
     from mcp import ClientSession, MCPError
     from mcp.types import (
         AudioContent,
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
         TextContent,
     )
 else:
+    import httpx2
     from mcp import ClientSession, MCPError
     from mcp.client.sse import sse_client
     from mcp.client.stdio import StdioServerParameters, stdio_client
@@ -52,6 +54,14 @@ def _prefer_sse(url: str) -> bool:
     """Heuristic for legacy SSE endpoints vs streamable HTTP."""
     path = urlparse(url).path.lower()
     return path.endswith("/sse") or "/sse/" in path
+
+
+async def _check_auth(url: str, headers: dict[str, Any]) -> None:
+    """Do a pre-flight POST to detect 401/403 before entering the MCP transport."""
+    async with httpx2.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+        response = await client.post(url, headers=headers, content=b"{}")
+        if response.status_code in (401, 403):
+            response.raise_for_status()
 
 
 class PersistentMCPClient:
@@ -107,6 +117,7 @@ class PersistentMCPClient:
                         )
                     )
                 else:
+                    await _check_auth(self.command_or_url, self.headers)
                     http_client = create_mcp_http_client()
                     if self.headers:
                         http_client.headers.update(self.headers)
@@ -169,6 +180,9 @@ class PersistentMCPClient:
                     )
                     yield session
                     return
+                except httpx2.HTTPStatusError:
+                    await self._reset_session()
+                    raise
                 except (MCPError, ConnectionError, TimeoutError, OSError) as e:
                     last_exception = e
                     logger.warning(

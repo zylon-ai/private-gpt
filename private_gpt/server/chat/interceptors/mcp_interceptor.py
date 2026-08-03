@@ -1,6 +1,7 @@
 import asyncio
 
-from httpx import HTTPStatusError
+import httpx
+import httpx2
 from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import (
@@ -23,7 +24,7 @@ from private_gpt.server.mcp.mcp_service import McpService, mcp_tool_to_spec
 
 
 def _extract_original_exception(exc: BaseException) -> BaseException:
-    if isinstance(exc, HTTPStatusError):
+    if isinstance(exc, (httpx.HTTPStatusError, httpx2.HTTPStatusError)):
         if exc.response.status_code in (401, 403):
             return PermissionError(
                 f"MCP server rejected the request with HTTP {exc.response.status_code}. "
