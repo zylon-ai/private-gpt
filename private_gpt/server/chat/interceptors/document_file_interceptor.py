@@ -17,6 +17,9 @@ from private_gpt.components.engines.chat.models.chat_interceptor_context import 
 from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
+from private_gpt.components.ingestion.ingestion_scheduler import (
+    IngestionSchedulerFactory,
+)
 from private_gpt.events.models import (
     RawContentBlockStartEvent,
     RawContentBlockStopEvent,
@@ -24,7 +27,6 @@ from private_gpt.events.models import (
     ToolUseBlock,
     to_llama_index_blocks,
 )
-from private_gpt.server.ingest.convert_service import ConvertService
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
@@ -38,8 +40,10 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
     """Preprocess DocumentBlock sources by converting file content to plain text."""
 
     @inject
-    def __init__(self, convert_service: ConvertService, settings: Settings) -> None:
-        self._convert_service = convert_service
+    def __init__(
+        self, scheduler_factory: IngestionSchedulerFactory, settings: Settings
+    ) -> None:
+        self._scheduler_factory = scheduler_factory
         self._tool_name = DOCUMENT_PROCESSING_TOOL_NAME
         self._preprocess_settings = settings.chat.preprocess.documents
 
@@ -55,7 +59,7 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
 
         async for response in preprocess_document_history(
             chat_history=state.input.request.messages,
-            convert_service=self._convert_service,
+            convert_service=self._scheduler_factory.get(),
             max_concurrency=self._preprocess_settings.max_concurrency,
             return_type=self._preprocess_settings.return_type,
         ):

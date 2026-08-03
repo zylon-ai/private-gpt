@@ -195,6 +195,14 @@ class IngestAsyncBody(BaseCallbackInput):
         ...,
         description="Document ingestion parameters including artifact, collection, input data, and optional metadata",
     )
+    nodes_json: list[str] | None = Field(
+        default=None,
+        description="Serialised nodes produced by parse_task, consumed by extract_task.",
+    )
+    parse_only: bool = Field(
+        default=False,
+        description="When True, parse_task returns nodes_json without dispatching extract_task.",
+    )
 
     model_config = {  # noqa: RUF012
         "json_schema_extra": {

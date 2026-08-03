@@ -74,6 +74,15 @@ class BaseIngestionScheduler(ABC):
         del delete_body
         raise NotImplementedError
 
+    def bytes_to_text(self, raw: bytes, ext: str) -> str:
+        """Parse raw bytes to plain text via the configured execution path.
+
+        Satisfies the ``DocumentConverter`` protocol so chat document
+        preprocessing routes through the same scheduler (local or Celery)
+        as regular ingestion instead of calling ``ParseComponent`` directly.
+        """
+        raise NotImplementedError
+
 
 @singleton
 class LocalIngestionScheduler(BaseIngestionScheduler):
@@ -105,6 +114,12 @@ class LocalIngestionScheduler(BaseIngestionScheduler):
                 },
             )
 
+    def bytes_to_text(self, raw: bytes, ext: str) -> str:
+        from private_gpt.server.ingest.convert_service import ConvertService
+
+        convert = ConvertService(self._ingest_service.parse_component)
+        return convert.bytes_to_text(raw, ext)
+
 
 @singleton
 class CeleryIngestionScheduler(BaseIngestionScheduler):
@@ -126,7 +141,7 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
 
         from private_gpt.celery.dispatch import dispatch_task
         from private_gpt.celery.tasks.ingestion.extraction_tasks import (
-            VECTOR_INDEX_TASK_NAME,
+            PARSE_TASK_NAME,
         )
         from private_gpt.server.utils.artifact_input import UriArtifact
 
@@ -161,7 +176,7 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
                 ingest_body.ingest_body.input = UriArtifact(value=s3_url)
 
         result = dispatch_task(
-            task_name=VECTOR_INDEX_TASK_NAME,
+            task_name=PARSE_TASK_NAME,
             args=(ingest_body,),
             queue=config.scheduler.ingestion.celery_queue,
         )
@@ -281,6 +296,66 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
         if result.failed():
             raise result.result
         return IngestResponse.model_validate(result.result)
+
+    def bytes_to_text(self, raw: bytes, ext: str) -> str:
+        import base64
+        import json
+        import time
+        import uuid
+
+        from private_gpt.celery.dispatch import dispatch_task
+        from private_gpt.celery.tasks.ingestion.extraction_tasks import PARSE_TASK_NAME
+        from private_gpt.components.readers.nodes.tree_node import (
+            TreeMetadataMode,
+            TreeNode,
+        )
+        from private_gpt.components.readers.nodes.utils import dict_to_tree_node
+        from private_gpt.server.ingest.ingest_router import IngestAsyncBody, IngestBody
+        from private_gpt.server.utils.artifact_input import FileArtifact
+
+        config = settings()
+        parse_body = IngestAsyncBody(
+            parse_only=True,
+            ingest_body=IngestBody(
+                artifact=f"__parse_only_{uuid.uuid4().hex}",
+                collection="__parse_only",
+                input=FileArtifact(value=base64.b64encode(raw).decode()),
+                metadata={"file_name": f"document{ext}"},
+            ),
+        )
+        result = dispatch_task(
+            task_name=PARSE_TASK_NAME,
+            args=(parse_body,),
+            queue=config.scheduler.ingestion.celery_queue,
+        )
+        while not result.ready():
+            time.sleep(0.1)
+        if result.failed():
+            raise result.result
+        assert isinstance(result.result, list)
+        nodes_json: list[str] = result.result
+
+        def _class_parts(raw_node: str) -> tuple[str, str]:
+            cn: str = json.loads(raw_node).get("class_name", "")
+            parts = cn.rsplit("-", 1)
+            return (parts[0], parts[1]) if len(parts) == 2 else (cn, "v1")
+
+        nodes = [
+            dict_to_tree_node(
+                version=_class_parts(rn)[1],
+                node_type=_class_parts(rn)[0],
+                node_dict=json.loads(rn),
+            )
+            for rn in nodes_json
+        ]
+        roots = [n for n in nodes if isinstance(n, TreeNode) and n.parent is None]
+        if not roots:
+            raise ValueError("No root node found in parse result.")
+        return "\n\n".join(
+            n.get_content(metadata_mode=TreeMetadataMode.USER)
+            for n in roots
+            if n.get_content(metadata_mode=TreeMetadataMode.USER)
+        )
 
 
 register_ingestion_scheduler("local", LocalIngestionScheduler)
