@@ -369,12 +369,13 @@ class StatefulBackgroundTask(_BackgroundTask):
     async def _warm_async(cls) -> None:
         from private_gpt.eager_loading import warm
 
-        injector = create_loop_injector()
         profile = os.environ.get("PGPT_WORKER_WARM_PROFILE", "").strip()
         if not profile:
             raise ValueError(
                 "PGPT_WORKER_WARM_PROFILE is required for stateful workers"
             )
+
+        injector = create_loop_injector()
         warm(injector, profile=profile)
 
     @classmethod
