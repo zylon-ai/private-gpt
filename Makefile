@@ -20,7 +20,7 @@ WIPE_LOCAL_DATA_DIR := $(WIPE_PGPT_HOME)/local_data
 
 test:
 	rm -rf "$(TEST_LOCAL_DATA_DIR)"/*
-	PGPT_HOME=$(TEST_PGPT_HOME) PYTHONPATH=. uv run pytest tests $(PYTEST_ARGS)
+	PGPT_HOME=$(TEST_PGPT_HOME) PYTHONPATH=. uv run pytest tests $(PYTEST_ARGS) -v
 
 test-changed:
 	rm -rf "$(TEST_LOCAL_DATA_DIR)"/*
