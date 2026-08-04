@@ -164,11 +164,20 @@ def test_ingest_uri_async(
         task_id = content["task_id"]
         assert task_id
 
+        # parse_task completes immediately in eager mode; its result is the
+        # store_vectors task_id. Resolve that to get the final IngestResponse.
         response = test_client.get(f"/v1/artifacts/ingest/async/{task_id}")
-        # Response will already contain the result as we are running tests synchronously
+        assert response.status_code == 200
+        parse_status = response.json()
+        assert parse_status["task_id"] == task_id
+        assert parse_status["task_status"] == "SUCCESS"
+        store_task_id = parse_status["task_result"]
+        assert isinstance(store_task_id, str)
+
+        response = test_client.get(f"/v1/artifacts/ingest/async/{store_task_id}")
         assert response.status_code == 200
         content = response.json()
-        assert content["task_id"] == task_id
+        assert content["task_id"] == store_task_id
         assert content["task_status"] == "SUCCESS"
         ingest_result = IngestResponse.model_validate(content["task_result"])
         assert len(ingest_result.data) == 1
