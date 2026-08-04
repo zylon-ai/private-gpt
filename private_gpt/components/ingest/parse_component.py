@@ -30,6 +30,9 @@ from private_gpt.components.ingest.utils import (
 from private_gpt.components.readers.docling.docling_api_reader import (
     ExtractionUnsuccessfulError,
 )
+from private_gpt.components.readers.pdf_inspector.pdf_inspector_reader import (
+    PdfInspectorFallbackError,
+)
 from private_gpt.components.readers.reader_component import ReaderComponent
 from private_gpt.settings.settings import Settings
 
@@ -94,13 +97,34 @@ class ParseComponent:
         resolved_reader = reader_name or self._resolve_reader(converted_file.extension)
 
         try:
-            nodes = self._load_data(
-                converted_file,
-                file_metadata,
-                notification=notification,
-                warnings=warnings,
-                reader_name=resolved_reader,
-            )
+            try:
+                nodes = self._load_data(
+                    converted_file,
+                    file_metadata,
+                    notification=notification,
+                    warnings=warnings,
+                    reader_name=resolved_reader,
+                )
+            except PdfInspectorFallbackError as e:
+                logger.warning(
+                    "pdf-inspector fallback for %s: %s", file_info.file_name, e
+                )
+                next_reader = self._next_reader(
+                    converted_file.extension, resolved_reader
+                )
+                if next_reader is None:
+                    raise InvalidFileError(
+                        errors=[IngestionParseErrors.PARSING_FAILURE],
+                        warnings=warnings,
+                    ) from e
+                resolved_reader = next_reader
+                nodes = self._load_data(
+                    converted_file,
+                    file_metadata,
+                    notification=notification,
+                    warnings=warnings,
+                    reader_name=resolved_reader,
+                )
         except ExtractionUnsuccessfulError as e:
             logger.warning("Extraction unsuccessful for %s: %s", file_info.file_name, e)
             try:
@@ -132,6 +156,8 @@ class ParseComponent:
                 ) from e
         except RuntimeError as e:
             raise InvalidFileError(errors=[IngestionParseErrors.PARSING_FAILURE]) from e
+        except InvalidFileError:
+            raise
         except Exception as e:
             logger.error("Error loading file: %s", e, exc_info=True)
 
@@ -164,6 +190,19 @@ class ParseComponent:
     def _resolve_reader(self, extension: str | None) -> str:
         names = self.reader_component.get_reader_names(extension=extension or "")
         return names[0] if names else "text"
+
+    def _next_reader(self, extension: str | None, current_reader: str) -> str | None:
+        """Return the reader configured to run after ``current_reader``.
+
+        Used to fall back to the next entry in the extension's reader chain
+        (e.g. pdf-inspector -> docling) without hardcoding a specific name.
+        """
+        names = self.reader_component.get_reader_names(extension=extension or "")
+        try:
+            index = names.index(current_reader)
+        except ValueError:
+            return None
+        return names[index + 1] if index + 1 < len(names) else None
 
     def _get_file_info(
         self,
