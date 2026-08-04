@@ -27,7 +27,12 @@ def test_sync_celery_ingest_preserves_filename_and_extension(
     def dispatch_task(**kwargs: Any) -> MagicMock:
         nonlocal dispatched_body
         dispatched_body = kwargs["args"][0]
-        return MagicMock(task_id="task-id")
+        mock = MagicMock()
+        mock.task_id = "task-id"
+        mock.ready.return_value = True
+        mock.failed.return_value = False
+        mock.result = "store-task-id"
+        return mock
 
     monkeypatch.setattr("private_gpt.celery.dispatch.dispatch_task", dispatch_task)
 

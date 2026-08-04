@@ -175,15 +175,22 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
                 }
                 ingest_body.ingest_body.input = UriArtifact(value=s3_url)
 
-        result = dispatch_task(
+        import time
+
+        parse_result = dispatch_task(
             task_name=PARSE_TASK_NAME,
             args=(ingest_body,),
             queue=config.scheduler.ingestion.celery_queue,
         )
-        task_id = result.task_id
-        if not isinstance(task_id, str):
-            raise ValueError("Async ingestion task did not return a valid task_id")
-        return task_id
+        # parse_task is fast (file I/O + parsing only); wait for it so we
+        # can return the store_vectors task_id — the one the caller should
+        # track, since it owns the final done/error AMQP notification.
+        while not parse_result.ready():
+            time.sleep(0.1)
+        if parse_result.failed():
+            raise parse_result.result
+        assert isinstance(parse_result.result, str)
+        return parse_result.result
 
     def delete_async(self, delete_body: DeleteIngestedDocumentAsyncBody) -> str:
         from private_gpt.celery.celery import celery_app

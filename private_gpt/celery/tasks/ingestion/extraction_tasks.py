@@ -151,8 +151,13 @@ def parse_task(body: IngestAsyncBody, dispatch_store: bool = True) -> Any:
             )
             raise
 
+    # Transfer callback ownership to store_vectors_task — it is the terminal
+    # task that owns the final done/error AMQP notification. Clearing
+    # body.callback prevents parse_task's after_return hook from firing an
+    # intermediate notification with the store task-id as raw data.
     store_body = body.model_copy(deep=True)
     store_body.nodes = nodes
+    body.callback = None
 
     from private_gpt.celery.dispatch import dispatch_task
 
