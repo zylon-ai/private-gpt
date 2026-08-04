@@ -148,10 +148,18 @@ def _setup_web_search_mock(injector: MockInjector) -> None:
         WebSearchToolBuilder,
     )
     from private_gpt.components.tools.events.adapters import WebSearchEventAdapter
-    from private_gpt.events.models import TextBlock
+    from private_gpt.events.models import WebSearchResultBlock
 
     async def _fake_search(query: str) -> list[Any]:
-        return [TextBlock(text="mock search result")]
+        return [
+            WebSearchResultBlock(
+                url="https://example.com",
+                title="Mock Result",
+                encrypted_content="mock",
+                content="mock search result",
+                description="A mock result",
+            )
+        ]
 
     mock_builder = AsyncMock(spec=WebSearchToolBuilder)
     mock_builder.build_tool = AsyncMock(
@@ -174,10 +182,12 @@ def _setup_web_fetch_mock(injector: MockInjector) -> None:
         WebFetchToolBuilder,
     )
     from private_gpt.components.tools.events.adapters import WebFetchEventAdapter
-    from private_gpt.events.models import TextBlock
+    from private_gpt.events.models import WebFetchResultBlock
 
     async def _fake_fetch(url: str) -> list[Any]:
-        return [TextBlock(text="mock fetch result")]
+        return [
+            WebFetchResultBlock.from_markdown(url=url, markdown="mock fetch result")
+        ]
 
     mock_builder = MagicMock(spec=WebFetchToolBuilder)
     mock_builder.build_tool = MagicMock(
@@ -380,7 +390,15 @@ def validate_response_structure(
         tool_result_blocks = [
             b
             for b in response.content
-            if b.type in {"tool_result", "server_tool_result"}
+            if b.type
+            in {
+                "tool_result",
+                "server_tool_result",
+                "bash_code_execution_tool_result",
+                "text_editor_code_execution_tool_result",
+                "web_search_tool_result",
+                "web_fetch_tool_result",
+            }
         ]
         assert len(tool_result_blocks) == 1
 
