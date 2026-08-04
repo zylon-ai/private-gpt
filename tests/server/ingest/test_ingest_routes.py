@@ -2,7 +2,7 @@ import tempfile
 import uuid
 from pathlib import Path
 from random import random
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 
@@ -127,55 +127,75 @@ def test_ingest_uri_async(
 
     set_global_injector(injector.test_injector)
 
-    path = Path(__file__).parents[0] / "test.txt"
-    ingest_uri_body = IngestBody(
-        input=UriArtifact(value=str(path)),
-        metadata={"file_name": "test.txt"},
-        collection=collection,
-        artifact="artifact_id",
-    )
-    body = IngestAsyncBody(
-        ingest_body=ingest_uri_body,
-        callback=Callback(
-            amqp=AMQP(
-                exchange="main",
-                routing_key_done="ingest.done",
-                routing_key_progress="ingest.progress",
-                routing_key_error="ingest.error",
+    # StatelessBackgroundTask calls create_application_injector() which would
+    # replace the mock injector with a fresh one, making the mock broker
+    # unreachable from task_after_return.  Pin it to the test injector so the
+    # mock broker is used for the AMQP callback during eager task execution.
+    with patch(
+        "private_gpt.celery.base.create_application_injector",
+        return_value=injector.test_injector,
+    ):
+        path = Path(__file__).parents[0] / "test.txt"
+        ingest_uri_body = IngestBody(
+            input=UriArtifact(value=str(path)),
+            metadata={"file_name": "test.txt"},
+            collection=collection,
+            artifact="artifact_id",
+        )
+        body = IngestAsyncBody(
+            ingest_body=ingest_uri_body,
+            callback=Callback(
+                amqp=AMQP(
+                    exchange="main",
+                    routing_key_done="ingest.done",
+                    routing_key_progress="ingest.progress",
+                    routing_key_error="ingest.error",
+                ),
+                properties={"test": "123"},
             ),
-            properties={"test": "123"},
-        ),
-    )
+        )
 
-    response = test_client.post("/v1/artifacts/ingest/async", json=body.model_dump())
+        response = test_client.post(
+            "/v1/artifacts/ingest/async", json=body.model_dump()
+        )
 
-    assert response.status_code == 200
-    content = response.json()
-    task_id = content["task_id"]
-    assert task_id
+        assert response.status_code == 200
+        content = response.json()
+        task_id = content["task_id"]
+        assert task_id
 
-    response = test_client.get(f"/v1/artifacts/ingest/async/{task_id}")
-    # Response will already contain the result as we are running tests synchronously
-    assert response.status_code == 200
-    content = response.json()
-    assert content["task_id"] == task_id
-    assert content["task_status"] == "SUCCESS"
-    ingest_result = IngestResponse.model_validate(content["task_result"])
-    assert len(ingest_result.data) == 1
+        # parse_task completes immediately in eager mode; its result is the
+        # store_vectors task_id. Resolve that to get the final IngestResponse.
+        response = test_client.get(f"/v1/artifacts/ingest/async/{task_id}")
+        assert response.status_code == 200
+        parse_status = response.json()
+        assert parse_status["task_id"] == task_id
+        assert parse_status["task_status"] == "SUCCESS"
+        store_task_id = parse_status["task_result"]
+        assert isinstance(store_task_id, str)
 
-    # Check if broker was called with the callback
-    expected_response = AsyncResponse(
-        data=ingest_result,
-        error=None,
-        type="pgpt.vector_index_task.done",
-        callback_properties={"test": "123"},
-    )
+        response = test_client.get(f"/v1/artifacts/ingest/async/{store_task_id}")
+        assert response.status_code == 200
+        content = response.json()
+        assert content["task_id"] == store_task_id
+        assert content["task_status"] == "SUCCESS"
+        ingest_result = IngestResponse.model_validate(content["task_result"])
+        assert len(ingest_result.data) == 1
 
-    broker_mock.publish.assert_called_with(
-        exchange="main",
-        routing_key="ingest.done",
-        body=bytes(expected_response.model_dump_json(), "utf-8"),
-    )
+        # Check if broker was called with the callback — the event type must use
+        # the legacy vector_index_task name so existing consumers aren't broken.
+        expected_response = AsyncResponse(
+            data=ingest_result,
+            error=None,
+            type="pgpt.vector_index_task.done",
+            callback_properties={"test": "123"},
+        )
+
+        broker_mock.publish.assert_called_with(
+            exchange="main",
+            routing_key="ingest.done",
+            body=bytes(expected_response.model_dump_json(), "utf-8"),
+        )
 
     # Delete the created temp file
     ingest_helper.delete_file(collection, "artifact_id")

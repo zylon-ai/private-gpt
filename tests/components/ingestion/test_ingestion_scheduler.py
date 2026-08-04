@@ -27,9 +27,28 @@ def test_sync_celery_ingest_preserves_filename_and_extension(
     def dispatch_task(**kwargs: Any) -> MagicMock:
         nonlocal dispatched_body
         dispatched_body = kwargs["args"][0]
-        return MagicMock(task_id="task-id")
+        mock = MagicMock()
+        mock.task_id = "task-id"
+        mock.ready.return_value = True
+        mock.failed.return_value = False
+        mock.result = "store-task-id"
+        return mock
 
     monkeypatch.setattr("private_gpt.celery.dispatch.dispatch_task", dispatch_task)
+
+    # ingest() also polls the store_vectors AsyncResult; stub it out.
+    store_result_mock = MagicMock()
+    store_result_mock.ready.return_value = True
+    store_result_mock.failed.return_value = False
+    from private_gpt.server.ingest.ingest_router import IngestResponse
+
+    store_result_mock.result = IngestResponse(
+        object="list", model="private-gpt", data=[]
+    )
+    monkeypatch.setattr(
+        "celery.result.AsyncResult",
+        lambda *a, **kw: store_result_mock,
+    )
 
     ingest_service = MagicMock()
     s3_helper = MagicMock()
@@ -37,7 +56,7 @@ def test_sync_celery_ingest_preserves_filename_and_extension(
     s3_helper.upload_file_to_s3.return_value = "s3://temporary-bucket/object-id"
     scheduler = CeleryIngestionScheduler(MagicMock(), s3_helper, ingest_service)
 
-    scheduler._dispatch_sync_ingest(
+    scheduler.ingest(
         IngestBody(
             artifact="artifact",
             collection="collection",

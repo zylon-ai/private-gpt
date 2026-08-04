@@ -13,7 +13,7 @@ from private_gpt.events.models import (
     TextBlock,
     from_tool_output,
 )
-from private_gpt.server.ingest.convert_service import ConvertService
+from private_gpt.events.models._content_blocks import DocumentConverter
 
 if TYPE_CHECKING:
     from private_gpt.events.models import (
@@ -55,7 +55,7 @@ class DocumentProcessingResponse(BaseModel):
 
 async def _process_document(
     doc_block: DocumentBlock,
-    convert_service: ConvertService,
+    convert_service: DocumentConverter,
 ) -> LITextBlock:
     text = await asyncio.to_thread(doc_block.source.to_text, convert_service)
     if not text:
@@ -76,7 +76,7 @@ async def _process_document(
 
 async def preprocess_document_message(
     message: ChatMessage,
-    convert_service: ConvertService,
+    convert_service: DocumentConverter,
     max_concurrency: int | None = None,
     return_type: Literal["user_message", "tool_result"] = "user_message",
 ) -> AsyncIterator[DocumentProcessingResponse]:
@@ -181,7 +181,7 @@ async def preprocess_document_message(
 
 async def preprocess_document_history(
     chat_history: list[ChatMessage] | None,
-    convert_service: ConvertService,
+    convert_service: DocumentConverter,
     max_concurrency: int | None = None,
     return_type: Literal["user_message", "tool_result"] = "user_message",
 ) -> AsyncIterator[DocumentProcessingResponse]:

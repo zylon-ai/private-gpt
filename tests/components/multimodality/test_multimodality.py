@@ -474,6 +474,169 @@ class TestHistoryPreprocessing:
         assert all(isinstance(block, TextBlock) for block in result[0].blocks)
 
     @pytest.mark.asyncio
+    async def test_keeps_supported_images_across_history_within_limit(
+        self, main_llm: LLM
+    ) -> None:
+        history = [
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="First"),
+                    ImageBlock(url="https://picsum.photos/1/1"),
+                    ImageBlock(url="https://picsum.photos/2/2"),
+                ],
+            ),
+            ChatMessage(role=MessageRole.ASSISTANT, content="Response", blocks=[]),
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="Second"),
+                    ImageBlock(url="https://picsum.photos/3/3"),
+                    ImageBlock(url="https://picsum.photos/4/4"),
+                ],
+            ),
+        ]
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm,
+            history,
+            image_multimodal_llm=main_llm,
+            audio_multimodal_llm=None,
+            max_images=2,
+        ):
+            responses.append(response)
+
+        result = responses[-1].chat_history
+        # The last user message keeps its images raw (native support).
+        assert len(extract_image_blocks(result[2])) == 2
+        # No budget left, so the older message's images are dropped.
+        assert extract_image_blocks(result[0]) == []
+        assert result[0].content == "First"
+
+    @pytest.mark.asyncio
+    async def test_keeps_latest_images_when_history_exceeds_limit(
+        self, main_llm: LLM
+    ) -> None:
+        history = [
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="First"),
+                    ImageBlock(url="https://picsum.photos/1/1"),
+                    ImageBlock(url="https://picsum.photos/2/2"),
+                    ImageBlock(url="https://picsum.photos/3/3"),
+                ],
+            ),
+            ChatMessage(role=MessageRole.ASSISTANT, content="Response", blocks=[]),
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="Second"),
+                    ImageBlock(url="https://picsum.photos/4/4"),
+                    ImageBlock(url="https://picsum.photos/5/5"),
+                ],
+            ),
+        ]
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm,
+            history,
+            image_multimodal_llm=main_llm,
+            audio_multimodal_llm=None,
+            max_images=3,
+        ):
+            responses.append(response)
+
+        result = responses[-1].chat_history
+        assert len(extract_image_blocks(result[2])) == 2
+        # Only the latest image of the older message fits within the budget.
+        kept = extract_image_blocks(result[0])
+        assert len(kept) == 1
+        assert str(kept[0].url) == "https://picsum.photos/3/3"
+
+    @pytest.mark.asyncio
+    async def test_keeps_supported_images_and_audio_with_independent_limits(
+        self, main_llm: LLM
+    ) -> None:
+        history = [
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="First"),
+                    ImageBlock(url="https://picsum.photos/1/1"),
+                    AudioBlock(url="https://example.com/a1.mp3"),
+                ],
+            ),
+            ChatMessage(role=MessageRole.ASSISTANT, content="Response", blocks=[]),
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="Second"),
+                    ImageBlock(url="https://picsum.photos/2/2"),
+                    ImageBlock(url="https://picsum.photos/3/3"),
+                    AudioBlock(url="https://example.com/a2.mp3"),
+                    AudioBlock(url="https://example.com/a3.mp3"),
+                ],
+            ),
+        ]
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm,
+            history,
+            image_multimodal_llm=main_llm,
+            audio_multimodal_llm=main_llm,
+            max_images=2,
+            max_audios=3,
+        ):
+            responses.append(response)
+
+        result = responses[-1].chat_history
+        # The last user message keeps its images and audios raw.
+        assert len(extract_image_blocks(result[2])) == 2
+        assert len(extract_audio_blocks(result[2])) == 2
+        # The older message keeps nothing for images and one audio slot.
+        assert extract_image_blocks(result[0]) == []
+        kept_audios = extract_audio_blocks(result[0])
+        assert len(kept_audios) == 1
+        assert str(kept_audios[0].url) == "https://example.com/a1.mp3"
+
+    @pytest.mark.asyncio
+    async def test_keeps_all_supported_media_without_limit(self, main_llm: LLM) -> None:
+        history = [
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="First"),
+                    ImageBlock(url="https://picsum.photos/1/1"),
+                ],
+            ),
+            ChatMessage(role=MessageRole.ASSISTANT, content="Response", blocks=[]),
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="Second"),
+                    ImageBlock(url="https://picsum.photos/2/2"),
+                ],
+            ),
+        ]
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm,
+            history,
+            image_multimodal_llm=main_llm,
+            audio_multimodal_llm=None,
+        ):
+            responses.append(response)
+
+        result = responses[-1].chat_history
+        assert len(extract_image_blocks(result[0])) == 1
+        assert len(extract_image_blocks(result[2])) == 1
+
+    @pytest.mark.asyncio
     async def test_empty_history_returns_none(
         self, main_llm: LLM, image_llm: LLM
     ) -> None:

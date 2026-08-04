@@ -195,8 +195,19 @@ async def preprocess_multimodal_history(
     audio_multimodal_llm: LLM | None = None,
     max_concurrency: int | None = None,
     return_type: Literal["user_message", "tool_result"] = "user_message",
+    max_images: int | None = None,
+    max_audios: int | None = None,
     **kwargs: Any,
 ) -> AsyncIterator[MultimodalProcessingResponse]:
+    """Preprocess image/audio blocks across the whole chat history.
+
+    The main LLM keeps raw image/audio blocks natively when it supports them, so
+    instead of stripping media from every message except the last user one, they
+    are retained across the history up to the model's maximum supported counts
+    (``max_images``/``max_audios``). The most recent blocks are kept, so when the
+    history contains more media than the model supports, the latest ones are kept
+    raw and the older ones are removed.
+    """
     if not chat_history:
         yield MultimodalProcessingResponse(chat_history=chat_history)
         return
@@ -204,6 +215,82 @@ async def preprocess_multimodal_history(
     if chat_history[-1].role != MessageRole.USER:
         yield MultimodalProcessingResponse(chat_history=chat_history)
         return
+
+    # The main LLM keeps a modality natively when it is the multimodal LLM.
+    image_native = (
+        image_multimodal_llm is not None
+        and not requires_image_preprocessing(main_llm, image_multimodal_llm)
+    )
+    audio_native = (
+        audio_multimodal_llm is not None
+        and not requires_audio_preprocessing(main_llm, audio_multimodal_llm)
+    )
+
+    # The last user message keeps its media natively as a whole; older messages
+    # can only retain what is left of the model's maximum supported counts.
+    last_user_image_count = 0
+    last_user_audio_count = 0
+    for message in reversed(chat_history):
+        if message.role != MessageRole.USER:
+            continue
+        if image_native:
+            last_user_image_count = len(extract_image_blocks(message))
+        if audio_native:
+            last_user_audio_count = len(extract_audio_blocks(message))
+        break
+
+    def remaining_budget(max_count: int | None, kept_count: int) -> int | None:
+        if max_count is None:
+            return None
+        return max(max_count - kept_count, 0)
+
+    remaining_images = (
+        remaining_budget(max_images, last_user_image_count) if image_native else 0
+    )
+    remaining_audios = (
+        remaining_budget(max_audios, last_user_audio_count) if audio_native else 0
+    )
+
+    def trim_media(
+        message: ChatMessage,
+        image_budget: int | None,
+        audio_budget: int | None,
+    ) -> tuple[ChatMessage, int | None, int | None]:
+        """Keep the latest native media blocks within the remaining budget."""
+        image_blocks = extract_image_blocks(message)
+        audio_blocks = extract_audio_blocks(message)
+
+        def keep_latest(blocks: list[Any], budget: int | None) -> list[Any]:
+            if budget is None:
+                return list(blocks)
+            if budget <= 0:
+                return []
+            return blocks[-budget:]
+
+        kept_images = keep_latest(image_blocks, image_budget)
+        kept_audios = keep_latest(audio_blocks, audio_budget)
+
+        def consumed(budget: int | None, block_count: int) -> int | None:
+            if budget is None:
+                return None
+            return max(budget - block_count, 0)
+
+        new_image_budget = consumed(image_budget, len(image_blocks))
+        new_audio_budget = consumed(audio_budget, len(audio_blocks))
+
+        kept_ids = {id(block) for block in kept_images} | {
+            id(block) for block in kept_audios
+        }
+        new_blocks = [
+            block
+            for block in message.blocks
+            if isinstance(block, TextBlock) or id(block) in kept_ids
+        ]
+        return (
+            ChatMessage(role=message.role, blocks=new_blocks),
+            new_image_budget,
+            new_audio_budget,
+        )
 
     is_last_user_message = True
     preprocessed_history = []
@@ -225,11 +312,22 @@ async def preprocess_multimodal_history(
                     preprocessed_history.append(response.modified_message)
 
             is_last_user_message = False
+        elif message.role == MessageRole.USER:
+            trimmed, remaining_images, remaining_audios = trim_media(
+                message, remaining_images, remaining_audios
+            )
+            preprocessed_history.append(trimmed)
         else:
-            message.blocks = [
-                block for block in message.blocks if isinstance(block, TextBlock)
-            ]
-            preprocessed_history.append(message)
+            preprocessed_history.append(
+                ChatMessage(
+                    role=message.role,
+                    blocks=[
+                        block
+                        for block in message.blocks
+                        if isinstance(block, TextBlock)
+                    ],
+                )
+            )
 
     final_history = list(reversed(preprocessed_history))
     yield MultimodalProcessingResponse(chat_history=final_history)

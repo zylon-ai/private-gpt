@@ -21,7 +21,8 @@ def test_explicit_task_packages_replace_defaults() -> None:
             "private_gpt.celery.tasks.ingestion",
             {
                 "private_gpt.ingestion.delete",
-                "private_gpt.ingestion.vector_index",
+                "private_gpt.ingestion.parse",
+                "private_gpt.ingestion.store_vectors",
             },
         ),
         (
