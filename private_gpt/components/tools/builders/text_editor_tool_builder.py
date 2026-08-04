@@ -11,6 +11,9 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.tools.events.adapters import (
+    TextEditorCodeExecutionEventAdapter,
+)
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import (
     TEXT_EDITOR_CREATE_TOOL_NAME,
@@ -26,7 +29,11 @@ from private_gpt.components.tools.tool_placeholders import (
 )
 from private_gpt.components.tools.utils import truncate_output
 from private_gpt.di import get_global_injector
-from private_gpt.events.models import TextBlock
+from private_gpt.events.models import (
+    TextEditorCodeExecutionCreateResultBlock,
+    TextEditorCodeExecutionStrReplaceResultBlock,
+    TextEditorCodeExecutionViewResultBlock,
+)
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
@@ -37,8 +44,8 @@ if TYPE_CHECKING:
     from private_gpt.events.models import ResultContentBlockType
 
 
-def _format_output(output: str, max_bytes: int) -> list[ResultContentBlockType]:
-    return [TextBlock(text=truncate_output(output, max_bytes))]
+def _truncated(output: str, max_bytes: int) -> str:
+    return truncate_output(output, max_bytes)
 
 
 @singleton
@@ -74,10 +81,7 @@ class TextEditorToolBuilder:
             resolved_view_range: tuple[int, int] | None = None
             if view_range is not None:
                 if len(view_range) != 2:
-                    return _format_output(
-                        "Error: view_range must contain exactly two integers.",
-                        self._settings.code_execution.max_output_bytes,
-                    )
+                    raise ValueError("view_range must contain exactly two integers")
                 resolved_view_range = (view_range[0], view_range[1])
 
             session = await self._session(config)
@@ -85,16 +89,27 @@ class TextEditorToolBuilder:
                 path,
                 view_range=resolved_view_range,
             )
-            output = result.output if result.success else f"Error: {result.error}"
-            return _format_output(
-                output,
-                self._settings.code_execution.max_output_bytes,
+            if not result.success:
+                raise RuntimeError(result.error or "Unable to view file")
+            output = _truncated(
+                result.output, self._settings.code_execution.max_output_bytes
             )
+            line_count = len(output.splitlines())
+            start_line = resolved_view_range[0] if resolved_view_range else 1
+            return [
+                TextEditorCodeExecutionViewResultBlock(
+                    content=output,
+                    num_lines=line_count,
+                    start_line=start_line,
+                    total_lines=line_count,
+                )
+            ]
 
         return ToolSpec.from_defaults(
             name=name,
             type=type,
             runtime="server",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
             description=description,
             async_fn=view,
             requirements=[ToolRequirements.SANDBOX],
@@ -123,16 +138,18 @@ class TextEditorToolBuilder:
         ) -> list[ResultContentBlockType]:
             session = await self._session(config)
             result = await session.str_replace(path, old_str, new_str)
-            output = result.output if result.success else f"Error: {result.error}"
-            return _format_output(
-                output,
-                self._settings.code_execution.max_output_bytes,
+            if not result.success:
+                raise RuntimeError(result.error or "Unable to replace text")
+            output = _truncated(
+                result.output, self._settings.code_execution.max_output_bytes
             )
+            return [TextEditorCodeExecutionStrReplaceResultBlock(lines=[output])]
 
         return ToolSpec.from_defaults(
             name=name,
             type=type,
             runtime="server",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
             description=description,
             async_fn=str_replace,
             requirements=[ToolRequirements.SANDBOX],
@@ -160,16 +177,15 @@ class TextEditorToolBuilder:
         ) -> list[ResultContentBlockType]:
             session = await self._session(config)
             result = await session.create(path, file_text)
-            output = result.output if result.success else f"Error: {result.error}"
-            return _format_output(
-                output,
-                self._settings.code_execution.max_output_bytes,
-            )
+            if not result.success:
+                raise RuntimeError(result.error or "Unable to create file")
+            return [TextEditorCodeExecutionCreateResultBlock(is_file_update=False)]
 
         return ToolSpec.from_defaults(
             name=name,
             type=type,
             runtime="server",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
             description=description,
             async_fn=create,
             requirements=[ToolRequirements.SANDBOX],
@@ -198,16 +214,26 @@ class TextEditorToolBuilder:
         ) -> list[ResultContentBlockType]:
             session = await self._session(config)
             result = await session.insert(path, insert_line, new_str)
-            output = result.output if result.success else f"Error: {result.error}"
-            return _format_output(
-                output,
-                self._settings.code_execution.max_output_bytes,
+            if not result.success:
+                raise RuntimeError(result.error or "Unable to insert text")
+            output = _truncated(
+                result.output, self._settings.code_execution.max_output_bytes
             )
+            inserted_lines = len(new_str.splitlines())
+            return [
+                TextEditorCodeExecutionStrReplaceResultBlock(
+                    old_start=insert_line,
+                    new_start=insert_line,
+                    new_lines=inserted_lines,
+                    lines=[output],
+                )
+            ]
 
         return ToolSpec.from_defaults(
             name=name,
             type=type,
             runtime="server",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
             description=description,
             async_fn=insert,
             requirements=[ToolRequirements.SANDBOX],

@@ -1,22 +1,19 @@
-import asyncio
 from typing import Any, Literal, cast
 
 from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
-from private_gpt.components.chunk.models import Website
 from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.tools.events.adapters import WebSearchEventAdapter
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import WEB_SEARCH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import WEB_SEARCH_TOOL_FN
 from private_gpt.components.tools.types import ToolValidationMode
-from private_gpt.components.web.web_search.models import WebSearchResult
 from private_gpt.components.web.web_search.web_search_service import WebSearchService
 from private_gpt.di import get_global_injector
 from private_gpt.events.models import (
     ResultContentBlockType,
-    TextBlock,
-    from_tool_output,
+    WebSearchResultBlock,
 )
 
 
@@ -50,22 +47,6 @@ class WebSearchToolBuilder:
         async def validate_search() -> None:
             await self.web_search_service.validate()
 
-        def _sync_format_results(
-            content: list[WebSearchResult],
-        ) -> list[ResultContentBlockType]:
-            if not content:
-                return [
-                    TextBlock(
-                        text="No results found for the given query.",
-                    )
-                ]
-
-            websites = [Website.from_website_result(res) for res in content]
-            return [
-                *from_tool_output(websites),
-                *[TextBlock(text=str(result)) for result in content],
-            ]
-
         async def run_tool(query: str) -> list[ResultContentBlockType]:
             if validate == ToolValidationMode.LAZY:
                 # It is not validated because that would imply another call;
@@ -73,10 +54,11 @@ class WebSearchToolBuilder:
                 pass
 
             results = await self.web_search_service.search(query, model_id=model_id)
-            return await asyncio.to_thread(
-                _sync_format_results,
-                results,
-            )
+            if not results:
+                from private_gpt.events.models import TextBlock
+
+                return [TextBlock(text="No results found for the given query.")]
+            return [WebSearchResultBlock.from_web_search_result(r) for r in results]
 
         if validate == ToolValidationMode.EAGER:
             # At the moment, eager validation is not performed because
@@ -87,6 +69,7 @@ class WebSearchToolBuilder:
             name=name,
             type=type,
             runtime=runtime,
+            event_adapter=WebSearchEventAdapter,
             description=description,
             async_fn=run_tool,
             execution_metadata=build_rebuild_metadata(

@@ -13,8 +13,13 @@ from private_gpt.chat.input_models import MessageInput, ToolSpecBody
 from private_gpt.components.chunk.models import Chunk
 from private_gpt.components.engines.citations.utils import process_history_citations
 from private_gpt.events.models import (
+    BashCodeExecutionResultBlock,
+    BashCodeExecutionToolResultBlock,
+    ClientToolResultBlock,
+    ClientToolUseBlock,
     ImageBlock,
     MidConvSystemBlock,
+    ServerToolUseBlock,
     SourceBlock,
     TextBlock,
     ThinkingBlock,
@@ -167,6 +172,53 @@ def test_tool_message_with_result_blocks() -> None:
     assert result[0].content == "Result: 3"
     assert result[0].additional_kwargs["tool_call_id"] == "tool1"
     assert result[0].additional_kwargs["tool_call_name"] == "calculator"
+
+
+def test_client_and_server_tool_blocks_convert_to_same_messages() -> None:
+    tool_id = "srvtoolu_equal"
+    tool_input = {"command": "echo ok"}
+    result_content = BashCodeExecutionResultBlock(
+        stdout="ok\n",
+        stderr="",
+        return_code=0,
+    )
+
+    client_messages = [
+        MessageInput(
+            role="assistant",
+            content=[
+                ClientToolUseBlock(
+                    id=tool_id,
+                    name="bash_code_execution",
+                    input=tool_input,
+                ),
+                ClientToolResultBlock(
+                    tool_use_id=tool_id,
+                    content=[result_content],
+                ),
+            ],
+        )
+    ]
+    server_messages = [
+        MessageInput(
+            role="assistant",
+            content=[
+                ServerToolUseBlock(
+                    id=tool_id,
+                    name="bash_code_execution",
+                    input=tool_input,
+                ),
+                BashCodeExecutionToolResultBlock(
+                    tool_use_id=tool_id,
+                    content=result_content,
+                ),
+            ],
+        )
+    ]
+
+    assert MessageInput.convert_from_llama_index_messages(
+        client_messages
+    ) == MessageInput.convert_from_llama_index_messages(server_messages)
 
 
 def test_tool_result_with_empty_content() -> None:
@@ -2313,3 +2365,75 @@ def test_accumulated_right_tldr_with_thinking_blocks_causes_consecutive_assistan
         assert roles[i] != roles[i + 1], (
             f"Consecutive same-role at positions {i}/{i + 1}: {roles}"
         )
+
+
+# ---------------------------------------------------------------------------
+# server_tool_use internal_name translation
+# ---------------------------------------------------------------------------
+
+
+def test_server_tool_use_with_internal_name_uses_internal_for_tool_selection() -> None:
+    """When internal_name is set (PrivateGPT-generated block), it must be used
+    as the ToolSelection tool_name instead of the public name."""
+    tool_id = "srvtoolu_abc123"
+    tool_input = {"command": "echo ok"}
+
+    messages = [
+        MessageInput(
+            role="assistant",
+            content=[
+                ServerToolUseBlock(
+                    id=tool_id,
+                    name="bash_code_execution",
+                    input=tool_input,
+                    internal_name="bash",
+                ),
+                BashCodeExecutionToolResultBlock(
+                    tool_use_id=tool_id,
+                    content=BashCodeExecutionResultBlock(
+                        stdout="ok\n", stderr="", return_code=0
+                    ),
+                ),
+            ],
+        )
+    ]
+
+    result = MessageInput.convert_from_llama_index_messages(messages)
+
+    assistant_msg = next(m for m in result if m.role == MessageRole.ASSISTANT)
+    tool_calls = assistant_msg.additional_kwargs.get("tool_calls", [])
+    assert len(tool_calls) == 1
+    assert tool_calls[0].tool_name == "bash"
+
+
+def test_server_tool_use_without_internal_name_falls_back_to_public_name() -> None:
+    """When internal_name is absent (native Anthropic block), the public name
+    is used as-is for the ToolSelection tool_name."""
+    tool_id = "srvtoolu_xyz456"
+    tool_input = {"command": "node --version"}
+
+    messages = [
+        MessageInput(
+            role="assistant",
+            content=[
+                ServerToolUseBlock(
+                    id=tool_id,
+                    name="bash_code_execution",
+                    input=tool_input,
+                ),
+                BashCodeExecutionToolResultBlock(
+                    tool_use_id=tool_id,
+                    content=BashCodeExecutionResultBlock(
+                        stdout="v18.20.4\n", stderr="", return_code=0
+                    ),
+                ),
+            ],
+        )
+    ]
+
+    result = MessageInput.convert_from_llama_index_messages(messages)
+
+    assistant_msg = next(m for m in result if m.role == MessageRole.ASSISTANT)
+    tool_calls = assistant_msg.additional_kwargs.get("tool_calls", [])
+    assert len(tool_calls) == 1
+    assert tool_calls[0].tool_name == "bash_code_execution"

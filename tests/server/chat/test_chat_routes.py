@@ -35,6 +35,7 @@ from private_gpt.events.models import (
     SourceBlock,
     TextBlock,
     TextDelta,
+    TextEditorCodeExecutionToolResultBlock,
     ToolResultBlock,
     ToolUseBlock,
 )
@@ -1109,46 +1110,72 @@ async def test_code_execution_expand_and_is_usable(
 @pytest.mark.anyio
 async def test_chat_body_validation_mismatched_tool_ids(
     async_test_client: AsyncClient,
+    injector: MockInjector,
 ) -> None:
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="call_001",
+                    tool_name="create",
+                    tool_kwargs={"path": "potato.md", "file_text": "# Potato"},
+                ),
+            ],
+            [
+                ToolSelection(
+                    tool_id="call_002",
+                    tool_name="present_files",
+                    tool_kwargs={"filepaths": ["potato.md"]},
+                )
+            ],
+            ["Created potato.md."],
+        ],
+    )
+
     body = {
         "messages": [
-            {"content": "test", "role": "user"},
+            {"content": "Create a potato.md and present the file", "role": "user"}
+        ],
+        "tools": [
             {
-                "role": "assistant",
-                "content": [
-                    {
-                        "type": "tool_use",
-                        "id": "tool_1",
-                        "name": "test_tool",
-                        "input": {},
-                    },
-                    {
-                        "type": "tool_use",
-                        "id": "tool_2",
-                        "name": "test_tool2",
-                        "input": {},
-                    },
-                ],
-            },
-            {
-                "role": "assistant",
-                "content": [
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": "tool_1",
-                        "content": "result",
-                    },
-                ],
-            },
-        ]
+                "name": "code_execution",
+                "type": "code_execution_v1",
+                "input_schema": {"type": "object", "properties": {}},
+            }
+        ],
+        "system": [{"extensions": ["zylon"]}],
     }
+
     response = await async_test_client.post("/v1/messages", json=body)
-    assert response.status_code == 400
-    error_detail = response.json()["detail"]
-    assert any(
-        "Tool result blocks must match the tool use IDs" in str(err)
-        for err in error_detail
+    assert response.status_code == 200
+
+    completion: Message = Message.model_validate(response.json())
+    tool_uses = [
+        block for block in completion.content if isinstance(block, ToolUseBlock)
+    ]
+    tool_results = [
+        block for block in completion.content if isinstance(block, ToolResultBlock)
+    ]
+
+    assert len(tool_uses) == 2, f"Expected 2 tool_uses, got {len(tool_uses)}"
+    assert len(tool_results) == 2, f"Expected 2 tool_result, got {len(tool_results)}"
+
+    first_tool_use = tool_uses[0]
+    first_tool_result = tool_results[0]
+
+    assert first_tool_use.name == "text_editor_code_execution", (
+        f"Expected first tool use to be 'text_editor_code_execution', got {first_tool_use.name}"
     )
+    assert isinstance(first_tool_result, TextEditorCodeExecutionToolResultBlock)
+
+    second_tool_use = tool_uses[1]
+    second_tool_result = tool_results[1]
+
+    assert second_tool_use.name == "present_files", (
+        f"Expected second tool use to be 'present_files', got {second_tool_use.name}"
+    )
+    assert isinstance(second_tool_result, ToolResultBlock)
 
 
 @pytest.mark.anyio
@@ -2446,9 +2473,9 @@ def _parse_sse_tool_blocks(sse_text: str) -> tuple[list[dict], list[dict]]:
             continue
         payload = json.loads(data_line.split("data:", 1)[1].strip())
         block = payload.get("content_block", {})
-        if block.get("type") == "tool_use":
+        if block.get("type") in {"tool_use", "server_tool_use"}:
             tool_uses.append(block)
-        elif block.get("type") == "tool_result":
+        elif block.get("type") in {"tool_result", "server_tool_result"}:
             tool_results.append(block)
     return tool_uses, tool_results
 
@@ -2481,7 +2508,7 @@ async def test_chat_with_single_document_file(
 async def test_chat_with_multiple_document_files_emits_one_tool_pair_per_document(
     async_test_client: AsyncClient,
 ) -> None:
-    """3 document blocks → 3 ToolUseBlock + 3 ToolResultBlock pairs in the stream."""
+    """3 documents emit 3 paired server tool blocks in the stream."""
     body = {
         "model": "default",
         "messages": [
@@ -2510,6 +2537,9 @@ async def test_chat_with_multiple_document_files_emits_one_tool_pair_per_documen
 
     # Each result must reference a use that was emitted for this message.
     use_ids = {b["id"] for b in doc_uses}
+    assert all(b["type"] == "server_tool_use" for b in doc_uses)
+    assert all(b["id"].startswith("srvtoolu_") for b in doc_uses)
+    assert all(b["type"] == "server_tool_result" for b in tool_results)
     for result in tool_results:
         assert result["tool_use_id"] in use_ids, (
             f"tool_result references unknown tool_use_id {result['tool_use_id']!r}"

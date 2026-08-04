@@ -19,6 +19,7 @@ from pydantic import (
 
 from private_gpt.chat.extensions.citation import ZylonCitation  # noqa: TC001
 from private_gpt.components.chunk.models import Chunk, SourceType  # noqa: TC001
+from private_gpt.components.web.web_search.models import WebSearchResult  # noqa: TC001
 from private_gpt.events.models._base import (
     BaseContentBlock,
     CacheableContentBlock,
@@ -384,7 +385,7 @@ class RedactedThinkingBlock(CacheableContentBlock, StandardContentProtocol):
 
 
 class ToolUseBlock(CacheableContentBlock, StandardContentProtocol):
-    """Represents a model-initiated tool call."""
+    """Shared interface for model-initiated tool calls."""
 
     type: Literal["tool_use"] = Field(default="tool_use")
     id: str = Field(
@@ -401,23 +402,25 @@ class ToolUseBlock(CacheableContentBlock, StandardContentProtocol):
     caller: ToolCaller | None = Field(default=None)
 
 
-class ServerToolUseBlock(CacheableContentBlock, StandardContentProtocol):
+class ClientToolUseBlock(ToolUseBlock):
+    """Represents a client-executed model tool call."""
+
+    type: Literal["tool_use"] = Field(default="tool_use")
+
+
+class ServerToolUseBlock(ToolUseBlock):
     """Represents a server-side (built-in) tool call initiated by the model."""
 
     type: Literal["server_tool_use"] = Field(default="server_tool_use")
     id: str = Field(
         description="Unique identifier for this server tool use",
-        pattern=r"^srvtoolu_[a-zA-Z0-9_]+$",
+        pattern=r"^[a-zA-Z0-9_]+$",
     )
-    name: Literal[
-        "web_search",
-        "web_fetch",
-        "code_execution",
-        "bash_code_execution",
-        "text_editor_code_execution",
-        "tool_search_tool_regex",
-        "tool_search_tool_bm25",
-    ] = Field(description="Name of the server tool being called")
+    name: str = Field(
+        description="Name of the server tool being called",
+        min_length=1,
+        max_length=200,
+    )
     input: dict[str, Any] = Field(
         description="Input payload for the server tool call",
         title="ServerToolUseInput",
@@ -695,4 +698,217 @@ class TLDRBlock(BaseContentBlock, ExtendedContentProtocol):
     tldr_side: Literal["left", "right"] = Field(default="left")
 
 
-ResultContentBlockType = BasicContentBlockType | TLDRBlock
+class BashCodeExecutionResultBlock(BaseContentBlock, StandardContentProtocol):
+    type: Literal["bash_code_execution_result"] = "bash_code_execution_result"
+    stdout: str = Field(description="Standard output from the bash command.")
+    stderr: str = Field(description="Standard error output from the bash command.")
+    return_code: int = Field(
+        description="Exit code of the bash command. 0 indicates success."
+    )
+    content: list[BashExecutionFileEntry] | None = Field(
+        default=None, description="Files created during execution."
+    )
+
+    def render(self) -> str:
+        sections = [f"exit_code: {self.return_code}"]
+        if self.stdout:
+            sections.append(f"stdout:\n{self.stdout}")
+        if self.stderr:
+            sections.append(f"stderr:\n{self.stderr}")
+        return "\n\n".join(sections)
+
+
+class BashExecutionFileEntry(BaseModel):
+    """A file created during bash code execution, retrievable via the Files API."""
+
+    type: Literal["bash_code_execution_output"]
+    file_id: str = Field(
+        description="Identifier for the created file, retrievable via the Files API."
+    )
+
+
+class CodeExecutionToolResultErrorBlock(BaseContentBlock, StandardContentProtocol):
+    type: Literal[
+        "bash_code_execution_tool_result_error",
+        "text_editor_code_execution_tool_result_error",
+    ]
+    error_code: Literal[
+        "unavailable",
+        "execution_time_exceeded",
+        "invalid_tool_input",
+        "too_many_requests",
+        "output_file_too_large",
+    ]
+
+    def render(self) -> str:
+        return f"Error: {self.error_code}"
+
+
+class TextEditorCodeExecutionViewResultBlock(BaseContentBlock, StandardContentProtocol):
+    type: Literal["text_editor_code_execution_view_result"] = (
+        "text_editor_code_execution_view_result"
+    )
+    file_type: Literal["text"] = "text"
+    content: str
+    num_lines: int
+    start_line: int
+    total_lines: int
+
+    def render(self) -> str:
+        return self.content
+
+
+class TextEditorCodeExecutionCreateResultBlock(
+    BaseContentBlock, StandardContentProtocol
+):
+    type: Literal["text_editor_code_execution_create_result"] = (
+        "text_editor_code_execution_create_result"
+    )
+    is_file_update: bool = False
+
+    def render(self) -> str:
+        return self.model_dump_json()
+
+
+class TextEditorCodeExecutionStrReplaceResultBlock(
+    BaseContentBlock, StandardContentProtocol
+):
+    type: Literal["text_editor_code_execution_str_replace_result"] = (
+        "text_editor_code_execution_str_replace_result"
+    )
+    old_start: int = 0
+    old_lines: int = 0
+    new_start: int = 0
+    new_lines: int = 0
+    lines: list[str] = Field(default_factory=list)
+
+    def render(self) -> str:
+        return self.model_dump_json()
+
+
+class WebSearchResultBlock(BaseContentBlock, StandardContentProtocol):
+    """Result from a single web search hit.
+
+    Mirrors Anthropic's WebSearchResultBlock.
+    ``encrypted_content`` is filled with the actual result text (Zylon executes
+    locally, so there is no encrypted payload). ``content`` is a Zylon extension
+    that carries the same text in plain form; Anthropic-only clients should use
+    ``encrypted_content``.
+    """
+
+    type: Literal["web_search_result"] = "web_search_result"
+    url: str
+    title: str
+    encrypted_content: str
+    page_age: str | None = None
+    # Zylon extension: same payload as encrypted_content but in plain form
+    content: str | None = Field(
+        default=None,
+        description="[Zylon extension] Plain-text result content. "
+        "Mirrors encrypted_content for Zylon consumers.",
+    )
+    # Zylon extension: snippet / description from the search provider
+    description: str | None = Field(
+        default=None,
+        description="[Zylon extension] Short description or snippet from the search provider.",
+    )
+    favicon_url: str | None = Field(
+        default=None,
+        description="[Zylon extension] URL of the website favicon.",
+    )
+
+    def render(self) -> str:
+        entry = f"{self.title}\n"
+        entry += f"Description: {self.description or ''}\n"
+        entry += f"URL: {self.url}\n"
+        text = self.content or self.encrypted_content
+        if text:
+            entry += f"Content: {text}\n"
+        return entry
+
+    @classmethod
+    def from_web_search_result(
+        cls,
+        result: WebSearchResult,
+    ) -> WebSearchResultBlock:
+        """Build from a WebSearchResult domain object."""
+        text = result.content or result.description or ""
+        return cls(
+            url=result.url,
+            title=result.title,
+            encrypted_content=text,
+            content=text,
+            page_age=result.age,
+            description=result.description,
+            favicon_url=result.favicon_url,
+        )
+
+
+class WebFetchResultBlock(BaseContentBlock, StandardContentProtocol):
+    """Fetched page content from web_fetch.
+
+    Mirrors Anthropic's web_fetch_tool_result content shape:
+    ``url`` + ``content`` (a document block).
+    """
+
+    type: Literal["web_fetch_result"] = "web_fetch_result"
+    url: str
+    content: DocumentBlock
+    retrieved_at: str | None = Field(
+        default=None,
+        description="ISO-8601 timestamp of when the page was fetched.",
+    )
+    # Zylon extension: raw markdown text before DocumentBlock wrapping
+    markdown: str | None = Field(
+        default=None,
+        description="[Zylon extension] Raw markdown content before DocumentBlock wrapping.",
+    )
+
+    def render(self) -> str:
+        return self.markdown or "No content could be fetched from the provided URL."
+
+    @classmethod
+    def from_markdown(cls, url: str, markdown: str) -> WebFetchResultBlock:
+        return cls(
+            url=url,
+            markdown=markdown,
+            content=DocumentBlock(
+                source=DocumentBlock.PlainTextSource(
+                    type="text",
+                    media_type="text/plain",
+                    data=markdown,
+                )
+            ),
+        )
+
+
+WebToolResultContentBlockType = WebSearchResultBlock | WebFetchResultBlock
+
+CodeExecutionResultContentBlockType = (
+    BashCodeExecutionResultBlock
+    | CodeExecutionToolResultErrorBlock
+    | TextEditorCodeExecutionViewResultBlock
+    | TextEditorCodeExecutionCreateResultBlock
+    | TextEditorCodeExecutionStrReplaceResultBlock
+)
+
+ResultContentBlockType = (
+    BasicContentBlockType
+    | TLDRBlock
+    | CodeExecutionResultContentBlockType
+    | WebToolResultContentBlockType
+)
+
+
+class WebSearchToolResultError(BaseModel):
+    """SDK-compatible error result for a web_search tool call."""
+
+    type: Literal["web_search_tool_result_error"] = "web_search_tool_result_error"
+    error_code: Literal[
+        "invalid_tool_input",
+        "unavailable",
+        "max_uses_exceeded",
+        "too_many_requests",
+        "query_too_long",
+        "request_too_large",
+    ]

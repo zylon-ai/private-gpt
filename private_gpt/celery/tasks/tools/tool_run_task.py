@@ -17,9 +17,12 @@ from private_gpt.components.tools.remote_execution import (
     execute_tool_request,
     resolve_tool_execution_interceptors,
 )
+from private_gpt.components.tools.tool_execution_outcome import (
+    ToolExecutionError,
+    ToolExecutionFailure,
+)
 from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
 from private_gpt.di import get_global_injector
-from private_gpt.events.models import TextBlock
 from private_gpt.settings.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -74,8 +77,12 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
         response = ToolExecutionResponse(
             tool_name=request.tool_name,
             tool_id=request.tool_id,
-            result_content=[TextBlock(text=str(exc))],
-            is_error=True,
+            outcome=ToolExecutionFailure(
+                error=ToolExecutionError(
+                    message=str(exc),
+                    exception_type=type(exc).__name__,
+                )
+            ),
             tool_message=request_error_message(request, str(exc)),
         )
     else:
@@ -86,7 +93,7 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
             message_id,
             request.tool_id,
             request.tool_name,
-            response.is_error,
+            isinstance(response.outcome, ToolExecutionFailure),
         )
 
     logger.debug(
@@ -116,7 +123,7 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
         correlation_id,
         message_id,
         request.tool_id,
-        response.is_error,
+        isinstance(response.outcome, ToolExecutionFailure),
         _result_fragment(response),
     )
     return response.model_dump(mode="json")
@@ -141,8 +148,12 @@ def _duplicate_execution_response(
     return ToolExecutionResponse(
         tool_name=request.tool_name,
         tool_id=request.tool_id,
-        result_content=[TextBlock(text=message)],
-        is_error=True,
+        outcome=ToolExecutionFailure(
+            error=ToolExecutionError(
+                code="duplicate_execution",
+                message=message,
+            )
+        ),
         tool_message=request_error_message(request, message),
     )
 
@@ -168,7 +179,7 @@ async def _notify_completion(
 
 def _result_fragment(response: ToolExecutionResponse) -> str:
     serialized = json.dumps(
-        response.model_dump(mode="json")["result_content"],
+        response.model_dump(mode="json")["outcome"],
         ensure_ascii=False,
         default=str,
     )
