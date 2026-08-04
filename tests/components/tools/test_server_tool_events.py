@@ -116,7 +116,7 @@ def test_bash_tool_resolves_specialized_adapter() -> None:
     tool_id = adapter.new_tool_use_id()
     use = adapter.build_tool_use(
         tool_id=tool_id,
-        tool_name="bash",
+        tool_name="bash_code_execution",
         tool_input={"command": "echo ok"},
     )
     result = adapter.build_tool_result(
@@ -181,7 +181,7 @@ def test_new_adapter_requires_no_central_source_changes() -> None:
     adapter = tool.resolve_event_adapter()
     use = adapter.build_tool_use(
         tool_id=adapter.new_tool_use_id(),
-        tool_name="ignored",
+        tool_name="custom_public_tool",
         tool_input={},
     )
 
@@ -192,7 +192,7 @@ def test_new_adapter_requires_no_central_source_changes() -> None:
 class _CustomAdapter(ServerToolEventAdapter):
     """Module-level adapter proving extensibility without central source changes."""
 
-    public_tool_name = "custom_public_tool"
+    pass
 
 
 def test_client_adapter_renders_bash_result_to_text_block() -> None:

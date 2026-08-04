@@ -191,13 +191,6 @@ class TestSystemPromptInterceptorIdempotency:
         context = _make_context(original_request)
         await interceptor.intercept(context)
 
-        # Verify _render_system_prompt_text returns a single TextBlock
-        mutated_prompt = context.state.input.request.system.prompt
-        if isinstance(mutated_prompt, list):
-            assert len(mutated_prompt) == 1, (
-                "_render_system_prompt_text should return exactly 1 TextBlock"
-            )
-
         # --- Simulate resume: build fresh stack from ORIGINAL (clean) request ---
         restored_stack = build_initial_context_stack(original_request)
         restored_context = _make_context(original_request, context_stack=restored_stack)

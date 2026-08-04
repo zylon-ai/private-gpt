@@ -2368,13 +2368,12 @@ def test_accumulated_right_tldr_with_thinking_blocks_causes_consecutive_assistan
 
 
 # ---------------------------------------------------------------------------
-# server_tool_use internal_name translation
+# server_tool_use name used as-is for tool selection
 # ---------------------------------------------------------------------------
 
 
 def test_server_tool_use_with_internal_name_uses_internal_for_tool_selection() -> None:
-    """When internal_name is set (PrivateGPT-generated block), it must be used
-    as the ToolSelection tool_name instead of the public name."""
+    """ServerToolUseBlock.name is used directly as the ToolSelection tool_name."""
     tool_id = "srvtoolu_abc123"
     tool_input = {"command": "echo ok"}
 
@@ -2386,7 +2385,6 @@ def test_server_tool_use_with_internal_name_uses_internal_for_tool_selection() -
                     id=tool_id,
                     name="bash_code_execution",
                     input=tool_input,
-                    internal_name="bash",
                 ),
                 BashCodeExecutionToolResultBlock(
                     tool_use_id=tool_id,
@@ -2403,12 +2401,11 @@ def test_server_tool_use_with_internal_name_uses_internal_for_tool_selection() -
     assistant_msg = next(m for m in result if m.role == MessageRole.ASSISTANT)
     tool_calls = assistant_msg.additional_kwargs.get("tool_calls", [])
     assert len(tool_calls) == 1
-    assert tool_calls[0].tool_name == "bash"
+    assert tool_calls[0].tool_name == "bash_code_execution"
 
 
 def test_server_tool_use_without_internal_name_falls_back_to_public_name() -> None:
-    """When internal_name is absent (native Anthropic block), the public name
-    is used as-is for the ToolSelection tool_name."""
+    """ServerToolUseBlock.name is used as the ToolSelection tool_name."""
     tool_id = "srvtoolu_xyz456"
     tool_input = {"command": "node --version"}
 

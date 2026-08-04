@@ -1063,8 +1063,12 @@ async def test_code_execution_expand_and_is_usable(
             [
                 ToolSelection(
                     tool_id="call_001",
-                    tool_name="create",
-                    tool_kwargs={"path": "potato.md", "file_text": "# Potato"},
+                    tool_name="text_editor_code_execution",
+                    tool_kwargs={
+                        "command": "create",
+                        "path": "potato.md",
+                        "file_text": "# Potato",
+                    },
                 ),
             ],
             [
@@ -1118,8 +1122,12 @@ async def test_chat_body_validation_mismatched_tool_ids(
             [
                 ToolSelection(
                     tool_id="call_001",
-                    tool_name="create",
-                    tool_kwargs={"path": "potato.md", "file_text": "# Potato"},
+                    tool_name="text_editor_code_execution",
+                    tool_kwargs={
+                        "command": "create",
+                        "path": "potato.md",
+                        "file_text": "# Potato",
+                    },
                 ),
             ],
             [

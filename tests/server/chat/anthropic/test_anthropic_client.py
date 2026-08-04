@@ -28,6 +28,7 @@ from private_gpt.chat.input_models import (
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.tools.tool_names import (
+    BASH_CODE_EXECUTION_TOOL_NAME,
     BASH_TOOL_NAME,
     CODE_EXECUTION_TOOL_NAME,
     INTERNAL_TOOLS,
@@ -232,8 +233,8 @@ def generate_tool_deltas(tools: list[ToolConfig]) -> list[list[str | ToolSelecti
                 )
             elif tool.name in {BASH_TOOL_NAME, CODE_EXECUTION_TOOL_NAME}:
                 yield ToolSelection(
-                    tool_id=f"{BASH_TOOL_NAME}_1",
-                    tool_name=BASH_TOOL_NAME,
+                    tool_id=f"{BASH_CODE_EXECUTION_TOOL_NAME}_1",
+                    tool_name=BASH_CODE_EXECUTION_TOOL_NAME,
                     tool_kwargs={"command": "echo ok"},
                 )
             else:
