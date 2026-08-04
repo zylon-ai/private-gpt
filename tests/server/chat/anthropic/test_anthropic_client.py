@@ -231,7 +231,13 @@ def generate_tool_deltas(tools: list[ToolConfig]) -> list[list[str | ToolSelecti
                     tool_name=WEB_FETCH_TOOL_NAME,
                     tool_kwargs={"url": "https://example.com"},
                 )
-            elif tool.name in {BASH_TOOL_NAME, CODE_EXECUTION_TOOL_NAME}:
+            elif tool.name == BASH_TOOL_NAME:
+                yield ToolSelection(
+                    tool_id=f"{BASH_TOOL_NAME}_1",
+                    tool_name=BASH_TOOL_NAME,
+                    tool_kwargs={"command": "echo ok"},
+                )
+            elif tool.name == CODE_EXECUTION_TOOL_NAME:
                 yield ToolSelection(
                     tool_id=f"{BASH_CODE_EXECUTION_TOOL_NAME}_1",
                     tool_name=BASH_CODE_EXECUTION_TOOL_NAME,
