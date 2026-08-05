@@ -11,6 +11,7 @@ from celery.exceptions import TimeoutError as CeleryTimeoutError
 from injector import Injector, inject, singleton
 
 from private_gpt.celery.dispatch import dispatch_task
+from private_gpt.celery.result import wait_for_celery_result
 from private_gpt.components.tools.remote_execution import (
     execute_tool_request,
     invoke_execution_hook,
@@ -173,8 +174,9 @@ class CeleryToolScheduler(BaseToolScheduler):
         )
         try:
             response_data = await to_thread(
-                result.get,
-                timeout=self._settings.scheduler.tools.callback_timeout_seconds,
+                wait_for_celery_result,
+                result,
+                self._settings.scheduler.tools.callback_timeout_seconds,
             )
         except (CancelledError, CeleryTimeoutError):
             await self.cancel_task(str(result.id))
