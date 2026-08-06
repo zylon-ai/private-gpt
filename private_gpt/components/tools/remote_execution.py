@@ -3,11 +3,11 @@ from __future__ import annotations
 import importlib
 import inspect
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.tools import adapt_to_async_tool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from private_gpt.components.chat.models.chat_config_models import (
     ToolExecutionMetadata,
@@ -20,11 +20,13 @@ from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
 )
 from private_gpt.components.engines.chat.utils.tool_utils import execute_tool_call
-from private_gpt.events.models import (
-    ResultContentBlockType,
-    TextBlock,
-    from_tool_output,
+from private_gpt.components.tools.tool_execution_outcome import (
+    ToolExecutionError,
+    ToolExecutionFailure,
+    ToolExecutionOutcome,
+    ToolExecutionSuccess,
 )
+from private_gpt.events.models import TextBlock, from_tool_output
 
 if TYPE_CHECKING:
     from llama_index.core.tools import AsyncBaseTool
@@ -61,9 +63,40 @@ async def invoke_execution_hook(
 class ToolExecutionResponse(BaseModel):
     tool_name: str
     tool_id: str
-    result_content: list[ResultContentBlockType] = Field(default_factory=list)
-    is_error: bool = False
+    outcome: ToolExecutionOutcome
     tool_message: ChatMessage
+
+    @model_validator(mode="before")
+    @classmethod
+    def upgrade_legacy_outcome(cls, value: Any) -> Any:
+        if not isinstance(value, dict) or "outcome" in value:
+            return value
+        upgraded = dict(value)
+        content = upgraded.pop("result_content", [])
+        is_error = upgraded.pop("is_error", False)
+        upgraded["outcome"] = (
+            {
+                "type": "failure",
+                "error": {
+                    "message": _result_content_text(content),
+                    "details": {"content": content},
+                },
+            }
+            if is_error
+            else {"type": "success", "content": content}
+        )
+        return upgraded
+
+    @property
+    def result_content(self) -> list[Any]:
+        if isinstance(self.outcome, ToolExecutionSuccess):
+            return self.outcome.content
+        details = self.outcome.error.details.get("content", [])
+        return cast(list[Any], details) if isinstance(details, list) else []
+
+    @property
+    def is_error(self) -> bool:
+        return isinstance(self.outcome, ToolExecutionFailure)
 
 
 class ToolExecutionInterceptorContext(BaseModel):
@@ -132,15 +165,26 @@ class ToolExecutor:
             tool_kwargs=before_context.tool_kwargs,
             state_ctx=state_ctx,
         )
+        result_content = (
+            from_tool_output(result.tool_output.raw_output)
+            if result.tool_output.raw_output is not None
+            else [TextBlock(text=result.tool_output.content or "")]
+        )
+        outcome: ToolExecutionOutcome = (
+            ToolExecutionFailure(
+                error=ToolExecutionError(
+                    message=result.tool_output.content
+                    or _result_content_text(result_content),
+                    details={"content": result_content},
+                )
+            )
+            if result.tool_output.is_error
+            else ToolExecutionSuccess(content=result_content)
+        )
         response = ToolExecutionResponse(
             tool_name=request.tool_name,
             tool_id=request.tool_id,
-            result_content=(
-                from_tool_output(result.tool_output.raw_output)
-                if result.tool_output.raw_output is not None
-                else [TextBlock(text=result.tool_output.content or "")]
-            ),
-            is_error=result.tool_output.is_error,
+            outcome=outcome,
             tool_message=tool_message,
         )
 
@@ -225,3 +269,11 @@ def _import_callable(path: str) -> Any:
     for attr in attr_path.split("."):
         target = getattr(target, attr)
     return target
+
+
+def _result_content_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(str(item) for item in content)
+    return str(content or "Tool execution failed")

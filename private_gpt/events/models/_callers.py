@@ -12,7 +12,7 @@ class DirectCaller(BaseModel):
 class ServerToolCaller(BaseModel):
     tool_id: str = Field(
         description="Server tool identifier.",
-        pattern=r"^srvtoolu_[a-zA-Z0-9_]+$",
+        pattern=r"^[a-zA-Z0-9_]+$",
     )
     type: Literal["code_execution_20250825"] = Field(
         description="Caller type discriminator."
@@ -24,7 +24,7 @@ class ServerToolCaller(BaseModel):
 class ServerToolCaller20260120(BaseModel):
     tool_id: str = Field(
         description="Server tool identifier.",
-        pattern=r"^srvtoolu_[a-zA-Z0-9_]+$",
+        pattern=r"^[a-zA-Z0-9_]+$",
     )
     type: Literal["code_execution_20260120"] = Field(
         description="Caller type discriminator."

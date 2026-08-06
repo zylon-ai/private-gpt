@@ -169,7 +169,7 @@ class FatalError(BaseModel, StandardContentProtocol):
     def model_dump_json(self, **kwargs: Any) -> str:
         return json.dumps(self.model_dump(**kwargs), ensure_ascii=False)
 
-    def prune_content_block_by_response_mode(
+    def for_response_mode(
         self, response_mode: Literal["anthropic", "zylon"]
     ) -> Self | None:
         return self

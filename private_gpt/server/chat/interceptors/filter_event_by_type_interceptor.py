@@ -34,7 +34,7 @@ class FilterZylonInterceptor(ChatResponseLoopInterceptor):
             if context.state.input.request.system.extensions.zylon_enabled
             else "anthropic"
         )
-        if not event.prune_content_block_by_response_mode(response_format):
+        if not event.for_response_mode(response_format):
             return None
 
         if isinstance(event, RawContentBlockStartEvent):
