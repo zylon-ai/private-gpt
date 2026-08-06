@@ -355,17 +355,11 @@ transformation:
         enable_semaphore: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_ENABLE_SEMAPHORE:false}
         mode: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MODE:none}
 
-# Filesystem namespace registry (T1.1)
-# Maps logical namespace names to their local mount roots.
-# Roots must exist and be readable at startup — missing roots cause a startup failure.
 filesystems:
   namespaces:
     session:
       root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:local_data/private_gpt/volumes}
       default_mode: rw
     skills:
-      root: ${PGPT_SKILLS_VOLUME_ROOT:}
+      root: ${PGPT_SKILLS_VOLUME_ROOT:local_data/private_gpt/volumes/skills}
       default_mode: ro
-    artifacts:
-      root: ${PGPT_ARTIFACTS_VOLUME_ROOT:}
-      default_mode: rw
