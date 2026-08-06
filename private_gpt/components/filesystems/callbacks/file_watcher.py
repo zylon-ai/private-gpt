@@ -99,21 +99,3 @@ def parse_minio_notification(
 
     return results
 
-
-def key_to_namespace_scope_path(
-    key: str,
-    bucket_namespace_map: dict[str, str],
-) -> tuple[str, str, str] | None:
-    """Derive (namespace, scope, path) from an S3 object key and bucket→namespace map.
-
-    Artifact path: ``{orgId}/{projectId?}/{artifactId}``
-    Scope = orgId (first segment), path = the rest.
-
-    Returns None when the key cannot be mapped.
-    """
-    # key looks like: "org-uuid/proj-uuid/art-uuid.mdx" or "org-uuid/art-uuid.mdx"
-    parts = key.split("/", 1)
-    if len(parts) < 2:
-        return None
-    # scope = orgId (first segment), path = rest; namespace from caller
-    return None  # filled in by the caller who knows the bucket→namespace mapping

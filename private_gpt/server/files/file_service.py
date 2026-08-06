@@ -9,7 +9,10 @@ import magic  # ty:ignore[unresolved-import]
 from fastapi import HTTPException
 from injector import inject, singleton
 
-from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
+from private_gpt.components.environment.layout import (
+    canonical_to_storage_path,
+    storage_to_canonical_path,
+)
 from private_gpt.components.filesystems.namespace_registry import NamespaceRegistry
 from private_gpt.components.filesystems.path_resolver import (
     InvalidPathError,
@@ -57,23 +60,6 @@ def _decode_file_id(file_id: str) -> str:
         return base64.urlsafe_b64decode(file_id + "=" * padding).decode()
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid file ID encoding.") from e
-
-
-def _canonical_to_storage_path(canonical: str) -> str:
-    for mount in DEFAULT_SESSION_LAYOUT:
-        if canonical.startswith(mount.canonical):
-            relative = canonical[len(mount.canonical) :]
-            return f"{mount.name}/{relative}"
-    return canonical
-
-
-def _storage_to_canonical_path(storage: str) -> str:
-    for mount in DEFAULT_SESSION_LAYOUT:
-        prefix = f"{mount.name}/"
-        if storage.startswith(prefix):
-            relative = storage[len(prefix) :]
-            return f"{mount.canonical}{relative}"
-    return storage
 
 
 @singleton
@@ -135,7 +121,7 @@ class FileService:
         namespace: str = _SESSION_NAMESPACE,
     ) -> FileMetadata:
         downloadable = not file_info.path.startswith("uploads/")
-        canonical = _storage_to_canonical_path(file_info.path)
+        canonical = storage_to_canonical_path(file_info.path)
         return FileMetadata(
             id=_encode_file_id(canonical),
             created_at=file_info.created_at,
@@ -238,7 +224,7 @@ class FileService:
 
         storage = self._require_storage()
         canonical = _decode_file_id(file_id)
-        storage_path = _canonical_to_storage_path(canonical)
+        storage_path = canonical_to_storage_path(canonical)
         self._validate_file_id(storage_path)
         folder, filename = storage_path.split("/", 1)
         prefix = self._prefix_for_path(storage_path, scope_id)
@@ -260,7 +246,7 @@ class FileService:
 
         storage = self._require_storage()
         canonical = _decode_file_id(file_id)
-        storage_path = _canonical_to_storage_path(canonical)
+        storage_path = canonical_to_storage_path(canonical)
         self._validate_file_id(storage_path)
         _folder, filename = storage_path.split("/", 1)
         prefix = self._prefix_for_path(storage_path, scope_id)
@@ -282,7 +268,7 @@ class FileService:
 
         storage = self._require_storage()
         canonical = _decode_file_id(file_id)
-        storage_path = _canonical_to_storage_path(canonical)
+        storage_path = canonical_to_storage_path(canonical)
         self._validate_file_id(storage_path)
         if not storage_path.startswith("uploads/"):
             raise HTTPException(

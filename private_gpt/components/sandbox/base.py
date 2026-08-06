@@ -10,7 +10,7 @@ from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
     from private_gpt.components.sandbox.content_bundle import BundledFile
-    from private_gpt.components.sandbox.mount import SandboxMountSpec, VolumeSpec
+    from private_gpt.components.sandbox.mount import MountSpec
 
 
 class SandboxExecutionResult(BaseModel):
@@ -169,10 +169,10 @@ class SandboxProvider(ABC):
         self,
         user_id: str | None = None,
         timeout: int | None = None,
-        bundle_specs: list[SandboxMountSpec] | None = None,
+        bundle_specs: list[MountSpec] | None = None,
         *,
         session_id: str | None = None,
-        volumes: list[VolumeSpec] | None = None,
+        volumes: list[MountSpec] | None = None,
         env: dict[str, str] | None = None,
     ) -> SandboxSession:
         """Create a sandbox session. The session may be lazy until first use.
@@ -187,7 +187,7 @@ class SandboxProvider(ABC):
         self,
         session_id: str,
         timeout: int | None = None,
-        bundle_specs: list[SandboxMountSpec] | None = None,
+        bundle_specs: list[MountSpec] | None = None,
     ) -> SandboxSession | None:
         """Reattach to an existing backend sandbox for this session, if any.
 

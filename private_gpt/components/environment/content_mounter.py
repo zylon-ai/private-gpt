@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
     from private_gpt.components.sandbox.base import SandboxSession
     from private_gpt.components.sandbox.content_bundle import ContentBundle
-    from private_gpt.components.sandbox.mount import VolumeSpec
+    from private_gpt.components.sandbox.mount import MountSpec
 
 
 def _volume_name(canonical_path: str, prefix: str = "bundle") -> str:
@@ -33,8 +33,8 @@ class ContentMounter(ABC):
 
     async def prepare_volume(
         self, descriptor: ContentBundle, session_id: str
-    ) -> VolumeSpec | None:
-        """Return a VolumeSpec to bind-mount this content at container creation.
+    ) -> MountSpec | None:
+        """Return a MountSpec to bind-mount this content at container creation.
 
         When non-None, the spec is wired into sandbox creation and materialize()
         must be a no-op for this descriptor. Default: None (use materialize()).
@@ -96,7 +96,7 @@ class LocalStorageContentMounter(ContentMounter):
     already exist at storage_root/storage_prefix and are bind-mounted directly.
     When storage_provider='s3', the local directory may be empty; in that case
     prepare_volume() fetches from the storage backend and caches the files
-    locally before returning the VolumeSpec — keeps the bind-mount the only
+    locally before returning the MountSpec — keeps the bind-mount the only
     write path so callers never need to write to read-only container paths.
     For bundles added lazily after container creation, materialize() re-fetches
     and writes directly into the sandbox (bind-mounts cannot be added post-start).
@@ -112,9 +112,9 @@ class LocalStorageContentMounter(ContentMounter):
 
     async def prepare_volume(
         self, descriptor: ContentBundle, session_id: str
-    ) -> VolumeSpec | None:
+    ) -> MountSpec | None:
         from private_gpt.components.sandbox.content_bundle import StoredBundle
-        from private_gpt.components.sandbox.mount import VolumeSpec
+        from private_gpt.components.sandbox.mount import MountSpec
 
         if not isinstance(descriptor, StoredBundle):
             return None
@@ -131,10 +131,10 @@ class LocalStorageContentMounter(ContentMounter):
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes(f.content)
 
-        return VolumeSpec(
+        return MountSpec(
             name=_volume_name(descriptor.canonical_path, "stored"),
+            canonical=descriptor.canonical_path,
             host_path=host_path,
-            mount_path=descriptor.canonical_path,
             read_only=not descriptor.writable,
         )
 

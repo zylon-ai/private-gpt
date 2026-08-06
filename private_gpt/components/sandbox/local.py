@@ -10,22 +10,19 @@ import anyio
 import anyio.to_thread
 
 from private_gpt.components.code_execution.bash_executor import LocalBashExecutor
-from private_gpt.components.code_execution.path_translator import (
-    PathTranslator,
-)
 from private_gpt.components.sandbox.base import (
     SandboxExecutionResult,
     SandboxProvider,
     SandboxSession,
 )
-from private_gpt.components.sandbox.mount import LocalMountSpec
+from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.path_translator import PathTranslator
 
 if TYPE_CHECKING:
     from private_gpt.components.sandbox.base import (
         SandboxExecOptions,
     )
     from private_gpt.components.sandbox.content_bundle import BundledFile
-    from private_gpt.components.sandbox.mount import SandboxMountSpec, VolumeSpec
     from private_gpt.settings.settings import Settings
 
 
@@ -41,16 +38,16 @@ class BashExecutorSandbox(SandboxSession):
 
     def __init__(
         self,
-        mounts: list[LocalMountSpec],
+        mounts: list[MountSpec],
         executor: LocalBashExecutor,
         env: dict[str, str] | None = None,
     ) -> None:
-        self._translator = PathTranslator(
-            [(m.canonical, m.real_path, m.writable) for m in mounts]
-        )
+        self._translator = PathTranslator(mounts)
         self._executor = executor
-        self._readonly = [m.canonical for m in mounts if not m.writable]
-        self._default_cwd = next((m.canonical for m in mounts if m.writable), "/")
+        self._readonly = [m.canonical for m in mounts if m.read_only]
+        self._default_cwd = next(
+            (m.canonical for m in mounts if not m.read_only), "/"
+        )
         self._env = env
 
     def add_local_mount(
@@ -164,7 +161,7 @@ class LocalSandboxSession(BashExecutorSandbox):
 
     def __init__(
         self,
-        mounts: list[LocalMountSpec],
+        mounts: list[MountSpec],
         executor: LocalBashExecutor,
         workdir: Path,
         env: dict[str, str] | None = None,
@@ -197,30 +194,20 @@ class LocalSandboxProvider(SandboxProvider):
         self,
         user_id: str | None = None,
         timeout: int | None = None,
-        bundle_specs: list[SandboxMountSpec] | None = None,
+        bundle_specs: list[MountSpec] | None = None,
         *,
         session_id: str | None = None,
-        volumes: list[VolumeSpec] | None = None,
+        volumes: list[MountSpec] | None = None,
         env: dict[str, str] | None = None,
     ) -> SandboxSession:
         if volumes:
-            specs = [
-                LocalMountSpec(
-                    canonical=v.mount_path,
-                    real_path=v.host_path,
-                    writable=not v.read_only,
-                )
-                for v in volumes
-            ]
-            return BashExecutorSandbox(specs, self._executor, env=env)
+            return BashExecutorSandbox(volumes, self._executor, env=env)
 
         workdir = await anyio.to_thread.run_sync(
             lambda: Path(tempfile.mkdtemp(prefix=f"sandbox_{user_id or 'local'}_"))
         )
-        specs = [
-            LocalMountSpec(canonical="/home/agent/", real_path=workdir, writable=True)
-        ]
-        specs.extend(s for s in bundle_specs or [] if isinstance(s, LocalMountSpec))
+        specs = [MountSpec(canonical="/home/agent/", host_path=workdir)]
+        specs.extend(s for s in bundle_specs or [] if s.host_path is not None)
         return LocalSandboxSession(specs, self._executor, workdir, env=env)
 
     async def delete_session(self, session: SandboxSession) -> None:

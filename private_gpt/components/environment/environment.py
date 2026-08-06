@@ -45,6 +45,13 @@ class Environment:
         self._mounted: set[str] = set()
         self._pending: list[ContentBundle] = []
         self._stale: bool = False
+        # Mount fingerprint this env was created with: requested bundle
+        # canonical paths + extra volume identities. Used by the manager to
+        # decide whether a reuse request changed mounts (then it recreates
+        # instead of materializing into a running container).
+        self._bundle_paths: frozenset[tuple[str, str]] = frozenset()
+        self._volume_keys: frozenset[tuple[object, ...]] = frozenset()
+        self._sandbox_env: dict[str, str] = {}
 
     def touch(self) -> None:
         self.last_accessed = time.monotonic()

@@ -23,7 +23,7 @@ from private_gpt.chat.schema_models import create_model_from_json_schema
 from private_gpt.components.engines.citations.types import Citation, Document
 from private_gpt.components.llm.llm_helper import AsyncTokenizerFn, TokenizerFn
 from private_gpt.components.sandbox.content_bundle import ContentBundle
-from private_gpt.components.sandbox.mount import VolumeSpec
+from private_gpt.components.sandbox.mount import MountSpec
 from private_gpt.components.tools.tool_names import resolve_internal_tool_name
 from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.server.mcp.config import McpServerConfig
@@ -630,7 +630,7 @@ class ResolvedContextConfig(ContextConfig):
         description="Canonical paths of skill bundles to remove from the sandbox.",
         exclude=True,
     )
-    extra_volumes: list[VolumeSpec] = Field(
+    extra_volumes: list[MountSpec] = Field(
         default_factory=list,
         description=(
             "Additional host-directory bind-mounts to inject into the container. "

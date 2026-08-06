@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
-from private_gpt.components.sandbox.mount import SandboxMountSpec, VolumeSpec
+from private_gpt.components.sandbox.mount import MountSpec
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -40,7 +40,7 @@ class LayoutMounter(ABC):
         """One-time idempotent setup of backing storage (e.g. mount s3fs)."""
 
     @abstractmethod
-    def session_volumes(self, session_id: str) -> list[VolumeSpec] | None:
+    def session_volumes(self, session_id: str) -> list[MountSpec] | None:
         """Host volumes backing this session's layout dirs, or None if not host-backed.
 
         Only covers the fixed session layout (workspace, uploads, outputs).
@@ -48,14 +48,14 @@ class LayoutMounter(ABC):
         Implementations create the host directories they return. Idempotent.
         """
 
-    def mount_specs(self) -> list[SandboxMountSpec]:
+    def mount_specs(self) -> list[MountSpec]:
         """Canonical mount specs for the session layout (writability enforcement).
 
         Bundle specs are added separately by the EnvironmentManager so this
         class stays unaware of content.
         """
         return [
-            SandboxMountSpec(canonical=m.canonical, writable=m.writable)
+            MountSpec(canonical=m.canonical, writable=m.writable)
             for m in self._layout
         ]
 
@@ -71,7 +71,7 @@ class SandboxDirMounter(LayoutMounter):
     ephemeral use where persistence is not required.
     """
 
-    def session_volumes(self, session_id: str) -> list[VolumeSpec] | None:
+    def session_volumes(self, session_id: str) -> list[MountSpec] | None:
         return None
 
 
@@ -101,16 +101,16 @@ class LocalDirMounter(LayoutMounter):
     def outputs_path(self, session_id: str) -> Path:
         return self._base / "outputs" / session_id
 
-    def session_volumes(self, session_id: str) -> list[VolumeSpec] | None:
-        volumes: list[VolumeSpec] = []
+    def session_volumes(self, session_id: str) -> list[MountSpec] | None:
+        volumes: list[MountSpec] = []
         for mount in self._layout:
             host = self._base / mount.name / session_id
             host.mkdir(parents=True, exist_ok=True)
             volumes.append(
-                VolumeSpec(
+                MountSpec(
                     name=mount.name,
+                    canonical=mount.canonical,
                     host_path=host,
-                    mount_path=mount.canonical,
                     read_only=not mount.writable,
                 )
             )

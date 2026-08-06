@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict, Field
 
 from private_gpt.components.sandbox.content_bundle import ContentBundle
-from private_gpt.components.sandbox.mount import VolumeSpec
+from private_gpt.components.sandbox.mount import MountSpec
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
@@ -62,7 +62,7 @@ class CodeExecutionSessionConfig(BaseModel):
     extra_bundles: list[ContentBundle] = Field(default_factory=list)
     bundles_to_remove: list[str] = Field(default_factory=list)
     env: dict[str, str] = Field(default_factory=dict)
-    extra_volumes: list[VolumeSpec] = Field(
+    extra_volumes: list[MountSpec] = Field(
         default_factory=list,
         description="Extra host-directory volumes to bind-mount from the Backend mount plan.",
     )

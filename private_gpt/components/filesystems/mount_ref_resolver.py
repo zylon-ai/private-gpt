@@ -1,8 +1,8 @@
-"""Resolves Backend mount entries into local VolumeSpec objects (T4.2).
+"""Resolves Backend mount entries into local MountSpec objects (T4.2).
 
 The Backend emits generic mount entries (namespace + scope + path + target).
 This component resolves each entry via the PathResolver and produces a
-VolumeSpec that the sandbox can bind-mount.
+MountSpec that the sandbox can bind-mount.
 
 Unresolvable or unauthorised entries are skipped (not fatal) — the
 conversation continues without that file rather than failing entirely.
@@ -21,14 +21,14 @@ from private_gpt.components.filesystems.path_resolver import (
     PathEscapeError,
     PathResolver,
 )
-from private_gpt.components.sandbox.mount import VolumeSpec
+from private_gpt.components.sandbox.mount import MountSpec
 
 logger = logging.getLogger(__name__)
 
 
 @singleton
 class MountRefResolver:
-    """Resolves mount entries from the Backend mount plan into VolumeSpecs.
+    """Resolves mount entries from the Backend mount plan into MountSpecs.
 
     Skips entries whose namespace is not registered or whose path is
     invalid/escaping — a missing optional file must not abort the turn.
@@ -43,22 +43,22 @@ class MountRefResolver:
         self._registry = registry
         self._resolver = resolver
 
-    def resolve(self, entries: list[MountEntry]) -> list[VolumeSpec]:
-        """Convert a list of mount entries to bind-mountable VolumeSpecs.
+    def resolve(self, entries: list[MountEntry]) -> list[MountSpec]:
+        """Convert a list of mount entries to bind-mountable MountSpecs.
 
         Silently skips unresolvable entries.
         """
         if not entries:
             return []
 
-        volumes: list[VolumeSpec] = []
+        volumes: list[MountSpec] = []
         for entry in entries:
             volume = self._resolve_one(entry)
             if volume is not None:
                 volumes.append(volume)
         return volumes
 
-    def _resolve_one(self, entry: MountEntry) -> VolumeSpec | None:
+    def _resolve_one(self, entry: MountEntry) -> MountSpec | None:
         try:
             # Verify namespace is known before attempting resolution
             self._registry.get(entry.namespace)
@@ -90,9 +90,9 @@ class MountRefResolver:
             )
             return None
 
-        return VolumeSpec(
+        return MountSpec(
             name=f"mount-{entry.namespace}-{entry.artifact_id or entry.path[:16]}",
+            canonical=entry.target,
             host_path=host_path,
-            mount_path=entry.target,
             read_only=(entry.mode == "ro"),
         )

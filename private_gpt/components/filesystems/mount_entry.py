@@ -1,7 +1,7 @@
 """Mount entry models for the ZGPT filesystem platform (T4.2).
 
 Mount entries are emitted by the Backend on each chat turn and resolve
-to VolumeSpec objects that are bind-mounted into the container.
+to MountSpec objects that are bind-mounted into the container.
 """
 
 from __future__ import annotations

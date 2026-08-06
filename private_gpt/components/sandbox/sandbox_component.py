@@ -1,7 +1,7 @@
 from injector import inject, singleton
 
 from private_gpt.components.sandbox.base import SandboxSession
-from private_gpt.components.sandbox.mount import SandboxMountSpec
+from private_gpt.components.sandbox.mount import MountSpec
 from private_gpt.components.sandbox.registry import SandboxProviderRegistry
 from private_gpt.settings.settings import Settings
 
@@ -17,7 +17,7 @@ class SandboxComponent:
         self,
         user_id: str | None = None,
         timeout: int | None = None,
-        bundle_specs: list[SandboxMountSpec] | None = None,
+        bundle_specs: list[MountSpec] | None = None,
         env: dict[str, str] | None = None,
     ) -> SandboxSession | None:
         provider_name = self._settings.sandbox.provider

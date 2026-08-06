@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from private_gpt.components.sandbox.mount import SandboxMountSpec
+from private_gpt.components.sandbox.mount import MountSpec
 
 
-class SessionMountDef(SandboxMountSpec):
+class SessionMountDef(MountSpec):
     """One entry of the session filesystem layout.
 
     ``name`` doubles as the volume name and the host subdirectory under
@@ -35,3 +35,26 @@ DEFAULT_SESSION_LAYOUT: tuple[SessionMountDef, ...] = (
         description="Deliverables the user can download",
     ),
 )
+
+
+def canonical_to_storage_path(
+    canonical: str, layout: tuple[SessionMountDef, ...] = DEFAULT_SESSION_LAYOUT
+) -> str:
+    """Map a canonical sandbox path to its storage path (e.g. ``user/foo.txt``)."""
+    for mount in layout:
+        if canonical.startswith(mount.canonical):
+            relative = canonical[len(mount.canonical) :]
+            return f"{mount.name}/{relative}"
+    return canonical
+
+
+def storage_to_canonical_path(
+    storage: str, layout: tuple[SessionMountDef, ...] = DEFAULT_SESSION_LAYOUT
+) -> str:
+    """Map a storage path (e.g. ``user/foo.txt``) back to its canonical form."""
+    for mount in layout:
+        prefix = f"{mount.name}/"
+        if storage.startswith(prefix):
+            relative = storage[len(prefix) :]
+            return f"{mount.canonical}{relative}"
+    return storage
