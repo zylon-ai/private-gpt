@@ -1579,6 +1579,7 @@ class SkillSettings(BaseModel):
             "If None (default), no size limit is enforced."
         ),
     )
+
     @field_validator("max_bundle_size_bytes", mode="before")
     @classmethod
     def empty_str_to_none(cls, v: object) -> object:

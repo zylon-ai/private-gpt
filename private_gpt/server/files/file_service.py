@@ -93,9 +93,7 @@ class FileService:
         if "session" in registry.all_names():
             local_root = str(registry.root("session"))
         else:
-            local_root = str(
-                Path(settings.data.local_data_folder) / "code_execution"
-            )
+            local_root = str(Path(settings.data.local_data_folder) / "code_execution")
         self._storage = storage_component.get_object_storage(
             provider=cfg.storage_provider,
             local_root_path=local_root,
