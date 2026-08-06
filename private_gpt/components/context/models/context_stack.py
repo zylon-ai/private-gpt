@@ -11,7 +11,7 @@ from private_gpt.components.context.models.context_layer import (
 )
 from private_gpt.components.context.models.layer_type import LayerType
 from private_gpt.components.engines.citations.types import Document
-from private_gpt.components.sandbox.content_bundle import ContentBundle
+from private_gpt.components.sandbox.mount import MountSpec
 
 
 class ContextStack(BaseModel):
@@ -79,22 +79,13 @@ class ContextStack(BaseModel):
             layer.document for layer in self.layers if isinstance(layer, DocumentLayer)
         ]
 
-    def all_bundles(self) -> list[ContentBundle]:
-        """Return bundles from all CONTENT_BUNDLES layers in insertion order."""
+    def all_mounts(self) -> list[MountSpec]:
+        """Return mounts from all CONTENT_BUNDLES layers in insertion order."""
         return [
-            bundle
+            mount
             for layer in self.layers
             if isinstance(layer, ContentBundlesLayer)
-            for bundle in layer.bundles
-        ]
-
-    def all_bundles_to_remove(self) -> list[str]:
-        """Return canonical paths to remove from all CONTENT_BUNDLES layers."""
-        return [
-            path
-            for layer in self.layers
-            if isinstance(layer, ContentBundlesLayer)
-            for path in layer.to_remove
+            for mount in layer.mounts
         ]
 
     def layers_of_type(

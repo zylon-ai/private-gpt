@@ -40,7 +40,7 @@ class PresentFilesProcessor(ToolProcessor):
                     [
                         await self._builder.build_tool(
                             session_id,
-                            bundles=request.context.content_bundles or None,
+                            mounts=request.context.mounts or None,
                             name=tool.name or PRESENT_FILES_TOOL_NAME,
                             type=tool.type or PRESENT_FILES_TOOL_NAME + "_v1",
                         )

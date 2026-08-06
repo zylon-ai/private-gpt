@@ -13,7 +13,7 @@ if TYPE_CHECKING:
         SandboxExecutionResult,
         SandboxSession,
     )
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
+    from private_gpt.components.sandbox.mount import MountSpec
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +26,11 @@ class Environment:
     Delegated calls refresh the idle clock the manager's reaper watches, so
     any tool activity keeps the environment alive.
 
-    ContentBundles (skills, tools, ...) are registered via add_pending() and
-    materialized by _flush_pending(). When the sandbox is being created for
-    the first time, bundles that couldn't be volume-mounted are deferred and
+    Mounts (skills, tools, artifacts, ...) are registered via add_pending()
+    and materialized by _flush_pending(). When the sandbox is being created
+    for the first time, mounts that couldn't be bind-mounted are deferred and
     flushed before the first exec(). When the sandbox is already running,
-    the manager flushes immediately so bundles are available right away.
+    the manager flushes immediately so mounts are available right away.
     The _stale flag is set on any flush failure so the EnvironmentManager
     can evict and recreate on the next acquire().
     """
@@ -43,14 +43,12 @@ class Environment:
 
     def __post_init__(self) -> None:
         self._mounted: set[str] = set()
-        self._pending: list[ContentBundle] = []
+        self._pending: list[MountSpec] = []
         self._stale: bool = False
-        # Mount fingerprint this env was created with: requested bundle
-        # canonical paths + extra volume identities. Used by the manager to
+        # Mount fingerprint this env was created with. Used by the manager to
         # decide whether a reuse request changed mounts (then it recreates
         # instead of materializing into a running container).
-        self._bundle_paths: frozenset[tuple[str, str]] = frozenset()
-        self._volume_keys: frozenset[tuple[object, ...]] = frozenset()
+        self._mount_keys: frozenset[tuple[object, ...]] = frozenset()
         self._sandbox_env: dict[str, str] = {}
 
     def touch(self) -> None:
@@ -59,37 +57,37 @@ class Environment:
     def idle_seconds(self, now: float) -> float:
         return now - self.last_accessed
 
-    def add_pending(self, bundles: list[ContentBundle]) -> None:
-        """Stage bundles for materialization, skipping already-mounted paths.
+    def add_pending(self, mounts: list[MountSpec]) -> None:
+        """Stage mounts for materialization, skipping already-mounted targets.
 
         When the container is already running, the caller is responsible for
         calling _flush_pending() immediately after. When the container is being
-        created, deferred bundles are flushed before the first exec().
+        created, deferred mounts are flushed before the first exec().
         """
-        for bundle in bundles:
-            if bundle.canonical_path not in self._mounted:
-                self._pending.append(bundle)
+        for mount in mounts:
+            if mount.target not in self._mounted:
+                self._pending.append(mount)
 
     async def _flush_pending(self) -> None:
         if not self._pending:
             return
         pending, self._pending = self._pending, []
         try:
-            for bundle in pending:
+            for mount in pending:
                 mounter = next(
-                    (m for m in self.content_mounters if m.can_handle(bundle)), None
+                    (m for m in self.content_mounters if m.can_handle(mount)), None
                 )
                 if mounter:
-                    await mounter.materialize(bundle, self.sandbox)
-                self._mounted.add(bundle.canonical_path)
+                    await mounter.materialize(mount, self.sandbox)
+                self._mounted.add(mount.target)
         except Exception:
             self._stale = True
             raise
 
-    async def remove_bundles(self, canonical_paths: list[str]) -> None:
-        for path in canonical_paths:
-            await self.sandbox.remove_mount(path)
-            self._mounted.discard(path)
+    async def remove_mounts(self, targets: list[str]) -> None:
+        for target in targets:
+            await self.sandbox.remove_mount(target)
+            self._mounted.discard(target)
 
     async def exec(
         self, command: str, opts: SandboxExecOptions | None = None

@@ -3,11 +3,8 @@ from pathlib import Path
 
 from injector import inject, singleton
 
-from private_gpt.components.sandbox.content_bundle import (
-    BundledFile,
-    ContentBundle,
-    StoredBundle,
-)
+from private_gpt.components.sandbox.content_bundle import BundledFile
+from private_gpt.components.sandbox.mount import MountSpec, StorageRef
 from private_gpt.components.skills.models.skill_entities import (
     SkillFilter,
     SkillVersionEntity,
@@ -20,7 +17,7 @@ from private_gpt.settings.settings import Settings
 
 @singleton
 class SkillLoader:
-    """Resolves active skills from a SkillFilter into StoredBundles.
+    """Resolves active skills from a SkillFilter into storage-backed mounts.
 
     Skill-specific knowledge (where skills live in storage, how to identify them)
     is encapsulated here. The environment layer receives generic bundles and
@@ -47,43 +44,38 @@ class SkillLoader:
             bucket_name=settings.s3.durable_bucket_name,
         )
 
-    def bundles_for_versions(
+    def mounts_for_versions(
         self, versions: list[SkillVersionEntity]
-    ) -> list[ContentBundle]:
-        """Create by-reference bundles from already-resolved skill version entities.
+    ) -> list[MountSpec]:
+        """Create storage-backed mounts from already-resolved skill versions.
 
-        Used by the skills interceptor to populate ``ContentBundlesLayer`` without
-        a redundant ``recover_versions`` round-trip.
+        Used by the skills interceptor to populate ``ContentBundlesLayer``
+        without a redundant ``recover_versions`` round-trip. Each skill is a
+        read-only directory mount at ``/mnt/skills/{name}/`` backed by the
+        skill's storage prefix; the folder is bind-mounted directly when the
+        host can see it, and ``fetch`` hydrates it only when it is absent.
         """
-        bundles: list[ContentBundle] = []
-        for v in versions:
-            bundles.append(
-                StoredBundle(
-                    canonical_path=skill_mount_path(v.frontmatter.name),
-                    storage_prefix=v.storage_prefix,
-                    writable=False,
+        return [
+            MountSpec(
+                target=skill_mount_path(v.frontmatter.name),
+                access="ro",
+                name=f"skill:{v.frontmatter.name}",
+                storage=StorageRef(
+                    prefix=v.storage_prefix,
                     fetch=self._fetcher(v.storage_prefix),
-                )
+                ),
             )
-        return bundles
+            for v in versions
+        ]
 
-    async def resolve(self, skill_filter: SkillFilter) -> list[StoredBundle]:
-        """Resolve active skills into by-reference bundles. No downloads here.
+    async def resolve(self, skill_filter: SkillFilter) -> list[MountSpec]:
+        """Resolve active skills into storage-backed mounts. No downloads here.
 
-        Each bundle points at the skill version's storage prefix and is mounted
-        at canonical_path="/mnt/skills/{name}/"; bytes are fetched lazily
-        and only when the mounter cannot bind the storage path directly.
+        Each skill is mounted at ``/mnt/skills/{name}/``; bytes are fetched
+        lazily and only when the host folder cannot be bound directly.
         """
         versions = await self._skill_service.recover_versions(skill_filter)
-        return [
-            StoredBundle(
-                canonical_path=skill_mount_path(item.version.frontmatter.name),
-                storage_prefix=item.version.storage_prefix,
-                writable=False,
-                fetch=self._fetcher(item.version.storage_prefix),
-            )
-            for item in versions
-        ]
+        return self.mounts_for_versions([item.version for item in versions])
 
     def _fetcher(self, prefix: str) -> Callable[[], Awaitable[list[BundledFile]]]:
         async def fetch() -> list[BundledFile]:

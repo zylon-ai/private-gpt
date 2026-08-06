@@ -11,7 +11,6 @@ from private_gpt.components.code_execution.sandbox_session import (
 )
 from private_gpt.components.environment.content_mounter import (
     FetchContentMounter,
-    InlineContentMounter,
     LocalStorageContentMounter,
 )
 from private_gpt.components.environment.manager import EnvironmentManager
@@ -68,15 +67,13 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
 
         When skills are stored locally, LocalStorageContentMounter provides a
         direct host-path volume (no fetch needed). FetchContentMounter is the
-        universal fallback for any StoredBundle. InlineContentMounter handles
-        plain ContentBundle instances whose files are already in memory.
+        universal fallback for any storage-backed mount.
         """
         mounters: list[ContentMounter] = []
         if self.settings.skills.storage_provider == "local":
             storage_root = Path(self.settings.data.local_data_folder) / "storage"
             mounters.append(LocalStorageContentMounter(storage_root))
         mounters.append(FetchContentMounter())
-        mounters.append(InlineContentMounter())
         return mounters
 
     async def create_session(
@@ -85,10 +82,8 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
     ) -> SandboxCodeExecutionSession:
         env = await self._manager.acquire(
             config.session_id,
-            config.extra_bundles or None,
-            config.bundles_to_remove or None,
-            config.env or None,
-            config.extra_volumes or None,
+            mounts=config.mounts or None,
+            sandbox_env=config.env or None,
         )
         return SandboxCodeExecutionSession(env)
 

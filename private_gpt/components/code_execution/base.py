@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from private_gpt.components.sandbox.content_bundle import ContentBundle
 from private_gpt.components.sandbox.mount import MountSpec
 from private_gpt.settings.settings import Settings
 
@@ -59,12 +58,16 @@ class CodeExecutionSessionConfig(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     session_id: str
-    extra_bundles: list[ContentBundle] = Field(default_factory=list)
-    bundles_to_remove: list[str] = Field(default_factory=list)
     env: dict[str, str] = Field(default_factory=dict)
-    extra_volumes: list[MountSpec] = Field(
+    mounts: list[MountSpec] = Field(
         default_factory=list,
-        description="Extra host-directory volumes to bind-mount from the Backend mount plan.",
+        description=(
+            "The single mount set for the session: session layout is added by "
+            "the layout mounter; this list carries skill/bundle mounts (with a "
+            "storage ref) and Backend mount-plan volumes (with a source dir). "
+            "A change in this set recreates the sandbox instead of "
+            "materializing files into the running container."
+        ),
     )
 
 

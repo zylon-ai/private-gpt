@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.context.models.layer_type import LayerType
 from private_gpt.components.engines.citations.types import Document
-from private_gpt.components.sandbox.content_bundle import ContentBundle
+from private_gpt.components.sandbox.mount import MountSpec
 
 
 class BaseContextLayer(BaseModel):
@@ -218,17 +218,18 @@ class ContextPromptLayer(BaseContextLayer):
 
 
 class ContentBundlesLayer(BaseContextLayer):
-    """Skill content bundles — consumed by tool builders, not rendered."""
+    """Skill/bundle mounts — consumed by tool builders, not rendered.
+
+    The layer carries the same ``MountSpec`` model used everywhere else; a
+    storage-backed skill is a mount with a ``storage`` ref, so no separate
+    ``ContentBundle`` concept is needed.
+    """
 
     type: Literal[LayerType.CONTENT_BUNDLES] = Field(
         default=LayerType.CONTENT_BUNDLES, frozen=True
     )
     priority: int = Field(default=2000, frozen=True)
-    bundles: list[ContentBundle] = Field(default_factory=list)
-    to_remove: list[str] = Field(
-        default_factory=list,
-        description="Canonical paths of skill bundles to remove from the sandbox.",
-    )
+    mounts: list[MountSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 

@@ -1,8 +1,13 @@
-"""Resolves Backend mount entries into local MountSpec objects (T4.2).
+"""Resolves Backend mount entries into directory-level MountSpec objects (T4.2).
 
 The Backend emits generic mount entries (namespace + scope + path + target).
 This component resolves each entry via the PathResolver and produces a
 MountSpec that the sandbox can bind-mount.
+
+A mount is always a directory — never a single file. File-level entries are
+normalized to the containing directory (the resolved host dir when the path
+is a directory, or its parent when the path is a file), so the agent works
+over mount paths only.
 
 Unresolvable or unauthorised entries are skipped (not fatal) — the
 conversation continues without that file rather than failing entirely.
@@ -11,6 +16,7 @@ conversation continues without that file rather than failing entirely.
 from __future__ import annotations
 
 import logging
+import posixpath
 
 from injector import inject, singleton
 
@@ -44,19 +50,19 @@ class MountRefResolver:
         self._resolver = resolver
 
     def resolve(self, entries: list[MountEntry]) -> list[MountSpec]:
-        """Convert a list of mount entries to bind-mountable MountSpecs.
+        """Convert a list of mount entries to bind-mountable directory MountSpecs.
 
         Silently skips unresolvable entries.
         """
         if not entries:
             return []
 
-        volumes: list[MountSpec] = []
+        mounts: list[MountSpec] = []
         for entry in entries:
-            volume = self._resolve_one(entry)
-            if volume is not None:
-                volumes.append(volume)
-        return volumes
+            mount = self._resolve_one(entry)
+            if mount is not None:
+                mounts.append(mount)
+        return mounts
 
     def _resolve_one(self, entry: MountEntry) -> MountSpec | None:
         try:
@@ -90,9 +96,25 @@ class MountRefResolver:
             )
             return None
 
+        # Mounts are directories — never single files. If the resolved host
+        # path is a file, mount its parent directory instead.
+        source = host_path if host_path.is_dir() else host_path.parent
+        target = _directory_target(entry.target, file_target=not host_path.is_dir())
+
         return MountSpec(
             name=f"mount-{entry.namespace}-{entry.artifact_id or entry.path[:16]}",
-            canonical=entry.target,
-            host_path=host_path,
-            read_only=(entry.mode == "ro"),
+            target=target,
+            access="ro" if entry.mode == "ro" else "rw",
+            source=source,
+            etag=entry.etag,
         )
+
+
+def _directory_target(target: str, *, file_target: bool) -> str:
+    """Normalize a Backend target to a directory mount path (ends with "/")."""
+    if target.endswith("/"):
+        return target
+    if file_target:
+        parent = posixpath.dirname(target.rstrip("/"))
+        return parent.rstrip("/") + "/"
+    return target.rstrip("/") + "/"

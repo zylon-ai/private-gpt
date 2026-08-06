@@ -5,8 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from private_gpt.components.environment.manager import EnvironmentManager
-from private_gpt.components.sandbox.content_bundle import ContentBundle
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import MountSpec, StorageRef
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -87,12 +86,18 @@ def _manager(**kwargs) -> EnvironmentManager:
     )
 
 
-def _bundle(canonical: str) -> ContentBundle:
-    return ContentBundle(canonical_path=canonical)
+def _bundle_mount(canonical: str, prefix: str = "") -> MountSpec:
+    """A storage-backed skill mount."""
+    return MountSpec(
+        name=f"skill:{canonical}",
+        target=canonical,
+        access="ro",
+        storage=StorageRef(prefix=prefix or canonical, fetch=lambda: []),
+    )
 
 
 def _volume(name: str, canonical: str) -> MountSpec:
-    return MountSpec(name=name, canonical=canonical, host_path=Path("/tmp") / name)
+    return MountSpec(name=name, target=canonical, source=Path("/tmp") / name)
 
 
 async def _sleep_tasks(manager: EnvironmentManager) -> None:
@@ -111,11 +116,11 @@ async def _sleep_tasks(manager: EnvironmentManager) -> None:
 async def test_acquire_recreates_when_bundles_change() -> None:
     manager = _manager(recreate_on_mount_change=True)
 
-    first = await manager.acquire("s1", extra_bundles=[_bundle("/mnt/skills/a/")])
+    first = await manager.acquire("s1", mounts=[_bundle_mount("/mnt/skills/a/")])
     await _sleep_tasks(manager)
     second = await manager.acquire(
         "s1",
-        extra_bundles=[_bundle("/mnt/skills/a/"), _bundle("/mnt/skills/b/")],
+        mounts=[_bundle_mount("/mnt/skills/a/"), _bundle_mount("/mnt/skills/b/")],
     )
     await _sleep_tasks(manager)
 
@@ -130,10 +135,12 @@ async def test_acquire_reuses_when_mounts_unchanged() -> None:
     manager = _manager(recreate_on_mount_change=True)
 
     first = await manager.acquire(
-        "s1", extra_bundles=[_bundle("/mnt/skills/a/"), _bundle("/mnt/skills/b/")]
+        "s1",
+        mounts=[_bundle_mount("/mnt/skills/a/"), _bundle_mount("/mnt/skills/b/")],
     )
     second = await manager.acquire(
-        "s1", extra_bundles=[_bundle("/mnt/skills/a/"), _bundle("/mnt/skills/b/")]
+        "s1",
+        mounts=[_bundle_mount("/mnt/skills/a/"), _bundle_mount("/mnt/skills/b/")],
     )
     await _sleep_tasks(manager)
 
@@ -145,11 +152,11 @@ async def test_acquire_reuses_when_mounts_unchanged() -> None:
 async def test_acquire_recreates_when_volumes_change() -> None:
     manager = _manager(recreate_on_mount_change=True)
 
-    first = await manager.acquire("s1", extra_volumes=[_volume("v1", "/mnt/data/")])
+    first = await manager.acquire("s1", mounts=[_volume("v1", "/mnt/data/")])
     await _sleep_tasks(manager)
     second = await manager.acquire(
         "s1",
-        extra_volumes=[_volume("v1", "/mnt/data/"), _volume("v2", "/mnt/other/")],
+        mounts=[_volume("v1", "/mnt/data/"), _volume("v2", "/mnt/other/")],
     )
     await _sleep_tasks(manager)
 
@@ -171,19 +178,11 @@ async def test_acquire_recreates_when_env_changes() -> None:
     assert manager._provider.killed == ["sandbox-1"]
 
 
-async def test_acquire_reuses_when_removal_is_already_done() -> None:
+async def test_acquire_reuses_when_mounts_unchanged_again() -> None:
     manager = _manager(recreate_on_mount_change=True)
 
-    first = await manager.acquire(
-        "s1",
-        extra_bundles=[_bundle("/mnt/skills/a/")],
-        bundles_to_remove=["/mnt/skills/b/"],  # never mounted
-    )
-    second = await manager.acquire(
-        "s1",
-        extra_bundles=[_bundle("/mnt/skills/a/")],
-        bundles_to_remove=["/mnt/skills/b/"],
-    )
+    first = await manager.acquire("s1", mounts=[_bundle_mount("/mnt/skills/a/")])
+    second = await manager.acquire("s1", mounts=[_bundle_mount("/mnt/skills/a/")])
     await _sleep_tasks(manager)
 
     assert first is second
@@ -194,13 +193,13 @@ async def test_acquire_recreates_when_bundle_removed() -> None:
     manager = _manager(recreate_on_mount_change=True)
 
     first = await manager.acquire(
-        "s1", extra_bundles=[_bundle("/mnt/skills/a/"), _bundle("/mnt/skills/b/")]
+        "s1",
+        mounts=[_bundle_mount("/mnt/skills/a/"), _bundle_mount("/mnt/skills/b/")],
     )
     await _sleep_tasks(manager)
     second = await manager.acquire(
         "s1",
-        extra_bundles=[_bundle("/mnt/skills/a/")],
-        bundles_to_remove=["/mnt/skills/b/"],
+        mounts=[_bundle_mount("/mnt/skills/a/")],
     )
     await _sleep_tasks(manager)
 

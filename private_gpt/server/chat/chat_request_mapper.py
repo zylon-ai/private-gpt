@@ -218,7 +218,7 @@ class ChatRequestMapper:
                 if body.metadata and body.metadata.user_id
                 else str(uuid.uuid4()),
                 container=body.container,
-                extra_volumes=self._mount_ref_resolver.resolve(body.mounts or []),
+                mounts=self._mount_ref_resolver.resolve(body.mounts or []),
                 maximum_context_length=self._settings.chat.maximum_context_length,
                 maximum_loaded_skills=(
                     body.maximum_loaded_skills

@@ -10,7 +10,6 @@ bundle content (skills, tools, ...) reaches the sandbox.
 from private_gpt.components.environment.content_mounter import (
     ContentMounter,
     FetchContentMounter,
-    InlineContentMounter,
     LocalStorageContentMounter,
 )
 from private_gpt.components.environment.environment import Environment
@@ -32,7 +31,6 @@ __all__ = [
     "Environment",
     "EnvironmentManager",
     "FetchContentMounter",
-    "InlineContentMounter",
     "LayoutMounter",
     "LocalDirMounter",
     "LocalStorageContentMounter",

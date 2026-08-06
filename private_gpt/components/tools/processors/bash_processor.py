@@ -27,10 +27,8 @@ class BashProcessor(ToolProcessor):
 
             config = CodeExecutionSessionConfig(
                 session_id=_session_id(request),
-                extra_bundles=request.context.content_bundles or [],
-                bundles_to_remove=request.context.bundles_to_remove or [],
                 env=Principal.current().as_env() or {},
-                extra_volumes=request.context.extra_volumes or [],
+                mounts=request.context.mounts or [],
             )
             resolved = await self._bash_builder.build_tool(
                 config,

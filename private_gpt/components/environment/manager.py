@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from private_gpt.components.environment.content_mounter import ContentMounter
     from private_gpt.components.environment.mounter import LayoutMounter
     from private_gpt.components.sandbox.base import SandboxProvider, SandboxSession
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 logger = logging.getLogger(__name__)
 
@@ -27,19 +26,20 @@ class EnvironmentManager:
     (LayoutMounter), and the ordered list of content mounters (ContentMounter).
 
     acquire() reuses a live environment, restores a backend sandbox when the
-    provider supports it, or creates a fresh one. Bundle registration on reuse
-    is zero-network: bundles are added to a pending list and materialized lazily
-    just before the first exec() that follows.
+    provider supports it, or creates a fresh one. The single ``mounts`` list
+    carries every directory mount the session needs: storage-backed bundle
+    mounts (skills) and source-backed mount-plan volumes. Layout mounts
+    (workspace, uploads, outputs) are added by the LayoutMounter.
 
     ``renew_on_acquire`` switches the backend lifetime refresh from the reaper
     timer to an eager refresh on every acquire() — i.e. every new message that
     reaches a tool. The reaper then only reaps idle sandboxes.
 
     ``recreate_on_mount_change`` kills the old sandbox and creates a new one
-    whenever the requested mounts (bundles, extra volumes, sandbox env) differ
-    from what the live env was created with. Recreating wires the new mounts at
-    container creation (fastest path) instead of materializing/copying files
-    into a running container.
+    whenever the requested mounts (or sandbox env) differ from what the live
+    env was created with. Recreating wires the new mounts at container creation
+    (fastest path) instead of materializing/copying files into a running
+    container.
 
     A stale sandbox (e.g. after the backend server restarts) marks the
     Environment as _stale during the first failing exec/flush; acquire() then
@@ -75,10 +75,8 @@ class EnvironmentManager:
     async def acquire(
         self,
         session_id: str,
-        extra_bundles: list[ContentBundle] | None = None,
-        bundles_to_remove: list[str] | None = None,
+        mounts: list[MountSpec] | None = None,
         sandbox_env: dict[str, str] | None = None,
-        extra_volumes: list[MountSpec] | None = None,
     ) -> Environment:
         # Serialize per session_id so concurrent calls cannot race into
         # creating two backend sandboxes for the same session (one would leak).
@@ -100,7 +98,7 @@ class EnvironmentManager:
                         f"kill stale sandbox ({session_id})",
                     )
                 elif self._recreate_on_mount_change and self._mounts_changed(
-                    env, extra_bundles, bundles_to_remove, sandbox_env, extra_volumes
+                    env, mounts, sandbox_env
                 ):
                     # Mounts changed: kill the old sandbox and create a new one
                     # so the new mounts are wired at container creation (no
@@ -115,12 +113,7 @@ class EnvironmentManager:
                     # the old sandbox and reconnect with old mounts.
                     await self._kill(env.sandbox, session_id)
                     return await self._create(
-                        session_id,
-                        extra_bundles,
-                        bundles_to_remove,
-                        sandbox_env,
-                        extra_volumes,
-                        force_new=True,
+                        session_id, mounts, sandbox_env, force_new=True
                     )
                 else:
                     env.touch()
@@ -140,24 +133,15 @@ class EnvironmentManager:
                                 self._active.pop(session_id, None)
                             await self._kill(env.sandbox, session_id)
                             return await self._create(
-                                session_id,
-                                extra_bundles,
-                                bundles_to_remove,
-                                sandbox_env,
-                                extra_volumes,
-                                force_new=True,
+                                session_id, mounts, sandbox_env, force_new=True
                             )
-                    if bundles_to_remove:
-                        await env.remove_bundles(bundles_to_remove)
-                    if extra_bundles:
-                        # Container is already running — push bundles immediately
-                        # so skills are accessible before the next exec().
-                        env.add_pending(extra_bundles)
+                    if mounts:
+                        # Content that could not be bind-mounted at creation is
+                        # materialized lazily just before the first exec().
+                        env.add_pending(mounts)
                         await env._flush_pending()
                     return env
-            return await self._create(
-                session_id, extra_bundles, bundles_to_remove, sandbox_env, extra_volumes
-            )
+            return await self._create(session_id, mounts, sandbox_env)
 
     def release(self, session_id: str) -> None:
         """Drop the environment and release its backend resources."""
@@ -172,10 +156,8 @@ class EnvironmentManager:
     async def _create(
         self,
         session_id: str,
-        extra_bundles: list[ContentBundle] | None,
-        bundles_to_remove: list[str] | None = None,
+        mounts: list[MountSpec] | None = None,
         sandbox_env: dict[str, str] | None = None,
-        extra_volumes: list[MountSpec] | None = None,
         *,
         force_new: bool = False,
     ) -> Environment:
@@ -184,31 +166,32 @@ class EnvironmentManager:
         # Layout volumes (workspace, uploads, outputs).
         layout_volumes = self._layout.session_volumes(session_id)
         volumes = list(layout_volumes or [])
-        # Artifact mount refs from the Backend mount plan.
-        volumes.extend(extra_volumes or [])
 
-        # Bundle mount specs — always added for writability enforcement.
+        # Mount specs — always added for writability enforcement.
         specs = self._layout.mount_specs()
-        for bundle in extra_bundles or []:
+        for mount in mounts or []:
             specs.append(
-                MountSpec(canonical=bundle.canonical_path, writable=bundle.writable)
+                MountSpec(target=mount.target, access=mount.access)
             )
 
-        # Bundles that support eager volume-mounting (e.g. local storage,
-        # S3FS bind-mount). Pre-populate _mounted so they skip materialize().
-        # Deduplicate by volume name: multiple skills from the same collection
-        # return the same collection-level MountSpec; only the first is added.
+        # Mounts that support eager volume-mounting (a resolved source dir, or
+        # a storage-backed bundle whose host folder is already present).
+        # Pre-populate _mounted so they skip materialize().
         pre_mounted: set[str] = set()
         seen_volume_names: set[str] = set()
-        for bundle in extra_bundles or []:
-            mounter = self._find_content_mounter(bundle)
+        for mount in mounts or []:
+            if mount.source is not None:
+                volumes.append(mount)
+                pre_mounted.add(mount.target)
+                continue
+            mounter = self._find_content_mounter(mount)
             if mounter:
-                vol = await mounter.prepare_volume(bundle, session_id)
+                vol = await mounter.prepare_volume(mount, session_id)
                 if vol:
                     if vol.name not in seen_volume_names:
                         volumes.append(vol)
                         seen_volume_names.add(vol.name)
-                    pre_mounted.add(bundle.canonical_path)
+                    pre_mounted.add(mount.target)
 
         if force_new:
             sandbox = None
@@ -247,16 +230,12 @@ class EnvironmentManager:
         env._mounted.update(pre_mounted)
         # Record the mounts this env was created with, so acquire() can detect
         # mount changes on later reuses (and recreate instead of materializing).
-        env._bundle_paths = self._bundle_keys(extra_bundles or [])
-        env._volume_keys = self._volume_keys(extra_volumes or [])
+        env._mount_keys = self._mount_keys(mounts or [])
         env._sandbox_env = dict(sandbox_env or {})
 
-        if bundles_to_remove:
-            await env.remove_bundles(bundles_to_remove)
-
-        # Deferred bundles: not volume-mounted, will be materialized on exec().
+        # Deferred mounts: not volume-mounted, will be materialized on exec().
         deferred = [
-            b for b in (extra_bundles or []) if b.canonical_path not in pre_mounted
+            m for m in (mounts or []) if m.target not in pre_mounted
         ]
         env.add_pending(deferred)
 
@@ -266,46 +245,35 @@ class EnvironmentManager:
         self._ensure_reaper()
         return env
 
-    def _find_content_mounter(self, bundle: ContentBundle) -> ContentMounter | None:
-        return next((m for m in self._content_mounters if m.can_handle(bundle)), None)
+    def _find_content_mounter(self, mount: MountSpec) -> ContentMounter | None:
+        return next((m for m in self._content_mounters if m.can_handle(mount)), None)
 
     @staticmethod
-    def _bundle_keys(
-        bundles: list[ContentBundle],
-    ) -> frozenset[tuple[str, str]]:
-        """Identity of each requested bundle: mount path + storage prefix.
+    def _mount_keys(mounts: list[MountSpec]) -> frozenset[tuple[object, ...]]:
+        """Identity of each requested mount: target + access + source + storage prefix.
 
-        The storage prefix (when present, e.g. StoredBundle) distinguishes
-        content versions that share a canonical mount path.
+        The storage prefix (when present) distinguishes content versions that
+        share a canonical mount path; the etag captures content-level changes.
         """
         return frozenset(
-            (b.canonical_path, getattr(b, "storage_prefix", "")) for b in bundles
-        )
-
-    @staticmethod
-    def _volume_keys(volumes: list[MountSpec]) -> frozenset[tuple[object, ...]]:
-        """Identity of each extra volume: name + host path + canonical + mode."""
-        return frozenset(
-            (v.name, str(v.host_path), v.canonical, v.read_only) for v in volumes
+            (
+                m.target,
+                m.access,
+                str(m.source) if m.source is not None else "",
+                m.storage.prefix if m.storage is not None else "",
+                m.etag or "",
+            )
+            for m in mounts
         )
 
     def _mounts_changed(
         self,
         env: Environment,
-        extra_bundles: list[ContentBundle] | None,
-        bundles_to_remove: list[str] | None,
+        mounts: list[MountSpec] | None,
         sandbox_env: dict[str, str] | None,
-        extra_volumes: list[MountSpec] | None,
     ) -> bool:
         """True when the requested mounts differ from the live env's mounts."""
-        requested_bundles = self._bundle_keys(extra_bundles or [])
-        if requested_bundles != env._bundle_paths:
-            return True
-        if bundles_to_remove and any(
-            p in {path for path, _ in env._bundle_paths} for p in bundles_to_remove
-        ):
-            return True
-        if self._volume_keys(extra_volumes or []) != env._volume_keys:
+        if self._mount_keys(mounts or []) != env._mount_keys:
             return True
         return dict(sandbox_env or {}) != env._sandbox_env
 
