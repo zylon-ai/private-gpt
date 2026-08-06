@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
 
-from langchain.document_loaders import (
+from langchain_community.document_loaders import (
     CSVLoader,
     EverNoteLoader,
     PyMuPDFLoader,
@@ -17,12 +17,11 @@ from langchain.document_loaders import (
     UnstructuredMarkdownLoader,
     UnstructuredODTLoader,
     UnstructuredPowerPointLoader,
-    UnstructuredWordDocumentLoader,
-)
+    UnstructuredWordDocumentLoader)
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.docstore.document import Document
 
 if not load_dotenv():

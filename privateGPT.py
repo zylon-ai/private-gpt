@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 from dotenv import load_dotenv
-from langchain.chains import RetrievalQA
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-from langchain.vectorstores import Chroma
-from langchain.llms import GPT4All, LlamaCpp
+from langchain_classic.chains import RetrievalQA
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain_community.vectorstores import Chroma
+from langchain.llms import GPT4All
+from langchain_community.llms import LlamaCpp
 import chromadb
 import os
 import argparse
