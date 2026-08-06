@@ -1579,18 +1579,6 @@ class SkillSettings(BaseModel):
             "If None (default), no size limit is enforced."
         ),
     )
-    volume_root: str | None = Field(
-        default=None,
-        description=(
-            "Host filesystem root for skill bundle volumes. "
-            "When set, VolumeContentMounter bind-mounts skill files from "
-            "{volume_root}/{storage_prefix}/ into the sandbox at /mnt/skills/{name}/. "
-            "In production this path should be backed by a FUSE/S3FS DaemonSet mount. "
-            "When absent or empty the mounter fetches files from the storage backend "
-            "and caches them locally before creating the bind-mount."
-        ),
-    )
-
     @field_validator("max_bundle_size_bytes", mode="before")
     @classmethod
     def empty_str_to_none(cls, v: object) -> object:
@@ -1704,17 +1692,11 @@ class CodeExecutionSettings(BaseModel):
         default="sessions",
         description="Path prefix inside the storage bucket for session workspace data.",
     )
-    volume_root: str | None = Field(
-        default=None,
-        description="Host filesystem root for session volumes. "
-        "When set, session upload/output directories are created under "
-        "{volume_root}/{vfs_sessions_prefix}/{session_id}/. "
-        "Required by the Files API when storage_provider is 'local'.",
-    )
     storage_provider: Literal["local", "s3"] = Field(
         default="local",
         description="Storage backend for session files (Files API). "
-        "Use 'local' with volume_root set, or 's3' with s3.durable_bucket_name set.",
+        "Use 'local' with a session namespace root configured, "
+        "or 's3' with s3.durable_bucket_name set.",
     )
     tools: CodeExecutionToolsSettings = Field(
         default_factory=lambda: CodeExecutionToolsSettings(),

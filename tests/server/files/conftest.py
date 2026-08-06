@@ -34,8 +34,19 @@ def volume_root(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def files_client(injector: MockInjector, volume_root: Path) -> TestClient:
-    """TestClient configured with a local volume_root and a mocked sandbox."""
-    injector.bind_settings({"code_execution": {"volume_root": str(volume_root)}})
+    """TestClient configured with a local session namespace and a mocked sandbox."""
+    injector.bind_settings(
+        {
+            "filesystems": {
+                "namespaces": {
+                    "session": {
+                        "root": str(volume_root),
+                        "default_mode": "rw",
+                    },
+                }
+            },
+        }
+    )
 
     ce_mock = injector.bind_mock(CodeExecutionComponent)
     ce_mock.get_or_create_session = AsyncMock(return_value=None)
@@ -58,7 +69,6 @@ def files_namespaces_client(injector: MockInjector, volume_root: Path) -> TestCl
 
     injector.bind_settings(
         {
-            "code_execution": {"volume_root": str(volume_root)},
             "filesystems": {
                 "namespaces": {
                     "session": {"root": str(session_root), "default_mode": "rw"},

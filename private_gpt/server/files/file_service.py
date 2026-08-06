@@ -90,9 +90,12 @@ class FileService:
         self._registry = registry
         self._resolver = resolver
         cfg = settings.code_execution
-        local_root = cfg.volume_root or str(
-            Path(settings.data.local_data_folder) / "code_execution"
-        )
+        if "session" in registry.all_names():
+            local_root = str(registry.root("session"))
+        else:
+            local_root = str(
+                Path(settings.data.local_data_folder) / "code_execution"
+            )
         self._storage = storage_component.get_object_storage(
             provider=cfg.storage_provider,
             local_root_path=local_root,

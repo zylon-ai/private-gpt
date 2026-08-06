@@ -53,13 +53,14 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
     def _make_layout_mounter(self, base: Path) -> LayoutMounter:
         """Factory hook — subclasses override to inject cloud-backed storage.
 
-        When volume_root is set (Files API enabled), sessions are rooted there
-        so that files uploaded via the Files API are accessible to the sandbox
-        at the same host paths where LocalObjectStorage writes them.
+        When the 'session' filesystem namespace is configured, sessions are
+        rooted there so that files uploaded via the Files API are accessible
+        to the sandbox at the same host paths where LocalObjectStorage writes
+        them.
         """
-        volume_root = self.settings.code_execution.volume_root
-        if volume_root is not None:
-            return LocalDirMounter(Path(volume_root))
+        session_ns = self.settings.filesystems.namespaces.get("session")
+        if session_ns is not None and session_ns.root:
+            return LocalDirMounter(Path(session_ns.root))
         return LocalDirMounter(base)
 
     def _make_content_mounters(self) -> list[ContentMounter]:

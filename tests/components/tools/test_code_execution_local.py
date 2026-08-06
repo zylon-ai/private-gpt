@@ -10,7 +10,7 @@ from private_gpt.settings.settings import unsafe_typed_settings
 def _settings(tmp_path: Path):
     settings = unsafe_typed_settings.model_copy(deep=True)
     settings.code_execution.provider = "local"
-    settings.code_execution.volume_root = None
+    settings.filesystems.namespaces = {}
     settings.code_execution.workspace_path = str(tmp_path / "workspaces")
     settings.code_execution.timeout = 5
     return settings

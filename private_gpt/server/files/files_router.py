@@ -140,7 +140,7 @@ async def list_files(
             "content": {"application/octet-stream": {}},
         },
         404: {"description": "File not found in the session."},
-        503: {"description": "Files API not configured (volume_root not set)."},
+        503: {"description": "Files API not configured (session namespace not set)."},
     },
 )
 async def get_file_content(
@@ -178,7 +178,7 @@ async def get_file_content(
     ),
     responses={
         404: {"description": "File not found in the session."},
-        503: {"description": "Files API not configured (volume_root not set)."},
+        503: {"description": "Files API not configured (session namespace not set)."},
     },
 )
 async def get_file_metadata(
@@ -214,7 +214,7 @@ async def get_file_metadata(
         404: {
             "description": "File not found or is a sandbox output (outputs cannot be deleted)."
         },
-        503: {"description": "Files API not configured (volume_root not set)."},
+        503: {"description": "Files API not configured (session namespace not set)."},
     },
 )
 async def delete_file(
