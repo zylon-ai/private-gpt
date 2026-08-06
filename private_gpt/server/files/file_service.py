@@ -22,6 +22,8 @@ from private_gpt.server.files.file_models import (
     FileListResponse,
     FileMetadata,
     FileScope,
+    NamespaceInfo,
+    NamespaceListResponse,
 )
 from private_gpt.settings.settings import Settings
 
@@ -95,6 +97,20 @@ class FileService:
             provider=cfg.storage_provider,
             local_root_path=local_root,
             bucket_name=settings.s3.durable_bucket_name,
+        )
+
+    def list_namespaces(self) -> NamespaceListResponse:
+        """Return all registered filesystem namespaces, sorted by name."""
+        names = sorted(self._registry.all_names())
+        return NamespaceListResponse(
+            data=[
+                NamespaceInfo(
+                    name=name,
+                    root=str(self._registry.root(name)),
+                    default_mode=self._registry.get(name).default_mode,
+                )
+                for name in names
+            ]
         )
 
     def _require_storage(self) -> ObjectStorage:

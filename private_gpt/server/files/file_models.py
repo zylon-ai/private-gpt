@@ -158,3 +158,29 @@ class FileListResponse(BaseModel):
         description="True when there are additional pages of results beyond this one.",
         examples=[False],
     )
+
+
+class NamespaceInfo(BaseModel):
+    """Description of a single filesystem namespace."""
+
+    name: str = Field(
+        description="Logical namespace name, e.g. 'session', 'artifacts' or 'skills'.",
+        examples=["artifacts"],
+    )
+    root: str = Field(
+        description="Absolute local path that backs this namespace.",
+        examples=["/mnt/artifacts"],
+    )
+    default_mode: Literal["rw", "ro"] = Field(
+        description="Default access mode: 'rw' (read-write) or 'ro' (read-only).",
+        examples=["rw"],
+    )
+
+
+class NamespaceListResponse(BaseModel):
+    """List of registered filesystem namespaces."""
+
+    data: list[NamespaceInfo] = Field(
+        default_factory=list,
+        description="Registered namespaces, sorted alphabetically by name.",
+    )

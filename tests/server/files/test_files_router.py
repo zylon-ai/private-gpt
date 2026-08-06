@@ -152,3 +152,30 @@ def test_delete_output_returns_404(files_client: TestClient, volume_root: Path) 
 
     resp = files_client.delete(_file_url(output_id, _SESSION_ID))
     assert resp.status_code == 404
+
+
+def test_list_namespaces(
+    files_namespaces_client: TestClient,
+) -> None:
+    resp = files_namespaces_client.get("/v1/files/namespaces")
+    assert resp.status_code == 200
+    payload = resp.json()
+    names = [item["name"] for item in payload["data"]]
+    assert names == ["artifacts", "session", "skills"]
+    modes = {item["name"]: item["default_mode"] for item in payload["data"]}
+    assert modes == {
+        "artifacts": "rw",
+        "session": "rw",
+        "skills": "ro",
+    }
+    assert all(item["root"].endswith(f"{item['name']}_ns") for item in payload["data"])
+
+
+def test_list_namespaces_default_session(
+    files_client: TestClient,
+) -> None:
+    """The default settings always register the implicit 'session' namespace."""
+    resp = files_client.get("/v1/files/namespaces")
+    assert resp.status_code == 200
+    names = [item["name"] for item in resp.json()["data"]]
+    assert "session" in names

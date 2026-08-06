@@ -45,3 +45,35 @@ def files_client(injector: MockInjector, volume_root: Path) -> TestClient:
     app = create_app(injector.test_injector)
     app.middleware("http")(inject_global_injector(injector))
     return TestClient(app)
+
+
+@pytest.fixture
+def files_namespaces_client(injector: MockInjector, volume_root: Path) -> TestClient:
+    """TestClient with explicit filesystem namespaces bound."""
+    session_root = volume_root / "session_ns"
+    artifacts_root = volume_root / "artifacts_ns"
+    skills_root = volume_root / "skills_ns"
+    for root in (session_root, artifacts_root, skills_root):
+        root.mkdir(parents=True, exist_ok=True)
+
+    injector.bind_settings(
+        {
+            "code_execution": {"volume_root": str(volume_root)},
+            "filesystems": {
+                "namespaces": {
+                    "session": {"root": str(session_root), "default_mode": "rw"},
+                    "artifacts": {"root": str(artifacts_root), "default_mode": "rw"},
+                    "skills": {"root": str(skills_root), "default_mode": "ro"},
+                }
+            },
+        }
+    )
+
+    ce_mock = injector.bind_mock(CodeExecutionComponent)
+    ce_mock.get_or_create_session = AsyncMock(return_value=None)
+
+    injector.get(PersistenceComponent).apply_migrations()
+
+    app = create_app(injector.test_injector)
+    app.middleware("http")(inject_global_injector(injector))
+    return TestClient(app)

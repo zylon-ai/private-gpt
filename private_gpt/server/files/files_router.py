@@ -7,6 +7,7 @@ from private_gpt.server.files.file_models import (
     DeletedFile,
     FileListResponse,
     FileMetadata,
+    NamespaceListResponse,
 )
 from private_gpt.server.files.file_service import FileService
 from private_gpt.server.utils.auth import authenticated
@@ -17,6 +18,23 @@ files_router = APIRouter(
     tags=["Files"],
     responses={401: {"description": "Unauthorized"}},
 )
+
+
+@files_router.get(
+    "/namespaces",
+    response_model=NamespaceListResponse,
+    summary="List namespaces",
+    description=(
+        "List all registered filesystem namespaces and their local roots. "
+        "Namespaces are configured under `filesystems.namespaces` in settings; "
+        "the well-known names are 'session', 'artifacts' and 'skills'."
+    ),
+)
+async def list_namespaces(
+    request: Request,
+) -> NamespaceListResponse:
+    service: FileService = request.state.injector.get(FileService)
+    return service.list_namespaces()
 
 
 @files_router.post(
