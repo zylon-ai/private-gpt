@@ -21,6 +21,8 @@ import time
 from collections import defaultdict
 from typing import Any
 
+from private_gpt.components.filesystems.callbacks.models import FileEventType
+
 logger = logging.getLogger(__name__)
 
 # Seconds within which duplicate events for the same key are collapsed.
@@ -60,7 +62,7 @@ class FileEventDebouncer:
 
 def parse_minio_notification(
     payload: dict[str, Any],
-) -> list[tuple[str, str, int]]:
+) -> list[tuple[str, FileEventType, int]]:
     """Parse a MinIO bucket notification payload into (key, event_type, size) tuples.
 
     MinIO sends an ``EventName`` field and a ``Records`` array.
@@ -68,7 +70,7 @@ def parse_minio_notification(
     Returns a list of (object_key, event_type, size_bytes) for the caller
     to process.  Unknown / unsupported event names are silently skipped.
     """
-    results: list[tuple[str, str, int]] = []
+    results: list[tuple[str, FileEventType, int]] = []
     for record in payload.get("Records", []):
         event_name: str = record.get("eventName", "")
         obj = record.get("s3", {}).get("object", {})
@@ -79,9 +81,9 @@ def parse_minio_notification(
             continue
 
         if event_name.startswith("s3:ObjectCreated:"):
-            event_type = "file.created" if size > 0 else None
+            event_type: FileEventType | None = "file.created" if size > 0 else None
         elif event_name.startswith("s3:ObjectRemoved:"):
-            event_type = "file.deleted"
+            event_type: FileEventType = "file.deleted"
         else:
             continue
 
