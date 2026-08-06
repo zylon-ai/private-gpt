@@ -3,7 +3,7 @@
   "info": {
     "title": "Private-GPT API",
     "description": "PrivateGPT -built by Zylon- is a production-ready AI project that allows you to ask questions about your documents using the power\nof Large Language Models (LLMs), even in scenarios without an Internet connection. 100% private, no data leaves your\nexecution environment at any point.",
-    "version": "1.0.1"
+    "version": "1.1.0"
   },
   "paths": {
     "/v1/messages": {
@@ -4730,6 +4730,94 @@
         "title": "Base64Source",
         "description": "Base64Source schema."
       },
+      "BaseNode": {
+        "properties": {
+          "id_": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique ID of the node."
+          },
+          "embedding": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding",
+            "description": "Embedding of the node."
+          },
+          "extra_info": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Extra Info",
+            "description": "A flat dictionary of metadata fields"
+          },
+          "excluded_embed_metadata_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Excluded Embed Metadata Keys",
+            "description": "Metadata keys that are excluded from text for the embed model."
+          },
+          "excluded_llm_metadata_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Excluded Llm Metadata Keys",
+            "description": "Metadata keys that are excluded from text for the LLM."
+          },
+          "relationships": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RelatedNodeInfo"
+                },
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/RelatedNodeInfo"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/NodeRelationship"
+            },
+            "type": "object",
+            "title": "Relationships",
+            "description": "A mapping of relationships to other node information."
+          },
+          "metadata_template": {
+            "type": "string",
+            "title": "Metadata Template",
+            "description": "Template for how metadata is formatted, with {key} and {value} placeholders.",
+            "default": "{key}: {value}"
+          },
+          "metadata_seperator": {
+            "type": "string",
+            "title": "Metadata Seperator",
+            "description": "Separator between metadata fields when converting to string.",
+            "default": "\n"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name",
+            "default": "base_component",
+            "description": "class name field."
+          }
+        },
+        "type": "object",
+        "title": "BaseNode",
+        "description": "Base node Object.\n\nGeneric abstract interface for retrievable nodes"
+      },
       "BinaryBlock": {
         "properties": {
           "type": {
@@ -7989,6 +8077,21 @@
           "ingest_body": {
             "$ref": "#/components/schemas/IngestBody",
             "description": "Document ingestion parameters including artifact, collection, input data, and optional metadata"
+          },
+          "nodes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BaseNode"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes",
+            "description": "Parsed nodes produced by parse_task, consumed by store_vectors_task."
           }
         },
         "type": "object",
@@ -9141,6 +9244,30 @@
         "title": "ModelListOutput",
         "description": "Paginated model list payload."
       },
+      "NodeRelationship": {
+        "type": "string",
+        "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "title": "NodeRelationship",
+        "description": "Node relationships used in `BaseNode` class.\n\nAttributes:\n    SOURCE: The node is the source document.\n    PREVIOUS: The node is the previous node in the document.\n    NEXT: The node is the next node in the document.\n    PARENT: The node is the parent node in the document.\n    CHILD: The node is a child node in the document."
+      },
+      "ObjectType": {
+        "type": "string",
+        "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "title": "ObjectType",
+        "description": "ObjectType schema."
+      },
       "OpenAPIValidationErrorResponse": {
         "properties": {
           "detail": {
@@ -9165,7 +9292,7 @@
           "detail"
         ],
         "title": "OpenAPIValidationErrorResponse",
-        "description": "Standard 422 validation error response matching FastAPI's HTTPValidationError shape."
+        "description": "Standard 422 validation error response."
       },
       "OutputConfigInput": {
         "properties": {
@@ -9448,6 +9575,60 @@
         ],
         "title": "RefusalStopDetails",
         "description": "Additional metadata when generation stops due to refusal."
+      },
+      "RelatedNodeInfo": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "title": "Node Id",
+            "description": "node id field."
+          },
+          "node_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectType"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Type",
+            "description": "node type field."
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "metadata field."
+          },
+          "hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hash",
+            "description": "hash field."
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name",
+            "default": "RelatedNodeInfo",
+            "description": "class name field."
+          }
+        },
+        "type": "object",
+        "required": [
+          "node_id"
+        ],
+        "title": "RelatedNodeInfo",
+        "description": "RelatedNodeInfo schema."
       },
       "Resource": {
         "properties": {
