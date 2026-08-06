@@ -155,7 +155,7 @@ def parse_task(body: IngestAsyncBody, dispatch_store: bool = True) -> Any:
     # task that owns the final done/error AMQP notification. Clearing
     # body.callback prevents parse_task's after_return hook from firing an
     # intermediate notification with the store task-id as raw data.
-    store_body = body.model_copy(deep=True)
+    store_body = IngestAsyncBody(**body.model_dump())
     store_body.nodes = nodes
     body.callback = None
 
