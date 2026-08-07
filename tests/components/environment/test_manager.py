@@ -16,7 +16,7 @@ class FakeLayout:
     """Layout mounter returning no host volumes (dirs live in the sandbox)."""
 
     layout = ()
-    workspace_canonical = "/home/agent/workspace/"
+    workspace_target = "/home/agent/workspace/"
 
     def ensure_ready(self) -> None:
         pass

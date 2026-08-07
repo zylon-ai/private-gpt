@@ -1,4 +1,4 @@
-"""Tests for MountRefResolver (T4.2)."""
+"""Tests for MountRefResolver."""
 
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ class TestMountRefResolver:
         mount = result[0]
         # Target is a directory (ends with "/"), source is the parent dir.
         assert mount.target == "/mnt/artifacts/org-1/"
-        assert mount.source == root / "org-1"
+        assert mount.host_path == root / "org-1"
         assert mount.access == "rw"
         assert mount.etag == "abc"
 
@@ -83,7 +83,7 @@ class TestMountRefResolver:
         result = resolver.resolve([entry])
         assert len(result) == 1
         assert result[0].target == "/mnt/artifacts/org-1/art-dir/"
-        assert result[0].source == root / "org-1" / "art-dir"
+        assert result[0].host_path == root / "org-1" / "art-dir"
 
     def test_ro_entry_produces_read_only_mount(self, tmp_path: Path) -> None:
         resolver, root = _make_resolver(tmp_path)

@@ -18,20 +18,20 @@ class SessionMountDef(Mount):
 DEFAULT_SESSION_LAYOUT: tuple[SessionMountDef, ...] = (
     SessionMountDef(
         name="user",
-        canonical="/home/agent/workspace/",
-        writable=True,
+        target="/home/agent/workspace/",
+        access="rw",
         description="Working directory — create all new files here",
     ),
     SessionMountDef(
         name="uploads",
-        canonical="/mnt/user-data/uploads/",
-        writable=False,
+        target="/mnt/user-data/uploads/",
+        access="ro",
         description="Files uploaded by the user",
     ),
     SessionMountDef(
         name="outputs",
-        canonical="/mnt/user-data/outputs/",
-        writable=True,
+        target="/mnt/user-data/outputs/",
+        access="rw",
         description="Deliverables the user can download",
     ),
 )
@@ -42,8 +42,8 @@ def canonical_to_storage_path(
 ) -> str:
     """Map a canonical sandbox path to its storage path (e.g. ``user/foo.txt``)."""
     for mount in layout:
-        if canonical.startswith(mount.canonical):
-            relative = canonical[len(mount.canonical) :]
+        if canonical.startswith(mount.target):
+            relative = canonical[len(mount.target) :]
             return f"{mount.name}/{relative}"
     return canonical
 
@@ -56,5 +56,5 @@ def storage_to_canonical_path(
         prefix = f"{mount.name}/"
         if storage.startswith(prefix):
             relative = storage[len(prefix) :]
-            return f"{mount.canonical}{relative}"
+            return f"{mount.target}{relative}"
     return storage

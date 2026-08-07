@@ -44,9 +44,9 @@ class BashExecutorSandbox(SandboxSession):
     ) -> None:
         self._translator = PathTranslator(mounts)
         self._executor = executor
-        self._readonly = [m.canonical for m in mounts if m.read_only]
+        self._readonly = [m.target for m in mounts if m.access == "ro"]
         self._default_cwd = next(
-            (m.canonical for m in mounts if not m.read_only), "/"
+            (m.target for m in mounts if m.access == "rw"), "/"
         )
         self._env = env
 
@@ -206,7 +206,7 @@ class LocalSandboxProvider(SandboxProvider):
         workdir = await anyio.to_thread.run_sync(
             lambda: Path(tempfile.mkdtemp(prefix=f"sandbox_{user_id or 'local'}_"))
         )
-        specs = [Mount(canonical="/home/agent/", host_path=workdir)]
+        specs = [Mount(target="/home/agent/", access="rw", host_path=workdir)]
         specs.extend(s for s in bundle_specs or [] if s.host_path is not None)
         return LocalSandboxSession(specs, self._executor, workdir, env=env)
 

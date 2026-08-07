@@ -1,4 +1,4 @@
-"""Path resolver for the ZGPT filesystem platform (T1.2).
+"""Path resolver for the ZGPT filesystem platform.
 
 Translates ``(namespace, scope, path)`` triples into absolute local paths,
 enforcing strict containment: the resolved path must be inside the namespace

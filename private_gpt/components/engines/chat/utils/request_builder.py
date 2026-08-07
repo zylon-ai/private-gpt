@@ -78,7 +78,7 @@ def _merge_mounts(*groups: list[Mount]) -> list[Mount]:
     """Merge mount groups, deduplicating by mount identity.
 
     ``Mount`` carries a ``storage`` ref with an excluded callable, so the
-    identity is the target + access + source + storage prefix — enough to keep
+    The identity is the target + access + host_path + uri_source.uri — enough to keep
     skills and mount-plan volumes stable across repeated request builds.
     """
     seen: set[tuple[object, ...]] = set()
@@ -88,8 +88,8 @@ def _merge_mounts(*groups: list[Mount]) -> list[Mount]:
             key = (
                 mount.target,
                 mount.access,
-                str(mount.source) if mount.source is not None else "",
-                mount.storage.prefix if mount.storage is not None else "",
+                str(mount.host_path) if mount.host_path is not None else "",
+                mount.uri_source.uri if mount.uri_source is not None else "",
             )
             if key not in seen:
                 seen.add(key)

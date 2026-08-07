@@ -694,7 +694,7 @@ def test_create_code_execution_prompt_contains_paths(
     formatted = prompt.format()
     assert formatted != ""
     for mount in DEFAULT_SESSION_LAYOUT:
-        assert mount.canonical in formatted
+        assert mount.target in formatted
         assert mount.access in formatted
         assert mount.description in formatted
     assert "/mnt/skills/" in formatted

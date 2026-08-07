@@ -1,4 +1,4 @@
-"""File callback service for the ZGPT filesystem platform (T5.1).
+"""File callback service for the ZGPT filesystem platform.
 
 Receives MinIO/S3 bucket notification webhooks, deduplicates them, and
 routes typed FileEvents to configured callback targets (AMQP or HTTP).

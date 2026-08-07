@@ -1,4 +1,4 @@
-"""Tests for the FileCallbackService delivery worker (T5.1).
+"""Tests for the FileCallbackService delivery worker.
 
 The delivery worker mirrors the broker publisher: jobs are enqueued onto a
 background thread that performs the blocking HTTP delivery, so webhook

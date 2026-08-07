@@ -1,4 +1,4 @@
-"""Resolves Backend mount entries into directory-level Mount objects (T4.2).
+"""Resolves Backend mount entries into directory-level Mount objects.
 
 The Backend emits generic mount entries (namespace + scope + path + target,
 or a content ``uri``). This component resolves each entry into a Mount the

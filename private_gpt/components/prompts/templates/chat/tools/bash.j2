@@ -10,13 +10,13 @@ Execute shell commands in an isolated sandbox environment.
 | Path | Access | Purpose |
 |---|---|---|
 {% for mount in layout %}
-| `{{ mount.canonical }}` | {{ mount.access }} | {{ mount.description }} |
+| `{{ mount.target }}` | {{ mount.access }} | {{ mount.description }} |
 {% endfor %}
 | `{{ skills_prefix }}*/` | ro | Mounted skill content |
 
 Rules:
-- Use absolute paths. `{{ workspace.canonical }}` is the working directory.
-- Save any file the user should receive to `{{ (layout | selectattr("name", "equalto", "outputs") | first).canonical }}`.
+- Use absolute paths. `{{ workspace.target }}` is the working directory.
+- Save any file the user should receive to `{{ (layout | selectattr("name", "equalto", "outputs") | first).target }}`.
 - Do not access paths outside the directories listed above.{% if has_text_editor %}
 - Prefer the text editor tools for viewing or editing existing files.{% endif %}
 
@@ -24,8 +24,8 @@ Rules:
 {% set uploads = layout | selectattr("name", "equalto", "uploads") | first %}
 {% set outputs = layout | selectattr("name", "equalto", "outputs") | first %}
 Examples:
-- Read an upload: `cat {{ uploads.canonical }}report.csv`
-- Save result: `cp analysis.png {{ outputs.canonical }}analysis.png`
+- Read an upload: `cat {{ uploads.target }}report.csv`
+- Save result: `cp analysis.png {{ outputs.target }}analysis.png`
 {% endif %}
 </{{ tool_name }}>
 {% endif %}

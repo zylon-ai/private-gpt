@@ -1,4 +1,4 @@
-"""Tests for the filesystem path resolver (T1.2)."""
+"""Tests for the filesystem path resolver."""
 
 from __future__ import annotations
 

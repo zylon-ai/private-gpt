@@ -1,4 +1,4 @@
-"""Tests for the file event debouncer and MinIO notification parser (T5.1)."""
+"""Tests for the file event debouncer and MinIO notification parser."""
 
 from __future__ import annotations
 

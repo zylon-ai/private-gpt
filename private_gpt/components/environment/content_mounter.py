@@ -143,7 +143,7 @@ class LocalStorageContentMounter(ContentMounter):
                     dest.write_bytes(f.content)
                     dest.chmod(f.permissions)
             sandbox.add_local_mount(
-                descriptor.target, host_path, writable=descriptor.writable
+                descriptor.target, host_path, writable=descriptor.access == "rw"
             )
         else:
             files = await descriptor.uri_source.fetch()

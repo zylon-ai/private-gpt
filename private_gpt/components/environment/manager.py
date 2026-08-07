@@ -212,7 +212,7 @@ class EnvironmentManager:
             # Layout dirs are only needed when not volume-backed.
             if layout_volumes is None:
                 await asyncio.gather(
-                    *[sandbox.make_dir(m.canonical) for m in self._layout.layout]
+                    *[sandbox.make_dir(m.target) for m in self._layout.layout]
                 )
         except Exception:
             self._spawn(
@@ -224,7 +224,7 @@ class EnvironmentManager:
         env = Environment(
             id=session_id,
             sandbox=sandbox,
-            workspace=self._layout.workspace_canonical,
+            workspace=self._layout.workspace_target,
             content_mounters=self._content_mounters,
         )
         env._mounted.update(pre_mounted)

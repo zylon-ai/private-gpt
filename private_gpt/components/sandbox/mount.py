@@ -6,7 +6,7 @@ from typing import Literal
 from urllib.parse import urlparse
 
 import anyio
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 AccessMode = Literal["rw", "ro"]
 
@@ -75,70 +75,7 @@ class Mount(BaseModel):
     host_path: Path | None = None  # eager: folder already on the host
     uri_source: UriSource | None = None  # lazy: fetch from any URI
     name: str = ""
+    description: str = ""
     etag: str | None = Field(
         default=None, description="Optional content checksum for change detection."
     )
-
-    # --- Legacy aliases (accepted on construction, kept for compatibility) ---
-    @property
-    def canonical(self) -> str:
-        """Legacy ``SandboxMountSpec`` alias for ``target``."""
-        return self.target
-
-    @property
-    def mount_path(self) -> str:
-        """Legacy ``VolumeSpec`` alias for ``target``."""
-        return self.target
-
-    @property
-    def real_path(self) -> Path | None:
-        """Legacy ``LocalMountSpec`` alias for ``host_path``."""
-        return self.host_path
-
-    @property
-    def source(self) -> Path | None:
-        """Legacy alias for ``host_path``."""
-        return self.host_path
-
-    @property
-    def read_only(self) -> bool:
-        """Legacy ``VolumeSpec`` inverse of ``access``."""
-        return self.access == "ro"
-
-    @property
-    def writable(self) -> bool:
-        """Legacy ``SandboxMountSpec`` API — inverse of ``read_only``."""
-        return self.access == "rw"
-
-    @property
-    def storage(self) -> UriSource | None:
-        """Legacy alias for ``uri_source``."""
-        return self.uri_source
-
-    @model_validator(mode="before")
-    @classmethod
-    def _normalize_legacy_fields(cls, data: object) -> object:
-        """Accept the legacy field names used by the old mount models."""
-        if isinstance(data, dict):
-            data = dict(data)
-            if "mount_path" in data and "target" not in data:
-                data["target"] = data.pop("mount_path")
-            elif "canonical" in data and "target" not in data:
-                data["target"] = data.pop("canonical")
-            if "real_path" in data and "host_path" not in data:
-                data["host_path"] = data.pop("real_path")
-            elif "source" in data and "host_path" not in data:
-                data["host_path"] = data.pop("source")
-            if "writable" in data:
-                data["access"] = "rw" if data.pop("writable") else "ro"
-            elif "read_only" in data and "access" not in data:
-                data["access"] = "ro" if data.pop("read_only") else "rw"
-            if "storage" in data and "uri_source" not in data:
-                data["uri_source"] = data.pop("storage")
-        return data
-
-
-# Backward-compatible aliases — all legacy names point at the one model.
-MountSpec = Mount
-VolumeSpec = Mount
-SandboxMountSpec = Mount

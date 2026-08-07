@@ -1,4 +1,4 @@
-"""Namespace registry for the ZGPT filesystem platform (T1.1).
+"""Namespace registry for the ZGPT filesystem platform.
 
 A namespace maps a logical name (e.g. "session", "artifacts", "skills") to a
 local filesystem root and a default access mode.  The registry is loaded from

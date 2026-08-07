@@ -1,4 +1,4 @@
-"""File event handler for the ZGPT file callback system (T5.1).
+"""File event handler for the ZGPT file callback system.
 
 Design: ZGPT receives MinIO/S3 bucket notification webhooks at
 ``POST /v1/internal/file-events``.  Each notification is parsed,

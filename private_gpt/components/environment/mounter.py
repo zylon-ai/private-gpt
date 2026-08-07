@@ -32,9 +32,9 @@ class LayoutMounter(ABC):
         return self._layout
 
     @property
-    def workspace_canonical(self) -> str:
+    def workspace_target(self) -> str:
         """Canonical working directory: the first writable layout entry."""
-        return next(m.canonical for m in self._layout if m.writable)
+        return next(m.target for m in self._layout if m.access == "rw")
 
     def ensure_ready(self) -> None:  # noqa: B027 — optional hook, default no-op
         """One-time idempotent setup of backing storage (e.g. mount s3fs)."""
@@ -55,7 +55,7 @@ class LayoutMounter(ABC):
         class stays unaware of content.
         """
         return [
-            Mount(canonical=m.canonical, writable=m.writable)
+            Mount(target=m.target, access=m.access)
             for m in self._layout
         ]
 
@@ -109,9 +109,9 @@ class LocalDirMounter(LayoutMounter):
             volumes.append(
                 Mount(
                     name=mount.name,
-                    canonical=mount.canonical,
+                    target=mount.target,
                     host_path=host,
-                    read_only=not mount.writable,
+                    access=mount.access,
                 )
             )
         return volumes

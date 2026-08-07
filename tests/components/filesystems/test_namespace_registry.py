@@ -1,4 +1,4 @@
-"""Tests for the filesystem namespace registry (T1.1)."""
+"""Tests for the filesystem namespace registry."""
 
 from __future__ import annotations
 

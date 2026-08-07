@@ -1,4 +1,4 @@
-"""Event models for the ZGPT file callback system (T5.1)."""
+"""Event models for the ZGPT file callback system."""
 
 from __future__ import annotations
 

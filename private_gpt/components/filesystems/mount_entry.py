@@ -1,4 +1,4 @@
-"""Mount entry models for the ZGPT filesystem platform (T4.2).
+"""Mount entry models for the ZGPT filesystem platform.
 
 Mount entries are emitted by the Backend on each chat turn and resolve
 to Mount objects that are bind-mounted into the container.
