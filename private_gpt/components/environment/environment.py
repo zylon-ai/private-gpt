@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from private_gpt.components.environment.content_mounter import ContentMounter
     from private_gpt.components.sandbox.base import (
         SandboxCodeOptions,
@@ -16,6 +19,10 @@ if TYPE_CHECKING:
     from private_gpt.components.sandbox.mount import Mount
 
 logger = logging.getLogger(__name__)
+
+# Minimum seconds between two shared-activity writes (Redis round trips are
+# fire-and-forget; throttling avoids task churn on hot paths).
+_ACTIVITY_THROTTLE_SECONDS = 5.0
 
 
 @dataclass
@@ -42,6 +49,12 @@ class Environment:
     last_accessed: float = field(default_factory=time.monotonic)
     ttl_start: float = field(default_factory=time.monotonic)
     last_renewed: float = field(default_factory=lambda: 0.0)
+    # Cross-process ownership marker (the manager's coordinator instance id).
+    owner: str = ""
+    # Optional async callback used to publish activity to the shared
+    # last-activity clock (set by the EnvironmentManager when a distributed
+    # coordinator is available).
+    activity_sink: Callable[[str], Awaitable[None]] | None = None
 
     def __post_init__(self) -> None:
         self._mounted: set[str] = set()
@@ -51,9 +64,19 @@ class Environment:
         # to detect mount changes on reuse.
         self._mount_keys: frozenset[tuple[object, ...]] = frozenset()
         self._sandbox_env: dict[str, str] = {}
+        self._last_shared_touch: float = 0.0
 
     def touch(self) -> None:
-        self.last_accessed = time.monotonic()
+        now = time.monotonic()
+        self.last_accessed = now
+        if self.activity_sink is not None and now - self._last_shared_touch >= _ACTIVITY_THROTTLE_SECONDS:
+            self._last_shared_touch = now
+            try:
+                # Best-effort, fire-and-forget: the shared clock is used by
+                # the reaper on OTHER pods/workers.
+                asyncio.get_running_loop().create_task(self.activity_sink(self.id))
+            except RuntimeError:
+                pass
 
     def idle_seconds(self, now: float) -> float:
         return now - self.last_accessed

@@ -2,14 +2,28 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from pathlib import Path
 
+import pytest
+
+from private_gpt.components.environment import distributed as _dist
 from private_gpt.components.environment.manager import (
     _RENEW_THRESHOLD,
     EnvironmentManager,
 )
 from private_gpt.components.sandbox.mount import Mount, UriSource
+
+
+@pytest.fixture(autouse=True)
+def _clean_distributed_state() -> None:
+    """Isolate the process-wide fallback coordination state per test."""
+    _dist._fallback_locks.clear()
+    _dist._fallback_activity.clear()
+    yield
+    _dist._fallback_locks.clear()
+    _dist._fallback_activity.clear()
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -52,9 +66,12 @@ class FakeProvider:
         self.created: list[str] = []
         self.killed: list[str] = []
         self.renewed: list[str] = []
+        self.fingerprints: list[str | None] = []
         self._counter = 0
 
-    async def restore_session(self, session_id, timeout=None, bundle_specs=None):
+    async def restore_session(
+        self, session_id, timeout=None, bundle_specs=None, *, fingerprint=None
+    ):
         return None
 
     async def create_session(
@@ -66,10 +83,12 @@ class FakeProvider:
         session_id=None,
         volumes=None,
         env=None,
+        fingerprint=None,
     ) -> FakeSandbox:
         self._counter += 1
         sandbox_id = f"sandbox-{self._counter}"
         self.created.append(sandbox_id)
+        self.fingerprints.append(fingerprint)
         return FakeSandbox(sandbox_id)
 
     async def renew_session(self, session) -> None:
@@ -84,8 +103,8 @@ class FakeProvider:
 
 
 def _manager(**kwargs) -> EnvironmentManager:
+    kwargs.setdefault("sandbox_provider", FakeProvider())
     return EnvironmentManager(
-        sandbox_provider=FakeProvider(),
         layout_mounter=FakeLayout(),
         content_mounters=[],
         ttl_seconds=3600,
@@ -303,7 +322,9 @@ async def test_stale_env_discarded_and_never_restored() -> None:
             super().__init__()
             self.restored: list[str] = []
 
-        async def restore_session(self, session_id, timeout=None, bundle_specs=None):
+        async def restore_session(
+            self, session_id, timeout=None, bundle_specs=None, *, fingerprint=None
+        ):
             self.restored.append(session_id)
             return FakeSandbox("restored-sandbox")
 
@@ -372,7 +393,9 @@ async def test_acquire_restores_when_provider_has_sandbox() -> None:
             self.restored: list[str] = []
             self._existing = FakeSandbox("restored-sandbox")
 
-        async def restore_session(self, session_id, timeout=None, bundle_specs=None):
+        async def restore_session(
+            self, session_id, timeout=None, bundle_specs=None, *, fingerprint=None
+        ):
             self.restored.append(session_id)
             return self._existing
 
@@ -399,7 +422,9 @@ async def test_mount_change_forces_fresh_create_even_with_restore() -> None:
             super().__init__()
             self.restored: list[str] = []
 
-        async def restore_session(self, session_id, timeout=None, bundle_specs=None):
+        async def restore_session(
+            self, session_id, timeout=None, bundle_specs=None, *, fingerprint=None
+        ):
             self.restored.append(session_id)
             return FakeSandbox("restored-sandbox")
 
@@ -424,3 +449,118 @@ async def test_mount_change_forces_fresh_create_even_with_restore() -> None:
     assert provider.created == ["sandbox-1"]
     assert provider.killed == ["restored-sandbox"]
     assert second.sandbox.sandbox_id == "sandbox-1"
+
+
+# ---------------------------------------------------------------------------
+# Multi-pod / multi-worker safety
+# ---------------------------------------------------------------------------
+
+
+class SharedProvider(FakeProvider):
+    """Provider with a shared registry so two managers (pods) see each other's
+    containers — simulating the OpenSandbox metadata discovery."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._registry: dict[str, FakeSandbox] = {}
+
+    async def create_session(
+        self,
+        user_id=None,
+        timeout=None,
+        bundle_specs=None,
+        *,
+        session_id=None,
+        volumes=None,
+        env=None,
+        fingerprint=None,
+    ) -> FakeSandbox:
+        sandbox = await super().create_session(
+            session_id=session_id, env=env, fingerprint=fingerprint
+        )
+        if session_id:
+            self._registry[session_id] = sandbox
+        return sandbox
+
+    async def restore_session(
+        self, session_id, timeout=None, bundle_specs=None, *, fingerprint=None
+    ):
+        return self._registry.get(session_id)
+
+
+async def test_distributed_lock_prevents_double_create() -> None:
+    """Two managers (different instance ids) racing the same session must end
+    with ONE container: the second restores the first's."""
+    from private_gpt.components.environment.distributed import DistributedCoordinator
+
+    provider = SharedProvider()
+    m1 = _manager(
+        sandbox_provider=provider,
+        coordinator=DistributedCoordinator(instance_id="pod-a"),
+    )
+    m2 = _manager(
+        sandbox_provider=provider,
+        coordinator=DistributedCoordinator(instance_id="pod-b"),
+    )
+
+    env1, env2 = await asyncio.gather(m1.acquire("s1"), m2.acquire("s1"))
+
+    assert len(provider.created) == 1  # no double-create leak
+    assert env1.sandbox is env2.sandbox  # both managers ended on one container
+
+
+async def test_reaper_does_not_kill_when_shared_activity_recent() -> None:
+    """A reaper on pod A must not kill a sandbox pod B is actively using."""
+    from private_gpt.components.environment.distributed import DistributedCoordinator
+
+    coordinator = DistributedCoordinator(instance_id="pod-a")
+    manager = _manager(coordinator=coordinator)
+
+    env = await manager.acquire("s1")
+    # Locally idle past TTL (this pod stopped using it)...
+    env.last_accessed = 0.0
+    # ...but pod B touched the shared clock recently.
+    await coordinator.set_activity("s1")
+
+    await manager._reap_once()
+    await _sleep_tasks(manager)
+
+    assert manager._provider.killed == []
+    assert "s1" in manager._active
+
+
+async def test_reaper_kills_when_shared_activity_old() -> None:
+    from private_gpt.components.environment.distributed import DistributedCoordinator
+
+    coordinator = DistributedCoordinator(instance_id="pod-a")
+    manager = _manager(coordinator=coordinator)
+
+    env = await manager.acquire("s1")
+    env.last_accessed = 0.0
+    # Shared clock also idle for longer than the TTL (60 min).
+    async with _dist._fallback_guard:
+        _dist._fallback_activity["sandbox:activity:s1"] = time.time() - 2 * 3600
+
+    await manager._reap_once()
+    await _sleep_tasks(manager)
+
+    assert manager._provider.killed == ["sandbox-1"]
+    assert manager._active == {}
+
+
+async def test_fingerprint_passed_to_create_and_restore() -> None:
+    """The manager computes a stable fingerprint and forwards it to both
+    create_session and restore_session."""
+    provider = FakeProvider()
+    manager = _manager(sandbox_provider=provider)
+
+    await manager.acquire(
+        "s1",
+        mounts=[_bundle_mount("/mnt/skills/a/")],
+        sandbox_env={"TOKEN": "x"},
+    )
+    await _sleep_tasks(manager)
+
+    assert provider.fingerprints == [manager._fingerprint(
+        [_bundle_mount("/mnt/skills/a/")], {"TOKEN": "x"}
+    )]

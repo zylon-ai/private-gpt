@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from typing import TYPE_CHECKING
 
+from private_gpt.components.environment.distributed import DistributedCoordinator
 from private_gpt.components.environment.environment import Environment
 from private_gpt.components.sandbox.mount import Mount
 
@@ -29,12 +31,31 @@ _RENEW_SKIP_WINDOW = 30
 class EnvironmentManager:
     """Owns the lifecycle of managed environments, keyed by session id.
 
-    acquire() returns the live environment for a session, reusing it when the
-    requested mounts and sandbox env are unchanged, or killing and recreating
-    it otherwise. release() drops an environment and kills its backend sandbox.
-    A background reaper kills environments idle past the TTL, and stale
-    environments (e.g. after a backend server restart) are evicted and
-    recreated on the next acquire().
+    Decision rules (per acquire()):
+
+    * **Reuse**: the session's live environment (or a container restored from
+      the backend, e.g. after an app restart) is reused whenever the requested
+      mounts/sandbox env are unchanged and the container is still healthy.
+    * **Discard on change**: when the requested mounts or sandbox env differ,
+      the old container is killed and a fresh one is created. The same
+      fingerprint is stored in the sandbox metadata so a *restored* container
+      (another pod, after a restart) is also discarded when its mounts differ.
+    * **Expired -> original**: when the container is stale/expired (exec or
+      renewal failure), it is discarded and a fresh original container is
+      created for the request — restore is never attempted for a dead one.
+
+    Cross-process safety (multi-pod / multi-worker):
+
+    * A distributed per-session lock (Redis, with an in-memory fallback)
+      serialises acquire/create/kill so two processes cannot double-create or
+      kill a sandbox the other is using.
+    * The reaper only kills an idle sandbox when BOTH the local idle clock and
+      the shared last-activity clock say it has been idle past the TTL — so a
+      reaper on pod A cannot kill a sandbox pod B is actively using.
+
+    The reaper only kills environments idle past the TTL; lifetime renewal is
+    handled on-acquire (renew only when remaining TTL < 1/3, throttled by a
+    short skip-window).
     """
 
     def __init__(
@@ -44,12 +65,15 @@ class EnvironmentManager:
         content_mounters: list[ContentMounter],
         ttl_seconds: int,
         reaper_interval_seconds: int | None = None,
+        *,
+        coordinator: DistributedCoordinator | None = None,
     ) -> None:
         self._provider = sandbox_provider
         self._layout = layout_mounter
         self._content_mounters = content_mounters
         self._ttl = ttl_seconds
         self._reaper_interval = reaper_interval_seconds
+        self._coordinator = coordinator or DistributedCoordinator()
         self._active: dict[str, Environment] = {}
         self._lock = asyncio.Lock()
         self._creation_locks: dict[str, asyncio.Lock] = {}
@@ -66,63 +90,80 @@ class EnvironmentManager:
         # creating two backend sandboxes for the same session (one would leak).
         creation_lock = await self._creation_lock(session_id)
         async with creation_lock:
-            async with self._lock:
-                env = self._active.get(session_id)
-
-            if env:
-                if env._stale:
-                    # Sandbox died (e.g. server restart): discard it and
-                    # create a fresh one for this request.
+            # Cross-process serialisation: only one worker may create/restore/
+            # kill the session's container at a time.
+            async with self._coordinator.session_lock(session_id) as locked:
+                if not locked:
                     logger.warning(
-                        "Sandbox for session %s is stale, recreating", session_id
+                        "Could not acquire distributed lock for session %s; "
+                        "proceeding with local coordination only",
+                        session_id,
                     )
-                    async with self._lock:
-                        self._active.pop(session_id, None)
-                    await self._kill(env.sandbox, session_id)
-                    return await self._create(
-                        session_id, mounts, sandbox_env, force_new=True
-                    )
+                return await self._acquire_locked(session_id, mounts, sandbox_env)
 
-                elif self._mounts_changed(env, mounts, sandbox_env):
-                    # Mounts changed: kill the old sandbox and create a new one
-                    # so the new mounts are wired at container creation.
-                    logger.info(
-                        "Mounts changed for session %s, recreating sandbox",
+    async def _acquire_locked(
+        self,
+        session_id: str,
+        mounts: list[Mount] | None,
+        sandbox_env: dict[str, str] | None,
+    ) -> Environment:
+        async with self._lock:
+            env = self._active.get(session_id)
+
+        if env:
+            if env._stale:
+                # Sandbox died (e.g. server restart): discard it and
+                # create a fresh one for this request.
+                logger.warning(
+                    "Sandbox for session %s is stale, recreating", session_id
+                )
+                async with self._lock:
+                    self._active.pop(session_id, None)
+                await self._kill(env.sandbox, session_id)
+                return await self._create(
+                    session_id, mounts, sandbox_env, force_new=True
+                )
+
+            elif self._mounts_changed(env, mounts, sandbox_env):
+                # Mounts changed: kill the old sandbox and create a new one
+                # so the new mounts are wired at container creation.
+                logger.info(
+                    "Mounts changed for session %s, recreating sandbox",
+                    session_id,
+                )
+                async with self._lock:
+                    self._active.pop(session_id, None)
+                # Kill synchronously so restore_session() cannot rediscover
+                # the old sandbox and reconnect with old mounts.
+                await self._kill(env.sandbox, session_id)
+                return await self._create(
+                    session_id, mounts, sandbox_env, force_new=True
+                )
+
+            else:
+                env.touch()
+                if not await self._maybe_renew(env, session_id):
+                    # Renewal failed — discard the dead sandbox so this
+                    # request does not run on it.
+                    logger.warning(
+                        "Sandbox for session %s could not be renewed, recreating",
                         session_id,
                     )
                     async with self._lock:
                         self._active.pop(session_id, None)
-                    # Kill synchronously so restore_session() cannot rediscover
-                    # the old sandbox and reconnect with old mounts.
                     await self._kill(env.sandbox, session_id)
                     return await self._create(
                         session_id, mounts, sandbox_env, force_new=True
                     )
 
-                else:
-                    env.touch()
-                    if not await self._maybe_renew(env, session_id):
-                        # Renewal failed — discard the dead sandbox so this
-                        # request does not run on it.
-                        logger.warning(
-                            "Sandbox for session %s could not be renewed, recreating",
-                            session_id,
-                        )
-                        async with self._lock:
-                            self._active.pop(session_id, None)
-                        await self._kill(env.sandbox, session_id)
-                        return await self._create(
-                            session_id, mounts, sandbox_env, force_new=True
-                        )
+                if mounts:
+                    # Content that could not be bind-mounted at creation is
+                    # materialised lazily just before the first exec().
+                    env.add_pending(mounts)
+                    await env._flush_pending()
+                return env
 
-                    if mounts:
-                        # Content that could not be bind-mounted at creation is
-                        # materialised lazily just before the first exec().
-                        env.add_pending(mounts)
-                        await env._flush_pending()
-                    return env
-
-            return await self._create(session_id, mounts, sandbox_env)
+        return await self._create(session_id, mounts, sandbox_env)
 
     def release(self, session_id: str) -> None:
         """Drop the environment and release its backend resources."""
@@ -130,13 +171,28 @@ class EnvironmentManager:
         self._creation_locks.pop(session_id, None)
         if env:
             self._spawn(
-                self._kill(env.sandbox, session_id),
+                self._release_and_kill(session_id, env),
                 f"kill sandbox on release ({session_id})",
             )
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    async def _release_and_kill(self, session_id: str, env: Environment) -> None:
+        """Kill the released sandbox unless a newer env took over meanwhile."""
+        async with self._coordinator.session_lock(session_id):
+            async with self._lock:
+                current = self._active.get(session_id)
+            if current is not None and current is not env:
+                # A newer environment was created for this session while we
+                # waited for the lock — do not kill it.
+                logger.info(
+                    "Skipping kill on release for session %s (newer env active)",
+                    session_id,
+                )
+                return
+            await self._kill(env.sandbox, session_id)
 
     async def _maybe_renew(self, env: Environment, session_id: str) -> bool:
         """Renew the sandbox's lifetime if it is approaching expiry.
@@ -213,11 +269,19 @@ class EnvironmentManager:
                         seen_volume_names.add(vol.name)
                     pre_mounted.add(mount.target)
 
+        # Fingerprint of everything that would change the container: the
+        # requested mounts and the injected env. Stored in sandbox metadata at
+        # creation so a restore from another pod can detect stale containers.
+        fingerprint = self._fingerprint(mounts or [], sandbox_env)
+
         if force_new:
             sandbox = None
         else:
             sandbox = await self._provider.restore_session(
-                session_id, timeout=self._ttl, bundle_specs=specs
+                session_id,
+                timeout=self._ttl,
+                bundle_specs=specs,
+                fingerprint=fingerprint,
             )
         if sandbox is None:
             sandbox = await self._provider.create_session(
@@ -226,6 +290,7 @@ class EnvironmentManager:
                 session_id=session_id,
                 volumes=volumes or None,
                 env=sandbox_env,
+                fingerprint=fingerprint,
             )
 
         try:
@@ -246,6 +311,8 @@ class EnvironmentManager:
             sandbox=sandbox,
             workspace=self._layout.workspace_target,
             content_mounters=self._content_mounters,
+            owner=self._coordinator.instance_id,
+            activity_sink=self._coordinator.set_activity,
         )
         env._mounted.update(pre_mounted)
         # Record the mounts this env was created with, so acquire() can detect
@@ -265,6 +332,30 @@ class EnvironmentManager:
 
     def _find_content_mounter(self, mount: Mount) -> ContentMounter | None:
         return next((m for m in self._content_mounters if m.can_handle(mount)), None)
+
+    @staticmethod
+    def _fingerprint(
+        mounts: list[Mount], sandbox_env: dict[str, str] | None
+    ) -> str:
+        """Stable, cross-process fingerprint of requested mounts + env.
+
+        Must be byte-identical on every pod for the same input so it can be
+        compared against the value stored in sandbox metadata at creation.
+        """
+        keys = sorted(
+            (
+                m.target,
+                m.access,
+                str(m.host_path) if m.host_path is not None else "",
+                m.uri_source.uri if m.uri_source is not None else "",
+                m.etag or "",
+            )
+            for m in mounts
+        )
+        return json.dumps(
+            {"mounts": keys, "env": sorted((sandbox_env or {}).items())},
+            sort_keys=True,
+        )
 
     @staticmethod
     def _mount_keys(mounts: list[Mount]) -> frozenset[tuple[object, ...]]:
@@ -351,15 +442,26 @@ class EnvironmentManager:
                 logger.exception("Environment reaper iteration failed")
 
     async def _reap_once(self) -> None:
-        """Kill sandboxes that have been idle longer than the TTL."""
-        now = time.monotonic()
+        """Kill sandboxes idle past the TTL.
+
+        A sandbox is only killed when it is idle locally AND has no recent
+        shared last-activity — so a reaper on pod A never kills a sandbox
+        that pod B is actively using.
+        """
+        now_mono = time.monotonic()
+        now_wall = time.time()
         expired: list[tuple[str, Environment]] = []
         async with self._lock:
             for session_id, env in list(self._active.items()):
-                if env.idle_seconds(now) > self._ttl:
-                    self._active.pop(session_id, None)
-                    self._creation_locks.pop(session_id, None)
-                    expired.append((session_id, env))
+                if env.idle_seconds(now_mono) <= self._ttl:
+                    continue
+                shared = await self._coordinator.get_activity(session_id)
+                if shared is not None and (now_wall - shared) <= self._ttl:
+                    # Active on another pod/worker — leave it alone.
+                    continue
+                self._active.pop(session_id, None)
+                self._creation_locks.pop(session_id, None)
+                expired.append((session_id, env))
 
         for session_id, env in expired:
             self._spawn(

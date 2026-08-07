@@ -173,12 +173,17 @@ class SandboxProvider(ABC):
         session_id: str | None = None,
         volumes: list[Mount] | None = None,
         env: dict[str, str] | None = None,
+        fingerprint: str | None = None,
     ) -> SandboxSession:
         """Create a sandbox session. The session may be lazy until first use.
 
-        ``session_id`` tags the backend resource so it can be found again by
-        ``volumes`` are host directories to bind-mount.
+        ``session_id`` tags the backend resource so ``restore_session()``
+        can find it again. ``volumes`` are host directories to bind-mount.
         ``env`` carries environment variables to inject into the sandbox.
+        ``fingerprint`` is an opaque, cross-process-stable identity of the
+        requested mounts + env; backends may store it with the sandbox so a
+        later restore can detect that the container was created with different
+        mounts (and discard it).
         Backends without those capabilities may ignore them.
         """
 
@@ -187,9 +192,14 @@ class SandboxProvider(ABC):
         session_id: str,
         timeout: int | None = None,
         bundle_specs: list[Mount] | None = None,
+        *,
+        fingerprint: str | None = None,
     ) -> SandboxSession | None:
         """Reattach to an existing backend sandbox for this session, if any.
 
+        ``fingerprint`` is the identity of the mounts/env the caller wants
+        now; when the backend stored a different fingerprint on the sandbox,
+        it should return None so the caller creates fresh (discard on change).
         Default: the backend cannot restore — returns None.
         """
         return None

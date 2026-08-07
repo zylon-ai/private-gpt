@@ -197,7 +197,9 @@ class LocalSandboxProvider(SandboxProvider):
         session_id: str | None = None,
         volumes: list[Mount] | None = None,
         env: dict[str, str] | None = None,
+        fingerprint: str | None = None,
     ) -> SandboxSession:
+        del fingerprint  # local sandboxes carry no cross-process metadata
         if volumes:
             return BashExecutorSandbox(volumes, self._executor, env=env)
 
