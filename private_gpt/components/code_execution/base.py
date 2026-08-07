@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
@@ -59,7 +59,7 @@ class CodeExecutionSessionConfig(BaseModel):
 
     session_id: str
     env: dict[str, str] = Field(default_factory=dict)
-    mounts: list[MountSpec] = Field(
+    mounts: list[Mount] = Field(
         default_factory=list,
         description=(
             "The single mount set for the session: session layout is added by "

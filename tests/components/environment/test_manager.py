@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from private_gpt.components.environment.manager import EnvironmentManager
-from private_gpt.components.sandbox.mount import MountSpec, StorageRef
+from private_gpt.components.sandbox.mount import Mount, UriSource
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -21,10 +21,10 @@ class FakeLayout:
     def ensure_ready(self) -> None:
         pass
 
-    def session_volumes(self, session_id: str) -> list[MountSpec] | None:
+    def session_volumes(self, session_id: str) -> list[Mount] | None:
         return None
 
-    def mount_specs(self) -> list[MountSpec]:
+    def mount_specs(self) -> list[Mount]:
         return []
 
 
@@ -86,18 +86,18 @@ def _manager(**kwargs) -> EnvironmentManager:
     )
 
 
-def _bundle_mount(canonical: str, prefix: str = "") -> MountSpec:
+def _bundle_mount(canonical: str, prefix: str = "") -> Mount:
     """A storage-backed skill mount."""
-    return MountSpec(
+    return Mount(
         name=f"skill:{canonical}",
         target=canonical,
         access="ro",
-        storage=StorageRef(prefix=prefix or canonical, fetch=lambda: []),
+        uri_source=UriSource(uri=prefix or canonical, fetch=lambda: []),
     )
 
 
-def _volume(name: str, canonical: str) -> MountSpec:
-    return MountSpec(name=name, target=canonical, source=Path("/tmp") / name)
+def _volume(name: str, canonical: str) -> Mount:
+    return Mount(name=name, target=canonical, host_path=Path("/tmp") / name)
 
 
 async def _sleep_tasks(manager: EnvironmentManager) -> None:

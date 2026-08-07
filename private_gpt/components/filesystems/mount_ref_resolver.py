@@ -1,8 +1,8 @@
-"""Resolves Backend mount entries into directory-level MountSpec objects (T4.2).
+"""Resolves Backend mount entries into directory-level Mount objects (T4.2).
 
-The Backend emits generic mount entries (namespace + scope + path + target).
-This component resolves each entry via the PathResolver and produces a
-MountSpec that the sandbox can bind-mount.
+The Backend emits generic mount entries (namespace + scope + path + target,
+or a content ``uri``). This component resolves each entry into a Mount the
+sandbox can bind-mount.
 
 A mount is always a directory — never a single file. File-level entries are
 normalized to the containing directory (the resolved host dir when the path
@@ -10,7 +10,7 @@ is a directory, or its parent when the path is a file), so the agent works
 over mount paths only.
 
 Unresolvable or unauthorised entries are skipped (not fatal) — the
-conversation continues without that file rather than failing entirely.
+conversation continues without that content rather than failing entirely.
 """
 
 from __future__ import annotations
@@ -27,14 +27,18 @@ from private_gpt.components.filesystems.path_resolver import (
     PathEscapeError,
     PathResolver,
 )
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount, UriSource
 
 logger = logging.getLogger(__name__)
 
 
 @singleton
 class MountRefResolver:
-    """Resolves mount entries from the Backend mount plan into MountSpecs.
+    """Resolves mount entries from the Backend mount plan into Mounts.
+
+    A ``uri`` entry becomes a lazy mount (content fetched from the URI only
+    when the backing folder is empty). A namespace/scope/path entry is
+    resolved to a local host folder (eager when it already has content).
 
     Skips entries whose namespace is not registered or whose path is
     invalid/escaping — a missing optional file must not abort the turn.
@@ -49,22 +53,33 @@ class MountRefResolver:
         self._registry = registry
         self._resolver = resolver
 
-    def resolve(self, entries: list[MountEntry]) -> list[MountSpec]:
-        """Convert a list of mount entries to bind-mountable directory MountSpecs.
+    def resolve(self, entries: list[MountEntry]) -> list[Mount]:
+        """Convert a list of mount entries to bind-mountable directory Mounts.
 
         Silently skips unresolvable entries.
         """
         if not entries:
             return []
 
-        mounts: list[MountSpec] = []
+        mounts: list[Mount] = []
         for entry in entries:
             mount = self._resolve_one(entry)
             if mount is not None:
                 mounts.append(mount)
         return mounts
 
-    def _resolve_one(self, entry: MountEntry) -> MountSpec | None:
+    def _resolve_one(self, entry: MountEntry) -> Mount | None:
+        target = _directory_target(entry.target, file_target=True)
+
+        if entry.uri:
+            return Mount(
+                name=f"mount-{entry.namespace}-{entry.artifact_id or entry.path[:16]}",
+                target=target,
+                access="ro" if entry.mode == "ro" else "rw",
+                uri_source=UriSource.from_uri(entry.uri),
+                etag=entry.etag,
+            )
+
         try:
             # Verify namespace is known before attempting resolution
             self._registry.get(entry.namespace)
@@ -101,11 +116,11 @@ class MountRefResolver:
         source = host_path if host_path.is_dir() else host_path.parent
         target = _directory_target(entry.target, file_target=not host_path.is_dir())
 
-        return MountSpec(
+        return Mount(
             name=f"mount-{entry.namespace}-{entry.artifact_id or entry.path[:16]}",
             target=target,
             access="ro" if entry.mode == "ro" else "rw",
-            source=source,
+            host_path=source,
             etag=entry.etag,
         )
 

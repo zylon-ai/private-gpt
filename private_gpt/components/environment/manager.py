@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING
 
 from private_gpt.components.environment.environment import Environment
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -75,7 +75,7 @@ class EnvironmentManager:
     async def acquire(
         self,
         session_id: str,
-        mounts: list[MountSpec] | None = None,
+        mounts: list[Mount] | None = None,
         sandbox_env: dict[str, str] | None = None,
     ) -> Environment:
         # Serialize per session_id so concurrent calls cannot race into
@@ -156,7 +156,7 @@ class EnvironmentManager:
     async def _create(
         self,
         session_id: str,
-        mounts: list[MountSpec] | None = None,
+        mounts: list[Mount] | None = None,
         sandbox_env: dict[str, str] | None = None,
         *,
         force_new: bool = False,
@@ -171,7 +171,7 @@ class EnvironmentManager:
         specs = self._layout.mount_specs()
         for mount in mounts or []:
             specs.append(
-                MountSpec(target=mount.target, access=mount.access)
+                Mount(target=mount.target, access=mount.access)
             )
 
         # Mounts that support eager volume-mounting (a resolved source dir, or
@@ -180,7 +180,7 @@ class EnvironmentManager:
         pre_mounted: set[str] = set()
         seen_volume_names: set[str] = set()
         for mount in mounts or []:
-            if mount.source is not None:
+            if mount.host_path is not None:
                 volumes.append(mount)
                 pre_mounted.add(mount.target)
                 continue
@@ -245,11 +245,11 @@ class EnvironmentManager:
         self._ensure_reaper()
         return env
 
-    def _find_content_mounter(self, mount: MountSpec) -> ContentMounter | None:
+    def _find_content_mounter(self, mount: Mount) -> ContentMounter | None:
         return next((m for m in self._content_mounters if m.can_handle(mount)), None)
 
     @staticmethod
-    def _mount_keys(mounts: list[MountSpec]) -> frozenset[tuple[object, ...]]:
+    def _mount_keys(mounts: list[Mount]) -> frozenset[tuple[object, ...]]:
         """Identity of each requested mount: target + access + source + storage prefix.
 
         The storage prefix (when present) distinguishes content versions that
@@ -259,8 +259,8 @@ class EnvironmentManager:
             (
                 m.target,
                 m.access,
-                str(m.source) if m.source is not None else "",
-                m.storage.prefix if m.storage is not None else "",
+                str(m.host_path) if m.host_path is not None else "",
+                m.uri_source.uri if m.uri_source is not None else "",
                 m.etag or "",
             )
             for m in mounts
@@ -269,7 +269,7 @@ class EnvironmentManager:
     def _mounts_changed(
         self,
         env: Environment,
-        mounts: list[MountSpec] | None,
+        mounts: list[Mount] | None,
         sandbox_env: dict[str, str] | None,
     ) -> bool:
         """True when the requested mounts differ from the live env's mounts."""

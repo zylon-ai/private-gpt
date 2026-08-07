@@ -13,7 +13,7 @@ if TYPE_CHECKING:
         SandboxExecutionResult,
         SandboxSession,
     )
-    from private_gpt.components.sandbox.mount import MountSpec
+    from private_gpt.components.sandbox.mount import Mount
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class Environment:
 
     def __post_init__(self) -> None:
         self._mounted: set[str] = set()
-        self._pending: list[MountSpec] = []
+        self._pending: list[Mount] = []
         self._stale: bool = False
         # Mount fingerprint this env was created with. Used by the manager to
         # decide whether a reuse request changed mounts (then it recreates
@@ -57,7 +57,7 @@ class Environment:
     def idle_seconds(self, now: float) -> float:
         return now - self.last_accessed
 
-    def add_pending(self, mounts: list[MountSpec]) -> None:
+    def add_pending(self, mounts: list[Mount]) -> None:
         """Stage mounts for materialization, skipping already-mounted targets.
 
         When the container is already running, the caller is responsible for

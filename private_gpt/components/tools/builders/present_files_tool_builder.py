@@ -21,7 +21,7 @@ from private_gpt.di import get_global_injector
 from private_gpt.events.models import LocalResourceBlock, TextBlock
 
 if TYPE_CHECKING:
-    from private_gpt.components.sandbox.mount import MountSpec
+    from private_gpt.components.sandbox.mount import Mount
     from private_gpt.events.models import ResultContentBlockType
 
 
@@ -54,7 +54,7 @@ class PresentFilesToolBuilder:
     async def build_tool(
         self,
         session_id: str,
-        mounts: list[MountSpec] | None = None,
+        mounts: list[Mount] | None = None,
         name: str = PRESENT_FILES_TOOL_NAME,
         type: str = PRESENT_FILES_TOOL_NAME + "_v1",
         description: str = PRESENT_FILES_TOOL_FN.metadata.description,

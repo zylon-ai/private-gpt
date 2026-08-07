@@ -14,17 +14,17 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedToolConfig,
     ToolSpec,
 )
-from private_gpt.components.context.models.context_layer import ContentBundlesLayer
+from private_gpt.components.context.models.context_layer import MountsLayer
 from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat.utils.request_builder import (
     build_request_from_context_stack,
 )
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount
 from private_gpt.components.tools.types import ToolValidationMode
 
 
-def _mount(target: str, *, source: str | None = None) -> MountSpec:
-    return MountSpec(
+def _mount(target: str, *, source: str | None = None) -> Mount:
+    return Mount(
         name=f"mount:{target}",
         target=target,
         access="rw",
@@ -32,7 +32,7 @@ def _mount(target: str, *, source: str | None = None) -> MountSpec:
     )
 
 
-def _request(mounts: list[MountSpec]) -> ResolvedChatRequest:
+def _request(mounts: list[Mount]) -> ResolvedChatRequest:
     return ResolvedChatRequest(
         messages=[ChatMessage(role=MessageRole.USER, content="hello")],
         system=ResolvedSystemConfig(
@@ -56,7 +56,7 @@ def test_mount_plan_volumes_survive_and_stack_mounts_are_appended() -> None:
     """Backend mount-plan volumes + skill mounts end up in one mount set."""
     plan = _mount("/mnt/artifacts/org-1/", source="/host/artifacts/org-1")
     stack = ContextStack().append_layer(
-        ContentBundlesLayer(
+        MountsLayer(
             mounts=[_mount("/mnt/skills/pdf/")],
             source="skills",
         )
@@ -74,7 +74,7 @@ def test_merge_is_idempotent_across_rebuilds() -> None:
     """build_request runs per iteration; mounts must not accumulate."""
     plan = _mount("/mnt/artifacts/org-1/", source="/host/artifacts/org-1")
     stack = ContextStack().append_layer(
-        ContentBundlesLayer(mounts=[_mount("/mnt/skills/pdf/")], source="skills")
+        MountsLayer(mounts=[_mount("/mnt/skills/pdf/")], source="skills")
     )
 
     first = build_request_from_context_stack(_request([plan]), stack)

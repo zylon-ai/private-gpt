@@ -22,7 +22,7 @@ from private_gpt.chat.input_models import BlobVisibilityMode, PromptConfig
 from private_gpt.chat.schema_models import create_model_from_json_schema
 from private_gpt.components.engines.citations.types import Citation, Document
 from private_gpt.components.llm.llm_helper import AsyncTokenizerFn, TokenizerFn
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount
 from private_gpt.components.tools.tool_names import resolve_internal_tool_name
 from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.server.mcp.config import McpServerConfig
@@ -616,7 +616,7 @@ class ResolvedContextConfig(ContextConfig):
         default=None,
         description="List of documents to use as context in the chat.",
     )
-    mounts: list[MountSpec] = Field(
+    mounts: list[Mount] = Field(
         default_factory=list,
         description=(
             "The single mount set for the session: skill/bundle mounts (with a "

@@ -15,14 +15,14 @@ from private_gpt.components.sandbox.base import (
     SandboxProvider,
     SandboxSession,
 )
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount
 from private_gpt.components.sandbox.path_translator import PathTranslator
 
 if TYPE_CHECKING:
     from private_gpt.components.sandbox.base import (
         SandboxExecOptions,
     )
-    from private_gpt.components.sandbox.content_bundle import BundledFile
+    from private_gpt.components.sandbox.mount import MountFile
     from private_gpt.settings.settings import Settings
 
 
@@ -38,7 +38,7 @@ class BashExecutorSandbox(SandboxSession):
 
     def __init__(
         self,
-        mounts: list[MountSpec],
+        mounts: list[Mount],
         executor: LocalBashExecutor,
         env: dict[str, str] | None = None,
     ) -> None:
@@ -133,7 +133,7 @@ class BashExecutorSandbox(SandboxSession):
         real = self._translator.to_real(path)
         await anyio.to_thread.run_sync(lambda: real.chmod(mode))
 
-    async def initialize_mount(self, canonical: str, files: list[BundledFile]) -> None:
+    async def initialize_mount(self, canonical: str, files: list[MountFile]) -> None:
         for f in files:
             real = self._translator.to_real(canonical + f.path)
             content = f.content
@@ -161,7 +161,7 @@ class LocalSandboxSession(BashExecutorSandbox):
 
     def __init__(
         self,
-        mounts: list[MountSpec],
+        mounts: list[Mount],
         executor: LocalBashExecutor,
         workdir: Path,
         env: dict[str, str] | None = None,
@@ -194,10 +194,10 @@ class LocalSandboxProvider(SandboxProvider):
         self,
         user_id: str | None = None,
         timeout: int | None = None,
-        bundle_specs: list[MountSpec] | None = None,
+        bundle_specs: list[Mount] | None = None,
         *,
         session_id: str | None = None,
-        volumes: list[MountSpec] | None = None,
+        volumes: list[Mount] | None = None,
         env: dict[str, str] | None = None,
     ) -> SandboxSession:
         if volumes:
@@ -206,7 +206,7 @@ class LocalSandboxProvider(SandboxProvider):
         workdir = await anyio.to_thread.run_sync(
             lambda: Path(tempfile.mkdtemp(prefix=f"sandbox_{user_id or 'local'}_"))
         )
-        specs = [MountSpec(canonical="/home/agent/", host_path=workdir)]
+        specs = [Mount(canonical="/home/agent/", host_path=workdir)]
         specs.extend(s for s in bundle_specs or [] if s.host_path is not None)
         return LocalSandboxSession(specs, self._executor, workdir, env=env)
 

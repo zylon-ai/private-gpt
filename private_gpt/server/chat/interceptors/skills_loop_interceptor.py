@@ -7,7 +7,7 @@ from injector import inject, singleton
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 from private_gpt.components.context.models.context_layer import (
-    ContentBundlesLayer,
+    MountsLayer,
     SkillBodyLayer,
     SkillCatalogEntry,
     SkillCatalogLayer,
@@ -115,7 +115,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
         stack = state.input.context_stack
         stack = stack.remove_layers_of_type(LayerType.SKILL_CATALOG)
         stack = stack.remove_layers_of_type(LayerType.SKILL_BODY)
-        stack = stack.remove_layers_of_type(LayerType.CONTENT_BUNDLES)
+        stack = stack.remove_layers_of_type(LayerType.MOUNTS)
         if filter_input is None:
             state.input.context_stack = stack
             context.set_state(state)
@@ -195,7 +195,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
         mounts = self._skill_loader.mounts_for_versions(mounted_versions)
         if mounts:
             stack = stack.append_layer(
-                ContentBundlesLayer(mounts=mounts, source="skills")
+                MountsLayer(mounts=mounts, source="skills")
             )
 
         state.input.context_stack = stack

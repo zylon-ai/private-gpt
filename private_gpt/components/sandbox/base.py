@@ -9,8 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
-    from private_gpt.components.sandbox.content_bundle import BundledFile
-    from private_gpt.components.sandbox.mount import MountSpec
+    from private_gpt.components.sandbox.mount import MountFile
+    from private_gpt.components.sandbox.mount import Mount
 
 
 class SandboxExecutionResult(BaseModel):
@@ -131,7 +131,7 @@ class SandboxSession(ABC):
         """Set file permissions. Raises ValueError if path is in a read-only mount."""
 
     @abstractmethod
-    async def initialize_mount(self, canonical: str, files: list[BundledFile]) -> None:
+    async def initialize_mount(self, canonical: str, files: list[MountFile]) -> None:
         """Write mount files during session setup. Bypasses writable check."""
 
     async def remove_mount(self, canonical_path: str) -> None:
@@ -169,10 +169,10 @@ class SandboxProvider(ABC):
         self,
         user_id: str | None = None,
         timeout: int | None = None,
-        bundle_specs: list[MountSpec] | None = None,
+        bundle_specs: list[Mount] | None = None,
         *,
         session_id: str | None = None,
-        volumes: list[MountSpec] | None = None,
+        volumes: list[Mount] | None = None,
         env: dict[str, str] | None = None,
     ) -> SandboxSession:
         """Create a sandbox session. The session may be lazy until first use.
@@ -187,7 +187,7 @@ class SandboxProvider(ABC):
         self,
         session_id: str,
         timeout: int | None = None,
-        bundle_specs: list[MountSpec] | None = None,
+        bundle_specs: list[Mount] | None = None,
     ) -> SandboxSession | None:
         """Reattach to an existing backend sandbox for this session, if any.
 

@@ -3,65 +3,83 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
+import anyio
 from pydantic import BaseModel, Field, model_validator
-
-from private_gpt.components.sandbox.content_bundle import BundledFile
 
 AccessMode = Literal["rw", "ro"]
 
 
-class StorageRef(BaseModel):
-    """Reference to content in object storage, resolved lazily on demand.
+class MountFile(BaseModel):
+    """A file that will exist inside a mounted folder.
 
-    A mount backed by a storage ref is bind-mounted directly when the host
-    folder is already present (infra volume / s3fs / local storage); the
-    ``fetch`` callable is the hydration fallback used only when the folder
-    is absent or empty.
+    Produced by ``UriSource.fetch()`` when a lazy mount's folder must be
+    materialized from its URI before the mount becomes usable.
     """
 
-    prefix: str  # e.g. "skills/org-1/pdf/v1"
-    fetch: Callable[[], Awaitable[list[BundledFile]]] = Field(exclude=True)
+    path: str  # relative to the mount folder, e.g. "SKILL.md"
+    content: bytes
+    permissions: int = 0o444  # Unix permissions
 
 
-class MountSpec(BaseModel):
-    """A single mount: a directory visible to the agent, backed by a host path.
+class UriSource(BaseModel):
+    """Where a mount's content comes from (lazy materialization).
 
-    This is the single mount model used across the platform. It replaces the
-    three competing models that used to exist (``SandboxMountSpec``,
-    ``LocalMountSpec`` and ``VolumeSpec``), which were the same fields
-    expressed with different names.
+    A mount backed by a UriSource is *eager* when its host folder already has
+    content (bind-mount directly — ``fetch`` is never called) and *lazy* when
+    the folder is empty: then ``fetch()`` materializes the content from
+    ``uri`` before the mount is usable.
 
-    A mount is always a directory — never a single file. ``target`` is the
-    canonical path inside the sandbox (must end with "/"), ``source`` is the
-    host directory backing it (None until resolved at container creation),
-    and ``storage`` is the optional object-storage reference used to hydrate
-    the source folder when it is not already materialized.
+    The URI may be anything ``load_file_from_uri`` understands — ``s3://``,
+    ``https://``, ``data:`` or a local disk path — so a mount works the same
+    in a remote network sandbox and in local private-gpt.
+    """
 
-    Legacy names are still accepted on construction (``mount_path``/``canonical``,
-    ``real_path``/``host_path``, ``writable``/``read_only``) and exposed as
-    read-only properties so existing callers keep working.
+    uri: str
+    fetch: Callable[[], Awaitable[list[MountFile]]] = Field(exclude=True)
+
+    @classmethod
+    def from_uri(cls, uri: str) -> UriSource:
+        """Build a UriSource whose fetch loads bytes via the generic URI loader."""
+
+        async def fetch() -> list[MountFile]:
+            from private_gpt.server.ingest.uri_loader import load_file_from_uri
+
+            binary = await anyio.to_thread.run_sync(load_file_from_uri, uri)
+            filename = Path(urlparse(uri).path).name or "file"
+            return [
+                MountFile(path=filename, content=binary.read(), permissions=0o444)
+            ]
+
+        return cls(uri=uri, fetch=fetch)
+
+
+class Mount(BaseModel):
+    """A directory visible inside a sandbox.
+
+    This is the one mount model used across the platform after resolution.
+
+    - ``target``: where the directory appears in the sandbox (ends with "/").
+    - ``access``: "rw" or "ro".
+    - ``host_path``: the host directory backing the mount. When it already
+      holds content the mount is eager (bind-mount it); when it is empty the
+      mount is lazy and ``uri_source`` provides the content.
+    - ``uri_source``: where to fetch the content from when ``host_path`` is
+      absent or empty (any URI supported by ``load_file_from_uri``).
+    - ``etag``: optional content checksum, used for change detection.
     """
 
     target: str  # e.g. "/home/agent/" — must end with "/"
-    access: AccessMode = "ro"  # replaces writable / read_only / mode
-    source: Path | None = None  # host dir; None until resolved at creation
+    access: AccessMode = "ro"
+    host_path: Path | None = None  # eager: folder already on the host
+    uri_source: UriSource | None = None  # lazy: fetch from any URI
     name: str = ""
-    description: str = ""
     etag: str | None = Field(
         default=None, description="Optional content checksum for change detection."
     )
-    storage: StorageRef | None = Field(
-        default=None,
-        exclude=True,
-        description=(
-            "Object-storage reference used to hydrate the source folder when "
-            "it is absent or empty. When the folder is already present the "
-            "mount is wired directly with no fetch."
-        ),
-    )
 
-    # --- Legacy aliases ----------------------------------------------------
+    # --- Legacy aliases (accepted on construction, kept for compatibility) ---
     @property
     def canonical(self) -> str:
         """Legacy ``SandboxMountSpec`` alias for ``target``."""
@@ -74,13 +92,13 @@ class MountSpec(BaseModel):
 
     @property
     def real_path(self) -> Path | None:
-        """Legacy ``LocalMountSpec`` alias for ``source``."""
-        return self.source
+        """Legacy ``LocalMountSpec`` alias for ``host_path``."""
+        return self.host_path
 
     @property
-    def host_path(self) -> Path | None:
-        """Legacy ``VolumeSpec`` alias for ``source``."""
-        return self.source
+    def source(self) -> Path | None:
+        """Legacy alias for ``host_path``."""
+        return self.host_path
 
     @property
     def read_only(self) -> bool:
@@ -92,6 +110,11 @@ class MountSpec(BaseModel):
         """Legacy ``SandboxMountSpec`` API — inverse of ``read_only``."""
         return self.access == "rw"
 
+    @property
+    def storage(self) -> UriSource | None:
+        """Legacy alias for ``uri_source``."""
+        return self.uri_source
+
     @model_validator(mode="before")
     @classmethod
     def _normalize_legacy_fields(cls, data: object) -> object:
@@ -102,18 +125,20 @@ class MountSpec(BaseModel):
                 data["target"] = data.pop("mount_path")
             elif "canonical" in data and "target" not in data:
                 data["target"] = data.pop("canonical")
-            if "real_path" in data and "source" not in data:
-                data["source"] = data.pop("real_path")
-            elif "host_path" in data and "source" not in data:
-                data["source"] = data.pop("host_path")
+            if "real_path" in data and "host_path" not in data:
+                data["host_path"] = data.pop("real_path")
+            elif "source" in data and "host_path" not in data:
+                data["host_path"] = data.pop("source")
             if "writable" in data:
                 data["access"] = "rw" if data.pop("writable") else "ro"
             elif "read_only" in data and "access" not in data:
                 data["access"] = "ro" if data.pop("read_only") else "rw"
+            if "storage" in data and "uri_source" not in data:
+                data["uri_source"] = data.pop("storage")
         return data
 
 
 # Backward-compatible aliases — all legacy names point at the one model.
-VolumeSpec = MountSpec
-SandboxMountSpec = MountSpec
-Mount = MountSpec
+MountSpec = Mount
+VolumeSpec = Mount
+SandboxMountSpec = Mount

@@ -11,7 +11,7 @@ from private_gpt.components.context.models.context_layer import (
 )
 from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.context.models.layer_type import LayerType
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount
 
 
 def build_initial_context_stack(
@@ -74,15 +74,15 @@ def build_request_from_context_stack(
     return request
 
 
-def _merge_mounts(*groups: list[MountSpec]) -> list[MountSpec]:
+def _merge_mounts(*groups: list[Mount]) -> list[Mount]:
     """Merge mount groups, deduplicating by mount identity.
 
-    ``MountSpec`` carries a ``storage`` ref with an excluded callable, so the
+    ``Mount`` carries a ``storage`` ref with an excluded callable, so the
     identity is the target + access + source + storage prefix — enough to keep
     skills and mount-plan volumes stable across repeated request builds.
     """
     seen: set[tuple[object, ...]] = set()
-    merged: list[MountSpec] = []
+    merged: list[Mount] = []
     for group in groups:
         for mount in group:
             key = (

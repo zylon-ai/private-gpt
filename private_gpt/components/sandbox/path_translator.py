@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -19,7 +19,7 @@ class PathTranslator:
     All methods are pure (no I/O).
     """
 
-    def __init__(self, mounts: list[MountSpec]) -> None:
+    def __init__(self, mounts: list[Mount]) -> None:
         # Only host-backed mounts participate in translation; a mount without
         # a host path has nothing to translate to.
         self._mounts = sorted(
@@ -51,7 +51,7 @@ class PathTranslator:
         """Add or update a mount mapping and rebuild the internal regex."""
         self._mounts = [m for m in self._mounts if m.canonical != canonical]
         self._mounts.append(
-            MountSpec(canonical=canonical, host_path=host_path, writable=writable)
+            Mount(canonical=canonical, host_path=host_path, writable=writable)
         )
         self._mounts.sort(key=lambda m: len(m.canonical), reverse=True)
         self._rebuild_regex()

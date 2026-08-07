@@ -14,7 +14,7 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedToolConfig,
     ToolSpec,
 )
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount
 from private_gpt.components.tools.builders.bash_tool_builder import BashToolBuilder
 from private_gpt.components.tools.builders.database_query_builder import (
     DatabaseQueryToolBuilder,
@@ -87,7 +87,7 @@ def _request(
     tool: ToolSpec,
     *,
     tool_context: list[object] | None = None,
-    mounts: list[MountSpec] | None = None,
+    mounts: list[Mount] | None = None,
 ) -> ResolvedChatRequest:
     return ResolvedChatRequest(
         messages=[ChatMessage(role=MessageRole.USER, content="hello")],
@@ -306,7 +306,7 @@ async def test_web_fetch_builder_receives_complete_request_contract() -> None:
 
 @pytest.mark.asyncio
 async def test_bash_builder_receives_complete_session_contract() -> None:
-    mount = MountSpec(target="/mnt/skills/contract/", access="ro")
+    mount = Mount(target="/mnt/skills/contract/", access="ro")
     builder = SimpleNamespace(build_tool=AsyncMock(return_value=_resolved("bash")))
     request = _request(
         _tool("bash"),
@@ -339,7 +339,7 @@ async def test_text_editor_builders_receive_complete_session_contract(
     tool_name: str,
     builder_method: str,
 ) -> None:
-    mount = MountSpec(target="/mnt/skills/editor/", access="ro")
+    mount = Mount(target="/mnt/skills/editor/", access="ro")
     builder = SimpleNamespace(
         build_view_tool=AsyncMock(return_value=_resolved("view")),
         build_str_replace_tool=AsyncMock(return_value=_resolved("str_replace")),
@@ -366,7 +366,7 @@ async def test_text_editor_builders_receive_complete_session_contract(
 
 @pytest.mark.asyncio
 async def test_present_files_builder_receives_complete_request_contract() -> None:
-    mount = MountSpec(target="/mnt/skills/present/", access="ro")
+    mount = Mount(target="/mnt/skills/present/", access="ro")
     builder = SimpleNamespace(
         build_tool=AsyncMock(return_value=_resolved("present_files"))
     )

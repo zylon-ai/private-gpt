@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.context.models.layer_type import LayerType
 from private_gpt.components.engines.citations.types import Document
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount
 
 
 class BaseContextLayer(BaseModel):
@@ -217,19 +217,16 @@ class ContextPromptLayer(BaseContextLayer):
         return self.text
 
 
-class ContentBundlesLayer(BaseContextLayer):
-    """Skill/bundle mounts — consumed by tool builders, not rendered.
+class MountsLayer(BaseContextLayer):
+    """Mounts (skills, artifacts, ...) — consumed by tool builders, not rendered.
 
-    The layer carries the same ``MountSpec`` model used everywhere else; a
-    storage-backed skill is a mount with a ``storage`` ref, so no separate
-    ``ContentBundle`` concept is needed.
+    The layer carries the same ``Mount`` model used everywhere else; a
+    storage-backed skill is a mount with a ``uri_source`` ref.
     """
 
-    type: Literal[LayerType.CONTENT_BUNDLES] = Field(
-        default=LayerType.CONTENT_BUNDLES, frozen=True
-    )
+    type: Literal[LayerType.MOUNTS] = Field(default=LayerType.MOUNTS, frozen=True)
     priority: int = Field(default=2000, frozen=True)
-    mounts: list[MountSpec] = Field(default_factory=list)
+    mounts: list[Mount] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
@@ -246,6 +243,6 @@ AnyContextLayer = Annotated[
     | ToolInstructionsLayer
     | DocumentLayer
     | ToolDefinitionsLayer
-    | ContentBundlesLayer,
+    | MountsLayer,
     Field(discriminator="type"),
 ]

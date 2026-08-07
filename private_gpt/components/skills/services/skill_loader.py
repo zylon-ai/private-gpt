@@ -3,8 +3,7 @@ from pathlib import Path
 
 from injector import inject, singleton
 
-from private_gpt.components.sandbox.content_bundle import BundledFile
-from private_gpt.components.sandbox.mount import MountSpec, StorageRef
+from private_gpt.components.sandbox.mount import Mount, MountFile, UriSource
 from private_gpt.components.skills.models.skill_entities import (
     SkillFilter,
     SkillVersionEntity,
@@ -46,29 +45,29 @@ class SkillLoader:
 
     def mounts_for_versions(
         self, versions: list[SkillVersionEntity]
-    ) -> list[MountSpec]:
+    ) -> list[Mount]:
         """Create storage-backed mounts from already-resolved skill versions.
 
-        Used by the skills interceptor to populate ``ContentBundlesLayer``
+        Used by the skills interceptor to populate ``MountsLayer``
         without a redundant ``recover_versions`` round-trip. Each skill is a
         read-only directory mount at ``/mnt/skills/{name}/`` backed by the
         skill's storage prefix; the folder is bind-mounted directly when the
         host can see it, and ``fetch`` hydrates it only when it is absent.
         """
         return [
-            MountSpec(
+            Mount(
                 target=skill_mount_path(v.frontmatter.name),
                 access="ro",
                 name=f"skill:{v.frontmatter.name}",
-                storage=StorageRef(
-                    prefix=v.storage_prefix,
+                uri_source=UriSource(
+                    uri=v.storage_prefix,
                     fetch=self._fetcher(v.storage_prefix),
                 ),
             )
             for v in versions
         ]
 
-    async def resolve(self, skill_filter: SkillFilter) -> list[MountSpec]:
+    async def resolve(self, skill_filter: SkillFilter) -> list[Mount]:
         """Resolve active skills into storage-backed mounts. No downloads here.
 
         Each skill is mounted at ``/mnt/skills/{name}/``; bytes are fetched
@@ -77,11 +76,11 @@ class SkillLoader:
         versions = await self._skill_service.recover_versions(skill_filter)
         return self.mounts_for_versions([item.version for item in versions])
 
-    def _fetcher(self, prefix: str) -> Callable[[], Awaitable[list[BundledFile]]]:
-        async def fetch() -> list[BundledFile]:
+    def _fetcher(self, prefix: str) -> Callable[[], Awaitable[list[MountFile]]]:
+        async def fetch() -> list[MountFile]:
             file_paths = await self._storage.list_files(prefix)
             return [
-                BundledFile(
+                MountFile(
                     path=fp,
                     content=await self._storage.read_file(prefix, fp),
                     permissions=0o444,

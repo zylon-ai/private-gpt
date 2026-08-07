@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount
 
 
-class SessionMountDef(MountSpec):
+class SessionMountDef(Mount):
     """One entry of the session filesystem layout.
 
     ``name`` doubles as the volume name and the host subdirectory under

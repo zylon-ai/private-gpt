@@ -5,13 +5,13 @@ from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.context.errors import NonResumableToolError
 from private_gpt.components.context.models.context_layer import (
     AnyContextLayer,
-    ContentBundlesLayer,
     DocumentLayer,
+    MountsLayer,
     ToolDefinitionsLayer,
 )
 from private_gpt.components.context.models.layer_type import LayerType
 from private_gpt.components.engines.citations.types import Document
-from private_gpt.components.sandbox.mount import MountSpec
+from private_gpt.components.sandbox.mount import Mount
 
 
 class ContextStack(BaseModel):
@@ -79,12 +79,12 @@ class ContextStack(BaseModel):
             layer.document for layer in self.layers if isinstance(layer, DocumentLayer)
         ]
 
-    def all_mounts(self) -> list[MountSpec]:
-        """Return mounts from all CONTENT_BUNDLES layers in insertion order."""
+    def all_mounts(self) -> list[Mount]:
+        """Return mounts from all MOUNTS layers in insertion order."""
         return [
             mount
             for layer in self.layers
-            if isinstance(layer, ContentBundlesLayer)
+            if isinstance(layer, MountsLayer)
             for mount in layer.mounts
         ]
 
