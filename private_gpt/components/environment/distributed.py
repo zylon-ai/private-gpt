@@ -1,18 +1,9 @@
 """Distributed coordination for sandbox environments.
 
-Prevents multi-pod / multi-worker races on the same session's sandbox:
-
-* **Per-session lock**: serialises acquire/create/kill so two processes
-  cannot both create a container for the same session (double-create leak)
-  or kill a container the other is still using.
-* **Shared last-activity clock**: every worker writes a "last used" timestamp
-  so a reaper on pod A does not kill a sandbox that pod B is actively using.
-
-The distributed lock reuses the same Redis semaphore library as
-``RedisSemaphoreManager`` (``redis_semaphore_async.Semaphore``) with a
-per-session task name and ``value=1`` (a mutex). When Redis is unavailable,
-coordination degrades to an in-process fallback (single worker == exactly the
-old behaviour).
+Provides a per-session mutex (serialising acquire/create/kill across
+processes) and a shared last-activity clock (so reapers only kill sandboxes
+idle everywhere). Uses ``redis_semaphore_async`` with an in-process fallback
+when Redis is unavailable.
 """
 
 from __future__ import annotations

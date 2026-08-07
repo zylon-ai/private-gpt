@@ -31,31 +31,14 @@ _RENEW_SKIP_WINDOW = 30
 class EnvironmentManager:
     """Owns the lifecycle of managed environments, keyed by session id.
 
-    Decision rules (per acquire()):
-
-    * **Reuse**: the session's live environment (or a container restored from
-      the backend, e.g. after an app restart) is reused whenever the requested
-      mounts/sandbox env are unchanged and the container is still healthy.
-    * **Discard on change**: when the requested mounts or sandbox env differ,
-      the old container is killed and a fresh one is created. The same
-      fingerprint is stored in the sandbox metadata so a *restored* container
-      (another pod, after a restart) is also discarded when its mounts differ.
-    * **Expired -> original**: when the container is stale/expired (exec or
-      renewal failure), it is discarded and a fresh original container is
-      created for the request — restore is never attempted for a dead one.
-
-    Cross-process safety (multi-pod / multi-worker):
-
-    * A distributed per-session lock (Redis, with an in-memory fallback)
-      serialises acquire/create/kill so two processes cannot double-create or
-      kill a sandbox the other is using.
-    * The reaper only kills an idle sandbox when BOTH the local idle clock and
-      the shared last-activity clock say it has been idle past the TTL — so a
-      reaper on pod A cannot kill a sandbox pod B is actively using.
-
-    The reaper only kills environments idle past the TTL; lifetime renewal is
-    handled on-acquire (renew only when remaining TTL < 1/3, throttled by a
-    short skip-window).
+    acquire() returns the live environment for a session, reusing it when the
+    requested mounts and sandbox env are unchanged, or killing and recreating
+    it otherwise. release() drops an environment and kills its backend sandbox.
+    A background reaper kills environments idle past the TTL, and stale
+    environments (e.g. after a backend server restart) are evicted and
+    recreated on the next acquire(). Cross-process races on the same session
+    are serialised with a per-session lock (Redis, with an in-memory
+    fallback); the reaper also consults a shared last-activity clock.
     """
 
     def __init__(
@@ -442,12 +425,8 @@ class EnvironmentManager:
                 logger.exception("Environment reaper iteration failed")
 
     async def _reap_once(self) -> None:
-        """Kill sandboxes idle past the TTL.
-
-        A sandbox is only killed when it is idle locally AND has no recent
-        shared last-activity — so a reaper on pod A never kills a sandbox
-        that pod B is actively using.
-        """
+        """Kill sandboxes idle past the TTL (idle locally and on the shared
+        last-activity clock)."""
         now_mono = time.monotonic()
         now_wall = time.time()
         expired: list[tuple[str, Environment]] = []

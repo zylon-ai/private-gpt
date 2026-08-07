@@ -53,7 +53,7 @@ class PathTranslator:
                 target=canonical, access="rw" if writable else "ro", host_path=host_path
             )
         )
-        self._mounts.sort(key=lambda m: len(m.canonical), reverse=True)
+        self._mounts.sort(key=lambda m: len(m.target), reverse=True)
         self._rebuild_regex()
 
     def unregister(self, canonical: str) -> None:
