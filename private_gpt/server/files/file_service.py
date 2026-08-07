@@ -109,10 +109,6 @@ class FileService:
     def _outputs_prefix(self, scope_id: str) -> str:
         return f"outputs/{scope_id}"
 
-    def _prefix_for_scope(self, folder: str, scope_id: str) -> str:
-        """Storage prefix for a session folder (uploads|outputs) + scope."""
-        return f"{folder}/{scope_id}"
-
     def _prefix_for_path(self, storage_path: str, scope_id: str) -> str:
         """Return the storage prefix for a given storage_path."""
         folder = storage_path.split("/")[0]
@@ -151,8 +147,7 @@ class FileService:
         mime_type = _detect_mime_from_bytes(content)
 
         rel_path = self._normalize_upload_path(path=path, fallback=filename)
-        folder, rel_path = self._session_folder(rel_path)
-        prefix = self._prefix_for_scope(folder, scope_id)
+        prefix = self._uploads_prefix(scope_id)
         await storage.write_file(prefix, rel_path, content, mime_type)
 
         file_info = await storage.stat_file(prefix, rel_path)
@@ -160,7 +155,7 @@ class FileService:
             raise HTTPException(
                 status_code=500, detail="File written but could not be read back."
             )
-        file_info = file_info.model_copy(update={"path": f"{folder}/{rel_path}"})
+        file_info = file_info.model_copy(update={"path": f"uploads/{rel_path}"})
         return self._to_metadata(file_info, scope_id)
 
     async def put_file(
@@ -178,8 +173,7 @@ class FileService:
         """
         storage = self._require_storage()
         rel_path = self._normalize_upload_path(path=path, fallback="upload")
-        folder, rel_path = self._session_folder(rel_path)
-        prefix = self._prefix_for_scope(folder, scope_id)
+        prefix = self._uploads_prefix(scope_id)
         await storage.write_file(
             prefix, rel_path, content, mime_type or _detect_mime_from_bytes(content)
         )
@@ -189,7 +183,7 @@ class FileService:
             raise HTTPException(
                 status_code=500, detail="File written but could not be read back."
             )
-        file_info = file_info.model_copy(update={"path": f"{folder}/{rel_path}"})
+        file_info = file_info.model_copy(update={"path": f"uploads/{rel_path}"})
         return self._to_metadata(file_info, scope_id)
 
     async def list_files(
@@ -545,11 +539,10 @@ class FileService:
     def _normalize_upload_path(path: str | None, fallback: str) -> str:
         """Normalize and validate an object-storage-style upload key.
 
-        Keys are interpreted relative to the session's mounts: ``uploads/``
-        (input, default) or ``outputs/`` (sandbox output folder). Explicit
-        ``uploads/`` / ``outputs/`` prefixes are accepted so callers can pass
-        the full storage key; ``../``, absolute paths and trailing slashes are
-        rejected (mirrors S3/blob put-object key rules).
+        Keys are interpreted relative to the session's uploads mount. An
+        explicit ``uploads/`` prefix is accepted and stripped so callers can
+        pass the full storage key; ``../``, absolute paths and trailing
+        slashes are rejected (mirrors S3/blob put-object key rules).
         """
         rel = (path or "").strip()
         if not rel:
@@ -578,26 +571,3 @@ class FileService:
                 detail="path must not be empty.",
             )
         return rel
-
-    @staticmethod
-    def _session_folder(rel_path: str) -> tuple[str, str]:
-        """Resolve the session mount for a normalized key.
-
-        Keys prefixed with ``outputs/`` target the sandbox output mount
-        (``/mnt/user-data/outputs/``); everything else targets the uploads
-        mount (input, ``/mnt/user-data/uploads/``).  Returns ``(folder, rel)``.
-        """
-        folder = "uploads"
-        rel = rel_path
-        if rel.startswith("outputs/"):
-            folder = "outputs"
-            rel = rel[len("outputs/") :]
-        elif rel.startswith("uploads/"):
-            rel = rel[len("uploads/") :]
-        rel = "/".join(PurePosixPath(rel).parts)
-        if not rel:
-            raise HTTPException(
-                status_code=400,
-                detail="path must not be empty.",
-            )
-        return folder, rel
