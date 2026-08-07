@@ -48,9 +48,7 @@ class UriSource(BaseModel):
 
             binary = await anyio.to_thread.run_sync(load_file_from_uri, uri)
             filename = Path(urlparse(uri).path).name or "file"
-            return [
-                MountFile(path=filename, content=binary.read(), permissions=0o444)
-            ]
+            return [MountFile(path=filename, content=binary.read(), permissions=0o444)]
 
         return cls(uri=uri, fetch=fetch)
 

@@ -138,11 +138,13 @@ class LocalObjectStorage(ObjectStorage):
         return await to_thread.run_sync(self._list_files_meta_sync, prefix)
 
     def _list_files_meta_sync(self, prefix: str) -> list[FileInfo]:
+        # Recursive, mirroring S3 prefix listing so nested keys (e.g.
+        # uploads/{scope}/data/2024/report.pdf) show up in listings.
         root = Path(self._root_path) / prefix
         if not root.exists():
             return []
         results: list[FileInfo] = []
-        for entry in root.iterdir():
+        for entry in root.rglob("*"):
             if not entry.is_file():
                 continue
             stat = entry.stat()

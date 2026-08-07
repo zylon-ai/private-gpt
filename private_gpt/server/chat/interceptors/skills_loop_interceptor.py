@@ -194,9 +194,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
 
         mounts = self._skill_loader.mounts_for_versions(mounted_versions)
         if mounts:
-            stack = stack.append_layer(
-                MountsLayer(mounts=mounts, source="skills")
-            )
+            stack = stack.append_layer(MountsLayer(mounts=mounts, source="skills"))
 
         state.input.context_stack = stack
         context.set_state(state)

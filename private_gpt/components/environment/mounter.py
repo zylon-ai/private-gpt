@@ -54,10 +54,7 @@ class LayoutMounter(ABC):
         Bundle specs are added separately by the EnvironmentManager so this
         class stays unaware of content.
         """
-        return [
-            Mount(target=m.target, access=m.access)
-            for m in self._layout
-        ]
+        return [Mount(target=m.target, access=m.access) for m in self._layout]
 
 
 # Backward-compatible alias so existing imports of `Mounter` keep working.

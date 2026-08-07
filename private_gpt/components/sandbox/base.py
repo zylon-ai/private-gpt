@@ -9,8 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
-    from private_gpt.components.sandbox.mount import MountFile
-    from private_gpt.components.sandbox.mount import Mount
+    from private_gpt.components.sandbox.mount import Mount, MountFile
 
 
 class SandboxExecutionResult(BaseModel):
@@ -178,7 +177,7 @@ class SandboxProvider(ABC):
         """Create a sandbox session. The session may be lazy until first use.
 
         ``session_id`` tags the backend resource so it can be found again by
-        restore_session(); ``volumes`` are host directories to bind-mount.
+        ``volumes`` are host directories to bind-mount.
         ``env`` carries environment variables to inject into the sandbox.
         Backends without those capabilities may ignore them.
         """

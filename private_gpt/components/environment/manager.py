@@ -18,34 +18,23 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Fraction of TTL remaining below which we proactively renew the sandbox.
+_RENEW_THRESHOLD = 1 / 3
+
+# Minimum seconds between two renewal attempts for the same session.
+# Prevents rapid concurrent requests from all issuing a renewal.
+_RENEW_SKIP_WINDOW = 30
+
 
 class EnvironmentManager:
     """Owns the lifecycle of managed environments, keyed by session id.
 
-    Generic over the sandbox backend (SandboxProvider), the layout strategy
-    (LayoutMounter), and the ordered list of content mounters (ContentMounter).
-
-    acquire() reuses a live environment, restores a backend sandbox when the
-    provider supports it, or creates a fresh one. The single ``mounts`` list
-    carries every directory mount the session needs: storage-backed bundle
-    mounts (skills) and source-backed mount-plan volumes. Layout mounts
-    (workspace, uploads, outputs) are added by the LayoutMounter.
-
-    ``renew_on_acquire`` switches the backend lifetime refresh from the reaper
-    timer to an eager refresh on every acquire() — i.e. every new message that
-    reaches a tool. The reaper then only reaps idle sandboxes.
-
-    ``recreate_on_mount_change`` kills the old sandbox and creates a new one
-    whenever the requested mounts (or sandbox env) differ from what the live
-    env was created with. Recreating wires the new mounts at container creation
-    (fastest path) instead of materializing/copying files into a running
-    container.
-
-    A stale sandbox (e.g. after the backend server restarts) marks the
-    Environment as _stale during the first failing exec/flush; acquire() then
-    evicts and recreates transparently.
-
-    A background reaper kills environments idle past the TTL.
+    acquire() returns the live environment for a session, reusing it when the
+    requested mounts and sandbox env are unchanged, or killing and recreating
+    it otherwise. release() drops an environment and kills its backend sandbox.
+    A background reaper kills environments idle past the TTL, and stale
+    environments (e.g. after a backend server restart) are evicted and
+    recreated on the next acquire().
     """
 
     def __init__(
@@ -55,17 +44,12 @@ class EnvironmentManager:
         content_mounters: list[ContentMounter],
         ttl_seconds: int,
         reaper_interval_seconds: int | None = None,
-        *,
-        renew_on_acquire: bool = False,
-        recreate_on_mount_change: bool = False,
     ) -> None:
         self._provider = sandbox_provider
         self._layout = layout_mounter
         self._content_mounters = content_mounters
         self._ttl = ttl_seconds
         self._reaper_interval = reaper_interval_seconds
-        self._renew_on_acquire = renew_on_acquire
-        self._recreate_on_mount_change = recreate_on_mount_change
         self._active: dict[str, Environment] = {}
         self._lock = asyncio.Lock()
         self._creation_locks: dict[str, asyncio.Lock] = {}
@@ -84,25 +68,24 @@ class EnvironmentManager:
         async with creation_lock:
             async with self._lock:
                 env = self._active.get(session_id)
+
             if env:
                 if env._stale:
-                    # Sandbox died (e.g. server restart). Evict and fall
-                    # through to _create() so the next acquire gets a fresh env.
+                    # Sandbox died (e.g. server restart): discard it and
+                    # create a fresh one for this request.
                     logger.warning(
                         "Sandbox for session %s is stale, recreating", session_id
                     )
                     async with self._lock:
                         self._active.pop(session_id, None)
-                    self._spawn(
-                        self._kill(env.sandbox, session_id),
-                        f"kill stale sandbox ({session_id})",
+                    await self._kill(env.sandbox, session_id)
+                    return await self._create(
+                        session_id, mounts, sandbox_env, force_new=True
                     )
-                elif self._recreate_on_mount_change and self._mounts_changed(
-                    env, mounts, sandbox_env
-                ):
+
+                elif self._mounts_changed(env, mounts, sandbox_env):
                     # Mounts changed: kill the old sandbox and create a new one
-                    # so the new mounts are wired at container creation (no
-                    # materialization / file copy into a running container).
+                    # so the new mounts are wired at container creation.
                     logger.info(
                         "Mounts changed for session %s, recreating sandbox",
                         session_id,
@@ -115,32 +98,30 @@ class EnvironmentManager:
                     return await self._create(
                         session_id, mounts, sandbox_env, force_new=True
                     )
+
                 else:
                     env.touch()
-                    if self._renew_on_acquire:
-                        # Eager refresh: a new message arrived, extend the
-                        # backend lifetime now instead of on the reaper timer.
-                        try:
-                            await self._provider.renew_session(env.sandbox)
-                        except Exception as exc:
-                            logger.warning(
-                                "Failed to eagerly renew sandbox for session %s, "
-                                "recreating: %s",
-                                session_id,
-                                exc,
-                            )
-                            async with self._lock:
-                                self._active.pop(session_id, None)
-                            await self._kill(env.sandbox, session_id)
-                            return await self._create(
-                                session_id, mounts, sandbox_env, force_new=True
-                            )
+                    if not await self._maybe_renew(env, session_id):
+                        # Renewal failed — discard the dead sandbox so this
+                        # request does not run on it.
+                        logger.warning(
+                            "Sandbox for session %s could not be renewed, recreating",
+                            session_id,
+                        )
+                        async with self._lock:
+                            self._active.pop(session_id, None)
+                        await self._kill(env.sandbox, session_id)
+                        return await self._create(
+                            session_id, mounts, sandbox_env, force_new=True
+                        )
+
                     if mounts:
                         # Content that could not be bind-mounted at creation is
-                        # materialized lazily just before the first exec().
+                        # materialised lazily just before the first exec().
                         env.add_pending(mounts)
                         await env._flush_pending()
                     return env
+
             return await self._create(session_id, mounts, sandbox_env)
 
     def release(self, session_id: str) -> None:
@@ -152,6 +133,47 @@ class EnvironmentManager:
                 self._kill(env.sandbox, session_id),
                 f"kill sandbox on release ({session_id})",
             )
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    async def _maybe_renew(self, env: Environment, session_id: str) -> bool:
+        """Renew the sandbox's lifetime if it is approaching expiry.
+
+        Returns True when the sandbox is still usable; False when the renewal
+        failed and the caller must discard the sandbox and create a fresh one.
+
+        Renewal is skipped when another renewal happened recently
+        (within ``_RENEW_SKIP_WINDOW`` seconds) to avoid a storm of
+        renewal calls when many requests arrive simultaneously.
+        """
+        now = time.monotonic()
+        age = now - env.ttl_start
+        remaining = self._ttl - age
+        if remaining >= self._ttl * _RENEW_THRESHOLD:
+            return True  # plenty of time left
+
+        since_last_renew = now - env.last_renewed
+        if since_last_renew < _RENEW_SKIP_WINDOW:
+            return True  # a renewal was issued very recently; skip
+
+        logger.info(
+            "Sandbox for session %s has ~%.0fs remaining (TTL %ds), renewing",
+            session_id,
+            remaining,
+            self._ttl,
+        )
+        try:
+            await self._provider.renew_session(env.sandbox)
+            env.ttl_start = now
+            env.last_renewed = now
+        except Exception as exc:
+            logger.warning(
+                "Failed to renew sandbox for session %s: %s", session_id, exc
+            )
+            return False
+        return True
 
     async def _create(
         self,
@@ -170,9 +192,7 @@ class EnvironmentManager:
         # Mount specs — always added for writability enforcement.
         specs = self._layout.mount_specs()
         for mount in mounts or []:
-            specs.append(
-                Mount(target=mount.target, access=mount.access)
-            )
+            specs.append(Mount(target=mount.target, access=mount.access))
 
         # Mounts that support eager volume-mounting (a resolved source dir, or
         # a storage-backed bundle whose host folder is already present).
@@ -229,14 +249,12 @@ class EnvironmentManager:
         )
         env._mounted.update(pre_mounted)
         # Record the mounts this env was created with, so acquire() can detect
-        # mount changes on later reuses (and recreate instead of materializing).
+        # mount changes on later reuses (and recreate instead of materialising).
         env._mount_keys = self._mount_keys(mounts or [])
         env._sandbox_env = dict(sandbox_env or {})
 
-        # Deferred mounts: not volume-mounted, will be materialized on exec().
-        deferred = [
-            m for m in (mounts or []) if m.target not in pre_mounted
-        ]
+        # Deferred mounts: not volume-mounted, will be materialised on exec().
+        deferred = [m for m in (mounts or []) if m.target not in pre_mounted]
         env.add_pending(deferred)
 
         async with self._lock:
@@ -317,7 +335,6 @@ class EnvironmentManager:
     def _ensure_reaper(self) -> None:
         if not self._reaper_interval:
             return
-
         if self._reaper_task is None or self._reaper_task.done():
             self._reaper_task = asyncio.get_running_loop().create_task(
                 self._reaper_loop()
@@ -326,7 +343,6 @@ class EnvironmentManager:
     async def _reaper_loop(self) -> None:
         if not self._reaper_interval:
             return
-
         while True:
             await asyncio.sleep(self._reaper_interval)
             try:
@@ -335,31 +351,18 @@ class EnvironmentManager:
                 logger.exception("Environment reaper iteration failed")
 
     async def _reap_once(self) -> None:
+        """Kill sandboxes that have been idle longer than the TTL."""
         now = time.monotonic()
         expired: list[tuple[str, Environment]] = []
-        live: list[Environment] = []
         async with self._lock:
             for session_id, env in list(self._active.items()):
                 if env.idle_seconds(now) > self._ttl:
                     self._active.pop(session_id, None)
                     self._creation_locks.pop(session_id, None)
                     expired.append((session_id, env))
-                else:
-                    live.append(env)
 
         for session_id, env in expired:
             self._spawn(
                 self._kill(env.sandbox, session_id),
                 f"kill idle sandbox ({session_id})",
             )
-
-        # With eager refresh on acquire, the backend lifetime is extended per
-        # new message — no periodic renewal on the reaper timer.
-        if not self._renew_on_acquire:
-            for env in live:
-                try:
-                    await self._provider.renew_session(env.sandbox)
-                except Exception as exc:
-                    logger.warning(
-                        "Failed to renew sandbox for session %s: %s", env.id, exc
-                    )

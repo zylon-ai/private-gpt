@@ -43,9 +43,12 @@ async def list_namespaces(
     summary="Upload a file",
     description=(
         "Upload a file into the session's uploads directory. "
-        "The file is stored under `uploads/{filename}` within the session scope and "
-        "its relative path is returned as the file ID. "
-        "Uploading a file with the same name overwrites the existing one."
+        "By default the file is stored under `uploads/{filename}` within the session "
+        "scope; pass `path` to push it to a custom object-storage-style key "
+        "(e.g. `data/2024/report.pdf`), relative to the uploads mount "
+        "(`/mnt/user-data/uploads/` inside the sandbox). "
+        "The relative path is returned as the file ID. "
+        "Uploading a file to an existing key overwrites it."
     ),
 )
 async def upload_file(
@@ -56,6 +59,17 @@ async def upload_file(
         description="Session / container identifier (matches the `container` field in chat requests).",
         examples=["session-abc123"],
     ),
+    path: str | None = Query(
+        default=None,
+        description=(
+            "Object-storage-style key for the uploaded file, relative to the uploads "
+            "mount. Defaults to `uploads/{filename}`. Nested keys are supported and "
+            "parent directories are created automatically. May be prefixed with "
+            "`uploads/` for convenience. Must be relative (no leading `/`), must not "
+            "contain `..` components, and must not end with `/`."
+        ),
+        examples=["data/2024/report.pdf"],
+    ),
     namespace: str = Query(
         default="session",
         description="Namespace for the file. Defaults to 'session'. Use 'artifacts' for durable storage.",
@@ -64,13 +78,62 @@ async def upload_file(
 ) -> FileMetadata:
     service: FileService = request.state.injector.get(FileService)
     if namespace == "session":
-        return await service.upload_file(scope_id=scope_id, upload=file)
+        return await service.upload_file(scope_id=scope_id, upload=file, path=path)
     content_bytes = await file.read()
     return await service.write_file_to_namespace(
         namespace=namespace,
         scope=scope_id,
-        path=file.filename or "upload",
+        path=path or file.filename or "upload",
         content=content_bytes,
+    )
+
+
+@files_router.put(
+    "/{file_id:path}",
+    response_model=FileMetadata,
+    summary="Put a file at a specific path (object-storage style)",
+    description=(
+        "S3/blob-style put-object: store the raw request body at the given key. "
+        "The key is relative to the session's uploads mount (`/mnt/user-data/uploads/` "
+        "inside the sandbox) and may be nested, e.g. `data/2024/report.pdf`; an "
+        "explicit `uploads/` prefix is accepted and normalized away. Parent "
+        "directories are created automatically and existing keys are overwritten. "
+        "The response is the same `FileMetadata` as `POST /v1/files`, so the returned "
+        "`id` can be used with the other file endpoints."
+    ),
+    responses={
+        400: {"description": "Invalid path key (absolute, `..`, or directory key)."},
+        404: {"description": "Namespace not found."},
+        503: {"description": "Files API not configured (session namespace not set)."},
+    },
+)
+async def put_file(
+    request: Request,
+    file_id: str,
+    scope_id: str = Query(
+        ...,
+        description="Session / container identifier.",
+        examples=["session-abc123"],
+    ),
+    namespace: str = Query(
+        default="session",
+        description="Namespace for the file. Defaults to 'session'.",
+        examples=["session"],
+    ),
+) -> FileMetadata:
+    service: FileService = request.state.injector.get(FileService)
+    content = await request.body()
+    mime_type = request.headers.get("content-type")
+    if namespace == "session":
+        return await service.put_file(
+            scope_id=scope_id, path=file_id, content=content, mime_type=mime_type
+        )
+    return await service.write_file_to_namespace(
+        namespace=namespace,
+        scope=scope_id,
+        path=file_id,
+        content=content,
+        mime_type=mime_type,
     )
 
 

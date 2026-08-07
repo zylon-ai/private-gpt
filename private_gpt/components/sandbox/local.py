@@ -45,9 +45,7 @@ class BashExecutorSandbox(SandboxSession):
         self._translator = PathTranslator(mounts)
         self._executor = executor
         self._readonly = [m.target for m in mounts if m.access == "ro"]
-        self._default_cwd = next(
-            (m.target for m in mounts if m.access == "rw"), "/"
-        )
+        self._default_cwd = next((m.target for m in mounts if m.access == "rw"), "/")
         self._env = env
 
     def add_local_mount(

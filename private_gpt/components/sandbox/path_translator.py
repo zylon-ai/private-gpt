@@ -39,9 +39,7 @@ class PathTranslator:
             self._canonical_re = re.compile(r"(?!)")  # never matches
 
         # Reverse: match any real path prefix.
-        real_escaped = [
-            re.escape(str(m.host_path)) + r"(/|$)" for m in self._mounts
-        ]
+        real_escaped = [re.escape(str(m.host_path)) + r"(/|$)" for m in self._mounts]
         if real_escaped:
             self._real_re = re.compile("|".join(real_escaped))
         else:
@@ -51,7 +49,9 @@ class PathTranslator:
         """Add or update a mount mapping and rebuild the internal regex."""
         self._mounts = [m for m in self._mounts if m.target != canonical]
         self._mounts.append(
-            Mount(target=canonical, access="rw" if writable else "ro", host_path=host_path)
+            Mount(
+                target=canonical, access="rw" if writable else "ro", host_path=host_path
+            )
         )
         self._mounts.sort(key=lambda m: len(m.canonical), reverse=True)
         self._rebuild_regex()

@@ -58,12 +58,9 @@ def build_request_from_context_stack(
 
     request.tool_config.tools = list(context_stack.all_tools())
     request.context.documents = context_stack.all_documents() or None
-    # The initial ResolvedChatRequest already carries Backend mount-plan
-    # volumes (resolved from ChatBody.mounts by ChatRequestMapper). Keep them
-    # and append skill/bundle mounts from the context stack — the single
-    # mount set that tools later pass to the environment manager. The merge
-    # is idempotent: build_request_from_context_stack runs on every LLM
-    # iteration, so duplicate mounts would otherwise accumulate.
+    # The initial ResolvedChatRequest already carries mount-plan volumes
+    # (from ChatBody.mounts). Append the context-stack mounts so tools get
+    # one merged set; the merge is idempotent since this runs every iteration.
     request.context.mounts = _merge_mounts(
         request.context.mounts, context_stack.all_mounts()
     )
@@ -77,8 +74,7 @@ def build_request_from_context_stack(
 def _merge_mounts(*groups: list[Mount]) -> list[Mount]:
     """Merge mount groups, deduplicating by mount identity.
 
-    ``Mount`` carries a ``storage`` ref with an excluded callable, so the
-    The identity is the target + access + host_path + uri_source.uri — enough to keep
+    Identity is target + access + host_path + uri_source.uri, which keeps
     skills and mount-plan volumes stable across repeated request builds.
     """
     seen: set[tuple[object, ...]] = set()

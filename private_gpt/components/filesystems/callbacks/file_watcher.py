@@ -98,4 +98,3 @@ def parse_minio_notification(
         results.append((key, event_type, size))
 
     return results
-

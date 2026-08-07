@@ -1,10 +1,14 @@
-"""Tests for EnvironmentManager mount-change recreation and eager renewal."""
+"""Tests for EnvironmentManager mount-change recreation and on-acquire renewal."""
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
-from private_gpt.components.environment.manager import EnvironmentManager
+from private_gpt.components.environment.manager import (
+    _RENEW_THRESHOLD,
+    EnvironmentManager,
+)
 from private_gpt.components.sandbox.mount import Mount, UriSource
 
 # ---------------------------------------------------------------------------
@@ -75,6 +79,9 @@ class FakeProvider:
         session.killed = True
         self.killed.append(session.sandbox_id)
 
+    async def delete_session(self, session) -> None:
+        await self.kill_session(session)
+
 
 def _manager(**kwargs) -> EnvironmentManager:
     return EnvironmentManager(
@@ -109,12 +116,12 @@ async def _sleep_tasks(manager: EnvironmentManager) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Mount-change recreation
+# Mount-change recreation (always enabled)
 # ---------------------------------------------------------------------------
 
 
 async def test_acquire_recreates_when_bundles_change() -> None:
-    manager = _manager(recreate_on_mount_change=True)
+    manager = _manager()
 
     first = await manager.acquire("s1", mounts=[_bundle_mount("/mnt/skills/a/")])
     await _sleep_tasks(manager)
@@ -126,13 +133,13 @@ async def test_acquire_recreates_when_bundles_change() -> None:
 
     assert first is not second
     assert len(manager._provider.created) == 2
-    # The old sandbox was killed, not materialized into.
+    # The old sandbox was killed, not materialised into.
     assert manager._provider.killed == ["sandbox-1"]
     assert len(manager._provider.renewed) == 0
 
 
 async def test_acquire_reuses_when_mounts_unchanged() -> None:
-    manager = _manager(recreate_on_mount_change=True)
+    manager = _manager()
 
     first = await manager.acquire(
         "s1",
@@ -150,7 +157,7 @@ async def test_acquire_reuses_when_mounts_unchanged() -> None:
 
 
 async def test_acquire_recreates_when_volumes_change() -> None:
-    manager = _manager(recreate_on_mount_change=True)
+    manager = _manager()
 
     first = await manager.acquire("s1", mounts=[_volume("v1", "/mnt/data/")])
     await _sleep_tasks(manager)
@@ -166,7 +173,7 @@ async def test_acquire_recreates_when_volumes_change() -> None:
 
 
 async def test_acquire_recreates_when_env_changes() -> None:
-    manager = _manager(recreate_on_mount_change=True)
+    manager = _manager()
 
     first = await manager.acquire("s1", sandbox_env={"TOKEN": "a"})
     await _sleep_tasks(manager)
@@ -179,7 +186,7 @@ async def test_acquire_recreates_when_env_changes() -> None:
 
 
 async def test_acquire_reuses_when_mounts_unchanged_again() -> None:
-    manager = _manager(recreate_on_mount_change=True)
+    manager = _manager()
 
     first = await manager.acquire("s1", mounts=[_bundle_mount("/mnt/skills/a/")])
     second = await manager.acquire("s1", mounts=[_bundle_mount("/mnt/skills/a/")])
@@ -190,7 +197,7 @@ async def test_acquire_reuses_when_mounts_unchanged_again() -> None:
 
 
 async def test_acquire_recreates_when_bundle_removed() -> None:
-    manager = _manager(recreate_on_mount_change=True)
+    manager = _manager()
 
     first = await manager.acquire(
         "s1",
@@ -207,7 +214,58 @@ async def test_acquire_recreates_when_bundle_removed() -> None:
     assert manager._provider.killed == ["sandbox-1"]
 
 
-async def test_acquire_recreates_when_eager_renew_fails() -> None:
+# ---------------------------------------------------------------------------
+# On-acquire throttled renewal (TTL threshold)
+# ---------------------------------------------------------------------------
+
+
+async def test_no_renewal_when_ttl_healthy() -> None:
+    """No renewal when there is plenty of lifetime left."""
+    manager = _manager()
+
+    await manager.acquire("s1")
+    await manager.acquire("s1")  # reuse — TTL is fresh, no renewal expected
+
+    assert manager._provider.renewed == []
+
+
+async def test_renewal_triggered_when_ttl_below_threshold() -> None:
+    """Renewal fires when remaining TTL < 1/3 of configured TTL."""
+    manager = _manager()
+    ttl = manager._ttl  # 3600s
+
+    env = await manager.acquire("s1")
+    # Simulate the sandbox being old enough that < 1/3 TTL remains.
+    env.ttl_start = time.monotonic() - ttl * (1 - _RENEW_THRESHOLD + 0.01)
+    env.last_renewed = 0.0  # never renewed — skip-window not active
+
+    await manager.acquire("s1")  # should trigger renewal
+
+    assert manager._provider.renewed == ["sandbox-1"]
+
+
+async def test_renewal_skipped_within_skip_window() -> None:
+    """A second renewal is not issued if one happened very recently."""
+    manager = _manager()
+    ttl = manager._ttl
+
+    env = await manager.acquire("s1")
+    # Age the sandbox so it would normally renew.
+    env.ttl_start = time.monotonic() - ttl * (1 - _RENEW_THRESHOLD + 0.01)
+    env.last_renewed = 0.0
+
+    # First reuse → renewal fires.
+    await manager.acquire("s1")
+    assert len(manager._provider.renewed) == 1
+
+    # Second reuse immediately after → skip window blocks it.
+    await manager.acquire("s1")
+    assert len(manager._provider.renewed) == 1  # still just one renewal
+
+
+async def test_stale_on_renew_failure_triggers_recreate() -> None:
+    """A failed renewal discards the container and recreates immediately."""
+
     class FlakyProvider(FakeProvider):
         async def renew_session(self, session) -> None:
             raise RuntimeError("sandbox expired")
@@ -218,54 +276,67 @@ async def test_acquire_recreates_when_eager_renew_fails() -> None:
         layout_mounter=FakeLayout(),
         content_mounters=[],
         ttl_seconds=3600,
-        renew_on_acquire=True,
-        recreate_on_mount_change=True,
     )
+    ttl = manager._ttl
 
-    first = await manager.acquire("s1")
-    await _sleep_tasks(manager)
-    second = await manager.acquire("s1")  # eager renew fails → recreate
+    env = await manager.acquire("s1")
+    # Push env into renewal territory.
+    env.ttl_start = time.monotonic() - ttl * (1 - _RENEW_THRESHOLD + 0.01)
+    env.last_renewed = 0.0
+
+    # Renew attempt fails → the SAME acquire discards the dead container and
+    # returns a fresh one (no request runs on the expired sandbox).
+    second = await manager.acquire("s1")
     await _sleep_tasks(manager)
 
-    assert first is not second
+    assert second is not env
     assert len(provider.created) == 2
     assert provider.killed == ["sandbox-1"]
 
 
+async def test_stale_env_discarded_and_never_restored() -> None:
+    """A stale env is killed and replaced by a fresh container — restore must
+    never be attempted for it."""
+
+    class RestoringProvider(FakeProvider):
+        def __init__(self) -> None:
+            super().__init__()
+            self.restored: list[str] = []
+
+        async def restore_session(self, session_id, timeout=None, bundle_specs=None):
+            self.restored.append(session_id)
+            return FakeSandbox("restored-sandbox")
+
+    provider = RestoringProvider()
+    manager = EnvironmentManager(
+        sandbox_provider=provider,
+        layout_mounter=FakeLayout(),
+        content_mounters=[],
+        ttl_seconds=3600,
+    )
+
+    env = await manager.acquire("s1")
+    assert provider.restored == ["s1"]
+
+    # Mark stale (backend container died) and acquire again.
+    env._stale = True
+    fresh = await manager.acquire("s1")
+    await _sleep_tasks(manager)
+
+    # Restore was NOT attempted for the stale env; fresh container created.
+    assert provider.restored == ["s1"]  # only the first acquire restored
+    assert provider.created == ["sandbox-1"]
+    assert provider.killed == ["restored-sandbox"]
+    assert fresh.sandbox.sandbox_id == "sandbox-1"
+
+
 # ---------------------------------------------------------------------------
-# Eager renewal on acquire + reaper behavior
+# Reaper — idle cleanup only, no renewal
 # ---------------------------------------------------------------------------
-
-
-async def test_renew_on_acquire_renews_eagerly() -> None:
-    manager = _manager(renew_on_acquire=True)
-
-    await manager.acquire("s1")
-    await manager.acquire("s1")  # reuse → eager renew
-
-    assert manager._provider.renewed == ["sandbox-1"]
-
-
-async def test_renew_on_acquire_disables_reaper_renewal() -> None:
-    manager = _manager(renew_on_acquire=True)
-
-    await manager.acquire("s1")
-    await manager._reap_once()  # env is live, must NOT be renewed by the reaper
-
-    assert manager._provider.renewed == []
-
-
-async def test_reaper_still_renews_when_not_eager() -> None:
-    manager = _manager(renew_on_acquire=False)
-
-    await manager.acquire("s1")
-    await manager._reap_once()  # env is live → reaper renews it
-
-    assert manager._provider.renewed == ["sandbox-1"]
 
 
 async def test_reaper_kills_idle_sandboxes() -> None:
-    manager = _manager(renew_on_acquire=True, recreate_on_mount_change=True)
+    manager = _manager()
 
     env = await manager.acquire("s1")
     # Age the env past the TTL (1h) so the reaper considers it idle.
@@ -275,3 +346,81 @@ async def test_reaper_kills_idle_sandboxes() -> None:
 
     assert manager._provider.killed == ["sandbox-1"]
     assert manager._active == {}
+
+
+async def test_reaper_does_not_renew_live_sandboxes() -> None:
+    """The reaper only kills idle envs — renewal is on-acquire."""
+    manager = _manager()
+
+    await manager.acquire("s1")
+    await manager._reap_once()  # env is live — reaper must NOT renew it
+
+    assert manager._provider.renewed == []
+
+
+# ---------------------------------------------------------------------------
+# Session restore
+# ---------------------------------------------------------------------------
+
+
+async def test_acquire_restores_when_provider_has_sandbox() -> None:
+    """A provider that can restore is used instead of creating fresh."""
+
+    class RestoringProvider(FakeProvider):
+        def __init__(self) -> None:
+            super().__init__()
+            self.restored: list[str] = []
+            self._existing = FakeSandbox("restored-sandbox")
+
+        async def restore_session(self, session_id, timeout=None, bundle_specs=None):
+            self.restored.append(session_id)
+            return self._existing
+
+    provider = RestoringProvider()
+    manager = EnvironmentManager(
+        sandbox_provider=provider,
+        layout_mounter=FakeLayout(),
+        content_mounters=[],
+        ttl_seconds=3600,
+    )
+
+    env = await manager.acquire("s1")
+
+    assert provider.restored == ["s1"]
+    assert provider.created == []
+    assert env.sandbox is provider._existing
+
+
+async def test_mount_change_forces_fresh_create_even_with_restore() -> None:
+    """Mount changes must not restore the old (killed) sandbox."""
+
+    class RestoringProvider(FakeProvider):
+        def __init__(self) -> None:
+            super().__init__()
+            self.restored: list[str] = []
+
+        async def restore_session(self, session_id, timeout=None, bundle_specs=None):
+            self.restored.append(session_id)
+            return FakeSandbox("restored-sandbox")
+
+    provider = RestoringProvider()
+    manager = EnvironmentManager(
+        sandbox_provider=provider,
+        layout_mounter=FakeLayout(),
+        content_mounters=[],
+        ttl_seconds=3600,
+    )
+
+    await manager.acquire("s1", mounts=[_bundle_mount("/mnt/skills/a/")])
+    await _sleep_tasks(manager)
+    second = await manager.acquire(
+        "s1",
+        mounts=[_bundle_mount("/mnt/skills/a/"), _bundle_mount("/mnt/skills/b/")],
+    )
+    await _sleep_tasks(manager)
+
+    # First acquire restored; mount change forced a fresh create (no restore).
+    assert provider.restored == ["s1"]
+    assert provider.created == ["sandbox-1"]
+    assert provider.killed == ["restored-sandbox"]
+    assert second.sandbox.sandbox_id == "sandbox-1"

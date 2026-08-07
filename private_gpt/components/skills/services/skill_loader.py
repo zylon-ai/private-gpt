@@ -16,17 +16,7 @@ from private_gpt.settings.settings import Settings
 
 @singleton
 class SkillLoader:
-    """Resolves active skills from a SkillFilter into storage-backed mounts.
-
-    Skill-specific knowledge (where skills live in storage, how to identify them)
-    is encapsulated here. The environment layer receives generic bundles and
-    does not need to know they came from skills.
-
-    Bundles are references (storage prefix + lazy fetch): when the execution
-    host can see the storage (s3fs mount or local storage dir), the skill is
-    bind-mounted directly with no copying; fetch() is only invoked by the
-    mounter's copy fallback.
-    """
+    """Resolves active skills from a SkillFilter into storage-backed mounts."""
 
     @inject
     def __init__(
@@ -43,16 +33,13 @@ class SkillLoader:
             bucket_name=settings.s3.durable_bucket_name,
         )
 
-    def mounts_for_versions(
-        self, versions: list[SkillVersionEntity]
-    ) -> list[Mount]:
+    def mounts_for_versions(self, versions: list[SkillVersionEntity]) -> list[Mount]:
         """Create storage-backed mounts from already-resolved skill versions.
 
-        Used by the skills interceptor to populate ``MountsLayer``
-        without a redundant ``recover_versions`` round-trip. Each skill is a
-        read-only directory mount at ``/mnt/skills/{name}/`` backed by the
-        skill's storage prefix; the folder is bind-mounted directly when the
-        host can see it, and ``fetch`` hydrates it only when it is absent.
+        Each skill is a read-only directory mount at ``/mnt/skills/{name}/``
+        backed by the skill's storage prefix; the folder is bind-mounted
+        directly when the host can see it, and ``fetch`` hydrates it only when
+        it is absent.
         """
         return [
             Mount(

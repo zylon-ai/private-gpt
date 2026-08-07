@@ -40,14 +40,15 @@ class Environment:
     workspace: str
     content_mounters: list[ContentMounter]
     last_accessed: float = field(default_factory=time.monotonic)
+    ttl_start: float = field(default_factory=time.monotonic)
+    last_renewed: float = field(default_factory=lambda: 0.0)
 
     def __post_init__(self) -> None:
         self._mounted: set[str] = set()
         self._pending: list[Mount] = []
         self._stale: bool = False
-        # Mount fingerprint this env was created with. Used by the manager to
-        # decide whether a reuse request changed mounts (then it recreates
-        # instead of materializing into a running container).
+        # Mount fingerprint this env was created with; used by the manager
+        # to detect mount changes on reuse.
         self._mount_keys: frozenset[tuple[object, ...]] = frozenset()
         self._sandbox_env: dict[str, str] = {}
 

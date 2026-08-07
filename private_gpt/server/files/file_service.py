@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 import magic  # ty:ignore[unresolved-import]
@@ -138,21 +138,52 @@ class FileService:
     # Session-scoped operations (namespace = "session", backward-compat)
     # ------------------------------------------------------------------
 
-    async def upload_file(self, scope_id: str, upload: UploadFile) -> FileMetadata:
+    async def upload_file(
+        self, scope_id: str, upload: UploadFile, path: str | None = None
+    ) -> FileMetadata:
         storage = self._require_storage()
         content = await upload.read()
         filename = upload.filename or "upload"
         mime_type = _detect_mime_from_bytes(content)
 
+        rel_path = self._normalize_upload_path(path=path, fallback=filename)
         prefix = self._uploads_prefix(scope_id)
-        await storage.write_file(prefix, filename, content, mime_type)
+        await storage.write_file(prefix, rel_path, content, mime_type)
 
-        file_info = await storage.stat_file(prefix, filename)
+        file_info = await storage.stat_file(prefix, rel_path)
         if file_info is None:
             raise HTTPException(
                 status_code=500, detail="File written but could not be read back."
             )
-        file_info = file_info.model_copy(update={"path": f"uploads/{filename}"})
+        file_info = file_info.model_copy(update={"path": f"uploads/{rel_path}"})
+        return self._to_metadata(file_info, scope_id)
+
+    async def put_file(
+        self,
+        scope_id: str,
+        path: str,
+        content: bytes,
+        mime_type: str | None = None,
+    ) -> FileMetadata:
+        """S3/blob-style put-object: store *content* at an arbitrary key.
+
+        The key is interpreted relative to the session's uploads mount (i.e.
+        ``/mnt/user-data/uploads/`` in the sandbox), so files pushed this way
+        stay visible to the agent and to the existing listing/download flows.
+        """
+        storage = self._require_storage()
+        rel_path = self._normalize_upload_path(path=path, fallback="upload")
+        prefix = self._uploads_prefix(scope_id)
+        await storage.write_file(
+            prefix, rel_path, content, mime_type or _detect_mime_from_bytes(content)
+        )
+
+        file_info = await storage.stat_file(prefix, rel_path)
+        if file_info is None:
+            raise HTTPException(
+                status_code=500, detail="File written but could not be read back."
+            )
+        file_info = file_info.model_copy(update={"path": f"uploads/{rel_path}"})
         return self._to_metadata(file_info, scope_id)
 
     async def list_files(
@@ -411,3 +442,40 @@ class FileService:
     def _validate_file_id(file_id: str) -> None:
         if ".." in file_id.split("/"):
             raise HTTPException(status_code=400, detail="Invalid file ID.")
+
+    @staticmethod
+    def _normalize_upload_path(path: str | None, fallback: str) -> str:
+        """Normalize and validate an object-storage-style upload key.
+
+        Keys are interpreted relative to the session's uploads mount. An
+        explicit ``uploads/`` prefix is accepted and stripped so callers can
+        pass the full storage key; ``../``, absolute paths and trailing
+        slashes are rejected (mirrors S3/blob put-object key rules).
+        """
+        rel = (path or "").strip()
+        if not rel:
+            rel = fallback
+        if rel.startswith("/"):
+            raise HTTPException(
+                status_code=400,
+                detail="path must be relative (no leading '/').",
+            )
+        if rel.endswith("/"):
+            raise HTTPException(
+                status_code=400,
+                detail="path must point to a file, not a directory (no trailing '/').",
+            )
+        parts = PurePosixPath(rel).parts
+        if ".." in parts:
+            raise HTTPException(
+                status_code=400,
+                detail="path must not contain '..' components.",
+            )
+        if parts and parts[0] == "uploads":
+            rel = "/".join(parts[1:])
+        if not rel:
+            raise HTTPException(
+                status_code=400,
+                detail="path must not be empty.",
+            )
+        return rel

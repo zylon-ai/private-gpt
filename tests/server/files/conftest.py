@@ -35,6 +35,10 @@ def volume_root(tmp_path: Path) -> Path:
 @pytest.fixture
 def files_client(injector: MockInjector, volume_root: Path) -> TestClient:
     """TestClient configured with a local session namespace and a mocked sandbox."""
+    # The default settings also register a 'skills' namespace; point it at an
+    # existing tmp dir so NamespaceRegistry does not fail at startup.
+    skills_root = volume_root / "skills_ns"
+    skills_root.mkdir(parents=True, exist_ok=True)
     injector.bind_settings(
         {
             "filesystems": {
@@ -42,6 +46,10 @@ def files_client(injector: MockInjector, volume_root: Path) -> TestClient:
                     "session": {
                         "root": str(volume_root),
                         "default_mode": "rw",
+                    },
+                    "skills": {
+                        "root": str(skills_root),
+                        "default_mode": "ro",
                     },
                 }
             },

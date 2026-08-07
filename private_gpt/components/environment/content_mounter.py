@@ -31,9 +31,7 @@ class ContentMounter(ABC):
     def can_handle(self, descriptor: Mount) -> bool:
         """Return True if this mounter can resolve this URI-backed mount."""
 
-    async def prepare_volume(
-        self, descriptor: Mount, session_id: str
-    ) -> Mount | None:
+    async def prepare_volume(self, descriptor: Mount, session_id: str) -> Mount | None:
         """Return a resolved Mount (host_path set) to bind at container creation.
 
         When non-None, the spec is wired into sandbox creation and materialize()
@@ -42,9 +40,7 @@ class ContentMounter(ABC):
         return None
 
     @abstractmethod
-    async def materialize(
-        self, descriptor: Mount, sandbox: SandboxSession
-    ) -> None:
+    async def materialize(self, descriptor: Mount, sandbox: SandboxSession) -> None:
         """Write the content into the live sandbox at descriptor.target.
 
         Called lazily just before the first exec() after the mount is
@@ -64,9 +60,7 @@ class FetchContentMounter(ContentMounter):
     def can_handle(self, descriptor: Mount) -> bool:
         return descriptor.uri_source is not None
 
-    async def materialize(
-        self, descriptor: Mount, sandbox: SandboxSession
-    ) -> None:
+    async def materialize(self, descriptor: Mount, sandbox: SandboxSession) -> None:
         if descriptor.uri_source is not None:
             files = await descriptor.uri_source.fetch()
             await sandbox.initialize_mount(descriptor.target, files)
@@ -79,10 +73,8 @@ class LocalStorageContentMounter(ContentMounter):
     already exist under the storage root and are bind-mounted directly.
     When storage_provider='s3', the local directory may be empty; in that
     case prepare_volume() fetches from the URI and caches the files locally
-    before returning the Mount — keeps the bind-mount the only write path so
-    callers never need to write to read-only container paths. For mounts
-    added lazily after container creation, materialize() re-fetches and
-    writes directly into the sandbox (bind-mounts cannot be added post-start).
+    before returning the Mount. For mounts added lazily after container
+    creation, materialize() re-fetches and writes directly into the sandbox.
     """
 
     def __init__(self, storage_root: Path) -> None:
@@ -91,9 +83,7 @@ class LocalStorageContentMounter(ContentMounter):
     def can_handle(self, descriptor: Mount) -> bool:
         return descriptor.uri_source is not None
 
-    async def prepare_volume(
-        self, descriptor: Mount, session_id: str
-    ) -> Mount | None:
+    async def prepare_volume(self, descriptor: Mount, session_id: str) -> Mount | None:
         from private_gpt.components.sandbox.mount import Mount
 
         if descriptor.uri_source is None:
@@ -120,9 +110,7 @@ class LocalStorageContentMounter(ContentMounter):
             etag=descriptor.etag,
         )
 
-    async def materialize(
-        self, descriptor: Mount, sandbox: SandboxSession
-    ) -> None:
+    async def materialize(self, descriptor: Mount, sandbox: SandboxSession) -> None:
         from private_gpt.components.sandbox.local import BashExecutorSandbox
 
         if descriptor.uri_source is None:

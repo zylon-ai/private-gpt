@@ -179,3 +179,151 @@ def test_list_namespaces_default_session(
     assert resp.status_code == 200
     names = [item["name"] for item in resp.json()["data"]]
     assert "session" in names
+
+
+# ---------------------------------------------------------------------------
+# Custom-path uploads (object-storage style) and S3/blob-style PUT
+# ---------------------------------------------------------------------------
+
+
+def test_upload_with_custom_path(
+    files_client: TestClient, volume_root: Path
+) -> None:
+    """POST /v1/files accepts a custom object-storage-style key."""
+    resp = files_client.post(
+        f"/v1/files?scope_id={_SESSION_ID}&path=data/2024/report.pdf",
+        files={"file": ("report.pdf", io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+    )
+    assert resp.status_code == 200, resp.text
+    meta = FileMetadata.model_validate(resp.json())
+    decoded = _decode_file_id(meta.id)
+    assert decoded == "/mnt/user-data/uploads/data/2024/report.pdf"
+    assert meta.filename == "report.pdf"
+    assert meta.downloadable is False
+    assert meta.scope.id == _SESSION_ID
+
+    stored = volume_root / "uploads" / _SESSION_ID / "data" / "2024" / "report.pdf"
+    assert stored.read_bytes() == _FILE_CONTENT
+
+
+def test_upload_with_uploads_prefix_is_normalized(
+    files_client: TestClient, volume_root: Path
+) -> None:
+    """An explicit `uploads/` prefix on path is accepted and not doubled."""
+    resp = files_client.post(
+        f"/v1/files?scope_id={_SESSION_ID}&path=uploads/data/2024/report.pdf",
+        files={"file": ("report.pdf", io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+    )
+    assert resp.status_code == 200, resp.text
+    decoded = _decode_file_id(resp.json()["id"])
+    assert decoded == "/mnt/user-data/uploads/data/2024/report.pdf"
+
+    stored = volume_root / "uploads" / _SESSION_ID / "data" / "2024" / "report.pdf"
+    assert stored.read_bytes() == _FILE_CONTENT
+    assert not (volume_root / "uploads" / _SESSION_ID / "uploads").exists()
+
+
+def test_upload_with_invalid_path_rejected(files_client: TestClient) -> None:
+    for bad in ("/abs/path.txt", "a/../b.txt", "dir/", ""):
+        resp = files_client.post(
+            f"/v1/files?scope_id={_SESSION_ID}&path={bad}",
+            files={"file": (_FILE_NAME, io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+        )
+        assert resp.status_code == 400, (bad, resp.text)
+
+
+def test_upload_custom_path_appears_in_listing(
+    files_client: TestClient,
+) -> None:
+    files_client.post(
+        f"/v1/files?scope_id={_SESSION_ID}&path=data/2024/report.pdf",
+        files={"file": ("report.pdf", io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+    )
+
+    resp = files_client.get(f"/v1/files?scope_id={_SESSION_ID}")
+    assert resp.status_code == 200
+    listing = FileListResponse.model_validate(resp.json())
+    ids = [_decode_file_id(f.id) for f in listing.data]
+    assert "/mnt/user-data/uploads/data/2024/report.pdf" in ids
+
+
+def test_delete_custom_path_file(files_client: TestClient) -> None:
+    upload_resp = files_client.post(
+        f"/v1/files?scope_id={_SESSION_ID}&path=data/2024/report.pdf",
+        files={"file": ("report.pdf", io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+    )
+    file_id = upload_resp.json()["id"]
+
+    del_resp = files_client.delete(_file_url(file_id, _SESSION_ID))
+    assert del_resp.status_code == 200, del_resp.text
+    assert files_client.get(_file_url(file_id, _SESSION_ID)).status_code == 404
+
+
+def test_put_object_s3_style(files_client: TestClient, volume_root: Path) -> None:
+    """PUT /v1/files/{key} stores raw bytes at the key (S3/blob style)."""
+    resp = files_client.put(
+        f"/v1/files/data/2024/report.pdf?scope_id={_SESSION_ID}",
+        content=_FILE_CONTENT,
+        headers={"Content-Type": "text/csv"},
+    )
+    assert resp.status_code == 200, resp.text
+    meta = FileMetadata.model_validate(resp.json())
+    assert _decode_file_id(meta.id) == "/mnt/user-data/uploads/data/2024/report.pdf"
+    assert meta.filename == "report.pdf"
+
+    stored = volume_root / "uploads" / _SESSION_ID / "data" / "2024" / "report.pdf"
+    assert stored.read_bytes() == _FILE_CONTENT
+
+    # Round-trips through the rest of the API: metadata, content, listing.
+    file_id = meta.id
+    assert files_client.get(_file_url(file_id, _SESSION_ID)).status_code == 200
+    content_resp = files_client.get(_file_url(file_id, _SESSION_ID, suffix="/content"))
+    assert content_resp.status_code == 200
+    assert content_resp.content == _FILE_CONTENT
+
+    listing = FileListResponse.model_validate(
+        files_client.get(f"/v1/files?scope_id={_SESSION_ID}").json()
+    )
+    assert any(_decode_file_id(f.id).endswith("report.pdf") for f in listing.data)
+
+
+def test_put_object_uploads_prefix_normalized(
+    files_client: TestClient, volume_root: Path
+) -> None:
+    resp = files_client.put(
+        f"/v1/files/uploads/data/2024/report.pdf?scope_id={_SESSION_ID}",
+        content=_FILE_CONTENT,
+    )
+    assert resp.status_code == 200, resp.text
+    assert _decode_file_id(resp.json()["id"]) == (
+        "/mnt/user-data/uploads/data/2024/report.pdf"
+    )
+    stored = volume_root / "uploads" / _SESSION_ID / "data" / "2024" / "report.pdf"
+    assert stored.read_bytes() == _FILE_CONTENT
+
+
+def test_put_object_invalid_path_rejected(files_client: TestClient) -> None:
+    for bad in ("/abs/path.txt", "a/../b.txt", "dir/"):
+        resp = files_client.put(
+            f"/v1/files/{bad}?scope_id={_SESSION_ID}",
+            content=_FILE_CONTENT,
+        )
+        assert resp.status_code == 400, (bad, resp.text)
+
+
+def test_put_object_to_namespace(files_namespaces_client: TestClient) -> None:
+    """PUT also works for non-session namespaces via PathResolver."""
+    resp = files_namespaces_client.put(
+        f"/v1/files/data/report.pdf?scope_id={_SESSION_ID}&namespace=artifacts",
+        content=_FILE_CONTENT,
+    )
+    assert resp.status_code == 200, resp.text
+    meta = FileMetadata.model_validate(resp.json())
+    assert meta.id == "data/report.pdf"
+    assert meta.namespace == "artifacts"
+
+    meta_resp = files_namespaces_client.get(
+        _file_url("data/report.pdf", _SESSION_ID) + "&namespace=artifacts"
+    )
+    assert meta_resp.status_code == 200, meta_resp.text
+    assert FileMetadata.model_validate(meta_resp.json()).id == "data/report.pdf"
