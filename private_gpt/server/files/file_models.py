@@ -184,3 +184,33 @@ class NamespaceListResponse(BaseModel):
         default_factory=list,
         description="Registered namespaces, sorted alphabetically by name.",
     )
+
+
+class DeletedPrefix(BaseModel):
+    """Confirmation that all files matching a prefix were deleted."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "prefix": "data/2024/",
+                    "deleted_count": 3,
+                    "type": "prefix_deleted",
+                }
+            ]
+        }
+    )
+
+    prefix: str = Field(
+        description="The key prefix that was deleted.",
+        examples=["data/2024/"],
+    )
+    deleted_count: int = Field(
+        description="Number of files actually removed.",
+        examples=[3],
+    )
+    type: Literal["prefix_deleted"] = Field(
+        default="prefix_deleted",
+        description="Object type discriminator, always 'prefix_deleted'.",
+        examples=["prefix_deleted"],
+    )

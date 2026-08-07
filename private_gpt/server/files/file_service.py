@@ -193,25 +193,43 @@ class FileService:
         after_id: str | None = None,
         before_id: str | None = None,
         namespace: str = _SESSION_NAMESPACE,
+        prefix: str | None = None,
     ) -> FileListResponse:
+        """List files, optionally filtered by a canonical path prefix.
+
+        The *prefix* is matched against the canonical upload key (relative to
+        the uploads mount, e.g. ``data/2024/``).  For the session namespace
+        both the ``uploads/`` and ``outputs/`` folder keys are checked against
+        the prefix.  An empty or absent prefix returns everything.
+        """
         # Namespace-aware: when not session, read from local FS via PathResolver
         if namespace != _SESSION_NAMESPACE:
-            return await self._list_namespace_files(scope_id, namespace, limit)
+            return await self._list_namespace_files(scope_id, namespace, limit, prefix)
 
         storage = self._require_storage()
+        norm_prefix = (prefix or "").strip().lstrip("/")
 
         uploads = await storage.list_files_meta(self._uploads_prefix(scope_id))
         outputs = await storage.list_files_meta(self._outputs_prefix(scope_id))
+
+        def _keep(storage_rel_path: str) -> bool:
+            if not norm_prefix:
+                return True
+            # storage_rel_path is already relative to folder/scope_id,
+            # e.g. "data/2024/report.pdf" -- match against the prefix directly
+            return storage_rel_path.startswith(norm_prefix)
 
         all_infos = sorted(
             [
                 *[
                     fi.model_copy(update={"path": f"uploads/{fi.path}"})
                     for fi in uploads
+                    if _keep(fi.path)
                 ],
                 *[
                     fi.model_copy(update={"path": f"outputs/{fi.path}"})
                     for fi in outputs
+                    if _keep(fi.path)
                 ],
             ],
             key=lambda fi: fi.created_at,
@@ -315,6 +333,55 @@ class FileService:
             )
         return DeletedFile(id=file_id)
 
+    async def delete_prefix(
+        self,
+        scope_id: str,
+        prefix: str,
+        namespace: str = _SESSION_NAMESPACE,
+    ) -> int:
+        """Delete every file whose upload key starts with *prefix*.
+
+        Returns the number of files actually deleted.  Only upload-side files
+        are affected (output files cannot be bulk-deleted through the API).
+        Works for both session storage (via ObjectStorage) and other namespaces
+        (via local PathResolver).
+        """
+        if namespace != _SESSION_NAMESPACE:
+            return await self._delete_namespace_prefix(scope_id, namespace, prefix)
+
+        norm = (prefix or "").strip().lstrip("/")
+        if not norm:
+            raise HTTPException(
+                status_code=400,
+                detail="prefix must be non-empty for bulk delete.",
+            )
+        storage = self._require_storage()
+        uploads = await storage.list_files_meta(self._uploads_prefix(scope_id))
+        targets = [fi.path for fi in uploads if fi.path.startswith(norm)]
+        count = 0
+        for rel_path in targets:
+            deleted = await storage.delete_file(
+                self._uploads_prefix(scope_id), rel_path
+            )
+            if deleted:
+                count += 1
+        return count
+
+    async def head_file(
+        self,
+        scope_id: str,
+        file_id: str,
+        namespace: str = _SESSION_NAMESPACE,
+    ) -> FileMetadata:
+        """Lightweight stat that avoids reading file bytes where possible.
+
+        For the session namespace this delegates to the underlying
+        ``stat_file`` on the ObjectStorage (which only reads metadata, not
+        content, on S3-compatible backends).  For namespace-backed paths it
+        falls back to the regular stat (local FS stat is always O(1)).
+        """
+        return await self.get_file_metadata(scope_id, file_id, namespace)
+
     # ------------------------------------------------------------------
     # Namespace-aware operations via PathResolver (local FS)
     # ------------------------------------------------------------------
@@ -391,18 +458,21 @@ class FileService:
         return content, mime, target.name
 
     async def _list_namespace_files(
-        self, scope: str, namespace: str, limit: int = 100
+        self, scope: str, namespace: str, limit: int = 100, prefix: str | None = None
     ) -> FileListResponse:
         ns_root = self._resolve_ns_path(namespace, scope, "")
         if not ns_root.exists():
             return FileListResponse(data=[])
         from datetime import UTC, datetime
 
+        norm_prefix = (prefix or "").strip().lstrip("/")
         files: list[FileMetadata] = []
         for entry in sorted(ns_root.rglob("*")):
             if not entry.is_file():
                 continue
             rel = str(entry.relative_to(ns_root))
+            if norm_prefix and not rel.startswith(norm_prefix):
+                continue
             content = entry.read_bytes()
             mime = _detect_mime_from_bytes(content)
             etag = _compute_etag(content)
@@ -437,6 +507,28 @@ class FileService:
             raise HTTPException(status_code=404, detail=f"File not found: {path!r}")
         target.unlink()
         return DeletedFile(id=path)
+
+    async def _delete_namespace_prefix(
+        self, scope: str, namespace: str, prefix: str
+    ) -> int:
+        norm = (prefix or "").strip().lstrip("/")
+        if not norm:
+            raise HTTPException(
+                status_code=400,
+                detail="prefix must be non-empty for bulk delete.",
+            )
+        ns_root = self._resolve_ns_path(namespace, scope, "")
+        if not ns_root.exists():
+            return 0
+        count = 0
+        for entry in list(ns_root.rglob("*")):
+            if not entry.is_file():
+                continue
+            rel = str(entry.relative_to(ns_root))
+            if rel.startswith(norm):
+                entry.unlink()
+                count += 1
+        return count
 
     @staticmethod
     def _validate_file_id(file_id: str) -> None:

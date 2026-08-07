@@ -5,6 +5,7 @@ from fastapi.responses import Response
 
 from private_gpt.server.files.file_models import (
     DeletedFile,
+    DeletedPrefix,
     FileListResponse,
     FileMetadata,
     NamespaceListResponse,
@@ -137,6 +138,54 @@ async def put_file(
     )
 
 
+@files_router.delete(
+    "",
+    response_model=DeletedPrefix,
+    summary="Delete all files matching a prefix (bulk delete)",
+    description=(
+        "S3/blob-style bulk delete: remove every uploaded file whose key starts "
+        "with *prefix* (e.g. `data/2024/` deletes all files in that virtual "
+        "folder). Only upload-side files are affected; sandbox output files "
+        "cannot be bulk-deleted. Returns the count of files actually removed. "
+        "Anthropic SDK callers can reach this via "
+        "`client.beta.files.with_raw_response` or a plain `httpx` call with "
+        "`extra_query={...prefix: data/2024/...}`."
+    ),
+    responses={
+        400: {"description": "prefix is missing or empty."},
+        503: {"description": "Files API not configured."},
+    },
+)
+async def delete_by_prefix(
+    request: Request,
+    scope_id: str = Query(
+        ...,
+        description="Session / container identifier.",
+        examples=["session-abc123"],
+    ),
+    prefix: str = Query(
+        ...,
+        description=(
+            "Key prefix to delete. All uploaded files whose relative path starts "
+            "with this string are removed. Must be non-empty. A trailing `/` is "
+            "recommended to avoid accidentally deleting sibling keys that share "
+            "the same prefix string (e.g. use `data/2024/` not `data/2024`)."
+        ),
+        examples=["data/2024/"],
+    ),
+    namespace: str = Query(
+        default="session",
+        description="Namespace to delete from. Defaults to 'session'.",
+        examples=["session"],
+    ),
+) -> DeletedPrefix:
+    service: FileService = request.state.injector.get(FileService)
+    count = await service.delete_prefix(
+        scope_id=scope_id, prefix=prefix, namespace=namespace
+    )
+    return DeletedPrefix(prefix=prefix, deleted_count=count)
+
+
 @files_router.get(
     "",
     response_model=FileListResponse,
@@ -176,6 +225,17 @@ async def list_files(
         description="Namespace to list files from. Defaults to 'session'.",
         examples=["session"],
     ),
+    prefix: str | None = Query(
+        default=None,
+        description=(
+            "Object-storage-style key prefix filter. When set, only files whose "
+            "key starts with this prefix are returned (e.g. `data/2024/` lists "
+            "everything uploaded under that virtual folder). Works like S3 "
+            "`list-objects-v2 --prefix`. The prefix is matched against the "
+            "relative upload key, not the full canonical path."
+        ),
+        examples=["data/2024/"],
+    ),
 ) -> FileListResponse:
     service: FileService = request.state.injector.get(FileService)
     return await service.list_files(
@@ -184,6 +244,7 @@ async def list_files(
         after_id=after_id,
         before_id=before_id,
         namespace=namespace,
+        prefix=prefix,
     )
 
 
@@ -219,15 +280,25 @@ async def get_file_content(
         description="Namespace the file belongs to. Defaults to 'session'.",
         examples=["session"],
     ),
+    disposition: str = Query(
+        default="attachment",
+        description=(
+            "Content-Disposition mode for the response: `attachment` (default, "
+            "browser download) or `inline` (open in browser / preview). "
+            "Corresponds to RFC 6266."
+        ),
+        examples=["attachment"],
+    ),
 ) -> Response:
     service: FileService = request.state.injector.get(FileService)
     content, mime_type, display_name = await service.get_file_content(
         scope_id=scope_id, file_id=file_id, namespace=namespace
     )
+    disp = "inline" if disposition.lower() == "inline" else "attachment"
     return Response(
         content=content,
         media_type=mime_type,
-        headers={"Content-Disposition": f'attachment; filename="{display_name}"'},
+        headers={"Content-Disposition": f'{disp}; filename="{display_name}"'},
     )
 
 
@@ -262,6 +333,55 @@ async def get_file_metadata(
     return await service.get_file_metadata(
         scope_id=scope_id, file_id=file_id, namespace=namespace
     )
+
+
+@files_router.head(
+    "/{file_id:path}",
+    summary="Check file existence and get metadata headers",
+    description=(
+        "Lightweight existence check and metadata retrieval. Returns the same "
+        "metadata as `GET /{file_id}` but as HTTP response headers and with no "
+        "body — useful for existence checks and ETag-based conditional requests "
+        "without transferring file content. Mirrors S3 `HeadObject` semantics. "
+        "Headers returned: `X-File-Id`, `X-File-Mime-Type`, `X-File-Size`, "
+        "`X-File-Etag`, `X-File-Namespace`, `X-File-Filename`, "
+        "`X-File-Created-At`."
+    ),
+    responses={
+        200: {"description": "File exists; metadata in response headers."},
+        404: {"description": "File not found."},
+    },
+)
+async def head_file(
+    request: Request,
+    file_id: str,
+    scope_id: str = Query(
+        ...,
+        description="Session / container identifier.",
+        examples=["session-abc123"],
+    ),
+    namespace: str = Query(
+        default="session",
+        description="Namespace the file belongs to. Defaults to 'session'.",
+        examples=["session"],
+    ),
+) -> Response:
+    service: FileService = request.state.injector.get(FileService)
+    meta = await service.head_file(
+        scope_id=scope_id, file_id=file_id, namespace=namespace
+    )
+    headers = {
+        "X-File-Id": meta.id,
+        "X-File-Filename": meta.filename,
+        "X-File-Mime-Type": meta.mime_type,
+        "X-File-Size": str(meta.size_bytes),
+        "X-File-Namespace": meta.namespace,
+        "X-File-Created-At": meta.created_at.isoformat(),
+    }
+    if meta.etag:
+        headers["X-File-Etag"] = meta.etag
+        headers["ETag"] = f'"{meta.etag}"'
+    return Response(status_code=200, headers=headers)
 
 
 @files_router.delete(

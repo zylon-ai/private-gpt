@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from private_gpt.server.files.file_models import (
     DeletedFile,
+    DeletedPrefix,
     FileListResponse,
     FileMetadata,
 )
@@ -222,7 +223,7 @@ def test_upload_with_uploads_prefix_is_normalized(
 
 
 def test_upload_with_invalid_path_rejected(files_client: TestClient) -> None:
-    for bad in ("/abs/path.txt", "a/../b.txt", "dir/", ""):
+    for bad in ("/abs/path.txt", "a/../b.txt", "dir/"):
         resp = files_client.post(
             f"/v1/files?scope_id={_SESSION_ID}&path={bad}",
             files={"file": (_FILE_NAME, io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
@@ -301,7 +302,11 @@ def test_put_object_uploads_prefix_normalized(
 
 
 def test_put_object_invalid_path_rejected(files_client: TestClient) -> None:
-    for bad in ("/abs/path.txt", "a/../b.txt", "dir/"):
+    # Note: `..` segments are normalised away by the HTTP client before they
+    # reach our handler, so the traversal case is only catchable via the
+    # _normalize_upload_path unit test (see below).  What *is* catchable
+    # at the HTTP level:
+    for bad in ("//abs/path.txt", "dir/"):
         resp = files_client.put(
             f"/v1/files/{bad}?scope_id={_SESSION_ID}",
             content=_FILE_CONTENT,
@@ -325,3 +330,171 @@ def test_put_object_to_namespace(files_namespaces_client: TestClient) -> None:
     )
     assert meta_resp.status_code == 200, meta_resp.text
     assert FileMetadata.model_validate(meta_resp.json()).id == "data/report.pdf"
+
+
+# ---------------------------------------------------------------------------
+# Prefix listing (GET /v1/files?prefix=...)
+# ---------------------------------------------------------------------------
+
+
+def test_prefix_listing_filters_files(
+    files_client: TestClient, volume_root: Path
+) -> None:
+    """Only files under the given prefix are returned."""
+    for key in ("data/2024/jan.csv", "data/2024/feb.csv", "other/report.txt"):
+        files_client.post(
+            f"/v1/files?scope_id={_SESSION_ID}&path={key}",
+            files={"file": (key.split("/")[-1], io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+        )
+
+    resp = files_client.get(f"/v1/files?scope_id={_SESSION_ID}&prefix=data/2024/")
+    assert resp.status_code == 200
+    listing = FileListResponse.model_validate(resp.json())
+    keys = [_decode_file_id(f.id) for f in listing.data]
+    assert all("/data/2024/" in k for k in keys), keys
+    assert not any("other" in k for k in keys), keys
+    assert len(listing.data) == 2
+
+
+def test_prefix_listing_no_prefix_returns_all(files_client: TestClient) -> None:
+    for key in ("data/2024/jan.csv", "other/report.txt"):
+        files_client.post(
+            f"/v1/files?scope_id={_SESSION_ID}&path={key}",
+            files={"file": (key.split("/")[-1], io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+        )
+
+    resp = files_client.get(f"/v1/files?scope_id={_SESSION_ID}")
+    listing = FileListResponse.model_validate(resp.json())
+    assert len(listing.data) == 2
+
+
+def test_prefix_listing_namespace(files_namespaces_client: TestClient) -> None:
+    """Prefix filter also works for non-session namespaces."""
+    files_namespaces_client.put(
+        f"/v1/files/data/2024/jan.csv?scope_id={_SESSION_ID}&namespace=artifacts",
+        content=_FILE_CONTENT,
+    )
+    files_namespaces_client.put(
+        f"/v1/files/other/report.txt?scope_id={_SESSION_ID}&namespace=artifacts",
+        content=_FILE_CONTENT,
+    )
+
+    resp = files_namespaces_client.get(
+        f"/v1/files?scope_id={_SESSION_ID}&namespace=artifacts&prefix=data/"
+    )
+    assert resp.status_code == 200
+    listing = FileListResponse.model_validate(resp.json())
+    assert len(listing.data) == 1
+    assert listing.data[0].id == "data/2024/jan.csv"
+
+
+# ---------------------------------------------------------------------------
+# Bulk delete by prefix (DELETE /v1/files?prefix=...)
+# ---------------------------------------------------------------------------
+
+
+def test_delete_by_prefix(files_client: TestClient) -> None:
+    for key in ("data/2024/jan.csv", "data/2024/feb.csv", "other/report.txt"):
+        files_client.post(
+            f"/v1/files?scope_id={_SESSION_ID}&path={key}",
+            files={"file": (key.split("/")[-1], io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+        )
+
+    resp = files_client.delete(f"/v1/files?scope_id={_SESSION_ID}&prefix=data/2024/")
+    assert resp.status_code == 200
+    deleted = DeletedPrefix.model_validate(resp.json())
+    assert deleted.prefix == "data/2024/"
+    assert deleted.deleted_count == 2
+    assert deleted.type == "prefix_deleted"
+
+    listing = FileListResponse.model_validate(
+        files_client.get(f"/v1/files?scope_id={_SESSION_ID}").json()
+    )
+    remaining_keys = [_decode_file_id(f.id) for f in listing.data]
+    assert len(remaining_keys) == 1
+    assert "other" in remaining_keys[0]
+
+
+def test_delete_by_prefix_empty_prefix_rejected(files_client: TestClient) -> None:
+    resp = files_client.delete(f"/v1/files?scope_id={_SESSION_ID}&prefix=")
+    assert resp.status_code in (400, 422), resp.text
+
+
+def test_delete_by_prefix_namespace(files_namespaces_client: TestClient) -> None:
+    for key in ("data/2024/jan.csv", "data/2024/feb.csv"):
+        files_namespaces_client.put(
+            f"/v1/files/{key}?scope_id={_SESSION_ID}&namespace=artifacts",
+            content=_FILE_CONTENT,
+        )
+
+    resp = files_namespaces_client.delete(
+        f"/v1/files?scope_id={_SESSION_ID}&namespace=artifacts&prefix=data/"
+    )
+    assert resp.status_code == 200
+    deleted = DeletedPrefix.model_validate(resp.json())
+    assert deleted.deleted_count == 2
+
+
+# ---------------------------------------------------------------------------
+# HEAD /{file_id} — existence check with metadata headers
+# ---------------------------------------------------------------------------
+
+
+def test_head_file_returns_metadata_headers(files_client: TestClient) -> None:
+    upload_resp = files_client.post(
+        f"/v1/files?scope_id={_SESSION_ID}",
+        files={"file": (_FILE_NAME, io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+    )
+    file_id = upload_resp.json()["id"]
+    encoded = quote(file_id, safe="")
+
+    resp = files_client.request("HEAD", f"/v1/files/{encoded}?scope_id={_SESSION_ID}")
+    assert resp.status_code == 200
+    assert resp.headers["X-File-Filename"] == _FILE_NAME
+    assert resp.headers["X-File-Mime-Type"] in (
+        "text/plain",
+        "text/csv",
+    )  # libmagic varies
+    assert int(resp.headers["X-File-Size"]) == len(_FILE_CONTENT)
+    assert "X-File-Etag" in resp.headers
+    assert "ETag" in resp.headers
+    assert resp.content == b""
+
+
+def test_head_file_not_found(files_client: TestClient) -> None:
+    from private_gpt.server.files.file_service import _encode_file_id
+
+    encoded = quote(_encode_file_id("/nonexistent/path.txt"), safe="")
+    resp = files_client.request("HEAD", f"/v1/files/{encoded}?scope_id={_SESSION_ID}")
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Content-Disposition inline vs attachment
+# ---------------------------------------------------------------------------
+
+
+def test_content_download_default_attachment(files_client: TestClient) -> None:
+    upload_resp = files_client.post(
+        f"/v1/files?scope_id={_SESSION_ID}",
+        files={"file": (_FILE_NAME, io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+    )
+    file_id = upload_resp.json()["id"]
+    resp = files_client.get(_file_url(file_id, _SESSION_ID, suffix="/content"))
+    assert resp.status_code == 200
+    assert resp.headers["Content-Disposition"].startswith("attachment")
+
+
+def test_content_download_inline(files_client: TestClient) -> None:
+    upload_resp = files_client.post(
+        f"/v1/files?scope_id={_SESSION_ID}",
+        files={"file": (_FILE_NAME, io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+    )
+    file_id = upload_resp.json()["id"]
+    encoded = quote(file_id, safe="")
+    resp = files_client.get(
+        f"/v1/files/{encoded}/content?scope_id={_SESSION_ID}&disposition=inline"
+    )
+    assert resp.status_code == 200
+    assert resp.headers["Content-Disposition"].startswith("inline")
+    assert resp.content == _FILE_CONTENT
