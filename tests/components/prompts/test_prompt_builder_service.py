@@ -693,11 +693,12 @@ def test_create_code_execution_prompt_contains_paths(
     prompt = prompt_builder.create_code_execution_prompt(tools)
     formatted = prompt.format()
     assert formatted != ""
+    # All layout entries (workspace, uploads, outputs, skills) appear uniformly
     for mount in DEFAULT_SESSION_LAYOUT:
         assert mount.target in formatted
         assert mount.access in formatted
         assert mount.description in formatted
-    assert "/mnt/skills/" in formatted
+    assert "/mnt/skills/" in formatted  # skills mount included in the layout
 
 
 def test_create_code_execution_prompt_no_code_execution_tool(

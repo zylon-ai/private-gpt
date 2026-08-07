@@ -550,17 +550,24 @@ class PromptBuilderService:
         Returns an empty template when the template is missing or rendering fails.
         """
         from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
+        from private_gpt.components.sandbox.mount import Mount
         from private_gpt.components.skills.paths import SKILLS_MOUNT_ROOT
 
         namespace = _build_tool_namespace(tools)
         template_path = "chat/tools/bash.j2"
+        skills_mount = Mount(
+            name="skills",
+            target=SKILLS_MOUNT_ROOT,
+            access="ro",
+            description="Mounted skill content (one sub-directory per loaded skill)",
+        )
+        layout = (*DEFAULT_SESSION_LAYOUT, skills_mount)
         try:
             template = self.template_service.get_template(template_path)
             rendered = template.render(
                 namespace=namespace,
                 few_shots=str(few_shots),
-                layout=DEFAULT_SESSION_LAYOUT,
-                skills_prefix=SKILLS_MOUNT_ROOT,
+                layout=layout,
             )
             return PromptTemplate(template=rendered.strip())
         except Exception as exc:
