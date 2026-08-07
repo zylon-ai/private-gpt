@@ -625,7 +625,6 @@ class ResolvedContextConfig(ContextConfig):
             "A change in this set recreates the sandbox instead of "
             "materializing files into the running container."
         ),
-        exclude=True,
     )
 
 

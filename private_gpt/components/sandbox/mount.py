@@ -6,7 +6,7 @@ from typing import Literal
 from urllib.parse import urlparse
 
 import anyio
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 AccessMode = Literal["rw", "ro"]
 
@@ -21,6 +21,19 @@ class MountFile(BaseModel):
     path: str  # relative to the mount folder, e.g. "SKILL.md"
     content: bytes
     permissions: int = 0o444  # Unix permissions
+
+
+def _fetch_from_uri(uri: str) -> Callable[[], Awaitable[list[MountFile]]]:
+    """Build the default fetch for a URI-backed mount: load bytes from the URI."""
+
+    async def fetch() -> list[MountFile]:
+        from private_gpt.server.ingest.uri_loader import load_file_from_uri
+
+        binary = await anyio.to_thread.run_sync(load_file_from_uri, uri)
+        filename = Path(urlparse(uri).path).name or "file"
+        return [MountFile(path=filename, content=binary.read(), permissions=0o444)]
+
+    return fetch
 
 
 class UriSource(BaseModel):
@@ -39,24 +52,22 @@ class UriSource(BaseModel):
     uri: str
     fetch: Callable[[], Awaitable[list[MountFile]]] = Field(exclude=True)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _restore_fetch(cls, data: object) -> object:
+        """Recreate the excluded fetch callable when a UriSource is rebuilt."""
+        if isinstance(data, dict) and "fetch" not in data and data.get("uri"):
+            return {**data, "fetch": _fetch_from_uri(data["uri"])}
+        return data
+
     @classmethod
     def from_uri(cls, uri: str) -> UriSource:
         """Build a UriSource whose fetch loads bytes via the generic URI loader."""
-
-        async def fetch() -> list[MountFile]:
-            from private_gpt.server.ingest.uri_loader import load_file_from_uri
-
-            binary = await anyio.to_thread.run_sync(load_file_from_uri, uri)
-            filename = Path(urlparse(uri).path).name or "file"
-            return [MountFile(path=filename, content=binary.read(), permissions=0o444)]
-
-        return cls(uri=uri, fetch=fetch)
+        return cls(uri=uri, fetch=_fetch_from_uri(uri))
 
 
 class Mount(BaseModel):
     """A directory visible inside a sandbox.
-
-    This is the one mount model used across the platform after resolution.
 
     - ``target``: where the directory appears in the sandbox (ends with "/").
     - ``access``: "rw" or "ro".

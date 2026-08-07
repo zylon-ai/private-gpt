@@ -105,7 +105,8 @@ class PathTranslator:
             for mount in self._mounts:
                 if canonical == mount.target:
                     assert mount.host_path is not None  # filtered in __init__
-                    return str(mount.host_path)
+                    host = str(mount.host_path)
+                    return host.rstrip("/") + "/" if canonical.endswith("/") else host
             return canonical  # should never happen
 
         return self._canonical_re.sub(_replace, command)
