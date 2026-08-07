@@ -411,9 +411,7 @@ runtime-evaluated-decorators = ["injector.inject"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["D"]
 "private_gpt/components/filesystems/mount_ref_resolver.py" = ["TC001"]
-"private_gpt/components/filesystems/callbacks/*.py" = ["TC001"]
 "tests/components/filesystems/test_mount_ref_resolver.py" = ["TC003"]
-"tests/components/filesystems/callbacks/*.py" = ["TC001", "TC003"]
 
 [tool.ty.environment]
 python-version = "3.11"
