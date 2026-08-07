@@ -44,11 +44,8 @@ class NamespaceRegistry:
                 continue
 
             root = Path(cfg.root)
-            if not root.exists():
-                raise RuntimeError(
-                    f"Namespace '{name}': configured root '{cfg.root}' does not exist. "
-                    "Ensure the mount is available before starting."
-                )
+            root.mkdir(exist_ok=True, parents=True)
+
             if not os.access(str(root), os.R_OK):
                 raise RuntimeError(
                     f"Namespace '{name}': configured root '{cfg.root}' is not readable."
