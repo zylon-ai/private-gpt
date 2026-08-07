@@ -25,6 +25,7 @@ def _clean_distributed_state() -> None:
     _dist._fallback_locks.clear()
     _dist._fallback_activity.clear()
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -561,6 +562,6 @@ async def test_fingerprint_passed_to_create_and_restore() -> None:
     )
     await _sleep_tasks(manager)
 
-    assert provider.fingerprints == [manager._fingerprint(
-        [_bundle_mount("/mnt/skills/a/")], {"TOKEN": "x"}
-    )]
+    assert provider.fingerprints == [
+        manager._fingerprint([_bundle_mount("/mnt/skills/a/")], {"TOKEN": "x"})
+    ]

@@ -3,11 +3,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Callable, Coroutine
 
     from private_gpt.components.environment.content_mounter import ContentMounter
     from private_gpt.components.sandbox.base import (
@@ -54,7 +55,7 @@ class Environment:
     # Optional async callback used to publish activity to the shared
     # last-activity clock (set by the EnvironmentManager when a distributed
     # coordinator is available).
-    activity_sink: Callable[[str], Awaitable[None]] | None = None
+    activity_sink: Callable[[str], Coroutine[None, None, None]] | None = None
 
     def __post_init__(self) -> None:
         self._mounted: set[str] = set()
@@ -69,14 +70,15 @@ class Environment:
     def touch(self) -> None:
         now = time.monotonic()
         self.last_accessed = now
-        if self.activity_sink is not None and now - self._last_shared_touch >= _ACTIVITY_THROTTLE_SECONDS:
+        if (
+            self.activity_sink is not None
+            and now - self._last_shared_touch >= _ACTIVITY_THROTTLE_SECONDS
+        ):
             self._last_shared_touch = now
-            try:
+            with suppress(RuntimeError):
                 # Best-effort, fire-and-forget: the shared clock is used by
                 # the reaper on OTHER pods/workers.
                 asyncio.get_running_loop().create_task(self.activity_sink(self.id))
-            except RuntimeError:
-                pass
 
     def idle_seconds(self, now: float) -> float:
         return now - self.last_accessed

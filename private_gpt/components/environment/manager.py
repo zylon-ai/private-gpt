@@ -72,17 +72,16 @@ class EnvironmentManager:
         # Serialize per session_id so concurrent calls cannot race into
         # creating two backend sandboxes for the same session (one would leak).
         creation_lock = await self._creation_lock(session_id)
-        async with creation_lock:
-            # Cross-process serialisation: only one worker may create/restore/
-            # kill the session's container at a time.
-            async with self._coordinator.session_lock(session_id) as locked:
-                if not locked:
-                    logger.warning(
-                        "Could not acquire distributed lock for session %s; "
-                        "proceeding with local coordination only",
-                        session_id,
-                    )
-                return await self._acquire_locked(session_id, mounts, sandbox_env)
+        # Cross-process serialisation: only one worker may create/restore/
+        # kill the session's container at a time.
+        async with creation_lock, self._coordinator.session_lock(session_id) as locked:
+            if not locked:
+                logger.warning(
+                    "Could not acquire distributed lock for session %s; "
+                    "proceeding with local coordination only",
+                    session_id,
+                )
+            return await self._acquire_locked(session_id, mounts, sandbox_env)
 
     async def _acquire_locked(
         self,
@@ -317,9 +316,7 @@ class EnvironmentManager:
         return next((m for m in self._content_mounters if m.can_handle(mount)), None)
 
     @staticmethod
-    def _fingerprint(
-        mounts: list[Mount], sandbox_env: dict[str, str] | None
-    ) -> str:
+    def _fingerprint(mounts: list[Mount], sandbox_env: dict[str, str] | None) -> str:
         """Stable, cross-process fingerprint of requested mounts + env.
 
         Must be byte-identical on every pod for the same input so it can be
@@ -425,8 +422,10 @@ class EnvironmentManager:
                 logger.exception("Environment reaper iteration failed")
 
     async def _reap_once(self) -> None:
-        """Kill sandboxes idle past the TTL (idle locally and on the shared
-        last-activity clock)."""
+        """Kill sandboxes idle past the TTL.
+
+        Kills sandboxes that are idle locally and on the shared last-activity clock.
+        """
         now_mono = time.monotonic()
         now_wall = time.time()
         expired: list[tuple[str, Environment]] = []

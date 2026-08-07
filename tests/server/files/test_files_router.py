@@ -186,9 +186,7 @@ def test_list_namespaces_default_session(
 # ---------------------------------------------------------------------------
 
 
-def test_upload_with_custom_path(
-    files_client: TestClient, volume_root: Path
-) -> None:
+def test_upload_with_custom_path(files_client: TestClient, volume_root: Path) -> None:
     """POST /v1/files accepts a custom object-storage-style key."""
     resp = files_client.post(
         f"/v1/files?scope_id={_SESSION_ID}&path=data/2024/report.pdf",

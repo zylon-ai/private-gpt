@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
-import anyio
 from pydantic import BaseModel, Field, model_validator
 
 AccessMode = Literal["rw", "ro"]
@@ -27,9 +26,11 @@ def _fetch_from_uri(uri: str) -> Callable[[], Awaitable[list[MountFile]]]:
     """Build the default fetch for a URI-backed mount: load bytes from the URI."""
 
     async def fetch() -> list[MountFile]:
+        import asyncio
+
         from private_gpt.server.ingest.uri_loader import load_file_from_uri
 
-        binary = await anyio.to_thread.run_sync(load_file_from_uri, uri)
+        binary = await asyncio.to_thread(load_file_from_uri, uri)
         filename = Path(urlparse(uri).path).name or "file"
         return [MountFile(path=filename, content=binary.read(), permissions=0o444)]
 
@@ -56,8 +57,12 @@ class UriSource(BaseModel):
     @classmethod
     def _restore_fetch(cls, data: object) -> object:
         """Recreate the excluded fetch callable when a UriSource is rebuilt."""
-        if isinstance(data, dict) and "fetch" not in data and data.get("uri"):
-            return {**data, "fetch": _fetch_from_uri(data["uri"])}
+        if (
+            isinstance(data, dict)
+            and "fetch" not in data
+            and (uri_val := data.get("uri"))
+        ):
+            return {**data, "fetch": _fetch_from_uri(str(uri_val))}
         return data
 
     @classmethod

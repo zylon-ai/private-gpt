@@ -54,7 +54,7 @@ async def test_session_lock_serialises_other_owner() -> None:
     try:
         await asyncio.wait_for(asyncio.shield(t2), timeout=0.1)
         raise AssertionError("waiter acquired the lock while holder held it")
-    except asyncio.TimeoutError:
+    except TimeoutError:
         pass
 
     await t1
@@ -90,9 +90,8 @@ async def test_session_lock_yields_false_when_never_released() -> None:
 
     ctx = await _lock_wait(0.15)
     try:
-        async with c1.session_lock("s3"):
-            async with c2.session_lock("s3") as ok:
-                assert ok is False
+        async with c1.session_lock("s3"), c2.session_lock("s3") as ok:
+            assert ok is False
     finally:
         await ctx.__aexit__(None, None, None)
 

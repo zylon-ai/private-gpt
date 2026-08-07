@@ -13,10 +13,13 @@ import logging
 import time
 import uuid
 from contextlib import asynccontextmanager, suppress
-from typing import TYPE_CHECKING, AsyncIterator
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from redis.asyncio import Redis
+    from redis_semaphore_async import Semaphore
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +60,7 @@ class DistributedCoordinator:
         self._redis: Redis | None = None
         self._redis_attempted = False
         self._warned = False
-        self._semaphores: dict[str, object] = {}
+        self._semaphores: dict[str, Semaphore] = {}
 
     @property
     def instance_id(self) -> str:
@@ -100,12 +103,15 @@ class DistributedCoordinator:
     # Per-session lock
     # ------------------------------------------------------------------
 
-    def _semaphore(self, session_id: str) -> object:
+    def _semaphore(self, session_id: str) -> Semaphore:
         """Redis semaphore mutex for the session (redis_semaphore_async)."""
         from redis_semaphore_async import Semaphore  # type: ignore[import-untyped]
 
         sem = self._semaphores.get(session_id)
         if sem is None:
+            assert self._redis is not None, (
+                "Redis must be connected before creating semaphore"
+            )
             sem = Semaphore(
                 redis=self._redis,
                 task_name=f"sandbox:{session_id}",

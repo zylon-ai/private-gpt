@@ -1106,6 +1106,359 @@ async def test_code_execution_expand_and_is_usable(
     assert len(tool_results) == 2, f"Expected 2 tool_result, got {len(tool_results)}"
 
 
+def _code_execution_body(
+    *,
+    container: str,
+    mounts: list[dict[str, Any]] | None = None,
+    stream: bool = False,
+    messages: list[dict[str, Any]] | None = None,
+    tool_context: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "messages": messages or [{"content": "use code execution", "role": "user"}],
+        "tools": [
+            {
+                "name": "code_execution",
+                "type": "code_execution_v1",
+                "input_schema": {"type": "object", "properties": {}},
+            }
+        ],
+        "system": [{"extensions": ["zylon"]}],
+        "container": container,
+        "stream": stream,
+    }
+    if mounts is not None:
+        body["mounts"] = mounts
+    if tool_context is not None:
+        body["tool_context"] = tool_context
+    return body
+
+
+def _sse_events(raw: str) -> list[dict[str, Any]]:
+    """Parse the data payloads of an SSE stream."""
+    events: list[dict[str, Any]] = []
+    for chunk in raw.split("\n\n"):
+        if not chunk.strip():
+            continue
+        for line in chunk.split("\n"):
+            if line.startswith("data: "):
+                events.append(json.loads(line[len("data: ") :]))
+                break
+    return events
+
+
+def _sse_tool_result_texts(raw: str) -> str:
+    texts: list[str] = []
+    for event in _sse_events(raw):
+        if event.get("type") != "content_block_start":
+            continue
+        block = event.get("content_block") or {}
+        if block.get("type") == "tool_result":
+            for content in block.get("content") or []:
+                if content.get("type") == "text" and content.get("text"):
+                    texts.append(content["text"])
+    return "\n".join(texts)
+
+
+def _sse_container_id(raw: str) -> str | None:
+    for event in _sse_events(raw):
+        if event.get("type") == "message_delta":
+            container = (event.get("delta") or {}).get("container")
+            if container:
+                return container.get("id")
+    return None
+
+
+def _message_tool_result_texts(completion: Message) -> str:
+    texts: list[str] = []
+    for block in completion.content or []:
+        if isinstance(block, ToolResultBlock):
+            for content in block.content:
+                text = getattr(content, "text", None)
+                if text:
+                    texts.append(text)
+    return "\n".join(texts)
+
+
+@pytest.fixture
+def allow_file_uri_scheme(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Resolve ``file://`` mount URIs to local paths for this test only.
+
+    Production deployments resolve mount URIs against a remote object store
+    (``s3://``, ``https://``); the test environment has no such store, so the
+    ``file://`` scheme is allowed and mapped onto the local filesystem.
+    """
+    from urllib.parse import urlparse
+
+    import private_gpt.components.sandbox.mount as mount_module
+
+    original_from_uri = mount_module.UriSource.from_uri.__func__
+
+    def _local(uri: str) -> str:
+        return urlparse(uri).path if uri.startswith("file://") else uri
+
+    def from_uri(cls: type[Any], uri: str) -> Any:
+        return original_from_uri(cls, _local(uri))
+
+    monkeypatch.setattr(mount_module.UriSource, "from_uri", classmethod(from_uri))
+
+
+def _skill_md(name: str, description: str, body: str) -> bytes:
+    return f'---\nname: {name}\ndescription: "{description}"\n---\n\n{body}\n'.encode()
+
+
+async def _create_skill(
+    async_test_client: AsyncClient,
+    *,
+    collection: str,
+    name: str,
+    body: str | None = None,
+) -> None:
+    response = await async_test_client.post(
+        "/v1/skills",
+        data={"display_title": name, "collection": collection, "loading": "lazy"},
+        files=[
+            (
+                "files",
+                (
+                    "SKILL.md",
+                    _skill_md(
+                        name=name,
+                        description=f"{name} description",
+                        body=body or f"{name} body",
+                    ),
+                    "text/markdown",
+                ),
+            )
+        ],
+    )
+    assert response.status_code == 200, response.text
+
+
+def _assistant_load_history(skill_name: str) -> dict[str, Any]:
+    payload = {
+        "name": skill_name,
+        "loaded": True,
+        "skill_id": "dummy",
+        "version": "dummy",
+    }
+    return {
+        "role": "assistant",
+        "content": [
+            {
+                "type": "tool_use",
+                "id": "tu_load",
+                "name": "load_skill",
+                "input": {"name": skill_name},
+            },
+            {
+                "type": "tool_result",
+                "tool_use_id": "tu_load",
+                "content": [{"type": "text", "text": json.dumps(payload)}],
+            },
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_code_execution_reuses_sandbox_across_inferences_with_same_container(
+    async_test_client: AsyncClient,
+    injector: MockInjector,
+) -> None:
+    container = f"code-exec-reuse-{uuid.uuid4()}"
+
+    # First inference: create a file in the sandbox workspace.
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="call_create",
+                    tool_name="create",
+                    tool_kwargs={"path": "state.txt", "file_text": "persisted-data"},
+                )
+            ],
+            ["done"],
+        ],
+    )
+    first = await async_test_client.post(
+        "/v1/messages",
+        json=_code_execution_body(container=container, stream=True),
+    )
+    assert first.status_code == 200
+    assert "Created" in _sse_tool_result_texts(first.text)
+    assert _sse_container_id(first.text) == container
+
+    # Second inference with the same container id: the sandbox is reused, so
+    # the file written by the first inference is still readable.
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="call_view",
+                    tool_name="view",
+                    tool_kwargs={"path": "state.txt"},
+                )
+            ],
+            ["done"],
+        ],
+    )
+    second = await async_test_client.post(
+        "/v1/messages",
+        json=_code_execution_body(container=container, stream=True),
+    )
+    assert second.status_code == 200
+    assert "persisted-data" in _sse_tool_result_texts(second.text)
+    assert _sse_container_id(second.text) == container
+
+
+@pytest.mark.anyio
+async def test_code_execution_uri_mount_recreated_when_mounts_change(
+    async_test_client: AsyncClient,
+    injector: MockInjector,
+    tmp_path: Any,
+    allow_file_uri_scheme: None,
+) -> None:
+    first_source = tmp_path / "first"
+    first_source.mkdir()
+    (first_source / "notes.txt").write_text("FIRST MOUNT\n")
+
+    second_source = tmp_path / "second"
+    second_source.mkdir()
+    (second_source / "other.txt").write_text("SECOND MOUNT\n")
+
+    container = f"code-exec-mount-{uuid.uuid4()}"
+
+    # First inference: mount a directory by URL and read it from the sandbox.
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="call_view",
+                    tool_name="view",
+                    tool_kwargs={"path": "/mnt/user-data/notes.txt"},
+                )
+            ],
+            ["done"],
+        ],
+    )
+    first = await async_test_client.post(
+        "/v1/messages",
+        json=_code_execution_body(
+            container=container,
+            mounts=[
+                {
+                    "namespace": "artifacts",
+                    "scope": "org-1",
+                    "path": "notes",
+                    "target": "/mnt/user-data/notes.txt",
+                    "mode": "ro",
+                    "uri": f"file://{first_source}",
+                }
+            ],
+            stream=True,
+        ),
+    )
+    assert first.status_code == 200
+    assert "FIRST MOUNT" in _sse_tool_result_texts(first.text)
+    assert _sse_container_id(first.text) == container
+
+    # Second inference with the same container but a changed mount list: the
+    # sandbox is killed and recreated, so the previous mount is gone and the
+    # new one is wired into the fresh sandbox.
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="call_old",
+                    tool_name="view",
+                    tool_kwargs={"path": "/mnt/user-data/notes.txt"},
+                )
+            ],
+            [
+                ToolSelection(
+                    tool_id="call_new",
+                    tool_name="view",
+                    tool_kwargs={"path": "/mnt/user-data/other.txt"},
+                )
+            ],
+            ["done"],
+        ],
+    )
+    second = await async_test_client.post(
+        "/v1/messages",
+        json=_code_execution_body(
+            container=container,
+            mounts=[
+                {
+                    "namespace": "artifacts",
+                    "scope": "org-2",
+                    "path": "other",
+                    "target": "/mnt/user-data/other.txt",
+                    "mode": "ro",
+                    "uri": f"file://{second_source}",
+                }
+            ],
+            stream=True,
+        ),
+    )
+    assert second.status_code == 200
+    results = _sse_tool_result_texts(second.text)
+    assert "FIRST MOUNT" not in results
+    assert "File not found" in results
+    assert "SECOND MOUNT" in results
+    assert _sse_container_id(second.text) == container
+
+
+@pytest.mark.anyio
+async def test_code_execution_mounts_loaded_skill_files(
+    async_test_client: AsyncClient,
+    injector: MockInjector,
+) -> None:
+    collection = str(uuid.uuid4())
+    skill_name = "code-exec-skill"
+    await _create_skill(
+        async_test_client,
+        collection=collection,
+        name=skill_name,
+        body="SKILL BODY SENTINEL",
+    )
+
+    await mock_llm(
+        injector,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="call_view",
+                    tool_name="view",
+                    tool_kwargs={"path": f"/mnt/skills/{skill_name}/SKILL.md"},
+                )
+            ],
+            ["done"],
+        ],
+    )
+    response = await async_test_client.post(
+        "/v1/messages",
+        json=_code_execution_body(
+            container=f"code-exec-skill-{uuid.uuid4()}",
+            messages=[
+                _assistant_load_history(skill_name),
+                {"role": "user", "content": "read the loaded skill"},
+            ],
+            tool_context=[
+                {"type": "skill", "skill_filter": {"collection": collection}}
+            ],
+        ),
+    )
+    assert response.status_code == 200
+    completion = Message.model_validate(response.json())
+    result_text = _message_tool_result_texts(completion)
+    assert "SKILL BODY SENTINEL" in result_text
+
+
 @pytest.mark.anyio
 async def test_chat_body_validation_mismatched_tool_ids(
     async_test_client: AsyncClient,
