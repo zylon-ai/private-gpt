@@ -623,6 +623,10 @@ class LocalResourceBlock(BaseContentBlock, StandardContentProtocol):
         default=None,
         description="Base64url-encoded storage file ID used to download the file via the files API",
     )
+    etag: str | None = Field(
+        default=None,
+        description="Optional file version identifier used to avoid redundant downloads.",
+    )
     name: str = Field(description="Human-readable file name (stem, without extension)")
     mime_type: str = Field(description="MIME type of the file")
 

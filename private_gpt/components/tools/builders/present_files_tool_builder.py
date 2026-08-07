@@ -19,6 +19,7 @@ from private_gpt.components.tools.tool_names import PRESENT_FILES_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import PRESENT_FILES_TOOL_FN
 from private_gpt.di import get_global_injector
 from private_gpt.events.models import LocalResourceBlock, TextBlock
+from private_gpt.server.files.file_service import FileService
 
 if TYPE_CHECKING:
     from private_gpt.components.sandbox.mount import Mount
@@ -48,8 +49,13 @@ def _encode_file_id(path: str) -> str:
 @singleton
 class PresentFilesToolBuilder:
     @inject
-    def __init__(self, code_execution_component: CodeExecutionComponent) -> None:
+    def __init__(
+        self,
+        code_execution_component: CodeExecutionComponent,
+        file_service: FileService,
+    ) -> None:
         self._component = code_execution_component
+        self._file_service = file_service
 
     async def build_tool(
         self,
@@ -70,10 +76,23 @@ class PresentFilesToolBuilder:
                         mime_type = _EXTENSION_MIME_FALLBACKS.get(
                             suffix, "application/octet-stream"
                         )
+                    file_id = _encode_file_id(filepath)
+                    try:
+                        metadata = await self._file_service.head_file(
+                            scope_id=session_id,
+                            file_id=file_id,
+                        )
+                        etag = metadata.etag
+                    except Exception:
+                        # Presentation must remain compatible with file services
+                        # that cannot provide metadata. Without an ETag the
+                        # consumer falls back to downloading for correctness.
+                        etag = None
                     blocks.append(
                         LocalResourceBlock(
                             file_path=filepath,
-                            file_id=_encode_file_id(filepath),
+                            file_id=file_id,
+                            etag=etag,
                             name=Path(filepath).stem,
                             mime_type=mime_type,
                         )

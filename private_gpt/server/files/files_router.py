@@ -43,11 +43,12 @@ async def list_namespaces(
     response_model=FileMetadata,
     summary="Upload a file",
     description=(
-        "Upload a file into the session's uploads directory. "
-        "By default the file is stored under `uploads/{filename}` within the session "
-        "scope; pass `path` to push it to a custom object-storage-style key "
-        "(e.g. `data/2024/report.pdf`), relative to the uploads mount "
-        "(`/mnt/user-data/uploads/` inside the sandbox). "
+        "Upload a file into the session's filesystem. "
+        "By default the file is stored under `uploads/{filename}` (input) within the "
+        "session scope; pass `path` to push it to a custom object-storage-style key "
+        "(e.g. `data/2024/report.pdf`) relative to the uploads mount, or prefix the "
+        "key with `outputs/` to write into the sandbox output folder "
+        "(`/mnt/user-data/outputs/` inside the sandbox). "
         "The relative path is returned as the file ID. "
         "Uploading a file to an existing key overwrites it."
     ),
@@ -63,11 +64,12 @@ async def upload_file(
     path: str | None = Query(
         default=None,
         description=(
-            "Object-storage-style key for the uploaded file, relative to the uploads "
-            "mount. Defaults to `uploads/{filename}`. Nested keys are supported and "
-            "parent directories are created automatically. May be prefixed with "
-            "`uploads/` for convenience. Must be relative (no leading `/`), must not "
-            "contain `..` components, and must not end with `/`."
+            "Object-storage-style key for the uploaded file, relative to the session "
+            "mounts. Defaults to `uploads/{filename}` (input). Nested keys are "
+            "supported and parent directories are created automatically. May be "
+            "prefixed with `uploads/` or `outputs/` to select the mount (outputs "
+            "writes into the sandbox output folder). Must be relative (no leading "
+            "`/`), must not contain `..` components, and must not end with `/`."
         ),
         examples=["data/2024/report.pdf"],
     ),
@@ -95,9 +97,9 @@ async def upload_file(
     summary="Put a file at a specific path (object-storage style)",
     description=(
         "S3/blob-style put-object: store the raw request body at the given key. "
-        "The key is relative to the session's uploads mount (`/mnt/user-data/uploads/` "
-        "inside the sandbox) and may be nested, e.g. `data/2024/report.pdf`; an "
-        "explicit `uploads/` prefix is accepted and normalized away. Parent "
+        "The key is relative to the session's mounts and may be nested, e.g. "
+        "`data/2024/report.pdf`; an explicit `uploads/` or `outputs/` prefix selects "
+        "the mount (`outputs/` writes into the sandbox output folder). Parent "
         "directories are created automatically and existing keys are overwritten. "
         "The response is the same `FileMetadata` as `POST /v1/files`, so the returned "
         "`id` can be used with the other file endpoints."
