@@ -74,8 +74,9 @@ def build_request_from_context_stack(
 def _merge_mounts(*groups: list[Mount]) -> list[Mount]:
     """Merge mount groups, deduplicating by mount identity.
 
-    Identity is target + access + host_path + uri_source.uri, which keeps
-    skills and mount-plan volumes stable across repeated request builds.
+    Identity is target + access + host_path + generic source identity, which
+    keeps skills and mount-plan volumes stable across repeated request builds
+    without treating a signed URI as a filesystem identity.
     """
     seen: set[tuple[object, ...]] = set()
     merged: list[Mount] = []
@@ -85,7 +86,10 @@ def _merge_mounts(*groups: list[Mount]) -> list[Mount]:
                 mount.target,
                 mount.access,
                 str(mount.host_path) if mount.host_path is not None else "",
-                mount.uri_source.uri if mount.uri_source is not None else "",
+                mount.source_namespace or "",
+                mount.source_scope or "",
+                mount.source_path or "",
+                mount.uri_source.cache_key if mount.uri_source is not None else (),
             )
             if key not in seen:
                 seen.add(key)

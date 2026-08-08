@@ -1197,8 +1197,8 @@ def allow_file_uri_scheme(monkeypatch: pytest.MonkeyPatch) -> None:
     def _local(uri: str) -> str:
         return urlparse(uri).path if uri.startswith("file://") else uri
 
-    def from_uri(cls: type[Any], uri: str) -> Any:
-        return original_from_uri(cls, _local(uri))
+    def from_uri(cls: type[Any], uri: str, filename: str | None = None) -> Any:
+        return original_from_uri(cls, _local(uri), filename=filename)
 
     monkeypatch.setattr(mount_module.UriSource, "from_uri", classmethod(from_uri))
 

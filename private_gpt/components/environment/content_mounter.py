@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from abc import ABC, abstractmethod
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -81,7 +82,23 @@ class LocalStorageContentMounter(ContentMounter):
         self._root = storage_root
 
     def can_handle(self, descriptor: Mount) -> bool:
-        return descriptor.uri_source is not None
+        return (
+            descriptor.uri_source is not None and not descriptor.uri_source.is_composite
+        )
+
+    def _host_path(self, descriptor: Mount) -> Path:
+        """Return a stable cache path without ever using the URI as a path."""
+        if descriptor.source_scope and descriptor.source_path:
+            source_path = PurePosixPath(descriptor.source_path)
+            if source_path.is_absolute() or ".." in source_path.parts:
+                raise ValueError(
+                    f"Invalid mount source path: {descriptor.source_path!r}"
+                )
+            return self._root / descriptor.source_scope / source_path.parent
+
+        # URI-only mounts still get a safe deterministic cache location.
+        uri = descriptor.uri_source.uri if descriptor.uri_source is not None else ""
+        return self._root / "uri-cache" / hashlib.sha256(uri.encode()).hexdigest()
 
     async def prepare_volume(self, descriptor: Mount, session_id: str) -> Mount | None:
         from private_gpt.components.sandbox.mount import Mount
@@ -89,7 +106,7 @@ class LocalStorageContentMounter(ContentMounter):
         if descriptor.uri_source is None:
             return None
 
-        host_path = self._root / descriptor.uri_source.uri
+        host_path = self._host_path(descriptor)
         if not host_path.is_dir() or not any(host_path.iterdir()):
             # Local directory is absent or empty — fetch from the URI and cache
             # locally so the bind-mount has content.
@@ -120,7 +137,7 @@ class LocalStorageContentMounter(ContentMounter):
             # Ensure files exist locally (fetch from URI if absent), then
             # register the host-path mapping in the path translator so that
             # subsequent exec() calls can resolve the canonical path.
-            host_path = self._root / descriptor.uri_source.uri
+            host_path = self._host_path(descriptor)
             if not host_path.is_dir() or not any(host_path.iterdir()):
                 files = await descriptor.uri_source.fetch()
                 if not files:

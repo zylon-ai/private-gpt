@@ -29,7 +29,7 @@ class MountEntry(BaseModel):
         description="Logical namespace (e.g. 'artifacts', 'session', 'skills')."
     )
     scope: str = Field(
-        description="Opaque scope id within the namespace (e.g. org-id)."
+        description="Opaque scope id within the namespace (e.g. thread-id)."
     )
     path: str = Field(description="Relative path within the scope.")
     target: str = Field(
@@ -37,9 +37,6 @@ class MountEntry(BaseModel):
     )
     mode: Literal["rw", "ro"] = Field(default="rw", description="Access mode.")
     etag: str | None = Field(default=None, description="Optional content checksum.")
-    artifact_id: str | None = Field(
-        default=None, description="Source artifact id for correlation."
-    )
     uri: str | None = Field(
         default=None,
         description=(

@@ -9,14 +9,17 @@ normalized to the containing directory (the resolved host dir when the path
 is a directory, or its parent when the path is a file), so the agent works
 over mount paths only.
 
-Unresolvable or unauthorised entries are skipped (not fatal) — the
-conversation continues without that content rather than failing entirely.
+Unresolvable namespace references are skipped (not fatal). URI-backed
+entries remain generic and retain their namespace identity for the selected
+runtime provider to resolve.
 """
 
 from __future__ import annotations
 
 import logging
 import posixpath
+from collections import defaultdict
+from dataclasses import dataclass
 
 from injector import inject, singleton
 
@@ -30,6 +33,12 @@ from private_gpt.components.filesystems.path_resolver import (
 from private_gpt.components.sandbox.mount import Mount, UriSource
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class _ResolvedMount:
+    entry: MountEntry
+    mount: Mount
 
 
 @singleton
@@ -61,23 +70,32 @@ class MountRefResolver:
         if not entries:
             return []
 
-        mounts: list[Mount] = []
+        resolved: list[_ResolvedMount] = []
         for entry in entries:
             mount = self._resolve_one(entry)
             if mount is not None:
-                mounts.append(mount)
-        return mounts
+                resolved.append(mount)
+        return _merge_compatible_mounts(resolved)
 
-    def _resolve_one(self, entry: MountEntry) -> Mount | None:
+    def _resolve_one(self, entry: MountEntry) -> _ResolvedMount | None:
         target = _directory_target(entry.target, file_target=True)
 
         if entry.uri:
-            return Mount(
-                name=f"mount-{entry.namespace}-{entry.artifact_id or entry.path[:16]}",
-                target=target,
-                access="ro" if entry.mode == "ro" else "rw",
-                uri_source=UriSource.from_uri(entry.uri),
-                etag=entry.etag,
+            return _ResolvedMount(
+                entry=entry,
+                mount=Mount(
+                    name=f"mount-{entry.namespace}-{entry.scope or entry.path[:16]}",
+                    target=target,
+                    access="ro" if entry.mode == "ro" else "rw",
+                    uri_source=UriSource.from_uri(
+                        entry.uri,
+                        filename=posixpath.basename(entry.target.rstrip("/")) or None,
+                    ),
+                    source_namespace=entry.namespace,
+                    source_scope=entry.scope,
+                    source_path=entry.path,
+                    etag=entry.etag,
+                ),
             )
 
         try:
@@ -116,12 +134,18 @@ class MountRefResolver:
         source = host_path if host_path.is_dir() else host_path.parent
         target = _directory_target(entry.target, file_target=not host_path.is_dir())
 
-        return Mount(
-            name=f"mount-{entry.namespace}-{entry.artifact_id or entry.path[:16]}",
-            target=target,
-            access="ro" if entry.mode == "ro" else "rw",
-            host_path=source,
-            etag=entry.etag,
+        return _ResolvedMount(
+            entry=entry,
+            mount=Mount(
+                name=f"mount-{entry.namespace}-{entry.scope or entry.path[:16]}",
+                target=target,
+                access="ro" if entry.mode == "ro" else "rw",
+                host_path=source,
+                source_namespace=entry.namespace,
+                source_scope=entry.scope,
+                source_path=entry.path,
+                etag=entry.etag,
+            ),
         )
 
 
@@ -133,3 +157,57 @@ def _directory_target(target: str, *, file_target: bool) -> str:
         parent = posixpath.dirname(target.rstrip("/"))
         return parent.rstrip("/") + "/"
     return target.rstrip("/") + "/"
+
+
+def _group_by_target(resolved: list[_ResolvedMount]) -> list[list[_ResolvedMount]]:
+    groups: dict[str, list[_ResolvedMount]] = defaultdict(list)
+    for item in resolved:
+        groups[item.mount.target].append(item)
+    return list(groups.values())
+
+
+def _merge_compatible_mounts(resolved: list[_ResolvedMount]) -> list[Mount]:
+    """Merge only mounts that can share one directory without losing data.
+
+    URI-backed files targeting the same directory are a generic composite
+    mount. Mixed host/URI mounts and overlapping directories are deliberately
+    left separate so the runtime provider can validate and reject conflicts;
+    this layer must not contain artifact-specific conflict policy.
+    """
+    merged: list[Mount] = []
+    for group in _group_by_target(resolved):
+        if len(group) == 1:
+            merged.append(group[0].mount)
+            continue
+
+        mounts = [item.mount for item in group]
+        if all(mount.uri_source is not None for mount in mounts):
+            merged.append(_merge_mount_group(group))
+        else:
+            merged.extend(mounts)
+    return merged
+
+
+def _merge_mount_group(group: list[_ResolvedMount]) -> Mount:
+    if len(group) == 1:
+        return group[0].mount
+
+    mounts = [item.mount for item in group]
+    uri_sources = [mount.uri_source for mount in mounts]
+    if all(source is not None for source in uri_sources):
+        sources = [source for source in uri_sources if source is not None]
+        first, *additional = sources
+        additional_sources: list[tuple[str, str | None]] = []
+        for source in additional:
+            additional_sources.extend(source.sources)
+        mounts[0].uri_source = UriSource.from_uri(
+            first.uri,
+            filename=first.filename,
+            additional_sources=additional_sources,
+        )
+        mounts[0].access = (
+            "rw" if any(mount.access == "rw" for mount in mounts) else "ro"
+        )
+        return mounts[0]
+
+    raise ValueError("Only URI-backed mounts can be merged")

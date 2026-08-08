@@ -50,7 +50,7 @@ class PathResolver:
         namespace:
             Logical namespace name; must be registered.
         scope:
-            Opaque scope identifier (e.g. session-id, org-id).  Must be a
+            Opaque scope identifier (e.g. session-id, thread-id).  Must be a
             single path segment (no ``/`` or ``..``).
         path:
             Relative path within the scope.  Must not start with ``/`` or

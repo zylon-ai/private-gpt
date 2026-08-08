@@ -225,10 +225,22 @@ class EnvironmentManager:
 
         # Layout volumes (workspace, uploads, outputs).
         layout_volumes = self._layout.session_volumes(session_id)
-        volumes = list(layout_volumes or [])
+        requested_targets = {mount.target for mount in mounts or []}
+        # An explicit mount is allowed to replace a layout mount at the same
+        # target (for example a durable file replacing a session file). This
+        # is generic mount precedence, not artifact knowledge.
+        volumes = [
+            volume
+            for volume in (layout_volumes or [])
+            if volume.target not in requested_targets
+        ]
 
         # Mount specs — always added for writability enforcement.
-        specs = self._layout.mount_specs()
+        specs = [
+            spec
+            for spec in self._layout.mount_specs()
+            if spec.target not in requested_targets
+        ]
         for mount in mounts or []:
             specs.append(Mount(target=mount.target, access=mount.access))
 
@@ -327,7 +339,7 @@ class EnvironmentManager:
                 m.target,
                 m.access,
                 str(m.host_path) if m.host_path is not None else "",
-                m.uri_source.uri if m.uri_source is not None else "",
+                m.uri_source.cache_key if m.uri_source is not None else (),
                 m.etag or "",
             )
             for m in mounts
@@ -349,7 +361,7 @@ class EnvironmentManager:
                 m.target,
                 m.access,
                 str(m.host_path) if m.host_path is not None else "",
-                m.uri_source.uri if m.uri_source is not None else "",
+                m.uri_source.cache_key if m.uri_source is not None else (),
                 m.etag or "",
             )
             for m in mounts
