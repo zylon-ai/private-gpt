@@ -319,17 +319,23 @@ class FileService:
         canonical = _decode_file_id(file_id)
         storage_path = canonical_to_storage_path(canonical)
         self._validate_file_id(storage_path)
-        if not storage_path.startswith("uploads/"):
+        if storage_path.startswith("uploads/"):
+            prefix = self._uploads_prefix(scope_id)
+            _folder, filename = storage_path.split("/", 1)
+        elif storage_path.startswith("outputs/"):
+            prefix = self._outputs_prefix(scope_id)
+            _folder, filename = storage_path.split("/", 1)
+        else:
             raise HTTPException(
                 status_code=404,
-                detail=f"File '{file_id}' not found or is a sandbox output (cannot be deleted).",
+                detail=f"File '{file_id}' not found.",
             )
-        _folder, filename = storage_path.split("/", 1)
-        deleted = await storage.delete_file(self._uploads_prefix(scope_id), filename)
+
+        deleted = await storage.delete_file(prefix, filename)
         if not deleted:
             raise HTTPException(
                 status_code=404,
-                detail=f"File '{file_id}' not found or is a sandbox output (cannot be deleted).",
+                detail=f"File '{file_id}' not found.",
             )
         return DeletedFile(id=file_id)
 

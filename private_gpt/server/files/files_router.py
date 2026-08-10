@@ -387,16 +387,13 @@ async def head_file(
 @files_router.delete(
     "/{file_id:path}",
     response_model=DeletedFile,
-    summary="Delete an uploaded file",
+    summary="Delete a file",
     description=(
-        "Permanently delete an uploaded file from the session. "
-        "Only files that were uploaded via `POST /v1/files` can be deleted; "
-        "sandbox-generated output files cannot be deleted through this endpoint."
+        "Permanently delete a file from the session. Both uploaded files and "
+        "sandbox-generated output files can be deleted through this endpoint."
     ),
     responses={
-        404: {
-            "description": "File not found or is a sandbox output (outputs cannot be deleted)."
-        },
+        404: {"description": "File not found."},
         503: {"description": "Files API not configured (session namespace not set)."},
     },
 )

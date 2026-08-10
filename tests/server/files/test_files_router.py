@@ -144,7 +144,7 @@ def test_delete_uploaded_file(files_client: TestClient) -> None:
     assert files_client.get(_file_url(file_id, _SESSION_ID)).status_code == 404
 
 
-def test_delete_output_returns_404(files_client: TestClient, volume_root: Path) -> None:
+def test_delete_output_file(files_client: TestClient, volume_root: Path) -> None:
     output_path = volume_root / "outputs" / _SESSION_ID / "result.csv"
     output_path.write_bytes(b"a,b\n1,2")
 
@@ -152,7 +152,9 @@ def test_delete_output_returns_404(files_client: TestClient, volume_root: Path) 
     output_id = _encode_file_id(canonical)
 
     resp = files_client.delete(_file_url(output_id, _SESSION_ID))
-    assert resp.status_code == 404
+    assert resp.status_code == 200
+    assert resp.json()["id"] == output_id
+    assert not output_path.exists()
 
 
 def test_list_namespaces(
