@@ -1,6 +1,6 @@
 import asyncio
 import concurrent.futures
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from typing import Any, cast
 
 from llama_index.core.llms import LLM
@@ -51,6 +51,7 @@ def max_audios_supported(
 
 TokenizerFn = Callable[..., TokenizedInput]
 AsyncTokenizerFn = Callable[..., Awaitable[TokenizedInput]]
+TokenCountBatchFn = Callable[[Sequence[str]], list[int]]
 
 
 def get_tokenizer_fn(tokenizer: TokenizerBase | None) -> TokenizerFn | None:
@@ -104,9 +105,25 @@ def as_sync_tokenizer_fn(
     return _sync_wrapper
 
 
+def get_token_count_batch_fn(
+    tokenizer: TokenizerBase | None,
+) -> TokenCountBatchFn | None:
+    if tokenizer is None:
+        return None
+    return tokenizer.count_tokens_batch
+
+
 def get_tokenizer() -> TokenizerFn | None:
     from private_gpt.components.llm.llm_component import LLMComponent
 
     llm_component = get_global_injector().get(LLMComponent)
     default_tokenizer = llm_component.tokenizer
     return get_tokenizer_fn(default_tokenizer)
+
+
+def get_token_count_batch() -> TokenCountBatchFn | None:
+    from private_gpt.components.llm.llm_component import LLMComponent
+
+    llm_component = get_global_injector().get(LLMComponent)
+    default_tokenizer = llm_component.tokenizer
+    return get_token_count_batch_fn(default_tokenizer)

@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, TypeVar, cast
 
@@ -191,6 +192,17 @@ class HuggingFaceTokenizer(TokenizerBase):
         )
         text_input_ids: list[int] = batch_encoding["input_ids"]
         return text_input_ids
+
+    def count_tokens_batch(self, texts: Sequence[str]) -> list[int]:
+        """Count tokens for each text using the tokenizer's native batch API."""
+        if not texts:
+            return []
+
+        batch_encoding = self._tokenizer(
+            list(texts),
+            add_special_tokens=False,
+        )
+        return [len(ids) for ids in batch_encoding["input_ids"]]
 
     def calculate_mm_input_ids(
         self,

@@ -46,7 +46,7 @@ def mock_children() -> Iterator[TreeNode]:
 @pytest.fixture
 def transform() -> IncludeTokenCountIntoNodesTransform:
     return IncludeTokenCountIntoNodesTransform.from_defaults(
-        tokenizer=lambda x: x.split()
+        count_tokens_batch=lambda texts: [len(text.split()) for text in texts]
     )
 
 
