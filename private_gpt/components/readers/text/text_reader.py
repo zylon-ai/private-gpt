@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from collections.abc import AsyncIterator, Iterable, Iterator
 from pathlib import Path
 from typing import Any
@@ -137,10 +138,35 @@ class TextReader(IngestionReader):
             reader_name,
             file_info.file_name,
         )
-        transformed_nodes = await arun_transformations(
-            documents,
-            list(self._tranformations()),
+
+        # --- START: Mesure the time taken by each transformation ---
+        nodes: list[BaseNode] = documents
+        timings: list[tuple[str, float, int]] = []
+        transformations = list(self._tranformations())
+
+        for idx, transform in enumerate(transformations):
+            t0 = time.perf_counter()
+            nodes = await arun_transformations(nodes, [transform])
+            elapsed = time.perf_counter() - t0
+            timings.append((transform.__class__.__name__, elapsed, len(nodes)))
+            logger.debug(
+                "[TIMING] %-40s %8.3fs  (nodos resultantes: %d)",
+                transform.__class__.__name__,
+                elapsed,
+                len(nodes),
+            )
+
+        total = sum(t for _, t, _ in timings)
+        logger.debug(
+            "[TIMING] TOTAL %s: %.3fs -> desglose: %s",
+            file_info.file_name,
+            total,
+            {name: f"{t:.3f}s ({t / total * 100:.1f}%)" for name, t, _ in timings},
         )
+
+        transformed_nodes = nodes
+        # --- END: Mesure the time taken by each transformation ---
+
         for node in transformed_nodes:
             yield node
         logger.debug(
