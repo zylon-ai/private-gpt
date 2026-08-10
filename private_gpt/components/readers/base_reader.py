@@ -13,8 +13,12 @@ from llama_index.core.schema import BaseComponent, BaseNode, TransformComponent
 from pydantic import ConfigDict
 
 from private_gpt.components.ingest.utils import FileInfo
+from private_gpt.settings.settings import settings
+
+debug_mode = settings().server.debug_mode
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
 
 
 class IngestionReader(BaseComponent):

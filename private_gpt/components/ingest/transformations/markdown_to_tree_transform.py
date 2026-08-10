@@ -6,6 +6,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, Tag
 from llama_index.core.schema import MetadataMode, TransformComponent
+from markdownify import MarkdownConverter  # ty:ignore[unresolved-import]
 from mistune import HTMLRenderer, create_markdown  # ty:ignore[unresolved-import]
 from pydantic import Field
 
@@ -27,6 +28,14 @@ if TYPE_CHECKING:
     from llama_index.core.schema import BaseNode
 
     from private_gpt.components.readers.nodes.tree_node import TreeNode
+
+
+# Reused across all tag->markdown conversions. MarkdownConverter is stateless
+# (options are fixed at construction and `process_tag` takes no mutable
+# instance state), so a single shared instance avoids re-building the options
+# dict (via _todict/dir()) on every call, which previously happened once per
+# call to `markdownify.markdownify`.
+_MD_CONVERTER = MarkdownConverter(heading_style="ATX")
 
 
 class MarkdownTreeNodeParser(TransformComponent):
@@ -72,17 +81,20 @@ class MarkdownTreeNodeParser(TransformComponent):
     def _get_current_parent(self) -> TreeNode:
         return self.section_stack[-1] if self.section_stack else self.root
 
-    def _parse_table(self, table_html: str) -> pd.DataFrame:
-        """Parse an HTML table into a DataFrame, converting each cell's inner
-        HTML to markdown so inline formatting (bold, italic, links, code)
-        round-trips correctly."""
-        soup = BeautifulSoup(table_html, "lxml")
+    def _parse_table(self, table: Tag) -> pd.DataFrame:
+        """Parse an HTML table Tag into a DataFrame, converting each cell's
+        inner HTML to markdown so inline formatting (bold, italic, links,
+        code) round-trips correctly.
 
-        headers = [self._convert_cell_to_markdown(th) for th in soup.find_all("th")]
+        Operates directly on the already-parsed BeautifulSoup Tag rather
+        than re-serializing it to a string and re-parsing it, which was
+        previously duplicated work.
+        """
+        headers = [self._convert_cell_to_markdown(th) for th in table.find_all("th")]
 
         rows = [
             [self._convert_cell_to_markdown(td) for td in tr.find_all("td")]
-            for tr in soup.find_all("tr")
+            for tr in table.find_all("tr")
             if tr.find("td")
         ]
 
@@ -100,14 +112,14 @@ class MarkdownTreeNodeParser(TransformComponent):
         strips bold/italic markers for body text - formatting that must
         be preserved inside table cells.
         """
-        from markdownify import markdownify as md  # ty:ignore[unresolved-import]
-
         parts = []
         for child in cell.contents:
             if isinstance(child, NavigableString):
                 parts.append(str(child).strip())
             elif isinstance(child, Tag):
-                markdown = md(str(child), heading_style="ATX").replace("\\", "")
+                markdown = _MD_CONVERTER.process_tag(
+                    child, convert_as_inline=False
+                ).replace("\\", "")
                 parts.append(markdown.strip())
         return " ".join(p for p in parts if p).strip()
 
@@ -241,12 +253,12 @@ class MarkdownTreeNodeParser(TransformComponent):
 
     def _convert_tag_to_markdown(self, element: Tag | NavigableString) -> str:
         """Convert a BeautifulSoup element to markdown while preserving formatting."""
-        from markdownify import markdownify as md  # ty:ignore[unresolved-import]
-
         if isinstance(element, NavigableString):
             return element
         else:
-            markdown: str = md(str(element), heading_style="ATX")
+            markdown: str = _MD_CONVERTER.process_tag(
+                element, convert_as_inline=False
+            )
             markdown = markdown.replace("\\", "")
             markdown = MarkdownHelper.sanitize_markdown(markdown)
             return markdown
@@ -277,7 +289,7 @@ class MarkdownTreeNodeParser(TransformComponent):
             )
             self._add_node_to_hierarchy(node)
         elif element.name == "table":
-            df = self._parse_table(str(element))
+            df = self._parse_table(element)
             table_node = self._generate_table_node(df)
             self._add_node_to_hierarchy(table_node)
             table_node.add_children(*(self._generate_table_row_node(df)))
@@ -383,19 +395,21 @@ class MarkdownTreeNodeParser(TransformComponent):
 
     def _copy_metadata_to_children(self, node: TreeNode) -> None:
         """Copy metadata from parent to children."""
+        # Build the parent's excluded-key sets once per node instead of
+        # rebuilding them from `node.excluded_llm_metadata_keys` /
+        # `node.excluded_embed_metadata_keys` for every child (previously a
+        # fresh set was constructed from the same parent list once per
+        # sibling). Each child's own resulting list content is identical to
+        # before - only how the union is computed changes.
+        parent_llm_keys = set(node.excluded_llm_metadata_keys)
+        parent_embed_keys = set(node.excluded_embed_metadata_keys)
         for child in node.children or []:
             child.metadata.update(node.metadata)
             child.excluded_llm_metadata_keys = list(
-                {
-                    *node.excluded_llm_metadata_keys,
-                    *child.excluded_llm_metadata_keys,
-                }
+                parent_llm_keys.union(child.excluded_llm_metadata_keys)
             )
             child.excluded_embed_metadata_keys = list(
-                {
-                    *node.excluded_embed_metadata_keys,
-                    *child.excluded_embed_metadata_keys,
-                }
+                parent_embed_keys.union(child.excluded_embed_metadata_keys)
             )
             self._copy_metadata_to_children(child)
 
