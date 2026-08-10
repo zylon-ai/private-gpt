@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Query, Request, UploadFile
 from fastapi.responses import Response
 
 from private_gpt.server.files.file_models import (
@@ -121,9 +121,15 @@ async def put_file(
         description="Namespace for the file. Defaults to 'session'.",
         examples=["session"],
     ),
+    content: bytes = Body(
+        ...,
+        description=(
+            "Raw file bytes stored at the key (S3/blob-style put-object). "
+            "The media type is taken from the request Content-Type header."
+        ),
+    ),
 ) -> FileMetadata:
     service: FileService = request.state.injector.get(FileService)
-    content = await request.body()
     mime_type = request.headers.get("content-type")
     if namespace == "session":
         return await service.put_file(
