@@ -19,8 +19,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Minimum seconds between two shared-activity writes (Redis round trips are
-# fire-and-forget; throttling avoids task churn on hot paths).
 _ACTIVITY_THROTTLE_SECONDS = 5.0
 
 
@@ -43,16 +41,10 @@ class Environment:
     last_accessed: float = field(default_factory=time.monotonic)
     ttl_start: float = field(default_factory=time.monotonic)
     last_renewed: float = field(default_factory=lambda: 0.0)
-    # Cross-process ownership marker (the manager's coordinator instance id).
     owner: str = ""
-    # Optional async callback used to publish activity to the shared
-    # last-activity clock (set by the EnvironmentManager when a distributed
-    # coordinator is available).
     activity_sink: Callable[[str], Coroutine[None, None, None]] | None = None
 
     def __post_init__(self) -> None:
-        # Mount fingerprint this env was created with; used by the manager
-        # to detect mount changes on reuse.
         self._mount_keys: frozenset[tuple[object, ...]] = frozenset()
         self._sandbox_env: dict[str, str] = {}
         self._last_shared_touch: float = 0.0
@@ -66,8 +58,6 @@ class Environment:
         ):
             self._last_shared_touch = now
             with suppress(RuntimeError):
-                # Best-effort, fire-and-forget: the shared clock is used by
-                # the reaper on OTHER pods/workers.
                 asyncio.get_running_loop().create_task(self.activity_sink(self.id))
 
     def idle_seconds(self, now: float) -> float:

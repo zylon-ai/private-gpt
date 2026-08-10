@@ -36,8 +36,6 @@ if TYPE_CHECKING:
     from private_gpt.components.storage.models import FileInfo
     from private_gpt.components.storage.object_storage import ObjectStorage
 
-_SESSION_NAMESPACE = "session"
-
 
 def _detect_mime_from_bytes(content: bytes) -> str:
     try:
@@ -76,8 +74,13 @@ class FileService:
         self._registry = registry
         self._resolver = resolver
         cfg = settings.code_execution
-        if "session" in registry.all_names():
-            local_root = str(registry.root("session"))
+        # Find the namespace that uses the ObjectStorage backend (normally "session").
+        storage_ns = next(
+            (n for n in registry.all_names() if registry.get(n).storage_backend),
+            None,
+        )
+        if storage_ns:
+            local_root = str(registry.root(storage_ns))
         else:
             local_root = str(Path(settings.data.local_data_folder) / "code_execution")
         self._storage = storage_component.get_object_storage(
@@ -100,6 +103,18 @@ class FileService:
             ]
         )
 
+    def _ns_uses_storage(self, namespace: str) -> bool:
+        """Return True when *namespace* is served by the ObjectStorage backend.
+
+        Namespaces with ``storage_backend=True`` expose the uploads/ and outputs/
+        virtual-folder layout via ObjectStorage.  All other namespaces are served
+        directly from the local filesystem via PathResolver.
+        """
+        try:
+            return self._registry.get(namespace).storage_backend
+        except KeyError:
+            return False
+
     def _require_storage(self) -> ObjectStorage:
         return self._storage
 
@@ -118,7 +133,7 @@ class FileService:
         self,
         file_info: FileInfo,
         scope_id: str,
-        namespace: str = _SESSION_NAMESPACE,
+        namespace: str = "session",
     ) -> FileMetadata:
         downloadable = not file_info.path.startswith("uploads/")
         canonical = storage_to_canonical_path(file_info.path)
@@ -133,10 +148,6 @@ class FileService:
             namespace=namespace,
             scope=FileScope(id=scope_id, type=namespace),
         )
-
-    # ------------------------------------------------------------------
-    # Session-scoped operations (namespace = "session", backward-compat)
-    # ------------------------------------------------------------------
 
     async def upload_file(
         self, scope_id: str, upload: UploadFile, path: str | None = None
@@ -192,7 +203,7 @@ class FileService:
         limit: int = 20,
         after_id: str | None = None,
         before_id: str | None = None,
-        namespace: str = _SESSION_NAMESPACE,
+        namespace: str = "session",
         prefix: str | None = None,
     ) -> FileListResponse:
         """List files, optionally filtered by a canonical path prefix.
@@ -202,8 +213,7 @@ class FileService:
         both the ``uploads/`` and ``outputs/`` folder keys are checked against
         the prefix.  An empty or absent prefix returns everything.
         """
-        # Namespace-aware: when not session, read from local FS via PathResolver
-        if namespace != _SESSION_NAMESPACE:
+        if not self._ns_uses_storage(namespace):
             return await self._list_namespace_files(scope_id, namespace, limit, prefix)
 
         storage = self._require_storage()
@@ -215,8 +225,6 @@ class FileService:
         def _keep(storage_rel_path: str) -> bool:
             if not norm_prefix:
                 return True
-            # storage_rel_path is already relative to folder/scope_id,
-            # e.g. "data/2024/report.pdf" -- match against the prefix directly
             return storage_rel_path.startswith(norm_prefix)
 
         all_infos = sorted(
@@ -266,9 +274,9 @@ class FileService:
         self,
         scope_id: str,
         file_id: str,
-        namespace: str = _SESSION_NAMESPACE,
+        namespace: str = "session",
     ) -> FileMetadata:
-        if namespace != _SESSION_NAMESPACE:
+        if not self._ns_uses_storage(namespace):
             return await self._stat_namespace_file(scope_id, namespace, file_id)
 
         storage = self._require_storage()
@@ -287,10 +295,10 @@ class FileService:
         self,
         scope_id: str,
         file_id: str,
-        namespace: str = _SESSION_NAMESPACE,
+        namespace: str = "session",
     ) -> tuple[bytes, str, str]:
         """Returns (bytes, mime_type, display_filename)."""
-        if namespace != _SESSION_NAMESPACE:
+        if not self._ns_uses_storage(namespace):
             return await self._read_namespace_file(scope_id, namespace, file_id)
 
         storage = self._require_storage()
@@ -310,9 +318,9 @@ class FileService:
         self,
         scope_id: str,
         file_id: str,
-        namespace: str = _SESSION_NAMESPACE,
+        namespace: str = "session",
     ) -> DeletedFile:
-        if namespace != _SESSION_NAMESPACE:
+        if not self._ns_uses_storage(namespace):
             return await self._delete_namespace_file(scope_id, namespace, file_id)
 
         storage = self._require_storage()
@@ -343,7 +351,7 @@ class FileService:
         self,
         scope_id: str,
         prefix: str,
-        namespace: str = _SESSION_NAMESPACE,
+        namespace: str = "session",
     ) -> int:
         """Delete every file whose upload key starts with *prefix*.
 
@@ -352,7 +360,7 @@ class FileService:
         Works for both session storage (via ObjectStorage) and other namespaces
         (via local PathResolver).
         """
-        if namespace != _SESSION_NAMESPACE:
+        if not self._ns_uses_storage(namespace):
             return await self._delete_namespace_prefix(scope_id, namespace, prefix)
 
         norm = (prefix or "").strip().lstrip("/")
@@ -377,7 +385,7 @@ class FileService:
         self,
         scope_id: str,
         file_id: str,
-        namespace: str = _SESSION_NAMESPACE,
+        namespace: str = "session",
     ) -> FileMetadata:
         """Lightweight stat that avoids reading file bytes where possible.
 

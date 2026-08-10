@@ -41,7 +41,7 @@ class ChatBody(MessagesInputBase):
     )
     mounts: list[MountEntry] | None = Field(
         default=None,
-        description="Generic mount entries from the Backend mount plan.",
+        description="Mount entries requesting files or folders to be available inside the sandbox.",
     )
     response_format: ResponseFormat = Field(
         default=ResponseFormat(),

@@ -28,7 +28,7 @@ files_router = APIRouter(
     description=(
         "List all registered filesystem namespaces and their local roots. "
         "Namespaces are configured under `filesystems.namespaces` in settings; "
-        "the well-known names are 'session', 'artifacts' and 'skills'."
+        "well-known names include 'session' and 'skills'; additional namespaces may be added in settings."
     ),
 )
 async def list_namespaces(
@@ -73,12 +73,12 @@ async def upload_file(
     ),
     namespace: str = Query(
         default="session",
-        description="Namespace for the file. Defaults to 'session'. Use 'artifacts' for durable storage.",
+        description="Namespace for the file. Defaults to 'session'.",
         examples=["session"],
     ),
 ) -> FileMetadata:
     service: FileService = request.state.injector.get(FileService)
-    if namespace == "session":
+    if service._ns_uses_storage(namespace):
         return await service.upload_file(scope_id=scope_id, upload=file, path=path)
     content_bytes = await file.read()
     return await service.write_file_to_namespace(
@@ -131,7 +131,7 @@ async def put_file(
 ) -> FileMetadata:
     service: FileService = request.state.injector.get(FileService)
     mime_type = request.headers.get("content-type")
-    if namespace == "session":
+    if service._ns_uses_storage(namespace):
         return await service.put_file(
             scope_id=scope_id, path=file_id, content=content, mime_type=mime_type
         )

@@ -4089,7 +4089,7 @@
           "Files"
         ],
         "summary": "List namespaces",
-        "description": "List all registered filesystem namespaces and their local roots. Namespaces are configured under `filesystems.namespaces` in settings; the well-known names are 'session', 'artifacts' and 'skills'.",
+        "description": "List all registered filesystem namespaces and their local roots. Namespaces are configured under `filesystems.namespaces` in settings; well-known names include 'session' and 'skills'; additional namespaces may be added in settings.",
         "operationId": "list_namespaces_v1_files_namespaces_get",
         "responses": {
           "200": {
@@ -4158,14 +4158,14 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Namespace for the file. Defaults to 'session'. Use 'artifacts' for durable storage.",
+              "description": "Namespace for the file. Defaults to 'session'.",
               "examples": [
                 "session"
               ],
               "default": "session",
               "title": "Namespace"
             },
-            "description": "Namespace for the file. Defaults to 'session'. Use 'artifacts' for durable storage."
+            "description": "Namespace for the file. Defaults to 'session'."
           }
         ],
         "requestBody": {
@@ -4482,6 +4482,20 @@
             "description": "Namespace for the file. Defaults to 'session'."
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string",
+                "contentMediaType": "application/octet-stream",
+                "description": "Raw file bytes stored at the key (S3/blob-style put-object). The media type is taken from the request Content-Type header.",
+                "title": "Content"
+              }
+            }
+          },
+          "description": "Request payload."
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4674,8 +4688,8 @@
         "tags": [
           "Files"
         ],
-        "summary": "Delete an uploaded file",
-        "description": "Permanently delete an uploaded file from the session. Only files that were uploaded via `POST /v1/files` can be deleted; sandbox-generated output files cannot be deleted through this endpoint.",
+        "summary": "Delete a file",
+        "description": "Permanently delete a file from the session. Both uploaded files and sandbox-generated output files can be deleted through this endpoint.",
         "operationId": "delete_file_v1_files__file_id__delete",
         "parameters": [
           {
@@ -4732,7 +4746,7 @@
             "description": "Unauthorized"
           },
           "404": {
-            "description": "File not found or is a sandbox output (outputs cannot be deleted)."
+            "description": "File not found."
           },
           "503": {
             "description": "Files API not configured (session namespace not set)."
@@ -5721,7 +5735,7 @@
               }
             ],
             "title": "Mounts",
-            "description": "Generic mount entries from the Backend mount plan."
+            "description": "Mount entries requesting files or folders to be available inside the sandbox."
           },
           "response_format": {
             "$ref": "#/components/schemas/ResponseFormat",
@@ -8265,7 +8279,7 @@
           "namespace": {
             "type": "string",
             "title": "Namespace",
-            "description": "Namespace this file belongs to: 'session', 'artifacts', 'skills', etc.",
+            "description": "Namespace this file belongs to (e.g. 'session', 'skills', or a custom namespace).",
             "default": "session",
             "examples": [
               "session"
@@ -8317,7 +8331,7 @@
           "type": {
             "type": "string",
             "title": "Type",
-            "description": "Namespace type: 'session', 'artifacts', 'skills', or a custom namespace.",
+            "description": "Namespace the file belongs to (e.g. 'session', 'skills', or a custom namespace).",
             "default": "session",
             "examples": [
               "session"
@@ -9728,12 +9742,12 @@
           "namespace": {
             "type": "string",
             "title": "Namespace",
-            "description": "Logical namespace (e.g. 'artifacts', 'session', 'skills')."
+            "description": "Registered namespace name (e.g. 'session', 'skills', or a custom namespace)."
           },
           "scope": {
             "type": "string",
             "title": "Scope",
-            "description": "Opaque scope id within the namespace (e.g. org-id)."
+            "description": "Opaque scope id within the namespace (e.g. thread-id)."
           },
           "path": {
             "type": "string",
@@ -9767,18 +9781,6 @@
             "title": "Etag",
             "description": "Optional content checksum."
           },
-          "artifact_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Artifact Id",
-            "description": "Source artifact id for correlation."
-          },
           "uri": {
             "anyOf": [
               {
@@ -9789,7 +9791,7 @@
               }
             ],
             "title": "Uri",
-            "description": "Content origin: s3://, https://, data: or disk path understood by load_file_from_uri. When set, the mount is lazy \u2014 content is fetched only if the backing folder is absent or empty."
+            "description": "Content origin: s3://, https://, data: or a local disk path. When set, the mount is lazy \u2014 content is fetched only if the backing folder is absent or empty."
           }
         },
         "type": "object",
@@ -9800,16 +9802,16 @@
           "target"
         ],
         "title": "MountEntry",
-        "description": "Backend request to make content visible inside a sandbox.\n\nThe Backend declares *what* to mount and *where* it should appear inside\nthe sandbox. Content is located one of two ways:\n\n- ``uri`` (preferred): a content origin understood by ``load_file_from_uri``\n  (``s3://...``, ``https://...``, ``data:...`` or a local disk path). The\n  mount is lazy \u2014 content is fetched only when the backing folder is empty.\n- ``namespace``/``scope``/``path``: a reference into the platform\n  filesystem, resolved by ``MountRefResolver`` to a local host folder\n  (eager when the folder already has content)."
+        "description": "Declares a file or folder to mount into the sandbox.\n\nPart of the chat request body (``mounts`` field). Declares *what*\ncontent should be visible inside the sandbox and *where* it should\nappear. Content is located one of two ways:\n\n- ``uri`` (preferred): a content origin (``s3://...``, ``https://...``,\n  ``data:...`` or a local disk path). The mount is lazy \u2014 content is\n  fetched only when the backing folder is absent or empty.\n- ``namespace``/``scope``/``path``: a reference into a registered\n  filesystem namespace, resolved to the exact host file/folder."
       },
       "NamespaceInfo": {
         "properties": {
           "name": {
             "type": "string",
             "title": "Name",
-            "description": "Logical namespace name, e.g. 'session', 'artifacts' or 'skills'.",
+            "description": "Logical namespace name (e.g. 'session', 'skills', or a custom name).",
             "examples": [
-              "artifacts"
+              "session"
             ]
           },
           "root": {
@@ -9817,7 +9819,7 @@
             "title": "Root",
             "description": "Absolute local path that backs this namespace.",
             "examples": [
-              "/mnt/artifacts"
+              "/mnt/filesystems/session"
             ]
           },
           "default_mode": {

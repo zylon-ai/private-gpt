@@ -233,8 +233,6 @@ class Mount(BaseModel):
     access: AccessMode = "ro"
     host_path: Path | None = None  # exact host file/folder backing the bind
     uri_source: UriSource | None = None  # hydration origin (dev only)
-    # Generic source identity preserved from a Backend MountEntry. Survives
-    # serialization (see class docstring).
     source: MountSource | None = None
     name: str = ""
     description: str = ""

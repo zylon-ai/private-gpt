@@ -15,7 +15,7 @@ class FileScope(BaseModel):
     )
     type: str = Field(
         default="session",
-        description="Namespace type: 'session', 'artifacts', 'skills', or a custom namespace.",
+        description="Namespace the file belongs to (e.g. 'session', 'skills', or a custom namespace).",
         examples=["session"],
     )
 
@@ -79,7 +79,7 @@ class FileMetadata(BaseModel):
     )
     namespace: str = Field(
         default="session",
-        description="Namespace this file belongs to: 'session', 'artifacts', 'skills', etc.",
+        description="Namespace this file belongs to (e.g. 'session', 'skills', or a custom namespace).",
         examples=["session"],
     )
     scope: FileScope = Field(
@@ -164,12 +164,12 @@ class NamespaceInfo(BaseModel):
     """Description of a single filesystem namespace."""
 
     name: str = Field(
-        description="Logical namespace name, e.g. 'session', 'artifacts' or 'skills'.",
-        examples=["artifacts"],
+        description="Logical namespace name (e.g. 'session', 'skills', or a custom name).",
+        examples=["session"],
     )
     root: str = Field(
         description="Absolute local path that backs this namespace.",
-        examples=["/mnt/artifacts"],
+        examples=["/mnt/filesystems/session"],
     )
     default_mode: Literal["rw", "ro"] = Field(
         description="Default access mode: 'rw' (read-write) or 'ro' (read-only).",

@@ -22,11 +22,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Fraction of TTL remaining below which we proactively renew the sandbox.
 _RENEW_THRESHOLD = 1 / 3
 
-# Minimum seconds between two renewal attempts for the same session.
-# Prevents rapid concurrent requests from all issuing a renewal.
 _RENEW_SKIP_WINDOW = 30
 
 
@@ -82,8 +79,6 @@ class EnvironmentManager:
         # Serialize per session_id so concurrent calls cannot race into
         # creating two backend sandboxes for the same session (one would leak).
         creation_lock = await self._creation_lock(session_id)
-        # Cross-process serialisation: only one worker may create/restore/
-        # kill the session's container at a time.
         async with creation_lock, self._coordinator.session_lock(session_id) as locked:
             if not locked:
                 logger.warning(
@@ -104,16 +99,12 @@ class EnvironmentManager:
 
         if env:
             if self._mounts_changed(env, mounts, sandbox_env):
-                # Mounts changed: kill the old sandbox and create a new one
-                # so the new mounts are wired at container creation.
                 logger.info(
                     "Mounts changed for session %s, recreating sandbox",
                     session_id,
                 )
                 async with self._lock:
                     self._active.pop(session_id, None)
-                # Kill synchronously so restore_session() cannot rediscover
-                # the old sandbox and reconnect with old mounts.
                 await self._kill(env.sandbox, session_id)
                 return await self._create(
                     session_id, mounts, sandbox_env, force_new=True
@@ -121,8 +112,6 @@ class EnvironmentManager:
 
             env.touch()
             if not await self._maybe_renew(env, session_id):
-                # Renewal failed — discard the dead sandbox so this
-                # request does not run on it.
                 logger.warning(
                     "Sandbox for session %s could not be renewed, recreating",
                     session_id,
@@ -157,8 +146,6 @@ class EnvironmentManager:
             async with self._lock:
                 current = self._active.get(session_id)
             if current is not None and current is not env:
-                # A newer environment was created for this session while we
-                # waited for the lock — do not kill it.
                 logger.info(
                     "Skipping kill on release for session %s (newer env active)",
                     session_id,
@@ -215,9 +202,6 @@ class EnvironmentManager:
 
         mounts = mounts or []
 
-        # Every mount is a bind volume at its exact target. Docker semantics:
-        # nested targets are allowed (a more specific mount shadows a subtree),
-        # identical targets with different sources are a conflict.
         layout_volumes = self._layout.session_volumes(session_id)
         volumes = _dedupe_volumes(
             self._namespace_volumes()
@@ -225,13 +209,9 @@ class EnvironmentManager:
             + [m for m in mounts if m.host_path is not None]
         )
 
-        # Mount specs — always added for writability enforcement.
         specs = self._layout.mount_specs()
         specs.extend(Mount(target=m.target, access=m.access) for m in mounts)
 
-        # Fingerprint of everything that would change the container: the
-        # requested mounts and the injected env. Stored in sandbox metadata at
-        # creation so a restore from another pod can detect stale containers.
         fingerprint = self._fingerprint(mounts, sandbox_env)
 
         if force_new:
@@ -273,8 +253,6 @@ class EnvironmentManager:
             owner=self._coordinator.instance_id,
             activity_sink=self._coordinator.set_activity,
         )
-        # Record the mounts this env was created with, so acquire() can detect
-        # mount changes on later reuses (and recreate instead of materialising).
         env._mount_keys = self._mount_keys(mounts)
         env._sandbox_env = dict(sandbox_env or {})
 
@@ -411,7 +389,6 @@ class EnvironmentManager:
                     continue
                 shared = await self._coordinator.get_activity(session_id)
                 if shared is not None and (now_wall - shared) <= self._ttl:
-                    # Active on another pod/worker — leave it alone.
                     continue
                 self._active.pop(session_id, None)
                 self._creation_locks.pop(session_id, None)
@@ -449,9 +426,9 @@ def _dedupe_volumes(volumes: list[Mount]) -> list[Mount]:
     while two different sources claiming the exact same target is ambiguous
     and must fail before any sandbox is created.
 
-    Also guarantees volume names stay unique: sandbox backends (e.g.
-    OpenSandbox) reject duplicate volume names, so any collision is resolved
-    by suffixing a short target hash.
+    Also guarantees volume names stay unique: duplicate volume names are
+    rejected by sandbox backends, so any collision is resolved by suffixing
+    a short target hash.
     """
     seen_sources: dict[str, Mount] = {}
     merged: list[Mount] = []

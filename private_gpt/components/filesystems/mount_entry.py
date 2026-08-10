@@ -1,7 +1,8 @@
-"""Mount entry models for the ZGPT filesystem platform.
+"""Input model for requesting content mounts in the chat API.
 
-Mount entries are emitted by the Backend on each chat turn and resolve
-to Mount objects that are bind-mounted into the container.
+``MountEntry`` is an input model of the chat request body: API clients use
+it to request that a file or folder be mounted into the sandbox where the
+assistant runs during a chat turn.
 """
 
 from __future__ import annotations
@@ -12,21 +13,21 @@ from pydantic import BaseModel, Field
 
 
 class MountEntry(BaseModel):
-    """Backend request to make content visible inside a sandbox.
+    """Declares a file or folder to mount into the sandbox.
 
-    The Backend declares *what* to mount and *where* it should appear inside
-    the sandbox. Content is located one of two ways:
+    Part of the chat request body (``mounts`` field). Declares *what*
+    content should be visible inside the sandbox and *where* it should
+    appear. Content is located one of two ways:
 
-    - ``uri`` (preferred): a content origin understood by ``load_file_from_uri``
-      (``s3://...``, ``https://...``, ``data:...`` or a local disk path). The
-      mount is lazy — content is fetched only when the backing folder is empty.
-    - ``namespace``/``scope``/``path``: a reference into the platform
-      filesystem, resolved by ``MountResolver`` to the exact local host
-      file/folder.
+    - ``uri`` (preferred): a content origin (``s3://...``, ``https://...``,
+      ``data:...`` or a local disk path). The mount is lazy — content is
+      fetched only when the backing folder is absent or empty.
+    - ``namespace``/``scope``/``path``: a reference into a registered
+      filesystem namespace, resolved to the exact host file/folder.
     """
 
     namespace: str = Field(
-        description="Logical namespace (e.g. 'artifacts', 'session', 'skills')."
+        description="Registered namespace name (e.g. 'session', 'skills', or a custom namespace)."
     )
     scope: str = Field(
         description="Opaque scope id within the namespace (e.g. thread-id)."
@@ -40,8 +41,8 @@ class MountEntry(BaseModel):
     uri: str | None = Field(
         default=None,
         description=(
-            "Content origin: s3://, https://, data: or disk path understood by "
-            "load_file_from_uri. When set, the mount is lazy — content is "
+            "Content origin: s3://, https://, data: or a local disk path. "
+            "When set, the mount is lazy — content is "
             "fetched only if the backing folder is absent or empty."
         ),
     )

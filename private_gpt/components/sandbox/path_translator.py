@@ -20,8 +20,6 @@ class PathTranslator:
     """
 
     def __init__(self, mounts: list[Mount]) -> None:
-        # Only host-backed mounts participate in translation; a mount without
-        # a host path has nothing to translate to.
         self._mounts = sorted(
             (m for m in mounts if m.host_path is not None),
             key=lambda m: len(m.target),
@@ -30,15 +28,12 @@ class PathTranslator:
         self._rebuild_regex()
 
     def _rebuild_regex(self) -> None:
-        # Pre-compile a regex that matches any canonical prefix in a string.
-        # Patterns are sorted longest-first so the leftmost-longest rule applies.
         escaped = [re.escape(m.target) for m in self._mounts]
         if escaped:
             self._canonical_re = re.compile("|".join(escaped))
         else:
             self._canonical_re = re.compile(r"(?!)")  # never matches
 
-        # Reverse: match any real path prefix.
         real_escaped = [re.escape(str(m.host_path)) + r"(/|$)" for m in self._mounts]
         if real_escaped:
             self._real_re = re.compile("|".join(real_escaped))
@@ -127,8 +122,6 @@ class PathTranslator:
             return output
 
         result = output
-        # Process longest real paths first (already sorted by canonical length desc,
-        # which correlates with real path length).
         for mount in self._mounts:
             assert mount.host_path is not None  # filtered in __init__
             real_str = str(mount.host_path)

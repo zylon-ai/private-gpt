@@ -105,10 +105,6 @@ class HydratingEnvironmentManager:
         if mount.is_folder:
             await asyncio.to_thread(_write_folder, host, files)
         else:
-            # A file mount binds one exact host file; fetch() returns the
-            # content of that file (path/filename may differ from the mount).
-            # Permissions follow the mount access so rw mounts stay writable
-            # through the bind (and re-hydratable).
             permissions = 0o644 if mount.access == "rw" else 0o444
             await asyncio.to_thread(_write_file, host, files[0].content, permissions)
 

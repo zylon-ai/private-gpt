@@ -1411,8 +1411,7 @@ class WebFetchSettings(BaseModel):
     )
     provider: str = Field(
         default="local",
-        description="Web scraper provider to run the scrape script with "
-        "(local, opensandbox, ...).",
+        description="Web scraper provider to run the scrape script with (e.g. 'local').",
     )
     timeout_seconds: int = Field(
         default=15, description="Timeout in seconds for web page fetching."
@@ -1811,6 +1810,15 @@ class NamespaceConfig(BaseModel):
             "(FUSE/s3fs) host the content and should keep this off."
         ),
     )
+    storage_backend: bool = Field(
+        default=False,
+        description=(
+            "When True the namespace is served by the ObjectStorage backend "
+            "(uploads/ and outputs/ virtual folders, optional S3 provider). "
+            "Set this on the 'session' namespace; all other namespaces use the "
+            "plain local filesystem via PathResolver."
+        ),
+    )
 
 
 class FilesystemsSettings(BaseModel):
@@ -1820,7 +1828,7 @@ class FilesystemsSettings(BaseModel):
         default_factory=dict,
         description=(
             "Map from namespace name to its configuration. "
-            "Well-known names: 'session', 'artifacts', 'skills'. "
+            "Well-known names include 'session' and 'skills'. "
             "Additional namespaces may be added freely."
         ),
     )

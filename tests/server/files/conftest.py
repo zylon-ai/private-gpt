@@ -46,6 +46,7 @@ def files_client(injector: MockInjector, volume_root: Path) -> TestClient:
                     "session": {
                         "root": str(volume_root),
                         "default_mode": "rw",
+                        "storage_backend": True,
                     },
                     "skills": {
                         "root": str(skills_root),
@@ -79,7 +80,11 @@ def files_namespaces_client(injector: MockInjector, volume_root: Path) -> TestCl
         {
             "filesystems": {
                 "namespaces": {
-                    "session": {"root": str(session_root), "default_mode": "rw"},
+                    "session": {
+                        "root": str(session_root),
+                        "default_mode": "rw",
+                        "storage_backend": True,
+                    },
                     "artifacts": {"root": str(artifacts_root), "default_mode": "rw"},
                     "skills": {"root": str(skills_root), "default_mode": "ro"},
                 }

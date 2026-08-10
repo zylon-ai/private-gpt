@@ -71,14 +71,13 @@ class PathResolver:
         PathEscapeError
             If the resolved path (after symlink expansion) is outside the root.
         """
-        root = self._registry.root(namespace)  # raises KeyError for unknown NS
+        root = self._registry.root(namespace)
 
         _validate_scope(scope)
         _validate_path(path)
 
         candidate = root / scope / path
 
-        # Resolve symlinks *within* the namespace root only.
         resolved = _safe_realpath(candidate, root)
 
         return resolved
@@ -91,7 +90,7 @@ class PathResolver:
 
 def _validate_scope(scope: str) -> None:
     if not scope:
-        return  # empty scope is allowed (namespace-level access)
+        return
     if ".." in scope.split("/") or "/" in scope:
         raise InvalidPathError(
             f"scope must be a single path segment without '..' or '/': {scope!r}"
@@ -100,7 +99,7 @@ def _validate_scope(scope: str) -> None:
 
 def _validate_path(path: str) -> None:
     if not path:
-        return  # empty path resolves to the scope directory itself
+        return
     if path.startswith("/"):
         raise InvalidPathError(f"path must be relative (no leading '/'): {path!r}")
     parts = PurePosixPath(path).parts
@@ -115,13 +114,11 @@ def _safe_realpath(candidate: Path, root: Path) -> Path:
     unconditionally.  Instead we iteratively resolve each component, stopping
     if a symlink target exits the root.
     """
-    # First, do a quick realpath of the root itself so comparisons are stable.
     root_real = Path(os.path.realpath(str(root)))
 
     try:
         real = Path(os.path.realpath(str(candidate)))
     except OSError:
-        # Path does not exist yet; validate the non-resolved form instead.
         real = candidate.resolve()
 
     try:

@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import posixpath
+import re
 from typing import TYPE_CHECKING
 
 from injector import inject, singleton
@@ -71,7 +72,6 @@ class MountResolver:
 
     def _resolve_one(self, entry: MountEntry) -> Mount | None:
         try:
-            # Verify namespace is known before attempting resolution.
             self._registry.get(entry.namespace)
         except KeyError:
             logger.debug(
@@ -103,9 +103,6 @@ class MountResolver:
             uri_source = UriSource.from_uri(entry.uri, filename=filename)
 
         if not host_path.exists() and uri_source is None:
-            # Nothing on the host and nothing to hydrate from: the content is
-            # gone (or was never created). Skipping is safer than binding a
-            # bogus empty path.
             logger.debug(
                 "Skipping mount entry (no host content and no URI): %s -> %s",
                 host_path,
@@ -128,13 +125,31 @@ class MountResolver:
         )
 
 
+# Maximum volume-name length imposed by Kubernetes (DNS label, RFC 1123) and
+# respected by Docker Compose / Swarm.  The fixed skeleton is
+# ``mount-{ns}-{digest16}`` (23 chars overhead), leaving 40 chars for the
+# namespace slug.
+_VOLUME_NAME_MAX = 63
+_VOLUME_NAME_OVERHEAD = len("mount-") + len("-") + 16  # 23
+_VOLUME_NS_MAX = _VOLUME_NAME_MAX - _VOLUME_NAME_OVERHEAD  # 40
+
+
+def _slugify_namespace(name: str) -> str:
+    """Lower-case alphanumeric slug; runs of invalid chars become a single '-'."""
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower())
+    return slug.strip("-")
+
+
 def _volume_name(entry: MountEntry) -> str:
     """Deterministic, unique volume name for a mount entry.
 
-    Volume names must be unique per sandbox (OpenSandbox rejects duplicates).
-    Two entries in the same namespace/scope (e.g. two artifacts of one thread)
+    Volume names must be unique per sandbox and must not exceed 63 characters
+    — the Kubernetes DNS-label limit, also enforced by Docker Compose / Swarm.
+
+    Two entries in the same namespace/scope (e.g. two files of one thread)
     collide if the name only carries namespace+scope, so the exact target —
     which the runtime guarantees to be unique per mount — is hashed in.
     """
     digest = hashlib.sha1(entry.target.encode("utf-8")).hexdigest()[:16]
-    return f"mount-{entry.namespace}-{digest}"
+    ns_slug = _slugify_namespace(entry.namespace)[:_VOLUME_NS_MAX]
+    return f"mount-{ns_slug}-{digest}"

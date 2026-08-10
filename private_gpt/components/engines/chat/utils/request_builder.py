@@ -58,9 +58,6 @@ def build_request_from_context_stack(
 
     request.tool_config.tools = list(context_stack.all_tools())
     request.context.documents = context_stack.all_documents() or None
-    # The initial ResolvedChatRequest already carries mount-plan volumes
-    # (from ChatBody.mounts). Append the context-stack mounts so tools get
-    # one merged set; the merge is idempotent since this runs every iteration.
     request.context.mounts = _merge_mounts(
         request.context.mounts, context_stack.all_mounts()
     )

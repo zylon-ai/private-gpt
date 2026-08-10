@@ -432,7 +432,7 @@ async def test_mount_change_forces_fresh_create_even_with_restore() -> None:
 
 class SharedProvider(FakeProvider):
     """Provider with a shared registry so two managers (pods) see each other's
-    containers — simulating the OpenSandbox metadata discovery."""
+    containers — simulating multi-pod metadata discovery."""
 
     def __init__(self) -> None:
         super().__init__()

@@ -173,7 +173,7 @@ class TestMountResolver:
 
     def test_volume_names_are_unique_within_a_scope(self, tmp_path: Path) -> None:
         """Two artifacts of the same thread must not produce duplicate volume
-        names (OpenSandbox rejects duplicate volume names)."""
+        names (sandbox backends reject duplicate volume names)."""
         resolver, _ = _make_resolver(tmp_path)
         entries = [
             MountEntry(

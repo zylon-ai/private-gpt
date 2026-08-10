@@ -23,22 +23,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# In-memory fallback state, shared process-wide so every coordinator instance
-# in this process coordinates against the same locks/activity. This mirrors
-# Redis within a single process (used when Redis is unavailable/not configured).
 _fallback_locks: dict[str, str] = {}
 _fallback_activity: dict[str, float] = {}
 _fallback_guard = asyncio.Lock()
 
-# How long the per-session lock may be held (refreshed while held — a crashed
-# holder therefore never blocks waiters for longer than this).
 _LOCK_TTL_SECONDS = 120
-# How long acquire() waits for another process to release the session lock.
 _LOCK_WAIT_SECONDS = 300
-# Shared last-activity keys never need to expire mid-session; 24h is ample.
 _ACTIVITY_TTL_SECONDS = 60 * 60 * 24
 
-# Namespace matching RedisSemaphoreManager's usage of redis_semaphore_async.
 _SEM_NAMESPACE = "sandbox_lock"
 
 
@@ -122,7 +114,6 @@ class DistributedCoordinator:
         return sem
 
     def _sem_counter_key(self, session_id: str) -> str:
-        # Same key layout the library derives: {namespace}:{task_name}.
         return f"{_SEM_NAMESPACE}:sandbox:{session_id}"
 
     async def _refresh_lease(self, session_id: str) -> None:
