@@ -314,3 +314,129 @@ class TestMarkdownParser(unittest.TestCase):
     def test_sample_markdown(self) -> None:
         """Test the parser on the sample markdown."""
         self._round_trip_test(SAMPLE_MARKDOWN, exact=False)
+
+    def test_metadata_propagation_to_children(self) -> None:
+        """Verify that root metadata and excluded keys propagate correctly
+        to all descendant nodes. This locks in current behavior before
+        refactoring _copy_metadata_to_children."""
+        markdown = (
+            "# Header 1\n"
+            "Paragraph under header 1.\n\n"
+            "## Header 2\n"
+            "* Item 1\n"
+            "* Item 2\n\n"
+            "| A | B |\n"
+            "|---|---|\n"
+            "| 1 | 2 |\n"
+        )
+        extra_info = {"source": "doc1", "page": 3}
+        root = self.parser.parse(markdown, extra_info=extra_info)
+
+        def collect_nodes(node, acc=None):
+            acc = [] if acc is None else acc
+            acc.append(node)
+            for child in node.children or []:
+                collect_nodes(child, acc)
+            return acc
+
+        all_nodes = collect_nodes(root)
+
+        # Root itself must carry the extra_info
+        assert root.metadata.get("source") == "doc1"
+        assert root.metadata.get("page") == 3
+
+        # Every descendant node must have inherited the root metadata
+        for node in all_nodes[1:]:  # skip root, already checked
+            assert node.metadata.get("source") == "doc1", (
+                f"Node {type(node).__name__} missing inherited 'source' metadata"
+            )
+            assert node.metadata.get("page") == 3, (
+                f"Node {type(node).__name__} missing inherited 'page' metadata"
+            )
+            # Inherited exclusion keys must be present too
+            assert "source" in node.excluded_llm_metadata_keys
+            assert "source" in node.excluded_embed_metadata_keys
+            assert "page" in node.excluded_llm_metadata_keys
+            assert "page" in node.excluded_embed_metadata_keys
+
+        # Node-specific exclusion keys must be preserved, not overwritten
+        # e.g. SectionNode/ListItemNode add their own keys like 'header_level',
+        # 'list_type', etc. Spot-check at least one such node still has them.
+        section_nodes = [n for n in all_nodes if "header_level" in n.metadata]
+        assert section_nodes, "Expected at least one SectionNode with header_level"
+        for sn in section_nodes:
+            assert "header_level" in sn.excluded_llm_metadata_keys
+            assert "header_level" in sn.excluded_embed_metadata_keys
+
+    def test_metadata_propagation_without_extra_info(self) -> None:
+        """When no extra_info is passed, children should not crash and
+        should simply have no inherited root-level keys beyond their own."""
+        markdown = "# Header\nSome text"
+        root = self.parser.parse(markdown)  # no extra_info
+
+        def collect_nodes(node, acc=None):
+            acc = [] if acc is None else acc
+            acc.append(node)
+            for child in node.children or []:
+                collect_nodes(child, acc)
+            return acc
+
+        all_nodes = collect_nodes(root)
+        # Should not raise, and metadata dicts should exist (possibly empty
+        # aside from node-specific keys like header_level/headers)
+        for node in all_nodes:
+            assert isinstance(node.metadata, dict)
+
+    def test_table_with_inline_formatting(self) -> None:
+        """Cells containing inline markdown (bold, italic, links, code)
+        must be parsed correctly. This guards _parse_table against
+        behavior changes if regex parsing is replaced with find_all()."""
+        markdown = (
+            "| Header 1 | Header 2 |\n"
+            "|----------|----------|\n"
+            "| **Bold** | *Italic* |\n"
+            "| [link](http://example.com) | `code` |"
+        )
+        self._round_trip_test(markdown, exact=False)
+
+    def test_table_with_nested_tags_in_cell(self) -> None:
+        """A cell with multiple nested inline tags shouldn't break header/
+        cell count alignment."""
+        markdown = (
+            "| Name | Notes |\n"
+            "|------|-------|\n"
+            "| Alice | **Important**: see *details* below |\n"
+            "| Bob | Plain text |"
+        )
+        root = self.parser.parse(markdown)
+        # Should not raise, and should produce exactly 2 data rows
+        serialized = self._serialize_tree(root)
+        assert "Alice" in serialized
+        assert "Bob" in serialized
+
+    def test_table_row_count_matches_input(self) -> None:
+        """Regression guard: number of TableRowNode children must match
+        the number of data rows in the source markdown, regardless of
+        how cells are extracted internally."""
+        from private_gpt.components.readers.nodes.table_node import TableNode
+
+        markdown = (
+            "| A | B | C |\n"
+            "|---|---|---|\n"
+            "| 1 | 2 | 3 |\n"
+            "| 4 | 5 | 6 |\n"
+            "| 7 | 8 | 9 |"
+        )
+        root = self.parser.parse(markdown)
+
+        def find_table_nodes(node, acc=None):
+            acc = [] if acc is None else acc
+            if isinstance(node, TableNode):
+                acc.append(node)
+            for child in node.children or []:
+                find_table_nodes(child, acc)
+            return acc
+
+        tables = find_table_nodes(root)
+        assert len(tables) == 1
+        assert len(tables[0].children or []) == 3  # 3 data rows

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -74,30 +73,43 @@ class MarkdownTreeNodeParser(TransformComponent):
         return self.section_stack[-1] if self.section_stack else self.root
 
     def _parse_table(self, table_html: str) -> pd.DataFrame:
-        """Parse one-line HTML table into pandas DataFrame using regex."""
-        # Extract headers with one regex match
-        headers = [
-            text.strip()
-            for text in re.findall(r"<th[^>]*>(.*?)</th>", table_html, re.IGNORECASE)
+        """Parse an HTML table into a DataFrame, converting each cell's inner
+        HTML to markdown so inline formatting (bold, italic, links, code)
+        round-trips correctly."""
+        soup = BeautifulSoup(table_html, "lxml")
+
+        headers = [self._convert_cell_to_markdown(th) for th in soup.find_all("th")]
+
+        rows = [
+            [self._convert_cell_to_markdown(td) for td in tr.find_all("td")]
+            for tr in soup.find_all("tr")
+            if tr.find("td")
         ]
-
-        # Extract all cells in one regex match and chunk them into rows
-        cells = [
-            cell.strip()
-            for cell in re.findall(r"<td[^>]*>(.*?)</td>", table_html, re.IGNORECASE)
-        ]
-
-        # Calculate number of columns from headers
-        num_cols = len(headers)
-
-        # Convert flat list of cells into rows
-        rows = [cells[i : i + num_cols] for i in range(0, len(cells), num_cols)]
 
         process_table = DataFramePreprocessor(
             try_cast_to_numeric=True,
             try_cast_to_datetime=True,
         )
         return process_table.preprocess_table_data(rows, headers)
+
+    def _convert_cell_to_markdown(self, cell: Tag) -> str:
+        """Convert a <th>/<td> cell's inner HTML to inline markdown.
+
+        Unlike _convert_tag_to_markdown, this does not run the result
+        through MarkdownHelper.sanitize_markdown, which intentionally
+        strips bold/italic markers for body text - formatting that must
+        be preserved inside table cells.
+        """
+        from markdownify import markdownify as md  # ty:ignore[unresolved-import]
+
+        parts = []
+        for child in cell.contents:
+            if isinstance(child, NavigableString):
+                parts.append(str(child).strip())
+            elif isinstance(child, Tag):
+                markdown = md(str(child), heading_style="ATX").replace("\\", "")
+                parts.append(markdown.strip())
+        return " ".join(p for p in parts if p).strip()
 
     def _generate_table_node(self, df: pd.DataFrame) -> TreeNode:
         table_node = TableNode(
