@@ -1,17 +1,20 @@
-"""Tests for MountRefResolver."""
+"""Tests for MountResolver — one entry, one exact bind mount."""
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from private_gpt.components.filesystems.mount_entry import MountEntry
-from private_gpt.components.filesystems.mount_ref_resolver import MountRefResolver
+from private_gpt.components.filesystems.mount_resolver import MountResolver
 from private_gpt.components.filesystems.namespace_registry import NamespaceRegistry
 from private_gpt.components.filesystems.path_resolver import PathResolver
 from private_gpt.settings.settings import FilesystemsSettings, NamespaceConfig
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def _make_resolver(tmp_path: Path) -> tuple[MountRefResolver, Path]:
+
+def _make_resolver(tmp_path: Path) -> tuple[MountResolver, Path]:
     root = tmp_path / "artifacts"
     root.mkdir()
     ns = NamespaceConfig(root=str(root), default_mode="rw")
@@ -22,15 +25,14 @@ def _make_resolver(tmp_path: Path) -> tuple[MountRefResolver, Path]:
 
     registry = NamespaceRegistry(settings=_FakeSettings())  # type: ignore[arg-type]
     path_resolver = PathResolver(registry=registry)
-    mount_resolver = MountRefResolver(registry=registry, resolver=path_resolver)
+    mount_resolver = MountResolver(registry=registry, resolver=path_resolver)
     return mount_resolver, root
 
 
-class TestMountRefResolver:
+class TestMountResolver:
     def test_empty_entries_returns_empty(self, tmp_path: Path) -> None:
         resolver, _ = _make_resolver(tmp_path)
-        result = resolver.resolve([])
-        assert result == []
+        assert resolver.resolve([]) == []
 
     def test_unknown_namespace_is_skipped(self, tmp_path: Path) -> None:
         resolver, _ = _make_resolver(tmp_path)
@@ -41,11 +43,12 @@ class TestMountRefResolver:
             target="/mnt/artifacts/file.mdx",
             mode="rw",
         )
-        result = resolver.resolve([entry])
-        assert result == []
+        assert resolver.resolve([entry]) == []
 
-    def test_file_entry_resolves_to_parent_directory(self, tmp_path: Path) -> None:
-        """A file-level entry becomes a directory mount of the file's parent."""
+    def test_file_entry_keeps_exact_target_and_file_source(
+        self, tmp_path: Path
+    ) -> None:
+        """A file-level entry becomes a file mount: exact target, exact host file."""
         resolver, root = _make_resolver(tmp_path)
         (root / "org-1").mkdir()
         (root / "org-1" / "art-1").write_bytes(b"content")
@@ -61,14 +64,15 @@ class TestMountRefResolver:
         result = resolver.resolve([entry])
         assert len(result) == 1
         mount = result[0]
-        # Target is a directory (ends with "/"), source is the parent dir.
-        assert mount.target == "/mnt/artifacts/org-1/"
-        assert mount.host_path == root / "org-1"
+        assert mount.target == "/mnt/artifacts/org-1/art-1"
+        assert mount.host_path == root / "org-1" / "art-1"
         assert mount.access == "rw"
         assert mount.etag == "abc"
+        assert mount.is_folder is False
 
-    def test_directory_entry_stays_directory(self, tmp_path: Path) -> None:
-        """A directory-level entry keeps its directory target/source."""
+    def test_entry_target_is_never_rewritten(self, tmp_path: Path) -> None:
+        """The target decides the mount kind; the resolver never adds or moves
+        trailing slashes — the Backend owns the exact target."""
         resolver, root = _make_resolver(tmp_path)
         (root / "org-1").mkdir()
         (root / "org-1" / "art-dir").mkdir()
@@ -77,13 +81,15 @@ class TestMountRefResolver:
             namespace="artifacts",
             scope="org-1",
             path="art-dir",
-            target="/mnt/artifacts/org-1/art-dir",
+            target="/mnt/artifacts/org-1/art-dir/",
             mode="rw",
         )
         result = resolver.resolve([entry])
         assert len(result) == 1
-        assert result[0].target == "/mnt/artifacts/org-1/art-dir/"
-        assert result[0].host_path == root / "org-1" / "art-dir"
+        mount = result[0]
+        assert mount.target == "/mnt/artifacts/org-1/art-dir/"
+        assert mount.host_path == root / "org-1" / "art-dir"
+        assert mount.is_folder is True
 
     def test_ro_entry_produces_read_only_mount(self, tmp_path: Path) -> None:
         resolver, root = _make_resolver(tmp_path)
@@ -101,7 +107,7 @@ class TestMountRefResolver:
         assert len(result) == 1
         assert result[0].access == "ro"
 
-    def test_nonexistent_path_is_skipped(self, tmp_path: Path) -> None:
+    def test_missing_path_without_uri_is_skipped(self, tmp_path: Path) -> None:
         resolver, _ = _make_resolver(tmp_path)
         entry = MountEntry(
             namespace="artifacts",
@@ -110,8 +116,30 @@ class TestMountRefResolver:
             target="/mnt/artifacts/org-1/does-not-exist",
             mode="rw",
         )
+        assert resolver.resolve([entry]) == []
+
+    def test_missing_path_with_uri_is_kept_for_hydration(self, tmp_path: Path) -> None:
+        """A URI-backed entry whose host file is missing is still emitted; the
+        hydration layer fills the host path before sandbox creation."""
+        resolver, root = _make_resolver(tmp_path)
+        (root / "org-1").mkdir()
+
+        entry = MountEntry(
+            namespace="artifacts",
+            scope="org-1",
+            path="art-1/_content.md",
+            target="/home/agent/workspace/potato.md",
+            mode="rw",
+            etag="abc",
+            uri="file:///storage/_content.md",
+        )
         result = resolver.resolve([entry])
-        assert result == []
+        assert len(result) == 1
+        mount = result[0]
+        assert mount.target == "/home/agent/workspace/potato.md"
+        assert mount.host_path == root / "org-1" / "art-1" / "_content.md"
+        assert mount.uri_source is not None
+        assert mount.etag == "abc"
 
     def test_invalid_traversal_path_is_skipped(self, tmp_path: Path) -> None:
         resolver, _ = _make_resolver(tmp_path)
@@ -122,10 +150,10 @@ class TestMountRefResolver:
             target="/mnt/escape",
             mode="rw",
         )
-        result = resolver.resolve([entry])
-        assert result == []
+        assert resolver.resolve([entry]) == []
 
-    def test_uri_mount_uses_target_filename(self, tmp_path: Path) -> None:
+    def test_uri_file_mount_keeps_exact_target(self, tmp_path: Path) -> None:
+        """No more parent-directory mangling: a file entry stays a file mount."""
         resolver, _ = _make_resolver(tmp_path)
         entry = MountEntry(
             namespace="artifacts",
@@ -139,19 +167,47 @@ class TestMountRefResolver:
         result = resolver.resolve([entry])
 
         assert len(result) == 1
-        assert result[0].target == "/mnt/artifacts/"
+        assert result[0].target == "/mnt/artifacts/artifact-1.mdx"
         assert result[0].uri_source is not None
         assert result[0].uri_source.filename == "artifact-1.mdx"
 
-    def test_same_directory_uri_files_are_combined_generically(
-        self, tmp_path: Path
-    ) -> None:
+    def test_volume_names_are_unique_within_a_scope(self, tmp_path: Path) -> None:
+        """Two artifacts of the same thread must not produce duplicate volume
+        names (OpenSandbox rejects duplicate volume names)."""
         resolver, _ = _make_resolver(tmp_path)
         entries = [
             MountEntry(
                 namespace="artifacts",
                 scope="thread-1",
-                path="_content.md",
+                path="art-1/_content.md",
+                target="/home/agent/workspace/a.md",
+                mode="rw",
+                uri="file:///storage/_content.md",
+            ),
+            MountEntry(
+                namespace="artifacts",
+                scope="thread-1",
+                path="art-2/_content.md",
+                target="/home/agent/workspace/b.md",
+                mode="rw",
+                uri="file:///storage/_content.md",
+            ),
+        ]
+
+        mounts = resolver.resolve(entries)
+
+        assert len(mounts) == 2
+        assert mounts[0].name != mounts[1].name
+        assert all(m.name.startswith("mount-artifacts-") for m in mounts)
+
+    def test_two_uri_files_are_not_merged(self, tmp_path: Path) -> None:
+        """Each entry is its own mount; merging is the runtime's job (none)."""
+        resolver, _ = _make_resolver(tmp_path)
+        entries = [
+            MountEntry(
+                namespace="artifacts",
+                scope="thread-1",
+                path="artifact-1/_content.md",
                 target="/mnt/artifacts/artifact-1/_content.md",
                 mode="rw",
                 uri="file:///storage/_content.md",
@@ -159,7 +215,7 @@ class TestMountRefResolver:
             MountEntry(
                 namespace="artifacts",
                 scope="thread-1",
-                path="_index.mdx",
+                path="artifact-1/_index.mdx",
                 target="/mnt/artifacts/artifact-1/_index.mdx",
                 mode="ro",
                 uri="file:///storage/_index.mdx",
@@ -168,38 +224,7 @@ class TestMountRefResolver:
 
         result = resolver.resolve(entries)
 
-        assert len(result) == 1
-        mount = result[0]
-        assert mount.target == "/mnt/artifacts/artifact-1/"
-        assert mount.access == "rw"
-        assert mount.uri_source is not None
-        assert mount.uri_source.sources == [
-            ("file:///storage/_content.md", "_content.md"),
-            ("file:///storage/_index.mdx", "_index.mdx"),
-        ]
-
-    def test_overlapping_directories_are_not_rewritten(self, tmp_path: Path) -> None:
-        resolver, _ = _make_resolver(tmp_path)
-        entries = [
-            MountEntry(
-                namespace="artifacts",
-                scope="thread-1",
-                path="artifact-1/_content.md",
-                target="/mnt/artifacts/artifact-1/_content.md",
-                uri="file:///storage/artifact-1/_content.md",
-            ),
-            MountEntry(
-                namespace="artifacts",
-                scope="thread-1",
-                path="artifact-2/_content.md",
-                target="/mnt/artifacts/artifact-2/_content.md",
-                uri="file:///storage/artifact-2/_content.md",
-            ),
-        ]
-
-        result = resolver.resolve(entries)
-
         assert {mount.target for mount in result} == {
-            "/mnt/artifacts/artifact-1/",
-            "/mnt/artifacts/artifact-2/",
+            "/mnt/artifacts/artifact-1/_content.md",
+            "/mnt/artifacts/artifact-1/_index.mdx",
         }

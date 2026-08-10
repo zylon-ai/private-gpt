@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 from private_gpt.chat.input_models import BlobVisibilityMode
@@ -19,7 +17,7 @@ from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat.utils.request_builder import (
     build_request_from_context_stack,
 )
-from private_gpt.components.sandbox.mount import Mount
+from private_gpt.components.sandbox.mount import Mount, MountSource
 from private_gpt.components.tools.types import ToolValidationMode
 
 
@@ -28,7 +26,7 @@ def _mount(target: str, *, source: str | None = None) -> Mount:
         name=f"mount:{target}",
         target=target,
         access="rw",
-        source=Path(source) if source else None,
+        source=MountSource(namespace=source or "", path=""),
     )
 
 

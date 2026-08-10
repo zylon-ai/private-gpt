@@ -68,27 +68,37 @@ class PathTranslator:
     def to_real(self, canonical_path: str) -> Path:
         """Translate a canonical path to its real filesystem Path.
 
-        Raises ValueError if the path does not start with any known mount prefix.
+        Folder mounts match by prefix; file mounts match exactly (a file mount
+        maps one canonical file to one host file, never a subtree).
+        Raises ValueError if the path does not match any known mount.
         """
         for mount in self._mounts:
-            if canonical_path.startswith(mount.target):
-                relative = canonical_path[len(mount.target) :]
+            if mount.target.endswith("/"):
+                if canonical_path.startswith(mount.target):
+                    relative = canonical_path[len(mount.target) :]
+                    assert mount.host_path is not None  # filtered in __init__
+                    return mount.host_path / relative
+            elif canonical_path == mount.target:
                 assert mount.host_path is not None  # filtered in __init__
-                return mount.host_path / relative
+                return mount.host_path
         raise ValueError(f"Path '{canonical_path}' does not match any session mount.")
 
     def to_canonical(self, real: Path | str) -> str:
         """Reverse-translate a real path to its canonical form.
 
+        Folder mounts match by prefix; file mounts match exactly.
         Raises ValueError if the real path is outside all mount points.
         """
         real_str = str(real)
         for mount in self._mounts:
             assert mount.host_path is not None  # filtered in __init__
             mount_str = str(mount.host_path)
-            if real_str == mount_str or real_str.startswith(mount_str + "/"):
-                relative = real_str[len(mount_str) :]
-                return mount.target + relative.lstrip("/")
+            if mount.target.endswith("/"):
+                if real_str == mount_str or real_str.startswith(mount_str + "/"):
+                    relative = real_str[len(mount_str) :]
+                    return mount.target + relative.lstrip("/")
+            elif real_str == mount_str:
+                return mount.target
         raise ValueError(f"Real path '{real}' is not inside any session mount.")
 
     # ------------------------------------------------------------------

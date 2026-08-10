@@ -12,6 +12,7 @@ from private_gpt.components.environment import distributed as _dist
 from private_gpt.components.environment.manager import (
     _RENEW_THRESHOLD,
     EnvironmentManager,
+    _dedupe_volumes,
 )
 from private_gpt.components.sandbox.mount import Mount, UriSource
 
@@ -107,10 +108,23 @@ def _manager(**kwargs) -> EnvironmentManager:
     kwargs.setdefault("sandbox_provider", FakeProvider())
     return EnvironmentManager(
         layout_mounter=FakeLayout(),
-        content_mounters=[],
         ttl_seconds=3600,
         **kwargs,
     )
+
+
+def test_dedupe_volumes_keeps_volume_names_unique() -> None:
+    """Sandbox backends reject duplicate volume names; the manager must
+    guarantee uniqueness even when producers collide."""
+    a = Mount(name="dupe", target="/mnt/a/", host_path=Path("/tmp/a"))
+    b = Mount(name="dupe", target="/mnt/b/", host_path=Path("/tmp/b"))
+
+    volumes = _dedupe_volumes([a, b])
+
+    assert len(volumes) == 2
+    names = {v.name for v in volumes}
+    assert len(names) == 2
+    assert "dupe" in names
 
 
 def _bundle_mount(canonical: str, prefix: str = "") -> Mount:
@@ -294,7 +308,6 @@ async def test_stale_on_renew_failure_triggers_recreate() -> None:
     manager = EnvironmentManager(
         sandbox_provider=provider,
         layout_mounter=FakeLayout(),
-        content_mounters=[],
         ttl_seconds=3600,
     )
     ttl = manager._ttl
@@ -312,44 +325,6 @@ async def test_stale_on_renew_failure_triggers_recreate() -> None:
     assert second is not env
     assert len(provider.created) == 2
     assert provider.killed == ["sandbox-1"]
-
-
-async def test_stale_env_discarded_and_never_restored() -> None:
-    """A stale env is killed and replaced by a fresh container — restore must
-    never be attempted for it."""
-
-    class RestoringProvider(FakeProvider):
-        def __init__(self) -> None:
-            super().__init__()
-            self.restored: list[str] = []
-
-        async def restore_session(
-            self, session_id, timeout=None, bundle_specs=None, *, fingerprint=None
-        ):
-            self.restored.append(session_id)
-            return FakeSandbox("restored-sandbox")
-
-    provider = RestoringProvider()
-    manager = EnvironmentManager(
-        sandbox_provider=provider,
-        layout_mounter=FakeLayout(),
-        content_mounters=[],
-        ttl_seconds=3600,
-    )
-
-    env = await manager.acquire("s1")
-    assert provider.restored == ["s1"]
-
-    # Mark stale (backend container died) and acquire again.
-    env._stale = True
-    fresh = await manager.acquire("s1")
-    await _sleep_tasks(manager)
-
-    # Restore was NOT attempted for the stale env; fresh container created.
-    assert provider.restored == ["s1"]  # only the first acquire restored
-    assert provider.created == ["sandbox-1"]
-    assert provider.killed == ["restored-sandbox"]
-    assert fresh.sandbox.sandbox_id == "sandbox-1"
 
 
 # ---------------------------------------------------------------------------
@@ -404,7 +379,6 @@ async def test_acquire_restores_when_provider_has_sandbox() -> None:
     manager = EnvironmentManager(
         sandbox_provider=provider,
         layout_mounter=FakeLayout(),
-        content_mounters=[],
         ttl_seconds=3600,
     )
 
@@ -433,7 +407,6 @@ async def test_mount_change_forces_fresh_create_even_with_restore() -> None:
     manager = EnvironmentManager(
         sandbox_provider=provider,
         layout_mounter=FakeLayout(),
-        content_mounters=[],
         ttl_seconds=3600,
     )
 

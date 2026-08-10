@@ -1802,6 +1802,15 @@ class NamespaceConfig(BaseModel):
         default="rw",
         description="Default access mode: 'rw' (read-write) or 'ro' (read-only).",
     )
+    hydration: bool = Field(
+        default=False,
+        description=(
+            "Development-only: when True, namespace-backed mounts are "
+            "(re)hydrated from their URI before the sandbox is created, using "
+            "an etag ledger to skip unchanged content. Production volumes "
+            "(FUSE/s3fs) host the content and should keep this off."
+        ),
+    )
 
 
 class FilesystemsSettings(BaseModel):

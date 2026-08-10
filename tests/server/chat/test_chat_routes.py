@@ -2,6 +2,7 @@ import asyncio
 import json
 import uuid
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, Mock
 
@@ -1314,23 +1315,25 @@ async def test_code_execution_reuses_sandbox_across_inferences_with_same_contain
 
 
 @pytest.mark.anyio
-async def test_code_execution_uri_mount_recreated_when_mounts_change(
+async def test_code_execution_mount_recreated_when_mounts_change(
     async_test_client: AsyncClient,
     injector: MockInjector,
-    tmp_path: Any,
-    allow_file_uri_scheme: None,
 ) -> None:
-    first_source = tmp_path / "first"
-    first_source.mkdir()
-    (first_source / "notes.txt").write_text("FIRST MOUNT\n")
+    # Eager namespace mounts: content already lives in the 'skills' namespace
+    # root (as production FUSE/s3fs volumes would host it), so no hydration is
+    # needed and each mount is a plain exact-target bind.
+    skills_root = Path("local_data/private_gpt/volumes/skills")
+    first_file = skills_root / "org-1" / "notes.txt"
+    first_file.parent.mkdir(parents=True, exist_ok=True)
+    first_file.write_text("FIRST MOUNT\n")
 
-    second_source = tmp_path / "second"
-    second_source.mkdir()
-    (second_source / "other.txt").write_text("SECOND MOUNT\n")
+    second_file = skills_root / "org-2" / "other.txt"
+    second_file.parent.mkdir(parents=True, exist_ok=True)
+    second_file.write_text("SECOND MOUNT\n")
 
     container = f"code-exec-mount-{uuid.uuid4()}"
 
-    # First inference: mount a directory by URL and read it from the sandbox.
+    # First inference: mount a file from the namespace and read it.
     await mock_llm(
         injector,
         deltas=[
@@ -1350,12 +1353,11 @@ async def test_code_execution_uri_mount_recreated_when_mounts_change(
             container=container,
             mounts=[
                 {
-                    "namespace": "artifacts",
+                    "namespace": "skills",
                     "scope": "org-1",
-                    "path": "notes",
+                    "path": "notes.txt",
                     "target": "/mnt/user-data/notes.txt",
                     "mode": "ro",
-                    "uri": f"file://{first_source}",
                 }
             ],
             stream=True,
@@ -1394,12 +1396,11 @@ async def test_code_execution_uri_mount_recreated_when_mounts_change(
             container=container,
             mounts=[
                 {
-                    "namespace": "artifacts",
+                    "namespace": "skills",
                     "scope": "org-2",
-                    "path": "other",
+                    "path": "other.txt",
                     "target": "/mnt/user-data/other.txt",
                     "mode": "ro",
-                    "uri": f"file://{second_source}",
                 }
             ],
             stream=True,
@@ -1408,7 +1409,9 @@ async def test_code_execution_uri_mount_recreated_when_mounts_change(
     assert second.status_code == 200
     results = _sse_tool_result_texts(second.text)
     assert "FIRST MOUNT" not in results
-    assert "File not found" in results
+    # The previous mount is gone entirely (exact-target mounts), so the local
+    # sandbox no longer knows the path.
+    assert "does not match any session mount" in results
     assert "SECOND MOUNT" in results
     assert _sse_container_id(second.text) == container
 

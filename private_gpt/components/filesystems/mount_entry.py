@@ -21,8 +21,8 @@ class MountEntry(BaseModel):
       (``s3://...``, ``https://...``, ``data:...`` or a local disk path). The
       mount is lazy — content is fetched only when the backing folder is empty.
     - ``namespace``/``scope``/``path``: a reference into the platform
-      filesystem, resolved by ``MountRefResolver`` to a local host folder
-      (eager when the folder already has content).
+      filesystem, resolved by ``MountResolver`` to the exact local host
+      file/folder.
     """
 
     namespace: str = Field(

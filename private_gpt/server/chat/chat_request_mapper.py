@@ -22,7 +22,7 @@ from private_gpt.components.chat.models.chat_config_models import (
     ThinkingConfig,
     ToolSpec,
 )
-from private_gpt.components.filesystems.mount_ref_resolver import MountRefResolver
+from private_gpt.components.filesystems.mount_resolver import MountResolver
 from private_gpt.components.tools.tool_pipeline import ToolPipeline
 from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.server.chat.chat_models import ChatBody
@@ -42,11 +42,11 @@ class ChatRequestMapper:
         self,
         settings: Settings,
         tool_pipeline: ToolPipeline,
-        mount_ref_resolver: MountRefResolver,
+        mount_resolver: MountResolver,
     ) -> None:
         self._settings = settings
         self._tool_pipeline = tool_pipeline
-        self._mount_ref_resolver = mount_ref_resolver
+        self._mount_resolver = mount_resolver
 
     def _get_model(
         self,
@@ -218,7 +218,7 @@ class ChatRequestMapper:
                 if body.metadata and body.metadata.user_id
                 else str(uuid.uuid4()),
                 container=body.container,
-                mounts=self._mount_ref_resolver.resolve(body.mounts or []),
+                mounts=self._mount_resolver.resolve(body.mounts or []),
                 maximum_context_length=self._settings.chat.maximum_context_length,
                 maximum_loaded_skills=(
                     body.maximum_loaded_skills

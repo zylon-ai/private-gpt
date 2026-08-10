@@ -19,7 +19,7 @@ class LayoutMounter(ABC):
     Responsible only for structural concerns: which canonical paths make up
     the session's persistent directory tree and how they are backed on the
     host. Bundle content (skills, tools, ...) is a separate concern handled
-    by ContentMounter implementations.
+    by the hydration layer, never here.
     """
 
     def __init__(
@@ -44,7 +44,6 @@ class LayoutMounter(ABC):
         """Host volumes backing this session's layout dirs, or None if not host-backed.
 
         Only covers the fixed session layout (workspace, uploads, outputs).
-        Bundle/skill volumes are declared by ContentMounter.prepare_volume().
         Implementations create the host directories they return. Idempotent.
         """
 
@@ -77,8 +76,6 @@ class LocalDirMounter(LayoutMounter):
 
     Layout dirs live under ``{base}/{name}/{session_id}`` so that each folder
     type sits at a top-level prefix — enabling per-folder MinIO lifecycle rules.
-    Bundle content is handled by LocalStorageContentMounter or
-    FetchContentMounter, not here.
     """
 
     def __init__(

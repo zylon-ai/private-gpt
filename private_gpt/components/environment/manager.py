@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from private_gpt.components.environment.distributed import DistributedCoordinator
@@ -14,9 +16,9 @@ if TYPE_CHECKING:
     from collections.abc import Coroutine
     from typing import Any
 
-    from private_gpt.components.environment.content_mounter import ContentMounter
     from private_gpt.components.environment.mounter import LayoutMounter
     from private_gpt.components.sandbox.base import SandboxProvider, SandboxSession
+    from private_gpt.settings.settings import NamespaceConfig
 
 logger = logging.getLogger(__name__)
 
@@ -39,24 +41,32 @@ class EnvironmentManager:
     recreated on the next acquire(). Cross-process races on the same session
     are serialised with a per-session lock (Redis, with an in-memory
     fallback); the reaper also consults a shared last-activity clock.
+
+    Every mount is a bind volume wired at container creation — there is no
+    lazy materialization into a running sandbox. The full volume set is:
+
+    1. one volume per configured filesystem namespace at its canonical
+       container root (``/mnt/{name}/``), even when empty,
+    2. the session layout volumes (workspace, uploads, outputs),
+    3. the requested content mounts (folders or files, exact targets).
     """
 
     def __init__(
         self,
         sandbox_provider: SandboxProvider,
         layout_mounter: LayoutMounter,
-        content_mounters: list[ContentMounter],
         ttl_seconds: int,
         reaper_interval_seconds: int | None = None,
         *,
         coordinator: DistributedCoordinator | None = None,
+        namespaces: dict[str, NamespaceConfig] | None = None,
     ) -> None:
         self._provider = sandbox_provider
         self._layout = layout_mounter
-        self._content_mounters = content_mounters
         self._ttl = ttl_seconds
         self._reaper_interval = reaper_interval_seconds
         self._coordinator = coordinator or DistributedCoordinator()
+        self._namespaces = namespaces or {}
         self._active: dict[str, Environment] = {}
         self._lock = asyncio.Lock()
         self._creation_locks: dict[str, asyncio.Lock] = {}
@@ -93,20 +103,7 @@ class EnvironmentManager:
             env = self._active.get(session_id)
 
         if env:
-            if env._stale:
-                # Sandbox died (e.g. server restart): discard it and
-                # create a fresh one for this request.
-                logger.warning(
-                    "Sandbox for session %s is stale, recreating", session_id
-                )
-                async with self._lock:
-                    self._active.pop(session_id, None)
-                await self._kill(env.sandbox, session_id)
-                return await self._create(
-                    session_id, mounts, sandbox_env, force_new=True
-                )
-
-            elif self._mounts_changed(env, mounts, sandbox_env):
+            if self._mounts_changed(env, mounts, sandbox_env):
                 # Mounts changed: kill the old sandbox and create a new one
                 # so the new mounts are wired at container creation.
                 logger.info(
@@ -122,28 +119,21 @@ class EnvironmentManager:
                     session_id, mounts, sandbox_env, force_new=True
                 )
 
-            else:
-                env.touch()
-                if not await self._maybe_renew(env, session_id):
-                    # Renewal failed — discard the dead sandbox so this
-                    # request does not run on it.
-                    logger.warning(
-                        "Sandbox for session %s could not be renewed, recreating",
-                        session_id,
-                    )
-                    async with self._lock:
-                        self._active.pop(session_id, None)
-                    await self._kill(env.sandbox, session_id)
-                    return await self._create(
-                        session_id, mounts, sandbox_env, force_new=True
-                    )
-
-                if mounts:
-                    # Content that could not be bind-mounted at creation is
-                    # materialised lazily just before the first exec().
-                    env.add_pending(mounts)
-                    await env._flush_pending()
-                return env
+            env.touch()
+            if not await self._maybe_renew(env, session_id):
+                # Renewal failed — discard the dead sandbox so this
+                # request does not run on it.
+                logger.warning(
+                    "Sandbox for session %s could not be renewed, recreating",
+                    session_id,
+                )
+                async with self._lock:
+                    self._active.pop(session_id, None)
+                await self._kill(env.sandbox, session_id)
+                return await self._create(
+                    session_id, mounts, sandbox_env, force_new=True
+                )
+            return env
 
         return await self._create(session_id, mounts, sandbox_env)
 
@@ -223,50 +213,26 @@ class EnvironmentManager:
     ) -> Environment:
         await asyncio.to_thread(self._layout.ensure_ready)
 
-        # Layout volumes (workspace, uploads, outputs).
+        mounts = mounts or []
+
+        # Every mount is a bind volume at its exact target. Docker semantics:
+        # nested targets are allowed (a more specific mount shadows a subtree),
+        # identical targets with different sources are a conflict.
         layout_volumes = self._layout.session_volumes(session_id)
-        requested_targets = {mount.target for mount in mounts or []}
-        # An explicit mount is allowed to replace a layout mount at the same
-        # target (for example a durable file replacing a session file). This
-        # is generic mount precedence, not artifact knowledge.
-        volumes = [
-            volume
-            for volume in (layout_volumes or [])
-            if volume.target not in requested_targets
-        ]
+        volumes = _dedupe_volumes(
+            self._namespace_volumes()
+            + (layout_volumes or [])
+            + [m for m in mounts if m.host_path is not None]
+        )
 
         # Mount specs — always added for writability enforcement.
-        specs = [
-            spec
-            for spec in self._layout.mount_specs()
-            if spec.target not in requested_targets
-        ]
-        for mount in mounts or []:
-            specs.append(Mount(target=mount.target, access=mount.access))
-
-        # Mounts that support eager volume-mounting (a resolved source dir, or
-        # a storage-backed bundle whose host folder is already present).
-        # Pre-populate _mounted so they skip materialize().
-        pre_mounted: set[str] = set()
-        seen_volume_names: set[str] = set()
-        for mount in mounts or []:
-            if mount.host_path is not None:
-                volumes.append(mount)
-                pre_mounted.add(mount.target)
-                continue
-            mounter = self._find_content_mounter(mount)
-            if mounter:
-                vol = await mounter.prepare_volume(mount, session_id)
-                if vol:
-                    if vol.name not in seen_volume_names:
-                        volumes.append(vol)
-                        seen_volume_names.add(vol.name)
-                    pre_mounted.add(mount.target)
+        specs = self._layout.mount_specs()
+        specs.extend(Mount(target=m.target, access=m.access) for m in mounts)
 
         # Fingerprint of everything that would change the container: the
         # requested mounts and the injected env. Stored in sandbox metadata at
         # creation so a restore from another pod can detect stale containers.
-        fingerprint = self._fingerprint(mounts or [], sandbox_env)
+        fingerprint = self._fingerprint(mounts, sandbox_env)
 
         if force_new:
             sandbox = None
@@ -304,19 +270,13 @@ class EnvironmentManager:
             id=session_id,
             sandbox=sandbox,
             workspace=self._layout.workspace_target,
-            content_mounters=self._content_mounters,
             owner=self._coordinator.instance_id,
             activity_sink=self._coordinator.set_activity,
         )
-        env._mounted.update(pre_mounted)
         # Record the mounts this env was created with, so acquire() can detect
         # mount changes on later reuses (and recreate instead of materialising).
-        env._mount_keys = self._mount_keys(mounts or [])
+        env._mount_keys = self._mount_keys(mounts)
         env._sandbox_env = dict(sandbox_env or {})
-
-        # Deferred mounts: not volume-mounted, will be materialised on exec().
-        deferred = [m for m in (mounts or []) if m.target not in pre_mounted]
-        env.add_pending(deferred)
 
         async with self._lock:
             self._active[session_id] = env
@@ -324,8 +284,28 @@ class EnvironmentManager:
         self._ensure_reaper()
         return env
 
-    def _find_content_mounter(self, mount: Mount) -> ContentMounter | None:
-        return next((m for m in self._content_mounters if m.can_handle(mount)), None)
+    def _namespace_volumes(self) -> list[Mount]:
+        """One bind volume per configured namespace root at ``/mnt/{name}/``.
+
+        Root volumes are mounted even when empty so the agent can write inside
+        the namespace and the runtime never has to create those paths inside
+        the container (which fails for provider-managed roots like /mnt).
+        """
+        volumes: list[Mount] = []
+        for name, config in sorted(self._namespaces.items()):
+            if not config.root:
+                continue
+            host = Path(config.root)
+            host.mkdir(parents=True, exist_ok=True)
+            volumes.append(
+                Mount(
+                    name=f"namespace-{name}",
+                    target=f"/mnt/{name}/",
+                    access=config.default_mode,
+                    host_path=host,
+                )
+            )
+        return volumes
 
     @staticmethod
     def _fingerprint(mounts: list[Mount], sandbox_env: dict[str, str] | None) -> str:
@@ -333,17 +313,10 @@ class EnvironmentManager:
 
         Must be byte-identical on every pod for the same input so it can be
         compared against the value stored in sandbox metadata at creation.
+        Signed URIs are deliberately absent — they rotate every request and
+        are not mount identity.
         """
-        keys = sorted(
-            (
-                m.target,
-                m.access,
-                str(m.host_path) if m.host_path is not None else "",
-                m.uri_source.cache_key if m.uri_source is not None else (),
-                m.etag or "",
-            )
-            for m in mounts
-        )
+        keys = sorted(_mount_identity(m) for m in mounts)
         return json.dumps(
             {"mounts": keys, "env": sorted((sandbox_env or {}).items())},
             sort_keys=True,
@@ -351,21 +324,12 @@ class EnvironmentManager:
 
     @staticmethod
     def _mount_keys(mounts: list[Mount]) -> frozenset[tuple[object, ...]]:
-        """Identity of each requested mount: target + access + source + storage prefix.
+        """Identity of each requested mount: target + access + source.
 
-        The storage prefix (when present) distinguishes content versions that
-        share a canonical mount path; the etag captures content-level changes.
+        Storage identity (namespace/scope/path + host path) and the etag
+        distinguish content versions that share a canonical mount target.
         """
-        return frozenset(
-            (
-                m.target,
-                m.access,
-                str(m.host_path) if m.host_path is not None else "",
-                m.uri_source.cache_key if m.uri_source is not None else (),
-                m.etag or "",
-            )
-            for m in mounts
-        )
+        return frozenset(_mount_identity(m) for m in mounts)
 
     def _mounts_changed(
         self,
@@ -458,3 +422,70 @@ class EnvironmentManager:
                 self._kill(env.sandbox, session_id),
                 f"kill idle sandbox ({session_id})",
             )
+
+
+def _mount_identity(mount: Mount) -> tuple[object, ...]:
+    """Stable identity of one mount: target + access + storage source + etag.
+
+    The URI is a hydration origin, not identity: signed URLs rotate every
+    request and must not cause spurious sandbox recreations.
+    """
+    source = mount.source
+    return (
+        mount.target,
+        mount.access,
+        str(mount.host_path) if mount.host_path is not None else "",
+        source.namespace if source else "",
+        source.scope if source else "",
+        source.path if source else "",
+        mount.etag or "",
+    )
+
+
+def _dedupe_volumes(volumes: list[Mount]) -> list[Mount]:
+    """Collapse identical bind volumes; reject same-target different-source.
+
+    Mirrors Docker: the same ``(host_path, target, mode)`` is idempotent,
+    while two different sources claiming the exact same target is ambiguous
+    and must fail before any sandbox is created.
+
+    Also guarantees volume names stay unique: sandbox backends (e.g.
+    OpenSandbox) reject duplicate volume names, so any collision is resolved
+    by suffixing a short target hash.
+    """
+    seen_sources: dict[str, Mount] = {}
+    merged: list[Mount] = []
+    for volume in volumes:
+        if volume.host_path is None:
+            continue
+        target = volume.target.rstrip("/") or "/"
+        if target in seen_sources:
+            other = seen_sources[target]
+            if (
+                str(other.host_path) == str(volume.host_path)
+                and other.access == volume.access
+            ):
+                continue  # identical bind — idempotent
+            raise ValueError(
+                "Conflicting sandbox mount targets: "
+                f"{other.target!r} ({other.host_path}) and "
+                f"{volume.target!r} ({volume.host_path})"
+            )
+        seen_sources[target] = volume
+        merged.append(volume)
+
+    used_names: set[str] = set()
+    for volume in merged:
+        name = volume.name or _target_volume_name(volume.target)
+        while name in used_names:
+            name = (
+                f"{name}-{hashlib.sha1(volume.target.encode('utf-8')).hexdigest()[:8]}"
+            )
+        used_names.add(name)
+        volume.name = name
+    return merged
+
+
+def _target_volume_name(target: str) -> str:
+    digest = hashlib.sha1(target.encode("utf-8")).hexdigest()[:16]
+    return f"mount-{digest}"

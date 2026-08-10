@@ -82,14 +82,15 @@ def _merge_mounts(*groups: list[Mount]) -> list[Mount]:
     merged: list[Mount] = []
     for group in groups:
         for mount in group:
+            source = mount.source
             key = (
                 mount.target,
                 mount.access,
                 str(mount.host_path) if mount.host_path is not None else "",
-                mount.source_namespace or "",
-                mount.source_scope or "",
-                mount.source_path or "",
-                mount.uri_source.cache_key if mount.uri_source is not None else (),
+                source.namespace if source else "",
+                source.scope if source else "",
+                source.path if source else "",
+                mount.etag or "",
             )
             if key not in seen:
                 seen.add(key)

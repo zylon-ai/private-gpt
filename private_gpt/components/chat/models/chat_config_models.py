@@ -621,7 +621,7 @@ class ResolvedContextConfig(ContextConfig):
         description=(
             "The single mount set for the session: skill/bundle mounts (with a "
             "storage ref) transferred from the context stack plus Backend "
-            "mount-plan volumes (with a source dir) resolved via MountRefResolver. "
+            "mount-plan volumes resolved via MountResolver. "
             "A change in this set recreates the sandbox instead of "
             "materializing files into the running container."
         ),

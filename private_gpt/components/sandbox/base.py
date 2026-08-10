@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
-    from private_gpt.components.sandbox.mount import Mount, MountFile
+    from private_gpt.components.sandbox.mount import Mount
 
 
 class SandboxExecutionResult(BaseModel):
@@ -62,9 +62,7 @@ class SandboxSession(ABC):
     """Async sandbox session with exec + file operations.
 
     Permission enforcement: write_file() and chmod() check if the path is
-    in a writable mount.
-    initialize_mount() bypasses this check — for session setup only.
-    make_dir() does not check writable.
+    in a writable mount. make_dir() does not check writable.
     """
 
     python_executable: str = "python"
@@ -128,22 +126,6 @@ class SandboxSession(ABC):
     @abstractmethod
     async def chmod(self, path: str, mode: int) -> None:
         """Set file permissions. Raises ValueError if path is in a read-only mount."""
-
-    @abstractmethod
-    async def initialize_mount(self, canonical: str, files: list[MountFile]) -> None:
-        """Write mount files during session setup. Bypasses writable check."""
-
-    async def remove_mount(self, canonical_path: str) -> None:
-        """Remove a mounted directory from the sandbox.
-
-        Default: run ``rm -rf`` inside the sandbox, suitable for copy-based
-        mounts (e.g. Docker). Override when deleting host-backed storage files
-        would be destructive (e.g. ``BashExecutorSandbox``).
-        """
-        import shlex
-
-        normalized = canonical_path.rstrip("/")
-        await self.exec(f"rm -rf {shlex.quote(normalized)}")
 
     async def get_endpoint(self, port: int) -> SandboxLink | None:
         """Return a browser-consumable URL for a service on the given port.

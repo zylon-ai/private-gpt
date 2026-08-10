@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from private_gpt.components.sandbox.base import (
         SandboxExecOptions,
     )
-    from private_gpt.components.sandbox.mount import MountFile
     from private_gpt.settings.settings import Settings
 
 
@@ -31,7 +30,6 @@ class BashExecutorSandbox(SandboxSession):
 
     Translates canonical paths → real local paths via PathTranslator.
     Enforces read-only constraints on write_file() and chmod().
-    initialize_mount() bypasses the check for session setup.
     """
 
     python_executable: str = sys.executable
@@ -47,23 +45,6 @@ class BashExecutorSandbox(SandboxSession):
         self._readonly = [m.target for m in mounts if m.access == "ro"]
         self._default_cwd = next((m.target for m in mounts if m.access == "rw"), "/")
         self._env = env
-
-    def add_local_mount(
-        self, canonical: str, host_path: Path, writable: bool = False
-    ) -> None:
-        """Register a new host-path mount after session creation."""
-        self._translator.register(canonical, host_path, writable)
-        if not writable and canonical not in self._readonly:
-            self._readonly.append(canonical)
-
-    def remove_local_mount(self, canonical: str) -> None:
-        """Unregister a mount — does not delete files from host storage."""
-        self._translator.unregister(canonical)
-        self._readonly = [p for p in self._readonly if p != canonical]
-
-    async def remove_mount(self, canonical_path: str) -> None:
-        """Unregister a local mount without touching host-backed storage files."""
-        self.remove_local_mount(canonical_path)
 
     def _assert_writable(self, path: str) -> None:
         for prefix in self._readonly:
@@ -130,25 +111,6 @@ class BashExecutorSandbox(SandboxSession):
         self._assert_writable(path)
         real = self._translator.to_real(path)
         await anyio.to_thread.run_sync(lambda: real.chmod(mode))
-
-    async def initialize_mount(self, canonical: str, files: list[MountFile]) -> None:
-        for f in files:
-            real = self._translator.to_real(canonical + f.path)
-            content = f.content
-            permissions = f.permissions
-
-            def _mkdir(r: Path = real) -> None:
-                r.parent.mkdir(parents=True, exist_ok=True)
-
-            def _write(r: Path = real, c: bytes = content) -> None:
-                r.write_bytes(c)
-
-            def _chmod(r: Path = real, p: int = permissions) -> None:
-                r.chmod(p)
-
-            await anyio.to_thread.run_sync(_mkdir)
-            await anyio.to_thread.run_sync(_write)
-            await anyio.to_thread.run_sync(_chmod)
 
     async def close(self) -> None:
         pass
