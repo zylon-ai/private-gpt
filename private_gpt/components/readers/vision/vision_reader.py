@@ -10,7 +10,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from llama_index.core.ingestion import arun_transformations
 from llama_index.core.schema import BaseNode, Document
 from PIL import Image
 
@@ -161,11 +160,12 @@ class VisionReader(IngestionReader):
             )
 
         # Rasterize the PDF (blocking / CPU-bound -> thread).
-        page_images = await asyncio.to_thread(
-            self._render_pdf_to_images,
-            file_info.file_data.absolute(),
-            _RENDER_SCALE,
-        )
+        with self._timed_phase("parsing", file_info.file_name):
+            page_images = await asyncio.to_thread(
+                self._render_pdf_to_images,
+                file_info.file_data.absolute(),
+                _RENDER_SCALE,
+            )
         docs = self._create_docs(page_images=page_images, extra_info=extra_info)
 
         if self._reader_settings.vision.is_enabled and notification:
@@ -186,14 +186,14 @@ class VisionReader(IngestionReader):
             "Starting PDF vision transformations of file: %s", file_info.file_name
         )
 
-        for transformed_node in await arun_transformations(
-            nodes=docs,
-            transformations=list(
-                vision_docs_transformations(
-                    reader_settings=self._reader_settings, vision_mode=vision_mode
-                )
+        transformed_nodes = await self._run_transformations_with_timing(
+            docs,
+            vision_docs_transformations(
+                reader_settings=self._reader_settings, vision_mode=vision_mode
             ),
-        ):
+            file_info.file_name,
+        )
+        for transformed_node in transformed_nodes:
             yield transformed_node
 
         logger.debug("Finished PDF vision parsing of file: %s", file_info.file_name)
