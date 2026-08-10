@@ -44,7 +44,13 @@ class NamespaceRegistry:
                 continue
 
             root = Path(cfg.root)
-            root.mkdir(exist_ok=True, parents=True)
+            try:
+                root.mkdir(exist_ok=True, parents=True)
+            except OSError as exc:
+                raise RuntimeError(
+                    f"Namespace '{name}': configured root '{cfg.root}' "
+                    "does not exist or is not readable."
+                ) from exc
 
             if not os.access(str(root), os.R_OK):
                 raise RuntimeError(
