@@ -157,6 +157,21 @@ def test_delete_output_file(files_client: TestClient, volume_root: Path) -> None
     assert not output_path.exists()
 
 
+def test_delete_workspace_file(files_client: TestClient, volume_root: Path) -> None:
+    """A sandbox-generated workspace file can be removed after promotion."""
+    workspace_path = volume_root / "user" / _SESSION_ID / "potato.md"
+    workspace_path.parent.mkdir(parents=True, exist_ok=True)
+    workspace_path.write_bytes(b"# Potato")
+
+    canonical = "/home/agent/workspace/potato.md"
+    workspace_id = _encode_file_id(canonical)
+
+    resp = files_client.delete(_file_url(workspace_id, _SESSION_ID))
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["id"] == workspace_id
+    assert not workspace_path.exists()
+
+
 def test_list_namespaces(
     files_namespaces_client: TestClient,
 ) -> None:

@@ -151,8 +151,8 @@ async def put_file(
     description=(
         "S3/blob-style bulk delete: remove every uploaded file whose key starts "
         "with *prefix* (e.g. `data/2024/` deletes all files in that virtual "
-        "folder). Only upload-side files are affected; sandbox output files "
-        "cannot be bulk-deleted. Returns the count of files actually removed. "
+        "folder). Workspace and sandbox output files are deleted individually "
+        "through the file-ID endpoint. Returns the count of files actually removed. "
         "Anthropic SDK callers can reach this via "
         "`client.beta.files.with_raw_response` or a plain `httpx` call with "
         "`extra_query={...prefix: data/2024/...}`."

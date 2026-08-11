@@ -327,7 +327,10 @@ class FileService:
         canonical = _decode_file_id(file_id)
         storage_path = canonical_to_storage_path(canonical)
         self._validate_file_id(storage_path)
-        if storage_path.startswith("uploads/"):
+        if storage_path.startswith("user/"):
+            prefix = f"user/{scope_id}"
+            _folder, filename = storage_path.split("/", 1)
+        elif storage_path.startswith("uploads/"):
             prefix = self._uploads_prefix(scope_id)
             _folder, filename = storage_path.split("/", 1)
         elif storage_path.startswith("outputs/"):
