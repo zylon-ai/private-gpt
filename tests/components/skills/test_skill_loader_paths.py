@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 from private_gpt.components.skills.models.skill_entities import (
@@ -13,6 +13,9 @@ from private_gpt.components.skills.models.skill_entities import (
 )
 from private_gpt.components.skills.paths import skill_mount_path
 from private_gpt.components.skills.services.skill_loader import SkillLoader
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class _FakeRegistry:
@@ -48,7 +51,7 @@ def _version() -> SkillVersionEntity:
         version="1",
         storage_prefix="skills/00000000-0000-7000-8001-000000000001/skill_xlsx/skillver_abc",
         frontmatter=SkillFrontmatter(name="xlsx", description="xlsx skill"),
-        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
     )
 
 

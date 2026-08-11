@@ -13,9 +13,10 @@ missing hosts are skipped so bind-mounts never create empty directories.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
@@ -28,7 +29,7 @@ from private_gpt.components.filesystems.mount_entry import MountEntry
 from private_gpt.components.filesystems.mount_resolver import MountResolver
 from private_gpt.components.filesystems.namespace_registry import NamespaceRegistry
 from private_gpt.components.filesystems.path_resolver import PathResolver
-from private_gpt.components.sandbox.mount import Mount, MountFile, UriSource
+from private_gpt.components.sandbox.mount import MountFile, UriSource
 from private_gpt.components.skills.models.skill_entities import (
     SkillFrontmatter,
     SkillVersionEntity,
@@ -36,6 +37,9 @@ from private_gpt.components.skills.models.skill_entities import (
 from private_gpt.components.skills.paths import skill_mount_path
 from private_gpt.components.skills.services.skill_loader import SkillLoader
 from private_gpt.settings.settings import FilesystemsSettings, NamespaceConfig
+
+if TYPE_CHECKING:
+    from private_gpt.components.sandbox.mount import Mount
 
 
 class RecordingProvider:
@@ -156,8 +160,10 @@ async def test_artifact_skill_and_session_exact_mounts(tmp_path: Path) -> None:
     by_target = {m.target: m for m in artifact_mounts}
     assert by_target["/mnt/artifacts/019f0488-art/_content.md"].host_path == content
     assert by_target["/mnt/artifacts/019f0488-art.mdx"].host_path == projection
-    assert content.is_file() and not content.is_dir()
-    assert projection.is_file() and not projection.is_dir()
+    assert content.is_file()
+    assert not content.is_dir()
+    assert projection.is_file()
+    assert not projection.is_dir()
 
     ns_settings = _ns_settings(tmp_path, hydration=False)
     registry = NamespaceRegistry(settings=ns_settings)  # type: ignore[arg-type]
@@ -181,7 +187,7 @@ async def test_artifact_skill_and_session_exact_mounts(tmp_path: Path) -> None:
             "skills/00000000-0000-7000-8001-000000000001/skill_xlsx/skillver_1"
         ),
         frontmatter=SkillFrontmatter(name="xlsx", description="xlsx skill"),
-        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
     )
     skill_mounts = loader.mounts_for_versions([version])
     assert skill_mounts[0].target == skill_mount_path("xlsx")
