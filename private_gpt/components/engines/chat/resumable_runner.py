@@ -407,6 +407,7 @@ class ResumableChatRunner:
         context_stack_data = data.get("context_stack")
         if isinstance(context_stack_data, dict):
             data["context_stack"] = ContextStack.model_validate(context_stack_data)
+
         return ChatInputState.model_validate(data)
 
     @staticmethod
