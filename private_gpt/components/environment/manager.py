@@ -5,7 +5,6 @@ import hashlib
 import json
 import logging
 import time
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from private_gpt.components.environment.distributed import DistributedCoordinator
@@ -42,10 +41,11 @@ class EnvironmentManager:
     Every mount is a bind volume wired at container creation — there is no
     lazy materialization into a running sandbox. The full volume set is:
 
-    1. one volume per configured filesystem namespace at its canonical
-       container root (``/mnt/{name}/``), even when empty,
-    2. the session layout volumes (workspace, uploads, outputs),
-    3. the requested content mounts (folders or files, exact targets).
+    1. the session layout volumes (workspace, uploads, outputs),
+    2. the requested content mounts (folders or files, exact targets).
+
+    Configured namespace roots are host-side storage locations used to resolve
+    requested mounts. They are never mounted wholesale into the sandbox.
     """
 
     def __init__(
@@ -204,9 +204,7 @@ class EnvironmentManager:
 
         layout_volumes = self._layout.session_volumes(session_id)
         volumes = _dedupe_volumes(
-            self._namespace_volumes()
-            + (layout_volumes or [])
-            + [m for m in mounts if m.host_path is not None]
+            (layout_volumes or []) + [m for m in mounts if m.host_path is not None]
         )
 
         specs = self._layout.mount_specs()
@@ -261,29 +259,6 @@ class EnvironmentManager:
 
         self._ensure_reaper()
         return env
-
-    def _namespace_volumes(self) -> list[Mount]:
-        """One bind volume per configured namespace root at ``/mnt/{name}/``.
-
-        Root volumes are mounted even when empty so the agent can write inside
-        the namespace and the runtime never has to create those paths inside
-        the container (which fails for provider-managed roots like /mnt).
-        """
-        volumes: list[Mount] = []
-        for name, config in sorted(self._namespaces.items()):
-            if not config.root:
-                continue
-            host = Path(config.root)
-            host.mkdir(parents=True, exist_ok=True)
-            volumes.append(
-                Mount(
-                    name=f"namespace-{name}",
-                    target=f"/mnt/{name}/",
-                    access=config.default_mode,
-                    host_path=host,
-                )
-            )
-        return volumes
 
     @staticmethod
     def _fingerprint(mounts: list[Mount], sandbox_env: dict[str, str] | None) -> str:
