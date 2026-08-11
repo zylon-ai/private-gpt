@@ -1340,6 +1340,37 @@ class DoclingSettings(BaseModel):
         super().__init__(**data)
 
 
+class PdfInspectorSettings(BaseModel):
+    hybrid_ocr_page_threshold: float = Field(
+        0.15,
+        description=(
+            "Max ratio of pages needing OCR (0-1) to still use the hybrid "
+            "per-page split pipeline. Above this ratio, the whole document "
+            "falls back to the next full-document reader instead."
+        ),
+    )
+    hybrid_ocr_reader: str = Field(
+        "auto",
+        description=(
+            "Reader name used to process the page groups that need OCR in "
+            "the hybrid pipeline (e.g. 'docling', 'vision'). 'auto' uses "
+            "the next reader configured after 'pdf-inspector-hybrid' in "
+            "the extension's reader chain."
+        ),
+    )
+    max_ocr_groups: int = Field(
+        20,
+        description=(
+            "Max number of page groups (consecutive-page ranges) the "
+            "hybrid pipeline will send to the OCR reader. If exceeded "
+            "(e.g. many alternating OCR/non-OCR pages), falls back to "
+            "processing the whole document with the next reader instead, "
+            "to avoid excessive memory/request overhead from too many "
+            "small groups."
+        ),
+    )
+
+
 class S3Settings(BaseModel):
     endpoint_url: str = Field(description="S3 endpoint override")
     public_endpoint_url: str = Field(description="Public S3 endpoint override")
@@ -1824,6 +1855,9 @@ class Settings(BaseModel):
     huggingface: HuggingFaceSettings
     openai: OpenAISettings
     docling: DoclingSettings
+    pdf_inspector: PdfInspectorSettings = Field(
+        default_factory=lambda: PdfInspectorSettings()
+    )
     vectorstore: VectorstoreSettings
     node_store: NodeStoreSettings
     qdrant: QdrantSettings

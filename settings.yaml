@@ -162,6 +162,11 @@ docling:
   langs: ${PGPT_DOCLING_LANGS:["en-US", "fr-FR", "de-DE", "es-ES"]}
   use_async: ${PGPT_DOCLING_USE_ASYNC:true}
 
+pdf_inspector:
+  hybrid_ocr_page_threshold: ${PGPT_PDF_INSPECTOR_HYBRID_OCR_PAGE_THRESHOLD:0.15}
+  hybrid_ocr_reader: ${PGPT_PDF_INSPECTOR_HYBRID_OCR_READER:auto}
+  max_ocr_groups: ${PGPT_PDF_INSPECTOR_MAX_OCR_GROUPS:20}
+
 celery:
   use_workers: true
   acks_late: ${PGPT_CELERY_ACKS_LATE:true}

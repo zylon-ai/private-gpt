@@ -4,6 +4,7 @@ from injector import Injector, inject, singleton
 
 from private_gpt.components.readers.factories.base import ReaderFactory
 from private_gpt.components.readers.factories.docling import DoclingReaderFactory
+from private_gpt.components.readers.factories.hybrid_pdf import HybridPdfReaderFactory
 from private_gpt.components.readers.factories.markitdown import MarkItDownReaderFactory
 from private_gpt.components.readers.factories.pdf_inspector import (
     PdfInspectorReaderFactory,
@@ -40,6 +41,7 @@ class ReaderFactoryRegistry:
             "pptx2md": PPTX2MdReaderFactory(settings, injector),
             "markitdown": MarkItDownReaderFactory(settings, injector),
             "pdf-inspector": PdfInspectorReaderFactory(settings, injector),
+            "pdf-inspector-hybrid": HybridPdfReaderFactory(settings, injector),
             "text": TextReaderFactory(settings, injector),
             "vision": VisionReaderFactory(settings, injector),
         }
