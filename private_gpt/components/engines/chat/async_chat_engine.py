@@ -64,6 +64,9 @@ from private_gpt.components.engines.chat.interceptors.restore_stateless_input_in
 from private_gpt.components.engines.chat.models.chat_interceptor_context import (
     ChatInterceptorContext,
 )
+from private_gpt.components.engines.chat.models.chat_llm_params import (
+    ChatLLMParameters,
+)
 from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
     TimelinePhase,
@@ -1033,18 +1036,18 @@ class AsyncChatEngine:
         if not run.state.input.request.tool_config.allow_parallel_tool_calls:
             stream_delta_state.tool_state.tool_semaphore = asyncio.Semaphore(1)
 
-        llm_kwargs = run.state.input.llm_kwargs.copy()
+        llm_kwargs = run.state.input.llm_kwargs.as_kwargs()
         if isinstance(run.llm, ZylonLLM):
             llm_kwargs["priority"] = (
                 run.state.input.request.system.priority
-                or DefinedPriorities.LLM.CHAT_PRIORITY,
+                or DefinedPriorities.LLM.CHAT_PRIORITY
             )
 
         response_stream = await run.llm.astream_chat_with_tools(
             llm_tools,
             chat_history=run.state.input.request.to_messages(),
             allow_parallel_tool_calls=run.state.input.request.tool_config.allow_parallel_tool_calls,
-            **run.state.input.llm_kwargs,
+            **llm_kwargs,
         )
         async for chunk in response_stream:
             llm_response = await self._handle_stream_chunk(
@@ -1605,17 +1608,21 @@ class AsyncChatEngine:
         if not isinstance(request, ResolvedChatRequest) and context_stack is None:
             raise ValueError("Configured context stack is required")
 
-        llm_kwargs = dict(request.sampling_params)
+        llm_kwargs = ChatLLMParameters.model_validate(request.sampling_params)
         if request.thinking.enabled and request.thinking.type:
-            llm_kwargs["reasoning_effort"] = ReasoningEffort.from_str(
-                request.thinking.type
+            llm_kwargs = llm_kwargs.model_copy(
+                update={
+                    "reasoning_effort": ReasoningEffort.from_str(request.thinking.type)
+                }
             )
         if request.response_format and request.response_format.output_cls:
             structured = StructuredOutputsParams.from_optional(
                 output_cls=request.response_format.output_cls,
             )
             if structured is not None:
-                llm_kwargs["structured_outputs"] = structured
+                llm_kwargs = llm_kwargs.model_copy(
+                    update={"structured_outputs": structured}
+                )
 
         state = ChatState(
             input=ChatInputState(

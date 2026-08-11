@@ -11,7 +11,10 @@ from llama_index.core.base.llms.types import (
 )
 from llama_index.core.tools import BaseTool
 
-from private_gpt.components.llm.models import ReasoningEffort
+from private_gpt.components.llm.models import (
+    ReasoningEffort,
+    normalize_reasoning_effort,
+)
 from private_gpt.events.models import StopReasonEnum
 
 _REASONING_BUDGET_KWARG = "reasoning_budget"
@@ -139,9 +142,10 @@ def with_reasoning_budget_chat(
         self: Any,
         messages: Sequence[ChatMessage],
         tools: Sequence[BaseTool] | None = None,
-        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
+        reasoning_effort: ReasoningEffort | str | None = ReasoningEffort.NONE,
         **kwargs: Any,
     ) -> ChatResponse:
+        reasoning_effort = normalize_reasoning_effort(reasoning_effort)
         # Check if reasoning_effort budget is enabled for this model
         if not getattr(self, "allow_reasoning_budget", False):
             return fn(
@@ -194,9 +198,10 @@ def with_reasoning_budget_stream_chat(
         self: Any,
         messages: Sequence[ChatMessage],
         tools: Sequence[BaseTool] | None = None,
-        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
+        reasoning_effort: ReasoningEffort | str | None = ReasoningEffort.NONE,
         **kwargs: Any,
     ) -> ChatResponseGen:
+        reasoning_effort = normalize_reasoning_effort(reasoning_effort)
         # Check if reasoning_effort budget is enabled for this model
         if not getattr(self, "allow_reasoning_budget", False):
             return fn(
@@ -264,9 +269,10 @@ def with_reasoning_budget_achat(fn: _AChatFn) -> _AChatFn:
         self: Any,
         messages: Sequence[ChatMessage],
         tools: Sequence[BaseTool] | None = None,
-        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
+        reasoning_effort: ReasoningEffort | str | None = ReasoningEffort.NONE,
         **kwargs: Any,
     ) -> ChatResponse:
+        reasoning_effort = normalize_reasoning_effort(reasoning_effort)
         # Check if reasoning_effort budget is enabled for this model
         if not getattr(self, "allow_reasoning_budget", False):
             return await fn(
@@ -320,9 +326,10 @@ def with_reasoning_budget_astream_chat(fn: _AStreamChatFn) -> _AStreamChatFn:
         self: Any,
         messages: Sequence[ChatMessage],
         tools: Sequence[BaseTool] | None = None,
-        reasoning_effort: ReasoningEffort = ReasoningEffort.NONE,
+        reasoning_effort: ReasoningEffort | str | None = ReasoningEffort.NONE,
         **kwargs: Any,
     ) -> AsyncGenerator[ChatResponse, None]:
+        reasoning_effort = normalize_reasoning_effort(reasoning_effort)
         # Check if reasoning_effort budget is enabled for this model
         if not getattr(self, "allow_reasoning_budget", False):
             return await fn(  # type: ignore[return-value]

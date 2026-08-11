@@ -7,6 +7,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from private_gpt.components.chat.models.chat_config_models import ChatRequest
 from private_gpt.components.context.models.context_stack import ContextStack
+from private_gpt.components.engines.chat.models.chat_llm_params import (
+    ChatLLMParameters,
+)
 from private_gpt.components.engines.chat.models.chat_phase import (
     TimelinePhase,
 )
@@ -31,7 +34,7 @@ class ChatInputState(BaseModel):
     request: ChatRequest
     context_stack: ContextStack = Field(default_factory=ContextStack)
     sampling_params: dict[str, Any] = Field(default_factory=dict)
-    llm_kwargs: dict[str, Any] = Field(default_factory=dict)
+    llm_kwargs: ChatLLMParameters = Field(default_factory=ChatLLMParameters)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
