@@ -1,8 +1,11 @@
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
-from private_gpt.components.llm.custom.base import StructuredOutputsParams
+from private_gpt.components.llm.custom.base import (
+    StructuredOutputsParams,
+    normalize_structured_outputs,
+)
 from private_gpt.components.llm.models import ReasoningEffort
 
 
@@ -27,6 +30,13 @@ class ChatLLMParameters(BaseModel):
     skip_special_tokens: bool | None = Field(default=None)
     reasoning_effort: ReasoningEffort | None = Field(default=None)
     structured_outputs: StructuredOutputsParams | None = Field(default=None)
+
+    @field_validator("structured_outputs", mode="before")
+    @classmethod
+    def _normalize_structured_outputs(
+        cls, value: Any
+    ) -> StructuredOutputsParams | None:
+        return normalize_structured_outputs(value)
 
     # Keep accepting provider-specific scalar parameters that are not known
     # here yet. Known parameters above are explicitly typed so nested values
