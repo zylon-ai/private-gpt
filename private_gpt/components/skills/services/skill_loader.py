@@ -104,7 +104,7 @@ class SkillLoader:
                 Mount(
                     target=skill_mount_path(version.frontmatter.name),
                     access="ro",
-                    name=f"skill:{version.frontmatter.name}",
+                    name=f"skill-{version.frontmatter.name}",
                     host_path=host_path,
                     uri_source=UriSource(
                         uri=version.storage_prefix,
