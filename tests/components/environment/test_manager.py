@@ -540,7 +540,6 @@ async def test_fingerprint_passed_to_create_and_restore() -> None:
     ]
 
 
-
 async def test_acquire_does_not_mount_namespace_roots_wholesale(tmp_path: Path) -> None:
     """Namespace roots are host-side resolvers only; never bind-mounted wholesale."""
     from private_gpt.settings.settings import NamespaceConfig

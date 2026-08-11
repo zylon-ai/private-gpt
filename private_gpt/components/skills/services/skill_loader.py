@@ -99,7 +99,11 @@ class SkillLoader:
 
         mounts: list[Mount] = []
         for version in versions:
-            host_path = (skills_root / version.storage_prefix) if skills_root is not None else None
+            host_path = (
+                (skills_root / version.storage_prefix)
+                if skills_root is not None
+                else None
+            )
             mounts.append(
                 Mount(
                     target=skill_mount_path(version.frontmatter.name),

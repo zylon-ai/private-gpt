@@ -52,7 +52,9 @@ def _version() -> SkillVersionEntity:
     )
 
 
-def test_mounts_for_versions_uses_storage_prefix_under_skills_root(tmp_path: Path) -> None:
+def test_mounts_for_versions_uses_storage_prefix_under_skills_root(
+    tmp_path: Path,
+) -> None:
     loader = _loader(tmp_path)
     version = _version()
 
@@ -77,7 +79,9 @@ def test_mounts_for_versions_uses_storage_prefix_under_skills_root(tmp_path: Pat
     assert mount.uri_source.uri == version.storage_prefix
 
 
-def test_mounts_for_versions_without_skills_namespace_has_no_host_path(tmp_path: Path) -> None:
+def test_mounts_for_versions_without_skills_namespace_has_no_host_path(
+    tmp_path: Path,
+) -> None:
     class EmptyRegistry:
         def root(self, namespace: str) -> Path:
             raise KeyError(namespace)

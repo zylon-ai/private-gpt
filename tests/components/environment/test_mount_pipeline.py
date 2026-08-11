@@ -117,9 +117,7 @@ async def test_artifact_skill_and_session_exact_mounts(tmp_path: Path) -> None:
         tmp_path, hydration=False
     )
 
-    content = (
-        artifacts_root / "00000000-org" / "proj" / "019f0488-art" / "_content.md"
-    )
+    content = artifacts_root / "00000000-org" / "proj" / "019f0488-art" / "_content.md"
     projection = content.with_name("_index.mdx")
     content.parent.mkdir(parents=True)
     content.write_bytes(b"# real content")
