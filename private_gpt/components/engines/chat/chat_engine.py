@@ -415,7 +415,7 @@ class ChatLoopEngine:
         if isinstance(run.llm, ZylonLLM):
             llm_kwargs["priority"] = (
                 run.state.input.request.system.priority
-                or DefinedPriorities.LLM.CHAT_PRIORITY,
+                or DefinedPriorities.LLM.CHAT_PRIORITY
             )
 
         response_stream = await run.llm.astream_chat_with_tools(
