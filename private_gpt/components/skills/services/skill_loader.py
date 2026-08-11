@@ -63,9 +63,10 @@ class SkillLoader:
     """Resolves active skills from a SkillFilter into namespace-backed mounts.
 
     Every skill is a read-only **folder** mount at ``/mnt/skills/{name}/``,
-    backed by the ``skills`` namespace root on the host. The URI source only
-    exists so the hydration layer can (re)fill that host folder in local
-    development; production volumes (FUSE/s3fs) already host the content.
+    backed by the version directory under the ``skills`` namespace root
+    (``{skills_root}/{storage_prefix}``). The URI source exists so the
+    hydration layer can (re)fill that host folder when content is not already
+    present on disk.
     """
 
     @inject
@@ -89,8 +90,8 @@ class SkillLoader:
         """Create namespace-backed mounts from already-resolved skill versions.
 
         Each skill is a read-only folder mount at ``/mnt/skills/{name}/`` whose
-        host folder lives under the ``skills`` namespace root, keyed by the
-        version id so an update produces a fresh path (and a fresh hydration).
+        host folder is ``{skills_root}/{version.storage_prefix}`` so an update
+        produces a fresh path (and a fresh hydration when enabled).
         """
         skills_root: Path | None = None
         with suppress(KeyError):
@@ -98,7 +99,7 @@ class SkillLoader:
 
         mounts: list[Mount] = []
         for version in versions:
-            host_path = skills_root / version.id if skills_root is not None else None
+            host_path = (skills_root / version.storage_prefix) if skills_root is not None else None
             mounts.append(
                 Mount(
                     target=skill_mount_path(version.frontmatter.name),

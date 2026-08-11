@@ -1320,8 +1320,7 @@ async def test_code_execution_mount_recreated_when_mounts_change(
     injector: MockInjector,
 ) -> None:
     # Eager namespace mounts: content already lives in the 'skills' namespace
-    # root (as production FUSE/s3fs volumes would host it), so no hydration is
-    # needed and each mount is a plain exact-target bind.
+    # root, so no hydration is needed and each mount is a plain exact-target bind.
     skills_root = Path("local_data/private_gpt/volumes/skills")
     first_file = skills_root / "org-1" / "notes.txt"
     first_file.parent.mkdir(parents=True, exist_ok=True)

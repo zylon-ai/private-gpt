@@ -37,7 +37,7 @@ class LayoutMounter(ABC):
         return next(m.target for m in self._layout if m.access == "rw")
 
     def ensure_ready(self) -> None:  # noqa: B027 — optional hook, default no-op
-        """One-time idempotent setup of backing storage (e.g. mount s3fs)."""
+        """One-time idempotent setup of backing storage."""
 
     @abstractmethod
     def session_volumes(self, session_id: str) -> list[Mount] | None:

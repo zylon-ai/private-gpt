@@ -21,11 +21,10 @@ class HydratingEnvironmentManager:
     """Transparent wrapper that (re)hydrates namespace content before acquire.
 
     Sandboxes only ever see bind volumes: the host must already hold the
-    content. In production a FUSE/s3fs mount provides it. In local development
-    the volume roots are plain folders, so this wrapper syncs the host paths
-    from each mount's URI first — gated per namespace by
-    ``NamespaceConfig.hydration`` (default off), with an etag ledger to avoid
-    re-reading/writing content that did not change.
+    content. When a namespace root is a plain folder rather than a live remote
+    mount, this wrapper syncs host paths from each mount's URI first — gated
+    per namespace by ``NamespaceConfig.hydration`` (default off), with an etag
+    ledger to avoid re-reading/writing content that did not change.
 
     With no hydrating namespaces configured this wrapper is a pure pass-through
     and adds no I/O.

@@ -538,3 +538,76 @@ async def test_fingerprint_passed_to_create_and_restore() -> None:
     assert provider.fingerprints == [
         manager._fingerprint([_bundle_mount("/mnt/skills/a/")], {"TOKEN": "x"})
     ]
+
+
+
+async def test_acquire_does_not_mount_namespace_roots_wholesale(tmp_path: Path) -> None:
+    """Namespace roots are host-side resolvers only; never bind-mounted wholesale."""
+    from private_gpt.settings.settings import NamespaceConfig
+
+    class RecordingProvider(FakeProvider):
+        def __init__(self) -> None:
+            super().__init__()
+            self.volumes: list[list[Mount] | None] = []
+
+        async def create_session(
+            self,
+            user_id=None,
+            timeout=None,
+            bundle_specs=None,
+            *,
+            session_id=None,
+            volumes=None,
+            env=None,
+            fingerprint=None,
+        ) -> FakeSandbox:
+            self.volumes.append(volumes)
+            return await super().create_session(
+                user_id=user_id,
+                timeout=timeout,
+                bundle_specs=bundle_specs,
+                session_id=session_id,
+                volumes=volumes,
+                env=env,
+                fingerprint=fingerprint,
+            )
+
+    provider = RecordingProvider()
+    skills_root = tmp_path / "zylon-skills"
+    session_root = tmp_path / "zylon-sessions"
+    skills_root.mkdir()
+    session_root.mkdir()
+
+    manager = EnvironmentManager(
+        sandbox_provider=provider,
+        layout_mounter=FakeLayout(),
+        ttl_seconds=3600,
+        namespaces={
+            "session": NamespaceConfig(root=str(session_root), default_mode="rw"),
+            "skills": NamespaceConfig(root=str(skills_root), default_mode="ro"),
+        },
+    )
+
+    skill_mount = Mount(
+        name="skill:xlsx",
+        target="/mnt/skills/xlsx/",
+        access="ro",
+        host_path=skills_root / "skills" / "col" / "skill_xlsx" / "ver1",
+    )
+    await manager.acquire("s1", mounts=[skill_mount])
+    await _sleep_tasks(manager)
+
+    assert len(provider.volumes) == 1
+    volumes = provider.volumes[0] or []
+    targets = {v.target for v in volumes}
+    host_paths = {str(v.host_path) for v in volumes if v.host_path is not None}
+
+    # Exact skill mount is present.
+    assert "/mnt/skills/xlsx/" in targets
+    assert str(skill_mount.host_path) in host_paths
+
+    # Namespace roots themselves are never mounted.
+    assert "/mnt/skills/" not in targets
+    assert "/mnt/session/" not in targets
+    assert str(skills_root) not in host_paths
+    assert str(session_root) not in host_paths

@@ -9,12 +9,16 @@ There is deliberately no target mangling, no parent-directory fallback and no
 merging: one entry -> one bind volume, mirroring Docker ``-v`` semantics. The
 runtime validates conflicts (exact-target collisions) and fails fast.
 
-Content is located on the host by resolving ``(namespace, scope, path)`` to
-the exact host file/folder inside the namespace root. When the host path does
-not exist yet but the entry carries a ``uri``, the mount is still emitted and
-the hydration layer (development only) fills the host path before the sandbox
-is created. Entries that cannot be located at all are skipped — a missing
-optional file must not abort the turn.
+Host content is located in this order:
+
+1. when the entry carries an ``s3://`` URI, the object key is resolved under
+   the namespace root,
+2. otherwise ``(namespace, scope, path)`` is resolved inside the namespace root.
+
+Missing host paths are only kept when the namespace has hydration enabled so
+the host file can be materialized from the URI before sandbox creation.
+Otherwise a missing host path is skipped — bind-mounting a non-existent path
+would create empty directories.
 """
 
 from __future__ import annotations
@@ -23,7 +27,9 @@ import hashlib
 import logging
 import posixpath
 import re
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 from injector import inject, singleton
 
@@ -37,6 +43,7 @@ from private_gpt.components.sandbox.mount import Mount, MountSource, UriSource
 
 if TYPE_CHECKING:
     from private_gpt.components.filesystems.mount_entry import MountEntry
+    from private_gpt.settings.settings import NamespaceConfig
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +79,7 @@ class MountResolver:
 
     def _resolve_one(self, entry: MountEntry) -> Mount | None:
         try:
-            self._registry.get(entry.namespace)
+            config = self._registry.get(entry.namespace)
         except KeyError:
             logger.debug(
                 "Skipping mount entry (namespace='%s' not registered): %s",
@@ -82,14 +89,15 @@ class MountResolver:
             return None
 
         try:
-            host_path = self._resolver.resolve(entry.namespace, entry.scope, entry.path)
+            host_path = self._host_path(entry, config)
         except (InvalidPathError, PathEscapeError, KeyError) as exc:
             logger.debug(
-                "Skipping mount entry (resolution failed: %s): namespace=%s scope=%s path=%s",
+                "Skipping mount entry (resolution failed: %s): namespace=%s scope=%s path=%s uri=%s",
                 exc,
                 entry.namespace,
                 entry.scope,
                 entry.path,
+                entry.uri,
             )
             return None
 
@@ -102,13 +110,15 @@ class MountResolver:
             )
             uri_source = UriSource.from_uri(entry.uri, filename=filename)
 
-        if not host_path.exists() and uri_source is None:
-            logger.debug(
-                "Skipping mount entry (no host content and no URI): %s -> %s",
-                host_path,
-                entry.target,
-            )
-            return None
+        if not host_path.exists():
+            # Only keep a missing host path when hydration can materialize it.
+            if uri_source is None or not config.hydration:
+                logger.debug(
+                    "Skipping mount entry (host path missing): %s -> %s",
+                    host_path,
+                    entry.target,
+                )
+                return None
 
         return Mount(
             name=_volume_name(entry),
@@ -123,6 +133,41 @@ class MountResolver:
             ),
             etag=entry.etag,
         )
+
+    def _host_path(self, entry: MountEntry, config: NamespaceConfig) -> Path:
+        """Resolve the exact host file/folder for one mount entry."""
+        root = Path(config.root)
+        if entry.uri:
+            from_uri = _host_path_from_s3_uri(root, entry.uri)
+            if from_uri is not None:
+                return from_uri
+        return self._resolver.resolve(entry.namespace, entry.scope, entry.path)
+
+
+def _host_path_from_s3_uri(root: Path, uri: str) -> Path | None:
+    """Map ``s3://bucket/object/key`` onto ``{namespace_root}/object/key``.
+
+    Durable content is stored under bucket-relative keys (for example
+    ``{org}/{project}/{artifact}/_content.md``). When the namespace root is the
+    mounted bucket (or a local mirror of it), the object key is the
+    host-relative path.
+    """
+    parsed = urlparse(uri)
+    if parsed.scheme != "s3":
+        return None
+    key = parsed.path.lstrip("/")
+    if not key:
+        return None
+    parts = PurePosixPath(key).parts
+    if any(part in ("", ".", "..") for part in parts):
+        return None
+    candidate = root.joinpath(*parts)
+    root_resolved = root.resolve(strict=False)
+    try:
+        candidate.resolve(strict=False).relative_to(root_resolved)
+    except ValueError:
+        return None
+    return candidate
 
 
 # Maximum volume-name length imposed by Kubernetes (DNS label, RFC 1123) and

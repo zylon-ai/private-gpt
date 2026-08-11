@@ -14,10 +14,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def _make_resolver(tmp_path: Path) -> tuple[MountResolver, Path]:
+def _make_resolver(
+    tmp_path: Path, *, hydration: bool = False
+) -> tuple[MountResolver, Path]:
     root = tmp_path / "artifacts"
     root.mkdir()
-    ns = NamespaceConfig(root=str(root), default_mode="rw")
+    ns = NamespaceConfig(root=str(root), default_mode="rw", hydration=hydration)
     fs_settings = FilesystemsSettings(namespaces={"artifacts": ns})
 
     class _FakeSettings:
@@ -118,10 +120,11 @@ class TestMountResolver:
         )
         assert resolver.resolve([entry]) == []
 
-    def test_missing_path_with_uri_is_kept_for_hydration(self, tmp_path: Path) -> None:
-        """A URI-backed entry whose host file is missing is still emitted; the
-        hydration layer fills the host path before sandbox creation."""
-        resolver, root = _make_resolver(tmp_path)
+    def test_missing_path_with_uri_is_kept_only_when_hydration_enabled(
+        self, tmp_path: Path
+    ) -> None:
+        """URI-backed missing hosts are kept only when hydration can fill them."""
+        resolver, root = _make_resolver(tmp_path, hydration=True)
         (root / "org-1").mkdir()
 
         entry = MountEntry(
@@ -141,6 +144,44 @@ class TestMountResolver:
         assert mount.uri_source is not None
         assert mount.etag == "abc"
 
+    def test_missing_path_with_uri_is_skipped_when_hydration_disabled(
+        self, tmp_path: Path
+    ) -> None:
+        """Missing hosts must not be bind-mounted (would create empty dirs)."""
+        resolver, _ = _make_resolver(tmp_path, hydration=False)
+        entry = MountEntry(
+            namespace="artifacts",
+            scope="thread-1",
+            path="art-1/_content.md",
+            target="/mnt/artifacts/art-1/_content.md",
+            mode="rw",
+            uri="s3://private/missing/art-1/_content.md",
+        )
+        assert resolver.resolve([entry]) == []
+
+    def test_s3_uri_resolves_host_path_from_object_key(self, tmp_path: Path) -> None:
+        """URI object keys map under the namespace root, not thread/scope."""
+        resolver, root = _make_resolver(tmp_path)
+        host = root / "00000000-org" / "proj" / "art-1" / "_content.md"
+        host.parent.mkdir(parents=True)
+        host.write_bytes(b"content")
+
+        entry = MountEntry(
+            namespace="artifacts",
+            scope="thread-does-not-exist-on-disk",
+            path="art-1/_content.md",
+            target="/mnt/artifacts/art-1/_content.md",
+            mode="rw",
+            uri="s3://private/00000000-org/proj/art-1/_content.md",
+        )
+        result = resolver.resolve([entry])
+        assert len(result) == 1
+        mount = result[0]
+        assert mount.host_path == host
+        assert mount.target == "/mnt/artifacts/art-1/_content.md"
+        assert mount.is_folder is False
+        assert mount.host_path.is_file()
+
     def test_invalid_traversal_path_is_skipped(self, tmp_path: Path) -> None:
         resolver, _ = _make_resolver(tmp_path)
         entry = MountEntry(
@@ -154,7 +195,7 @@ class TestMountResolver:
 
     def test_uri_file_mount_keeps_exact_target(self, tmp_path: Path) -> None:
         """No more parent-directory mangling: a file entry stays a file mount."""
-        resolver, _ = _make_resolver(tmp_path)
+        resolver, _ = _make_resolver(tmp_path, hydration=True)
         entry = MountEntry(
             namespace="artifacts",
             scope="artifact-1",
@@ -174,7 +215,7 @@ class TestMountResolver:
     def test_volume_names_are_unique_within_a_scope(self, tmp_path: Path) -> None:
         """Two artifacts of the same thread must not produce duplicate volume
         names (sandbox backends reject duplicate volume names)."""
-        resolver, _ = _make_resolver(tmp_path)
+        resolver, _ = _make_resolver(tmp_path, hydration=True)
         entries = [
             MountEntry(
                 namespace="artifacts",
@@ -202,7 +243,7 @@ class TestMountResolver:
 
     def test_two_uri_files_are_not_merged(self, tmp_path: Path) -> None:
         """Each entry is its own mount; merging is the runtime's job (none)."""
-        resolver, _ = _make_resolver(tmp_path)
+        resolver, _ = _make_resolver(tmp_path, hydration=True)
         entries = [
             MountEntry(
                 namespace="artifacts",

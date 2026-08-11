@@ -1,4 +1,4 @@
-"""Tests for HydratingEnvironmentManager (dev-only etag-ledger hydration)."""
+"""Tests for HydratingEnvironmentManager (etag-ledger hydration)."""
 
 from __future__ import annotations
 
