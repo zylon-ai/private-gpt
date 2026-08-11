@@ -166,6 +166,10 @@ pdf_inspector:
   hybrid_ocr_page_threshold: ${PGPT_PDF_INSPECTOR_HYBRID_OCR_PAGE_THRESHOLD:0.15}
   hybrid_ocr_reader: ${PGPT_PDF_INSPECTOR_HYBRID_OCR_READER:auto}
   max_ocr_groups: ${PGPT_PDF_INSPECTOR_MAX_OCR_GROUPS:20}
+  hybrid_min_pages: ${PGPT_PDF_INSPECTOR_HYBRID_MIN_PAGES:5}
+  broken_table_avg_words_per_cell: ${PGPT_PDF_INSPECTOR_BROKEN_TABLE_AVG_WORDS_PER_CELL:5.0}
+  broken_table_pct_long_cells: ${PGPT_PDF_INSPECTOR_BROKEN_TABLE_PCT_LONG_CELLS:0.4}
+  broken_table_page_threshold: ${PGPT_PDF_INSPECTOR_BROKEN_TABLE_PAGE_THRESHOLD:0.3}
 
 celery:
   use_workers: true

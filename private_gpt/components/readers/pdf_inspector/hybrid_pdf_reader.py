@@ -9,6 +9,10 @@ from llama_index.core.schema import BaseNode
 from pydantic import ConfigDict, Field
 
 from private_gpt.celery.notify import NotifyProtocol
+from private_gpt.components.ingest.broken_table_detector import (
+    is_broken_table,
+    parse_markdown_table_cells,
+)
 from private_gpt.components.ingest.metadata_helper import MetadataChunk
 from private_gpt.components.ingest.pdf_page_split import (
     extract_pdf_pages_bytes,
@@ -183,15 +187,56 @@ class HybridPdfReader(IngestionReader):
                 "Starting hybrid pdf-inspector split of file: %s", file_path
             )
             result = pdf_inspector.extract_pages_markdown(str(file_path))
+            # Log all result detail for debugging purposes
+            logger.debug(
+                "pdf-inspector result for '%s': is_complex=%s, total_pages=%d, pages_needing_ocr=%s, "
+                "pages_with_columns=%s, pages_with_tables=%s",
+                file_path,
+                result.is_complex,
+                len(result.pages),
+                result.pages_needing_ocr,
+                result.pages_with_columns,
+                result.pages_with_tables
+            )
         except Exception as e:
             raise PdfInspectorFallbackError(
                 f"pdf-inspector failed to process '{file_path}'."
             ) from e
 
+
         pages = result.pages
         page_count = len(pages)
         if page_count == 0:
             raise PdfInspectorFallbackError(f"'{file_path}' has no pages.")
+
+        if page_count < self.config.hybrid_min_pages:
+            raise PdfInspectorFallbackError(
+                f"'{file_path}' has {page_count} pages, below the hybrid "
+                f"pipeline's minimum ({self.config.hybrid_min_pages});"
+            )
+
+        broken_table_pages = 0
+        table_pages = 0
+        for page in pages:
+            cells = parse_markdown_table_cells(page.markdown)
+            if not cells:
+                continue
+            table_pages += 1
+            if is_broken_table(
+                cells,
+                self.config.broken_table_avg_words_per_cell,
+                self.config.broken_table_pct_long_cells,
+            ):
+                broken_table_pages += 1
+
+        if table_pages:
+            broken_table_ratio = broken_table_pages / table_pages
+            if broken_table_ratio > self.config.broken_table_page_threshold:
+                raise PdfInspectorFallbackError(
+                    f"'{file_path}' has {broken_table_ratio:.2%} of its table "
+                    "pages looking like mis-segmented narrative text, above "
+                    f"threshold ({self.config.broken_table_page_threshold:.2%})."
+                )
 
         ocr_pages = sorted({p - 1 for p in result.pages_needing_ocr})
         ratio = len(ocr_pages) / page_count

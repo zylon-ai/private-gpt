@@ -1369,6 +1369,48 @@ class PdfInspectorSettings(BaseModel):
             "small groups."
         ),
     )
+    hybrid_min_pages: int = Field(
+        10,
+        description=(
+            "Min number of pages a document must have to use the hybrid "
+            "per-page split pipeline. Below this, the document falls back "
+            "directly to the next full-document reader (e.g. docling), "
+            "since there is no meaningful benefit to the hybrid split on "
+            "very short documents and the next reader typically produces "
+            "better results overall."
+        ),
+    )
+    broken_table_avg_words_per_cell: float = Field(
+        5.0,
+        description=(
+            "A markdown table on a page is considered 'broken' (narrative "
+            "text mis-segmented into a table by pdf-inspector, rather than "
+            "a real data table) if the average number of words per cell is "
+            "at or above this value, or if broken_table_pct_long_cells is "
+            "met."
+        ),
+    )
+    broken_table_pct_long_cells: float = Field(
+        0.4,
+        description=(
+            "A markdown table on a page is considered 'broken' if the "
+            "fraction (0-1) of its cells with 5 or more words is at or "
+            "above this value, or if broken_table_avg_words_per_cell is "
+            "met."
+        ),
+    )
+    broken_table_page_threshold: float = Field(
+        0.3,
+        description=(
+            "Max ratio (0-1) of pages with a 'broken' markdown table (see "
+            "broken_table_avg_words_per_cell / broken_table_pct_long_cells) "
+            "among pages containing any markdown table, to still use the "
+            "hybrid per-page split pipeline. Above this ratio, the whole "
+            "document falls back to the next full-document reader instead, "
+            "since pdf-inspector's per-page markdown is unreliable on this "
+            "document."
+        ),
+    )
 
 
 class S3Settings(BaseModel):
