@@ -82,9 +82,10 @@ class MarkdownTreeNodeParser(TransformComponent):
         return self.section_stack[-1] if self.section_stack else self.root
 
     def _parse_table(self, table: Tag) -> pd.DataFrame:
-        """Parse an HTML table Tag into a DataFrame, converting each cell's
-        inner HTML to markdown so inline formatting (bold, italic, links,
-        code) round-trips correctly.
+        """Parse an HTML table Tag into a DataFrame.
+
+        Converts each cell's inner HTML to markdown so inline formatting
+        (bold, italic, links, code) round-trips correctly.
 
         Operates directly on the already-parsed BeautifulSoup Tag rather
         than re-serializing it to a string and re-parsing it, which was
@@ -256,9 +257,7 @@ class MarkdownTreeNodeParser(TransformComponent):
         if isinstance(element, NavigableString):
             return element
         else:
-            markdown: str = _MD_CONVERTER.process_tag(
-                element, convert_as_inline=False
-            )
+            markdown: str = _MD_CONVERTER.process_tag(element, convert_as_inline=False)
             markdown = markdown.replace("\\", "")
             markdown = MarkdownHelper.sanitize_markdown(markdown)
             return markdown

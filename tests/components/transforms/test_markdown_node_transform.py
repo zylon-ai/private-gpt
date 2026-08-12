@@ -421,11 +421,7 @@ class TestMarkdownParser(unittest.TestCase):
         from private_gpt.components.readers.nodes.table_node import TableNode
 
         markdown = (
-            "| A | B | C |\n"
-            "|---|---|---|\n"
-            "| 1 | 2 | 3 |\n"
-            "| 4 | 5 | 6 |\n"
-            "| 7 | 8 | 9 |"
+            "| A | B | C |\n|---|---|---|\n| 1 | 2 | 3 |\n| 4 | 5 | 6 |\n| 7 | 8 | 9 |"
         )
         root = self.parser.parse(markdown)
 

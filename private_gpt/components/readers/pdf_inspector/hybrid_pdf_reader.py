@@ -189,9 +189,7 @@ class HybridPdfReader(IngestionReader):
         try:
             import pdf_inspector  # type: ignore[import-not-found]
 
-            logger.debug(
-                "Starting hybrid pdf-inspector split of file: %s", file_path
-            )
+            logger.debug("Starting hybrid pdf-inspector split of file: %s", file_path)
             result = pdf_inspector.extract_pages_markdown(str(file_path))
             # Log all result detail for debugging purposes
             logger.debug(
@@ -202,13 +200,12 @@ class HybridPdfReader(IngestionReader):
                 len(result.pages),
                 result.pages_needing_ocr,
                 result.pages_with_columns,
-                result.pages_with_tables
+                result.pages_with_tables,
             )
         except Exception as e:
             raise PdfInspectorFallbackError(
                 f"pdf-inspector failed to process '{file_path}'."
             ) from e
-
 
         pages = result.pages
         page_count = len(pages)
