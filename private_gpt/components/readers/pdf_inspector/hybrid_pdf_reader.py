@@ -14,9 +14,11 @@ from private_gpt.components.ingest.page_quality import (
     QualityFilter,
     evaluate_document_quality,
     has_any_text,
+    has_glued_numbers,
     has_table,
     is_broken_table,
     is_fragmented_text,
+    is_sparse_chart_table,
 )
 from private_gpt.components.ingest.pdf_page_split import (
     extract_pdf_pages_bytes,
@@ -238,6 +240,22 @@ class HybridPdfReader(IngestionReader):
                     md, self.config.fragmented_text_short_token_ratio
                 ),
                 threshold=self.config.fragmented_text_page_threshold,
+            ),
+            QualityFilter(
+                name="sparse_chart_table",
+                applies=has_table,
+                is_bad=lambda md: is_sparse_chart_table(
+                    md, self.config.sparse_chart_table_empty_cell_ratio
+                ),
+                threshold=self.config.sparse_chart_table_page_threshold,
+            ),
+            QualityFilter(
+                name="glued_numbers",
+                applies=has_table,
+                is_bad=lambda md: has_glued_numbers(
+                    md, self.config.glued_numbers_cell_ratio
+                ),
+                threshold=self.config.glued_numbers_page_threshold,
             ),
         ]
         quality_issue = evaluate_document_quality(pages_markdown, quality_filters)

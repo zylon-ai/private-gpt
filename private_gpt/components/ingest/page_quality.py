@@ -18,7 +18,9 @@ from dataclasses import dataclass
 _SEPARATOR_ROW_RE = re.compile(r"\|[\s:|-]+\|")
 _WORD_RE = re.compile(r"\S+")
 _ALNUM_RE = re.compile(r"[^\W_]")
+_DECIMAL_POINT_RE = re.compile(r"\d\.\d")
 _LONG_CELL_WORD_COUNT = 5
+_GLUED_DECIMAL_POINTS_COUNT = 2
 
 
 def parse_markdown_table_cells(markdown: str) -> list[str]:
@@ -65,6 +67,63 @@ def is_broken_table(
 
 def has_table(markdown: str) -> bool:
     return bool(parse_markdown_table_cells(markdown))
+
+
+def empty_cell_ratio(markdown: str) -> float:
+    """Fraction of a page's markdown table cells that are empty.
+
+    Charts (bar/line plots) mis-extracted as a markdown table tend to
+    produce one row per bar/label with the value in a single column and all
+    other columns empty, unlike real data tables which are mostly filled in.
+    """
+    total = 0
+    empty = 0
+    for line in markdown.split("\n"):
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        if _SEPARATOR_ROW_RE.fullmatch(stripped):
+            continue
+        row_cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        total += len(row_cells)
+        empty += sum(1 for cell in row_cells if not cell)
+    return (empty / total) if total else 0.0
+
+
+def is_sparse_chart_table(markdown: str, empty_cell_ratio_threshold: float) -> bool:
+    """Whether a page's markdown table looks like a chart mis-extracted as a table."""
+    return empty_cell_ratio(markdown) >= empty_cell_ratio_threshold
+
+
+def glued_numbers_ratio(markdown: str) -> float:
+    """Fraction of table cells containing 2+ separate decimal numbers glued together.
+
+    When a chart/table's column separators are lost, adjacent numeric values
+    end up concatenated into a single cell (e.g. "0.3830.207" instead of two
+    cells "0.383" and "0.207"), which a well-formed data table cell never
+    exhibits.
+    """
+    total = 0
+    glued = 0
+    for line in markdown.split("\n"):
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        if _SEPARATOR_ROW_RE.fullmatch(stripped):
+            continue
+        row_cells = [
+            cell.strip() for cell in stripped.strip("|").split("|") if cell.strip()
+        ]
+        for cell in row_cells:
+            total += 1
+            if len(_DECIMAL_POINT_RE.findall(cell)) >= _GLUED_DECIMAL_POINTS_COUNT:
+                glued += 1
+    return (glued / total) if total else 0.0
+
+
+def has_glued_numbers(markdown: str, glued_numbers_ratio_threshold: float) -> bool:
+    """Whether a page's markdown table has cells with concatenated numbers."""
+    return glued_numbers_ratio(markdown) >= glued_numbers_ratio_threshold
 
 
 def fragmented_text_ratio(markdown: str, max_token_chars: int = 2) -> float:

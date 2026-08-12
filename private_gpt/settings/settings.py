@@ -1391,7 +1391,7 @@ class PdfInspectorSettings(BaseModel):
         ),
     )
     broken_table_pct_long_cells: float = Field(
-        0.4,
+        0.35,
         description=(
             "A markdown table on a page is considered 'broken' if the "
             "fraction (0-1) of its cells with 5 or more words is at or "
@@ -1430,6 +1430,46 @@ class PdfInspectorSettings(BaseModel):
             "whole document falls back to the next full-document reader "
             "instead, since pdf-inspector's per-page markdown is unreliable "
             "on this document."
+        ),
+    )
+    sparse_chart_table_empty_cell_ratio: float = Field(
+        0.25,
+        description=(
+            "A page's markdown table is considered a mis-extracted chart "
+            "(e.g. a bar/line plot converted into a sparse table with one "
+            "value per row and the rest of the columns empty) if the "
+            "fraction (0-1) of its cells that are empty is at or above this "
+            "value."
+        ),
+    )
+    sparse_chart_table_page_threshold: float = Field(
+        0.2,
+        description=(
+            "Max ratio (0-1) of pages with a 'sparse' chart-like table (see "
+            "sparse_chart_table_empty_cell_ratio) among pages containing any "
+            "markdown table, to still use the hybrid per-page split "
+            "pipeline. Above this ratio, the whole document falls back to "
+            "the next full-document reader instead."
+        ),
+    )
+    glued_numbers_cell_ratio: float = Field(
+        0.1,
+        description=(
+            "A page's markdown table is considered to have 'glued' numbers "
+            "(e.g. '0.3830.207' instead of two separate cells '0.383' and "
+            "'0.207', from a lost column separator) if the fraction (0-1) "
+            "of its cells containing 2+ separate decimal numbers "
+            "concatenated together is at or above this value."
+        ),
+    )
+    glued_numbers_page_threshold: float = Field(
+        0.3,
+        description=(
+            "Max ratio (0-1) of pages with 'glued' numbers in their table "
+            "cells (see glued_numbers_cell_ratio) among pages containing any "
+            "markdown table, to still use the hybrid per-page split "
+            "pipeline. Above this ratio, the whole document falls back to "
+            "the next full-document reader instead."
         ),
     )
 
