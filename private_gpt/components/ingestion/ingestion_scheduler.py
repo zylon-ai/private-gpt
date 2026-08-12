@@ -4,17 +4,17 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from injector import Injector, inject, singleton
 
+from private_gpt.celery.result import wait_for_celery_result
 from private_gpt.components.ingest.utils import get_extension, get_file_name
 from private_gpt.components.storage.s3_helper import S3Helper
 from private_gpt.server.ingest.ingest_service import IngestService
 from private_gpt.settings.settings import Settings, settings
 
 if TYPE_CHECKING:
-    from celery.result import AsyncResult
     from llama_index.core.schema import BaseNode
 
     from private_gpt.server.ingest.ingest_router import (
@@ -467,7 +467,6 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
 
     def ingest(self, ingest_body: IngestBody) -> IngestResponse:
         """Parse then store synchronously, blocking until both complete."""
-        import time
         import uuid
 
         from private_gpt.server.ingest.ingest_router import (
@@ -507,8 +506,6 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
                 async_body.ingest_body.input = UriArtifact(value=s3_url)
 
         # 1. Parse on worker, wait — fast step.
-        from celery.result import AsyncResult
-
         from private_gpt.celery.dispatch import dispatch_task
         from private_gpt.celery.tasks.ingestion.extraction_tasks import PARSE_TASK_NAME
 
@@ -517,19 +514,14 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
             args=(async_body,),
             queue=config.scheduler.ingestion.celery_queue,
         )
-        while not parse_result.ready():
-            time.sleep(0.1)
-        if parse_result.failed():
-            raise parse_result.result
+        parse_result_value = wait_for_celery_result(parse_result)
 
         # 2. parse_task returns the store_vectors task_id; poll it.
-        assert isinstance(parse_result.result, str)
-        store_result: AsyncResult[Any] = AsyncResult(parse_result.result)
-        while not store_result.ready():
-            time.sleep(0.1)
-        if store_result.failed():
-            raise store_result.result
-        return IngestResponse.model_validate(store_result.result)
+        assert isinstance(parse_result_value, str)
+        from celery.result import AsyncResult
+
+        store_result = AsyncResult(parse_result_value)
+        return IngestResponse.model_validate(wait_for_celery_result(store_result))
 
     async def ingest_for_request(self, ingest_body: IngestBody) -> IngestResponse:
 
@@ -581,7 +573,6 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
     def bytes_to_text(self, raw: bytes, ext: str) -> str:
         """Dispatch parse_task in parse-only mode on the worker, return text."""
         import base64
-        import time
         import uuid
 
         from private_gpt.celery.dispatch import dispatch_task
@@ -604,12 +595,9 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
             kwargs={"dispatch_store": False},
             queue=config.scheduler.ingestion.celery_queue,
         )
-        while not result.ready():
-            time.sleep(0.1)
-        if result.failed():
-            raise result.result
-        assert isinstance(result.result, str)
-        return result.result
+        result_value = wait_for_celery_result(result)
+        assert isinstance(result_value, str)
+        return result_value
 
 
 register_ingestion_scheduler("local", LocalIngestionScheduler)

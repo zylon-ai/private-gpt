@@ -180,7 +180,7 @@ class CondensationRequestInterceptor(ChatRequestLoopInterceptor):
         )
 
         generator = condense_chat_history(
-            **state.input.llm_kwargs,
+            **state.input.llm_kwargs.as_kwargs(),
             chat_history=history,
             tools=state.input.context_stack.all_tools(),
             strategy_type=self._strategy_type,

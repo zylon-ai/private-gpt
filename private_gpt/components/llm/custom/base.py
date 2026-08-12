@@ -1,4 +1,6 @@
+import json
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from typing import Any, Optional
 
 from llama_index.core.base.llms.types import LLMMetadata
@@ -96,6 +98,48 @@ class StructuredOutputsParams(BaseModel):
     def model_dump_json(self, **kwargs: Any) -> str:
         exclude_none = kwargs.pop("exclude_none", True)
         return super().model_dump_json(exclude_none=exclude_none, **kwargs)
+
+
+def normalize_structured_outputs(
+    structured_outputs: (StructuredOutputsParams | Mapping[str, Any] | str | None),
+) -> StructuredOutputsParams | None:
+    """Normalize structured-output values crossing untyped boundaries.
+
+    Chat parameters can be restored from serialized checkpoint data, and some
+    API serializers use ``json`` instead of the model's internal
+    ``json_schema`` field. Normalize those representations before backend
+    specific code accesses the typed fields.
+    """
+    if structured_outputs is None:
+        return None
+    if isinstance(structured_outputs, StructuredOutputsParams):
+        return structured_outputs
+
+    if isinstance(structured_outputs, str):
+        try:
+            structured_outputs = json.loads(structured_outputs)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "structured_outputs must be a StructuredOutputsParams, "
+                "mapping, JSON object string, or None"
+            ) from exc
+        if not isinstance(structured_outputs, Mapping):
+            raise TypeError(
+                "structured_outputs JSON must decode to an object; "
+                f"got {type(structured_outputs).__name__}"
+            )
+
+    if isinstance(structured_outputs, Mapping):
+        values = dict(structured_outputs)
+        if "json" in values and "json_schema" not in values:
+            values["json_schema"] = values.pop("json")
+        return StructuredOutputsParams.model_validate(values)
+
+    raise TypeError(
+        "structured_outputs must be a StructuredOutputsParams, mapping, "
+        "JSON object string, or None; "
+        f"got {type(structured_outputs).__name__}"
+    )
 
 
 class SamplingParameters(BaseModel):

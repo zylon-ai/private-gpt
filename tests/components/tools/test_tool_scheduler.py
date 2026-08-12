@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from private_gpt.celery.result import wait_for_celery_result
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.tools.remote_execution import ToolExecutionRequest
 from private_gpt.components.tools.tool_scheduler import (
@@ -96,7 +97,7 @@ async def test_celery_tool_scheduler_execute_dispatches_and_waits(
         queue="tools",
         ignore_result=False,
     )
-    to_thread.assert_awaited_once_with(async_result.get, timeout=42)
+    to_thread.assert_awaited_once_with(wait_for_celery_result, async_result, 42)
 
 
 @pytest.mark.anyio
