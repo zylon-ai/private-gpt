@@ -9,11 +9,15 @@ from llama_index.core.schema import BaseNode
 from pydantic import ConfigDict, Field
 
 from private_gpt.celery.notify import NotifyProtocol
-from private_gpt.components.ingest.broken_table_detector import (
-    is_broken_table,
-    parse_markdown_table_cells,
-)
 from private_gpt.components.ingest.metadata_helper import MetadataChunk
+from private_gpt.components.ingest.page_quality import (
+    QualityFilter,
+    evaluate_document_quality,
+    has_any_text,
+    has_table,
+    is_broken_table,
+    is_fragmented_text,
+)
 from private_gpt.components.ingest.pdf_page_split import (
     extract_pdf_pages_bytes,
     group_consecutive_pages,
@@ -215,28 +219,32 @@ class HybridPdfReader(IngestionReader):
                 f"pipeline's minimum ({self.config.hybrid_min_pages});"
             )
 
-        broken_table_pages = 0
-        table_pages = 0
-        for page in pages:
-            cells = parse_markdown_table_cells(page.markdown)
-            if not cells:
-                continue
-            table_pages += 1
-            if is_broken_table(
-                cells,
-                self.config.broken_table_avg_words_per_cell,
-                self.config.broken_table_pct_long_cells,
-            ):
-                broken_table_pages += 1
-
-        if table_pages:
-            broken_table_ratio = broken_table_pages / table_pages
-            if broken_table_ratio > self.config.broken_table_page_threshold:
-                raise PdfInspectorFallbackError(
-                    f"'{file_path}' has {broken_table_ratio:.2%} of its table "
-                    "pages looking like mis-segmented narrative text, above "
-                    f"threshold ({self.config.broken_table_page_threshold:.2%})."
-                )
+        pages_markdown = [page.markdown for page in pages]
+        quality_filters = [
+            QualityFilter(
+                name="broken_table",
+                applies=has_table,
+                is_bad=lambda md: is_broken_table(
+                    md,
+                    self.config.broken_table_avg_words_per_cell,
+                    self.config.broken_table_pct_long_cells,
+                ),
+                threshold=self.config.broken_table_page_threshold,
+            ),
+            QualityFilter(
+                name="fragmented_text",
+                applies=has_any_text,
+                is_bad=lambda md: is_fragmented_text(
+                    md, self.config.fragmented_text_short_token_ratio
+                ),
+                threshold=self.config.fragmented_text_page_threshold,
+            ),
+        ]
+        quality_issue = evaluate_document_quality(pages_markdown, quality_filters)
+        if quality_issue is not None:
+            raise PdfInspectorFallbackError(
+                f"'{file_path}' failed quality check: {quality_issue.reason}"
+            )
 
         ocr_pages = sorted({p - 1 for p in result.pages_needing_ocr})
         ratio = len(ocr_pages) / page_count

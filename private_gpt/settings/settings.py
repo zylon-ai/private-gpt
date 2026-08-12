@@ -1411,6 +1411,27 @@ class PdfInspectorSettings(BaseModel):
             "document."
         ),
     )
+    fragmented_text_short_token_ratio: float = Field(
+        0.5,
+        description=(
+            "A page's markdown is considered to contain 'fragmented' text "
+            "(e.g. a chart/figure whose labels and numbers were chopped up "
+            "character-by-character, such as '2 8. 5 9' instead of '28.59') "
+            "if the fraction (0-1) of its tokens that are one or two "
+            "characters long is at or above this value."
+        ),
+    )
+    fragmented_text_page_threshold: float = Field(
+        0.2,
+        description=(
+            "Max ratio (0-1) of pages with 'fragmented' text (see "
+            "fragmented_text_short_token_ratio) among all pages, to still "
+            "use the hybrid per-page split pipeline. Above this ratio, the "
+            "whole document falls back to the next full-document reader "
+            "instead, since pdf-inspector's per-page markdown is unreliable "
+            "on this document."
+        ),
+    )
 
 
 class S3Settings(BaseModel):
