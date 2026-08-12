@@ -22,7 +22,12 @@ from private_gpt.components.engines.chat.models.chat_state import (
     ChatState,
 )
 from private_gpt.components.llm.llm_component import LLMComponent
-from private_gpt.components.llm.llm_helper import supports_audio, supports_images
+from private_gpt.components.llm.llm_helper import (
+    max_audios_supported,
+    max_images_supported,
+    supports_audio,
+    supports_images,
+)
 from private_gpt.events.models import (
     RawContentBlockStartEvent,
     RawContentBlockStopEvent,
@@ -55,6 +60,9 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
 
         state = context.state
         image_model, audio_model = self.resolve_multimodal_models(state, context.llm)
+        model_config = self._llm_component.get_config(state.input.request.system.model)
+        max_images = max_images_supported(context.llm, model_config)
+        max_audios = max_audios_supported(context.llm, model_config)
 
         tool_ids: dict[str, str] = {}
         completed_tools: list[tuple[str, str | list[ResultContentBlockType], bool]] = []
@@ -66,6 +74,8 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
             audio_multimodal_llm=audio_model,
             max_concurrency=self._preprocess_settings.max_concurrency,
             return_type=self._preprocess_settings.return_type,
+            max_images=max_images,
+            max_audios=max_audios,
         ):
             processing = response.processing_status
             if processing is not None:

@@ -8,7 +8,10 @@ from llama_index.core.base.llms.types import ChatMessage
 from llama_index.core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict
 
-from private_gpt.components.llm.models import ReasoningEffort
+from private_gpt.components.llm.models import (
+    ReasoningEffort,
+    normalize_reasoning_effort,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +40,7 @@ class MessageToPromptProtocol(Protocol):
         self,
         messages: Sequence[ChatMessage],
         tools: Sequence[BaseTool] | None = None,
-        reasoning_effort: ReasoningEffort | None = None,
+        reasoning_effort: ReasoningEffort | str | None = None,
         **kwargs: Any,
     ) -> PromptData:
         pass
@@ -114,10 +117,11 @@ class PromptStyleBase(ABC):
         self,
         messages: Sequence[ChatMessage],
         tools: Sequence[BaseTool] | None = None,
-        reasoning_effort: ReasoningEffort | None = None,
+        reasoning_effort: ReasoningEffort | str | None = None,
         **kwargs: Any,
     ) -> PromptData:
         """Format messages into prompt data."""
+        reasoning_effort = normalize_reasoning_effort(reasoning_effort)
         prompt = self._messages_to_prompt(messages, tools, reasoning_effort, **kwargs)
         logger.debug("Got for messages='%s' the prompt='%s'", messages, prompt)
         return prompt

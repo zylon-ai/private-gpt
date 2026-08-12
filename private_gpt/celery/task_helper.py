@@ -91,21 +91,23 @@ class IngestionTaskHelper:
     @staticmethod
     def revoke_ingestion_task(celery_app: Any, collection: str, artifact: str) -> bool:
         from private_gpt.celery.tasks.ingestion.extraction_tasks import (
-            VECTOR_INDEX_TASK_NAME,
+            PARSE_TASK_NAME,
+            STORE_VECTORS_TASK_NAME,
         )
         from private_gpt.server.ingest.ingest_router import IngestAsyncBody
 
-        for task in find_tasks(celery_app, task_name=VECTOR_INDEX_TASK_NAME):
-            if not task.args or not isinstance(task.args[0], IngestAsyncBody):
-                continue
+        for task_name in (PARSE_TASK_NAME, STORE_VECTORS_TASK_NAME):
+            for task in find_tasks(celery_app, task_name=task_name):
+                if not task.args or not isinstance(task.args[0], IngestAsyncBody):
+                    continue
 
-            task_body = task.args[0]
-            if (
-                task_body.ingest_body.collection == collection
-                and task_body.ingest_body.artifact == artifact
-            ):
-                revoke_task(celery_app, task.task_id)
-                return True
+                task_body = task.args[0]
+                if (
+                    task_body.ingest_body.collection == collection
+                    and task_body.ingest_body.artifact == artifact
+                ):
+                    revoke_task(celery_app, task.task_id)
+                    return True
 
         return False
 

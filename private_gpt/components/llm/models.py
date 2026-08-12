@@ -21,6 +21,22 @@ class ReasoningEffort(enum.StrEnum):
         return self != ReasoningEffort.NONE
 
 
+def normalize_reasoning_effort(
+    reasoning_effort: ReasoningEffort | str | None,
+) -> ReasoningEffort:
+    """Normalize values crossing untyped or serialized LLM boundaries."""
+    if reasoning_effort is None:
+        return ReasoningEffort.NONE
+    if isinstance(reasoning_effort, ReasoningEffort):
+        return reasoning_effort
+    if isinstance(reasoning_effort, str):
+        return ReasoningEffort.from_str(reasoning_effort)
+    raise TypeError(
+        "reasoning_effort must be a ReasoningEffort, string, or None; "
+        f"got {type(reasoning_effort).__name__}"
+    )
+
+
 def _get_exception_types() -> tuple[type[BaseException], ...]:
     base_exceptions = (ConnectionError, TimeoutError, OSError)
 

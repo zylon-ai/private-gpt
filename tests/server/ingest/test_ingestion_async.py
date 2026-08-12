@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from private_gpt.artifact_index.base_artifact_index import IndexNotReadyException
-from private_gpt.celery.tasks.ingestion import delete_ingested_task, vector_index_task
+from private_gpt.celery.tasks.ingestion import delete_ingested_task, parse_task
 from private_gpt.components.storage.s3_helper import S3Helper
 from private_gpt.server.ingest.ingest_router import (
     DeleteIngestedDocumentAsyncBody,
@@ -79,7 +79,7 @@ def test_delete_during_ingestion(mock_setup, test_bodies):
         "worker1": [
             {
                 "id": "task1",
-                "name": "private_gpt.ingestion.vector_index",
+                "name": "private_gpt.ingestion.parse",
                 "args": [ingestion_body],
             }
         ]
@@ -146,7 +146,7 @@ def test_delete_different_artifact_ingesting(mock_setup, test_bodies):
         "worker1": [
             {
                 "id": "task1",
-                "name": "private_gpt.ingestion.vector_index",
+                "name": "private_gpt.ingestion.parse",
                 "args": [different_ingestion_body],
             }
         ]
@@ -195,17 +195,17 @@ def test_delete_with_multiple_ingestion_tasks(mock_setup, test_bodies):
         "worker1": [
             {
                 "id": "task1",
-                "name": "private_gpt.ingestion.vector_index",
+                "name": "private_gpt.ingestion.parse",
                 "args": [different_artifact],
             },
             {
                 "id": "task2",
-                "name": "private_gpt.ingestion.vector_index",
+                "name": "private_gpt.ingestion.parse",
                 "args": [same_artifact_diff_collection],
             },
             {
                 "id": "task3",
-                "name": "private_gpt.ingestion.vector_index",
+                "name": "private_gpt.ingestion.parse",
                 "args": [ingestion_body],
             },
             {"id": "task4", "name": "different_task", "args": [{}]},
@@ -234,7 +234,7 @@ def test_delete_terminates_pending_tasks(mock_setup, test_bodies):
 
     pending_task = {
         "id": "task1",
-        "name": "private_gpt.ingestion.vector_index",
+        "name": "private_gpt.ingestion.parse",
         "args": [ingestion_body],
         "status": "PENDING",
     }
@@ -288,7 +288,7 @@ def test_delete_scheduled_when_ingestion_will_run(mock_setup, test_bodies):
             return_value=mock_injector,
         ),
     ):
-        result = vector_index_task(ingestion_body)
+        result = parse_task(ingestion_body)
 
         assert result.data == []
         mock_service.delete.assert_not_called()
@@ -383,11 +383,11 @@ def test_cleanup_remove_temporary_with_failed_s3_file(mock_setup):
         ),
     ):
         from private_gpt.celery.tasks.ingestion.extraction_tasks import (
-            vector_index_task,
+            parse_task,
         )
 
         with pytest.raises(ValueError):
-            vector_index_task(ingestion_body)
+            parse_task(ingestion_body)
 
         mock_s3_helper.remove_file_from_s3.assert_called_once_with(
             f"s3://{temporal_bucket}/path/to/file.pdf"
@@ -441,11 +441,11 @@ def test_cleanup_remove_temporary_with_an_autoretry_error(mock_setup):
         ),
     ):
         from private_gpt.celery.tasks.ingestion.extraction_tasks import (
-            vector_index_task,
+            parse_task,
         )
 
         with pytest.raises(IndexNotReadyException):
-            vector_index_task(ingestion_body)
+            parse_task(ingestion_body)
 
         mock_s3_helper.remove_file_from_s3.assert_not_called()
 

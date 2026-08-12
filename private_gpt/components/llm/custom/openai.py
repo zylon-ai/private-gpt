@@ -62,9 +62,12 @@ class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
         structured_outputs: Any,
     ) -> dict[str, Any]:
         """Convert StructuredOutputsParams to an OpenAI response_format dict."""
-        from private_gpt.components.llm.custom.base import StructuredOutputsParams
+        from private_gpt.components.llm.custom.base import (
+            normalize_structured_outputs,
+        )
 
-        if not isinstance(structured_outputs, StructuredOutputsParams):
+        structured_outputs = normalize_structured_outputs(structured_outputs)
+        if structured_outputs is None:
             return {"type": "json_object"}
 
         if structured_outputs.json_schema:
