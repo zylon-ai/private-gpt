@@ -126,7 +126,10 @@ TEXT_EDITOR_INSERT_TOOL_FN = _placeholder_tool(
 
 PRESENT_FILES_TOOL_FN = _placeholder_tool(
     PRESENT_FILES_TOOL_NAME,
-    "Present one or more output files to the user after they have been created.",
+    "REQUIRED to show files to the user. Present one or more sandbox files "
+    "(absolute paths, usually under /mnt/user-data/outputs/) so they appear as "
+    "downloadable attachments in the chat. Writing a file is not enough — if you "
+    "do not call this tool, the user will never see the file.",
 )
 
 PRESENT_SERVER_TOOL_FN = _placeholder_tool(
