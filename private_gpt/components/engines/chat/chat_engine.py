@@ -44,6 +44,9 @@ from private_gpt.components.engines.chat.interceptors.restore_stateless_input_in
 from private_gpt.components.engines.chat.models.chat_interceptor_context import (
     ChatInterceptorContext,
 )
+from private_gpt.components.engines.chat.models.chat_llm_params import (
+    ChatLLMParameters,
+)
 from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
     TimelinePhase,
@@ -97,7 +100,6 @@ from private_gpt.events.models import (
     ThinkingBlock,
     ThinkingDelta,
     ToolResultBlock,
-    ToolUseBlock,
     Usage,
 )
 from private_gpt.server.chat.interceptors.schema_coercing_tool_interceptor import (
@@ -408,18 +410,18 @@ class ChatLoopEngine:
         if not run.state.input.request.tool_config.allow_parallel_tool_calls:
             stream_delta_state.tool_state.tool_semaphore = asyncio.Semaphore(1)
 
-        llm_kwargs = run.state.input.llm_kwargs.copy()
+        llm_kwargs = run.state.input.llm_kwargs.as_kwargs()
         if isinstance(run.llm, ZylonLLM):
             llm_kwargs["priority"] = (
                 run.state.input.request.system.priority
-                or DefinedPriorities.LLM.CHAT_PRIORITY,
+                or DefinedPriorities.LLM.CHAT_PRIORITY
             )
 
         response_stream = await run.llm.astream_chat_with_tools(
             llm_tools,
             chat_history=run.state.input.request.to_messages(),
             allow_parallel_tool_calls=run.state.input.request.tool_config.allow_parallel_tool_calls,
-            **run.state.input.llm_kwargs,
+            **llm_kwargs,
         )
         async for chunk in response_stream:
             llm_response = await self._handle_stream_chunk(
@@ -635,7 +637,12 @@ class ChatLoopEngine:
                 tool_state = stream_delta_state.tool_state
 
                 if raw_id not in tool_state.tool_id_map:
-                    tool_state.tool_id_map[raw_id] = f"tool_{uuid4().hex}"
+                    tool_spec = tool_specs_by_name.get(tool_call.tool_name or "")
+                    tool_state.tool_id_map[raw_id] = (
+                        tool_spec.resolve_event_adapter().new_tool_use_id()
+                        if tool_spec
+                        else f"tool_{uuid4().hex}"
+                    )
 
                 if raw_id in tool_state.finished_tool_raw_ids:
                     continue
@@ -659,10 +666,14 @@ class ChatLoopEngine:
                         use_start = RawContentBlockStartEvent(
                             index=run.block_count,
                             block_id=f"block_{uuid4().hex}",
-                            content_block=ToolUseBlock(
-                                id=unique_id,
-                                name=tool_call.tool_name,
-                                input={},
+                            content_block=(
+                                tool_specs_by_name[tool_call.tool_name or ""]
+                                .resolve_event_adapter()
+                                .build_tool_use(
+                                    tool_id=unique_id,
+                                    tool_name=tool_call.tool_name or "",
+                                    tool_input={},
+                                )
                             ),
                         )
                         run.block_count += 1
@@ -860,17 +871,21 @@ class ChatLoopEngine:
         if not isinstance(request, ResolvedChatRequest) and context_stack is None:
             raise ValueError("Configured context stack is required")
 
-        llm_kwargs = dict(request.sampling_params)
+        llm_kwargs = ChatLLMParameters.model_validate(request.sampling_params)
         if request.thinking.enabled and request.thinking.type:
-            llm_kwargs["reasoning_effort"] = ReasoningEffort.from_str(
-                request.thinking.type
+            llm_kwargs = llm_kwargs.model_copy(
+                update={
+                    "reasoning_effort": ReasoningEffort.from_str(request.thinking.type)
+                }
             )
         if request.response_format and request.response_format.output_cls:
             structured = StructuredOutputsParams.from_optional(
                 output_cls=request.response_format.output_cls,
             )
             if structured is not None:
-                llm_kwargs["structured_outputs"] = structured
+                llm_kwargs = llm_kwargs.model_copy(
+                    update={"structured_outputs": structured}
+                )
 
         state = ChatState(
             input=ChatInputState(
@@ -1043,16 +1058,13 @@ class ChatLoopEngine:
                 response.tool_message,
             ]
 
-        result_content = response.result_content
-
         async with lock:
             result_start = RawContentBlockStartEvent(
                 index=run.block_count,
                 block_id=f"block_{uuid4().hex}",
-                content_block=ToolResultBlock(
+                content_block=tool_spec.resolve_event_adapter().build_tool_result(
                     tool_use_id=call_id,
-                    content=result_content,
-                    is_error=response.is_error,
+                    outcome=response.outcome,
                 ),
             )
 

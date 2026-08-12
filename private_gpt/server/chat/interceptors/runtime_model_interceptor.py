@@ -36,7 +36,7 @@ class RuntimeModelRequestInterceptor(ChatRequestLoopInterceptor):
 
         llm = self._llm_component.get_llm(runtime.model_id)
         metadata = (
-            llm.get_metadata(**context.state.input.llm_kwargs)
+            llm.get_metadata(**context.state.input.llm_kwargs.as_kwargs())
             if isinstance(llm, ZylonLLM)
             else llm.metadata
         )

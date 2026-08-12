@@ -64,9 +64,12 @@ class PatchedOpenAIResponsesLLM(StructuredChatMixin, OpenAIResponsesBase):  # ty
     @staticmethod
     def _build_responses_text_format(structured_outputs: Any) -> dict[str, Any] | None:
         """Convert StructuredOutputsParams to Responses API text.format dict."""
-        from private_gpt.components.llm.custom.base import StructuredOutputsParams
+        from private_gpt.components.llm.custom.base import (
+            normalize_structured_outputs,
+        )
 
-        if not isinstance(structured_outputs, StructuredOutputsParams):
+        structured_outputs = normalize_structured_outputs(structured_outputs)
+        if structured_outputs is None:
             return {"type": "json_object"}
 
         if structured_outputs.json_schema:

@@ -351,7 +351,9 @@ async def test_text_editor_builders_receive_complete_session_contract(
         mounts=[mount],
     )
 
-    assert await TextEditorProcessor(builder).intercept(request)
+    assert await TextEditorProcessor(
+        builder, SimpleNamespace(build_tool=AsyncMock())
+    ).intercept(request)
 
     method = getattr(builder, builder_method)
     config = method.await_args.args[0]

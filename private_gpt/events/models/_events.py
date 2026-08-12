@@ -32,10 +32,10 @@ class RawContentBlockStartEvent(BaseContentBlock, StandardContentProtocol):
             content_block=TextBlock(text=text),
         )
 
-    def prune_content_block_by_response_mode(
+    def for_response_mode(
         self, response_mode: Literal["anthropic", "zylon"]
     ) -> Self | None:
-        if self.content_block.prune_content_block_by_response_mode(response_mode):
+        if self.content_block.for_response_mode(response_mode):
             return self
         return None
 
@@ -58,10 +58,10 @@ class RawContentBlockDeltaEvent(BaseContentBlock, StandardContentProtocol):
     ) -> "RawContentBlockDeltaEvent":
         return cls(index=start.index, block_id=start.block_id, delta=delta)
 
-    def prune_content_block_by_response_mode(
+    def for_response_mode(
         self, response_mode: Literal["anthropic", "zylon"]
     ) -> Self | None:
-        if self.delta.prune_content_block_by_response_mode(response_mode):
+        if self.delta.for_response_mode(response_mode):
             return self
         return None
 

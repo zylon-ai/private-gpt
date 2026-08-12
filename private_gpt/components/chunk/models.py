@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from llama_index.core.schema import NodeWithScore
 from pydantic import BaseModel, Field
@@ -12,6 +12,9 @@ from private_gpt.components.ingest.metadata_helper import (
 from private_gpt.components.readers.nodes import TreeNode
 from private_gpt.components.readers.nodes.tree_node import TreeMetadataMode
 from private_gpt.components.web.web_search.models import WebSearchResult
+
+if TYPE_CHECKING:
+    from private_gpt.events.models._content_blocks import WebSearchResultBlock
 from private_gpt.server.ingest.model import IngestedDoc
 
 
@@ -267,6 +270,19 @@ class Website(BaseModel):
             content_type=result.content_type,
             content=result.content,
             metadata=result.metadata,
+        )
+
+    @classmethod
+    def from_web_search_result(cls, result: "WebSearchResultBlock") -> "Website":
+        """Create a Website from a WebSearchResultBlock event-model instance."""
+        return cls(
+            id="website_" + str(uuid.uuid4()),
+            object="context.website",
+            url=result.url,
+            title=result.title,
+            favicon_url=result.favicon_url,
+            description=result.description,
+            content=result.content,
         )
 
 

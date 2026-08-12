@@ -11,12 +11,13 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.tools.events.adapters import BashCodeExecutionEventAdapter
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import BASH_TOOL_FN
 from private_gpt.components.tools.utils import truncate_output
 from private_gpt.di import get_global_injector
-from private_gpt.events.models import TextBlock
+from private_gpt.events.models import BashCodeExecutionResultBlock
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
@@ -56,21 +57,25 @@ class BashToolBuilder:
                 timeout=timeout,
                 restart=restart,
             )
-            sections = [f"exit_code: {result.exit_code}"]
-            if result.stdout:
-                sections.append(f"stdout:\n{result.stdout}")
-            if result.stderr:
-                sections.append(f"stderr:\n{result.stderr}")
-            output = truncate_output(
-                "\n\n".join(sections),
-                self._settings.code_execution.max_output_bytes,
-            )
-            return [TextBlock(text=output)]
+            return [
+                BashCodeExecutionResultBlock(
+                    stdout=truncate_output(
+                        result.stdout,
+                        self._settings.code_execution.max_output_bytes,
+                    ),
+                    stderr=truncate_output(
+                        result.stderr,
+                        self._settings.code_execution.max_output_bytes,
+                    ),
+                    return_code=result.exit_code,
+                )
+            ]
 
         return ToolSpec.from_defaults(
             name=name,
             type=type,
             runtime="server",
+            event_adapter=BashCodeExecutionEventAdapter,
             description=description,
             async_fn=run_bash,
             requirements=[ToolRequirements.SANDBOX],

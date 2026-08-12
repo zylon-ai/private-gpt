@@ -125,7 +125,7 @@ def test_replace_tool_preserves_shared_properties_across_expansion() -> None:
 async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> None:
     bash_builder = SimpleNamespace(
         build_tool=AsyncMock(
-            side_effect=lambda session_id, name="bash", type="bash_v1", bundles=None, **kw: (
+            side_effect=lambda session_id, name="bash_code_execution", type="bash_code_execution_v1", **kw: (
                 ToolSpec.from_defaults(
                     name=name,
                     type=type,
@@ -135,47 +135,23 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
             )
         )
     )
-    text_editor_builder = SimpleNamespace(
-        build_view_tool=AsyncMock(
-            side_effect=lambda session_id, name="view", type="view_v1", bundles=None, **kw: (
+    unified_text_editor_builder = SimpleNamespace(
+        build_tool=AsyncMock(
+            side_effect=lambda session_id, name="text_editor_code_execution", type="text_editor_code_execution_v1", **kw: (
                 ToolSpec.from_defaults(
                     name=name,
                     type=type,
-                    description="view",
+                    description="text_editor",
                     async_fn=AsyncMock(return_value=[]),
                 )
             )
-        ),
-        build_str_replace_tool=AsyncMock(
-            side_effect=lambda session_id, name="str_replace", type="str_replace_v1", bundles=None, **kw: (
-                ToolSpec.from_defaults(
-                    name=name,
-                    type=type,
-                    description="replace",
-                    async_fn=AsyncMock(return_value=[]),
-                )
-            )
-        ),
-        build_create_tool=AsyncMock(
-            side_effect=lambda session_id, name="create", type="create_v1", bundles=None, **kw: (
-                ToolSpec.from_defaults(
-                    name=name,
-                    type=type,
-                    description="create",
-                    async_fn=AsyncMock(return_value=[]),
-                )
-            )
-        ),
-        build_insert_tool=AsyncMock(
-            side_effect=lambda session_id, name="insert", type="insert_v1", bundles=None, **kw: (
-                ToolSpec.from_defaults(
-                    name=name,
-                    type=type,
-                    description="insert",
-                    async_fn=AsyncMock(return_value=[]),
-                )
-            )
-        ),
+        )
+    )
+    text_editor_child_builder = SimpleNamespace(
+        build_view_tool=AsyncMock(return_value=None),
+        build_str_replace_tool=AsyncMock(return_value=None),
+        build_create_tool=AsyncMock(return_value=None),
+        build_insert_tool=AsyncMock(return_value=None),
     )
     noop = SimpleNamespace(intercept=AsyncMock(return_value=False))
     pipeline = ToolPipeline(
@@ -188,7 +164,9 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
         skill_management_processor=noop,
         code_execution_processor=CodeExecutionProcessor(),
         bash_processor=BashProcessor(bash_builder),
-        text_editor_processor=TextEditorProcessor(text_editor_builder),
+        text_editor_processor=TextEditorProcessor(
+            text_editor_child_builder, unified_text_editor_builder
+        ),
         present_files_processor=noop,
         present_server_processor=noop,
     )
@@ -205,11 +183,8 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
     resolved = await pipeline.contextualize_internal_tools(request)
 
     assert [tool.name for tool in resolved.tool_config.tools] == [
-        "bash",
-        "view",
-        "str_replace",
-        "create",
-        "insert",
+        "bash_code_execution",
+        "text_editor_code_execution",
     ]
 
 
@@ -232,11 +207,13 @@ def _built_tool(name: str, tool_type: str) -> ToolSpec:
 
 def _make_bash_builder() -> SimpleNamespace:
     return SimpleNamespace(
-        build_tool=AsyncMock(return_value=_built_tool("bash", "bash_v1")),
+        build_tool=AsyncMock(
+            return_value=_built_tool("bash_code_execution", "bash_code_execution_v1")
+        ),
     )
 
 
-def _make_text_editor_builder() -> SimpleNamespace:
+def _make_text_editor_child_builder() -> SimpleNamespace:
     return SimpleNamespace(
         build_view_tool=AsyncMock(return_value=_built_tool("view", "view_v1")),
         build_str_replace_tool=AsyncMock(
@@ -244,6 +221,16 @@ def _make_text_editor_builder() -> SimpleNamespace:
         ),
         build_create_tool=AsyncMock(return_value=_built_tool("create", "create_v1")),
         build_insert_tool=AsyncMock(return_value=_built_tool("insert", "insert_v1")),
+    )
+
+
+def _make_text_editor_builder() -> SimpleNamespace:
+    return SimpleNamespace(
+        build_tool=AsyncMock(
+            return_value=_built_tool(
+                "text_editor_code_execution", "text_editor_code_execution_v1"
+            )
+        ),
     )
 
 
@@ -274,7 +261,9 @@ def _make_pipeline(
         skill_management_processor=skill_processor or noop,
         code_execution_processor=CodeExecutionProcessor(),
         bash_processor=BashProcessor(_make_bash_builder()),
-        text_editor_processor=TextEditorProcessor(_make_text_editor_builder()),
+        text_editor_processor=TextEditorProcessor(
+            _make_text_editor_child_builder(), _make_text_editor_builder()
+        ),
         present_files_processor=noop,
         present_server_processor=noop,
     )
@@ -289,8 +278,7 @@ _SKILL_ARTIFACT = SkillArtifact(
 
 _NESTED_EXPANSION_CASES = [
     pytest.param(
-        # text_editor_v1 → expand → [view, str_replace, create, insert] stubs
-        #                 → build  → 4 built leaf tools
+        # text_editor_v1 → TextEditorProcessor → build text_editor_code_execution
         lambda: _make_pipeline(),
         ToolSpec(
             name="text_editor",
@@ -298,14 +286,13 @@ _NESTED_EXPANSION_CASES = [
             input_schema={"type": "object", "properties": {}},
         ),
         None,
-        ["view", "str_replace", "create", "insert"],
+        ["text_editor_code_execution"],
         id="text_editor_expands_to_built_leaf_tools",
     ),
     pytest.param(
-        # code_execution_v1 → expand → [bash, text_editor] stubs
-        #   bash           → build  → bash built
-        #   text_editor    → expand → [view, str_replace, create, insert] stubs
-        #                   → build  → 4 built leaf tools
+        # code_execution_v1 → [bash_code_execution, text_editor_code_execution]
+        #   bash_code_execution     → BashProcessor builds it
+        #   text_editor_code_execution → TextEditorProcessor builds it
         lambda: _make_pipeline(),
         ToolSpec(
             name="code_execution",
@@ -313,7 +300,7 @@ _NESTED_EXPANSION_CASES = [
             input_schema={"type": "object", "properties": {}},
         ),
         None,
-        ["bash", "view", "str_replace", "create", "insert"],
+        ["bash_code_execution", "text_editor_code_execution"],
         id="code_execution_fully_expands_all_levels",
     ),
     pytest.param(
@@ -326,7 +313,7 @@ _NESTED_EXPANSION_CASES = [
             input_schema={"type": "object", "properties": {}},
         ),
         None,
-        ["bash", "view", "str_replace", "create", "insert"],
+        ["bash_code_execution", "text_editor_code_execution"],
         id="code_execution_anthropic_wire_type_fully_expands",
     ),
     pytest.param(

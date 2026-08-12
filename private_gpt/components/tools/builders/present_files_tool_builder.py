@@ -14,6 +14,7 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.tools.events.adapters import PresentFilesEventAdapter
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import PRESENT_FILES_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import PRESENT_FILES_TOOL_FN
@@ -94,6 +95,7 @@ class PresentFilesToolBuilder:
             name=name,
             type=type,
             runtime="server",
+            event_adapter=PresentFilesEventAdapter,
             description=description,
             async_fn=present_files,
             requirements=[ToolRequirements.SANDBOX],

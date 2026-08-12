@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import builtins
 import enum
 import inspect
 import re
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping  # noqa: TC003
 from typing import Any, ClassVar, Literal
 
 from llama_index.core.base.llms.types import ChatMessage, MessageRole, TextBlock
@@ -23,6 +25,7 @@ from private_gpt.chat.schema_models import create_model_from_json_schema
 from private_gpt.components.engines.citations.types import Citation, Document
 from private_gpt.components.llm.llm_helper import AsyncTokenizerFn, TokenizerFn
 from private_gpt.components.sandbox.mount import Mount
+from private_gpt.components.tools.events.adapters import ToolEventAdapter
 from private_gpt.components.tools.tool_names import resolve_internal_tool_name
 from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.server.mcp.config import McpServerConfig
@@ -183,6 +186,10 @@ class ToolSpec(BaseModel):
         description="Execution runtime for the tool. 'server' means "
         "the tool is executed by the server; 'client' means the call is passed back to the caller.",
     )
+    event_adapter: builtins.type[ToolEventAdapter] | None = Field(
+        default=None,
+        description="Specialized adapter class for external tool event presentation.",
+    )
     description: str | None = Field(
         default=None, description="Human-readable description of what the tool does"
     )
@@ -252,12 +259,44 @@ class ToolSpec(BaseModel):
             return resolved_internal_name
         return re.sub(r"_v\d+$", "", potential_tool_name)
 
+    @field_serializer("event_adapter", when_used="json")
+    def _serialize_event_adapter(self, adapter_cls: object) -> str | None:
+        if adapter_cls is None:
+            return None
+        if not isinstance(adapter_cls, type):
+            return None
+        return f"{adapter_cls.__module__}:{adapter_cls.__qualname__}"
+
+    @field_validator("event_adapter", mode="before")
+    @classmethod
+    def _deserialize_event_adapter(cls, value: object) -> Any:
+        if value is None:
+            return None
+        from private_gpt.components.tools.events import (
+            ToolEventAdapter,
+            load_tool_event_adapter_class,
+        )
+
+        if isinstance(value, type) and issubclass(value, ToolEventAdapter):
+            return value
+        if isinstance(value, str):
+            return load_tool_event_adapter_class(value)
+        raise TypeError(
+            "event_adapter must be a ToolEventAdapter subclass or an import path string"
+        )
+
+    def resolve_event_adapter(self) -> ToolEventAdapter:
+        from private_gpt.components.tools.events import resolve_tool_event_adapter
+
+        return resolve_tool_event_adapter(self)
+
     @classmethod
     def from_defaults(
         cls,
         name: str,
         type: str | None = None,
         runtime: Literal["client", "server"] = "client",
+        event_adapter: builtins.type[ToolEventAdapter] | None = None,
         description: str | None = None,
         input_schema: dict[str, Any] | None = None,
         context: list[ArtifactType] | None = None,
@@ -268,7 +307,7 @@ class ToolSpec(BaseModel):
         instructions: str | None = None,
         requirements: list[ToolRequirements] | None = None,
         execution_metadata: ToolExecutionMetadata | None = None,
-    ) -> "ToolSpec":
+    ) -> ToolSpec:
         """Create a ToolSpec from default parameters."""
         if not input_schema and not async_fn:
             raise ValueError(
@@ -283,6 +322,7 @@ class ToolSpec(BaseModel):
             name=name,
             type=type,
             runtime=runtime,
+            event_adapter=event_adapter,
             description=description,
             input_schema=input_schema,
             context=context,
@@ -299,7 +339,7 @@ class ToolSpec(BaseModel):
     def from_llama_index(
         cls,
         tool: BaseTool | Callable[..., Any],
-    ) -> "ToolSpec":
+    ) -> ToolSpec:
         """Create ToolSpec from LlamaIndex FunctionTool."""
         if not isinstance(tool, BaseTool):
             raise ValueError("Unsupported tool type. Expected a FunctionTool.")
@@ -330,7 +370,7 @@ class ToolSpec(BaseModel):
             execution_metadata=None,
         )
 
-    def to_function_tool(self) -> "FunctionTool":
+    def to_function_tool(self) -> FunctionTool:
         """Convert into LlamaIndex tool."""
         schema = self.input_schema or {"type": "object", "properties": {}}
         model_schema = create_model_from_json_schema(
