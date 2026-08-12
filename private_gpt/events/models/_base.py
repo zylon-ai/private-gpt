@@ -97,7 +97,7 @@ class BaseContentBlock(BaseModel, StandardContentProtocol):
         kwargs.setdefault("by_alias", True)
         return super().model_dump_json(**kwargs)
 
-    def prune_content_block_by_response_mode(
+    def for_response_mode(
         self, response_mode: Literal["anthropic", "zylon"]
     ) -> Self | None:
         if response_mode == "zylon":

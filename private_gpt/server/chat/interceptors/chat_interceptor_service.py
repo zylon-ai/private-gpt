@@ -47,6 +47,9 @@ from private_gpt.server.chat.interceptors.platform_guidelines_interceptor import
 from private_gpt.server.chat.interceptors.runtime_model_interceptor import (
     RuntimeModelRequestInterceptor,
 )
+from private_gpt.server.chat.interceptors.server_tool_result_text_interceptor import (
+    ServerToolResultTextInterceptor,
+)
 from private_gpt.server.chat.interceptors.skill_tool_visibility_interceptor import (
     SkillToolVisibilityInterceptor,
 )
@@ -97,6 +100,7 @@ class ChatInterceptorService:
         # --- tool execution interceptors ---
         configure_tool_execution_interceptor: ConfigureToolExecutionInterceptor,
         # --- loop interceptors (run each iteration, order matters) ---
+        server_tool_result_text_interceptor: ServerToolResultTextInterceptor,
         document_file_interceptor: DocumentFilePreprocessingInterceptor,
         multimodal_interceptor: MultimodalRequestInterceptor,
         citation_interceptor: CitationRequestInterceptor,
@@ -137,7 +141,11 @@ class ChatInterceptorService:
             # Preprocess the chat history
             .add_range(
                 "preprocess",
-                requests=[document_file_interceptor, multimodal_interceptor],
+                requests=[
+                    server_tool_result_text_interceptor,
+                    document_file_interceptor,
+                    multimodal_interceptor,
+                ],
             )
             # Configure citations and documents
             .add_range(

@@ -13,9 +13,12 @@ from private_gpt.arq.tasks.chat.settings import (
 )
 from private_gpt.components.engines.chat.async_chat_engine import AsyncChatEngine
 from private_gpt.components.tools.remote_execution import ToolExecutionResponse
+from private_gpt.components.tools.tool_execution_outcome import (
+    ToolExecutionError,
+    ToolExecutionFailure,
+)
 from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
 from private_gpt.di import get_global_injector
-from private_gpt.events.models import TextBlock
 from private_gpt.server.chat.chat_service import ChatService
 from private_gpt.settings.settings import settings
 
@@ -120,8 +123,12 @@ def _timeout_response(
     return ToolExecutionResponse(
         tool_name=tool_name,
         tool_id=tool_id,
-        result_content=[TextBlock(text=message)],
-        is_error=True,
+        outcome=ToolExecutionFailure(
+            error=ToolExecutionError(
+                code="tool_timeout",
+                message=message,
+            )
+        ),
         tool_message=ChatMessage(
             role="tool",
             content=message,
