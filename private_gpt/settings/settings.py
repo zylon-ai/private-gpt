@@ -1706,6 +1706,30 @@ class CodeExecutionSettings(BaseModel):
         "Use 'local' with a session namespace root configured, "
         "or 's3' with s3.durable_bucket_name set.",
     )
+    internet_enabled: bool = Field(
+        default=False,
+        description=(
+            "Whether the code execution sandbox has outbound internet access. "
+            "When false (default), model instructions state that network access, "
+            "package installs, and external downloads are unavailable."
+        ),
+    )
+    preinstalled_packages: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Python packages advertised to the model as preinstalled in the "
+            "code execution environment. When set via env var, use a "
+            "comma-separated string."
+        ),
+    )
+    preinstalled_cli_tools: list[str] = Field(
+        default_factory=list,
+        description=(
+            "CLI tools advertised to the model as available in the code "
+            "execution environment. When set via env var, use a "
+            "comma-separated string."
+        ),
+    )
     tools: CodeExecutionToolsSettings = Field(
         default_factory=lambda: CodeExecutionToolsSettings(),
         description="Feature flags for code execution tools.",
@@ -1717,6 +1741,17 @@ class CodeExecutionSettings(BaseModel):
         if isinstance(value, str) and not value.strip():
             return None
         return value
+
+    @field_validator("preinstalled_packages", "preinstalled_cli_tools", mode="before")
+    @classmethod
+    def split_comma_separated_lists(cls, value: object) -> object:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        if isinstance(value, list):
+            return value
+        raise ValueError("must be a list or comma-separated string")
 
 
 class ReaderSettings(BaseModel):

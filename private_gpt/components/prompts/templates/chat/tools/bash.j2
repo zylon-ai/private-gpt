@@ -1,81 +1,99 @@
-{# Bash tool: Anthropic-style bash_code_execution, or legacy bash. #}
-{% set tool_name = namespace.tools.get("bash_code_execution_tool_name")
-    or namespace.tools.get("bash_tool_name")
-    or "bash_code_execution" %}
-
-{# Unified text editor (command=view|str_replace|create|insert), or legacy leaf tools / wrapper. #}
+{# Resolve tool names from the active tool list (Anthropic-style or legacy). #}
+{% set bash_tool = namespace.tools.get("bash_code_execution_tool_name")
+    or namespace.tools.get("bash_tool_name") %}
 {% set text_editor_tool = namespace.tools.get("text_editor_code_execution_tool_name")
     or namespace.tools.get("text_editor_tool_name") %}
 {% set view_tool = namespace.tools.get("view_tool_name") %}
 {% set str_replace_tool = namespace.tools.get("str_replace_tool_name") %}
 {% set create_tool = namespace.tools.get("create_tool_name") %}
 {% set insert_tool = namespace.tools.get("insert_tool_name") %}
-{% set has_unified_text_editor = text_editor_tool is not none %}
-{% set has_leaf_text_editor = view_tool or str_replace_tool or create_tool or insert_tool %}
-{% set has_text_editor = has_unified_text_editor or has_leaf_text_editor %}
-
-{% set has_present_files = namespace.tools.get("has_present_files") %}
 {% set present_files_tool = namespace.tools.get("present_files_tool_name") %}
-{% set has_present_server = namespace.tools.get("has_present_server") %}
 {% set present_server_tool = namespace.tools.get("present_server_tool_name") %}
+{% set has_leaf_editor = view_tool or str_replace_tool or create_tool or insert_tool %}
+{% set section_name = bash_tool or text_editor_tool or "code_execution" %}
+{# Default: no internet (matches CodeExecutionSettings.internet_enabled default). #}
+{% set internet_enabled = internet_enabled if internet_enabled is defined else false %}
+{% set preinstalled_packages = preinstalled_packages if preinstalled_packages is defined else [] %}
+{% set preinstalled_cli_tools = preinstalled_cli_tools if preinstalled_cli_tools is defined else [] %}
 
 {% if layout is not defined or not layout %}{% else %}
 {% set workspace = layout | selectattr("name", "equalto", "user") | first %}
 {% set outputs = layout | selectattr("name", "equalto", "outputs") | first %}
 {% set uploads = layout | selectattr("name", "equalto", "uploads") | first %}
-<{{ tool_name }}>
-Execute shell commands in an isolated sandbox environment.
+<code_execution>
+You have a sandboxed code execution environment.
 
-**Filesystem layout:**
+**Available tools**
+{% if bash_tool -%}
+- `{{ bash_tool }}` — run shell commands (`command`)
+{% endif -%}
+{% if text_editor_tool -%}
+- `{{ text_editor_tool }}` — read/edit text files via `command`: `view`, `str_replace`, `create`, or `insert` (plus `path` and the fields for that command)
+{% elif has_leaf_editor -%}
+- File tools:{% if view_tool %} `{{ view_tool }}` (read){% endif %}{% if str_replace_tool %}, `{{ str_replace_tool }}` (edit){% endif %}{% if create_tool %}, `{{ create_tool }}` (create){% endif %}{% if insert_tool %}, `{{ insert_tool }}` (insert){% endif %}
+{% endif -%}
+{% if present_files_tool -%}
+- `{{ present_files_tool }}` — **required** to show files to the user (`filepaths`: absolute paths). Writing a file does not surface it in chat.
+{% endif -%}
+{% if present_server_tool -%}
+- `{{ present_server_tool }}` — **required** to expose a sandbox HTTP service (`port`; optional `service_name`, `initial_path`)
+{% endif %}
+{% if preinstalled_packages or preinstalled_cli_tools %}
+
+**Environment**
+{% if preinstalled_packages -%}
+- Preinstalled Python packages: {{ preinstalled_packages | join(", ") }}
+{% endif -%}
+{% if preinstalled_cli_tools -%}
+- Preinstalled CLI tools: {{ preinstalled_cli_tools | join(", ") }}
+{% endif -%}
+{% endif %}
+
+**Filesystem**
 | Path | Access | Purpose |
 |---|---|---|
 {% for mount in layout -%}
 | `{{ mount.target }}` | {{ mount.access }} | {{ mount.description }} |
 {% endfor %}
-Rules:
-- Use absolute paths. `{{ workspace.target }}` is the working directory.
-- Do not access paths outside the directories listed above.
-- Create intermediate work under `{{ workspace.target }}`.
-- Save every deliverable the user should receive under `{{ outputs.target }}`.
-{% if has_unified_text_editor -%}
-- Prefer `{{ text_editor_tool }}` for reading/editing text files. It takes a `command` of `view`, `str_replace`, `create`, or `insert`, plus `path` and the fields for that command. Use `{{ tool_name }}` for shell work, builds, installs, and non-text files.
-{% elif has_leaf_text_editor -%}
-- Prefer the file tools for reading/editing text files{% if view_tool or str_replace_tool or create_tool or insert_tool %}: {% if view_tool %}`{{ view_tool }}` (read){% endif %}{% if str_replace_tool %}{% if view_tool %}, {% endif %}`{{ str_replace_tool }}` (edit){% endif %}{% if create_tool %}{% if view_tool or str_replace_tool %}, {% endif %}`{{ create_tool }}` (new file){% endif %}{% if insert_tool %}{% if view_tool or str_replace_tool or create_tool %}, {% endif %}`{{ insert_tool }}` (insert lines){% endif %}{% endif %}. Use `{{ tool_name }}` for shell work, builds, installs, and non-text files.
+
+**Rules**
+- Use absolute paths. Working directory: `{{ workspace.target }}`.
+- Stay inside the paths above.
+- Put intermediate work and scripts in `{{ workspace.target }}`. Put final user deliverables in `{{ outputs.target }}`.
+- Prefer writing code to a file under `{{ workspace.target }}`, then running that file{% if bash_tool %} with `{{ bash_tool }}`{% endif %}. Avoid long one-off inline code in the shell so failures are easy to inspect and fix with edits.
+{% if text_editor_tool or has_leaf_editor -%}
+- Prefer the text-editor tool(s) to create/edit those files; use {% if bash_tool %}`{{ bash_tool }}`{% else %}the shell{% endif %} to run them, and for installs/non-text work.
 {% endif -%}
-{% if has_present_files %}
-**CRITICAL — delivering files to the user (`{{ present_files_tool }}`):**
-- Writing a file is NOT enough. Files never appear in the chat UI unless you call `{{ present_files_tool }}`.
-- After creating or updating any user-facing deliverable (reports, CSVs, images, PDFs, zips, code, charts, exports, etc.), you MUST call `{{ present_files_tool }}` with the absolute path(s) under `{{ outputs.target }}`.
-- Call `{{ present_files_tool }}` in the same turn once the files are ready — do not only mention paths in prose.
-- Prefer batching: pass every finished deliverable path in one `{{ present_files_tool }}` call.
-- If you revise a deliverable, write the new version to `{{ outputs.target }}` and call `{{ present_files_tool }}` again.
-- Never claim the user can download or open a file unless you already called `{{ present_files_tool }}` successfully for that path.
-{% else -%}
-- Save any file the user should receive to `{{ outputs.target }}`.
+{% if not internet_enabled -%}
+- No internet: outbound network is disabled. Do not use `pip install`, `npm install`, `curl`, `wget`, `apt`, or any other download/install that needs the network. Use only the preinstalled packages/CLI tools listed above and local files.
 {% endif -%}
-{% if has_present_server %}
-**Exposing running services (`{{ present_server_tool }}`):**
-- After starting an HTTP service in the sandbox (web app, Streamlit, Jupyter, etc.), call `{{ present_server_tool }}` with the port so the user gets a clickable URL.
-- Starting the process alone does not surface a link; `{{ present_server_tool }}` is required.
+{% if present_files_tool -%}
+- After creating/updating deliverables, call `{{ present_files_tool }}` with their absolute paths (batch when possible). Do not claim a file is downloadable unless you already presented it.
+{% endif -%}
+{% if present_server_tool -%}
+- After starting an HTTP server in the sandbox, call `{{ present_server_tool }}` with its port.
 {% endif -%}
 {% if few_shots == "True" %}
-Examples:
-- Shell: call `{{ tool_name }}` with command `cat {{ uploads.target }}report.csv`
-- Write a deliverable: call `{{ tool_name }}` with command `cp analysis.png {{ outputs.target }}analysis.png`
-{% if has_unified_text_editor -%}
-- Read a text file: call `{{ text_editor_tool }}` with `command="view"`, `path="{{ workspace.target }}notes.md"`
-- Create a text file: call `{{ text_editor_tool }}` with `command="create"`, `path="{{ outputs.target }}summary.md"`, `file_text="..."`
-- Edit a text file: call `{{ text_editor_tool }}` with `command="str_replace"`, `path="..."`, `old_str="..."`, `new_str="..."`
-{% elif has_leaf_text_editor and view_tool -%}
-- Read a text file: call `{{ view_tool }}` with path `{{ workspace.target }}notes.md`
+
+**Examples**
+{% if bash_tool -%}
+- Read upload: `{{ bash_tool }}` → `command="cat {{ uploads.target }}report.csv"`
 {% endif -%}
-{% if has_present_files -%}
-- Then present it: call `{{ present_files_tool }}` with `["{{ outputs.target }}analysis.png"]`
-- Multiple outputs: write `{{ outputs.target }}summary.md` and `{{ outputs.target }}data.csv`, then call `{{ present_files_tool }}` once with both absolute paths
+{% if text_editor_tool and bash_tool -%}
+- Write then run: `{{ text_editor_tool }}` → `command="create"`, `path="{{ workspace.target }}analyze.py"`, `file_text="..."`; then `{{ bash_tool }}` → `command="python {{ workspace.target }}analyze.py"`
+- On failure: edit the file with `{{ text_editor_tool }}` (`command="str_replace"`) and re-run
+{% elif bash_tool -%}
+- Write then run a script under `{{ workspace.target }}`, edit it if it fails, then re-run
 {% endif -%}
-{% if has_present_server -%}
-- Started a server on port 8501: call `{{ present_server_tool }}` with port `8501` (optional `initial_path`)
+{% if bash_tool -%}
+- Write output: `{{ bash_tool }}` → `command="cp chart.png {{ outputs.target }}chart.png"`
+{% endif -%}
+{% if present_files_tool -%}
+- Show to user: `{{ present_files_tool }}` → `filepaths=["{{ outputs.target }}chart.png"]`
+{% endif -%}
+{% if present_server_tool -%}
+- Expose app: `{{ present_server_tool }}` → `port=8501`
 {% endif -%}
 {% endif %}
-</{{ tool_name }}>
+</code_execution>
 {% endif %}

@@ -741,29 +741,44 @@ def test_create_code_execution_prompt_no_code_execution_tool(
     assert not PlatformGuidelinesInterceptor._has_code_execution_tool(tools)
 
 
-def test_create_code_execution_prompt_cross_references_unified_text_editor(
+def test_create_code_execution_prompt_lists_available_tools(
     prompt_builder: PromptBuilderService,
 ) -> None:
-    prompt_with_editor = prompt_builder.create_code_execution_prompt(
-        _expanded_code_execution_tools(
-            include_present_files=False, include_present_server=False
-        )
+    from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
+
+    workspace = next(m for m in DEFAULT_SESSION_LAYOUT if m.name == "user")
+    formatted = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools()
     ).format()
 
-    prompt_without_editor = prompt_builder.create_code_execution_prompt(
+    assert "**Available tools**" in formatted
+    assert "`bash_code_execution`" in formatted
+    assert "`text_editor_code_execution`" in formatted
+    assert "command" in formatted
+    assert "view" in formatted
+    assert "str_replace" in formatted
+    assert "`present_files`" in formatted
+    assert "`present_server`" in formatted
+    assert "<code_execution>" in formatted
+    # Prefer workspace code files over long inline shell one-liners
+    assert (
+        "writing code to a file" in formatted.lower()
+        or "write code to a file" in formatted.lower()
+    )
+    assert "inline" in formatted.lower()
+    assert workspace.target in formatted
+
+    without_optional = prompt_builder.create_code_execution_prompt(
         _expanded_code_execution_tools(
             include_editor=False,
             include_present_files=False,
             include_present_server=False,
         )
     ).format()
-
-    assert "`bash_code_execution`" in prompt_with_editor
-    assert "`text_editor_code_execution`" in prompt_with_editor
-    assert "command" in prompt_with_editor
-    assert "view" in prompt_with_editor
-    assert "str_replace" in prompt_with_editor
-    assert "`text_editor_code_execution`" not in prompt_without_editor
+    assert "`bash_code_execution`" in without_optional
+    assert "`text_editor_code_execution`" not in without_optional
+    assert "present_files" not in without_optional
+    assert "present_server" not in without_optional
 
 
 def test_create_code_execution_prompt_accepts_legacy_leaf_editor_tools(
@@ -798,8 +813,10 @@ def test_create_code_execution_prompt_requires_present_files(
     ).format()
 
     assert "`present_files`" in formatted
-    assert "CRITICAL" in formatted
-    assert "never appear" in formatted.lower() or "never see" in formatted.lower()
+    assert "required" in formatted.lower()
+    assert (
+        "does not surface" in formatted.lower() or "writing a file" in formatted.lower()
+    )
     assert outputs.target in formatted
     assert "`present_server`" in formatted
     assert "`text_editor_code_execution`" in formatted
@@ -812,5 +829,43 @@ def test_create_code_execution_prompt_requires_present_files(
         )
     ).format()
     assert "present_files" not in formatted_without
-    assert "CRITICAL" not in formatted_without
     assert "present_server" not in formatted_without
+
+
+def test_create_code_execution_prompt_internet_disabled_by_default(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    formatted = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(),
+        internet_enabled=False,
+    ).format()
+    assert "No internet" in formatted
+    assert "pip install" in formatted
+
+    formatted_online = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(),
+        internet_enabled=True,
+    ).format()
+    assert "No internet" not in formatted_online
+    assert "pip install" not in formatted_online
+
+
+def test_create_code_execution_prompt_lists_preinstalled_inventory(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    formatted = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(),
+        preinstalled_packages=["numpy", "pandas"],
+        preinstalled_cli_tools=["rg", "sqlite3"],
+    ).format()
+    assert "**Environment**" in formatted
+    assert "Preinstalled Python packages: numpy, pandas" in formatted
+    assert "Preinstalled CLI tools: rg, sqlite3" in formatted
+
+    empty = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(),
+        preinstalled_packages=[],
+        preinstalled_cli_tools=[],
+    ).format()
+    assert "**Environment**" not in empty
+    assert "Preinstalled Python packages" not in empty
