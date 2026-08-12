@@ -1,28 +1,65 @@
-{% set tool_name = namespace.tools.get("bash_tool_name") %}
-{% set has_text_editor = namespace.tools.get("has_text_editor") %}
+{% set tool_name = namespace.tools.get("bash_tool_name") or "bash" %}
+{% set view_tool = namespace.tools.get("view_tool_name") %}
+{% set str_replace_tool = namespace.tools.get("str_replace_tool_name") %}
+{% set create_tool = namespace.tools.get("create_tool_name") %}
+{% set insert_tool = namespace.tools.get("insert_tool_name") %}
+{# text_editor expands to leaf tools (view/str_replace/create/insert); also accept the wrapper name. #}
+{% set has_text_editor = namespace.tools.get("has_text_editor") or view_tool or str_replace_tool or create_tool or insert_tool %}
+{% set has_present_files = namespace.tools.get("has_present_files") %}
+{% set present_files_tool = namespace.tools.get("present_files_tool_name") %}
+{% set has_present_server = namespace.tools.get("has_present_server") %}
+{% set present_server_tool = namespace.tools.get("present_server_tool_name") %}
 {% if layout is not defined or not layout %}{% else %}
 {% set workspace = layout | selectattr("name", "equalto", "user") | first %}
+{% set outputs = layout | selectattr("name", "equalto", "outputs") | first %}
+{% set uploads = layout | selectattr("name", "equalto", "uploads") | first %}
 <{{ tool_name }}>
 Execute shell commands in an isolated sandbox environment.
 
 **Filesystem layout:**
 | Path | Access | Purpose |
 |---|---|---|
-{%- for mount in layout %}
+{% for mount in layout -%}
 | `{{ mount.target }}` | {{ mount.access }} | {{ mount.description }} |
-{%- endfor %}
-
+{% endfor %}
 Rules:
 - Use absolute paths. `{{ workspace.target }}` is the working directory.
-- Save any file the user should receive to `{{ (layout | selectattr("name", "equalto", "outputs") | first).target }}`.
-- Do not access paths outside the directories listed above.{% if has_text_editor %}
-- Prefer the text editor tools for viewing or editing existing files.{% endif %}
+- Do not access paths outside the directories listed above.
+- Create intermediate work under `{{ workspace.target }}`.
+- Save every deliverable the user should receive under `{{ outputs.target }}`.
+{% if has_text_editor -%}
+- Prefer the file tools for reading/editing text files{% if view_tool or str_replace_tool or create_tool or insert_tool %}: {% if view_tool %}`{{ view_tool }}` (read){% endif %}{% if str_replace_tool %}{% if view_tool %}, {% endif %}`{{ str_replace_tool }}` (edit){% endif %}{% if create_tool %}{% if view_tool or str_replace_tool %}, {% endif %}`{{ create_tool }}` (new file){% endif %}{% if insert_tool %}{% if view_tool or str_replace_tool or create_tool %}, {% endif %}`{{ insert_tool }}` (insert lines){% endif %}{% endif %}. Use `{{ tool_name }}` for shell work, builds, installs, and non-text files.
+{% endif -%}
+{% if has_present_files %}
+**CRITICAL — delivering files to the user (`{{ present_files_tool }}`):**
+- Writing a file is NOT enough. Files never appear in the chat UI unless you call `{{ present_files_tool }}`.
+- After creating or updating any user-facing deliverable (reports, CSVs, images, PDFs, zips, code, charts, exports, etc.), you MUST call `{{ present_files_tool }}` with the absolute path(s) under `{{ outputs.target }}`.
+- Call `{{ present_files_tool }}` in the same turn once the files are ready — do not only mention paths in prose.
+- Prefer batching: pass every finished deliverable path in one `{{ present_files_tool }}` call.
+- If you revise a deliverable, write the new version to `{{ outputs.target }}` and call `{{ present_files_tool }}` again.
+- Never claim the user can download or open a file unless you already called `{{ present_files_tool }}` successfully for that path.
+{% else -%}
+- Save any file the user should receive to `{{ outputs.target }}`.
+{% endif -%}
+{% if has_present_server %}
+**Exposing running services (`{{ present_server_tool }}`):**
+- After starting an HTTP service in the sandbox (web app, Streamlit, Jupyter, etc.), call `{{ present_server_tool }}` with the port so the user gets a clickable URL.
+- Starting the process alone does not surface a link; `{{ present_server_tool }}` is required.
+{% endif -%}
 {% if few_shots == "True" %}
-{% set uploads = layout | selectattr("name", "equalto", "uploads") | first %}
-{% set outputs = layout | selectattr("name", "equalto", "outputs") | first %}
 Examples:
 - Read an upload: `cat {{ uploads.target }}report.csv`
-- Save result: `cp analysis.png {{ outputs.target }}analysis.png`
+- Write a deliverable: `cp analysis.png {{ outputs.target }}analysis.png`
+{% if has_present_files -%}
+- Then present it: call `{{ present_files_tool }}` with `["{{ outputs.target }}analysis.png"]`
+- Multiple outputs: write `{{ outputs.target }}summary.md` and `{{ outputs.target }}data.csv`, then call `{{ present_files_tool }}` once with both absolute paths
+{% endif -%}
+{% if has_present_server -%}
+- Started a server on port 8501: call `{{ present_server_tool }}` with port `8501` (optional `initial_path`)
+{% endif -%}
+{% if has_text_editor and view_tool -%}
+- Read a text file: call `{{ view_tool }}` with path `{{ workspace.target }}notes.md`
+{% endif -%}
 {% endif %}
 </{{ tool_name }}>
 {% endif %}

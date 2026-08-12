@@ -683,13 +683,39 @@ def test_seed_tool_instructions_empty_string_suppresses(
     assert seeded[0].instructions == ""
 
 
+def _expanded_code_execution_tools(
+    *,
+    include_editor: bool = True,
+    include_present_files: bool = True,
+    include_present_server: bool = True,
+) -> list:
+    """Tool list after code_execution → bash/text_editor/present_* expansion."""
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+
+    tools = [ToolSpec(name="bash", type="bash_v1")]
+    if include_editor:
+        # text_editor expands to these leaf tools before prompts are rendered
+        tools.extend(
+            [
+                ToolSpec(name="view", type="view_v1"),
+                ToolSpec(name="str_replace", type="str_replace_v1"),
+                ToolSpec(name="create", type="create_v1"),
+                ToolSpec(name="insert", type="insert_v1"),
+            ]
+        )
+    if include_present_files:
+        tools.append(ToolSpec(name="present_files", type="present_files_v1"))
+    if include_present_server:
+        tools.append(ToolSpec(name="present_server", type="present_server_v1"))
+    return tools
+
+
 def test_create_code_execution_prompt_contains_paths(
     prompt_builder: PromptBuilderService,
 ) -> None:
-    from private_gpt.components.chat.models.chat_config_models import ToolSpec
     from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
 
-    tools = [ToolSpec(name="bash"), ToolSpec(name="text_editor")]
+    tools = _expanded_code_execution_tools()
     prompt = prompt_builder.create_code_execution_prompt(tools)
     formatted = prompt.format()
     assert formatted != ""
@@ -715,16 +741,71 @@ def test_create_code_execution_prompt_no_code_execution_tool(
     assert not PlatformGuidelinesInterceptor._has_code_execution_tool(tools)
 
 
-def test_create_code_execution_prompt_cross_references_text_editor(
+def test_create_code_execution_prompt_cross_references_text_editor_leaf_tools(
     prompt_builder: PromptBuilderService,
 ) -> None:
+    prompt_with_editor = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(
+            include_present_files=False, include_present_server=False
+        )
+    ).format()
+
+    prompt_without_editor = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(
+            include_editor=False,
+            include_present_files=False,
+            include_present_server=False,
+        )
+    ).format()
+
+    # Expanded leaf names must appear — not the wrapper "text_editor"
+    assert "`view`" in prompt_with_editor
+    assert "`str_replace`" in prompt_with_editor
+    assert "`create`" in prompt_with_editor
+    assert "`insert`" in prompt_with_editor
+    assert "text_editor" not in prompt_with_editor
+
+    assert "`view`" not in prompt_without_editor
+    assert "`str_replace`" not in prompt_without_editor
+
+
+def test_create_code_execution_prompt_accepts_unexpanded_text_editor_wrapper(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    """Defensive: still works if prompts render before text_editor expands."""
     from private_gpt.components.chat.models.chat_config_models import ToolSpec
 
     tools = [ToolSpec(name="bash"), ToolSpec(name="text_editor")]
-    prompt_with_editor = prompt_builder.create_code_execution_prompt(tools)
+    formatted = prompt_builder.create_code_execution_prompt(tools).format()
+    assert "file tools" in formatted.lower() or "text editor" in formatted.lower()
 
-    tools_no_editor = [ToolSpec(name="bash")]
-    prompt_without_editor = prompt_builder.create_code_execution_prompt(tools_no_editor)
 
-    assert "text editor" in prompt_with_editor.format().lower()
-    assert "text editor" not in prompt_without_editor.format().lower()
+def test_create_code_execution_prompt_requires_present_files(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
+
+    outputs = next(m for m in DEFAULT_SESSION_LAYOUT if m.name == "outputs")
+
+    formatted = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools()
+    ).format()
+
+    assert "`present_files`" in formatted
+    assert "CRITICAL" in formatted
+    assert "never appear" in formatted.lower() or "never see" in formatted.lower()
+    assert outputs.target in formatted
+    assert "`present_server`" in formatted
+    # Leaf editor tools still cross-referenced alongside present_*
+    assert "`view`" in formatted
+
+    formatted_without = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(
+            include_editor=False,
+            include_present_files=False,
+            include_present_server=False,
+        )
+    ).format()
+    assert "present_files" not in formatted_without
+    assert "CRITICAL" not in formatted_without
+    assert "present_server" not in formatted_without
