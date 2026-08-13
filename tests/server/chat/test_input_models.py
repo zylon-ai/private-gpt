@@ -19,6 +19,7 @@ from private_gpt.events.models import (
     ClientToolUseBlock,
     ImageBlock,
     MidConvSystemBlock,
+    ServerToolResultBlock,
     ServerToolUseBlock,
     SourceBlock,
     TextBlock,
@@ -182,6 +183,10 @@ def test_client_and_server_tool_blocks_convert_to_same_messages() -> None:
         stderr="",
         return_code=0,
     )
+    server_result = BashCodeExecutionToolResultBlock(
+        tool_use_id=tool_id,
+        content=result_content,
+    )
 
     client_messages = [
         MessageInput(
@@ -194,7 +199,7 @@ def test_client_and_server_tool_blocks_convert_to_same_messages() -> None:
                 ),
                 ClientToolResultBlock(
                     tool_use_id=tool_id,
-                    content=[result_content],
+                    content=server_result.render(),
                 ),
             ],
         )
@@ -208,10 +213,7 @@ def test_client_and_server_tool_blocks_convert_to_same_messages() -> None:
                     name="bash_code_execution",
                     input=tool_input,
                 ),
-                BashCodeExecutionToolResultBlock(
-                    tool_use_id=tool_id,
-                    content=result_content,
-                ),
+                server_result,
             ],
         )
     ]
@@ -219,6 +221,70 @@ def test_client_and_server_tool_blocks_convert_to_same_messages() -> None:
     assert MessageInput.convert_from_llama_index_messages(
         client_messages
     ) == MessageInput.convert_from_llama_index_messages(server_messages)
+
+
+def test_tool_use_and_result_match_server_tool_use_and_result() -> None:
+    """Standalone tool_use/tool_result must match server_tool_use/server_tool_result.
+
+    The server result is reduced to its ``render()`` text so both paths produce
+    the same llama-index assistant tool call plus tool observation.
+    """
+    tool_id = "srvtoolu_standalone"
+    tool_input = {
+        "command": "view",
+        "path": "/home/agent/workspace/Ivan_Martinez_CV.md",
+    }
+    rendered_result = (
+        "Presented 2 file(s): Ivan_Martinez_CV.md, Ivan_Martinez_CV.html"
+    )
+    server_result = ServerToolResultBlock(
+        tool_use_id=tool_id,
+        content=[
+            TextBlock(text=rendered_result),
+            TextBlock(text="extra-line"),
+        ],
+    )
+
+    client_messages = [
+        MessageInput(
+            role="assistant",
+            content=[
+                ToolUseBlock(
+                    id=tool_id,
+                    name="present_files",
+                    input=tool_input,
+                ),
+                ToolResultBlock(
+                    tool_use_id=tool_id,
+                    content=server_result.render(),
+                ),
+            ],
+        )
+    ]
+    server_messages = [
+        MessageInput(
+            role="assistant",
+            content=[
+                ServerToolUseBlock(
+                    id=tool_id,
+                    name="present_files",
+                    input=tool_input,
+                ),
+                server_result,
+            ],
+        )
+    ]
+
+    client_converted = MessageInput.convert_from_llama_index_messages(client_messages)
+    server_converted = MessageInput.convert_from_llama_index_messages(server_messages)
+
+    assert client_converted == server_converted
+    assert len(server_converted) == 2
+    assert server_converted[0].role == MessageRole.ASSISTANT
+    assert server_converted[1].role == MessageRole.TOOL
+    assert server_converted[1].content == server_result.render()
+    assert server_converted[1].additional_kwargs["tool_call_id"] == tool_id
+    assert server_converted[1].additional_kwargs["tool_call_name"] == "present_files"
 
 
 def test_tool_result_with_empty_content() -> None:

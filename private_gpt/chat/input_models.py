@@ -40,6 +40,8 @@ from private_gpt.events.models import (
     ContentBlockType,
     ImageBlock,
     MidConvSystemBlock,
+    ServerToolResultBlock,
+    ServerToolUseBlock,
     TextBlock,
     TLDRBlock,
     ToolResultBlock,
@@ -374,6 +376,7 @@ class MessageInput(BaseModel):
         result = []
 
         messages = cls._support_legacy_messages(list(messages))
+        messages = cls._standalone_server_tool_messages(messages)
         messages = cls._merge_messages(messages)
         messages = cls._process_messages(messages)
 
@@ -440,6 +443,48 @@ class MessageInput(BaseModel):
                 )
 
         return converted_messages
+
+    @classmethod
+    def _standalone_server_tool_messages(
+        cls, messages: list["MessageInput"]
+    ) -> list["MessageInput"]:
+        """Rewrite server tool blocks as standalone tool_use / tool_result pairs.
+
+        The prompt path only understands client ``tool_use`` / ``tool_result``.
+        Server-executed history must therefore land as the same llama-index
+        messages, with the tool-result text taken from ``render()``.
+        """
+        rewritten: list[MessageInput] = []
+        for msg in messages:
+            if not isinstance(msg.content, list):
+                rewritten.append(msg)
+                continue
+
+            content: list[ContentBlockType] = []
+            for block in msg.content:
+                if isinstance(block, ServerToolUseBlock):
+                    content.append(
+                        ToolUseBlock(
+                            id=block.id,
+                            name=block.name,
+                            input=block.input,
+                            caller=block.caller,
+                        )
+                    )
+                elif isinstance(block, ServerToolResultBlock):
+                    rendered = block.render()
+                    content.append(
+                        ToolResultBlock(
+                            tool_use_id=block.tool_use_id,
+                            content=rendered,
+                            is_error=block.is_error,
+                        )
+                    )
+                else:
+                    content.append(block)
+
+            rewritten.append(MessageInput(role=msg.role, content=content))
+        return rewritten
 
     @classmethod
     def _process_messages(cls, messages: list["MessageInput"]) -> list["MessageInput"]:
