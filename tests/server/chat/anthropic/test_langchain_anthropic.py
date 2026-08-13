@@ -992,3 +992,96 @@ def test_all_models_run_without_crash(
 
     assert isinstance(response, AIMessage)
     assert len(response.content) > 0
+
+
+# ---------------------------------------------------------------------------
+# Multi-turn history with server_tool_use — internal_name translation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+async def test_langchain_multi_turn_server_tool_use_with_internal_name(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    """LangChain: sending history with server_tool_use blocks that carry
+    internal_name (PrivateGPT-emitted) must succeed without crashing."""
+    setup_mock_llm(injector, [])
+    chat_model = create_langchain_chat_model(test_client, httpx_mock, is_async=True)
+
+    tool_use_id = "srvtoolu_5ce5f7ffca47420b9fa126c570f72a35"
+
+    messages = [
+        HumanMessage(content="get the java version"),
+        AIMessage(
+            content=[
+                {
+                    "type": "server_tool_use",
+                    "id": tool_use_id,
+                    "name": "bash_code_execution",
+                    "input": {"command": "java -version", "timeout": None},
+                    "internal_name": "bash",
+                },
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use_id,
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": 'exit_code: 0\n\nstderr:\nopenjdk version "17.0.19"',
+                        }
+                    ],
+                    "is_error": False,
+                },
+            ]
+        ),
+        HumanMessage(content="hey"),
+    ]
+
+    response = await chat_model.ainvoke(messages)
+    assert isinstance(response, AIMessage)
+    assert len(response.content) > 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+async def test_langchain_multi_turn_server_tool_use_without_internal_name(
+    injector: MockInjector,
+    test_client: TestClient,
+    httpx_mock: HTTPXMock,
+) -> None:
+    """LangChain: sending history with server_tool_use blocks WITHOUT internal_name
+    (native Anthropic API blocks) must also succeed, falling back to public name."""
+    setup_mock_llm(injector, [])
+    chat_model = create_langchain_chat_model(test_client, httpx_mock, is_async=True)
+
+    tool_use_id = "srvtoolu_f87591591b7f4f8fa3f448f954334ed7"
+
+    messages = [
+        HumanMessage(content="get node version"),
+        AIMessage(
+            content=[
+                {
+                    "type": "server_tool_use",
+                    "id": tool_use_id,
+                    "name": "bash_code_execution",
+                    "input": {"command": "node --version", "timeout": None},
+                },
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use_id,
+                    "content": [
+                        {"type": "text", "text": "exit_code: 0\n\nstdout:\nv18.20.4"}
+                    ],
+                    "is_error": False,
+                },
+            ]
+        ),
+        HumanMessage(content="hey"),
+    ]
+
+    response = await chat_model.ainvoke(messages)
+    assert isinstance(response, AIMessage)
+    assert len(response.content) > 0

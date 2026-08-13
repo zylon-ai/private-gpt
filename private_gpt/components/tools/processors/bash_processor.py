@@ -10,7 +10,10 @@ from private_gpt.components.tools.processors.base import (
     _session_id,
     _tool_matches,
 )
-from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
+from private_gpt.components.tools.tool_names import (
+    BASH_CODE_EXECUTION_TOOL_NAME,
+    BASH_TOOL_NAME,
+)
 from private_gpt.server.principal import Principal
 
 
@@ -22,7 +25,9 @@ class BashProcessor(ToolProcessor):
 
     async def intercept(self, request: ResolvedChatRequest) -> bool:
         for tool in request.tool_config.tools:
-            if not _tool_matches(tool, BASH_TOOL_NAME) or not _is_unresolved_tool(tool):
+            if not _tool_matches(
+                tool, BASH_TOOL_NAME, BASH_CODE_EXECUTION_TOOL_NAME
+            ) or not _is_unresolved_tool(tool):
                 continue
 
             config = CodeExecutionSessionConfig(
@@ -33,8 +38,8 @@ class BashProcessor(ToolProcessor):
             )
             resolved = await self._bash_builder.build_tool(
                 config,
-                name=tool.name or BASH_TOOL_NAME,
-                type=tool.type or BASH_TOOL_NAME + "_v1",
+                name=tool.name or BASH_CODE_EXECUTION_TOOL_NAME,
+                type=tool.type or BASH_CODE_EXECUTION_TOOL_NAME + "_v1",
             )
             return _replace_tool(request, tool, [resolved])
         return False

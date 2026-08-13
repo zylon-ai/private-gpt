@@ -30,9 +30,7 @@ class FilterZylonEventInterceptor(BaseEventInterceptor):
         async def coro() -> AsyncGenerator[Event, None]:
             active_blocks: set[str] = set()
             async for event in gen:
-                new_event = event.prune_content_block_by_response_mode(
-                    self._response_mode
-                )
+                new_event = event.for_response_mode(self._response_mode)
                 if not new_event:
                     continue
 

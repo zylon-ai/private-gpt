@@ -4,6 +4,7 @@ from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.tools.events.adapters import WebFetchEventAdapter
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import WEB_FETCH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import WEB_FETCH_TOOL_FN
@@ -11,7 +12,7 @@ from private_gpt.components.web.web_scraper_service import WebScraperService
 from private_gpt.di import get_global_injector
 from private_gpt.events.models import (
     ResultContentBlockType,
-    TextBlock,
+    WebFetchResultBlock,
 )
 
 
@@ -45,16 +46,15 @@ class WebFetchToolBuilder:
             result = await self.web_scraper.scrape_max_compress(url)
 
             if not result.markdown_content:
+                from private_gpt.events.models import TextBlock
+
                 return [
-                    TextBlock(
-                        text="No content could be fetched from the provided URL.",
-                    )
+                    TextBlock(text="No content could be fetched from the provided URL.")
                 ]
 
-            page_content = result.markdown_content
             return [
-                TextBlock(
-                    text=page_content,
+                WebFetchResultBlock.from_markdown(
+                    url=url, markdown=result.markdown_content
                 )
             ]
 
@@ -62,6 +62,7 @@ class WebFetchToolBuilder:
             name=name,
             type=type,
             runtime=runtime,
+            event_adapter=WebFetchEventAdapter,
             description=description,
             async_fn=run_tool,
             execution_metadata=build_rebuild_metadata(

@@ -1808,6 +1808,14 @@ class CodeExecutionToolsSettings(BaseModel):
         default=True,
         description="Feature flag to enable the present_server tool.",
     )
+    server_tool_result_mode: Literal["full", "client"] = Field(
+        default="full",
+        description=(
+            "Controls how server tool results are returned to the model. "
+            "'full' preserves the original structured result blocks produced by each tool. "
+            "'client' renders the result as plain text before passing it to the model."
+        ),
+    )
 
 
 class CodeExecutionSettings(BaseModel):

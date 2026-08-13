@@ -3,6 +3,7 @@ from typing import Any
 from llama_index.core.tools import FunctionTool
 
 from private_gpt.components.tools.tool_names import (
+    BASH_CODE_EXECUTION_TOOL_NAME,
     BASH_TOOL_NAME,
     CODE_EXECUTION_TOOL_NAME,
     DATABASE_QUERY_TOOL_NAME,
@@ -12,6 +13,7 @@ from private_gpt.components.tools.tool_names import (
     SKILLS_TOOL_NAME,
     SUMMARIZE_TOOL_NAME,
     TABULAR_DATA_ANALYSIS,
+    TEXT_EDITOR_CODE_EXECUTION_TOOL_NAME,
     TEXT_EDITOR_CREATE_TOOL_NAME,
     TEXT_EDITOR_INSERT_TOOL_NAME,
     TEXT_EDITOR_STR_REPLACE_TOOL_NAME,
@@ -87,9 +89,19 @@ BASH_TOOL_FN = _placeholder_tool(
     "Execute bash commands in the session workspace.",
 )
 
+BASH_CODE_EXECUTION_TOOL_FN = _placeholder_tool(
+    BASH_CODE_EXECUTION_TOOL_NAME,
+    "Execute bash commands in the session workspace.",
+)
+
 TEXT_EDITOR_TOOL_FN = _placeholder_tool(
     TEXT_EDITOR_TOOL_NAME,
     "View and edit files in the session workspace.",
+)
+
+TEXT_EDITOR_CODE_EXECUTION_TOOL_FN = _placeholder_tool(
+    TEXT_EDITOR_CODE_EXECUTION_TOOL_NAME,
+    "View and edit files in the session workspace using view, str_replace, create, or insert commands.",
 )
 
 TEXT_EDITOR_VIEW_TOOL_FN = _placeholder_tool(
@@ -114,7 +126,10 @@ TEXT_EDITOR_INSERT_TOOL_FN = _placeholder_tool(
 
 PRESENT_FILES_TOOL_FN = _placeholder_tool(
     PRESENT_FILES_TOOL_NAME,
-    "Present one or more output files to the user after they have been created.",
+    "REQUIRED to show files to the user. Present one or more sandbox files "
+    "(absolute paths, usually under /mnt/user-data/outputs/) so they appear as "
+    "downloadable attachments in the chat. Writing a file is not enough — if you "
+    "do not call this tool, the user will never see the file.",
 )
 
 PRESENT_SERVER_TOOL_FN = _placeholder_tool(
