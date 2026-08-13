@@ -24,6 +24,7 @@ from private_gpt.events.models import (
     WebSearchResultBlock,
     WebSearchToolResultBlock,
     WebSearchToolResultError,
+    normalize_tool_result_content,
 )
 from private_gpt.events.models._tool_result_blocks import Renderable
 
@@ -89,7 +90,7 @@ class ClientToolEventAdapter(ToolEventAdapter):
                 content=outcome.error.message,
                 is_error=True,
             )
-        content = _render_blocks(outcome.content)
+        content = normalize_tool_result_content(_render_blocks(outcome.content))
         return ClientToolResultBlock(tool_use_id=tool_use_id, content=content)
 
 
@@ -115,7 +116,10 @@ class ServerToolEventAdapter(ToolEventAdapter):
                 content=outcome.error.message,
                 is_error=True,
             )
-        return ServerToolResultBlock(tool_use_id=tool_use_id, content=outcome.content)
+        return ServerToolResultBlock(
+            tool_use_id=tool_use_id,
+            content=normalize_tool_result_content(outcome.content),
+        )
 
 
 class BashCodeExecutionEventAdapter(ServerToolEventAdapter):

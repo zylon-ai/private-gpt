@@ -33,6 +33,7 @@ from pydantic import (
 from private_gpt.chat.extensions.citation import ZylonCitation
 from private_gpt.components.tools.tool_names import resolve_internal_tool_name
 from private_gpt.events.models import (
+    NO_TOOL_CONTENT,
     AudioBlock,
     BaseContentBlock,
     CacheControlEphemeral,
@@ -993,7 +994,7 @@ class MessageInput(BaseModel):
                 tool_use = tool_uses.get(block.tool_use_id)
 
                 if li_blocks is None and not custom_blocks:
-                    li_blocks = [LITextBlock(text="No content")]
+                    li_blocks = [LITextBlock(text=NO_TOOL_CONTENT)]
 
                 additional_kwargs: dict[str, Any] = {
                     **(custom_blocks or {}),

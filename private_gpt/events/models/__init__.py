@@ -42,7 +42,9 @@ from private_gpt.events.models._content_blocks import (
     WebSearchToolResultError,
 )
 from private_gpt.events.models._converters import (
+    NO_TOOL_CONTENT,
     from_tool_output,
+    normalize_tool_result_content,
     to_llama_index_blocks,
 )
 from private_gpt.events.models._deltas import (
@@ -155,6 +157,7 @@ _types = [
 ]
 
 __all__ = [
+    "NO_TOOL_CONTENT",
     "AudioBlock",
     "BaseContentBlock",
     "BashCodeExecutionResultBlock",
@@ -224,6 +227,7 @@ __all__ = [
     "WebSearchToolResultBlock",
     "WebSearchToolResultError",
     "from_tool_output",
+    "normalize_tool_result_content",
     "serialize_datetime",
     "to_llama_index_blocks",
 ]

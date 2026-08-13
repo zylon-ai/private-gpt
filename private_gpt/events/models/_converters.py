@@ -1,4 +1,5 @@
-from typing import Any, get_args
+from collections.abc import Callable
+from typing import Any, cast, get_args
 
 from llama_index.core.base.llms.types import AudioBlock as LIAudioBlock
 from llama_index.core.base.llms.types import ContentBlock
@@ -23,10 +24,50 @@ from private_gpt.server.mcp.mcp_service import (
     is_mcp_tool_result,
 )
 
+NO_TOOL_CONTENT = "No content"
+
+
+def normalize_tool_result_content(
+    content: list[ResultContentBlockType] | None,
+) -> list[ResultContentBlockType]:
+    """Ensure an empty tool result has model-visible text content.
+
+    Tool results may legitimately contain no output (for example, a successful
+    file update).  Keeping an empty result as ``[]`` allows prompt formatting
+    to drop the corresponding ``TOOL`` message, leaving the model's tool call
+    without its observation.  Preserve all existing blocks and add a concise
+    fallback when none of them renders meaningful text.
+    """
+    blocks = list(content or [])
+    has_text = False
+    for block in blocks:
+        if isinstance(block, TextBlock):
+            has_text = bool(block.text.strip())
+        elif isinstance(block, BaseContentBlock):
+            render = getattr(block, "render", None)
+            if callable(render):
+                render_fn = cast(Callable[[], str], render)
+                try:
+                    has_text = bool(str(render_fn()).strip())
+                except Exception:
+                    has_text = False
+        if has_text:
+            break
+
+    if not has_text:
+        blocks.append(TextBlock(text=NO_TOOL_CONTENT))
+    return blocks
+
 
 def from_tool_output(tool_output: Any) -> list[ResultContentBlockType]:
     """Convert arbitrary tool output to a list of ``ResultContentBlockType`` blocks."""
     match tool_output:
+        case None:
+            return []
+
+        case str() if not tool_output.strip():
+            return []
+
         case list() if tool_output and all(
             isinstance(i, NodeWithScore) for i in tool_output
         ):

@@ -9,7 +9,12 @@ from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
 from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
-from private_gpt.events.models import TextBlock, to_llama_index_blocks
+from private_gpt.events.models import (
+    NO_TOOL_CONTENT,
+    TextBlock,
+    normalize_tool_result_content,
+    to_llama_index_blocks,
+)
 from private_gpt.events.models._tool_result_blocks import (
     Renderable,
     ServerToolResultBlock,
@@ -59,13 +64,23 @@ class ServerToolResultTextInterceptor(ChatRequestLoopInterceptor):
             for key in server_result_keys:
                 for block in kwargs[key]:
                     if isinstance(block, Renderable):
-                        rendered.append(TextBlock(text=block.render()))
+                        rendered_text = block.render()
+                        if rendered_text.strip():
+                            rendered.append(TextBlock(text=rendered_text))
                     else:
                         rendered.append(block)
                 del kwargs[key]
 
-            li_blocks: list[LIContentBlock] = to_llama_index_blocks(rendered)
-            if li_blocks:
-                message.blocks = li_blocks
+            normalized = normalize_tool_result_content(rendered)
+            li_blocks: list[LIContentBlock] = to_llama_index_blocks(normalized)
+            message.blocks = li_blocks or [
+                TextBlock(text=NO_TOOL_CONTENT).to_llama_index()
+            ]
+            message.content = (
+                "\n\n".join(
+                    block.text for block in normalized if isinstance(block, TextBlock)
+                )
+                or NO_TOOL_CONTENT
+            )
 
         context.set_state(state)

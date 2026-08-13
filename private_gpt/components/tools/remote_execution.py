@@ -26,7 +26,12 @@ from private_gpt.components.tools.tool_execution_outcome import (
     ToolExecutionOutcome,
     ToolExecutionSuccess,
 )
-from private_gpt.events.models import TextBlock, from_tool_output
+from private_gpt.events.models import (
+    NO_TOOL_CONTENT,
+    TextBlock,
+    from_tool_output,
+    normalize_tool_result_content,
+)
 
 if TYPE_CHECKING:
     from llama_index.core.tools import AsyncBaseTool
@@ -165,10 +170,10 @@ class ToolExecutor:
             tool_kwargs=before_context.tool_kwargs,
             state_ctx=state_ctx,
         )
-        result_content = (
+        result_content = normalize_tool_result_content(
             from_tool_output(result.tool_output.raw_output)
             if result.tool_output.raw_output is not None
-            else [TextBlock(text=result.tool_output.content or "")]
+            else [TextBlock(text=result.tool_output.content or NO_TOOL_CONTENT)]
         )
         outcome: ToolExecutionOutcome = (
             ToolExecutionFailure(
