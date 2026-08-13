@@ -58,6 +58,7 @@ from private_gpt.events.models._deltas import (
 from private_gpt.events.models._errors import ErrorBlock, FatalError
 from private_gpt.events.models._events import (
     Event,
+    McpTokensRefreshedEvent,
     PingEvent,
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
@@ -130,6 +131,7 @@ _types = [
     ErrorBlock,
     FatalError,
     # Events
+    McpTokensRefreshedEvent,
     PingEvent,
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
@@ -180,6 +182,7 @@ __all__ = [
     "ImageBlock",
     "InputJSONDelta",
     "LocalResourceBlock",
+    "McpTokensRefreshedEvent",
     "Message",
     "MessageOutputDelta",
     "MidConvSystemBlock",

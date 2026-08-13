@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Callable
 
 import httpx
 import httpx2
@@ -19,6 +20,7 @@ from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.events.event_errors import Errors
+from private_gpt.events.models import Event
 from private_gpt.server.mcp.config import McpServerConfig
 from private_gpt.server.mcp.mcp_service import McpService, mcp_tool_to_spec
 
@@ -53,6 +55,7 @@ class McpRequestInterceptor(ChatRequestLoopInterceptor):
         self,
         request: ChatRequest,
         raise_on_error: bool = True,
+        emit_event: Callable[[Event], None] | None = None,
     ) -> list[ToolSpec]:
         try:
             output_tools: list[ToolSpec] = []
@@ -62,7 +65,10 @@ class McpRequestInterceptor(ChatRequestLoopInterceptor):
                     config: McpServerConfig,
                 ) -> list[ToolSpec]:
                     """Fetch tools from a single MCP server."""
-                    client = self._mcp_service.create_client(config)
+                    client = self._mcp_service.create_client(
+                        config,
+                        emit_event=emit_event,
+                    )
                     try:
                         mcp_tools = await client.list_tools()
                         return [mcp_tool_to_spec(config, tool) for tool in mcp_tools]
@@ -113,7 +119,10 @@ class McpRequestInterceptor(ChatRequestLoopInterceptor):
             state = context.state
             request = state.input.request
 
-            mcp_tools = await self._collect_tools_from_mcp(request)
+            mcp_tools = await self._collect_tools_from_mcp(
+                request,
+                emit_event=context.emit_event,
+            )
             if mcp_tools:
                 state.input.context_stack = (
                     state.input.context_stack.remove_layers_of_source("mcp")

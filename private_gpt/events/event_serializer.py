@@ -7,6 +7,7 @@ from private_gpt.components.streaming.providers.models import StreamStatus
 from private_gpt.events.models import (
     Event,
     FatalError,
+    McpTokensRefreshedEvent,
     PingEvent,
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
@@ -30,6 +31,7 @@ class StreamingEventHandler:
             "message_delta": RawMessageDeltaEvent,
             "message_stop": RawMessageStopEvent,
             "ping": PingEvent,
+            "mcp_tokens_refreshed": McpTokensRefreshedEvent,
             "error": FatalError,
         }
 

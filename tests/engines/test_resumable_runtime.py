@@ -15,7 +15,14 @@ from private_gpt.components.engines.chat.event_broker import (
 )
 from private_gpt.components.engines.chat.event_channel import BrokerEventChannel
 from private_gpt.components.tools.remote_execution import ToolExecutionResponse
-from private_gpt.events.models import PingEvent, TextBlock
+from private_gpt.events.models import (
+    McpTokensRefreshedEvent,
+    PingEvent,
+    RawContentBlockStartEvent,
+    RawContentBlockStopEvent,
+    TextBlock,
+    ToolResultBlock,
+)
 
 
 def _resumable_runner(
@@ -45,7 +52,10 @@ def _resumable_runner(
     )
 
 
-def _tool_response(tool_id: str) -> ToolExecutionResponse:
+def _tool_response(
+    tool_id: str,
+    internal_events: list[McpTokensRefreshedEvent] | None = None,
+) -> ToolExecutionResponse:
     return ToolExecutionResponse(
         tool_name=f"tool-{tool_id}",
         tool_id=tool_id,
@@ -55,7 +65,69 @@ def _tool_response(tool_id: str) -> ToolExecutionResponse:
             "content": f"result-{tool_id}",
             "additional_kwargs": {"tool_call_id": tool_id},
         },
+        internal_events=internal_events or [],
     )
+
+
+def _refresh_event() -> McpTokensRefreshedEvent:
+    return McpTokensRefreshedEvent(
+        artifact_id="artifact-123",
+        previous_refresh_token="refresh-before-sentinel",
+        authorization_token="access-after-sentinel",
+        refresh_token="refresh-after-sentinel",
+    )
+
+
+def test_tool_execution_response_json_roundtrip_preserves_internal_event() -> None:
+    response = _tool_response("tool-1", [_refresh_event()])
+
+    restored = ToolExecutionResponse.model_validate_json(response.model_dump_json())
+
+    assert restored == response
+    assert restored.internal_events == [_refresh_event()]
+
+
+@pytest.mark.asyncio
+async def test_resume_emits_internal_event_before_unchanged_tool_result() -> None:
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+    from private_gpt.components.engines.chat.async_chat_engine import AsyncChatEngine
+
+    response = _tool_response("tool-1", [_refresh_event()])
+    engine = object.__new__(AsyncChatEngine)
+    state = MagicMock()
+    state.input.context_stack.all_tools.return_value = [ToolSpec(name="tool-tool-1")]
+    run = MagicMock()
+    run.state = state
+    run.block_count = 0
+    emitted: list[object] = []
+
+    engine._initialize_run = MagicMock(return_value=run)
+    engine._apply_payload_usage = MagicMock()
+    engine._snapshot = MagicMock(side_effect=lambda current_state, _phase: current_state)
+    engine._build_checkpoint_context = MagicMock(return_value=MagicMock())
+    engine._execute_after_iteration_checkpoint = AsyncMock(return_value=state)
+
+    async def pipe_events(*, producer: object, **_: object) -> None:
+        handler = MagicMock()
+        handler.emit.side_effect = emitted.append
+        handler.close = AsyncMock()
+        await producer(handler)
+
+    engine._pipe_events_through_interceptors = pipe_events
+
+    await engine._continue_tools_checkpoint(
+        request=MagicMock(),
+        iteration=1,
+        next_block_count=0,
+        channel=MagicMock(),
+        checkpoint_payload=IterationCheckpointPayload(tool_responses=[response]),
+    )
+
+    assert emitted[0] == _refresh_event()
+    assert isinstance(emitted[1], RawContentBlockStartEvent)
+    assert isinstance(emitted[2], RawContentBlockStopEvent)
+    assert isinstance(emitted[1].content_block, ToolResultBlock)
+    assert emitted[1].content_block.content == response.result_content
 
 
 @pytest.mark.asyncio
@@ -230,6 +302,37 @@ async def test_memory_iteration_state_aggregates_once_and_cleans_up() -> None:
     assert await service.claim_resume("execution-3") is False
     await service.cleanup("execution-3")
     assert await service.load("execution-3") is None
+
+
+@pytest.mark.asyncio
+async def test_duplicate_worker_completion_does_not_duplicate_internal_events() -> None:
+    service = InMemoryChatCheckpointStore()
+    response = _tool_response("tool-1", [_refresh_event()])
+    await service.save(
+        ChatCheckpoint(
+            correlation_id="execution-event-once",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=0,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={"tool-1": "job-1"}
+            ),
+        )
+    )
+
+    first = await service.record_result(
+        "execution-event-once", "tool-1", response.model_dump(mode="json")
+    )
+    duplicate = await service.record_result(
+        "execution-event-once", "tool-1", response.model_dump(mode="json")
+    )
+
+    assert first is not None
+    assert duplicate is None
+    stored = (await service.get_results("execution-event-once"))["tool-1"]
+    assert stored.internal_events == [_refresh_event()]
 
 
 @pytest.mark.asyncio

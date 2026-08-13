@@ -4,7 +4,11 @@ from uuid import uuid4
 
 from pydantic import Field
 
-from private_gpt.events.models._base import BaseContentBlock, StandardContentProtocol
+from private_gpt.events.models._base import (
+    BaseContentBlock,
+    ExtendedContentProtocol,
+    StandardContentProtocol,
+)
 from private_gpt.events.models._deltas import ContentBlockDeltaType
 from private_gpt.events.models._errors import FatalError
 from private_gpt.events.models._message import Message, MessageOutputDelta, Usage
@@ -127,6 +131,22 @@ class PingEvent(BaseContentBlock, StandardContentProtocol):
     type: Literal["ping"] = Field(default="ping")
 
 
+class McpTokensRefreshedEvent(BaseContentBlock, ExtendedContentProtocol):
+    """Zylon-only notification carrying refreshed MCP OAuth credentials."""
+
+    type: Literal["mcp_tokens_refreshed"] = Field(default="mcp_tokens_refreshed")
+    artifact_id: str = Field(description="The Zylon MCP artifact ID.")
+    previous_refresh_token: str = Field(description="The refresh token before rotation.")
+    authorization_token: str = Field(description="The rotated access token.")
+    refresh_token: str = Field(description="The rotated refresh token.")
+
+    def __str__(self) -> str:
+        return f"McpTokensRefreshedEvent(type={self.type!r}, artifact_id={self.artifact_id!r})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
 Event = Annotated[
     RawContentBlockStartEvent
     | RawContentBlockDeltaEvent
@@ -135,6 +155,7 @@ Event = Annotated[
     | RawMessageDeltaEvent
     | RawMessageStopEvent
     | PingEvent
+    | McpTokensRefreshedEvent
     | FatalError,
     Field(discriminator="type"),
 ]
