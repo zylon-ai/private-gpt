@@ -234,9 +234,7 @@ def test_tool_use_and_result_match_server_tool_use_and_result() -> None:
         "command": "view",
         "path": "/home/agent/workspace/Ivan_Martinez_CV.md",
     }
-    rendered_result = (
-        "Presented 2 file(s): Ivan_Martinez_CV.md, Ivan_Martinez_CV.html"
-    )
+    rendered_result = "Presented 2 file(s): Ivan_Martinez_CV.md, Ivan_Martinez_CV.html"
     server_result = ServerToolResultBlock(
         tool_use_id=tool_id,
         content=[
