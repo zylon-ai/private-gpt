@@ -26,6 +26,6 @@ async def test_execute_tool_call_keeps_empty_result_visible(value: object) -> No
         state_ctx=SimpleNamespace(),
     )
 
-    assert result.tool_output.content == "No content"
-    assert message.content == "No content"
+    assert result.tool_output.content == "(no-output)"
+    assert message.content == "(no-output)"
     assert message.additional_kwargs["tool_call_id"] == "tc_empty"

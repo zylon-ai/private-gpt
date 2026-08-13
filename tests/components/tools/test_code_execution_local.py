@@ -44,6 +44,9 @@ async def test_local_code_execution_session_supports_file_operations(
     assert listing.success is True
     assert listing.output == "[file] notes.txt"
 
+    assert await session.path_exists("notes.txt") is True
+    assert await session.path_exists("missing.txt") is False
+
     await session.close()
 
 

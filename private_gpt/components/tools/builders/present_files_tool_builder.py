@@ -22,7 +22,7 @@ from private_gpt.di import get_global_injector
 from private_gpt.events.models import LocalResourceBlock, TextBlock
 
 if TYPE_CHECKING:
-    from private_gpt.components.sandbox.mount import Mount
+    from private_gpt.components.code_execution.base import CodeExecutionSessionConfig
     from private_gpt.events.models import ResultContentBlockType
 
 
@@ -54,17 +54,22 @@ class PresentFilesToolBuilder:
 
     async def build_tool(
         self,
-        session_id: str,
-        mounts: list[Mount] | None = None,
+        config: CodeExecutionSessionConfig,
         name: str = PRESENT_FILES_TOOL_NAME,
         type: str = PRESENT_FILES_TOOL_NAME + "_v1",
         description: str = PRESENT_FILES_TOOL_FN.metadata.description,
     ) -> ToolSpec:
         async def present_files(filepaths: list[str]) -> list[ResultContentBlockType]:
+            session = await self._component.get_or_create_session(config)
+            if session is None:
+                raise ValueError("code_execution provider is not configured.")
+
             blocks: list[ResultContentBlockType] = []
             presented: list[str] = []
             for filepath in filepaths:
                 try:
+                    if not await session.path_exists(filepath):
+                        raise FileNotFoundError(f"File not found: {filepath}")
                     mime_type, _ = mimetypes.guess_type(filepath)
                     if mime_type is None:
                         suffix = Path(filepath).suffix.lower()
@@ -102,8 +107,7 @@ class PresentFilesToolBuilder:
             execution_metadata=build_rebuild_metadata(
                 rebuild_present_files_tool,
                 {
-                    "session_id": session_id,
-                    "mounts": mounts,
+                    "config": config,
                     "name": name,
                     "type": type,
                     "description": description,

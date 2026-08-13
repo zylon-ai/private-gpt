@@ -156,5 +156,10 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
         self._env.touch()
         return await self._sandbox.read_file(path)
 
+    async def path_exists(self, path: str) -> bool:
+        path = self._resolve_path(path)
+        self._env.touch()
+        return await self._sandbox.path_exists(path)
+
     async def close(self) -> None:
         await self._sandbox.close()

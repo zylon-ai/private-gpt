@@ -8,11 +8,15 @@ from private_gpt.components.code_execution.results import (
     FileOperationResult,
 )
 from private_gpt.components.tools.builders.bash_tool_builder import BashToolBuilder
+from private_gpt.components.tools.builders.present_files_tool_builder import (
+    PresentFilesToolBuilder,
+)
 from private_gpt.components.tools.builders.text_editor_tool_builder import (
     TextEditorToolBuilder,
 )
 from private_gpt.components.tools.events.adapters import (
     BashCodeExecutionEventAdapter,
+    PresentFilesEventAdapter,
     TextEditorCodeExecutionEventAdapter,
 )
 from private_gpt.settings.settings import unsafe_typed_settings
@@ -110,3 +114,55 @@ async def test_text_editor_tool_builder_wraps_file_operations() -> None:
     assert insert_result[0].type == "text_editor_code_execution_str_replace_result"
     assert insert_result[0].new_lines == 1
     assert view_tool.event_adapter is TextEditorCodeExecutionEventAdapter
+
+
+@pytest.mark.asyncio
+async def test_present_files_builder_presents_existing_files() -> None:
+    session = SimpleNamespace(path_exists=AsyncMock(return_value=True))
+    builder = PresentFilesToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        )
+    )
+
+    tool = await builder.build_tool("corr-present")
+    result = await tool.async_fn(
+        filepaths=["/mnt/user-data/outputs/chart.png", "/tmp/notes.md"]
+    )
+
+    assert session.path_exists.await_count == 2
+    session.path_exists.assert_any_await("/mnt/user-data/outputs/chart.png")
+    session.path_exists.assert_any_await("/tmp/notes.md")
+    assert [block.type for block in result] == [
+        "local_resource",
+        "local_resource",
+        "text",
+    ]
+    assert result[0].file_path == "/mnt/user-data/outputs/chart.png"
+    assert result[0].name == "chart"
+    assert result[0].mime_type == "image/png"
+    assert result[1].file_path == "/tmp/notes.md"
+    assert result[1].mime_type == "text/markdown"
+    assert result[2].text == "Presented 2 file(s): chart.png, notes.md"
+    assert tool.event_adapter is PresentFilesEventAdapter
+
+
+@pytest.mark.asyncio
+async def test_present_files_builder_returns_error_when_file_missing() -> None:
+    session = SimpleNamespace(path_exists=AsyncMock(return_value=False))
+    builder = PresentFilesToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        )
+    )
+
+    tool = await builder.build_tool("corr-missing")
+    result = await tool.async_fn(filepaths=["/mnt/user-data/outputs/missing.png"])
+
+    session.path_exists.assert_awaited_once_with("/mnt/user-data/outputs/missing.png")
+    assert [block.type for block in result] == ["text", "text"]
+    assert (
+        result[0].text
+        == "Error presenting /mnt/user-data/outputs/missing.png: File not found: /mnt/user-data/outputs/missing.png"
+    )
+    assert result[1].text == "No files could be presented."

@@ -1,6 +1,7 @@
 from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ResolvedChatRequest
+from private_gpt.components.code_execution.base import CodeExecutionSessionConfig
 from private_gpt.components.tools.builders.present_files_tool_builder import (
     PresentFilesToolBuilder,
 )
@@ -12,6 +13,7 @@ from private_gpt.components.tools.processors.base import (
     _tool_matches,
 )
 from private_gpt.components.tools.tool_names import PRESENT_FILES_TOOL_NAME
+from private_gpt.server.principal import Principal
 from private_gpt.settings.settings import Settings
 
 
@@ -33,14 +35,17 @@ class PresentFilesProcessor(ToolProcessor):
             if _tool_matches(tool, PRESENT_FILES_TOOL_NAME):
                 if not self._enabled:
                     return _replace_tool(request, tool, [])
-                session_id = _session_id(request)
+                config = CodeExecutionSessionConfig(
+                    session_id=_session_id(request),
+                    env=Principal.current().as_env() or {},
+                    mounts=request.context.mounts or [],
+                )
                 return _replace_tool(
                     request,
                     tool,
                     [
                         await self._builder.build_tool(
-                            session_id,
-                            mounts=request.context.mounts or None,
+                            config,
                             name=tool.name or PRESENT_FILES_TOOL_NAME,
                             type=tool.type or PRESENT_FILES_TOOL_NAME + "_v1",
                         )

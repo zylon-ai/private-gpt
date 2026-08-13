@@ -185,7 +185,7 @@ def _request(
         ),
         (
             PresentFilesToolBuilder.build_tool,
-            {"session_id", "mounts", "name", "type", "description"},
+            {"config", "name", "type", "description"},
         ),
         (
             PresentServerToolBuilder.build_tool,
@@ -382,9 +382,11 @@ async def test_present_files_builder_receives_complete_request_contract() -> Non
         _request(_tool("present_files"), mounts=[mount])
     )
 
+    config = builder.build_tool.await_args.args[0]
+    assert config.session_id == "contract-correlation"
+    assert config.mounts == [mount]
     builder.build_tool.assert_awaited_once_with(
-        "contract-correlation",
-        mounts=[mount],
+        config,
         name="present_files",
         type="present_files_v1",
     )

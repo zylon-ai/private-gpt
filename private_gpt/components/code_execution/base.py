@@ -50,6 +50,10 @@ class CodeExecutionSession(ABC):
         """Read raw file bytes from the session workspace."""
 
     @abstractmethod
+    async def path_exists(self, path: str) -> bool:
+        """Return True if the path exists in the session workspace."""
+
+    @abstractmethod
     async def close(self) -> None:
         """Close and release the backing execution session."""
 
