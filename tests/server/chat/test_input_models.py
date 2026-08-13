@@ -298,7 +298,7 @@ def test_tool_result_with_empty_content() -> None:
 
     assert len(result) == 1
     assert result[0].role == MessageRole.TOOL
-    assert result[0].content == "No content"
+    assert result[0].content == "(no-output)"
     assert result[0].additional_kwargs["tool_call_id"] == "tool1"
     assert result[0].additional_kwargs["tool_call_name"] == "calculator"
 

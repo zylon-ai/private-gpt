@@ -24,7 +24,7 @@ from private_gpt.server.mcp.mcp_service import (
     is_mcp_tool_result,
 )
 
-NO_TOOL_CONTENT = "No content"
+NO_TOOL_CONTENT = "(no-output)"
 
 
 def normalize_tool_result_content(
