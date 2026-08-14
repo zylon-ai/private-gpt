@@ -129,7 +129,7 @@ class HydratingEnvironmentManager:
 
 
 def _write_file(path: Path, content: bytes, permissions: int) -> None:
-    del permissions # discard permissions in local
+    del permissions  # discard permissions in local
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
 
