@@ -92,6 +92,14 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     async def str_replace(
         self, path: str, old_str: str, new_str: str
     ) -> FileOperationResult:
+        if not isinstance(old_str, str):
+            return FileOperationResult(
+                success=False, error="str_replace requires the old_str parameter."
+            )
+        if not isinstance(new_str, str):
+            return FileOperationResult(
+                success=False, error="str_replace requires the new_str parameter."
+            )
         path = self._resolve_path(path)
         self._env.touch()
         try:
@@ -117,6 +125,10 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             return FileOperationResult(success=False, error=str(exc))
 
     async def create(self, path: str, file_text: str) -> FileOperationResult:
+        if not isinstance(file_text, str):
+            return FileOperationResult(
+                success=False, error="create requires the file_text parameter."
+            )
         path = self._resolve_path(path)
         self._env.touch()
         try:
@@ -133,6 +145,10 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     async def insert(
         self, path: str, insert_line: int, new_str: str
     ) -> FileOperationResult:
+        if not isinstance(new_str, str):
+            return FileOperationResult(
+                success=False, error="insert requires the new_str parameter."
+            )
         path = self._resolve_path(path)
         self._env.touch()
         try:
