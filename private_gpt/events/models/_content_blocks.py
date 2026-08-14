@@ -755,6 +755,9 @@ class TextEditorCodeExecutionViewResultBlock(BaseContentBlock, StandardContentPr
     total_lines: int
 
     def render(self) -> str:
+        if self.start_line > 1 or self.num_lines < self.total_lines:
+            header = f"[lines {self.start_line}–{self.start_line + self.num_lines - 1} / {self.total_lines}]\n"
+            return header + self.content
         return self.content
 
 
@@ -767,7 +770,7 @@ class TextEditorCodeExecutionCreateResultBlock(
     is_file_update: bool = False
 
     def render(self) -> str:
-        return self.model_dump_json()
+        return "File updated." if self.is_file_update else "File created."
 
 
 class TextEditorCodeExecutionStrReplaceResultBlock(
@@ -783,7 +786,10 @@ class TextEditorCodeExecutionStrReplaceResultBlock(
     lines: list[str] = Field(default_factory=list)
 
     def render(self) -> str:
-        return self.model_dump_json()
+        header = f"Applied at line {self.new_start} (-{self.old_lines} +{self.new_lines}):"
+        if self.lines:
+            return header + "\n" + "\n".join(self.lines)
+        return header
 
 
 class WebSearchResultBlock(BaseContentBlock, StandardContentProtocol):
