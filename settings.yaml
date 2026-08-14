@@ -362,7 +362,7 @@ transformation:
 filesystems:
   namespaces:
     session:
-      root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:local_data/private_gpt/volumes}
+      root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:local_data/private_gpt/volumes/sessions}
       default_mode: ${PGPT_CODE_EXECUTION_VOLUME_DEFAULT_MODE:rw}
     skills:
       root: ${PGPT_SKILLS_VOLUME_ROOT:local_data/private_gpt/volumes/skills}
