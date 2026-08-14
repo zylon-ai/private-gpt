@@ -95,14 +95,17 @@ class TextEditorToolBuilder:
             output = _truncated(
                 result.output, self._settings.code_execution.max_output_bytes
             )
-            line_count = len(output.splitlines())
+            num_lines = len(output.splitlines())
             start_line = resolved_view_range[0] if resolved_view_range else 1
+            total_lines = (
+                result.total_lines if result.total_lines is not None else num_lines
+            )
             return [
                 TextEditorCodeExecutionViewResultBlock(
                     content=output if output.strip() else NO_TOOL_CONTENT,
-                    num_lines=line_count,
+                    num_lines=num_lines,
                     start_line=start_line,
-                    total_lines=line_count,
+                    total_lines=total_lines,
                 )
             ]
 
@@ -141,10 +144,21 @@ class TextEditorToolBuilder:
             result = await session.str_replace(path, old_str, new_str)
             if not result.success:
                 raise RuntimeError(result.error or "Unable to replace text")
-            output = _truncated(
-                result.output, self._settings.code_execution.max_output_bytes
-            )
-            return [TextEditorCodeExecutionStrReplaceResultBlock(lines=[output])]
+            old_lines = old_str.splitlines()
+            new_lines = new_str.splitlines()
+            diff_lines = [f"- {line}" for line in old_lines] + [
+                f"+ {line}" for line in new_lines
+            ]
+            start = result.start_line or 0
+            return [
+                TextEditorCodeExecutionStrReplaceResultBlock(
+                    old_start=start,
+                    new_start=start,
+                    old_lines=len(old_lines),
+                    new_lines=len(new_lines),
+                    lines=diff_lines,
+                )
+            ]
 
         return ToolSpec.from_defaults(
             name=name,
@@ -180,7 +194,11 @@ class TextEditorToolBuilder:
             result = await session.create(path, file_text)
             if not result.success:
                 raise RuntimeError(result.error or "Unable to create file")
-            return [TextEditorCodeExecutionCreateResultBlock(is_file_update=False)]
+            return [
+                TextEditorCodeExecutionCreateResultBlock(
+                    is_file_update=result.is_update
+                )
+            ]
 
         return ToolSpec.from_defaults(
             name=name,
@@ -217,16 +235,14 @@ class TextEditorToolBuilder:
             result = await session.insert(path, insert_line, new_str)
             if not result.success:
                 raise RuntimeError(result.error or "Unable to insert text")
-            output = _truncated(
-                result.output, self._settings.code_execution.max_output_bytes
-            )
-            inserted_lines = len(new_str.splitlines())
+            new_lines_list = new_str.splitlines()
             return [
                 TextEditorCodeExecutionStrReplaceResultBlock(
                     old_start=insert_line,
                     new_start=insert_line,
-                    new_lines=inserted_lines,
-                    lines=[output],
+                    old_lines=0,
+                    new_lines=len(new_lines_list),
+                    lines=[f"+ {line}" for line in new_lines_list],
                 )
             ]
 

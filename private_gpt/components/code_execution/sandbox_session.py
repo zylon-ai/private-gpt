@@ -72,18 +72,20 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
                 return FileOperationResult(success=True, output="\n".join(entries))
             raw = await self._sandbox.read_file(path)
             text = raw.decode("utf-8", errors="replace")
-            lines = text.splitlines()
+            all_lines = text.splitlines()
+            total = len(all_lines)
             base_line = 1
+            view_lines = all_lines
             if view_range is not None:
                 start, end = view_range
                 start_idx = max(start, 1) - 1
                 end_idx = None if end == -1 else max(end, 0)
-                lines = lines[start_idx:end_idx]
+                view_lines = all_lines[start_idx:end_idx]
                 base_line = start_idx + 1
             output = "\n".join(
-                f"{i}: {line}" for i, line in enumerate(lines, start=base_line)
+                f"{i}: {line}" for i, line in enumerate(view_lines, start=base_line)
             )
-            return FileOperationResult(success=True, output=output)
+            return FileOperationResult(success=True, output=output, total_lines=total)
         except Exception as exc:
             return FileOperationResult(success=False, error=str(exc))
 
@@ -105,9 +107,12 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
                     success=False,
                     error="old_str appears more than once in the file.",
                 )
+            start_line = text[: text.index(old_str)].count("\n") + 1
             updated = text.replace(old_str, new_str, 1)
             await self._sandbox.write_file(path, updated.encode("utf-8"))
-            return FileOperationResult(success=True, output=f"Updated {path}")
+            return FileOperationResult(
+                success=True, output=f"Updated {path}", start_line=start_line
+            )
         except Exception as exc:
             return FileOperationResult(success=False, error=str(exc))
 
@@ -115,12 +120,13 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
         path = self._resolve_path(path)
         self._env.touch()
         try:
-            if await self._sandbox.path_exists(path):
-                return FileOperationResult(
-                    success=False, error=f"File already exists: {path}"
-                )
+            is_update = await self._sandbox.path_exists(path)
             await self._sandbox.write_file(path, file_text.encode("utf-8"))
-            return FileOperationResult(success=True, output=f"Created {path}")
+            return FileOperationResult(
+                success=True,
+                output=f"{'Updated' if is_update else 'Created'} {path}",
+                is_update=is_update,
+            )
         except Exception as exc:
             return FileOperationResult(success=False, error=str(exc))
 

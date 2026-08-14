@@ -28,9 +28,17 @@ You have a sandboxed code execution environment.
 - `{{ bash_tool }}` — run shell commands (`command`)
 {% endif -%}
 {% if text_editor_tool -%}
-- `{{ text_editor_tool }}` — read/edit text files via `command`: `view`, `str_replace`, `create`, or `insert` (plus `path` and the fields for that command)
+- `{{ text_editor_tool }}` — read/edit text files. Always pass `path` (absolute) plus the command-specific fields:
+  - `command="view"` → read a file (optional: `view_range=[start, end]` to limit lines)
+  - `command="create"` → write or overwrite a file (`file_text`)
+  - `command="str_replace"` → patch a file (`old_str`, `new_str`; `old_str` must be unique in the file)
+  - `command="insert"` → insert lines after a line number (`insert_line`, `new_str`)
 {% elif has_leaf_editor -%}
-- File tools:{% if view_tool %} `{{ view_tool }}` (read){% endif %}{% if str_replace_tool %}, `{{ str_replace_tool }}` (edit){% endif %}{% if create_tool %}, `{{ create_tool }}` (create){% endif %}{% if insert_tool %}, `{{ insert_tool }}` (insert){% endif %}
+- File tools:{% if view_tool %}
+  - `{{ view_tool }}` — read a file (`path`; optional `view_range=[start, end]`){% endif %}{% if create_tool %}
+  - `{{ create_tool }}` — write or overwrite a file (`path`, `file_text`){% endif %}{% if str_replace_tool %}
+  - `{{ str_replace_tool }}` — patch a file (`path`, `old_str`, `new_str`; `old_str` must be unique){% endif %}{% if insert_tool %}
+  - `{{ insert_tool }}` — insert lines after a line number (`path`, `insert_line`, `new_str`){% endif %}
 {% endif -%}
 {% if present_files_tool -%}
 - `{{ present_files_tool }}` — **required** to show files to the user (`filepaths`: absolute paths). Writing a file does not surface it in chat.
@@ -62,7 +70,7 @@ You have a sandboxed code execution environment.
 - Put intermediate work and scripts in `{{ workspace.target }}`. Put final user deliverables in `{{ outputs.target }}`.
 - Prefer writing code to a file under `{{ workspace.target }}`, then running that file{% if bash_tool %} with `{{ bash_tool }}`{% endif %}. Avoid long one-off inline code in the shell so failures are easy to inspect and fix with edits.
 {% if text_editor_tool or has_leaf_editor -%}
-- Prefer the text-editor tool(s) to create/edit those files; use {% if bash_tool %}`{{ bash_tool }}`{% else %}the shell{% endif %} to run them, and for installs/non-text work.
+- Use the text-editor tool(s) for all file operations (read, create, edit). Use {% if bash_tool %}`{{ bash_tool }}`{% else %}the shell{% endif %} only to execute code and for shell tasks that have no dedicated tool (e.g. copy, compress, run a script).
 {% endif -%}
 {% if not internet_enabled -%}
 - No internet: outbound network is disabled. Do not use `pip install`, `npm install`, `curl`, `wget`, `apt`, or any other download/install that needs the network. Use only the preinstalled packages/CLI tools listed above and local files.
@@ -76,17 +84,42 @@ You have a sandboxed code execution environment.
 {% if few_shots == "True" %}
 
 **Examples**
-{% if bash_tool -%}
-- Read upload: `{{ bash_tool }}` → `command="cat {{ uploads.target }}report.csv"`
-{% endif -%}
-{% if text_editor_tool and bash_tool -%}
-- Write then run: `{{ text_editor_tool }}` → `command="create"`, `path="{{ workspace.target }}analyze.py"`, `file_text="..."`; then `{{ bash_tool }}` → `command="python {{ workspace.target }}analyze.py"`
-- On failure: edit the file with `{{ text_editor_tool }}` (`command="str_replace"`) and re-run
+{% if text_editor_tool -%}
+- Read an upload: `{{ text_editor_tool }}` → `command="view"`, `path="{{ uploads.target }}report.csv"`
+{% elif view_tool -%}
+- Read an upload: `{{ view_tool }}` → `path="{{ uploads.target }}report.csv"`
 {% elif bash_tool -%}
-- Write then run a script under `{{ workspace.target }}`, edit it if it fails, then re-run
+- Read an upload: `{{ bash_tool }}` → `command="cat {{ uploads.target }}report.csv"`
+{% endif -%}
+{% if text_editor_tool -%}
+- Inspect a file: `{{ text_editor_tool }}` → `command="view"`, `path="{{ workspace.target }}config.json"`
+- Inspect lines 10–30 only: `{{ text_editor_tool }}` → `command="view"`, `path="{{ workspace.target }}config.json"`, `view_range=[10, 30]`
+{% if bash_tool -%}
+- Write then run: `{{ text_editor_tool }}` → `command="create"`, `path="{{ workspace.target }}analyze.py"`, `file_text="..."`; then `{{ bash_tool }}` → `command="python {{ workspace.target }}analyze.py"`
+- On failure, patch and re-run: `{{ text_editor_tool }}` → `command="str_replace"`, `path="{{ workspace.target }}analyze.py"`, `old_str="bad_line"`, `new_str="fixed_line"`
+{% endif -%}
+- Insert an import at line 1: `{{ text_editor_tool }}` → `command="insert"`, `path="{{ workspace.target }}analyze.py"`, `insert_line=0`, `new_str="import logging"`
+{% elif has_leaf_editor -%}
+{% if view_tool -%}
+- Inspect a file: `{{ view_tool }}` → `path="{{ workspace.target }}config.json"`
+- Inspect lines 10–30 only: `{{ view_tool }}` → `path="{{ workspace.target }}config.json"`, `view_range=[10, 30]`
+{% endif -%}
+{% if create_tool and bash_tool -%}
+- Write then run: `{{ create_tool }}` → `path="{{ workspace.target }}analyze.py"`, `file_text="..."`; then `{{ bash_tool }}` → `command="python {{ workspace.target }}analyze.py"`
+{% elif create_tool -%}
+- Write a script: `{{ create_tool }}` → `path="{{ workspace.target }}analyze.py"`, `file_text="..."`
+{% endif -%}
+{% if str_replace_tool -%}
+- Fix a script and re-run: `{{ str_replace_tool }}` → `path="{{ workspace.target }}analyze.py"`, `old_str="bad_line"`, `new_str="fixed_line"`
+{% endif -%}
+{% if insert_tool -%}
+- Insert an import at line 1: `{{ insert_tool }}` → `path="{{ workspace.target }}analyze.py"`, `insert_line=0`, `new_str="import logging"`
+{% endif -%}
+{% elif bash_tool -%}
+- Write then run a script: save to `{{ workspace.target }}`, run via `{{ bash_tool }}`, edit inline if it fails, then re-run
 {% endif -%}
 {% if bash_tool -%}
-- Write output: `{{ bash_tool }}` → `command="cp chart.png {{ outputs.target }}chart.png"`
+- Copy output for delivery: `{{ bash_tool }}` → `command="cp chart.png {{ outputs.target }}chart.png"`
 {% endif -%}
 {% if present_files_tool -%}
 - Show to user: `{{ present_files_tool }}` → `filepaths=["{{ outputs.target }}chart.png"]`
