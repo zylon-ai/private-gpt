@@ -27,34 +27,38 @@ from private_gpt.server.mcp.mcp_service import (
 NO_TOOL_CONTENT = "(no-output)"
 
 
+def _rendered_text(block: ResultContentBlockType) -> str:
+    if isinstance(block, TextBlock):
+        return block.text
+    render = getattr(block, "render", None)
+    if callable(render):
+        render_fn = cast(Callable[[], str], render)
+        try:
+            return str(render_fn())
+        except Exception:
+            return ""
+    return ""
+
+
 def normalize_tool_result_content(
     content: list[ResultContentBlockType] | None,
 ) -> list[ResultContentBlockType]:
     """Ensure an empty tool result has model-visible text content.
 
-    Tool results may legitimately contain no output (for example, a successful
-    file update).  Keeping an empty result as ``[]`` allows prompt formatting
-    to drop the corresponding ``TOOL`` message, leaving the model's tool call
-    without its observation.  Preserve all existing blocks and add a concise
-    fallback when none of them renders meaningful text.
+    Builders should write ``NO_TOOL_CONTENT`` into their native result
+    payload.  This helper is only a fallback: fill empty text blocks, and
+    if the result is still empty, append a sibling text block so prompt
+    formatting cannot drop the TOOL message.
     """
-    blocks = list(content or [])
-    has_text = False
-    for block in blocks:
-        if isinstance(block, TextBlock):
-            has_text = bool(block.text.strip())
-        elif isinstance(block, BaseContentBlock):
-            render = getattr(block, "render", None)
-            if callable(render):
-                render_fn = cast(Callable[[], str], render)
-                try:
-                    has_text = bool(str(render_fn()).strip())
-                except Exception:
-                    has_text = False
-        if has_text:
-            break
-
-    if not has_text:
+    blocks: list[ResultContentBlockType] = []
+    for block in content or []:
+        if isinstance(block, TextBlock) and not block.text.strip():
+            blocks.append(block.model_copy(update={"text": NO_TOOL_CONTENT}))
+        else:
+            blocks.append(block)
+    if not blocks:
+        return [TextBlock(text=NO_TOOL_CONTENT)]
+    if not any(_rendered_text(block).strip() for block in blocks):
         blocks.append(TextBlock(text=NO_TOOL_CONTENT))
     return blocks
 

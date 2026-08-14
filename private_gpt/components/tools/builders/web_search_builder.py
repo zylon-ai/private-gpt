@@ -54,10 +54,6 @@ class WebSearchToolBuilder:
                 pass
 
             results = await self.web_search_service.search(query, model_id=model_id)
-            if not results:
-                from private_gpt.events.models import TextBlock
-
-                return [TextBlock(text="No results found for the given query.")]
             return [WebSearchResultBlock.from_web_search_result(r) for r in results]
 
         if validate == ToolValidationMode.EAGER:

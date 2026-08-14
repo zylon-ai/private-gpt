@@ -117,6 +117,28 @@ async def test_text_editor_tool_builder_wraps_file_operations() -> None:
 
 
 @pytest.mark.asyncio
+async def test_text_editor_view_puts_no_output_in_empty_file_content() -> None:
+    session = SimpleNamespace(
+        view=AsyncMock(return_value=FileOperationResult(success=True, output=""))
+    )
+    builder = TextEditorToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        ),
+        settings=_settings(),
+    )
+
+    view_tool = await builder.build_view_tool("corr-empty")
+    view_result = await view_tool.async_fn(path="empty.txt")
+
+    assert len(view_result) == 1
+    assert view_result[0].type == "text_editor_code_execution_view_result"
+    assert view_result[0].content == "(no-output)"
+    assert view_result[0].num_lines == 0
+    assert view_result[0].total_lines == 0
+
+
+@pytest.mark.asyncio
 async def test_present_files_builder_presents_existing_files() -> None:
     session = SimpleNamespace(path_exists=AsyncMock(return_value=True))
     builder = PresentFilesToolBuilder(

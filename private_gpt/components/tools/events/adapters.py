@@ -175,11 +175,12 @@ def _single_result(
     content: list[ResultContentBlockType],
     expected_type: type | tuple[type, ...],
 ):
-    if len(content) != 1 or not isinstance(content[0], expected_type):
-        raise ValueError(
-            "Specialized tool adapter requires exactly one compatible result block"
-        )
-    return content[0]
+    matches = [block for block in content if isinstance(block, expected_type)]
+    if len(matches) == 1:
+        return matches[0]
+    raise ValueError(
+        "Specialized tool adapter requires exactly one compatible result block"
+    )
 
 
 class WebSearchEventAdapter(ServerToolEventAdapter):

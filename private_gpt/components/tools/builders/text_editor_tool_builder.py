@@ -30,6 +30,7 @@ from private_gpt.components.tools.tool_placeholders import (
 from private_gpt.components.tools.utils import truncate_output
 from private_gpt.di import get_global_injector
 from private_gpt.events.models import (
+    NO_TOOL_CONTENT,
     TextEditorCodeExecutionCreateResultBlock,
     TextEditorCodeExecutionStrReplaceResultBlock,
     TextEditorCodeExecutionViewResultBlock,
@@ -98,7 +99,7 @@ class TextEditorToolBuilder:
             start_line = resolved_view_range[0] if resolved_view_range else 1
             return [
                 TextEditorCodeExecutionViewResultBlock(
-                    content=output,
+                    content=output if output.strip() else NO_TOOL_CONTENT,
                     num_lines=line_count,
                     start_line=start_line,
                     total_lines=line_count,
