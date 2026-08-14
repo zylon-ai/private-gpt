@@ -47,10 +47,18 @@ class ServerToolResultTextInterceptor(ChatRequestLoopInterceptor):
                 continue
 
             kwargs = message.additional_kwargs
+            _EXCLUDED_KWARGS = {
+                "tool_call_id",
+                "tool_call_name",
+                "tool_call_args",
+                "raw_output",
+                "tldr",
+            }
             server_result_keys = [
                 key
                 for key, value in kwargs.items()
-                if isinstance(value, list)
+                if key not in _EXCLUDED_KWARGS
+                and isinstance(value, list)
                 and any(isinstance(item, Renderable) for item in value)
             ]
 
