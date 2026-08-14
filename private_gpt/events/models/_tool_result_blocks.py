@@ -17,6 +17,7 @@ from private_gpt.events.models._content_blocks import (
     TextEditorCodeExecutionStrReplaceResultBlock,
     TextEditorCodeExecutionViewResultBlock,
     WebFetchResultBlock,
+    WebFetchToolResultErrorBlock,
     WebSearchResultBlock,
     WebSearchToolResultError,
 )
@@ -140,7 +141,7 @@ class WebSearchToolResultBlock(ServerToolResultBlock):
 
     def render(self) -> str:
         if isinstance(self.content, WebSearchToolResultError):
-            return f"Web search error: {self.content.error_code}"
+            return self.content.render()
         parts = []
         for result in self.content:
             entry = f"{result.title}\n"
@@ -156,6 +157,12 @@ class WebSearchToolResultBlock(ServerToolResultBlock):
         self, response_mode: Literal["anthropic", "zylon"]
     ) -> "Self | ToolResultBlock | None":
         if response_mode == "anthropic":
+            if (
+                isinstance(self.content, WebSearchToolResultError)
+                and self.content.detail is not None
+            ):
+                stripped = self.content.model_copy(update={"detail": None})
+                return self.model_copy(update={"content": stripped})
             return self
         if isinstance(self.content, list):
             from private_gpt.components.chunk.models import Website
@@ -170,9 +177,7 @@ class WebSearchToolResultBlock(ServerToolResultBlock):
             ]
             is_err = False
         else:
-            zylon_content = [
-                TextBlock(text=f"Web search error: {self.content.error_code}")
-            ]
+            zylon_content = [TextBlock(text=self.content.render())]
             is_err = True
         return ToolResultBlock(
             tool_use_id=self.tool_use_id,
@@ -189,7 +194,7 @@ class WebFetchToolResultBlock(ServerToolResultBlock):
     """
 
     type: Literal["web_fetch_tool_result"] = "web_fetch_tool_result"
-    content: WebFetchResultBlock | CodeExecutionToolResultErrorBlock
+    content: WebFetchResultBlock | WebFetchToolResultErrorBlock
     is_error: bool = Field(default=False, exclude=True)
 
     def render(self) -> str:
@@ -199,15 +204,19 @@ class WebFetchToolResultBlock(ServerToolResultBlock):
         self, response_mode: Literal["anthropic", "zylon"]
     ) -> "Self | ToolResultBlock | None":
         if response_mode == "anthropic":
+            if (
+                isinstance(self.content, WebFetchToolResultErrorBlock)
+                and self.content.detail is not None
+            ):
+                stripped = self.content.model_copy(update={"detail": None})
+                return self.model_copy(update={"content": stripped})
             return self
         if isinstance(self.content, WebFetchResultBlock):
             text = self.content.markdown or ""
             zylon_content_: list[ResultContentBlockType] = [TextBlock(text=text)]
             is_err = False
         else:
-            zylon_content_ = [
-                TextBlock(text=f"Web fetch error: {self.content.error_code}")
-            ]
+            zylon_content_ = [TextBlock(text=self.content.render())]
             is_err = True
         return ToolResultBlock(
             tool_use_id=self.tool_use_id,

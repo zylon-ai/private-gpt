@@ -38,6 +38,7 @@ from private_gpt.events.models._content_blocks import (
     TLDRBlock,
     ToolUseBlock,
     WebFetchResultBlock,
+    WebFetchToolResultErrorBlock,
     WebSearchResultBlock,
     WebSearchToolResultError,
 )
@@ -57,7 +58,7 @@ from private_gpt.events.models._deltas import (
     ThinkingDelta,
     TLDRDelta,
 )
-from private_gpt.events.models._errors import ErrorBlock, FatalError
+from private_gpt.events.models._errors import ErrorBlock, ErrorDetail, FatalError
 from private_gpt.events.models._events import (
     Event,
     PingEvent,
@@ -177,6 +178,7 @@ __all__ = [
     "DirectCaller",
     "DocumentBlock",
     "ErrorBlock",
+    "ErrorDetail",
     "Event",
     "ExtendedContentProtocol",
     "FatalError",
@@ -223,6 +225,7 @@ __all__ = [
     "Usage",
     "WebFetchResultBlock",
     "WebFetchToolResultBlock",
+    "WebFetchToolResultErrorBlock",
     "WebSearchResultBlock",
     "WebSearchToolResultBlock",
     "WebSearchToolResultError",
