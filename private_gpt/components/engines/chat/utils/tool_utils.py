@@ -17,6 +17,7 @@ from private_gpt.events.models import (
     normalize_tool_result_content,
     to_llama_index_blocks,
 )
+from private_gpt.events.models._tool_result_blocks import Renderable
 from private_gpt.server.mcp.mcp_service import (
     convert_mcp_blocks_to_llama_index,
     get_mcp_tool_result_content,
@@ -100,9 +101,23 @@ async def execute_tool_call(
         from_tool_output(tool_output.raw_output)
     )
     content_text = str(tool_output.content or "")
-    if not content_text.strip() or (
+    is_none_placeholder = (
         tool_output.raw_output is None and content_text.strip() == "None"
-    ):
+    )
+    rendered_texts = [
+        block.text
+        for block in li_blocks
+        if isinstance(block, TextBlock) and block.text.strip()
+    ]
+    if not rendered_texts:
+        rendered_texts = [
+            text
+            for block in tool_result_block
+            if isinstance(block, Renderable) and (text := block.render().strip())
+        ]
+    if rendered_texts and not is_none_placeholder:
+        tool_output.content = "\n\n".join(rendered_texts)
+    elif not content_text.strip() or is_none_placeholder:
         tool_output.content = NO_TOOL_CONTENT
     if (
         not li_blocks
@@ -110,9 +125,9 @@ async def execute_tool_call(
             isinstance(block, TextBlock) and not block.text.strip()
             for block in li_blocks
         )
-        or (tool_output.raw_output is None and content_text.strip() == "None")
+        or is_none_placeholder
     ):
-        li_blocks = [TextBlock(text=NO_TOOL_CONTENT)]
+        li_blocks = [TextBlock(text=tool_output.content or NO_TOOL_CONTENT)]
     unique_types = {result.type for result in tool_result_block}
     tool_result_block_map = {
         block_type: [block for block in tool_result_block if block.type == block_type]

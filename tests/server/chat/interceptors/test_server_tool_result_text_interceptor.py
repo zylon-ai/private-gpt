@@ -4,7 +4,11 @@ import pytest
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
-from private_gpt.events.models import NO_TOOL_CONTENT, ServerToolResultBlock
+from private_gpt.events.models import (
+    NO_TOOL_CONTENT,
+    BashCodeExecutionResultBlock,
+    ServerToolResultBlock,
+)
 from private_gpt.server.chat.interceptors.server_tool_result_text_interceptor import (
     ServerToolResultTextInterceptor,
 )
@@ -56,3 +60,30 @@ async def test_server_result_rendering_is_idempotent() -> None:
 
     assert first == "ok"
     assert message.content == "ok"
+
+
+@pytest.mark.anyio
+async def test_bash_result_in_additional_kwargs_is_rendered() -> None:
+    result = BashCodeExecutionResultBlock(
+        stdout="# Potato\n",
+        stderr="",
+        return_code=0,
+    )
+    message = ChatMessage(
+        role=MessageRole.TOOL,
+        content="(no-output)",
+        additional_kwargs={
+            "bash_code_execution_result": [result],
+        },
+    )
+    state = SimpleNamespace(
+        input=SimpleNamespace(request=SimpleNamespace(messages=[message]))
+    )
+    context = SimpleNamespace(phase=InterceptorPhase.BEFORE_ITERATION, state=state)
+    context.set_state = lambda new_state: None
+
+    await ServerToolResultTextInterceptor().intercept(context)
+
+    assert message.content == result.render()
+    assert "# Potato" in message.content
+    assert "bash_code_execution_result" not in message.additional_kwargs

@@ -338,6 +338,52 @@ def test_extract_text_content_with_various_inputs() -> None:
     assert custom_blocks is None
 
 
+def test_extract_content_renders_bash_result_stdout() -> None:
+    message = MessageInput(role="user", content="test")
+    result = BashCodeExecutionResultBlock(
+        stdout="# Potato\n",
+        stderr="",
+        return_code=0,
+    )
+
+    blocks, custom_blocks = message._extract_content([result])
+
+    assert blocks is not None
+    text_block = next(b for b in blocks if isinstance(b, LITextBlock))
+    assert text_block.text == result.render()
+    assert custom_blocks is not None
+    assert "bash_code_execution_result" in custom_blocks
+
+
+def test_nested_bash_result_in_tool_result_becomes_message_content() -> None:
+    result = BashCodeExecutionResultBlock(
+        stdout="# Potato\n",
+        stderr="",
+        return_code=0,
+    )
+    tool_result = ToolResultBlock(
+        type="tool_result",
+        tool_use_id="tool1",
+        content=[result],
+    )
+    message = MessageInput(role="assistant", content=[tool_result])
+    tool_uses = {
+        "tool1": ToolUseBlock(
+            type="tool_use",
+            id="tool1",
+            name="bash_code_execution",
+            input={},
+        )
+    }
+
+    converted, _ = message._convert_into_llama_index_messages(tool_uses)
+
+    assert len(converted) == 1
+    assert converted[0].role == MessageRole.TOOL
+    assert converted[0].content == result.render()
+    assert converted[0].content != "(no-output)"
+
+
 def test_convert_from_llama_index_messages_with_reordering() -> None:
     # Create messages that need reordering
     messages = [

@@ -15,10 +15,7 @@ from private_gpt.events.models import (
     normalize_tool_result_content,
     to_llama_index_blocks,
 )
-from private_gpt.events.models._tool_result_blocks import (
-    Renderable,
-    ServerToolResultBlock,
-)
+from private_gpt.events.models._tool_result_blocks import Renderable
 
 if TYPE_CHECKING:
     from llama_index.core.base.llms.types import ContentBlock as LIContentBlock
@@ -33,7 +30,7 @@ class ServerToolResultTextInterceptor(ChatRequestLoopInterceptor):
     """Convert renderable server tool result blocks in the message history to text.
 
     Walks every ``TOOL`` role message before each iteration, detects any
-    ``ServerToolResultBlock`` stored in ``additional_kwargs``, and replaces
+    ``Renderable`` result stored in ``additional_kwargs``, and replaces
     renderable blocks with a plain ``TextBlock`` via ``render()``.
     Non-renderable blocks (e.g. images, source blocks) are preserved as-is.
     """
@@ -54,7 +51,7 @@ class ServerToolResultTextInterceptor(ChatRequestLoopInterceptor):
                 key
                 for key, value in kwargs.items()
                 if isinstance(value, list)
-                and any(isinstance(item, ServerToolResultBlock) for item in value)
+                and any(isinstance(item, Renderable) for item in value)
             ]
 
             if not server_result_keys:
@@ -73,14 +70,9 @@ class ServerToolResultTextInterceptor(ChatRequestLoopInterceptor):
 
             normalized = normalize_tool_result_content(rendered)
             li_blocks: list[LIContentBlock] = to_llama_index_blocks(normalized)
-            message.blocks = li_blocks or [
-                TextBlock(text=NO_TOOL_CONTENT).to_llama_index()
-            ]
-            message.content = (
-                "\n\n".join(
-                    block.text for block in normalized if isinstance(block, TextBlock)
-                )
-                or NO_TOOL_CONTENT
-            )
+
+            message.blocks = li_blocks
+            if not message.content:
+                message.blocks.append(TextBlock(text=NO_TOOL_CONTENT).to_llama_index())
 
         context.set_state(state)

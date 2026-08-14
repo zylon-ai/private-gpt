@@ -47,6 +47,7 @@ from private_gpt.events.models import (
     ToolResultBlock,
     ToolUseBlock,
 )
+from private_gpt.events.models._tool_result_blocks import Renderable
 from private_gpt.server.ingest.uri_loader import load_file_from_uri
 from private_gpt.server.utils.artifact_input import ArtifactType
 from private_gpt.settings.settings import settings
@@ -975,6 +976,10 @@ class MessageInput(BaseModel):
                     )
                 )
             elif isinstance(block, ContentBlockType):
+                if isinstance(block, Renderable):
+                    rendered = block.render()
+                    if rendered.strip():
+                        blocks.append(LITextBlock(text=rendered))
                 if block.type not in custom_blocks:
                     custom_blocks[block.type] = []
                 custom_blocks[block.type].append(block)
