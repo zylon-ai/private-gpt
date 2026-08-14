@@ -133,4 +133,8 @@ def to_llama_index_blocks(tool_output: Any) -> list[ContentBlock]:
     for block in from_tool_output(tool_output):
         if isinstance(block, TextBlock | ImageBlock | AudioBlock):
             li_blocks.append(block.to_llama_index())
+            continue
+        rendered = _rendered_text(block)
+        if rendered.strip():
+            li_blocks.append(LITextBlock(text=rendered))
     return li_blocks
