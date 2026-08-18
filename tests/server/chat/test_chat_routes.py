@@ -1153,16 +1153,49 @@ def _sse_events(raw: str) -> list[dict[str, Any]]:
     return events
 
 
+def _serialized_tool_result_text(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value] if value else []
+    if isinstance(value, list):
+        texts: list[str] = []
+        for item in value:
+            texts.extend(_serialized_tool_result_text(item))
+        return texts
+    render = getattr(value, "render", None)
+    if callable(render):
+        rendered = render()
+        return [rendered] if rendered else []
+    if not isinstance(value, dict):
+        return []
+    if value.get("type") == "text" and value.get("text"):
+        return [value["text"]]
+    if str(value.get("type", "")).endswith("_tool_result_error"):
+        detail = value.get("detail")
+        if isinstance(detail, dict) and detail.get("explanation"):
+            return [f"Error: {detail['explanation']}"]
+    content = value.get("content")
+    if content is not None:
+        texts = _serialized_tool_result_text(content)
+        if texts:
+            return texts
+    if value.get("type") == "text_editor_code_execution_create_result":
+        return ["File updated." if value.get("is_file_update") else "File created."]
+    return []
+
+
 def _sse_tool_result_texts(raw: str) -> str:
     texts: list[str] = []
     for event in _sse_events(raw):
         if event.get("type") != "content_block_start":
             continue
         block = event.get("content_block") or {}
-        if block.get("type") == "tool_result":
-            for content in block.get("content") or []:
-                if content.get("type") == "text" and content.get("text"):
-                    texts.append(content["text"])
+        block_type = block.get("type")
+        if block_type == "tool_result" or (
+            isinstance(block_type, str)
+            and "_tool_result" in block_type
+            and block_type.endswith(("_tool_result", "_tool_result_error"))
+        ):
+            texts.extend(_serialized_tool_result_text(block.get("content")))
     return "\n".join(texts)
 
 
@@ -1179,10 +1212,7 @@ def _message_tool_result_texts(completion: Message) -> str:
     texts: list[str] = []
     for block in completion.content or []:
         if isinstance(block, ToolResultBlock):
-            for content in block.content:
-                text = getattr(content, "text", None)
-                if text:
-                    texts.append(text)
+            texts.extend(_serialized_tool_result_text(block.content))
     return "\n".join(texts)
 
 
@@ -1280,8 +1310,12 @@ async def test_code_execution_reuses_sandbox_across_inferences_with_same_contain
             [
                 ToolSelection(
                     tool_id="call_create",
-                    tool_name="create",
-                    tool_kwargs={"path": "state.txt", "file_text": "persisted-data"},
+                    tool_name="text_editor_code_execution",
+                    tool_kwargs={
+                        "command": "create",
+                        "path": "state.txt",
+                        "file_text": "persisted-data",
+                    },
                 )
             ],
             ["done"],
@@ -1292,7 +1326,7 @@ async def test_code_execution_reuses_sandbox_across_inferences_with_same_contain
         json=_code_execution_body(container=container, stream=True),
     )
     assert first.status_code == 200
-    assert "Created" in _sse_tool_result_texts(first.text)
+    assert "File created." in _sse_tool_result_texts(first.text)
     assert _sse_container_id(first.text) == container
 
     # Second inference with the same container id: the sandbox is reused, so
@@ -1303,8 +1337,8 @@ async def test_code_execution_reuses_sandbox_across_inferences_with_same_contain
             [
                 ToolSelection(
                     tool_id="call_view",
-                    tool_name="view",
-                    tool_kwargs={"path": "state.txt"},
+                    tool_name="text_editor_code_execution",
+                    tool_kwargs={"command": "view", "path": "state.txt"},
                 )
             ],
             ["done"],
@@ -1344,8 +1378,11 @@ async def test_code_execution_mount_recreated_when_mounts_change(
             [
                 ToolSelection(
                     tool_id="call_view",
-                    tool_name="view",
-                    tool_kwargs={"path": "/mnt/user-data/notes.txt"},
+                    tool_name="text_editor_code_execution",
+                    tool_kwargs={
+                        "command": "view",
+                        "path": "/mnt/user-data/notes.txt",
+                    },
                 )
             ],
             ["done"],
@@ -1380,15 +1417,21 @@ async def test_code_execution_mount_recreated_when_mounts_change(
             [
                 ToolSelection(
                     tool_id="call_old",
-                    tool_name="view",
-                    tool_kwargs={"path": "/mnt/user-data/notes.txt"},
+                    tool_name="text_editor_code_execution",
+                    tool_kwargs={
+                        "command": "view",
+                        "path": "/mnt/user-data/notes.txt",
+                    },
                 )
             ],
             [
                 ToolSelection(
                     tool_id="call_new",
-                    tool_name="view",
-                    tool_kwargs={"path": "/mnt/user-data/other.txt"},
+                    tool_name="text_editor_code_execution",
+                    tool_kwargs={
+                        "command": "view",
+                        "path": "/mnt/user-data/other.txt",
+                    },
                 )
             ],
             ["done"],
@@ -1440,8 +1483,11 @@ async def test_code_execution_mounts_loaded_skill_files(
             [
                 ToolSelection(
                     tool_id="call_view",
-                    tool_name="view",
-                    tool_kwargs={"path": f"/mnt/skills/{skill_name}/SKILL.md"},
+                    tool_name="text_editor_code_execution",
+                    tool_kwargs={
+                        "command": "view",
+                        "path": f"/mnt/skills/{skill_name}/SKILL.md",
+                    },
                 )
             ],
             ["done"],
