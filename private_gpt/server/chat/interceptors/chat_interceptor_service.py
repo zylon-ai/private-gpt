@@ -136,6 +136,7 @@ class ChatInterceptorService:
                     configure_tool_interceptor,
                     platform_guidelines_interceptor,
                 ],
+                responses=[mcp_interceptor],
                 tools=[configure_tool_execution_interceptor],
             )
             # Preprocess the chat history

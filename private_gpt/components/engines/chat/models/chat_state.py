@@ -118,8 +118,7 @@ class ChatState(BaseModel):
         # Temporarily detach fields that must not be deep-copied:
         # - tokenizer_fn: HF tokenizer is not safely copyable and expensive
         # - context_stack: pydantic frozen — all mutations return new instances
-        # - original_input: retained across iterations; interceptors and internal
-        #   events may update its durable state
+        # - original_input: set once at loop init, never mutated
         tokenizer_fn = self.runtime.tokenizer_fn
         context_stack = self.input.context_stack
         original_input = self.original_input

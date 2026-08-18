@@ -13,14 +13,23 @@ from private_gpt.server.mcp._runtime import (
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("access_token", [None, "expired-access"])
 @pytest.mark.parametrize(
-    ("auth_method", "client_secret", "expected_auth_method"),
+    ("access_token", "auth_method", "client_secret", "expected_auth_method"),
     [
-        (None, "client-secret", "client_secret_basic"),
-        ("client_secret_basic", "client-secret", "client_secret_basic"),
-        ("client_secret_post", "client-secret", "client_secret_post"),
-        ("none", None, "none"),
+        (None, None, "client-secret", "client_secret_basic"),
+        (
+            "expired-access",
+            "client_secret_basic",
+            "client-secret",
+            "client_secret_basic",
+        ),
+        (
+            "expired-access",
+            "client_secret_post",
+            "client-secret",
+            "client_secret_post",
+        ),
+        ("expired-access", "none", None, "none"),
     ],
 )
 async def test_headless_oauth_discovers_and_refreshes(
@@ -88,6 +97,7 @@ async def test_headless_oauth_discovers_and_refreshes(
         client_secret=client_secret,
         token_endpoint_auth_method=auth_method,
     )
+    assert storage.refreshed_tokens is None
     auth = HeadlessOAuthClientProvider(
         server_url="https://resource.example.com/mcp",
         client_metadata=OAuthClientMetadata(

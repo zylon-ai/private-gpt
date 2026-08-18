@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, Field, model_validator
 
 
 class McpServerToolConfig(BaseModel):
@@ -19,8 +19,6 @@ class McpServerToolConfig(BaseModel):
 
 class McpServerConfig(BaseModel):
     """Configuration for the MCP server."""
-
-    model_config = ConfigDict(populate_by_name=True)
 
     name: str | None = Field(
         default="mcp",
@@ -74,8 +72,6 @@ class McpServerConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_refresh_token_config(self) -> "McpServerConfig":
-        if self.refresh_token:
-            missing = [name for name in ("client_id",) if not getattr(self, name)]
-            if missing:
-                raise ValueError(f"refresh_token requires {', '.join(missing)}")
+        if self.refresh_token and not self.client_id:
+            raise ValueError("refresh_token requires client_id")
         return self

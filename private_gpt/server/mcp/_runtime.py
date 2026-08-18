@@ -70,7 +70,7 @@ def _prefer_sse(url: str) -> bool:
 
 
 class RequestOAuthTokenStorage(TokenStorage):
-    """Request-scoped OAuth storage backed by the MCP request config."""
+    """Request-scoped OAuth storage initialized from the MCP request."""
 
     def __init__(
         self,
@@ -82,7 +82,6 @@ class RequestOAuthTokenStorage(TokenStorage):
         token_endpoint_auth_method: str | None = None,
     ) -> None:
         # The placeholder represents a missing access token, not a refresh.
-        self._initial_refresh_token = refresh_token
         self._tokens = OAuthToken(
             access_token=access_token or MISSING_ACCESS_TOKEN,
             refresh_token=refresh_token,
@@ -105,13 +104,15 @@ class RequestOAuthTokenStorage(TokenStorage):
         return self._tokens
 
     async def set_tokens(self, tokens: OAuthToken) -> None:
+        previous_refresh_token = self._tokens.refresh_token
+        assert previous_refresh_token is not None
         if tokens.refresh_token is None:
-            tokens.refresh_token = self._tokens.refresh_token
+            tokens.refresh_token = previous_refresh_token
         self._tokens = tokens
         self._refreshed_tokens = (
             tokens.access_token,
-            tokens.refresh_token or self._initial_refresh_token,
-            self._initial_refresh_token,
+            tokens.refresh_token or previous_refresh_token,
+            previous_refresh_token,
         )
 
     async def get_client_info(self) -> OAuthClientInformationFull | None:

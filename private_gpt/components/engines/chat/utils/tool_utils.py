@@ -12,14 +12,10 @@ from llama_index.core.tools import AsyncBaseTool, ToolOutput
 
 from private_gpt.events.models import (
     ContentBlockType,
-    Event,
-    McpTokensRefreshedEvent,
     from_tool_output,
     to_llama_index_blocks,
 )
-from private_gpt.server.mcp.config import McpServerConfig
 from private_gpt.server.mcp.mcp_service import (
-    McpToolExecutionResult,
     convert_mcp_blocks_to_llama_index,
     get_mcp_tool_result_content,
     is_mcp_tool_result,
@@ -30,31 +26,7 @@ if TYPE_CHECKING:
         ContentBlock,
     )
 
-    from private_gpt.components.engines.chat.models.chat_state import ChatState
-
 logger = logging.getLogger(__name__)
-
-
-def apply_mcp_token_refreshes(state: "ChatState", events: list[Event]) -> None:
-    """Persist worker-side MCP token refreshes in the chat's tool specs."""
-    for event in events:
-        if not isinstance(event, McpTokensRefreshedEvent):
-            continue
-        for input_state in (state.input, state.original_input):
-            if input_state is None:
-                continue
-            for tool in input_state.context_stack.all_tools():
-                metadata = tool.execution_metadata
-                config = metadata and metadata.rebuild_kwargs.get("config")
-                if (
-                    isinstance(config, McpServerConfig)
-                    and (config.name or "mcp") == event.name
-                    and config.url == event.url
-                    and config.refresh_token
-                    in (event.previous_refresh_token, event.refresh_token)
-                ):
-                    config.authorization_token = event.authorization_token
-                    config.refresh_token = event.refresh_token
 
 
 def select_tool_names(
@@ -74,9 +46,8 @@ async def execute_tool_call(
     tool_id: str,
     tool_kwargs: dict[str, Any],
     state_ctx: Any,
-) -> tuple[ToolCallResult, ChatMessage, list[Event]]:
+) -> tuple[ToolCallResult, ChatMessage]:
     """Execute one tool call and convert output into tool message blocks."""
-    internal_events: list[Event] = []
     try:
         if getattr(tool, "requires_context", False):
             context_tool: Any = tool
@@ -92,21 +63,6 @@ async def execute_tool_call(
             raw_output=str(error),
             is_error=True,
         )
-
-    if isinstance(tool_output.raw_output, McpToolExecutionResult):
-        mcp_result = tool_output.raw_output
-        internal_events = mcp_result.events
-        if mcp_result.error is not None:
-            tool_output = ToolOutput(
-                content=str(mcp_result.error),
-                tool_name=tool_name,
-                raw_input=tool_kwargs,
-                raw_output=str(mcp_result.error),
-                is_error=True,
-            )
-        else:
-            tool_output.raw_output = mcp_result.result
-            tool_output.content = str(mcp_result.result)
 
     # Double check that content is stored in blocks, not as content string
     # Llama Index always converts blocks to string content...
@@ -163,4 +119,4 @@ async def execute_tool_call(
         tool_output=tool_output,
         return_direct=tool.metadata.return_direct,
     )
-    return result, tool_message, internal_events
+    return result, tool_message

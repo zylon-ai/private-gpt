@@ -68,7 +68,6 @@ from private_gpt.components.engines.chat.utils.request_builder import (
     build_request_from_context_stack,
 )
 from private_gpt.components.engines.chat.utils.tool_utils import (
-    apply_mcp_token_refreshes,
     select_tool_names,
 )
 from private_gpt.components.llm.custom.base import StructuredOutputsParams, ZylonLLM
@@ -1053,7 +1052,6 @@ class ChatLoopEngine:
             )
 
         async with lock:
-            apply_mcp_token_refreshes(run.state, response.internal_events)
             run.state = run.state.model_copy(deep=True)
             run.state.input.request.messages = [
                 *run.state.input.request.messages,
@@ -1071,8 +1069,6 @@ class ChatLoopEngine:
             )
 
             run.block_count += 1
-            for internal_event in response.internal_events:
-                handler.emit(internal_event)
             handler.emit(result_start)
             handler.emit(RawContentBlockStopEvent.from_start(result_start))
 

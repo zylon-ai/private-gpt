@@ -26,16 +26,13 @@ from private_gpt.components.tools.tool_execution_outcome import (
     ToolExecutionOutcome,
     ToolExecutionSuccess,
 )
-from private_gpt.events.models import (
-    Event,
-    TextBlock,
-    from_tool_output,
-)
+from private_gpt.events.models import TextBlock, from_tool_output
 
 if TYPE_CHECKING:
     from llama_index.core.tools import AsyncBaseTool
 
     from private_gpt.components.engines.chat.models.chat_state import (
+        ChatInputState,
         ChatState,
     )
     from private_gpt.components.engines.chat.models.execution_hooks import (
@@ -69,7 +66,7 @@ class ToolExecutionResponse(BaseModel):
     tool_id: str
     outcome: ToolExecutionOutcome
     tool_message: ChatMessage
-    internal_events: list[Event] = Field(default_factory=list)
+    updated_tool_spec: ToolSpec | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -153,6 +150,11 @@ class ToolExecutor:
         request: ToolExecutionRequest,
         state_ctx: ChatState | None = None,
     ) -> ToolExecutionResponse:
+        original_metadata = (
+            request.tool_spec.execution_metadata.model_copy(deep=True)
+            if request.tool_spec.execution_metadata is not None
+            else None
+        )
         tool = await rebuild_tool_from_spec(request.tool_spec)
 
         before_context = ToolExecutionInterceptorContext(
@@ -163,7 +165,7 @@ class ToolExecutor:
         for interceptor in self._interceptors:
             await interceptor.intercept(before_context)
 
-        result, tool_message, internal_events = await execute_tool_call(
+        result, tool_message = await execute_tool_call(
             tool=tool,
             tool_name=request.tool_name,
             tool_id=request.tool_id,
@@ -191,7 +193,6 @@ class ToolExecutor:
             tool_id=request.tool_id,
             outcome=outcome,
             tool_message=tool_message,
-            internal_events=internal_events,
         )
 
         after_context = ToolExecutionInterceptorContext(
@@ -204,7 +205,26 @@ class ToolExecutor:
             await interceptor.intercept(after_context)
 
         assert after_context.response is not None
-        return after_context.response
+        response = after_context.response
+        if request.tool_spec.execution_metadata != original_metadata:
+            response = response.model_copy(
+                update={"updated_tool_spec": request.tool_spec}
+            )
+        return response
+
+
+def apply_tool_spec_update(
+    input_state: ChatInputState | None, updated_tool_spec: ToolSpec | None
+) -> None:
+    if input_state is None or updated_tool_spec is None:
+        return
+    for tool in input_state.context_stack.all_tools():
+        if tool.name == updated_tool_spec.name:
+            tool.execution_metadata = (
+                updated_tool_spec.execution_metadata.model_copy(deep=True)
+                if updated_tool_spec.execution_metadata is not None
+                else None
+            )
 
 
 def build_rebuild_metadata(

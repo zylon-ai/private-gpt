@@ -1,43 +1,62 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from mcp.types import CallToolResult, TextContent
+from mcp.types import CallToolResult, ListToolsResult, TextContent, Tool
 
 from private_gpt.components.tools.remote_execution import (
     ToolExecutionRequest,
     ToolExecutionResponse,
     ToolExecutor,
 )
-from private_gpt.events.models import McpTokensRefreshedEvent
 from private_gpt.server.mcp.config import McpServerConfig
-from private_gpt.server.mcp.mcp_service import McpToolDefinition, mcp_tool_to_spec
+from private_gpt.server.mcp.mcp_service import (
+    MCP_PREVIOUS_REFRESH_TOKEN_KEY,
+    McpToolDefinition,
+    mcp_tool_to_spec,
+)
 
 
 @pytest.mark.asyncio
-async def test_tool_execution_carries_refresh_event_outside_model_content() -> None:
+async def test_tool_execution_returns_mutated_mcp_request_state() -> None:
     config = McpServerConfig(name="tools", url="https://mcp.example.com")
     tool = McpToolDefinition(
         name="lookup",
         description="Look something up",
         input_schema={"type": "object", "properties": {}},
     )
-    event = McpTokensRefreshedEvent(
-        name="tools",
-        url=config.url,
-        previous_refresh_token="refresh-before-sentinel",
-        authorization_token="access-after-sentinel",
-        refresh_token="refresh-after-sentinel",
-        metadata={"artifact_id": "artifact-123"},
+    runtime_client = MagicMock()
+    runtime_client.list_tools = AsyncMock(
+        return_value=ListToolsResult(
+            tools=[
+                Tool(
+                    name=tool.name,
+                    description=tool.description,
+                    inputSchema=tool.input_schema,
+                )
+            ]
+        )
     )
-    client = MagicMock()
-    client.list_tools = AsyncMock(return_value=[tool])
-    client.call_tool = AsyncMock(
-        return_value=CallToolResult(content=[TextContent(text="normal MCP content")])
-    )
-    client.token_refresh_event.return_value = event
-    client.close = AsyncMock()
+    runtime_client.refreshed_tokens = None
+    runtime_client.refresh_attempted = False
+    runtime_client.close = AsyncMock()
 
-    with patch("private_gpt.server.mcp.mcp_service.McpClient", return_value=client):
+    async def call_tool(*_args: object, **_kwargs: object) -> CallToolResult:
+        runtime_client.refreshed_tokens = (
+            "access-after-sentinel",
+            "refresh-after-sentinel",
+            "refresh-before-sentinel",
+        )
+        return CallToolResult(content=[TextContent(text="normal MCP content")])
+
+    runtime_client.call_tool = AsyncMock(side_effect=call_tool)
+
+    config.authorization_token = "access-before-sentinel"
+    config.refresh_token = "refresh-before-sentinel"
+    config.client_id = "client-id"
+    with patch(
+        "private_gpt.server.mcp.mcp_service._load_runtime",
+        return_value=MagicMock(return_value=runtime_client),
+    ):
         response = await ToolExecutor().execute(
             ToolExecutionRequest(
                 tool_id="tool-1",
@@ -47,13 +66,19 @@ async def test_tool_execution_carries_refresh_event_outside_model_content() -> N
         )
 
     restored = ToolExecutionResponse.model_validate_json(response.model_dump_json())
-    assert restored.internal_events == [event]
-    serialized_message = response.tool_message.model_dump_json()
-    assert "normal MCP content" in serialized_message
-    for secret in (
-        "refresh-before-sentinel",
-        "access-after-sentinel",
-        "refresh-after-sentinel",
-    ):
-        assert secret not in serialized_message
-    client.close.assert_awaited_once()
+    assert restored.updated_tool_spec is not None
+    metadata = restored.updated_tool_spec.execution_metadata
+    assert metadata is not None
+    updated_config = metadata.rebuild_kwargs["config"]
+    assert isinstance(updated_config, McpServerConfig)
+    assert updated_config.authorization_token == "access-after-sentinel"
+    assert updated_config.refresh_token == "refresh-after-sentinel"
+    assert (
+        updated_config.metadata[MCP_PREVIOUS_REFRESH_TOKEN_KEY]
+        == "refresh-before-sentinel"
+    )
+    assert restored.tool_message.content == "normal MCP content"
+    serialized_message = restored.tool_message.model_dump_json()
+    assert "access-after-sentinel" not in serialized_message
+    assert "refresh-after-sentinel" not in serialized_message
+    runtime_client.close.assert_awaited_once()

@@ -33,6 +33,7 @@ from private_gpt.components.engines.chat.models.execution_hooks import (
 from private_gpt.components.engines.chat.utils.request_builder import (
     build_initial_context_stack,
 )
+from private_gpt.components.tools.remote_execution import apply_tool_spec_update
 from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
 from private_gpt.events.event_serializer import StreamingEventHandler
 from private_gpt.events.models import ContentBlockType
@@ -180,19 +181,24 @@ class ResumableChatRunner:
                     for response in responses
                 ),
             ]
+            input_state = ChatInputState(
+                request=self._request(request_data),
+                context_stack=self._context_stack(saved, request_data),
+            )
+            original_input = self._original_input(saved)
+            for response in responses:
+                apply_tool_spec_update(input_state, response.updated_tool_spec)
+                apply_tool_spec_update(original_input, response.updated_tool_spec)
             state = await engine.resume(
                 AsyncChatCheckpoint(
                     checkpoint=saved.checkpoint,
-                    input=ChatInputState(
-                        request=self._request(request_data),
-                        context_stack=self._context_stack(saved, request_data),
-                    ),
+                    input=input_state,
                     iteration=saved.iteration,
                     next_block_count=saved.next_block_count,
                     payload=saved.checkpoint_payload.model_copy(
                         update={"tool_responses": responses}
                     ),
-                    original_input=self._original_input(saved),
+                    original_input=original_input,
                 ),
                 hooks=_RESUME_HOOKS,
                 channel=channel,
