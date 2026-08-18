@@ -79,44 +79,27 @@ class RequestOAuthTokenStorage(TokenStorage):
         refresh_token: str,
         client_id: str,
         client_secret: str | None,
+        token_endpoint_auth_method: str | None = None,
     ) -> None:
         # The placeholder represents a missing access token, not a refresh.
-        self._initial_access_token = access_token or MISSING_ACCESS_TOKEN
         self._initial_refresh_token = refresh_token
         self._tokens = OAuthToken(
-            access_token=self._initial_access_token,
+            access_token=access_token or MISSING_ACCESS_TOKEN,
             refresh_token=refresh_token,
         )
+        self._refreshed_tokens: tuple[str, str, str] | None = None
         self._client_info = OAuthClientInformationFull(
             client_id=client_id,
             client_secret=client_secret,
-            token_endpoint_auth_method=(
-                "client_secret_post" if client_secret else "none"
-            ),
+            token_endpoint_auth_method=token_endpoint_auth_method
+            or ("client_secret_basic" if client_secret else "none"),
             redirect_uris=[],
         )
         self.refresh_attempted = False
 
     @property
-    def tokens(self) -> OAuthToken:
-        return self._tokens
-
-    @property
-    def changed_tokens(self) -> bool:
-        return (
-            self._tokens.access_token != self._initial_access_token
-            or self._tokens.refresh_token != self._initial_refresh_token
-        )
-
-    @property
-    def refreshed_tokens(self) -> tuple[str, str, str | None] | None:
-        if not self.changed_tokens:
-            return None
-        return (
-            self._tokens.access_token,
-            self._tokens.refresh_token or self._initial_refresh_token,
-            self._initial_refresh_token,
-        )
+    def refreshed_tokens(self) -> tuple[str, str, str] | None:
+        return self._refreshed_tokens
 
     async def get_tokens(self) -> OAuthToken | None:
         return self._tokens
@@ -125,6 +108,11 @@ class RequestOAuthTokenStorage(TokenStorage):
         if tokens.refresh_token is None:
             tokens.refresh_token = self._tokens.refresh_token
         self._tokens = tokens
+        self._refreshed_tokens = (
+            tokens.access_token,
+            tokens.refresh_token or self._initial_refresh_token,
+            self._initial_refresh_token,
+        )
 
     async def get_client_info(self) -> OAuthClientInformationFull | None:
         return self._client_info
@@ -185,6 +173,7 @@ class PersistentMCPClient:
         refresh_token: str | None = None,
         client_id: str | None = None,
         client_secret: str | None = None,
+        token_endpoint_auth_method: str | None = None,
         **_: Any,
     ) -> None:
         self.command_or_url = command_or_url
@@ -204,6 +193,7 @@ class PersistentMCPClient:
                 refresh_token=refresh_token,
                 client_id=client_id,
                 client_secret=client_secret,
+                token_endpoint_auth_method=token_endpoint_auth_method,
             )
             if refresh_token and client_id
             else None
@@ -230,7 +220,7 @@ class PersistentMCPClient:
         return bool(self.oauth_storage and self.oauth_storage.refresh_attempted)
 
     @property
-    def refreshed_tokens(self) -> tuple[str, str, str | None] | None:
+    def refreshed_tokens(self) -> tuple[str, str, str] | None:
         return self.oauth_storage.refreshed_tokens if self.oauth_storage else None
 
     async def _create_session(self) -> ClientSession:

@@ -20,11 +20,7 @@ from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
 from private_gpt.events.event_errors import Errors
-from private_gpt.events.models import (
-    Event,
-    McpTokensRefreshedEvent,
-    McpTokensRefreshFailedEvent,
-)
+from private_gpt.events.models import Event
 from private_gpt.server.mcp.config import McpServerConfig
 from private_gpt.server.mcp.mcp_service import McpService, mcp_tool_to_spec
 
@@ -69,43 +65,18 @@ class McpRequestInterceptor(ChatRequestLoopInterceptor):
                     config: McpServerConfig,
                 ) -> list[ToolSpec]:
                     """Fetch tools from a single MCP server."""
-                    client = self._mcp_service.create_client(
-                        config,
-                    )
+                    client = self._mcp_service.create_client(config)
                     try:
                         try:
                             mcp_tools = await client.list_tools()
                         except Exception:
-                            if (
-                                emit_event
-                                and client.refresh_attempted
-                                and not client.refreshed_tokens
-                            ):
-                                emit_event(
-                                    McpTokensRefreshFailedEvent(
-                                        name=config.name or "mcp",
-                                        url=config.url,
-                                        error="MCP OAuth token refresh failed",
-                                        metadata=config.metadata,
-                                    )
-                                )
+                            event = client.token_refresh_event(failed=True)
+                            if emit_event and event is not None:
+                                emit_event(event)
                             raise
-                        finally:
-                            if emit_event and client.refreshed_tokens:
-                                access_token, refresh_token, previous_refresh_token = (
-                                    client.refreshed_tokens
-                                )
-                                if previous_refresh_token is not None:
-                                    emit_event(
-                                        McpTokensRefreshedEvent(
-                                            name=config.name or "mcp",
-                                            url=config.url,
-                                            previous_refresh_token=previous_refresh_token,
-                                            authorization_token=access_token,
-                                            refresh_token=refresh_token,
-                                            metadata=config.metadata,
-                                        )
-                                    )
+                        event = client.token_refresh_event()
+                        if emit_event and event is not None:
+                            emit_event(event)
                         return [mcp_tool_to_spec(config, tool) for tool in mcp_tools]
                     finally:
                         await client.close()

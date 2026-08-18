@@ -1,5 +1,5 @@
 import base64
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
 
 from injector import singleton
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     )
 
     from private_gpt.components.chat.models.chat_config_models import ToolSpec
+    from private_gpt.events.models import Event
     from private_gpt.server.mcp._runtime import PersistentMCPClient
 
 
@@ -104,6 +105,15 @@ class McpToolDefinition:
         )
 
 
+@dataclass
+class McpToolExecutionResult:
+    """Keep internal MCP events separate from model-visible tool content."""
+
+    result: "CallToolResult | None" = None
+    error: BaseException | None = None
+    events: list["Event"] = field(default_factory=list)
+
+
 class McpClient:
     """MCP client that preserves original tool schemas and invokes tools directly."""
 
@@ -124,6 +134,7 @@ class McpClient:
             refresh_token=config.refresh_token,
             client_id=config.client_id,
             client_secret=config.client_secret,
+            token_endpoint_auth_method=config.token_endpoint_auth_method,
         )
 
     @property
@@ -131,20 +142,41 @@ class McpClient:
         return bool(self.client and self.client.refresh_attempted)
 
     @property
-    def refreshed_tokens(self) -> tuple[str, str, str | None] | None:
+    def refreshed_tokens(self) -> tuple[str, str, str] | None:
         return self.client.refreshed_tokens if self.client else None
 
     def _sync_tokens(self) -> None:
-        from private_gpt.server.mcp._runtime import MISSING_ACCESS_TOKEN
-
-        storage = self.client.oauth_storage if self.client else None
-        if storage is None:
+        refreshed_tokens = self.refreshed_tokens
+        if refreshed_tokens is None:
             return
-        tokens = storage.tokens
-        if tokens.access_token != MISSING_ACCESS_TOKEN:
-            self.config.authorization_token = tokens.access_token
-        if tokens.refresh_token:
-            self.config.refresh_token = tokens.refresh_token
+        access_token, refresh_token, _ = refreshed_tokens
+        self.config.authorization_token = access_token
+        self.config.refresh_token = refresh_token
+
+    def token_refresh_event(self, *, failed: bool = False) -> "Event | None":
+        from private_gpt.events.models import (
+            McpTokensRefreshedEvent,
+            McpTokensRefreshFailedEvent,
+        )
+
+        if refreshed_tokens := self.refreshed_tokens:
+            access_token, refresh_token, previous_refresh_token = refreshed_tokens
+            return McpTokensRefreshedEvent(
+                name=self.config.name or "mcp",
+                url=self.config.url,
+                previous_refresh_token=previous_refresh_token,
+                authorization_token=access_token,
+                refresh_token=refresh_token,
+                metadata=self.config.metadata,
+            )
+        if failed and self.refresh_attempted:
+            return McpTokensRefreshFailedEvent(
+                name=self.config.name or "mcp",
+                url=self.config.url,
+                error="MCP OAuth token refresh failed",
+                metadata=self.config.metadata,
+            )
+        return None
 
     async def list_tools(self) -> list[McpToolDefinition]:
         """List tools from the MCP server using the original input schema."""
@@ -174,7 +206,10 @@ class McpClient:
         """Invoke a tool on the MCP server with the given arguments."""
         if self.client is None:
             raise RuntimeError("MCP client is not initialized")
-        return await self.client.call_tool(name=name, arguments=arguments)
+        try:
+            return await self.client.call_tool(name=name, arguments=arguments)
+        finally:
+            self._sync_tokens()
 
     async def close(self) -> None:
         """Close the underlying MCP session in the task that owns it."""
@@ -218,14 +253,24 @@ def rebuild_mcp_tool(
     async def invoke_mcp_tool(**kwargs: object) -> object:
         client = McpClient(config)
         try:
-            tools = await client.list_tools()
-            available = {item.name for item in tools}
-            if tool_name not in available:
-                raise ValueError(
-                    f"MCP tool {tool_name!r} is no longer available from "
-                    f"server {config.name!r}."
-                )
-            return await client.call_tool(tool_name, dict(kwargs))
+            try:
+                tools = await client.list_tools()
+                available = {item.name for item in tools}
+                if tool_name not in available:
+                    raise ValueError(
+                        f"MCP tool {tool_name!r} is no longer available from "
+                        f"server {config.name!r}."
+                    )
+                result = await client.call_tool(tool_name, dict(kwargs))
+            except Exception as error:
+                event = client.token_refresh_event(failed=True)
+                if event is not None:
+                    return McpToolExecutionResult(error=error, events=[event])
+                raise
+            event = client.token_refresh_event()
+            if event is not None:
+                return McpToolExecutionResult(result=result, events=[event])
+            return result
         finally:
             await client.close()
 

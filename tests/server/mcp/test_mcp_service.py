@@ -52,6 +52,29 @@ async def test_missing_access_token_is_not_reported_as_refreshed() -> None:
     )
 
 
+@pytest.mark.asyncio
+async def test_successful_refresh_is_recorded_when_tokens_do_not_rotate() -> None:
+    storage = RequestOAuthTokenStorage(
+        access_token="access-before",
+        refresh_token="refresh-before",
+        client_id="client-id",
+        client_secret=None,
+    )
+
+    await storage.set_tokens(
+        OAuthToken(
+            access_token="access-before",
+            refresh_token="refresh-before",
+        )
+    )
+
+    assert storage.refreshed_tokens == (
+        "access-before",
+        "refresh-before",
+        "refresh-before",
+    )
+
+
 def test_mcp_tool_spec_json_roundtrip_preserves_rebuild_config() -> None:
     config = McpServerConfig(name="tools", url="https://mcp.example.com")
 
@@ -75,6 +98,7 @@ async def test_rebuilt_mcp_tool_uses_task_scoped_client() -> None:
     client = MagicMock()
     client.list_tools = AsyncMock(return_value=[_remote_tool_def()])
     client.call_tool = AsyncMock(return_value="result:platform")
+    client.token_refresh_event.return_value = None
     client.close = AsyncMock()
 
     with patch("private_gpt.server.mcp.mcp_service.McpClient", return_value=client):
@@ -92,6 +116,7 @@ async def test_rebuilt_mcp_tool_closes_client_when_tool_is_missing() -> None:
     spec = mcp_tool_to_spec(config, _remote_tool_def())
     client = MagicMock()
     client.list_tools = AsyncMock(return_value=[])
+    client.token_refresh_event.return_value = None
     client.close = AsyncMock()
 
     with patch("private_gpt.server.mcp.mcp_service.McpClient", return_value=client):
@@ -196,6 +221,7 @@ async def test_mcp_client_list_tools_preserves_remote_input_schema() -> None:
     runtime_client.list_tools = AsyncMock(
         return_value=ListToolsResult(tools=[remote_tool, ignored_tool])
     )
+    runtime_client.refreshed_tokens = None
 
     with patch(
         "private_gpt.server.mcp.mcp_service._load_runtime",

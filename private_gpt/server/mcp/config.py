@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
@@ -44,6 +44,15 @@ class McpServerConfig(BaseModel):
     client_secret: str | None = Field(
         default=None,
         description="The optional OAuth client secret associated with the client ID.",
+    )
+    token_endpoint_auth_method: (
+        Literal["none", "client_secret_basic", "client_secret_post"] | None
+    ) = Field(
+        default=None,
+        description=(
+            "The authentication method registered for the OAuth token endpoint. "
+            "Defaults to client_secret_basic when a client secret is provided."
+        ),
     )
     metadata: dict[str, Any] = Field(
         default_factory=dict,

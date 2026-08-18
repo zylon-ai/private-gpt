@@ -33,8 +33,7 @@ def _discovery_setup() -> tuple[
     )
     client = MagicMock()
     client.close = AsyncMock()
-    client.refreshed_tokens = None
-    client.refresh_attempted = False
+    client.token_refresh_event.return_value = None
     mcp_service = MagicMock()
     mcp_service.create_client.return_value = client
     interceptor = McpRequestInterceptor(mcp_service)
@@ -61,7 +60,14 @@ async def test_discovery_emits_refreshed_tokens_as_a_chat_event() -> None:
             )
         ]
     )
-    client.refreshed_tokens = ("access-after", "refresh-after", "refresh-before")
+    client.token_refresh_event.return_value = McpTokensRefreshedEvent(
+        name="mcp",
+        url="https://mcp.example.com",
+        previous_refresh_token="refresh-before",
+        authorization_token="access-after",
+        refresh_token="refresh-after",
+        metadata={"artifact_id": "artifact-123"},
+    )
 
     await interceptor.intercept(context)
 
@@ -84,7 +90,14 @@ async def test_discovery_emits_refreshed_tokens_before_wrapping_error() -> None:
     _, client, _, interceptor, context = _discovery_setup()
     error = RuntimeError("discovery failed after refresh")
     client.list_tools = AsyncMock(side_effect=error)
-    client.refreshed_tokens = ("access-after", "refresh-after", "refresh-before")
+    client.token_refresh_event.return_value = McpTokensRefreshedEvent(
+        name="mcp",
+        url="https://mcp.example.com",
+        previous_refresh_token="refresh-before",
+        authorization_token="access-after",
+        refresh_token="refresh-after",
+        metadata={"artifact_id": "artifact-123"},
+    )
 
     with pytest.raises(Errors.InvalidRequest) as exc_info:
         await interceptor.intercept(context)
@@ -108,7 +121,12 @@ async def test_discovery_emits_refresh_failed_before_wrapping_error() -> None:
     _, client, _, interceptor, context = _discovery_setup()
     error = RuntimeError("refresh failed")
     client.list_tools = AsyncMock(side_effect=error)
-    client.refresh_attempted = True
+    client.token_refresh_event.return_value = McpTokensRefreshFailedEvent(
+        name="mcp",
+        url="https://mcp.example.com",
+        error="MCP OAuth token refresh failed",
+        metadata={"artifact_id": "artifact-123"},
+    )
 
     with pytest.raises(Errors.InvalidRequest) as exc_info:
         await interceptor.intercept(context)

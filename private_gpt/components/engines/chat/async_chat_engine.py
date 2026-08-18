@@ -87,6 +87,7 @@ from private_gpt.components.engines.chat.utils.request_builder import (
     build_request_from_context_stack,
 )
 from private_gpt.components.engines.chat.utils.tool_utils import (
+    apply_mcp_token_refreshes,
     select_tool_names,
 )
 from private_gpt.components.llm.custom.base import StructuredOutputsParams, ZylonLLM
@@ -799,6 +800,7 @@ class AsyncChatEngine:
             async def _emit_tool_results(handler: _EventHandler) -> None:
                 try:
                     for response in payload.tool_responses:
+                        apply_mcp_token_refreshes(run.state, response.internal_events)
                         tool_spec = tool_specs_by_name.get(response.tool_name)
                         if tool_spec is None:
                             raise RuntimeError(
@@ -813,6 +815,8 @@ class AsyncChatEngine:
                             ),
                         )
                         run.block_count += 1
+                        for internal_event in response.internal_events:
+                            handler.emit(internal_event)
                         handler.emit(result_start)
                         handler.emit(RawContentBlockStopEvent.from_start(result_start))
                 finally:
@@ -1573,6 +1577,7 @@ class AsyncChatEngine:
             )
 
         async with lock:
+            apply_mcp_token_refreshes(run.state, response.internal_events)
             run.state = run.state.model_copy(deep=True)
             run.state.input.request.messages = [
                 *run.state.input.request.messages,
@@ -1589,6 +1594,8 @@ class AsyncChatEngine:
                 ),
             )
             run.block_count += 1
+            for internal_event in response.internal_events:
+                handler.emit(internal_event)
             handler.emit(result_start)
             handler.emit(RawContentBlockStopEvent.from_start(result_start))
 
