@@ -337,7 +337,9 @@ async def test_reaper_kills_idle_sandboxes() -> None:
 
     env = await manager.acquire("s1")
     # Age the env past the TTL (1h) so the reaper considers it idle.
-    env.last_accessed = 0.0
+    # CLOCK_MONOTONIC is not epoch-relative (it may reference boot time), so
+    # an absolute 0.0 is not guaranteed to be more than the TTL in the past.
+    env.last_accessed = time.monotonic() - 2 * manager._ttl
     await manager._reap_once()
     await _sleep_tasks(manager)
 
@@ -492,7 +494,9 @@ async def test_reaper_does_not_kill_when_shared_activity_recent() -> None:
 
     env = await manager.acquire("s1")
     # Locally idle past TTL (this pod stopped using it)...
-    env.last_accessed = 0.0
+    # CLOCK_MONOTONIC is not epoch-relative (it may reference boot time), so
+    # an absolute 0.0 is not guaranteed to be more than the TTL in the past.
+    env.last_accessed = time.monotonic() - 2 * manager._ttl
     # ...but pod B touched the shared clock recently.
     await coordinator.set_activity("s1")
 
@@ -510,7 +514,9 @@ async def test_reaper_kills_when_shared_activity_old() -> None:
     manager = _manager(coordinator=coordinator)
 
     env = await manager.acquire("s1")
-    env.last_accessed = 0.0
+    # CLOCK_MONOTONIC is not epoch-relative (it may reference boot time), so
+    # an absolute 0.0 is not guaranteed to be more than the TTL in the past.
+    env.last_accessed = time.monotonic() - 2 * manager._ttl
     # Shared clock also idle for longer than the TTL (60 min).
     async with _dist._fallback_guard:
         _dist._fallback_activity["sandbox:activity:s1"] = time.time() - 2 * 3600
