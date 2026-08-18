@@ -12,12 +12,10 @@ from llama_index.core.tools import AsyncBaseTool, ToolOutput
 
 from private_gpt.events.models import (
     ContentBlockType,
-    Event,
     from_tool_output,
     to_llama_index_blocks,
 )
 from private_gpt.server.mcp.mcp_service import (
-    McpToolExecutionResult,
     convert_mcp_blocks_to_llama_index,
     get_mcp_tool_result_content,
     is_mcp_tool_result,
@@ -48,9 +46,8 @@ async def execute_tool_call(
     tool_id: str,
     tool_kwargs: dict[str, Any],
     state_ctx: Any,
-) -> tuple[ToolCallResult, ChatMessage, list[Event]]:
+) -> tuple[ToolCallResult, ChatMessage]:
     """Execute one tool call and convert output into tool message blocks."""
-    internal_events: list[Event] = []
     try:
         if getattr(tool, "requires_context", False):
             context_tool: Any = tool
@@ -66,21 +63,6 @@ async def execute_tool_call(
             raw_output=str(error),
             is_error=True,
         )
-
-    if isinstance(tool_output.raw_output, McpToolExecutionResult):
-        mcp_result = tool_output.raw_output
-        internal_events = mcp_result.events
-        if mcp_result.error is not None:
-            tool_output = ToolOutput(
-                content=str(mcp_result.error),
-                tool_name=tool_name,
-                raw_input=tool_kwargs,
-                raw_output=str(mcp_result.error),
-                is_error=True,
-            )
-        else:
-            tool_output.raw_output = mcp_result.result
-            tool_output.content = str(mcp_result.result)
 
     # Double check that content is stored in blocks, not as content string
     # Llama Index always converts blocks to string content...
@@ -137,4 +119,4 @@ async def execute_tool_call(
         tool_output=tool_output,
         return_direct=tool.metadata.return_direct,
     )
-    return result, tool_message, internal_events
+    return result, tool_message

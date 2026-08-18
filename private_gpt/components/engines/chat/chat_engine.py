@@ -1069,8 +1069,6 @@ class ChatLoopEngine:
             )
 
             run.block_count += 1
-            for internal_event in response.internal_events:
-                handler.emit(internal_event)
             handler.emit(result_start)
             handler.emit(RawContentBlockStopEvent.from_start(result_start))
 

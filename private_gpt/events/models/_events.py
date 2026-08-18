@@ -135,16 +135,30 @@ class McpTokensRefreshedEvent(BaseContentBlock, ExtendedContentProtocol):
     """Zylon-only notification carrying refreshed MCP OAuth credentials."""
 
     type: Literal["mcp_tokens_refreshed"] = Field(default="mcp_tokens_refreshed")
-    artifact_id: str = Field(description="The Zylon MCP artifact ID.")
-    previous_refresh_token: str = Field(description="The refresh token before rotation.")
+    name: str = Field(description="The MCP server name.")
+    url: str = Field(description="The MCP server URL.")
+    previous_refresh_token: str = Field(
+        description="The refresh token before rotation."
+    )
     authorization_token: str = Field(description="The rotated access token.")
     refresh_token: str = Field(description="The rotated refresh token.")
 
     def __str__(self) -> str:
-        return f"McpTokensRefreshedEvent(type={self.type!r}, artifact_id={self.artifact_id!r})"
+        return f"McpTokensRefreshedEvent(type={self.type!r}, name={self.name!r}, url={self.url!r})"
 
     def __repr__(self) -> str:
         return self.__str__()
+
+
+class McpTokensRefreshFailedEvent(BaseContentBlock, ExtendedContentProtocol):
+    """Zylon-only notification that MCP OAuth refresh failed."""
+
+    type: Literal["mcp_tokens_refresh_failed"] = Field(
+        default="mcp_tokens_refresh_failed"
+    )
+    name: str = Field(description="The MCP server name.")
+    url: str = Field(description="The MCP server URL.")
+    error: str = Field(description="A sanitized refresh failure description.")
 
 
 Event = Annotated[
@@ -156,6 +170,7 @@ Event = Annotated[
     | RawMessageStopEvent
     | PingEvent
     | McpTokensRefreshedEvent
+    | McpTokensRefreshFailedEvent
     | FatalError,
     Field(discriminator="type"),
 ]

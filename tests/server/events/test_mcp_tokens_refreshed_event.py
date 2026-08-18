@@ -12,10 +12,12 @@ from private_gpt.events.models import Event, McpTokensRefreshedEvent
 
 def _event() -> McpTokensRefreshedEvent:
     return McpTokensRefreshedEvent(
-        artifact_id="artifact-123",
+        name="tools",
+        url="https://mcp.example.com",
         previous_refresh_token="refresh-before-sentinel",
         authorization_token="access-after-sentinel",
         refresh_token="refresh-after-sentinel",
+        metadata={"artifact_id": "artifact-123"},
     )
 
 
@@ -25,15 +27,17 @@ def test_mcp_tokens_refreshed_event_roundtrips_exactly_and_redacts_strings() -> 
 
     assert json.loads(serialized) == {
         "type": "mcp_tokens_refreshed",
-        "artifact_id": "artifact-123",
+        "name": "tools",
+        "url": "https://mcp.example.com",
         "previous_refresh_token": "refresh-before-sentinel",
         "authorization_token": "access-after-sentinel",
         "refresh_token": "refresh-after-sentinel",
+        "_meta": {"artifact_id": "artifact-123"},
     }
     restored = StreamingEventHandler().deserialize(serialized)
     assert restored == event
-    assert "artifact-123" in str(event)
-    assert "artifact-123" in repr(event)
+    assert "tools" in str(event)
+    assert "https://mcp.example.com" in repr(event)
     for sentinel in (
         "refresh-before-sentinel",
         "access-after-sentinel",
@@ -57,4 +61,4 @@ async def test_mcp_tokens_refreshed_event_is_zylon_only(
     filtered = await FilterZylonEventInterceptor(response_mode).intercept(source())
     events = [event async for event in filtered]
 
-    assert [event.artifact_id for event in events] == expected
+    assert [event.metadata["artifact_id"] for event in events] == expected

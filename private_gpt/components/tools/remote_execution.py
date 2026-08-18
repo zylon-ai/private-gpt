@@ -27,7 +27,6 @@ from private_gpt.components.tools.tool_execution_outcome import (
     ToolExecutionSuccess,
 )
 from private_gpt.events.models import (
-    Event,
     TextBlock,
     from_tool_output,
 )
@@ -69,7 +68,6 @@ class ToolExecutionResponse(BaseModel):
     tool_id: str
     outcome: ToolExecutionOutcome
     tool_message: ChatMessage
-    internal_events: list[Event] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -163,7 +161,7 @@ class ToolExecutor:
         for interceptor in self._interceptors:
             await interceptor.intercept(before_context)
 
-        result, tool_message, internal_events = await execute_tool_call(
+        result, tool_message = await execute_tool_call(
             tool=tool,
             tool_name=request.tool_name,
             tool_id=request.tool_id,
@@ -191,7 +189,6 @@ class ToolExecutor:
             tool_id=request.tool_id,
             outcome=outcome,
             tool_message=tool_message,
-            internal_events=internal_events,
         )
 
         after_context = ToolExecutionInterceptorContext(

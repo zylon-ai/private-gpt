@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from collections.abc import AsyncGenerator, AsyncIterator, Callable
+from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
@@ -8,7 +8,12 @@ from urllib.parse import urlparse
 if TYPE_CHECKING:
     import httpx2
     from mcp import ClientSession, MCPError
-    from mcp.shared.auth import OAuthToken
+    from mcp.client.auth import OAuthClientProvider, TokenStorage
+    from mcp.shared.auth import (
+        OAuthClientInformationFull,
+        OAuthClientMetadata,
+        OAuthToken,
+    )
     from mcp.types import (
         AudioContent,
         CallToolResult,
@@ -19,13 +24,18 @@ if TYPE_CHECKING:
 else:
     import httpx2
     from mcp import ClientSession, MCPError
+    from mcp.client.auth import OAuthClientProvider, TokenStorage
     from mcp.client.sse import sse_client
     from mcp.client.stdio import StdioServerParameters, stdio_client
     from mcp.client.streamable_http import (
         create_mcp_http_client,
         streamable_http_client,
     )
-    from mcp.shared.auth import OAuthToken
+    from mcp.shared.auth import (
+        OAuthClientInformationFull,
+        OAuthClientMetadata,
+        OAuthToken,
+    )
     from mcp.types import (
         AudioContent,
         CallToolResult,
@@ -35,6 +45,7 @@ else:
     )
 
 logger = logging.getLogger(__name__)
+MISSING_ACCESS_TOKEN = "mcp-missing-access-token"
 
 __all__ = [
     "AudioContent",
@@ -44,7 +55,6 @@ __all__ = [
     "ListToolsResult",
     "MCPError",
     "PersistentMCPClient",
-    "RefreshTokenAuth",
     "TextContent",
 ]
 
@@ -59,10 +69,8 @@ def _prefer_sse(url: str) -> bool:
     return path.endswith("/sse") or "/sse/" in path
 
 
-class RefreshTokenAuth(httpx2.Auth):
-    """Refresh an OAuth access token after a 401 response."""
-
-    requires_response_body = True
+class RequestOAuthTokenStorage(TokenStorage):
+    """Request-scoped OAuth storage backed by the MCP request config."""
 
     def __init__(
         self,
@@ -70,66 +78,74 @@ class RefreshTokenAuth(httpx2.Auth):
         access_token: str | None,
         refresh_token: str,
         client_id: str,
-        token_endpoint: str,
-        resource: str | None = None,
-        on_tokens_refreshed: Callable[[str, str], None] | None = None,
+        client_secret: str | None,
     ) -> None:
-        self.access_token = access_token
-        self.refresh_token = refresh_token
-        self.client_id = client_id
-        self.token_endpoint = token_endpoint
-        self.resource = resource
-        self.on_tokens_refreshed = on_tokens_refreshed
-        self._refresh_lock = asyncio.Lock()
+        # The placeholder represents a missing access token, not a refresh.
+        self._initial_access_token = access_token or MISSING_ACCESS_TOKEN
+        self._initial_refresh_token = refresh_token
+        self._tokens = OAuthToken(
+            access_token=self._initial_access_token,
+            refresh_token=refresh_token,
+        )
+        self._client_info = OAuthClientInformationFull(
+            client_id=client_id,
+            client_secret=client_secret,
+            token_endpoint_auth_method=(
+                "client_secret_post" if client_secret else "none"
+            ),
+            redirect_uris=[],
+        )
+        self.refresh_attempted = False
 
-    def _refresh_request(self) -> httpx2.Request:
-        data = {
-            "grant_type": "refresh_token",
-            "refresh_token": self.refresh_token,
-            "client_id": self.client_id,
-        }
-        if self.resource:
-            data["resource"] = self.resource
-        return httpx2.Request(
-            "POST",
-            self.token_endpoint,
-            data=data,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
+    @property
+    def tokens(self) -> OAuthToken:
+        return self._tokens
+
+    @property
+    def changed_tokens(self) -> bool:
+        return (
+            self._tokens.access_token != self._initial_access_token
+            or self._tokens.refresh_token != self._initial_refresh_token
         )
 
-    async def _save_tokens(self, response: httpx2.Response) -> None:
-        response.raise_for_status()
-        tokens = OAuthToken.model_validate_json(await response.aread())
-        self.access_token = tokens.access_token
-        self.refresh_token = tokens.refresh_token or self.refresh_token
-        if self.on_tokens_refreshed:
-            self.on_tokens_refreshed(self.access_token, self.refresh_token)
+    @property
+    def refreshed_tokens(self) -> tuple[str, str, str | None] | None:
+        if not self.changed_tokens:
+            return None
+        return (
+            self._tokens.access_token,
+            self._tokens.refresh_token or self._initial_refresh_token,
+            self._initial_refresh_token,
+        )
 
-    def _authorize(self, request: httpx2.Request) -> None:
-        if self.access_token:
-            request.headers["Authorization"] = f"Bearer {self.access_token}"
+    async def get_tokens(self) -> OAuthToken | None:
+        return self._tokens
 
-    async def async_auth_flow(
-        self, request: httpx2.Request
-    ) -> AsyncGenerator[httpx2.Request, httpx2.Response]:
-        if not self.access_token:
-            async with self._refresh_lock:
-                if not self.access_token:
-                    refresh_response = yield self._refresh_request()
-                    await self._save_tokens(refresh_response)
+    async def set_tokens(self, tokens: OAuthToken) -> None:
+        if tokens.refresh_token is None:
+            tokens.refresh_token = self._tokens.refresh_token
+        self._tokens = tokens
 
-        token_used = self.access_token
-        self._authorize(request)
-        response = yield request
-        if response.status_code != 401:
-            return
+    async def get_client_info(self) -> OAuthClientInformationFull | None:
+        return self._client_info
 
-        async with self._refresh_lock:
-            if self.access_token == token_used:
-                refresh_response = yield self._refresh_request()
-                await self._save_tokens(refresh_response)
-            self._authorize(request)
-        yield request
+    async def set_client_info(self, client_info: OAuthClientInformationFull) -> None:
+        self._client_info = client_info
+
+
+class HeadlessOAuthClientProvider(OAuthClientProvider):
+    """OAuth provider that discovers endpoints and only permits refresh."""
+
+    async def _refresh_token(self) -> httpx2.Request:
+        storage = self.context.storage
+        if isinstance(storage, RequestOAuthTokenStorage):
+            storage.refresh_attempted = True
+        return await super()._refresh_token()
+
+    async def _perform_authorization(self) -> httpx2.Request:
+        if not self.context.can_refresh_token():
+            raise RuntimeError("MCP OAuth refresh requires a refresh token")
+        return await self._refresh_token()
 
 
 async def _check_auth(
@@ -168,9 +184,7 @@ class PersistentMCPClient:
         retry_delay: float = 1.0,
         refresh_token: str | None = None,
         client_id: str | None = None,
-        token_endpoint: str | None = None,
-        oauth_resource: str | None = None,
-        on_tokens_refreshed: Callable[[str, str], None] | None = None,
+        client_secret: str | None = None,
         **_: Any,
     ) -> None:
         self.command_or_url = command_or_url
@@ -181,19 +195,28 @@ class PersistentMCPClient:
         self.sse_read_timeout = sse_read_timeout
         self._max_retries = max_retries
         self._retry_delay = retry_delay
-        self.auth = (
-            RefreshTokenAuth(
+        self.oauth_storage = (
+            RequestOAuthTokenStorage(
                 access_token=self.headers.get("Authorization", "").removeprefix(
                     "Bearer "
                 )
                 or None,
                 refresh_token=refresh_token,
                 client_id=client_id,
-                token_endpoint=token_endpoint,
-                resource=oauth_resource,
-                on_tokens_refreshed=on_tokens_refreshed,
+                client_secret=client_secret,
             )
-            if refresh_token and client_id and token_endpoint
+            if refresh_token and client_id
+            else None
+        )
+        self.auth = (
+            HeadlessOAuthClientProvider(
+                server_url=command_or_url,
+                client_metadata=OAuthClientMetadata(
+                    redirect_uris=["http://127.0.0.1/mcp-oauth"]
+                ),
+                storage=self.oauth_storage,
+            )
+            if self.oauth_storage
             else None
         )
 
@@ -201,6 +224,14 @@ class PersistentMCPClient:
         self._session_context: AsyncExitStack | None = None
         self._session_lock = asyncio.Lock()
         self._closed = False
+
+    @property
+    def refresh_attempted(self) -> bool:
+        return bool(self.oauth_storage and self.oauth_storage.refresh_attempted)
+
+    @property
+    def refreshed_tokens(self) -> tuple[str, str, str | None] | None:
+        return self.oauth_storage.refreshed_tokens if self.oauth_storage else None
 
     async def _create_session(self) -> ClientSession:
         """Create and initialize a new MCP session, keeping resources open."""

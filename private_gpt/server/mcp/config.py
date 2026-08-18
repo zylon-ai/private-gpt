@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 
 class McpServerToolConfig(BaseModel):
@@ -19,6 +19,8 @@ class McpServerToolConfig(BaseModel):
 
 class McpServerConfig(BaseModel):
     """Configuration for the MCP server."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     name: str | None = Field(
         default="mcp",
@@ -39,17 +41,15 @@ class McpServerConfig(BaseModel):
         default=None,
         description="The OAuth client ID associated with the refresh token.",
     )
-    token_endpoint: str | None = Field(
+    client_secret: str | None = Field(
         default=None,
-        description="The OAuth token endpoint used to refresh the authorization token.",
+        description="The optional OAuth client secret associated with the client ID.",
     )
-    oauth_resource: str | None = Field(
-        default=None,
-        description="The OAuth resource associated with the MCP server.",
-    )
-    artifact_id: str | None = Field(
-        default=None,
-        description="The Zylon artifact ID associated with this MCP server.",
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        validation_alias=AliasChoices("_meta", "metadata"),
+        serialization_alias="_meta",
+        description="Opaque metadata copied into internal MCP events.",
     )
     tool_configuration: McpServerToolConfig = Field(
         default_factory=McpServerToolConfig,
@@ -66,11 +66,7 @@ class McpServerConfig(BaseModel):
     @model_validator(mode="after")
     def validate_refresh_token_config(self) -> "McpServerConfig":
         if self.refresh_token:
-            missing = [
-                name
-                for name in ("client_id", "token_endpoint")
-                if not getattr(self, name)
-            ]
+            missing = [name for name in ("client_id",) if not getattr(self, name)]
             if missing:
                 raise ValueError(f"refresh_token requires {', '.join(missing)}")
         return self

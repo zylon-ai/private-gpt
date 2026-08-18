@@ -1,6 +1,5 @@
 import base64
-from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
 from injector import singleton
@@ -11,7 +10,6 @@ from llama_index.core.base.llms.types import (
     TextBlock,
 )
 
-from private_gpt.events.models._events import McpTokensRefreshedEvent
 from private_gpt.server.mcp.config import McpServerConfig
 from private_gpt.utils.dependencies import format_missing_dependency_message
 
@@ -106,26 +104,12 @@ class McpToolDefinition:
         )
 
 
-@dataclass
-class McpToolExecutionResult:
-    """Internal MCP result that keeps refresh events out of tool content."""
-
-    result: "CallToolResult | None" = None
-    error: BaseException | None = None
-    events: list[McpTokensRefreshedEvent] = field(default_factory=list)
-
-
 class McpClient:
     """MCP client that preserves original tool schemas and invokes tools directly."""
 
-    def __init__(
-        self,
-        config: McpServerConfig,
-        emit_event: Callable[[McpTokensRefreshedEvent], None] | None = None,
-    ) -> None:
+    def __init__(self, config: McpServerConfig) -> None:
         self.config = config
         self.client: PersistentMCPClient | None = None
-        self._emit_event = emit_event
 
         persistent_mcp_client_cls = _load_runtime()
 
@@ -139,26 +123,28 @@ class McpClient:
             timeout=10 * 60,
             refresh_token=config.refresh_token,
             client_id=config.client_id,
-            token_endpoint=config.token_endpoint,
-            oauth_resource=config.oauth_resource,
-            on_tokens_refreshed=self._save_refreshed_tokens,
+            client_secret=config.client_secret,
         )
 
-    def _save_refreshed_tokens(self, access_token: str, refresh_token: str) -> None:
-        previous_refresh_token = self.config.refresh_token
-        self.config.authorization_token = access_token
-        self.config.refresh_token = refresh_token
-        if self.config.artifact_id and self._emit_event:
-            if previous_refresh_token is None:
-                raise RuntimeError("MCP refresh token state is missing")
-            self._emit_event(
-                McpTokensRefreshedEvent(
-                    artifact_id=self.config.artifact_id,
-                    previous_refresh_token=previous_refresh_token,
-                    authorization_token=access_token,
-                    refresh_token=refresh_token,
-                )
-            )
+    @property
+    def refresh_attempted(self) -> bool:
+        return bool(self.client and self.client.refresh_attempted)
+
+    @property
+    def refreshed_tokens(self) -> tuple[str, str, str | None] | None:
+        return self.client.refreshed_tokens if self.client else None
+
+    def _sync_tokens(self) -> None:
+        from private_gpt.server.mcp._runtime import MISSING_ACCESS_TOKEN
+
+        storage = self.client.oauth_storage if self.client else None
+        if storage is None:
+            return
+        tokens = storage.tokens
+        if tokens.access_token != MISSING_ACCESS_TOKEN:
+            self.config.authorization_token = tokens.access_token
+        if tokens.refresh_token:
+            self.config.refresh_token = tokens.refresh_token
 
     async def list_tools(self) -> list[McpToolDefinition]:
         """List tools from the MCP server using the original input schema."""
@@ -171,7 +157,10 @@ class McpClient:
         ):
             return []
 
-        response = await self.client.list_tools()
+        try:
+            response = await self.client.list_tools()
+        finally:
+            self._sync_tokens()
         allowed = self.config.tool_configuration.allowed_tools
 
         tools: list[McpToolDefinition] = []
@@ -195,13 +184,9 @@ class McpClient:
 
 @singleton
 class McpService:
-    def create_client(
-        self,
-        config: McpServerConfig,
-        emit_event: Callable[[McpTokensRefreshedEvent], None] | None = None,
-    ) -> McpClient:
+    def create_client(self, config: McpServerConfig) -> McpClient:
         """Create a new MCP client with the given configuration."""
-        return McpClient(config, emit_event=emit_event)
+        return McpClient(config)
 
 
 def mcp_tool_to_spec(config: McpServerConfig, tool: McpToolDefinition) -> "ToolSpec":
@@ -231,23 +216,16 @@ def rebuild_mcp_tool(
     )
 
     async def invoke_mcp_tool(**kwargs: object) -> object:
-        events: list[McpTokensRefreshedEvent] = []
-        client = McpClient(config, emit_event=events.append)
+        client = McpClient(config)
         try:
-            try:
-                tools = await client.list_tools()
-                available = {item.name for item in tools}
-                if tool_name not in available:
-                    raise ValueError(
-                        f"MCP tool {tool_name!r} is no longer available from "
-                        f"server {config.name!r}."
-                    )
-                result = await client.call_tool(tool_name, dict(kwargs))
-            except Exception as error:
-                if events:
-                    return McpToolExecutionResult(error=error, events=events)
-                raise
-            return McpToolExecutionResult(result=result, events=events)
+            tools = await client.list_tools()
+            available = {item.name for item in tools}
+            if tool_name not in available:
+                raise ValueError(
+                    f"MCP tool {tool_name!r} is no longer available from "
+                    f"server {config.name!r}."
+                )
+            return await client.call_tool(tool_name, dict(kwargs))
         finally:
             await client.close()
 
