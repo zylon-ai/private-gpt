@@ -16,8 +16,7 @@ from private_gpt.utils.dataframe import df_to_minimal_markdown
 
 
 def format_datetime_value(value: Any) -> Any:
-    """Render midnight timestamps as date-only so pure date values do not
-    show a redundant ``00:00:00`` time component."""
+    """Render midnight timestamps as date-only instead of showing ``00:00:00``."""
     if isinstance(value, (pd.Timestamp, datetime.datetime, np.datetime64)):
         try:
             ts = pd.Timestamp(value)

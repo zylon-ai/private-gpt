@@ -53,9 +53,9 @@ class DataFramePreprocessor:
             return False
 
         # Check if enough values can be converted to numeric
-        numeric_count = pd.to_numeric(
-            non_empty.astype(str), errors="coerce"
-        ).notna().sum()
+        numeric_count = (
+            pd.to_numeric(non_empty.astype(str), errors="coerce").notna().sum()
+        )
 
         return numeric_count / len(non_empty) >= self.min_numeric_ratio
 

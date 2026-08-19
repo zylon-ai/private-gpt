@@ -141,6 +141,7 @@ class ParseComponent:
         warnings: list[str] | None,
     ) -> tuple[list, str | None]:
         """Tries readers in a chain for a given file/extension.
+
         Returns (nodes, reader_used), or ([], None) if all of them fail.
         """
         reader = preferred_reader or self._resolve_reader(extension)

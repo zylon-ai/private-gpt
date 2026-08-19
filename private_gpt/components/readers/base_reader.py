@@ -63,7 +63,7 @@ class IngestionReader(BaseComponent):
         transformations: Iterable[TransformComponent],
         file_name: str | None,
     ) -> list[BaseNode]:
-        """Run transformations, logging the time taken by each when debug logging is on."""
+        """Logging the time taken by each when debug logging is on."""
         if not logger.isEnabledFor(logging.DEBUG):
             return list(await arun_transformations(list(nodes), list(transformations)))
 

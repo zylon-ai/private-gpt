@@ -97,7 +97,7 @@ def test_table_node_model_dump_json_with_mixed_timezone_datetimes() -> None:
     columns of plain datetime.datetime values (not pd.Timestamp/np.datetime64),
     which must still be JSON-serializable via model_dump(mode="json")."""
     naive = datetime.datetime(2021, 5, 3, 12, 0, 0)
-    aware = datetime.datetime(2021, 5, 1, 10, 0, 0, tzinfo=datetime.timezone.utc)
+    aware = datetime.datetime(2021, 5, 1, 10, 0, 0, tzinfo=datetime.UTC)
     df = pd.DataFrame(
         {
             "date_col": pd.Series([aware, naive], dtype="object"),
