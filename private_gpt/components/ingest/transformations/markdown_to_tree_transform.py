@@ -6,6 +6,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, Tag
 from llama_index.core.schema import MetadataMode, TransformComponent
+from markdownify import MarkdownConverter  # ty:ignore[unresolved-import]
 from mistune import HTMLRenderer, create_markdown  # ty:ignore[unresolved-import]
 from pydantic import Field
 
@@ -27,6 +28,9 @@ if TYPE_CHECKING:
     from llama_index.core.schema import BaseNode
 
     from private_gpt.components.readers.nodes.tree_node import TreeNode
+
+
+_MD_CONVERTER = MarkdownConverter(heading_style="ATX")
 
 
 class MarkdownTreeNodeParser(TransformComponent):
@@ -104,14 +108,14 @@ class MarkdownTreeNodeParser(TransformComponent):
         strips bold/italic markers for body text - formatting that must
         be preserved inside table cells.
         """
-        from markdownify import markdownify as md  # ty:ignore[unresolved-import]
-
         parts = []
         for child in cell.contents:
             if isinstance(child, NavigableString):
                 parts.append(str(child).strip())
             elif isinstance(child, Tag):
-                markdown = md(str(child), heading_style="ATX").replace("\\", "")
+                markdown = _MD_CONVERTER.process_tag(
+                    child, convert_as_inline=False
+                ).replace("\\", "")
                 parts.append(markdown.strip())
         return " ".join(p for p in parts if p).strip()
 
@@ -245,12 +249,10 @@ class MarkdownTreeNodeParser(TransformComponent):
 
     def _convert_tag_to_markdown(self, element: Tag | NavigableString) -> str:
         """Convert a BeautifulSoup element to markdown while preserving formatting."""
-        from markdownify import markdownify as md  # ty:ignore[unresolved-import]
-
         if isinstance(element, NavigableString):
             return element
         else:
-            markdown: str = md(str(element), heading_style="ATX")
+            markdown: str = _MD_CONVERTER.process_tag(element, convert_as_inline=False)
             markdown = markdown.replace("\\", "")
             markdown = MarkdownHelper.sanitize_markdown(markdown)
             return markdown
