@@ -1,10 +1,19 @@
-from llama_index.core.base.llms.types import ChatMessage, MessageRole
+from types import SimpleNamespace
 
+import pytest
+from llama_index.core.base.llms.types import ChatMessage, MessageRole
+from llama_index.core.llms.llm import ToolSelection
+
+from private_gpt.chat.input_models import MessageInput
+from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
 from private_gpt.components.tools.tool_names import (
     SKILL_LOAD_TOOL_NAME,
     SKILL_UNLOAD_TOOL_NAME,
 )
 from private_gpt.events.models import NO_TOOL_CONTENT
+from private_gpt.server.chat.interceptors.server_tool_result_text_interceptor import (
+    ServerToolResultTextInterceptor,
+)
 from private_gpt.server.chat.interceptors.skills_loop_interceptor import (
     _resolve_active_skill_names,
     _resolve_skill_states,
@@ -99,3 +108,176 @@ def test_resolve_skill_states_unload_falls_back_to_tool_call_args() -> None:
     active, removed = _resolve_skill_states(messages)
     assert active == set()
     assert removed == {"skill-creator"}
+
+
+def test_resolve_skill_states_from_assistant_tool_calls_without_tool_result() -> None:
+    messages = [
+        ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="I'll load skill-creator.",
+            additional_kwargs={
+                "tool_calls": [
+                    ToolSelection(
+                        tool_id="srvtoolu_load_skill_1",
+                        tool_name=SKILL_LOAD_TOOL_NAME,
+                        tool_kwargs={"name": "skill-creator"},
+                    )
+                ]
+            },
+        ),
+        ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="Great! Let me help you create a skill.",
+        ),
+        ChatMessage(
+            role=MessageRole.USER,
+            content="Can you draft a version based on that?",
+        ),
+    ]
+
+    assert _resolve_active_skill_names(messages) == {"skill-creator"}
+
+
+def test_resolve_skill_states_failed_load_result_overrides_assistant_tool_call() -> (
+    None
+):
+    messages = [
+        ChatMessage(
+            role=MessageRole.ASSISTANT,
+            additional_kwargs={
+                "tool_calls": [
+                    ToolSelection(
+                        tool_id="tu_load",
+                        tool_name=SKILL_LOAD_TOOL_NAME,
+                        tool_kwargs={"name": "skill-creator"},
+                    )
+                ]
+            },
+        ),
+        _tool_message(
+            call_name=SKILL_LOAD_TOOL_NAME,
+            content='{"name": "skill-creator", "error": "missing"}',
+            args={"name": "skill-creator"},
+        ),
+    ]
+
+    assert _resolve_active_skill_names(messages) == set()
+
+
+def test_resolve_skill_states_from_user_tool_response_json() -> None:
+    messages = [
+        ChatMessage(
+            role=MessageRole.USER,
+            content='<tool_response>\n{"name": "skill-creator", "loaded": true}\n</tool_response>',
+        )
+    ]
+
+    assert _resolve_active_skill_names(messages) == {"skill-creator"}
+
+
+_CLIENT_FOLLOWUP_HISTORY = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "Create a skill for building internal metrics dashboards.",
+            }
+        ],
+    },
+    {
+        "role": "assistant",
+        "content": [
+            {
+                "type": "text",
+                "text": "I'll help you create a skill for building internal metrics dashboards. Let me first check what skills are available and then create a new one tailored to your needs.\n\n",
+            },
+            {
+                "type": "server_tool_use",
+                "id": "srvtoolu_list_skills_1",
+                "name": "list_skills",
+                "input": {"page": 0, "page_size": 20},
+            },
+            {
+                "type": "server_tool_result",
+                "tool_use_id": "srvtoolu_list_skills_1",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": '{"skills": [{"name": "skill-creator", "description": "Create new skills"}], "page": 0, "page_size": 20, "total": 1, "has_more": false}',
+                    }
+                ],
+                "is_error": False,
+            },
+            {
+                "type": "text",
+                "text": "I'll help you create a skill for building internal metrics dashboards. Let me start by loading the skill-creator tool which will allow us to build this new capability.\n\n",
+            },
+            {
+                "type": "server_tool_use",
+                "id": "srvtoolu_load_skill_1",
+                "name": "load_skill",
+                "input": {"name": "skill-creator"},
+            },
+            {
+                "type": "server_tool_result",
+                "tool_use_id": "srvtoolu_load_skill_1",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": '{"name": "skill-creator", "loaded": true}',
+                    }
+                ],
+                "is_error": False,
+            },
+            {
+                "type": "text",
+                "text": "Great! Let me help you create a skill for building internal metrics dashboards.",
+            },
+        ],
+    },
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "Let's go with a mix of technical and operational metrics. Can you draft a version based on that?",
+            }
+        ],
+    },
+]
+
+
+def test_client_history_with_server_tool_load_keeps_skill_creator_loaded() -> None:
+    messages = MessageInput.convert_from_llama_index_messages(
+        [MessageInput.model_validate(message) for message in _CLIENT_FOLLOWUP_HISTORY]
+    )
+
+    load_msgs = [
+        msg
+        for msg in messages
+        if msg.role == MessageRole.TOOL
+        and msg.additional_kwargs.get("tool_call_name") == SKILL_LOAD_TOOL_NAME
+    ]
+    assert load_msgs, (
+        "load_skill server_tool_result must become a TOOL message with tool_call_name"
+    )
+    assert _resolve_active_skill_names(messages) == {"skill-creator"}
+
+
+@pytest.mark.anyio
+async def test_client_history_still_loaded_after_server_tool_result_rewrite() -> None:
+    messages = MessageInput.convert_from_llama_index_messages(
+        [MessageInput.model_validate(message) for message in _CLIENT_FOLLOWUP_HISTORY]
+    )
+    state = SimpleNamespace(
+        input=SimpleNamespace(request=SimpleNamespace(messages=messages))
+    )
+    context = SimpleNamespace(phase=InterceptorPhase.BEFORE_ITERATION, state=state)
+    context.set_state = lambda new_state: None
+
+    await ServerToolResultTextInterceptor().intercept(context)
+
+    assert _resolve_active_skill_names(context.state.input.request.messages) == {
+        "skill-creator"
+    }

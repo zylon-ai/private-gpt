@@ -157,6 +157,97 @@ def _assistant_load_history(skill_name: str) -> dict[str, Any]:
     }
 
 
+def _assistant_server_tool_load_history(skill_name: str) -> dict[str, Any]:
+    """Client follow-up history: list_skills + load_skill as server tool blocks."""
+    list_id = "srvtoolu_fa9fc7a760314303a8e00126e973631f"
+    load_id = "srvtoolu_95b5b4bca35c4db883f08d9762b9b5ee"
+    return {
+        "role": "assistant",
+        "content": [
+            {
+                "type": "text",
+                "text": "I'll help you create a skill. Let me first check what skills are available.\n\n",
+                "start_timestamp": "2026-08-19T13:47:22.448574Z",
+                "stop_timestamp": "2026-08-19T13:47:22.850456Z",
+            },
+            {
+                "type": "server_tool_use",
+                "id": list_id,
+                "name": "list_skills",
+                "input": {"page": 0, "page_size": 20},
+                "start_timestamp": "2026-08-19T13:47:22.925823Z",
+                "stop_timestamp": "2026-08-19T13:47:23.336161Z",
+            },
+            {
+                "type": "server_tool_result",
+                "tool_use_id": list_id,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "skills": [
+                                    {
+                                        "name": skill_name,
+                                        "description": f"{skill_name} description",
+                                    }
+                                ],
+                                "page": 0,
+                                "page_size": 20,
+                                "total": 1,
+                                "has_more": False,
+                            }
+                        ),
+                    }
+                ],
+                "is_error": False,
+                "start_timestamp": "2026-08-19T13:47:23.351800Z",
+                "stop_timestamp": "2026-08-19T13:47:23.351871Z",
+            },
+            {
+                "type": "text",
+                "text": "Let me start by loading the skill-creator tool.\n\n",
+                "start_timestamp": "2026-08-19T13:47:26.178468Z",
+                "stop_timestamp": "2026-08-19T13:47:26.948111Z",
+            },
+            {
+                "type": "server_tool_use",
+                "id": load_id,
+                "name": "load_skill",
+                "input": {"name": skill_name},
+                "start_timestamp": "2026-08-19T13:47:26.982531Z",
+                "stop_timestamp": "2026-08-19T13:47:27.075400Z",
+            },
+            {
+                "type": "server_tool_result",
+                "tool_use_id": load_id,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "name": skill_name,
+                                "skill_id": "dummy",
+                                "version": "dummy",
+                                "loaded": True,
+                            }
+                        ),
+                    }
+                ],
+                "is_error": False,
+                "start_timestamp": "2026-08-19T13:47:27.088033Z",
+                "stop_timestamp": "2026-08-19T13:47:27.088100Z",
+            },
+            {
+                "type": "text",
+                "text": "Great! Let me help you create a skill.",
+                "start_timestamp": "2026-08-19T13:47:30.751553Z",
+                "stop_timestamp": "2026-08-19T13:47:36.252591Z",
+            },
+        ],
+    }
+
+
 def _assistant_load_history_many(skill_names: list[str]) -> dict[str, Any]:
     blocks: list[dict[str, Any]] = []
     for idx, name in enumerate(skill_names):
@@ -425,6 +516,66 @@ async def test_skill_injection_mode_tool_result_includes_full_body_only_in_tool_
         second_response = await async_test_client.post("/v1/messages", json=second_body)
         assert second_response.status_code == 200
         assert sentinel not in capture.system_prompts[-1]
+    finally:
+        settings.skills.skill_injection_mode = previous_mode
+
+
+@pytest.mark.anyio
+async def test_client_followup_with_server_tool_load_keeps_skill_body(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    collection = str(uuid.uuid4())
+    sentinel = "SKILL_CREATOR_BODY_SENTINEL"
+    await _create_skill(
+        async_test_client,
+        collection=collection,
+        name="skill-creator",
+        loading="lazy",
+        body=sentinel,
+    )
+
+    settings = injector.get(Settings)
+    previous_mode = settings.skills.skill_injection_mode
+    settings.skills.skill_injection_mode = "system_prompt"
+    try:
+        capture = SkillChatCapture()
+        await mock_llm_with_capture(injector, capture)
+
+        body = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Create a skill for building internal metrics dashboards.",
+                        }
+                    ],
+                },
+                _assistant_server_tool_load_history("skill-creator"),
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Can you draft a version based on that?",
+                        }
+                    ],
+                },
+            ],
+            "tools": [{"name": "skills", "type": "skills_v1"}],
+            "tool_context": [
+                {"type": "skill", "skill_filter": {"collection": collection}}
+            ],
+        }
+        response = await async_test_client.post("/v1/messages", json=body)
+        assert response.status_code == 200, response.text
+        prompt = capture.system_prompts[-1]
+        assert sentinel in prompt
+        assert "<skill_content" in prompt
+        assert "<available_skills>" not in prompt
+        assert SKILL_UNLOAD_TOOL_NAME in capture.tool_names_per_call[-1]
+        assert SKILL_LOAD_TOOL_NAME not in capture.tool_names_per_call[-1]
     finally:
         settings.skills.skill_injection_mode = previous_mode
 

@@ -1,3 +1,4 @@
+import json
 import logging
 from collections.abc import Sequence
 from typing import Any, Literal
@@ -9,6 +10,7 @@ from llama_index.core.base.llms.types import (
     ImageBlock,
     MessageRole,
 )
+from llama_index.core.llms.llm import ToolSelection
 from llama_index.core.tools import BaseTool
 
 from private_gpt.components.llm.models import ReasoningEffort
@@ -24,6 +26,27 @@ logger = logging.getLogger(__name__)
 ChatTemplateContentFormat = Literal["string", "openai"]
 
 _FALLBACK_USER_MESSAGE = {"role": "user", "content": ""}
+
+
+def _serialize_tool_calls(tool_calls: Any) -> list[dict[str, Any]]:
+    if not isinstance(tool_calls, list):
+        return []
+    serialized: list[dict[str, Any]] = []
+    for item in tool_calls:
+        if isinstance(item, ToolSelection):
+            serialized.append(
+                {
+                    "id": item.tool_id,
+                    "type": "function",
+                    "function": {
+                        "name": item.tool_name,
+                        "arguments": json.dumps(item.tool_kwargs or {}),
+                    },
+                }
+            )
+        elif isinstance(item, dict):
+            serialized.append(item)
+    return serialized
 
 
 class ChatTemplatePromptStyle(PromptStyleBase):
@@ -132,9 +155,22 @@ class ChatTemplatePromptStyle(PromptStyleBase):
     def _sanitize_conversation(
         conversation: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        # Drop non-user/assistant/system messages that some templates reject
-        allowed_roles = {"system", "user", "assistant"}
-        sanitized = [m for m in conversation if m.get("role") in allowed_roles]
+        # Templates that reject `tool` still need the observation. Rewrite it as
+        # a user <tool_response> block instead of dropping the turn.
+        sanitized: list[dict[str, Any]] = []
+        for msg in conversation:
+            role = msg.get("role")
+            if role in {"system", "user", "assistant"}:
+                sanitized.append(msg)
+                continue
+            if role not in {"tool", "tool_results"}:
+                continue
+            content = msg.get("content") or ""
+            if not isinstance(content, str):
+                content = str(content)
+            if "<tool_response>" not in content:
+                content = f"<tool_response>\n{content}\n</tool_response>"
+            sanitized.append({"role": "user", "content": content})
 
         # Ensure there is at least one user message
         has_user = any(m.get("role") == "user" for m in sanitized)
@@ -152,12 +188,22 @@ class ChatTemplatePromptStyle(PromptStyleBase):
         openai_dicts: list[dict[str, Any]] = []
 
         for message in messages:
+            # Do not spread additional_kwargs: Renderable tool payloads and
+            # ToolSelection objects break chat templates, which then drop TOOL
+            # turns in `_sanitize_conversation`.
             msg_dict: dict[str, Any] = {
-                **message.additional_kwargs,
                 "role": message.role.value,
                 "content": message.content or "",
             }
-
+            kwargs = message.additional_kwargs or {}
+            serialized_calls = _serialize_tool_calls(kwargs.get("tool_calls"))
+            if serialized_calls:
+                msg_dict["tool_calls"] = serialized_calls
+            if tool_call_id := kwargs.get("tool_call_id"):
+                msg_dict["tool_call_id"] = tool_call_id
+            name = kwargs.get("tool_call_name") or kwargs.get("name")
+            if name:
+                msg_dict["name"] = name
             openai_dicts.append(msg_dict)
 
         if self._content_format == "string":
