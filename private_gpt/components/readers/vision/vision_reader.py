@@ -189,7 +189,7 @@ class VisionReader(IngestionReader):
         transformed_nodes = await self._run_transformations_with_timing(
             docs,
             vision_docs_transformations(
-                reader_settings=self._reader_settings, vision_mode=vision_mode
+                reader_settings=self._reader_settings
             ),
             file_info.file_name,
         )
