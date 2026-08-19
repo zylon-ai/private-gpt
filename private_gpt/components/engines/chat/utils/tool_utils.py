@@ -43,6 +43,93 @@ def select_tool_names(
     return [name for name in tool_names if name in tool_choices]
 
 
+def _stream_tool_call_id(tool_call: Any) -> str | None:
+    """Return a stable id from ToolSelection (``tool_id``) or OpenAI deltas (``id``)."""
+    if isinstance(tool_call, dict):
+        ident = tool_call.get("tool_id") or tool_call.get("id")
+    else:
+        # Pydantic OpenAI models raise AttributeError for unknown fields, so
+        # getattr with a default is required (``tc.tool_id`` crashes).
+        ident = getattr(tool_call, "tool_id", None) or getattr(tool_call, "id", None)
+    if ident is None:
+        return None
+    ident_str = str(ident).strip()
+    return ident_str or None
+
+
+def _stream_tool_call_index(tool_call: Any) -> int | None:
+    if isinstance(tool_call, dict):
+        index = tool_call.get("index")
+    else:
+        index = getattr(tool_call, "index", None)
+    return index if isinstance(index, int) else None
+
+
+def _accumulate_openai_tool_call(current: Any, delta: Any) -> Any:
+    """Fold an OpenAI ``ChoiceDeltaToolCall`` argument/name fragment into *current*."""
+    current_fn = getattr(current, "function", None)
+    delta_fn = getattr(delta, "function", None)
+    if current_fn is None or delta_fn is None:
+        return current
+
+    if current_fn.arguments is None:
+        current_fn.arguments = ""
+    if current_fn.name is None:
+        current_fn.name = ""
+
+    current_fn.arguments += delta_fn.arguments or ""
+    current_fn.name += delta_fn.name or ""
+    delta_id = getattr(delta, "id", None) or ""
+    if delta_id:
+        current.id = (getattr(current, "id", None) or "") + delta_id
+    delta_type = getattr(delta, "type", None)
+    if delta_type and getattr(current, "type", None) is None:
+        current.type = delta_type
+    return current
+
+
+def merge_stream_tool_calls(existing: list[Any], incoming: list[Any]) -> list[Any]:
+    """Merge streamed tool-call payloads from consecutive LLM chunks.
+
+    Providers typically emit either:
+
+    - ``ToolSelection`` objects keyed by ``tool_id``
+    - OpenAI ``ChoiceDeltaToolCall`` objects keyed by ``id`` (and ``index``)
+
+    LlamaIndex's OpenAI adapter already accumulates argument fragments before
+    yielding, so later snapshots with the same id replace earlier ones. Raw
+    OpenAI deltas without an id (argument-only fragments) are folded onto the
+    matching ``index`` so the complete call can be sent back on the next turn.
+    """
+    merged: list[Any] = list(existing)
+
+    def _find(ident: str | None, index: int | None) -> int | None:
+        for i, tool_call in enumerate(merged):
+            if ident and _stream_tool_call_id(tool_call) == ident:
+                return i
+            if (
+                ident is None
+                and index is not None
+                and _stream_tool_call_index(tool_call) == index
+            ):
+                return i
+        return None
+
+    for tool_call in incoming:
+        ident = _stream_tool_call_id(tool_call)
+        index = _stream_tool_call_index(tool_call)
+        pos = _find(ident, index)
+        if pos is None:
+            merged.append(tool_call)
+            continue
+        if ident:
+            # Identified snapshot (ToolSelection or accumulated OpenAI call).
+            merged[pos] = tool_call
+        else:
+            merged[pos] = _accumulate_openai_tool_call(merged[pos], tool_call)
+    return merged
+
+
 async def execute_tool_call(
     tool: AsyncBaseTool,
     tool_name: str,
