@@ -1,7 +1,7 @@
 import json
 import logging
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from injector import inject, singleton
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
@@ -41,6 +41,21 @@ logger = logging.getLogger(__name__)
 _SKILL_TOOL_CALL_NAMES = {SKILL_LOAD_TOOL_NAME, SKILL_UNLOAD_TOOL_NAME}
 
 
+def _parse_tool_result_content(content: str | None) -> dict[str, Any] | None:
+    if not isinstance(content, str) or not content.strip():
+        return None
+    try:
+        parsed = json.loads(content)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _tool_call_args(msg: ChatMessage) -> dict[str, Any]:
+    args = msg.additional_kwargs.get("tool_call_args")
+    return args if isinstance(args, dict) else {}
+
+
 def _resolve_skill_states(
     conversation: list[ChatMessage],
     maximum_loaded_skills: int | None = None,
@@ -50,6 +65,10 @@ def _resolve_skill_states(
     active: currently loaded skills (load_skill called, no subsequent unload).
     to_remove: skills explicitly unloaded or evicted due to capacity limit.
     Skills never interacted with appear in neither set.
+
+    Prefer the tool-result JSON payload. If later interceptors rewrote the
+    visible content, fall back to ``tool_call_args`` so a loaded skill is not
+    dropped from the sandbox.
     """
     loaded_order: list[str] = []
     to_remove: set[str] = set()
@@ -59,11 +78,10 @@ def _resolve_skill_states(
         call_name = msg.additional_kwargs.get("tool_call_name")
         if call_name not in _SKILL_TOOL_CALL_NAMES:
             continue
-        try:
-            data = json.loads(msg.content or "{}")
-        except (json.JSONDecodeError, TypeError):
-            continue
-        skill_name = data.get("name")
+        parsed = _parse_tool_result_content(msg.content)
+        args = _tool_call_args(msg)
+        data = parsed if parsed is not None else args
+        skill_name = data.get("name") or args.get("name")
         if not skill_name:
             continue
         if call_name == SKILL_LOAD_TOOL_NAME and "error" not in data:
@@ -77,7 +95,9 @@ def _resolve_skill_states(
             ):
                 evicted = loaded_order.pop(0)
                 to_remove.add(evicted)
-        elif call_name == SKILL_UNLOAD_TOOL_NAME and data.get("unloaded"):
+        elif call_name == SKILL_UNLOAD_TOOL_NAME and (
+            (parsed is not None and data.get("unloaded")) or parsed is None
+        ):
             if skill_name in loaded_order:
                 loaded_order.remove(skill_name)
             to_remove.add(skill_name)
