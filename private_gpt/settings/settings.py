@@ -1966,9 +1966,7 @@ class Settings(BaseModel):
     huggingface: HuggingFaceSettings
     openai: OpenAISettings
     docling: DoclingSettings
-    pdf_inspector: PdfInspectorSettings = Field(
-        default_factory=lambda: PdfInspectorSettings()
-    )
+    pdf_inspector: PdfInspectorSettings
     vectorstore: VectorstoreSettings
     node_store: NodeStoreSettings
     qdrant: QdrantSettings

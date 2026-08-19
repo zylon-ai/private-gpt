@@ -86,12 +86,12 @@ class ParseComponent:
             return file_info, errors, warnings
 
     def file_to_nodes(
-            self,
-            file_info: FileInfo,
-            file_metadata: dict[str, Any] | None = None,
-            reader_name: str | None = None,
-            notification: NotifyProtocol | None = None,
-            warnings: list[str] | None = None,
+        self,
+        file_info: FileInfo,
+        file_metadata: dict[str, Any] | None = None,
+        reader_name: str | None = None,
+        notification: NotifyProtocol | None = None,
+        warnings: list[str] | None = None,
     ) -> FileParseResult:
         converted_file = convert_unsupported_file(file_info)
 
@@ -132,13 +132,13 @@ class ParseComponent:
         return FileParseResult(nodes=nodes, reader=resolved_reader)
 
     def _try_readers(
-            self,
-            file_obj,
-            file_metadata: dict[str, Any] | None,
-            extension: str | None,
-            preferred_reader: str | None,
-            notification: NotifyProtocol | None,
-            warnings: list[str] | None,
+        self,
+        file_obj,
+        file_metadata: dict[str, Any] | None,
+        extension: str | None,
+        preferred_reader: str | None,
+        notification: NotifyProtocol | None,
+        warnings: list[str] | None,
     ) -> tuple[list, str | None]:
         """Tries readers in a chain for a given file/extension.
         Returns (nodes, reader_used), or ([], None) if all of them fail.
@@ -176,11 +176,11 @@ class ParseComponent:
         (e.g. pdf-inspector -> docling) without hardcoding a specific name.
         """
         names = self.reader_component.get_reader_names(extension=extension or "")
-        try:
-            index = names.index(current_reader)
-        except ValueError:
-            return None
-        return names[index + 1] if index + 1 < len(names) else None
+        names_iter = iter(names)
+        for name in names_iter:
+            if name == current_reader:
+                return next(names_iter, None)
+        return None
 
     def _get_file_info(
         self,

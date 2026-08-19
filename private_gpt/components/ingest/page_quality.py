@@ -13,7 +13,8 @@ check for each one.
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+
+from pydantic import BaseModel, ConfigDict
 
 _SEPARATOR_ROW_RE = re.compile(r"\|[\s:|-]+\|")
 _WORD_RE = re.compile(r"\S+")
@@ -155,10 +156,9 @@ def has_any_text(markdown: str) -> bool:
     return bool(markdown.strip())
 
 
-@dataclass(frozen=True)
-class QualityIssue:
+class QualityIssue(BaseModel):
     """A quality dimension that failed for a document."""
-
+    model_config = ConfigDict(frozen=True)
     name: str
     reason: str
 
@@ -166,8 +166,7 @@ class QualityIssue:
 PageChecker = Callable[[str], bool]
 
 
-@dataclass(frozen=True)
-class QualityFilter:
+class QualityFilter(BaseModel):
     """A single document-level quality dimension.
 
     `applies` decides whether a page counts towards this filter's ratio at
@@ -176,7 +175,7 @@ class QualityFilter:
     dimension. The document fails this filter when the ratio of bad pages
     among applicable pages exceeds `threshold`.
     """
-
+    model_config = ConfigDict(frozen=True)
     name: str
     applies: PageChecker
     is_bad: PageChecker
