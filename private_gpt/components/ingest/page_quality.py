@@ -1,4 +1,4 @@
-"""Cheap, regex-based quality checks for pdf-inspector's per-page markdown.
+"""Regex-based quality checks for pdf-inspector's per-page markdown.
 
 Each check inspects a single page's markdown and decides whether that page
 looks mis-extracted for one quality dimension (broken table, fragmented

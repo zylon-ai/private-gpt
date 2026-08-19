@@ -30,11 +30,6 @@ if TYPE_CHECKING:
     from private_gpt.components.readers.nodes.tree_node import TreeNode
 
 
-# Reused across all tag->markdown conversions. MarkdownConverter is stateless
-# (options are fixed at construction and `process_tag` takes no mutable
-# instance state), so a single shared instance avoids re-building the options
-# dict (via _todict/dir()) on every call, which previously happened once per
-# call to `markdownify.markdownify`.
 _MD_CONVERTER = MarkdownConverter(heading_style="ATX")
 
 
