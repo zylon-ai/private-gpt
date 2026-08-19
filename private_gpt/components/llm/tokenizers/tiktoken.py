@@ -121,14 +121,6 @@ class TikTokenTokenizer(TokenizerBase):
 
         return TokenizedInput(input_ids=self._encoding.encode(str(texts)))
 
-    def count_tokens_batch(self, texts: Sequence[str]) -> list[int]:
-        """Count tokens for each text using tiktoken's native batch API."""
-        if not texts:
-            return []
-
-        encoded = self._encoding.encode_batch([str(text) for text in texts])
-        return [len(ids) for ids in encoded]
-
     def get_vocab(self) -> dict[str, int]:
         raise NotImplementedError(
             "TikTokenTokenizer does not expose a local vocabulary"

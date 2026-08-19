@@ -1,11 +1,8 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from io import IOBase
 from typing import Any
-
-_MAX_BATCH_WORKERS = 8
 
 
 @dataclass
@@ -94,25 +91,6 @@ class TokenizerBase(ABC):
     @abstractmethod
     def encode(self, text: str, add_special_tokens: bool | None = None) -> list[int]:
         raise NotImplementedError()
-
-    def count_tokens_batch(self, texts: Sequence[str]) -> list[int]:
-        """Count tokens for each text in ``texts`` independently.
-
-        Default implementation fans out `encode` calls across a thread pool,
-        which helps for backends without a native batch API (fast tokenizers
-        release the GIL during encoding). Backends with a native batch/parallel
-        encode path (e.g. HuggingFace fast tokenizers, tiktoken) should
-        override this for a single native call instead.
-        """
-        if not texts:
-            return []
-        if len(texts) == 1:
-            return [len(self.encode(texts[0]))]
-
-        with ThreadPoolExecutor(
-            max_workers=min(_MAX_BATCH_WORKERS, len(texts))
-        ) as executor:
-            return list(executor.map(lambda text: len(self.encode(text)), texts))
 
     @abstractmethod
     def support_chat_template(self, tokenizer: Any) -> bool:
