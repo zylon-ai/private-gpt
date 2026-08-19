@@ -123,7 +123,7 @@ class ParseComponent:
                     warnings=warnings,
                 )
 
-        if not nodes:
+        if not nodes or not resolved_reader:
             logger.info("No valid nodes found in the file.")
             raise InvalidFileError(
                 errors=[IngestionLoadErrors.NO_VALID_FILES], warnings=warnings
@@ -135,7 +135,7 @@ class ParseComponent:
             self,
             file_obj,
             file_metadata: dict[str, Any] | None,
-            extension: str,
+            extension: str | None,
             preferred_reader: str | None,
             notification: NotifyProtocol | None,
             warnings: list[str] | None,

@@ -178,9 +178,10 @@ class VisionReader(IngestionReader):
         execute_transformations: bool = True,
         notification: NotifyProtocol | None = None,
     ) -> AsyncIterable[BaseNode]:
-        self._ensure_vision_available(file_info.file_name)
+        file_name = file_info.file_name or "unknown"
+        self._ensure_vision_available(file_name)
 
-        with self._timed_phase("parsing", file_info.file_name):
+        with self._timed_phase("parsing", file_name):
             try:
                 page_images = await asyncio.to_thread(
                     self._render_pdf_to_images,
@@ -188,8 +189,8 @@ class VisionReader(IngestionReader):
                     _RENDER_SCALE,
                 )
             except Exception as e:
-                logger.exception("Failed to render PDF to images: %s", file_info.file_name)
-                raise PdfRenderError(file_info.file_name) from e
+                logger.exception("Failed to render PDF to images: %s", file_name)
+                raise PdfRenderError(file_name) from e
 
         docs = self._create_docs(page_images=page_images, extra_info=extra_info)
 
