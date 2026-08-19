@@ -1923,7 +1923,10 @@ class TestCondensationRefresh:
                     }
                 )
             ],
-            system=System(citations={"enabled": True}),
+            system=System(
+                citations={"enabled": True},
+                prompt=PromptConfig(citations=True),
+            ),
         )
         response = await async_test_client.post("/v1/messages", json=body.model_dump())
         assert response.status_code == 200, response.text
@@ -1942,6 +1945,12 @@ class TestCondensationRefresh:
         # reflected in the system prompt after the recalculate phase.
         assert source_doc_text in system_prompt, (
             "condensed tool source was not refreshed into the system prompt"
+        )
+
+        # The platform citation guidelines must also be re-updated after
+        # condensation, because the condensed history introduced documents.
+        assert "Citations let users trace" in system_prompt, (
+            "platform citation guidelines were not rebuilt after condensation"
         )
 
         # The known citation from the condensed history must be usable by the
@@ -2033,4 +2042,116 @@ class TestPlatformGuidelinesSyncedToLatestStack:
         await async_test_client.post(
             "/v1/artifacts/delete",
             json={"collection": collection, "artifact": artifact},
+        )
+
+    async def test_all_documents_from_multiple_iterations_appear_in_final_platform(
+        self, async_test_client: AsyncClient, injector: MockInjector
+    ) -> None:
+        """Platform layers must be rebuilt from the accumulated history.
+
+        Two tool calls in two different iterations each retrieve a different
+        artifact. The final system prompt/platform must show *both*
+        documents, not just the last one.
+        """
+        from private_gpt.server.chat.interceptors.chat_interceptor_service import (
+            ChatInterceptorService,
+        )
+
+        # Enable the recalculate branch so the final system prompt is rebuilt
+        # from the accumulated document stack after every iteration.
+        chat_service = injector.get(ChatInterceptorService)
+        for entry in chat_service._chain.entries:
+            if entry.name == "recalculate":
+                entry.condition = True
+
+        capture = ChainCapture()
+        await install_capturing_llm(
+            injector,
+            capture,
+            deltas=[
+                [
+                    ToolSelection(
+                        tool_id="s1",
+                        tool_name="semantic_search",
+                        tool_kwargs={
+                            "query": "docA",
+                            "artifacts": ["artifact-a"],
+                        },
+                    )
+                ],
+                [
+                    ToolSelection(
+                        tool_id="s2",
+                        tool_name="semantic_search",
+                        tool_kwargs={
+                            "query": "docB",
+                            "artifacts": ["artifact-b"],
+                        },
+                    )
+                ],
+                ["done"],
+            ],
+        )
+
+        collection = str(uuid.uuid4())
+        artifact_a = "artifact-a"
+        artifact_b = "artifact-b"
+        for artifact, text in [
+            (artifact_a, "FIRSTDOC platform sync"),
+            (artifact_b, "SECONDDOC platform sync"),
+        ]:
+            ingest = await async_test_client.post(
+                "/v1/artifacts/ingest",
+                json={
+                    "metadata": {},
+                    "input": {"type": "text", "value": text},
+                    "collection": collection,
+                    "artifact": artifact,
+                },
+            )
+            assert ingest.status_code == 200, ingest.text
+
+        body = ChatBody(
+            messages=[MessageInput(content="search both", role="user")],
+            tools=[{"name": "semantic_search", "type": "semantic_search_v1"}],
+            tool_choice={"type": "tool", "name": "semantic_search"},
+            tool_context=[
+                IngestedArtifact(
+                    context_filter={
+                        "collection": collection,
+                        "artifacts": [artifact_a, artifact_b],
+                    }
+                )
+            ],
+            system=System(
+                citations={"enabled": True},
+                prompt=PromptConfig(citations=True),
+            ),
+        )
+        response = await async_test_client.post("/v1/messages", json=body.model_dump())
+        assert response.status_code == 200, response.text
+        assert len(capture.system_prompts) == 3
+
+        # Iteration 0: no docs yet -> no platform citation guidelines.
+        assert "FIRSTDOC" not in capture.system_prompts[0]
+        assert "SECONDDOC" not in capture.system_prompts[0]
+        assert "Citations let users trace" not in capture.system_prompts[0]
+
+        # Iteration 1: only the first document has been retrieved.
+        assert "FIRSTDOC" in capture.system_prompts[1]
+        assert "SECONDDOC" not in capture.system_prompts[1]
+
+        # Iteration 2: both documents are in the accumulated stack and the
+        # platform layer reflects the full history, not only the latest tool.
+        assert "FIRSTDOC" in capture.system_prompts[2]
+        assert "SECONDDOC" in capture.system_prompts[2]
+        assert "Citations let users trace" in capture.system_prompts[2]
+
+        await async_test_client.post(
+            "/v1/artifacts/delete",
+            json={"collection": collection, "artifact": artifact_a},
+        )
+        await async_test_client.post(
+            "/v1/artifacts/delete",
+            json={"collection": collection, "artifact": artifact_b},
         )
