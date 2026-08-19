@@ -44,6 +44,12 @@ from private_gpt.server.mcp.mcp_service import (
 
 
 class _McpTokenRefreshPayload(BaseModel):
+    """Internal refresh result carried across worker and checkpoint boundaries.
+
+    The previous token is needed to reject stale worker updates, but must not be
+    exposed by the public MCP token refresh events.
+    """
+
     status: Literal["success", "failure"]
     name: str
     url: str
@@ -182,9 +188,10 @@ class McpRequestInterceptor(
         )
 
     @staticmethod
-    def _pop_message_payloads(
+    def _extract_token_refresh_payloads(
         context: ChatInterceptorContext,
     ) -> list[_McpTokenRefreshPayload]:
+        """Remove and validate refresh payloads embedded in tool messages."""
         payloads: list[_McpTokenRefreshPayload] = []
         for input_state in (context.state.input, context.state.original_input):
             if input_state is None:
@@ -202,7 +209,7 @@ class McpRequestInterceptor(
     @classmethod
     def _consume_token_refreshes(cls, context: ChatInterceptorContext) -> None:
         consumed_servers: set[tuple[str, str]] = set()
-        for payload in cls._pop_message_payloads(context):
+        for payload in cls._extract_token_refresh_payloads(context):
             identity = (payload.name, payload.url)
             if identity in consumed_servers:
                 continue
