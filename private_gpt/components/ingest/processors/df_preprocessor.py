@@ -78,11 +78,21 @@ class DataFramePreprocessor:
         if pattern_matches / len(non_empty) < self.min_datetime_ratio:
             return False
 
-        # Try to parse datetime
-        parsed = pd.to_datetime(str_values, errors="coerce")
+        # Try to parse datetime. utc=True and format="mixed" normalize mixed
+        # timezone offsets and mixed formats so the tz-naive min/max range
+        # check below cannot raise.
+        parsed = pd.to_datetime(str_values, errors="coerce", format="mixed", utc=True)
+        # Normalize to tz-naive for the reasonable-date range check
+        parsed_naive = (
+            parsed.dt.tz_localize(None)
+            if isinstance(parsed.dtype, pd.DatetimeTZDtype)
+            else parsed
+        )
         # Additional validation: ensure it's a reasonable date
         datetime_count = (
-            parsed.notna() & (parsed > pd.Timestamp.min) & (parsed < pd.Timestamp.max)
+            parsed_naive.notna()
+            & (parsed_naive > pd.Timestamp.min)
+            & (parsed_naive < pd.Timestamp.max)
         ).sum()
 
         return datetime_count / len(non_empty) >= self.min_datetime_ratio
@@ -112,7 +122,9 @@ class DataFramePreprocessor:
         # Try datetime conversion
         if self._try_cast_to_datetime and self._is_datetime_column(column):
             with suppress(Exception):
-                datetime_column = pd.to_datetime(column, errors="coerce")
+                datetime_column = pd.to_datetime(
+                    column, errors="coerce", format="mixed", utc=True
+                ).dt.tz_localize(None)
                 if not datetime_column.isna().all():
                     return datetime_column
 

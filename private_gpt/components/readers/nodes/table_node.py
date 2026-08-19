@@ -1,4 +1,5 @@
 import builtins
+import datetime
 import enum
 import re
 from typing import Any, Self
@@ -12,6 +13,21 @@ from private_gpt.components.ingest.processors.df_preprocessor import (
 )
 from private_gpt.components.readers.nodes.tree_node import TreeMetadataMode, TreeNode
 from private_gpt.utils.dataframe import df_to_minimal_markdown
+
+
+def format_datetime_value(value: Any) -> Any:
+    """Render midnight timestamps as date-only so pure date values do not
+    show a redundant ``00:00:00`` time component."""
+    if isinstance(value, (pd.Timestamp, datetime.datetime, np.datetime64)):
+        try:
+            ts = pd.Timestamp(value)
+        except (ValueError, OSError):
+            return value
+        if pd.isna(ts) or ts is pd.NaT:
+            return value
+        if ts == ts.normalize():
+            return ts.strftime("%Y-%m-%d")
+    return value
 
 
 class NpEncoder:
@@ -96,9 +112,12 @@ class TableRowNode(TreeNode):
     def get_content_internal(
         self, metadata_mode: TreeMetadataMode = TreeMetadataMode.ALL
     ) -> str:
+        formatted_content = [format_datetime_value(value) for value in self.content]
         df = (
             pd.DataFrame(
-                [self.content] if self.content else [], columns=self.header, dtype=str
+                [formatted_content] if formatted_content else [],
+                columns=self.header,
+                dtype=str,
             )
             if self.header
             else pd.DataFrame()
@@ -144,7 +163,7 @@ class TableRowNode(TreeNode):
             case TableRepresentation.KEY_VALUE:
                 content = ", ".join(
                     [
-                        f"{header}: {value}"
+                        f"{header}: {format_datetime_value(value)}"
                         for header, value in zip(
                             self.header, self.content, strict=False
                         )
