@@ -137,9 +137,6 @@ class McpTokensRefreshedEvent(BaseContentBlock, ExtendedContentProtocol):
     type: Literal["mcp_tokens_refreshed"] = Field(default="mcp_tokens_refreshed")
     name: str = Field(description="The MCP server name.")
     url: str = Field(description="The MCP server URL.")
-    previous_refresh_token: str = Field(
-        description="The refresh token before rotation."
-    )
     authorization_token: str = Field(description="The rotated access token.")
     refresh_token: str = Field(description="The rotated refresh token.")
 

@@ -106,6 +106,7 @@ class McpToolDefinition:
 
 MCP_PREVIOUS_REFRESH_TOKEN_KEY = "_pgpt_previous_refresh_token"
 MCP_REFRESH_FAILED_KEY = "_pgpt_refresh_failed"
+MCP_TOKEN_REFRESH_KEY = "_pgpt_mcp_token_refresh"
 
 
 class McpClient:
@@ -113,7 +114,6 @@ class McpClient:
 
     def __init__(self, config: McpServerConfig) -> None:
         self.config = config
-        self.client: PersistentMCPClient | None = None
 
         persistent_mcp_client_cls = _load_runtime()
 
@@ -132,8 +132,6 @@ class McpClient:
         )
 
     def _sync_tokens(self) -> None:
-        if self.client is None:
-            return
         refreshed_tokens = self.client.refreshed_tokens
         if refreshed_tokens is None:
             if self.client.refresh_attempted:

@@ -137,7 +137,7 @@ class ChatInterceptorService:
                     platform_guidelines_interceptor,
                 ],
                 responses=[mcp_interceptor],
-                tools=[configure_tool_execution_interceptor],
+                tools=[mcp_interceptor, configure_tool_execution_interceptor],
             )
             # Preprocess the chat history
             .add_range(

@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from llama_index.core.base.llms.types import ChatMessage
 
 from private_gpt.components.chat.models.chat_config_models import (
     ChatRequest,
@@ -11,7 +12,6 @@ from private_gpt.components.context.models.context_layer import ToolDefinitionsL
 from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
 from private_gpt.components.engines.chat.models.chat_state import ChatInputState
-from private_gpt.components.tools.remote_execution import apply_tool_spec_update
 from private_gpt.events.event_errors import Errors
 from private_gpt.events.models import (
     McpTokensRefreshedEvent,
@@ -25,6 +25,7 @@ from private_gpt.server.mcp.config import McpServerConfig
 from private_gpt.server.mcp.mcp_service import (
     MCP_PREVIOUS_REFRESH_TOKEN_KEY,
     MCP_REFRESH_FAILED_KEY,
+    MCP_TOKEN_REFRESH_KEY,
     McpToolDefinition,
     mcp_tool_to_spec,
 )
@@ -83,7 +84,6 @@ async def test_discovery_emits_refreshed_tokens_as_a_chat_event() -> None:
     event = McpTokensRefreshedEvent(
         name="mcp",
         url="https://mcp.example.com",
-        previous_refresh_token="refresh-before",
         authorization_token="access-after",
         refresh_token="refresh-after",
         metadata={"artifact_id": "artifact-123"},
@@ -109,7 +109,6 @@ async def test_discovery_emits_refreshed_tokens_before_wrapping_error() -> None:
     event = McpTokensRefreshedEvent(
         name="mcp",
         url="https://mcp.example.com",
-        previous_refresh_token="refresh-before",
         authorization_token="access-after",
         refresh_token="refresh-after",
         metadata={"artifact_id": "artifact-123"},
@@ -170,35 +169,51 @@ async def test_tool_refresh_is_consumed_by_interceptor_and_persisted() -> None:
         authorization_token="access-before",
         refresh_token="refresh-before",
         client_id="client-id",
+        metadata={"artifact_id": "artifact-123"},
     )
     tool = _mcp_tool("lookup", config)
     sibling_tool = _mcp_tool("search", config.model_copy(deep=True))
-    updated_tool = _mcp_tool(
-        "lookup",
+    other_tool = _mcp_tool(
+        "other",
         McpServerConfig(
-            name="tools",
-            url=config.url,
-            authorization_token="access-after",
-            refresh_token="refresh-after",
-            client_id="client-id",
-            metadata={
-                "artifact_id": "artifact-123",
-                MCP_PREVIOUS_REFRESH_TOKEN_KEY: "refresh-before",
-            },
+            name="other",
+            url="https://other.example.com",
+            authorization_token="other-access",
+            refresh_token="other-refresh",
+            client_id="other-client",
         ),
     )
+    refresh_payload = {
+        "status": "success",
+        "name": "tools",
+        "url": config.url,
+        "previous_refresh_token": "refresh-before",
+        "authorization_token": "access-after",
+        "refresh_token": "refresh-after",
+        "metadata": {"artifact_id": "artifact-123"},
+    }
     input_state = ChatInputState(
-        request=ChatRequest(messages=[]),
+        request=ChatRequest(
+            messages=[
+                ChatMessage(
+                    role="tool",
+                    content="normal MCP content",
+                    additional_kwargs={MCP_TOKEN_REFRESH_KEY: refresh_payload},
+                )
+            ]
+        ),
         context_stack=ContextStack(
-            layers=[ToolDefinitionsLayer(tools=[tool, sibling_tool], source="mcp")]
+            layers=[
+                ToolDefinitionsLayer(
+                    tools=[tool, sibling_tool, other_tool], source="mcp"
+                )
+            ]
         ),
     )
     state = SimpleNamespace(
         input=input_state,
         original_input=input_state.model_copy(deep=True),
     )
-    apply_tool_spec_update(state.input, updated_tool)
-    apply_tool_spec_update(state.original_input, updated_tool)
     emitted: list[object] = []
     mcp_service = MagicMock()
     interceptor = McpRequestInterceptor(mcp_service)
@@ -213,13 +228,15 @@ async def test_tool_refresh_is_consumed_by_interceptor_and_persisted() -> None:
         McpTokensRefreshedEvent(
             name="tools",
             url=config.url,
-            previous_refresh_token="refresh-before",
             authorization_token="access-after",
             refresh_token="refresh-after",
             metadata={"artifact_id": "artifact-123"},
         )
     ]
     assert state.original_input is not None
+    assert (
+        MCP_TOKEN_REFRESH_KEY not in input_state.request.messages[0].additional_kwargs
+    )
     restored = ChatInputState.model_validate_json(
         state.original_input.model_dump_json()
     )
@@ -228,6 +245,62 @@ async def test_tool_refresh_is_consumed_by_interceptor_and_persisted() -> None:
         *restored.context_stack.all_tools(),
     ):
         persisted_config = _mcp_config(persisted_tool)
-        assert persisted_config.authorization_token == "access-after"
-        assert persisted_config.refresh_token == "refresh-after"
-        assert MCP_PREVIOUS_REFRESH_TOKEN_KEY not in persisted_config.metadata
+        if persisted_config.name == "tools":
+            assert persisted_config.authorization_token == "access-after"
+            assert persisted_config.refresh_token == "refresh-after"
+            assert persisted_config.metadata == {"artifact_id": "artifact-123"}
+        else:
+            assert persisted_config.authorization_token == "other-access"
+            assert persisted_config.refresh_token == "other-refresh"
+
+
+@pytest.mark.asyncio
+async def test_stale_tool_refresh_is_consumed_without_overwriting_newer_tokens() -> (
+    None
+):
+    config = McpServerConfig(
+        name="tools",
+        url="https://mcp.example.com",
+        authorization_token="access-newer",
+        refresh_token="refresh-newer",
+        client_id="client-id",
+    )
+    tool = _mcp_tool("lookup", config)
+    input_state = ChatInputState(
+        request=ChatRequest(
+            messages=[
+                ChatMessage(
+                    role="tool",
+                    content="normal MCP content",
+                    additional_kwargs={
+                        MCP_TOKEN_REFRESH_KEY: {
+                            "status": "success",
+                            "name": "tools",
+                            "url": config.url,
+                            "previous_refresh_token": "refresh-before",
+                            "authorization_token": "access-stale",
+                            "refresh_token": "refresh-stale",
+                        }
+                    },
+                )
+            ]
+        ),
+        context_stack=ContextStack(
+            layers=[ToolDefinitionsLayer(tools=[tool], source="mcp")]
+        ),
+    )
+    state = SimpleNamespace(input=input_state, original_input=None)
+    context = MagicMock()
+    context.state = state
+
+    await McpRequestInterceptor(MagicMock()).intercept_event(
+        RawContentBlockStartEvent.from_text(), context
+    )
+
+    assert context.emit_event.call_count == 0
+    persisted_config = _mcp_config(tool)
+    assert persisted_config.authorization_token == "access-newer"
+    assert persisted_config.refresh_token == "refresh-newer"
+    assert (
+        MCP_TOKEN_REFRESH_KEY not in input_state.request.messages[0].additional_kwargs
+    )

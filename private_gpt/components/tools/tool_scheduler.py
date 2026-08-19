@@ -13,7 +13,6 @@ from injector import Injector, inject, singleton
 from private_gpt.celery.dispatch import dispatch_task
 from private_gpt.celery.result import wait_for_celery_result
 from private_gpt.components.tools.remote_execution import (
-    apply_tool_spec_update,
     execute_tool_request,
     invoke_execution_hook,
     tool_execution_interceptor_paths,
@@ -99,15 +98,9 @@ class LocalToolScheduler(BaseToolScheduler):
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
         try:
-            response = await execute_tool_request(
+            return await execute_tool_request(
                 request, state_ctx=state_ctx, interceptors=interceptors
             )
-            if state_ctx is not None:
-                apply_tool_spec_update(state_ctx.input, response.updated_tool_spec)
-                apply_tool_spec_update(
-                    state_ctx.original_input, response.updated_tool_spec
-                )
-            return response
         except Exception:
             logger.exception("Local tool '%s' execution failed", request.tool_name)
             raise
@@ -190,11 +183,7 @@ class CeleryToolScheduler(BaseToolScheduler):
 
         from private_gpt.components.tools.remote_execution import ToolExecutionResponse
 
-        response = ToolExecutionResponse.model_validate(response_data)
-        if state_ctx is not None:
-            apply_tool_spec_update(state_ctx.input, response.updated_tool_spec)
-            apply_tool_spec_update(state_ctx.original_input, response.updated_tool_spec)
-        return response
+        return ToolExecutionResponse.model_validate(response_data)
 
     async def cancel(
         self,

@@ -31,10 +31,7 @@ from private_gpt.events.models import TextBlock, from_tool_output
 if TYPE_CHECKING:
     from llama_index.core.tools import AsyncBaseTool
 
-    from private_gpt.components.engines.chat.models.chat_state import (
-        ChatInputState,
-        ChatState,
-    )
+    from private_gpt.components.engines.chat.models.chat_state import ChatState
     from private_gpt.components.engines.chat.models.execution_hooks import (
         ToolExecutionHook,
     )
@@ -66,7 +63,6 @@ class ToolExecutionResponse(BaseModel):
     tool_id: str
     outcome: ToolExecutionOutcome
     tool_message: ChatMessage
-    updated_tool_spec: ToolSpec | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -150,11 +146,6 @@ class ToolExecutor:
         request: ToolExecutionRequest,
         state_ctx: ChatState | None = None,
     ) -> ToolExecutionResponse:
-        original_metadata = (
-            request.tool_spec.execution_metadata.model_copy(deep=True)
-            if request.tool_spec.execution_metadata is not None
-            else None
-        )
         tool = await rebuild_tool_from_spec(request.tool_spec)
 
         before_context = ToolExecutionInterceptorContext(
@@ -205,26 +196,7 @@ class ToolExecutor:
             await interceptor.intercept(after_context)
 
         assert after_context.response is not None
-        response = after_context.response
-        if request.tool_spec.execution_metadata != original_metadata:
-            response = response.model_copy(
-                update={"updated_tool_spec": request.tool_spec}
-            )
-        return response
-
-
-def apply_tool_spec_update(
-    input_state: ChatInputState | None, updated_tool_spec: ToolSpec | None
-) -> None:
-    if input_state is None or updated_tool_spec is None:
-        return
-    for tool in input_state.context_stack.all_tools():
-        if tool.name == updated_tool_spec.name:
-            tool.execution_metadata = (
-                updated_tool_spec.execution_metadata.model_copy(deep=True)
-                if updated_tool_spec.execution_metadata is not None
-                else None
-            )
+        return after_context.response
 
 
 def build_rebuild_metadata(
