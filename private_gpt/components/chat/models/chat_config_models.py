@@ -628,6 +628,15 @@ class ResolvedSystemConfig(SystemConfig):
         default=None,
         description="The system prompt to use for the chat.",
     )
+    original_prompt: str | list[TextBlock] | None = Field(
+        default=None,
+        description=(
+            "The original user-provided system prompt, before platform "
+            "layers are rendered into ``prompt``. Tool-specific consumers "
+            "such as the database query tool can use this when they need "
+            "the user's instructions rather than the final rendered prompt."
+        ),
+    )
 
     def get_prompt(self) -> list[TextBlock] | None:
         prompt_block = (
@@ -635,6 +644,11 @@ class ResolvedSystemConfig(SystemConfig):
             if isinstance(self.prompt, str)
             else self.prompt
         )
+        return prompt_block or None
+
+    def get_original_prompt(self) -> list[TextBlock] | None:
+        source = self.original_prompt or self.prompt
+        prompt_block = [TextBlock(text=source)] if isinstance(source, str) else source
         return prompt_block or None
 
 

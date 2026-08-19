@@ -42,7 +42,11 @@ class DatabaseQueryProcessor(ToolProcessor):
                 )
 
             chat_history = request.messages.copy()
-            prompt_blocks = request.system.get_prompt()
+            # Use the original user-provided system prompt for SQL generation,
+            # not the final rendered prompt (platform headers, skills, context,
+            # citation guidelines, etc.). Other tools can still use the
+            # rendered ``system.prompt`` if they need it.
+            prompt_blocks = request.system.get_original_prompt()
             if prompt_blocks:
                 chat_history.insert(
                     0,

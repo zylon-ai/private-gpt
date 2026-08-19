@@ -32,10 +32,11 @@ class InternalToolRequestInterceptor(ChatRequestLoopInterceptor):
         self._prompt_builder = prompt_builder
 
     async def intercept(self, context: ChatInterceptorContext) -> None:
-        if (
-            context.phase != InterceptorPhase.VALIDATION
-            and context.phase != InterceptorPhase.BEFORE_ITERATION
-        ):
+        # Internal tools are prepared once per request during validation.
+        # The prepared tool layer is persisted into the original context stack
+        # so RestoreStatelessInput carries it forward across iterations and
+        # resumes without re-running tool contextualization.
+        if context.phase != InterceptorPhase.VALIDATION:
             return
 
         state = context.state
@@ -46,8 +47,7 @@ class InternalToolRequestInterceptor(ChatRequestLoopInterceptor):
             tool_request
         )
         tools = final_tool_request.tool_config.tools
-
-        if context.phase == InterceptorPhase.BEFORE_ITERATION and tools:
+        if tools:
             tools = self._prompt_builder.seed_tool_instructions(tools)
 
         stack = state.input.context_stack
@@ -57,4 +57,18 @@ class InternalToolRequestInterceptor(ChatRequestLoopInterceptor):
                 ToolDefinitionsLayer(tools=tools, source="internal_tools")
             )
         state.input.context_stack = stack
+
+        # Persist the prepared tool set so later iterations and resumed
+        # executions start from it instead of re-preparing.
+        if state.original_input is not None:
+            original_stack = state.original_input.context_stack
+            original_stack = original_stack.remove_layers_of_type(
+                LayerType.TOOL_DEFINITIONS
+            )
+            if tools:
+                original_stack = original_stack.append_layer(
+                    ToolDefinitionsLayer(tools=tools, source="internal_tools")
+                )
+            state.original_input.context_stack = original_stack
+
         context.set_state(state)

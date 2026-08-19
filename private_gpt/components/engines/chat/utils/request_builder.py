@@ -63,6 +63,14 @@ def build_request_from_context_stack(
     )
 
     request.messages = [m for m in request.messages if m.role != MessageRole.SYSTEM]
+
+    # Preserve the original user-provided system prompt across repeated
+    # materializations. The rendered prompt is overwritten below; consumers
+    # that need the user's own system prompt (e.g. database query tool) can
+    # read ``original_prompt`` without leaking platform layers.
+    if request.system.original_prompt is None and base_request.system.prompt:
+        request.system.original_prompt = base_request.system.prompt
+
     request.system.prompt = _render_system_prompt_text(context_stack)
 
     return request
