@@ -58,10 +58,22 @@ class CitationRequestInterceptor(ChatRequestLoopInterceptor):
 
         if documents is not None:
             stack = state.input.context_stack
+            request_docs = [
+                layer.document
+                for layer in stack.layers
+                if isinstance(layer, DocumentLayer) and layer.source == "request"
+            ]
             stack = stack.remove_layers_of_type(LayerType.DOCUMENT)
+            request_ids = {doc.id_ for doc in request_docs}
+            merged: dict[str, Document] = {
+                doc.id_: doc for doc in request_docs
+            }
             for document in documents:
+                merged[document.id_] = document
+            for document in merged.values():
+                source = "request" if document.id_ in request_ids else "citations"
                 stack = stack.append_layer(
-                    DocumentLayer(document=document, source="citations")
+                    DocumentLayer(document=document, source=source)
                 )
             state.input.context_stack = stack
 

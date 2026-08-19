@@ -20,10 +20,6 @@ class EnsureToolAreFlattenInterceptor(ChatRequestLoopInterceptor):
         context.state.input.request.messages = self._reorder_tool_messages(
             context.state.input.request.messages
         )
-        if context.state.original_input:
-            context.state.original_input.request.messages = self._reorder_tool_messages(
-                context.state.original_input.request.messages
-            )
 
         context.set_state(context.state)
 

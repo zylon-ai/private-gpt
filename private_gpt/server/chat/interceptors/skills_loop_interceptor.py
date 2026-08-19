@@ -228,6 +228,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
         stack = stack.remove_layers_of_type(LayerType.SKILL_BODY)
         stack = stack.remove_layers_of_type(LayerType.MOUNTS)
         if filter_input is None:
+            # No skill context on this request: catalog/body are not applicable.
             state.input.context_stack = stack
             context.set_state(state)
             return
@@ -236,6 +237,9 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
         entries = skills_cache.entries if skills_cache else []
         resources = skills_cache.resources if skills_cache else {}
         if not entries:
+            # Cache is the input used to rebuild. Empty means no skills this
+            # iteration — do not freeze a previous catalog/body, those depend
+            # on the current messages (load/unload).
             state.input.context_stack = stack
             context.set_state(state)
             return

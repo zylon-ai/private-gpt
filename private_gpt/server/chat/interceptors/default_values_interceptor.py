@@ -41,6 +41,8 @@ class DefaultValuesRequestInterceptor(ChatRequestLoopInterceptor):
                 tools=True,
                 citations=True,
                 thinking=True,
+                code_execution=True,
+                skills=True,
             )
         request.system.use_default_prompt = (
             request.system.use_default_prompt

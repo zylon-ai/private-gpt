@@ -1003,3 +1003,149 @@ async def test_initialize_run_reuses_provided_original_input() -> None:
     )
     assert second_layers
     assert second_layers[0].text == [TextBlock(text="USER PROMPT")]
+
+
+
+@pytest.mark.asyncio
+async def test_initialize_run_keeps_platform_layers_when_stack_is_carried() -> None:
+    """Later iterations must not collapse platform layers into USER_INSTRUCTIONS."""
+    from llama_index.core.base.llms.types import TextBlock
+    from llama_index.core.llms.function_calling import FunctionCallingLLM
+
+    from private_gpt.chat.input_models import PromptConfig
+    from private_gpt.components.context.models.context_layer import (
+        SkillBodyLayer,
+        SkillCatalogEntry,
+        SkillCatalogLayer,
+        ToolInstructionsLayer,
+        UserInstructionsLayer,
+    )
+    from private_gpt.components.context.models.context_stack import ContextStack
+    from private_gpt.components.context.models.layer_type import LayerType
+    from private_gpt.components.engines.chat.models.chat_state import ChatRuntimeCache
+    from private_gpt.components.engines.chat.utils.request_builder import (
+        build_request_from_context_stack,
+    )
+
+    class _FakeFunctionLLM(FunctionCallingLLM):
+        @property
+        def metadata(self):
+            return MagicMock(is_function_calling_model=True, context_window=8192)
+
+        def _prepare_chat_with_tools(self, *a, **k):
+            return {}
+
+        async def achat(self, *a, **k):
+            raise NotImplementedError
+
+        def chat(self, *a, **k):
+            raise NotImplementedError
+
+        def stream_chat(self, *a, **k):
+            raise NotImplementedError
+
+        async def astream_chat(self, *a, **k):
+            raise NotImplementedError
+
+        def complete(self, *a, **k):
+            raise NotImplementedError
+
+        async def acomplete(self, *a, **k):
+            raise NotImplementedError
+
+        def stream_complete(self, *a, **k):
+            raise NotImplementedError
+
+        async def astream_complete(self, *a, **k):
+            raise NotImplementedError
+
+        def chat_with_tools(self, *a, **k):
+            raise NotImplementedError
+
+        async def achat_with_tools(self, *a, **k):
+            raise NotImplementedError
+
+        def stream_chat_with_tools(self, *a, **k):
+            raise NotImplementedError
+
+        async def astream_chat_with_tools(self, *a, **k):
+            raise NotImplementedError
+
+        def get_tool_calls_from_response(self, *a, **k):
+            return []
+
+    first_request = ResolvedChatRequest(
+        messages=[ChatMessage(role=MessageRole.USER, content="hello")],
+        system=ResolvedSystemConfig(
+            model="default",
+            prompt=[TextBlock(text="You are Zylon")],
+            platform_prompts=PromptConfig(tools=True, skills=True, code_execution=True),
+        ),
+    )
+    platform_stack = ContextStack(
+        layers=[
+            UserInstructionsLayer(text="You are Zylon", source="request"),
+            SkillCatalogLayer(
+                entries=[
+                    SkillCatalogEntry(
+                        id="1",
+                        name="skill-creator",
+                        description="Create skills",
+                        loading="lazy",
+                    )
+                ],
+                source="skills",
+            ),
+            SkillBodyLayer(
+                skill_id="rg",
+                name="response-guidelines",
+                version="1",
+                instructions="<response_formatting>Be clear.</response_formatting>",
+                source="skill:response-guidelines",
+                render_as_xml=False,
+            ),
+            ToolInstructionsLayer(
+                tool_name="bash",
+                instructions="BASH PLATFORM INSTRUCTIONS",
+                source="platform:code_execution",
+            ),
+        ]
+    )
+
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = _FakeFunctionLLM()
+    engine = AsyncChatEngine(
+        llm_component=llm_component,
+        chat_scheduler=MagicMock(),
+    )
+
+    first_run = engine.initialize_run(first_request, context_stack=platform_stack)
+    rendered = build_request_from_context_stack(
+        first_run.state.input.request, first_run.state.input.context_stack
+    )
+
+    # Mutated request (what the loop used to rebuild from) contains the full prompt.
+    assert "skill-creator" in "\n".join(
+        block.text for block in rendered.system.prompt or []
+    )
+
+    second_run = engine.initialize_run(
+        rendered,
+        context_stack=first_run.state.input.context_stack,
+        original_input=first_run.state.original_input,
+        runtime_cache=first_run.state.runtime.cache or ChatRuntimeCache(),
+    )
+    types = [layer.type for layer in second_run.state.input.context_stack.layers]
+    assert LayerType.SKILL_CATALOG in types
+    assert LayerType.SKILL_BODY in types
+    assert LayerType.TOOL_INSTRUCTIONS in types
+
+    rebuilt_without_stack = engine.initialize_run(
+        rendered,
+        original_input=first_run.state.original_input,
+    )
+    collapsed_types = [
+        layer.type for layer in rebuilt_without_stack.state.input.context_stack.layers
+    ]
+    assert LayerType.SKILL_CATALOG not in collapsed_types
+    assert LayerType.SKILL_BODY not in collapsed_types

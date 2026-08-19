@@ -74,6 +74,7 @@ from private_gpt.components.engines.chat.models.chat_phase import (
 from private_gpt.components.engines.chat.models.chat_state import (
     ChatInputState,
     ChatOutputState,
+    ChatRuntimeCache,
     ChatRuntimeState,
     ChatState,
     ChatStatus,
@@ -187,6 +188,7 @@ class _CheckpointContext:
         default_factory=IterationCheckpointPayload
     )
     original_input: ChatInputState | None = None
+    runtime_cache: ChatRuntimeCache | None = None
 
 
 @dataclass
@@ -377,6 +379,8 @@ class AsyncChatEngine:
             hooks,
             channel,
             original_input=state.original_input,
+            context_stack=state.input.context_stack,
+            runtime_cache=state.runtime.cache,
         )
 
     async def resume(
@@ -434,6 +438,8 @@ class AsyncChatEngine:
             hooks,
             channel,
             original_input=state.original_input,
+            context_stack=state.input.context_stack,
+            runtime_cache=state.runtime.cache,
         )
 
     async def run(
@@ -549,11 +555,15 @@ class AsyncChatEngine:
         hooks: ExecutionHooks | None,
         channel: EventChannel,
         original_input: ChatInputState | None = None,
+        context_stack: ContextStack | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
     ) -> ChatState:
         context = self._build_checkpoint_context(
             checkpoint=_IterationCheckpoint.BEFORE_ITERATION,
             payload=payload,
             original_input=original_input,
+            context_stack=context_stack,
+            runtime_cache=runtime_cache,
         )
         return await self._execute_before_iteration_checkpoint(
             request, iteration, next_block_count, channel, hooks, context
@@ -587,6 +597,8 @@ class AsyncChatEngine:
         hooks: ExecutionHooks | None,
         channel: EventChannel,
         original_input: ChatInputState | None = None,
+        context_stack: ContextStack | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
     ) -> ChatState:
         while True:
             if iteration >= self._max_iterations:
@@ -606,11 +618,19 @@ class AsyncChatEngine:
                 hooks,
                 channel,
                 original_input=original_input,
+                context_stack=context_stack,
+                runtime_cache=runtime_cache,
             )
             # Keep the first-iteration snapshot for the whole loop. Later
             # checkpoints rebuild run state from the materialized request, so
             # re-snapshotting here would poison restore/system-prompt rebuilds.
             original_input = state.original_input or original_input
+            # Carry the working stack and interceptor cache forward. Rebuilding
+            # the stack from the mutated request collapses platform layers
+            # (skills, tool instructions, header) into USER_INSTRUCTIONS and
+            # then Restore drops them.
+            context_stack = state.input.context_stack
+            runtime_cache = state.runtime.cache
             new_payload = IterationCheckpointPayload(
                 model_id=state.runtime.model_id,
                 total_input_tokens=state.runtime.total_input_tokens,
@@ -652,6 +672,7 @@ class AsyncChatEngine:
         payload: IterationCheckpointPayload | None = None,
         context_stack: ContextStack | None = None,
         original_input: ChatInputState | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
     ) -> _CheckpointContext:
         return _CheckpointContext(
             checkpoint=checkpoint,
@@ -659,6 +680,7 @@ class AsyncChatEngine:
             context_stack=context_stack,
             payload=payload or IterationCheckpointPayload(),
             original_input=original_input,
+            runtime_cache=runtime_cache,
         )
 
     def _resolve_checkpoint_handler(
@@ -705,6 +727,7 @@ class AsyncChatEngine:
             context_stack=checkpoint_context.context_stack,
             hooks=hooks,
             original_input=checkpoint_context.original_input,
+            runtime_cache=checkpoint_context.runtime_cache,
         )
         run.state.runtime.iteration = iteration
         run.state.runtime.next_block_count = next_block_count
@@ -918,12 +941,14 @@ class AsyncChatEngine:
         context_stack: ContextStack | None = None,
         hooks: ExecutionHooks | None = None,
         original_input: ChatInputState | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
     ) -> _Run:
         return self._initialize_run(
             request,
             context_stack=context_stack,
             hooks=hooks,
             original_input=original_input,
+            runtime_cache=runtime_cache,
         )
 
     async def _pipe_events_through_interceptors(
@@ -1603,6 +1628,7 @@ class AsyncChatEngine:
         context_stack: ContextStack | None = None,
         hooks: ExecutionHooks | None = None,
         original_input: ChatInputState | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
     ) -> _Run:
         llm = self._llm_component.get_llm(request.system.model)
         if not isinstance(llm, FunctionCallingLLM):
@@ -1637,6 +1663,7 @@ class AsyncChatEngine:
             runtime=ChatRuntimeState(
                 iteration=0,
                 max_iterations=self._max_iterations,
+                cache=runtime_cache or ChatRuntimeCache(),
             ),
             output=ChatOutputState(),
             timeline=[],
