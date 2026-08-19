@@ -87,6 +87,7 @@ from private_gpt.components.engines.chat.utils.request_builder import (
     build_request_from_context_stack,
 )
 from private_gpt.components.engines.chat.utils.tool_utils import (
+    merge_stream_tool_calls,
     select_tool_names,
 )
 from private_gpt.components.llm.custom.base import StructuredOutputsParams, ZylonLLM
@@ -1195,6 +1196,7 @@ class AsyncChatEngine:
             assistant_message.content = chunk.message.content
 
         assistant_message.role = chunk.message.role or assistant_message.role
+        processed_tool_calls_id: int | None = None
         for source in (chunk.additional_kwargs, chunk.message.additional_kwargs):
             for key, value in source.items():
                 if key == "thinking_delta" and isinstance(value, str):
@@ -1219,18 +1221,15 @@ class AsyncChatEngine:
                     continue
                 if key == "tool_calls":
                     if isinstance(value, list) and value:
+                        value_id = id(value)
+                        if value_id == processed_tool_calls_id:
+                            continue
+                        processed_tool_calls_id = value_id
                         existing = assistant_message.additional_kwargs.get("tool_calls")
                         if not isinstance(existing, list):
                             existing = []
-                        by_id = {}
-                        for tc in existing:
-                            if tc.tool_id:
-                                by_id[tc.tool_id] = tc
-                        for tc in value:
-                            if tc.tool_id:
-                                by_id[tc.tool_id] = tc
-                        assistant_message.additional_kwargs["tool_calls"] = list(
-                            by_id.values()
+                        assistant_message.additional_kwargs["tool_calls"] = (
+                            merge_stream_tool_calls(existing, value)
                         )
                     continue
                 assistant_message.additional_kwargs[key] = value
