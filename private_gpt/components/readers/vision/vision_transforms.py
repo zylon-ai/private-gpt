@@ -46,7 +46,7 @@ def vision_docs_transformations(
 ) -> Iterable[TransformComponent]:
     # Deduplicate images in text(if apply)
     # yield ImageDeduplicationTransform.from_defaults()
-    logger.info(f"PDF transformations with Vision pipeline")
+    logger.info("PDF transformations with Vision pipeline")
 
     # For vision docs, we can directly extract the content from the image,
     # as it is likely to be more accurate than OCR text. We can skip
