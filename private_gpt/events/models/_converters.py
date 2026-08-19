@@ -1,4 +1,5 @@
-from typing import Any, get_args
+from collections.abc import Callable
+from typing import Any, cast, get_args
 
 from llama_index.core.base.llms.types import AudioBlock as LIAudioBlock
 from llama_index.core.base.llms.types import ContentBlock
@@ -23,10 +24,54 @@ from private_gpt.server.mcp.mcp_service import (
     is_mcp_tool_result,
 )
 
+NO_TOOL_CONTENT = "(no-output)"
+
+
+def _rendered_text(block: ResultContentBlockType) -> str:
+    if isinstance(block, TextBlock):
+        return block.text
+    render = getattr(block, "render", None)
+    if callable(render):
+        render_fn = cast(Callable[[], str], render)
+        try:
+            return str(render_fn())
+        except Exception:
+            return ""
+    return ""
+
+
+def normalize_tool_result_content(
+    content: list[ResultContentBlockType] | None,
+) -> list[ResultContentBlockType]:
+    """Ensure an empty tool result has model-visible text content.
+
+    Builders should write ``NO_TOOL_CONTENT`` into their native result
+    payload.  This helper is only a fallback: fill empty text blocks, and
+    if the result is still empty, append a sibling text block so prompt
+    formatting cannot drop the TOOL message.
+    """
+    blocks: list[ResultContentBlockType] = []
+    for block in content or []:
+        if isinstance(block, TextBlock) and not block.text.strip():
+            blocks.append(block.model_copy(update={"text": NO_TOOL_CONTENT}))
+        else:
+            blocks.append(block)
+    if not blocks:
+        return [TextBlock(text=NO_TOOL_CONTENT)]
+    if not any(_rendered_text(block).strip() for block in blocks):
+        blocks.append(TextBlock(text=NO_TOOL_CONTENT))
+    return blocks
+
 
 def from_tool_output(tool_output: Any) -> list[ResultContentBlockType]:
     """Convert arbitrary tool output to a list of ``ResultContentBlockType`` blocks."""
     match tool_output:
+        case None:
+            return []
+
+        case str() if not tool_output.strip():
+            return []
+
         case list() if tool_output and all(
             isinstance(i, NodeWithScore) for i in tool_output
         ):
@@ -88,4 +133,8 @@ def to_llama_index_blocks(tool_output: Any) -> list[ContentBlock]:
     for block in from_tool_output(tool_output):
         if isinstance(block, TextBlock | ImageBlock | AudioBlock):
             li_blocks.append(block.to_llama_index())
+            continue
+        rendered = _rendered_text(block)
+        if rendered.strip():
+            li_blocks.append(LITextBlock(text=rendered))
     return li_blocks

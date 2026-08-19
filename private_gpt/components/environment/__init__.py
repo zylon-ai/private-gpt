@@ -3,17 +3,13 @@
 The environment layer sits between sandbox backends (pure executors) and
 tools (code execution, bash, ...). An EnvironmentManager owns session
 lifecycle — reuse, restore, TTL reaping, keepalive — a LayoutMounter owns
-the session filesystem structure, and a list of ContentMounters handles how
-bundle content (skills, tools, ...) reaches the sandbox.
+the session filesystem structure, and a HydratingEnvironmentManager (dev
+only) syncs namespace content into the volume roots before acquire. Every
+mount is a bind volume; nothing is materialized into a running sandbox.
 """
 
-from private_gpt.components.environment.content_mounter import (
-    ContentMounter,
-    FetchContentMounter,
-    InlineContentMounter,
-    LocalStorageContentMounter,
-)
 from private_gpt.components.environment.environment import Environment
+from private_gpt.components.environment.hydration import HydratingEnvironmentManager
 from private_gpt.components.environment.layout import (
     DEFAULT_SESSION_LAYOUT,
     SessionMountDef,
@@ -28,14 +24,11 @@ from private_gpt.components.environment.mounter import (
 
 __all__ = [
     "DEFAULT_SESSION_LAYOUT",
-    "ContentMounter",
     "Environment",
     "EnvironmentManager",
-    "FetchContentMounter",
-    "InlineContentMounter",
+    "HydratingEnvironmentManager",
     "LayoutMounter",
     "LocalDirMounter",
-    "LocalStorageContentMounter",
     "Mounter",
     "SandboxDirMounter",
     "SessionMountDef",

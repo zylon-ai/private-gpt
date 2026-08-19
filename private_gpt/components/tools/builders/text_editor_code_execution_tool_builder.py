@@ -85,13 +85,26 @@ class TextEditorCodeExecutionToolBuilder:
                 if view_range is not None:
                     kwargs["view_range"] = view_range
             elif command == TEXT_EDITOR_STR_REPLACE_TOOL_NAME:
+                if old_str is None:
+                    raise ValueError("str_replace requires the old_str parameter.")
+                if new_str is None:
+                    raise ValueError("str_replace requires the new_str parameter.")
                 kwargs["old_str"] = old_str
                 kwargs["new_str"] = new_str
             elif command == TEXT_EDITOR_CREATE_TOOL_NAME:
+                if file_text is None:
+                    raise ValueError("create requires the file_text parameter.")
                 kwargs["file_text"] = file_text
             elif command == TEXT_EDITOR_INSERT_TOOL_NAME:
+                if insert_line is None:
+                    raise ValueError("insert requires the insert_line parameter.")
+                insert_content = insert_text if insert_text is not None else new_str
+                if insert_content is None:
+                    raise ValueError(
+                        "insert requires the insert_text parameter (the text to insert)."
+                    )
                 kwargs["insert_line"] = insert_line
-                kwargs["new_str"] = insert_text if insert_text is not None else new_str
+                kwargs["new_str"] = insert_content
             return await child.async_fn(**kwargs)
 
         return ToolSpec.from_defaults(

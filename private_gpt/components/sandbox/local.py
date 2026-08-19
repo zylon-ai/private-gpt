@@ -10,22 +10,18 @@ import anyio
 import anyio.to_thread
 
 from private_gpt.components.code_execution.bash_executor import LocalBashExecutor
-from private_gpt.components.code_execution.path_translator import (
-    PathTranslator,
-)
 from private_gpt.components.sandbox.base import (
     SandboxExecutionResult,
     SandboxProvider,
     SandboxSession,
 )
-from private_gpt.components.sandbox.mount import LocalMountSpec
+from private_gpt.components.sandbox.mount import Mount
+from private_gpt.components.sandbox.path_translator import PathTranslator
 
 if TYPE_CHECKING:
     from private_gpt.components.sandbox.base import (
         SandboxExecOptions,
     )
-    from private_gpt.components.sandbox.content_bundle import BundledFile
-    from private_gpt.components.sandbox.mount import SandboxMountSpec, VolumeSpec
     from private_gpt.settings.settings import Settings
 
 
@@ -34,41 +30,21 @@ class BashExecutorSandbox(SandboxSession):
 
     Translates canonical paths → real local paths via PathTranslator.
     Enforces read-only constraints on write_file() and chmod().
-    initialize_mount() bypasses the check for session setup.
     """
 
     python_executable: str = sys.executable
 
     def __init__(
         self,
-        mounts: list[LocalMountSpec],
+        mounts: list[Mount],
         executor: LocalBashExecutor,
         env: dict[str, str] | None = None,
     ) -> None:
-        self._translator = PathTranslator(
-            [(m.canonical, m.real_path, m.writable) for m in mounts]
-        )
+        self._translator = PathTranslator(mounts)
         self._executor = executor
-        self._readonly = [m.canonical for m in mounts if not m.writable]
-        self._default_cwd = next((m.canonical for m in mounts if m.writable), "/")
+        self._readonly = [m.target for m in mounts if m.access == "ro"]
+        self._default_cwd = next((m.target for m in mounts if m.access == "rw"), "/")
         self._env = env
-
-    def add_local_mount(
-        self, canonical: str, host_path: Path, writable: bool = False
-    ) -> None:
-        """Register a new host-path mount after session creation."""
-        self._translator.register(canonical, host_path, writable)
-        if not writable and canonical not in self._readonly:
-            self._readonly.append(canonical)
-
-    def remove_local_mount(self, canonical: str) -> None:
-        """Unregister a mount — does not delete files from host storage."""
-        self._translator.unregister(canonical)
-        self._readonly = [p for p in self._readonly if p != canonical]
-
-    async def remove_mount(self, canonical_path: str) -> None:
-        """Unregister a local mount without touching host-backed storage files."""
-        self.remove_local_mount(canonical_path)
 
     def _assert_writable(self, path: str) -> None:
         for prefix in self._readonly:
@@ -136,25 +112,6 @@ class BashExecutorSandbox(SandboxSession):
         real = self._translator.to_real(path)
         await anyio.to_thread.run_sync(lambda: real.chmod(mode))
 
-    async def initialize_mount(self, canonical: str, files: list[BundledFile]) -> None:
-        for f in files:
-            real = self._translator.to_real(canonical + f.path)
-            content = f.content
-            permissions = f.permissions
-
-            def _mkdir(r: Path = real) -> None:
-                r.parent.mkdir(parents=True, exist_ok=True)
-
-            def _write(r: Path = real, c: bytes = content) -> None:
-                r.write_bytes(c)
-
-            def _chmod(r: Path = real, p: int = permissions) -> None:
-                r.chmod(p)
-
-            await anyio.to_thread.run_sync(_mkdir)
-            await anyio.to_thread.run_sync(_write)
-            await anyio.to_thread.run_sync(_chmod)
-
     async def close(self) -> None:
         pass
 
@@ -164,7 +121,7 @@ class LocalSandboxSession(BashExecutorSandbox):
 
     def __init__(
         self,
-        mounts: list[LocalMountSpec],
+        mounts: list[Mount],
         executor: LocalBashExecutor,
         workdir: Path,
         env: dict[str, str] | None = None,
@@ -197,30 +154,22 @@ class LocalSandboxProvider(SandboxProvider):
         self,
         user_id: str | None = None,
         timeout: int | None = None,
-        bundle_specs: list[SandboxMountSpec] | None = None,
+        bundle_specs: list[Mount] | None = None,
         *,
         session_id: str | None = None,
-        volumes: list[VolumeSpec] | None = None,
+        volumes: list[Mount] | None = None,
         env: dict[str, str] | None = None,
+        fingerprint: str | None = None,
     ) -> SandboxSession:
+        del fingerprint  # local sandboxes carry no cross-process metadata
         if volumes:
-            specs = [
-                LocalMountSpec(
-                    canonical=v.mount_path,
-                    real_path=v.host_path,
-                    writable=not v.read_only,
-                )
-                for v in volumes
-            ]
-            return BashExecutorSandbox(specs, self._executor, env=env)
+            return BashExecutorSandbox(volumes, self._executor, env=env)
 
         workdir = await anyio.to_thread.run_sync(
             lambda: Path(tempfile.mkdtemp(prefix=f"sandbox_{user_id or 'local'}_"))
         )
-        specs = [
-            LocalMountSpec(canonical="/home/agent/", real_path=workdir, writable=True)
-        ]
-        specs.extend(s for s in bundle_specs or [] if isinstance(s, LocalMountSpec))
+        specs = [Mount(target="/home/agent/", access="rw", host_path=workdir)]
+        specs.extend(s for s in bundle_specs or [] if s.host_path is not None)
         return LocalSandboxSession(specs, self._executor, workdir, env=env)
 
     async def delete_session(self, session: SandboxSession) -> None:

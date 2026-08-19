@@ -1,21 +1,25 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
+from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from private_gpt.components.environment.content_mounter import ContentMounter
+    from collections.abc import Callable, Coroutine
+
     from private_gpt.components.sandbox.base import (
         SandboxCodeOptions,
         SandboxExecOptions,
         SandboxExecutionResult,
         SandboxSession,
     )
-    from private_gpt.components.sandbox.content_bundle import ContentBundle
 
 logger = logging.getLogger(__name__)
+
+_ACTIVITY_THROTTLE_SECONDS = 5.0
 
 
 @dataclass
@@ -26,74 +30,47 @@ class Environment:
     Delegated calls refresh the idle clock the manager's reaper watches, so
     any tool activity keeps the environment alive.
 
-    ContentBundles (skills, tools, ...) are registered via add_pending() and
-    materialized by _flush_pending(). When the sandbox is being created for
-    the first time, bundles that couldn't be volume-mounted are deferred and
-    flushed before the first exec(). When the sandbox is already running,
-    the manager flushes immediately so bundles are available right away.
-    The _stale flag is set on any flush failure so the EnvironmentManager
-    can evict and recreate on the next acquire().
+    All mounts are bind volumes wired at sandbox creation; nothing is
+    materialized into the running container afterwards. When the mount set
+    changes, the EnvironmentManager recreates the sandbox.
     """
 
     id: str
     sandbox: SandboxSession
     workspace: str
-    content_mounters: list[ContentMounter]
     last_accessed: float = field(default_factory=time.monotonic)
+    ttl_start: float = field(default_factory=time.monotonic)
+    last_renewed: float = field(default_factory=lambda: 0.0)
+    owner: str = ""
+    activity_sink: Callable[[str], Coroutine[None, None, None]] | None = None
 
     def __post_init__(self) -> None:
-        self._mounted: set[str] = set()
-        self._pending: list[ContentBundle] = []
-        self._stale: bool = False
+        self._mount_keys: frozenset[tuple[object, ...]] = frozenset()
+        self._sandbox_env: dict[str, str] = {}
+        self._last_shared_touch: float = 0.0
 
     def touch(self) -> None:
-        self.last_accessed = time.monotonic()
+        now = time.monotonic()
+        self.last_accessed = now
+        if (
+            self.activity_sink is not None
+            and now - self._last_shared_touch >= _ACTIVITY_THROTTLE_SECONDS
+        ):
+            self._last_shared_touch = now
+            with suppress(RuntimeError):
+                asyncio.get_running_loop().create_task(self.activity_sink(self.id))
 
     def idle_seconds(self, now: float) -> float:
         return now - self.last_accessed
-
-    def add_pending(self, bundles: list[ContentBundle]) -> None:
-        """Stage bundles for materialization, skipping already-mounted paths.
-
-        When the container is already running, the caller is responsible for
-        calling _flush_pending() immediately after. When the container is being
-        created, deferred bundles are flushed before the first exec().
-        """
-        for bundle in bundles:
-            if bundle.canonical_path not in self._mounted:
-                self._pending.append(bundle)
-
-    async def _flush_pending(self) -> None:
-        if not self._pending:
-            return
-        pending, self._pending = self._pending, []
-        try:
-            for bundle in pending:
-                mounter = next(
-                    (m for m in self.content_mounters if m.can_handle(bundle)), None
-                )
-                if mounter:
-                    await mounter.materialize(bundle, self.sandbox)
-                self._mounted.add(bundle.canonical_path)
-        except Exception:
-            self._stale = True
-            raise
-
-    async def remove_bundles(self, canonical_paths: list[str]) -> None:
-        for path in canonical_paths:
-            await self.sandbox.remove_mount(path)
-            self._mounted.discard(path)
 
     async def exec(
         self, command: str, opts: SandboxExecOptions | None = None
     ) -> SandboxExecutionResult:
         self.touch()
-        await self._flush_pending()
         return await self.sandbox.exec(command, opts)
 
     async def run_code(
         self, code: str, opts: SandboxCodeOptions | None = None
     ) -> SandboxExecutionResult:
         self.touch()
-        await self._flush_pending()
         return await self.sandbox.run_code(code, opts)

@@ -9,11 +9,13 @@ from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
 from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
-from private_gpt.events.models import TextBlock, to_llama_index_blocks
-from private_gpt.events.models._tool_result_blocks import (
-    Renderable,
-    ServerToolResultBlock,
+from private_gpt.events.models import (
+    NO_TOOL_CONTENT,
+    TextBlock,
+    normalize_tool_result_content,
+    to_llama_index_blocks,
 )
+from private_gpt.events.models._tool_result_blocks import Renderable
 
 if TYPE_CHECKING:
     from llama_index.core.base.llms.types import ContentBlock as LIContentBlock
@@ -28,7 +30,7 @@ class ServerToolResultTextInterceptor(ChatRequestLoopInterceptor):
     """Convert renderable server tool result blocks in the message history to text.
 
     Walks every ``TOOL`` role message before each iteration, detects any
-    ``ServerToolResultBlock`` stored in ``additional_kwargs``, and replaces
+    ``Renderable`` result stored in ``additional_kwargs``, and replaces
     renderable blocks with a plain ``TextBlock`` via ``render()``.
     Non-renderable blocks (e.g. images, source blocks) are preserved as-is.
     """
@@ -45,11 +47,19 @@ class ServerToolResultTextInterceptor(ChatRequestLoopInterceptor):
                 continue
 
             kwargs = message.additional_kwargs
+            _EXCLUDED_KWARGS = {
+                "tool_call_id",
+                "tool_call_name",
+                "tool_call_args",
+                "raw_output",
+                "tldr",
+            }
             server_result_keys = [
                 key
                 for key, value in kwargs.items()
-                if isinstance(value, list)
-                and any(isinstance(item, ServerToolResultBlock) for item in value)
+                if key not in _EXCLUDED_KWARGS
+                and isinstance(value, list)
+                and any(isinstance(item, Renderable) for item in value)
             ]
 
             if not server_result_keys:
@@ -59,13 +69,18 @@ class ServerToolResultTextInterceptor(ChatRequestLoopInterceptor):
             for key in server_result_keys:
                 for block in kwargs[key]:
                     if isinstance(block, Renderable):
-                        rendered.append(TextBlock(text=block.render()))
+                        rendered_text = block.render()
+                        if rendered_text.strip():
+                            rendered.append(TextBlock(text=rendered_text))
                     else:
                         rendered.append(block)
                 del kwargs[key]
 
-            li_blocks: list[LIContentBlock] = to_llama_index_blocks(rendered)
-            if li_blocks:
-                message.blocks = li_blocks
+            normalized = normalize_tool_result_content(rendered)
+            li_blocks: list[LIContentBlock] = to_llama_index_blocks(normalized)
+
+            message.blocks = li_blocks
+            if not message.content:
+                message.blocks.append(TextBlock(text=NO_TOOL_CONTENT).to_llama_index())
 
         context.set_state(state)

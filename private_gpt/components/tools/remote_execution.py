@@ -26,7 +26,12 @@ from private_gpt.components.tools.tool_execution_outcome import (
     ToolExecutionOutcome,
     ToolExecutionSuccess,
 )
-from private_gpt.events.models import TextBlock, from_tool_output
+from private_gpt.events.models import (
+    NO_TOOL_CONTENT,
+    TextBlock,
+    from_tool_output,
+    normalize_tool_result_content,
+)
 
 if TYPE_CHECKING:
     from llama_index.core.tools import AsyncBaseTool
@@ -148,57 +153,83 @@ class ToolExecutor:
         request: ToolExecutionRequest,
         state_ctx: ChatState | None = None,
     ) -> ToolExecutionResponse:
-        tool = await rebuild_tool_from_spec(request.tool_spec)
+        tool_kwargs = dict(request.tool_kwargs)
+        try:
+            tool = await rebuild_tool_from_spec(request.tool_spec)
 
-        before_context = ToolExecutionInterceptorContext(
-            phase=InterceptorPhase.BEFORE_TOOL,
-            request=request,
-            tool_kwargs=dict(request.tool_kwargs),
-        )
-        for interceptor in self._interceptors:
-            await interceptor.intercept(before_context)
-
-        result, tool_message = await execute_tool_call(
-            tool=tool,
-            tool_name=request.tool_name,
-            tool_id=request.tool_id,
-            tool_kwargs=before_context.tool_kwargs,
-            state_ctx=state_ctx,
-        )
-        result_content = (
-            from_tool_output(result.tool_output.raw_output)
-            if result.tool_output.raw_output is not None
-            else [TextBlock(text=result.tool_output.content or "")]
-        )
-        outcome: ToolExecutionOutcome = (
-            ToolExecutionFailure(
-                error=ToolExecutionError(
-                    message=result.tool_output.content
-                    or _result_content_text(result_content),
-                    details={"content": result_content},
-                )
+            before_context = ToolExecutionInterceptorContext(
+                phase=InterceptorPhase.BEFORE_TOOL,
+                request=request,
+                tool_kwargs=tool_kwargs,
             )
-            if result.tool_output.is_error
-            else ToolExecutionSuccess(content=result_content)
-        )
-        response = ToolExecutionResponse(
-            tool_name=request.tool_name,
-            tool_id=request.tool_id,
-            outcome=outcome,
-            tool_message=tool_message,
-        )
+            for interceptor in self._interceptors:
+                await interceptor.intercept(before_context)
+            tool_kwargs = before_context.tool_kwargs
 
-        after_context = ToolExecutionInterceptorContext(
-            phase=InterceptorPhase.AFTER_TOOL,
-            request=request,
-            tool_kwargs=before_context.tool_kwargs,
-            response=response,
-        )
-        for interceptor in self._interceptors:
-            await interceptor.intercept(after_context)
+            result, tool_message = await execute_tool_call(
+                tool=tool,
+                tool_name=request.tool_name,
+                tool_id=request.tool_id,
+                tool_kwargs=tool_kwargs,
+                state_ctx=state_ctx,
+            )
+            result_content = normalize_tool_result_content(
+                from_tool_output(result.tool_output.raw_output)
+                if result.tool_output.raw_output is not None
+                else [TextBlock(text=result.tool_output.content or NO_TOOL_CONTENT)]
+            )
+            outcome: ToolExecutionOutcome = (
+                ToolExecutionFailure(
+                    error=ToolExecutionError(
+                        message=result.tool_output.content
+                        or _result_content_text(result_content),
+                        details={"content": result_content},
+                    )
+                )
+                if result.tool_output.is_error
+                else ToolExecutionSuccess(content=result_content)
+            )
+            response = ToolExecutionResponse(
+                tool_name=request.tool_name,
+                tool_id=request.tool_id,
+                outcome=outcome,
+                tool_message=tool_message,
+            )
 
-        assert after_context.response is not None
-        return after_context.response
+            after_context = ToolExecutionInterceptorContext(
+                phase=InterceptorPhase.AFTER_TOOL,
+                request=request,
+                tool_kwargs=tool_kwargs,
+                response=response,
+            )
+            for interceptor in self._interceptors:
+                await interceptor.intercept(after_context)
+
+            assert after_context.response is not None
+            return after_context.response
+        except Exception as exc:
+            message = str(exc)
+            return ToolExecutionResponse(
+                tool_name=request.tool_name,
+                tool_id=request.tool_id,
+                outcome=ToolExecutionFailure(
+                    error=ToolExecutionError(
+                        message=message,
+                        exception_type=type(exc).__name__,
+                        details={"content": [TextBlock(text=message)]},
+                    )
+                ),
+                tool_message=ChatMessage(
+                    role="tool",
+                    content=message,
+                    additional_kwargs={
+                        "tool_call_id": request.tool_id,
+                        "tool_call_name": request.tool_name,
+                        "tool_call_args": tool_kwargs,
+                        "raw_output": message,
+                    },
+                ),
+            )
 
 
 def build_rebuild_metadata(

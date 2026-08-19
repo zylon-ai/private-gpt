@@ -1,6 +1,22 @@
-from typing import TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar("T")
+
+
+def require_tool_params(
+    tool_name: str,
+    kwargs: dict[str, Any],
+    input_schema: dict[str, Any] | None,
+) -> None:
+    """Raise ValueError when a schema-required param is missing or None."""
+    required = input_schema.get("required") if input_schema else None
+    if not isinstance(required, list):
+        return
+    for param in required:
+        if not isinstance(param, str):
+            continue
+        if kwargs.get(param) is None:
+            raise ValueError(f"{tool_name} requires the {param} parameter.")
 
 
 def truncate_output(text: str, max_bytes: int) -> str:

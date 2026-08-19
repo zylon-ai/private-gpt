@@ -9,11 +9,7 @@ from private_gpt.components.code_execution.base import CodeExecutionProvider
 from private_gpt.components.code_execution.sandbox_session import (
     SandboxCodeExecutionSession,
 )
-from private_gpt.components.environment.content_mounter import (
-    FetchContentMounter,
-    InlineContentMounter,
-    LocalStorageContentMounter,
-)
+from private_gpt.components.environment.hydration import HydratingEnvironmentManager
 from private_gpt.components.environment.manager import EnvironmentManager
 from private_gpt.components.environment.mounter import LocalDirMounter
 from private_gpt.components.sandbox.local import LocalSandboxProvider
@@ -24,7 +20,6 @@ if TYPE_CHECKING:
         CodeExecutionSession,
         CodeExecutionSessionConfig,
     )
-    from private_gpt.components.environment.content_mounter import ContentMounter
     from private_gpt.components.environment.mounter import LayoutMounter
 
 
@@ -43,40 +38,28 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
             settings.code_execution.workspace_path
             or Path(settings.data.local_data_folder) / "code_execution_workspaces"
         )
-        self._manager = EnvironmentManager(
+        manager = EnvironmentManager(
             sandbox_provider=LocalSandboxProvider(settings),
             layout_mounter=self._make_layout_mounter(base),
-            content_mounters=self._make_content_mounters(),
             ttl_seconds=settings.code_execution.session_ttl_seconds,
+            namespaces=settings.filesystems.namespaces,
+        )
+        self._manager = HydratingEnvironmentManager(
+            manager=manager, namespaces=settings.filesystems.namespaces
         )
 
     def _make_layout_mounter(self, base: Path) -> LayoutMounter:
         """Factory hook — subclasses override to inject cloud-backed storage.
 
-        When volume_root is set (Files API enabled), sessions are rooted there
-        so that files uploaded via the Files API are accessible to the sandbox
-        at the same host paths where LocalObjectStorage writes them.
+        When the 'session' filesystem namespace is configured, sessions are
+        rooted there so that files uploaded via the Files API are accessible
+        to the sandbox at the same host paths where LocalObjectStorage writes
+        them.
         """
-        volume_root = self.settings.code_execution.volume_root
-        if volume_root is not None:
-            return LocalDirMounter(Path(volume_root))
+        session_ns = self.settings.filesystems.namespaces.get("session")
+        if session_ns is not None and session_ns.root:
+            return LocalDirMounter(Path(session_ns.root))
         return LocalDirMounter(base)
-
-    def _make_content_mounters(self) -> list[ContentMounter]:
-        """Build the ordered content-mounter list for this deployment.
-
-        When skills are stored locally, LocalStorageContentMounter provides a
-        direct host-path volume (no fetch needed). FetchContentMounter is the
-        universal fallback for any StoredBundle. InlineContentMounter handles
-        plain ContentBundle instances whose files are already in memory.
-        """
-        mounters: list[ContentMounter] = []
-        if self.settings.skills.storage_provider == "local":
-            storage_root = Path(self.settings.data.local_data_folder) / "storage"
-            mounters.append(LocalStorageContentMounter(storage_root))
-        mounters.append(FetchContentMounter())
-        mounters.append(InlineContentMounter())
-        return mounters
 
     async def create_session(
         self,
@@ -84,9 +67,8 @@ class LocalCodeExecutionProvider(CodeExecutionProvider):
     ) -> SandboxCodeExecutionSession:
         env = await self._manager.acquire(
             config.session_id,
-            config.extra_bundles or None,
-            config.bundles_to_remove or None,
-            config.env or None,
+            mounts=config.mounts or None,
+            sandbox_env=config.env or None,
         )
         return SandboxCodeExecutionSession(env)
 

@@ -1411,8 +1411,7 @@ class WebFetchSettings(BaseModel):
     )
     provider: str = Field(
         default="local",
-        description="Web scraper provider to run the scrape script with "
-        "(local, opensandbox, ...).",
+        description="Web scraper provider to run the scrape script with (e.g. 'local').",
     )
     timeout_seconds: int = Field(
         default=15, description="Timeout in seconds for web page fetching."
@@ -1579,17 +1578,6 @@ class SkillSettings(BaseModel):
             "If None (default), no size limit is enforced."
         ),
     )
-    volume_root: str | None = Field(
-        default=None,
-        description=(
-            "Host filesystem root for skill bundle volumes. "
-            "When set, VolumeContentMounter bind-mounts skill files from "
-            "{volume_root}/{storage_prefix}/ into the sandbox at /mnt/skills/{name}/. "
-            "In production this path should be backed by a FUSE/S3FS DaemonSet mount. "
-            "When absent or empty the mounter fetches files from the storage backend "
-            "and caches them locally before creating the bind-mount."
-        ),
-    )
 
     @field_validator("max_bundle_size_bytes", mode="before")
     @classmethod
@@ -1712,17 +1700,35 @@ class CodeExecutionSettings(BaseModel):
         default="sessions",
         description="Path prefix inside the storage bucket for session workspace data.",
     )
-    volume_root: str | None = Field(
-        default=None,
-        description="Host filesystem root for session volumes. "
-        "When set, session upload/output directories are created under "
-        "{volume_root}/{vfs_sessions_prefix}/{session_id}/. "
-        "Required by the Files API when storage_provider is 'local'.",
-    )
     storage_provider: Literal["local", "s3"] = Field(
         default="local",
         description="Storage backend for session files (Files API). "
-        "Use 'local' with volume_root set, or 's3' with s3.durable_bucket_name set.",
+        "Use 'local' with a session namespace root configured, "
+        "or 's3' with s3.durable_bucket_name set.",
+    )
+    internet_enabled: bool = Field(
+        default=False,
+        description=(
+            "Whether the code execution sandbox has outbound internet access. "
+            "When false (default), model instructions state that network access, "
+            "package installs, and external downloads are unavailable."
+        ),
+    )
+    preinstalled_packages: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Python packages advertised to the model as preinstalled in the "
+            "code execution environment. When set via env var, use a "
+            "comma-separated string."
+        ),
+    )
+    preinstalled_cli_tools: list[str] = Field(
+        default_factory=list,
+        description=(
+            "CLI tools advertised to the model as available in the code "
+            "execution environment. When set via env var, use a "
+            "comma-separated string."
+        ),
     )
     tools: CodeExecutionToolsSettings = Field(
         default_factory=lambda: CodeExecutionToolsSettings(),
@@ -1735,6 +1741,17 @@ class CodeExecutionSettings(BaseModel):
         if isinstance(value, str) and not value.strip():
             return None
         return value
+
+    @field_validator("preinstalled_packages", "preinstalled_cli_tools", mode="before")
+    @classmethod
+    def split_comma_separated_lists(cls, value: object) -> object:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        if isinstance(value, list):
+            return value
+        raise ValueError("must be a list or comma-separated string")
 
 
 class ReaderSettings(BaseModel):
@@ -1817,6 +1834,49 @@ class SemaphoreSettings(BaseModel):
     )
 
 
+class NamespaceConfig(BaseModel):
+    """Configuration for a single filesystem namespace."""
+
+    root: str = Field(
+        description="Absolute local path that backs this namespace. Must exist and be readable at startup.",
+    )
+    default_mode: Literal["rw", "ro"] = Field(
+        default="rw",
+        description="Default access mode: 'rw' (read-write) or 'ro' (read-only).",
+    )
+    hydration: bool = Field(
+        default=False,
+        description=(
+            "When True, namespace-backed mounts are (re)hydrated from their URI "
+            "before the sandbox is created, using an etag ledger to skip "
+            "unchanged content. Keep this off when the namespace root already "
+            "contains the content (for example a remote filesystem mount)."
+        ),
+    )
+    storage_backend: bool = Field(
+        default=False,
+        description=(
+            "When True the namespace is served by the ObjectStorage backend "
+            "(uploads/ and outputs/ virtual folders, optional S3 provider). "
+            "Set this on the 'session' namespace; all other namespaces use the "
+            "plain local filesystem via PathResolver."
+        ),
+    )
+
+
+class FilesystemsSettings(BaseModel):
+    """Namespace registry: maps logical names to local filesystem roots."""
+
+    namespaces: dict[str, NamespaceConfig] = Field(
+        default_factory=dict,
+        description=(
+            "Map from namespace name to its configuration. "
+            "Well-known names include 'session' and 'skills'. "
+            "Additional namespaces may be added freely."
+        ),
+    )
+
+
 class Settings(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -1855,6 +1915,10 @@ class Settings(BaseModel):
     skills: SkillSettings
     transformation: TransformationSettings
     semaphore: SemaphoreSettings
+    filesystems: FilesystemsSettings = Field(
+        default_factory=FilesystemsSettings,
+        description="Namespace registry: maps logical names to local filesystem roots.",
+    )
     scheduler: SchedulerConfig = Field(
         default_factory=SchedulerConfig,
         description="Scheduler configuration for chat and tool workers.",

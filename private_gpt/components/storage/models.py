@@ -12,6 +12,10 @@ class FileInfo(BaseModel):
     size_bytes: int = Field(description="File size in bytes.")
     created_at: datetime = Field(description="Last-modified timestamp (UTC).")
     mime_type: str = Field(description="MIME type of the file content.")
+    etag: str | None = Field(
+        default=None,
+        description="Content checksum (MD5 hex or S3 ETag). Present on stat; None if unavailable.",
+    )
 
 
 class StoredFile(BaseModel):

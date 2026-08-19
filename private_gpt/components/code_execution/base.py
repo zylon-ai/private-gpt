@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from private_gpt.components.sandbox.content_bundle import ContentBundle
+from private_gpt.components.sandbox.mount import Mount
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
@@ -50,6 +50,10 @@ class CodeExecutionSession(ABC):
         """Read raw file bytes from the session workspace."""
 
     @abstractmethod
+    async def path_exists(self, path: str) -> bool:
+        """Return True if the path exists in the session workspace."""
+
+    @abstractmethod
     async def close(self) -> None:
         """Close and release the backing execution session."""
 
@@ -58,9 +62,17 @@ class CodeExecutionSessionConfig(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     session_id: str
-    extra_bundles: list[ContentBundle] = Field(default_factory=list)
-    bundles_to_remove: list[str] = Field(default_factory=list)
     env: dict[str, str] = Field(default_factory=dict)
+    mounts: list[Mount] = Field(
+        default_factory=list,
+        description=(
+            "The single mount set for the session: session layout is added by "
+            "the layout mounter; this list carries skill/bundle mounts (with a "
+            "storage ref) and Backend mount-plan volumes (with a source dir). "
+            "A change in this set recreates the sandbox instead of "
+            "materializing files into the running container."
+        ),
+    )
 
 
 class CodeExecutionProvider(ABC):

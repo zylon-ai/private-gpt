@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
-from private_gpt.components.sandbox.mount import SandboxMountSpec, VolumeSpec
+from private_gpt.components.sandbox.mount import Mount
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -19,7 +19,7 @@ class LayoutMounter(ABC):
     Responsible only for structural concerns: which canonical paths make up
     the session's persistent directory tree and how they are backed on the
     host. Bundle content (skills, tools, ...) is a separate concern handled
-    by ContentMounter implementations.
+    by the hydration layer, never here.
     """
 
     def __init__(
@@ -32,32 +32,28 @@ class LayoutMounter(ABC):
         return self._layout
 
     @property
-    def workspace_canonical(self) -> str:
+    def workspace_target(self) -> str:
         """Canonical working directory: the first writable layout entry."""
-        return next(m.canonical for m in self._layout if m.writable)
+        return next(m.target for m in self._layout if m.access == "rw")
 
     def ensure_ready(self) -> None:  # noqa: B027 — optional hook, default no-op
-        """One-time idempotent setup of backing storage (e.g. mount s3fs)."""
+        """One-time idempotent setup of backing storage."""
 
     @abstractmethod
-    def session_volumes(self, session_id: str) -> list[VolumeSpec] | None:
+    def session_volumes(self, session_id: str) -> list[Mount] | None:
         """Host volumes backing this session's layout dirs, or None if not host-backed.
 
         Only covers the fixed session layout (workspace, uploads, outputs).
-        Bundle/skill volumes are declared by ContentMounter.prepare_volume().
         Implementations create the host directories they return. Idempotent.
         """
 
-    def mount_specs(self) -> list[SandboxMountSpec]:
+    def mount_specs(self) -> list[Mount]:
         """Canonical mount specs for the session layout (writability enforcement).
 
         Bundle specs are added separately by the EnvironmentManager so this
         class stays unaware of content.
         """
-        return [
-            SandboxMountSpec(canonical=m.canonical, writable=m.writable)
-            for m in self._layout
-        ]
+        return [Mount(target=m.target, access=m.access) for m in self._layout]
 
 
 # Backward-compatible alias so existing imports of `Mounter` keep working.
@@ -71,7 +67,7 @@ class SandboxDirMounter(LayoutMounter):
     ephemeral use where persistence is not required.
     """
 
-    def session_volumes(self, session_id: str) -> list[VolumeSpec] | None:
+    def session_volumes(self, session_id: str) -> list[Mount] | None:
         return None
 
 
@@ -80,8 +76,6 @@ class LocalDirMounter(LayoutMounter):
 
     Layout dirs live under ``{base}/{name}/{session_id}`` so that each folder
     type sits at a top-level prefix — enabling per-folder MinIO lifecycle rules.
-    Bundle content is handled by LocalStorageContentMounter or
-    FetchContentMounter, not here.
     """
 
     def __init__(
@@ -101,17 +95,17 @@ class LocalDirMounter(LayoutMounter):
     def outputs_path(self, session_id: str) -> Path:
         return self._base / "outputs" / session_id
 
-    def session_volumes(self, session_id: str) -> list[VolumeSpec] | None:
-        volumes: list[VolumeSpec] = []
+    def session_volumes(self, session_id: str) -> list[Mount] | None:
+        volumes: list[Mount] = []
         for mount in self._layout:
             host = self._base / mount.name / session_id
             host.mkdir(parents=True, exist_ok=True)
             volumes.append(
-                VolumeSpec(
+                Mount(
                     name=mount.name,
+                    target=mount.target,
                     host_path=host,
-                    mount_path=mount.canonical,
-                    read_only=not mount.writable,
+                    access=mount.access,
                 )
             )
         return volumes

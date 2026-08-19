@@ -13,9 +13,9 @@ class FileScope(BaseModel):
         description="Session / container identifier that owns this file.",
         examples=["session-abc123"],
     )
-    type: Literal["session"] = Field(
+    type: str = Field(
         default="session",
-        description="Object type discriminator, always 'session'.",
+        description="Namespace the file belongs to (e.g. 'session', 'skills', or a custom namespace).",
         examples=["session"],
     )
 
@@ -71,6 +71,16 @@ class FileMetadata(BaseModel):
     downloadable: bool = Field(
         description="True for sandbox output files; False for uploaded input files.",
         examples=[False],
+    )
+    etag: str | None = Field(
+        default=None,
+        description="Content checksum (MD5 hex or S3 ETag). Present after stat; None if unavailable.",
+        examples=["d41d8cd98f00b204e9800998ecf8427e"],
+    )
+    namespace: str = Field(
+        default="session",
+        description="Namespace this file belongs to (e.g. 'session', 'skills', or a custom namespace).",
+        examples=["session"],
     )
     scope: FileScope = Field(
         description="Session scope this file belongs to.",
@@ -147,4 +157,60 @@ class FileListResponse(BaseModel):
         default=False,
         description="True when there are additional pages of results beyond this one.",
         examples=[False],
+    )
+
+
+class NamespaceInfo(BaseModel):
+    """Description of a single filesystem namespace."""
+
+    name: str = Field(
+        description="Logical namespace name (e.g. 'session', 'skills', or a custom name).",
+        examples=["session"],
+    )
+    root: str = Field(
+        description="Absolute local path that backs this namespace.",
+        examples=["/mnt/filesystems/session"],
+    )
+    default_mode: Literal["rw", "ro"] = Field(
+        description="Default access mode: 'rw' (read-write) or 'ro' (read-only).",
+        examples=["rw"],
+    )
+
+
+class NamespaceListResponse(BaseModel):
+    """List of registered filesystem namespaces."""
+
+    data: list[NamespaceInfo] = Field(
+        default_factory=list,
+        description="Registered namespaces, sorted alphabetically by name.",
+    )
+
+
+class DeletedPrefix(BaseModel):
+    """Confirmation that all files matching a prefix were deleted."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "prefix": "data/2024/",
+                    "deleted_count": 3,
+                    "type": "prefix_deleted",
+                }
+            ]
+        }
+    )
+
+    prefix: str = Field(
+        description="The key prefix that was deleted.",
+        examples=["data/2024/"],
+    )
+    deleted_count: int = Field(
+        description="Number of files actually removed.",
+        examples=[3],
+    )
+    type: Literal["prefix_deleted"] = Field(
+        default="prefix_deleted",
+        description="Object type discriminator, always 'prefix_deleted'.",
+        examples=["prefix_deleted"],
     )

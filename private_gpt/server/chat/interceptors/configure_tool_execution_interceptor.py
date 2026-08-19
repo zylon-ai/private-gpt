@@ -7,6 +7,9 @@ from private_gpt.components.tools.remote_execution import (
 from private_gpt.server.chat.interceptors.null_tool_values_interceptor import (
     NullToolValuesRequestInterceptor,
 )
+from private_gpt.server.chat.interceptors.required_tool_params_interceptor import (
+    RequiredToolParamsInterceptor,
+)
 from private_gpt.server.chat.interceptors.schema_coercing_tool_interceptor import (
     SchemaCoercingToolInterceptor,
 )
@@ -21,10 +24,12 @@ class ConfigureToolExecutionInterceptor(ToolExecutionInterceptor):
         self,
         null_tool_values_interceptor: NullToolValuesRequestInterceptor,
         schema_coercing_interceptor: SchemaCoercingToolInterceptor,
+        required_tool_params_interceptor: RequiredToolParamsInterceptor,
     ) -> None:
         self._interceptors: list[ToolExecutionInterceptor] = [
             schema_coercing_interceptor,
             null_tool_values_interceptor,
+            required_tool_params_interceptor,
         ]
 
     async def intercept(self, context: ToolExecutionInterceptorContext) -> None:

@@ -9,8 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
-    from private_gpt.components.sandbox.content_bundle import BundledFile
-    from private_gpt.components.sandbox.mount import SandboxMountSpec, VolumeSpec
+    from private_gpt.components.sandbox.mount import Mount
 
 
 class SandboxExecutionResult(BaseModel):
@@ -63,9 +62,7 @@ class SandboxSession(ABC):
     """Async sandbox session with exec + file operations.
 
     Permission enforcement: write_file() and chmod() check if the path is
-    in a writable mount.
-    initialize_mount() bypasses this check — for session setup only.
-    make_dir() does not check writable.
+    in a writable mount. make_dir() does not check writable.
     """
 
     python_executable: str = "python"
@@ -130,22 +127,6 @@ class SandboxSession(ABC):
     async def chmod(self, path: str, mode: int) -> None:
         """Set file permissions. Raises ValueError if path is in a read-only mount."""
 
-    @abstractmethod
-    async def initialize_mount(self, canonical: str, files: list[BundledFile]) -> None:
-        """Write mount files during session setup. Bypasses writable check."""
-
-    async def remove_mount(self, canonical_path: str) -> None:
-        """Remove a mounted directory from the sandbox.
-
-        Default: run ``rm -rf`` inside the sandbox, suitable for copy-based
-        mounts (e.g. Docker). Override when deleting host-backed storage files
-        would be destructive (e.g. ``BashExecutorSandbox``).
-        """
-        import shlex
-
-        normalized = canonical_path.rstrip("/")
-        await self.exec(f"rm -rf {shlex.quote(normalized)}")
-
     async def get_endpoint(self, port: int) -> SandboxLink | None:
         """Return a browser-consumable URL for a service on the given port.
 
@@ -169,17 +150,22 @@ class SandboxProvider(ABC):
         self,
         user_id: str | None = None,
         timeout: int | None = None,
-        bundle_specs: list[SandboxMountSpec] | None = None,
+        bundle_specs: list[Mount] | None = None,
         *,
         session_id: str | None = None,
-        volumes: list[VolumeSpec] | None = None,
+        volumes: list[Mount] | None = None,
         env: dict[str, str] | None = None,
+        fingerprint: str | None = None,
     ) -> SandboxSession:
         """Create a sandbox session. The session may be lazy until first use.
 
-        ``session_id`` tags the backend resource so it can be found again by
-        restore_session(); ``volumes`` are host directories to bind-mount.
+        ``session_id`` tags the backend resource so ``restore_session()``
+        can find it again. ``volumes`` are host directories to bind-mount.
         ``env`` carries environment variables to inject into the sandbox.
+        ``fingerprint`` is an opaque, cross-process-stable identity of the
+        requested mounts + env; backends may store it with the sandbox so a
+        later restore can detect that the container was created with different
+        mounts (and discard it).
         Backends without those capabilities may ignore them.
         """
 
@@ -187,10 +173,15 @@ class SandboxProvider(ABC):
         self,
         session_id: str,
         timeout: int | None = None,
-        bundle_specs: list[SandboxMountSpec] | None = None,
+        bundle_specs: list[Mount] | None = None,
+        *,
+        fingerprint: str | None = None,
     ) -> SandboxSession | None:
         """Reattach to an existing backend sandbox for this session, if any.
 
+        ``fingerprint`` is the identity of the mounts/env the caller wants
+        now; when the backend stored a different fingerprint on the sandbox,
+        it should return None so the caller creates fresh (discard on change).
         Default: the backend cannot restore — returns None.
         """
         return None

@@ -243,12 +243,14 @@ code_execution:
   provider: ${PGPT_CODE_EXECUTION_PROVIDER:local}
   workspace_path: ${PGPT_CODE_EXECUTION_WORKSPACE_PATH:}
   timeout: ${PGPT_CODE_EXECUTION_TIMEOUT:60}
+  internet_enabled: ${PGPT_CODE_EXECUTION_INTERNET_ENABLED:false}
+  preinstalled_packages: ${PGPT_CODE_EXECUTION_PREINSTALLED_PACKAGES:pandas,numpy,scipy,scikit-learn,statsmodels,matplotlib,seaborn,pyarrow,openpyxl,xlsxwriter,xlrd,pillow,python-pptx,python-docx,pypdf,pdfplumber,pypdfium2,pdf2image,pdfkit,tabula-py,reportlab,img2pdf,sympy,mpmath,tqdm,python-dateutil,pytz,joblib}
+  preinstalled_cli_tools: ${PGPT_CODE_EXECUTION_PREINSTALLED_CLI_TOOLS:unzip,unrar,7zip,bc,rg,fd,sqlite3}
   tools:
     present_files_enabled: ${PGPT_CODE_EXECUTION_PRESENT_FILES_ENABLED:true}
     present_server_enabled: ${PGPT_CODE_EXECUTION_PRESENT_SERVER_ENABLED:true}
     server_tool_result_mode: ${PGPT_CODE_EXECUTION_SERVER_TOOL_RESULT_MODE:full}
   max_output_bytes: ${PGPT_CODE_EXECUTION_MAX_OUTPUT_BYTES:1048576}
-  volume_root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:local_data/private_gpt/volumes}
 
 bash:
   cpu_limit_seconds: ${PGPT_BASH_CPU_LIMIT_SECONDS:30}
@@ -310,7 +312,6 @@ skills:
   skill_injection_mode: ${PGPT_SKILL_INJECTION_MODE:system_prompt}
   maximum_loaded_skills: ${PGPT_SKILL_MAXIMUM_LOADED_SKILLS:1}
   max_bundle_size_bytes: ${PGPT_SKILLS_MAX_BUNDLE_SIZE_BYTES:}
-  volume_root: ${PGPT_SKILLS_VOLUME_ROOT:}
 
 semaphore:
   mode: ${PGPT_SEMAPHORE_MODE:memory}
@@ -357,3 +358,12 @@ transformation:
         max_iterations: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MAX_ITERATIONS:2}
         enable_semaphore: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_ENABLE_SEMAPHORE:false}
         mode: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MODE:none}
+
+filesystems:
+  namespaces:
+    session:
+      root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:local_data/private_gpt/volumes/sessions}
+      default_mode: ${PGPT_CODE_EXECUTION_VOLUME_DEFAULT_MODE:rw}
+    skills:
+      root: ${PGPT_SKILLS_VOLUME_ROOT:local_data/private_gpt/volumes/skills}
+      default_mode: ${PGPT_SKILLS_VOLUME_DEFAULT_MODE:ro}
