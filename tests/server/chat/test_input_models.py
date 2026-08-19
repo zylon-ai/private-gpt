@@ -2546,7 +2546,6 @@ def test_server_tool_use_without_internal_name_falls_back_to_public_name() -> No
     assert tool_calls[0].tool_name == "bash_code_execution"
 
 
-
 def test_validate_system_config_merges_prompt_flags() -> None:
     """Merging system blocks must OR PromptConfig flags, not drop them."""
     from private_gpt.chat.input_models import (

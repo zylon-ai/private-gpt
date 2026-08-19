@@ -1005,7 +1005,6 @@ async def test_initialize_run_reuses_provided_original_input() -> None:
     assert second_layers[0].text == [TextBlock(text="USER PROMPT")]
 
 
-
 @pytest.mark.asyncio
 async def test_initialize_run_keeps_platform_layers_when_stack_is_carried() -> None:
     """Later iterations must not collapse platform layers into USER_INSTRUCTIONS."""

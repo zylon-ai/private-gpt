@@ -65,9 +65,7 @@ class CitationRequestInterceptor(ChatRequestLoopInterceptor):
             ]
             stack = stack.remove_layers_of_type(LayerType.DOCUMENT)
             request_ids = {doc.id_ for doc in request_docs}
-            merged: dict[str, Document] = {
-                doc.id_: doc for doc in request_docs
-            }
+            merged: dict[str, Document] = {doc.id_: doc for doc in request_docs}
             for document in documents:
                 merged[document.id_] = document
             for document in merged.values():

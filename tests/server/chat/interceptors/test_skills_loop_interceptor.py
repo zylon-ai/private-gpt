@@ -283,7 +283,6 @@ async def test_client_history_still_loaded_after_server_tool_result_rewrite() ->
     }
 
 
-
 def _skill_cache_entry(*, name: str, loading: str = "lazy"):
     from datetime import UTC, datetime
 
@@ -349,7 +348,9 @@ def _skill_request(messages: list[ChatMessage]):
     )
 
 
-def _skill_context(request, *, names: list[str], messages: list[ChatMessage] | None = None):
+def _skill_context(
+    request, *, names: list[str], messages: list[ChatMessage] | None = None
+):
     from private_gpt.components.context.models.context_stack import ContextStack
     from private_gpt.components.engines.chat.models.chat_interceptor_context import (
         ChatInterceptorContext,
