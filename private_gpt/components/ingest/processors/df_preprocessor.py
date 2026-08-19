@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-import re
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
@@ -54,11 +53,9 @@ class DataFramePreprocessor:
             return False
 
         # Check if enough values can be converted to numeric
-        numeric_count = 0
-        for value in non_empty:
-            with suppress(Exception):
-                pd.to_numeric(str(value))
-                numeric_count += 1
+        numeric_count = pd.to_numeric(
+            non_empty.astype(str), errors="coerce"
+        ).notna().sum()
 
         return numeric_count / len(non_empty) >= self.min_numeric_ratio
 
@@ -73,24 +70,20 @@ class DataFramePreprocessor:
             return False
 
         # First check if values match common datetime patterns
-        pattern_matches = 0
-        for value in non_empty:
-            str_value = str(value).strip()
-            if any(re.match(pattern, str_value) for pattern in self._datetime_patterns):
-                pattern_matches += 1
+        str_values = non_empty.astype(str).str.strip()
+        combined_pattern = "|".join(self._datetime_patterns)
+        pattern_matches = str_values.str.match(combined_pattern).sum()
 
         # If not enough pattern matches, it's likely not a datetime column
         if pattern_matches / len(non_empty) < self.min_datetime_ratio:
             return False
 
         # Try to parse datetime
-        datetime_count = 0
-        for value in non_empty:
-            with suppress(Exception):
-                parsed = pd.to_datetime(str(value), errors="raise")
-                # Additional validation: ensure it's a reasonable date
-                if pd.Timestamp.min < parsed < pd.Timestamp.max:
-                    datetime_count += 1
+        parsed = pd.to_datetime(str_values, errors="coerce")
+        # Additional validation: ensure it's a reasonable date
+        datetime_count = (
+            parsed.notna() & (parsed > pd.Timestamp.min) & (parsed < pd.Timestamp.max)
+        ).sum()
 
         return datetime_count / len(non_empty) >= self.min_datetime_ratio
 
