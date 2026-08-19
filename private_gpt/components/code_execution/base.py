@@ -50,6 +50,10 @@ class CodeExecutionSession(ABC):
         """Read raw file bytes from the session workspace."""
 
     @abstractmethod
+    async def write_file(self, path: str, content: bytes) -> None:
+        """Write raw file bytes into the session workspace."""
+
+    @abstractmethod
     async def path_exists(self, path: str) -> bool:
         """Return True if the path exists in the session workspace."""
 

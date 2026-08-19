@@ -144,7 +144,19 @@ async def test_text_editor_view_puts_no_output_in_empty_file_content() -> None:
 
 @pytest.mark.asyncio
 async def test_present_files_builder_presents_existing_files() -> None:
-    session = SimpleNamespace(path_exists=AsyncMock(return_value=True))
+    existing = {
+        "/mnt/user-data/outputs/chart.png",
+        "/tmp/notes.md",
+    }
+
+    async def path_exists(path: str) -> bool:
+        return path in existing
+
+    session = SimpleNamespace(
+        path_exists=AsyncMock(side_effect=path_exists),
+        read_file=AsyncMock(return_value=b"# notes"),
+        write_file=AsyncMock(),
+    )
     builder = PresentFilesToolBuilder(
         code_execution_component=SimpleNamespace(
             get_or_create_session=AsyncMock(return_value=session)
@@ -156,9 +168,12 @@ async def test_present_files_builder_presents_existing_files() -> None:
         filepaths=["/mnt/user-data/outputs/chart.png", "/tmp/notes.md"]
     )
 
-    assert session.path_exists.await_count == 2
     session.path_exists.assert_any_await("/mnt/user-data/outputs/chart.png")
     session.path_exists.assert_any_await("/tmp/notes.md")
+    session.read_file.assert_awaited_once_with("/tmp/notes.md")
+    session.write_file.assert_awaited_once_with(
+        "/mnt/user-data/outputs/tmp/notes.md", b"# notes"
+    )
     assert [block.type for block in result] == [
         "local_resource",
         "local_resource",
@@ -167,10 +182,73 @@ async def test_present_files_builder_presents_existing_files() -> None:
     assert result[0].file_path == "/mnt/user-data/outputs/chart.png"
     assert result[0].name == "chart"
     assert result[0].mime_type == "image/png"
-    assert result[1].file_path == "/tmp/notes.md"
+    assert result[1].file_path == "/mnt/user-data/outputs/tmp/notes.md"
     assert result[1].mime_type == "text/markdown"
     assert result[2].text == "Presented 2 file(s): chart.png, notes.md"
     assert tool.event_adapter is PresentFilesEventAdapter
+
+
+@pytest.mark.asyncio
+async def test_present_files_copies_claude_skills_into_outputs() -> None:
+    existing = {"/home/agent/.claude/skills/technical-dashboard/SKILL.md"}
+
+    async def path_exists(path: str) -> bool:
+        return path in existing
+
+    session = SimpleNamespace(
+        path_exists=AsyncMock(side_effect=path_exists),
+        read_file=AsyncMock(return_value=b"# skill"),
+        write_file=AsyncMock(),
+    )
+    builder = PresentFilesToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        )
+    )
+
+    tool = await builder.build_tool("corr-skill")
+    result = await tool.async_fn(
+        filepaths=["/home/agent/.claude/skills/technical-dashboard/SKILL.md"]
+    )
+
+    dest = "/mnt/user-data/outputs/technical-dashboard/SKILL.md"
+    session.read_file.assert_awaited_once_with(
+        "/home/agent/.claude/skills/technical-dashboard/SKILL.md"
+    )
+    session.write_file.assert_awaited_once_with(dest, b"# skill")
+    assert result[0].type == "local_resource"
+    assert result[0].file_path == dest
+    assert result[0].name == "SKILL"
+    assert result[0].mime_type == "text/markdown"
+
+
+@pytest.mark.asyncio
+async def test_present_files_uniquifies_outputs_copy_on_collision() -> None:
+    existing = {
+        "/tmp/notes.md",
+        "/mnt/user-data/outputs/tmp/notes.md",
+    }
+
+    async def path_exists(path: str) -> bool:
+        return path in existing
+
+    session = SimpleNamespace(
+        path_exists=AsyncMock(side_effect=path_exists),
+        read_file=AsyncMock(return_value=b"# notes"),
+        write_file=AsyncMock(),
+    )
+    builder = PresentFilesToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        )
+    )
+
+    tool = await builder.build_tool("corr-collision")
+    result = await tool.async_fn(filepaths=["/tmp/notes.md"])
+
+    dest = "/mnt/user-data/outputs/tmp/notes-2.md"
+    session.write_file.assert_awaited_once_with(dest, b"# notes")
+    assert result[0].file_path == dest
 
 
 @pytest.mark.asyncio

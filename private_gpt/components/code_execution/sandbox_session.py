@@ -178,6 +178,11 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
         self._env.touch()
         return await self._sandbox.read_file(path)
 
+    async def write_file(self, path: str, content: bytes) -> None:
+        path = self._resolve_path(path)
+        self._env.touch()
+        await self._sandbox.write_file(path, content)
+
     async def path_exists(self, path: str) -> bool:
         path = self._resolve_path(path)
         self._env.touch()
