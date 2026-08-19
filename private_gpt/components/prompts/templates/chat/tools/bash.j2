@@ -41,7 +41,7 @@ You have a sandboxed code execution environment.
   - `{{ insert_tool }}` — insert lines after a line number (`path`, `insert_line`, `new_str`){% endif %}
 {% endif -%}
 {% if present_files_tool -%}
-- `{{ present_files_tool }}` — **required** to show files to the user (`filepaths`: absolute paths). Writing a file does not surface it in chat.
+- `{{ present_files_tool }}` — **required** to show files to the user. `filepaths` must be absolute paths **already under `{{ outputs.target }}`**. Workspace, uploads, skills, and other paths are rejected. Writing a file does not surface it in chat.
 {% endif -%}
 {% if present_server_tool -%}
 - `{{ present_server_tool }}` — **required** to expose a sandbox HTTP service (`port`; optional `service_name`, `initial_path`)
@@ -76,7 +76,7 @@ You have a sandboxed code execution environment.
 - No internet: outbound network is disabled. Do not use `pip install`, `npm install`, `curl`, `wget`, `apt`, or any other download/install that needs the network. Use only the preinstalled packages/CLI tools listed above and local files.
 {% endif -%}
 {% if present_files_tool -%}
-- After creating/updating deliverables, call `{{ present_files_tool }}` with their absolute paths (batch when possible). Do not claim a file is downloadable unless you already presented it.
+- After creating/updating deliverables in `{{ outputs.target }}`, call `{{ present_files_tool }}` with those absolute outputs paths (batch when possible). If a file currently lives elsewhere, copy it into `{{ outputs.target }}` first, then present the copy. Do not claim a file is downloadable unless you already presented it.
 {% endif -%}
 {% if present_server_tool -%}
 - After starting an HTTP server in the sandbox, call `{{ present_server_tool }}` with its port.

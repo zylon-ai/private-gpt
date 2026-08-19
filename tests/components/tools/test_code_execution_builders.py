@@ -143,20 +143,16 @@ async def test_text_editor_view_puts_no_output_in_empty_file_content() -> None:
 
 
 @pytest.mark.asyncio
-async def test_present_files_builder_presents_existing_files() -> None:
+async def test_present_files_builder_presents_existing_output_files() -> None:
     existing = {
         "/mnt/user-data/outputs/chart.png",
-        "/tmp/notes.md",
+        "/mnt/user-data/outputs/report.md",
     }
 
     async def path_exists(path: str) -> bool:
         return path in existing
 
-    session = SimpleNamespace(
-        path_exists=AsyncMock(side_effect=path_exists),
-        read_file=AsyncMock(return_value=b"# notes"),
-        write_file=AsyncMock(),
-    )
+    session = SimpleNamespace(path_exists=AsyncMock(side_effect=path_exists))
     builder = PresentFilesToolBuilder(
         code_execution_component=SimpleNamespace(
             get_or_create_session=AsyncMock(return_value=session)
@@ -165,15 +161,14 @@ async def test_present_files_builder_presents_existing_files() -> None:
 
     tool = await builder.build_tool("corr-present")
     result = await tool.async_fn(
-        filepaths=["/mnt/user-data/outputs/chart.png", "/tmp/notes.md"]
+        filepaths=[
+            "/mnt/user-data/outputs/chart.png",
+            "/mnt/user-data/outputs/report.md",
+        ]
     )
 
     session.path_exists.assert_any_await("/mnt/user-data/outputs/chart.png")
-    session.path_exists.assert_any_await("/tmp/notes.md")
-    session.read_file.assert_awaited_once_with("/tmp/notes.md")
-    session.write_file.assert_awaited_once_with(
-        "/mnt/user-data/outputs/tmp/notes.md", b"# notes"
-    )
+    session.path_exists.assert_any_await("/mnt/user-data/outputs/report.md")
     assert [block.type for block in result] == [
         "local_resource",
         "local_resource",
@@ -182,22 +177,30 @@ async def test_present_files_builder_presents_existing_files() -> None:
     assert result[0].file_path == "/mnt/user-data/outputs/chart.png"
     assert result[0].name == "chart"
     assert result[0].mime_type == "image/png"
-    assert result[1].file_path == "/mnt/user-data/outputs/tmp/notes.md"
+    assert result[1].file_path == "/mnt/user-data/outputs/report.md"
     assert result[1].mime_type == "text/markdown"
-    assert result[2].text == "Presented 2 file(s): chart.png, notes.md"
+    assert result[2].text == "Presented 2 file(s): chart.png, report.md"
     assert tool.event_adapter is PresentFilesEventAdapter
 
 
 @pytest.mark.asyncio
-async def test_present_files_copies_claude_skills_into_outputs() -> None:
-    existing = {"/home/agent/.claude/skills/technical-dashboard/SKILL.md"}
-
-    async def path_exists(path: str) -> bool:
-        return path in existing
-
+@pytest.mark.parametrize(
+    "filepath",
+    [
+        "/tmp/notes.md",
+        "/home/agent/workspace/chart.png",
+        "/mnt/user-data/uploads/report.csv",
+        "/home/agent/.claude/skills/technical-dashboard/SKILL.md",
+        "/mnt/user-data/outputs/../uploads/secret.txt",
+        "chart.png",
+        "/mnt/user-data/outputs",
+        "/mnt/user-data/outputs/",
+    ],
+)
+async def test_present_files_rejects_non_output_paths(filepath: str) -> None:
     session = SimpleNamespace(
-        path_exists=AsyncMock(side_effect=path_exists),
-        read_file=AsyncMock(return_value=b"# skill"),
+        path_exists=AsyncMock(return_value=True),
+        read_file=AsyncMock(),
         write_file=AsyncMock(),
     )
     builder = PresentFilesToolBuilder(
@@ -206,49 +209,39 @@ async def test_present_files_copies_claude_skills_into_outputs() -> None:
         )
     )
 
-    tool = await builder.build_tool("corr-skill")
-    result = await tool.async_fn(
-        filepaths=["/home/agent/.claude/skills/technical-dashboard/SKILL.md"]
-    )
+    tool = await builder.build_tool("corr-reject")
+    result = await tool.async_fn(filepaths=[filepath])
 
-    dest = "/mnt/user-data/outputs/technical-dashboard/SKILL.md"
-    session.read_file.assert_awaited_once_with(
-        "/home/agent/.claude/skills/technical-dashboard/SKILL.md"
-    )
-    session.write_file.assert_awaited_once_with(dest, b"# skill")
-    assert result[0].type == "local_resource"
-    assert result[0].file_path == dest
-    assert result[0].name == "SKILL"
-    assert result[0].mime_type == "text/markdown"
+    session.path_exists.assert_not_awaited()
+    session.read_file.assert_not_awaited()
+    session.write_file.assert_not_awaited()
+    assert result[0].type == "text"
+    assert "only present files already inside /mnt/user-data/outputs/" in result[0].text
+    assert "Copy the file into outputs first" in result[0].text
+    assert result[1].text == "No files could be presented."
 
 
 @pytest.mark.asyncio
-async def test_present_files_uniquifies_outputs_copy_on_collision() -> None:
-    existing = {
-        "/tmp/notes.md",
-        "/mnt/user-data/outputs/tmp/notes.md",
-    }
-
-    async def path_exists(path: str) -> bool:
-        return path in existing
-
-    session = SimpleNamespace(
-        path_exists=AsyncMock(side_effect=path_exists),
-        read_file=AsyncMock(return_value=b"# notes"),
-        write_file=AsyncMock(),
-    )
+async def test_present_files_mixed_list_presents_outputs_and_rejects_others() -> None:
+    session = SimpleNamespace(path_exists=AsyncMock(return_value=True))
     builder = PresentFilesToolBuilder(
         code_execution_component=SimpleNamespace(
             get_or_create_session=AsyncMock(return_value=session)
         )
     )
 
-    tool = await builder.build_tool("corr-collision")
-    result = await tool.async_fn(filepaths=["/tmp/notes.md"])
+    tool = await builder.build_tool("corr-mixed")
+    result = await tool.async_fn(
+        filepaths=[
+            "/mnt/user-data/outputs/chart.png",
+            "/home/agent/workspace/chart.png",
+        ]
+    )
 
-    dest = "/mnt/user-data/outputs/tmp/notes-2.md"
-    session.write_file.assert_awaited_once_with(dest, b"# notes")
-    assert result[0].file_path == dest
+    assert result[0].type == "local_resource"
+    assert result[0].file_path == "/mnt/user-data/outputs/chart.png"
+    assert "only present files already inside /mnt/user-data/outputs/" in result[1].text
+    assert result[2].text == "Presented 1 file(s): chart.png"
 
 
 @pytest.mark.asyncio
