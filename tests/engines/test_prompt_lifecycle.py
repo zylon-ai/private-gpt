@@ -920,12 +920,13 @@ async def test_tool_flattening_does_not_mutate_original_input_messages() -> None
     original_messages = list(state.original_input.request.messages)
     context = ChatInterceptorContext(
         state=state,
-        llm=FunctionCallingLLM.model_construct(),
+        llm=get_mock_function_calling_llm(["ok"]),
         phase=InterceptorPhase.AFTER_ITERATION,
         emit_fn=lambda _event: None,
     )
 
     await EnsureToolAreFlattenInterceptor().intercept(context)
 
-    assert state.input.request.messages != original_messages
+    assert state.input.request.messages is not original_messages
+    assert state.input.request.messages[0] is not original_messages[0]
     assert state.original_input.request.messages == original_messages

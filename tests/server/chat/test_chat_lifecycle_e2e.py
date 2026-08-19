@@ -1797,3 +1797,240 @@ class TestAdditionalLifecycleInvariants:
         self,
     ) -> None:
         assert True
+
+
+# ---------------------------------------------------------------------------
+# Condensation: after condensing the right history (latest user + tool pairs),
+# documents/citations/system prompt must be recalculated from the condensed
+# history rather than staying stale.
+# ---------------------------------------------------------------------------
+
+
+class TestCondensationRefresh:
+    """Condensation-specific lifecycle contract.
+
+    The production chain runs condensation *after* the first prompt build.
+    When it condenses, it replaces `request.messages` with a shorter history
+    that still contains the latest user turn and (when applicable) the
+    assistant/tool pairs that carry source documents. The recalculate phase
+    must then rebuild documents, citations, and the system prompt from that
+    condensed history — not from the pre-condensation snapshot.
+    """
+
+    async def test_condensed_tool_history_refreshes_documents_citations_and_system(
+        self,
+        async_test_client: AsyncClient,
+        injector: MockInjector,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from llama_index.core.schema import NodeWithScore, TextNode
+
+        from private_gpt.components.chat.processors.chat_history.memory.tldr_processor import (
+            CondenseResponse,
+        )
+        from private_gpt.events.models import SourceBlock
+        from private_gpt.server.chat.interceptors import (
+            condensation_interceptor as module,
+        )
+        from private_gpt.server.chat.interceptors.chat_interceptor_service import (
+            ChatInterceptorService,
+        )
+        from private_gpt.server.chat.interceptors.condensation_interceptor import (
+            CondensationRequestInterceptor,
+        )
+
+        # Enable the recalculate branch regardless of the settings value that
+        # was captured when the app was created.
+        chat_interceptor_service = injector.get(ChatInterceptorService)
+        for entry in chat_interceptor_service._chain.entries:
+            if entry.name == "recalculate":
+                entry.condition = True
+
+        condensation_interceptor = injector.get(CondensationRequestInterceptor)
+        condensation_interceptor._enabled = True
+        condensation_interceptor._strategy_type = "condenser"
+        condensation_interceptor._min_duration = None
+
+        source_doc_text = "CONDENSED_SOURCE_DOC_TEXT: revenue grew 20%"
+        node = TextNode(
+            text=source_doc_text,
+            id_="doc_condensed",
+            metadata={"shorter_id": "AB12", "artifact_id": "artifact-condensed"},
+        )
+        source_block = SourceBlock.from_nodes([NodeWithScore(node=node, score=0.9)])
+        tool_call_id = "cond-tool-1"
+
+        condensed_history = [
+            ChatMessage(role=MessageRole.USER, content="latest question"),
+            ChatMessage(
+                role=MessageRole.ASSISTANT,
+                content=None,
+                additional_kwargs={
+                    "tool_calls": [
+                        ToolSelection(
+                            tool_id=tool_call_id,
+                            tool_name="semantic_search",
+                            tool_kwargs={"query": "latest"},
+                        )
+                    ]
+                },
+            ),
+            ChatMessage(
+                role=MessageRole.TOOL,
+                content=f"Citation identifier [AB12]\n{source_doc_text}",
+                additional_kwargs={
+                    "source": [source_block],
+                    "tool_call_id": tool_call_id,
+                    "tool_call_name": "semantic_search",
+                    "tool_call_args": {"query": "latest"},
+                },
+            ),
+            ChatMessage(
+                role=MessageRole.ASSISTANT,
+                content=(
+                    "Known citation <citation id='AB12' source_id='doc_condensed'"
+                    " index='0'></citation>."
+                ),
+                additional_kwargs={},
+            ),
+        ]
+
+        async def fake_condense_chat_history(*args: Any, **kwargs: Any) -> Any:
+            yield CondenseResponse(
+                is_condensed=True,
+                chat_history=condensed_history,
+                condense_blocks=[],
+            )
+
+        monkeypatch.setattr(module, "condense_chat_history", fake_condense_chat_history)
+
+        capture = ChainCapture()
+        await install_capturing_llm(
+            injector, capture, deltas=[["citing the source [AB12]."]]
+        )
+
+        # Build a request whose pre-condensation history is deliberately
+        # longer/stale. The fake condenser replaces it with the condensed
+        # right-side history above.
+        body = ChatBody(
+            messages=[MessageInput(content="old question", role="user")],
+            tools=[{"name": "semantic_search", "type": "semantic_search_v1"}],
+            tool_context=[
+                IngestedArtifact(
+                    context_filter={
+                        "collection": str(uuid.uuid4()),
+                        "artifacts": [str(uuid.uuid4())],
+                    }
+                )
+            ],
+            system=System(citations={"enabled": True}),
+        )
+        response = await async_test_client.post("/v1/messages", json=body.model_dump())
+        assert response.status_code == 200, response.text
+        assert len(capture.histories) == 1
+
+        history = capture.histories[-1]
+        system_prompt = capture.system_prompts[-1]
+        roles = [message.role for message in history]
+
+        # The condensed latest user + tool pair reached the LLM.
+        assert MessageRole.USER in roles
+        assert MessageRole.ASSISTANT in roles
+        assert MessageRole.TOOL in roles
+
+        # The source document carried by the condensed tool result must be
+        # reflected in the system prompt after the recalculate phase.
+        assert source_doc_text in system_prompt, (
+            "condensed tool source was not refreshed into the system prompt"
+        )
+
+        # The known citation from the condensed history must be usable by the
+        # response pipeline after the recalculate phase.
+        message = Message.model_validate(response.json())
+        text_blocks = [b for b in message.content if isinstance(b, OutTextBlock)]
+        citations = [c for block in text_blocks for c in (block.citations or [])]
+        assert citations, (
+            "condensed known citation was not refreshed into the response pipeline"
+        )
+
+        # The old pre-condensation user text must not appear anywhere.
+        assert "old question" not in system_prompt
+        assert all("old question" not in str(m.content) for m in history)
+
+
+class TestPlatformGuidelinesSyncedToLatestStack:
+    """Platform prompt layers are not frozen after iteration 0.
+
+    `PlatformGuidelinesInterceptor` removes and rebuilds all platform layers
+    from the *current* context stack on every iteration. This means layers
+    such as citation guidelines must appear only after documents are added
+    by a tool result, and must reflect the latest document/tool state in the
+    system prompt seen by the LLM.
+    """
+
+    async def test_citation_guidelines_appear_only_after_tool_adds_documents(
+        self, async_test_client: AsyncClient, injector: MockInjector
+    ) -> None:
+        capture = ChainCapture()
+        await install_capturing_llm(
+            injector,
+            capture,
+            deltas=[
+                [
+                    ToolSelection(
+                        tool_id="s1",
+                        tool_name="semantic_search",
+                        tool_kwargs={"query": "artifact text"},
+                    )
+                ],
+                ["done"],
+            ],
+        )
+
+        collection = str(uuid.uuid4())
+        artifact = str(uuid.uuid4())
+        ingest_response = await async_test_client.post(
+            "/v1/artifacts/ingest",
+            json={
+                "metadata": {},
+                "input": {"type": "text", "value": "Platform sync fact."},
+                "collection": collection,
+                "artifact": artifact,
+            },
+        )
+        assert ingest_response.status_code == 200
+
+        body = ChatBody(
+            messages=[MessageInput(content="use the source", role="user")],
+            tools=[{"name": "semantic_search", "type": "semantic_search_v1"}],
+            tool_choice={"type": "tool", "name": "semantic_search"},
+            tool_context=[
+                IngestedArtifact(
+                    context_filter={
+                        "collection": collection,
+                        "artifacts": [artifact],
+                    }
+                )
+            ],
+            system=System(
+                citations={"enabled": True},
+                prompt=PromptConfig(citations=True),
+            ),
+        )
+        response = await async_test_client.post("/v1/messages", json=body.model_dump())
+        assert response.status_code == 200, response.text
+        assert len(capture.system_prompts) == 2
+
+        # Before the tool ran there are no documents, so no citation
+        # guidelines should be injected yet.
+        assert "Citations let users trace" not in capture.system_prompts[0]
+
+        # After the tool result added a source document, the platform
+        # citation guidelines must be rebuilt from the latest stack and
+        # appear in the final system prompt.
+        assert "Citations let users trace" in capture.system_prompts[1]
+
+        await async_test_client.post(
+            "/v1/artifacts/delete",
+            json={"collection": collection, "artifact": artifact},
+        )

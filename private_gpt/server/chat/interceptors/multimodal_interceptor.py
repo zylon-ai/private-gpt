@@ -60,8 +60,18 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
         self._preprocess_settings = settings.chat.preprocess.multimodal
 
     async def intercept(self, context: ChatInterceptorContext) -> None:
-        """Apply multimodal preprocessing to the current chat history."""
-        if context.phase != InterceptorPhase.BEFORE_ITERATION:
+        """Apply multimodal preprocessing to the current chat history.
+
+        This runs only on the first iteration of a request. The original
+        image/audio blocks are replaced by their processed text on that first
+        pass, so later iterations do not need to reprocess them. Document and
+        citation interceptors still run every iteration and consume the
+        updated history.
+        """
+        if (
+            context.phase != InterceptorPhase.BEFORE_ITERATION
+            or context.state.runtime.iteration > 0
+        ):
             return
 
         state = context.state

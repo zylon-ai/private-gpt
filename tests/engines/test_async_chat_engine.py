@@ -1148,3 +1148,78 @@ async def test_initialize_run_keeps_platform_layers_when_stack_is_carried() -> N
     ]
     assert LayerType.SKILL_CATALOG not in collapsed_types
     assert LayerType.SKILL_BODY not in collapsed_types
+
+
+@pytest.mark.asyncio
+async def test_mcp_tool_survives_resumable_async_executor(
+    base_request: ResolvedChatRequest,
+) -> None:
+    """MCP discovery runs on the initial validation/iteration and the
+    discovered tool must remain executable when the async engine resumes
+    after a server-tool checkpoint."""
+    from unittest.mock import AsyncMock, patch
+
+    from private_gpt.server.chat.interceptors.mcp_interceptor import (
+        McpRequestInterceptor,
+    )
+    from private_gpt.server.mcp.config import McpServerConfig
+    from private_gpt.server.mcp.mcp_service import McpToolDefinition
+
+    request = base_request.model_copy(deep=True)
+    request.mcp_servers = [McpServerConfig(url="https://mcp.example.invalid")]
+    request.tool_config = ResolvedToolConfig(tools=[])
+
+    fake_client = MagicMock()
+    fake_client.list_tools = AsyncMock(
+        return_value=[
+            McpToolDefinition(
+                name="mcp_lookup",
+                description="MCP lookup",
+                input_schema={"type": "object", "properties": {}},
+            )
+        ]
+    )
+    fake_client.call_tool = AsyncMock(return_value="mcp-result")
+    fake_client.close = AsyncMock()
+
+    fake_mcp_service = MagicMock()
+    fake_mcp_service.create_client.return_value = fake_client
+
+    mock_llm = get_mock_function_calling_llm(
+        [
+            [
+                ToolSelection(
+                    tool_id="mcp-1",
+                    tool_name="mcp_lookup",
+                    tool_kwargs={"query": "x"},
+                )
+            ],
+            ["done"],
+        ]
+    )
+
+    with patch(
+        "private_gpt.server.mcp.mcp_service.McpClient",
+        return_value=fake_client,
+    ):
+        async_result = await _run_async_engine(
+            request,
+            mock_llm,
+            tool_scheduler=_FakeAsyncToolScheduler(),
+            request_interceptors=[McpRequestInterceptor(fake_mcp_service)],
+        )
+
+    assert [state.output.status for state in async_result.states] == [
+        ChatStatus.WAITING,
+        ChatStatus.COMPLETED,
+    ]
+    assert _tool_result_texts(async_result.events) == ["mcp-result"]
+    # Discovery happened once on the initial run; resume did not re-fetch.
+    assert fake_mcp_service.create_client.call_count == 1
+    # The discovered MCP tool is present in the final resumed state.
+    final_tools = [
+        tool.name
+        for tool in async_result.states[-1].input.context_stack.all_tools()
+        if tool.name
+    ]
+    assert "mcp_lookup" in final_tools

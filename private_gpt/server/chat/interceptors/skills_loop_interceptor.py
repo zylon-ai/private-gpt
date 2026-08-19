@@ -226,7 +226,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
         stack = state.input.context_stack
         stack = stack.remove_layers_of_type(LayerType.SKILL_CATALOG)
         stack = stack.remove_layers_of_type(LayerType.SKILL_BODY)
-        stack = stack.remove_layers_of_type(LayerType.MOUNTS)
+        stack = stack.remove_layers_of_source("skills")
         if filter_input is None:
             # No skill context on this request: catalog/body are not applicable.
             state.input.context_stack = stack

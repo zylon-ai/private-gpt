@@ -28,10 +28,10 @@ class SkillsValidationInterceptor(ChatRequestLoopInterceptor):
         self._skill_service = skill_service
 
     async def intercept(self, context: ChatInterceptorContext) -> None:
-        if context.phase not in {
-            InterceptorPhase.VALIDATION,
-            InterceptorPhase.BEFORE_ITERATION,
-        }:
+        # Skill validation is request-level: resolve versions once and cache
+        # them in the runtime. Resumed executions carry the runtime cache, so
+        # there is no need to re-enter this on every BEFORE_ITERATION.
+        if context.phase != InterceptorPhase.VALIDATION:
             return
 
         state = context.state

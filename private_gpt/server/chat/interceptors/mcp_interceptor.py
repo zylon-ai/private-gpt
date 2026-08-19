@@ -103,10 +103,11 @@ class McpRequestInterceptor(ChatRequestLoopInterceptor):
             return []
 
     async def intercept(self, context: ChatInterceptorContext) -> None:
-        if (
-            context.phase != InterceptorPhase.VALIDATION
-            and context.phase != InterceptorPhase.BEFORE_ITERATION
-        ):
+        # MCP discovery is a one-time, request-level operation. Validation is
+        # the first phase of every fresh request, and resumed executions carry
+        # the already-discovered tools in the context stack, so running here
+        # again on every BEFORE_ITERATION is pure waste.
+        if context.phase != InterceptorPhase.VALIDATION:
             return
 
         try:
