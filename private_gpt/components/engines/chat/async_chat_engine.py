@@ -122,6 +122,7 @@ from private_gpt.events.models import (
     ThinkingBlock,
     ThinkingDelta,
     ToolResultBlock,
+    ToolUseBlock,
     Usage,
 )
 
@@ -1303,25 +1304,33 @@ class AsyncChatEngine:
 
                     async with lock:
                         unique_id = tool_state.tool_id_map[raw_id]
+                        tool_name = tool_call.tool_name or "unknown"
+                        tool_spec = tool_specs_by_name.get(tool_name)
+                        if tool_spec is None:
+                            content_block: ToolUseBlock = ToolUseBlock(
+                                id=unique_id,
+                                name=tool_name,
+                                input={},
+                            )
+                        else:
+                            content_block = (
+                                tool_spec.resolve_event_adapter().build_tool_use(
+                                    tool_id=unique_id,
+                                    tool_name=tool_name,
+                                    tool_input={},
+                                )
+                            )
                         use_start = RawContentBlockStartEvent(
                             index=run.block_count,
                             block_id=f"block_{uuid4().hex}",
-                            content_block=(
-                                tool_specs_by_name[tool_call.tool_name or ""]
-                                .resolve_event_adapter()
-                                .build_tool_use(
-                                    tool_id=unique_id,
-                                    tool_name=tool_call.tool_name or "",
-                                    tool_input={},
-                                )
-                            ),
+                            content_block=content_block,
                         )
                         run.block_count += 1
                         handler.emit(use_start)
 
                     tool_state.active_tool_block = use_start
                     tool_state.active_tool_raw_id = raw_id
-                    tool_state.tool_name_map[raw_id] = tool_call.tool_name or ""
+                    tool_state.tool_name_map[raw_id] = tool_name
                     tool_state.last_serialized[raw_id] = ""
 
                 if tool_call.tool_kwargs and tool_state.active_tool_block is not None:

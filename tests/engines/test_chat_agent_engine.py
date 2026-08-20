@@ -231,6 +231,73 @@ async def test_loop_streams_tool_use_and_tool_result(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_handles_tool_call_with_missing_spec(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    """A streamed tool call whose spec is not in the current stack should not crash.
+
+    This can happen when a model calls a tool that was visible in an earlier
+    iteration but was filtered out before the current LLM call. The engine
+    should surface it as an error result instead of raising KeyError.
+    """
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[
+            ToolSpec.from_defaults(
+                name="echo",
+                type="echo",
+                runtime="server",
+                async_fn=_noop_tool,
+            )
+        ]
+    )
+
+    mock_llm = get_mock_function_calling_llm(
+        [
+            [
+                ToolSelection(
+                    tool_id="tool_1",
+                    tool_name="str_replace",
+                    tool_kwargs={"path": "a.txt", "old_str": "x", "new_str": "y"},
+                )
+            ]
+        ]
+    )
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=1,
+    )
+
+    events = await _run_engine(
+        engine=engine,
+        request=request,
+        runner=runner,
+    )
+
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolUseBlock)
+        and event.content_block.name == "str_replace"
+        for event in events
+    )
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolResultBlock)
+        and event.content_block.is_error
+        and event.content_block.content == "Tool not found."
+        for event in events
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
 async def test_loop_streams_reasoning_blocks(
     base_request: ResolvedChatRequest, engine_cls: Any, engine_kwargs: dict
 ) -> None:
