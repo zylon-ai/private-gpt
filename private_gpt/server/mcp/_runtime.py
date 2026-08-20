@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 if TYPE_CHECKING:
     import httpx2
     from mcp import ClientSession, MCPError
-    from mcp.client.auth import OAuthClientProvider, TokenStorage
+    from mcp.client.auth import OAuthClientProvider, OAuthFlowError, TokenStorage
     from mcp.shared.auth import (
         OAuthClientInformationFull,
         OAuthClientMetadata,
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 else:
     import httpx2
     from mcp import ClientSession, MCPError
-    from mcp.client.auth import OAuthClientProvider, TokenStorage
+    from mcp.client.auth import OAuthClientProvider, OAuthFlowError, TokenStorage
     from mcp.client.sse import sse_client
     from mcp.client.stdio import StdioServerParameters, stdio_client
     from mcp.client.streamable_http import (
@@ -143,14 +143,24 @@ async def _check_auth(
     auth: httpx2.Auth | None = None,
 ) -> None:
     """Do a pre-flight POST to detect 401/403 before entering the MCP transport."""
-    async with httpx2.AsyncClient(
-        auth=auth,
-        follow_redirects=True,
-        timeout=10.0,
-    ) as client:
-        response = await client.post(url, headers=headers, content=b"{}")
-        if response.status_code in (401, 403):
-            response.raise_for_status()
+    oauth_storage = (
+        auth.context.storage if isinstance(auth, HeadlessOAuthClientProvider) else None
+    )
+    try:
+        async with httpx2.AsyncClient(
+            auth=auth,
+            follow_redirects=True,
+            timeout=10.0,
+        ) as client:
+            response = await client.post(url, headers=headers, content=b"{}")
+    except OAuthFlowError:
+        if isinstance(oauth_storage, RequestOAuthTokenStorage):
+            oauth_storage.refresh_attempted = True
+        raise
+    if response.status_code in (401, 403):
+        if isinstance(oauth_storage, RequestOAuthTokenStorage):
+            oauth_storage.refresh_attempted = True
+        response.raise_for_status()
 
 
 class PersistentMCPClient:

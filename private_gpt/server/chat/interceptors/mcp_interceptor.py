@@ -47,7 +47,8 @@ class _McpTokenRefreshPayload(BaseModel):
     """Internal refresh result carried across worker and checkpoint boundaries.
 
     The previous token is needed to reject stale worker updates, but must not be
-    exposed by the public MCP token refresh events.
+    exposed by the public MCP token refresh events. The payload is removed from
+    tool messages as soon as the coordinator applies it.
     """
 
     status: Literal["success", "failure"]
