@@ -22,6 +22,7 @@ from private_gpt.components.persistence.persistence_component import (
     PersistenceComponent,
 )
 from private_gpt.constants import PROJECT_ROOT_PATH
+from private_gpt.context import reset_bag
 from private_gpt.di import set_global_injector
 from private_gpt.docs import DESCRIPTION, TITLE, configure_openapi
 from private_gpt.eager_loading import eager_loading
@@ -177,6 +178,10 @@ def create_app(root_injector: Injector) -> FastAPI:
         )
         request.state.injector = injector
 
+        # Start each request with a fresh context bag so nothing leaks between
+        # requests running on the same asyncio task/loop.
+        reset_bag()
+
         settings = injector.get(Settings)
         _build_principal(
             request,
@@ -187,7 +192,7 @@ def create_app(root_injector: Injector) -> FastAPI:
         try:
             return await call_next(request)
         finally:
-            Principal.reset()
+            reset_bag()
 
     app.include_router(chat_router)
     app.include_router(completion_router)

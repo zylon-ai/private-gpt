@@ -198,6 +198,7 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
         metadata: dict[str, Any],
     ) -> None:
         from private_gpt.arq.tasks.chat.start import enqueue_start_chat_job
+        from private_gpt.context import snapshot
 
         await enqueue_start_chat_job(
             request_data=request_data,
@@ -205,26 +206,31 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
             stream_type=stream_type,
             metadata=metadata,
             job_id=f"{execution_id}:start",
+            context=snapshot(),
         )
 
     async def resume(self, *, execution_id: str, checkpoint_id: str) -> None:
         from private_gpt.arq.tasks.chat.resume import enqueue_resume_iteration_job
+        from private_gpt.context import snapshot
 
         await enqueue_resume_iteration_job(
             correlation_id=execution_id,
             checkpoint_id=checkpoint_id,
             job_id=f"{execution_id}:resume:{checkpoint_id}",
+            context=snapshot(),
         )
 
     async def callback(
         self, *, execution_id: str, tool_id: str, result: dict[str, Any]
     ) -> None:
         from private_gpt.arq.tasks.chat.resume import enqueue_tool_resume_job
+        from private_gpt.context import snapshot
 
         await enqueue_tool_resume_job(
             correlation_id=execution_id,
             tool_id=tool_id,
             result=result,
+            context=snapshot(),
         )
 
     async def tool_timeout(
@@ -238,6 +244,7 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
         delay_seconds: int,
     ) -> None:
         from private_gpt.arq.tasks.chat.resume import enqueue_tool_timeout_job
+        from private_gpt.context import snapshot
 
         await enqueue_tool_timeout_job(
             correlation_id=execution_id,
@@ -246,6 +253,7 @@ class ArqChatExecutionScheduler(ChatExecutionScheduler):
             tool_name=tool_name,
             task_id=task_id,
             delay_seconds=delay_seconds,
+            context=snapshot(),
         )
 
     async def cancel_tool_timeout(

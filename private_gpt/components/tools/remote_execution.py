@@ -26,6 +26,7 @@ from private_gpt.components.tools.tool_execution_outcome import (
     ToolExecutionOutcome,
     ToolExecutionSuccess,
 )
+from private_gpt.context import snapshot
 from private_gpt.events.models import (
     NO_TOOL_CONTENT,
     TextBlock,
@@ -269,6 +270,10 @@ def build_tool_execution_context(state: ChatState) -> dict[str, Any]:
             msg.model_dump(mode="json", exclude_none=True)
             for msg in state.input.request.messages
         ],
+        # ContextVars don't cross the broker boundary; carry the request's
+        # context bag so the Celery tools worker can reinstall it around tool
+        # execution (see tool_run_task).
+        "_context": snapshot(),
     }
 
 

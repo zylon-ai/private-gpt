@@ -47,6 +47,7 @@ async def test_enqueue_start_chat_job_dispatches_generic_arq_job(
             "execution-id",
             "text/event-stream",
             metadata,
+            {},  # context snapshot — no principal in test context
         ),
         job_id=expected_job_id,
         correlation_id="execution-id",

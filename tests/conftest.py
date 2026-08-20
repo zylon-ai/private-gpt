@@ -10,6 +10,20 @@ root_path = pathlib.Path(__file__).parents[1]
 os.chdir(root_path)
 
 
+@pytest.fixture(autouse=True)
+def _reset_context_bag() -> None:
+    """Reset the request-scoped context bag between tests.
+
+    The bag is a contextvar that persists for the lifetime of a test task;
+    without this, state written by one test leaks into the next.
+    """
+    from private_gpt.context import reset_bag
+
+    reset_bag()
+    yield
+    reset_bag()
+
+
 def _as_module(fixture_path: str) -> str:
     return fixture_path.replace("/", ".").replace("\\", ".").replace(".py", "")
 
