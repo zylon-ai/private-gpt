@@ -17,12 +17,18 @@ from private_gpt.di import (
 def test_injector_is_shared_across_loops_when_global_root_exists() -> None:
     class IdentifiableService:
         instance_count = 0
+        # Keep every instance alive for the duration of the test so that
+        # CPython never reuses a garbage-collected instance's id() for a
+        # later instance, which would make the id() equality checks below
+        # unreliable.
+        instances: list["IdentifiableService"] = []
 
         def __init__(self) -> None:
             self.id: int = id(self)
             self.instance_number: int = IdentifiableService.instance_count
             IdentifiableService.instance_count += 1
             self.created_in_thread: int = threading.get_ident()
+            IdentifiableService.instances.append(self)
 
         async def operation(self, should_fail: bool = False) -> dict[str, Any]:
             if should_fail:
