@@ -169,7 +169,7 @@ def _request(
         ),
         (
             TextEditorToolBuilder.build_view_tool,
-            {"config", "name", "type", "description"},
+            {"config", "name", "type", "description", "include_line_numbers"},
         ),
         (
             TextEditorToolBuilder.build_str_replace_tool,

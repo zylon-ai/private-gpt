@@ -25,7 +25,10 @@ class CodeExecutionSession(ABC):
 
     @abstractmethod
     async def view(
-        self, path: str, view_range: tuple[int, int] | None = None
+        self,
+        path: str,
+        view_range: tuple[int, int] | None = None,
+        include_line_numbers: bool = True,
     ) -> FileOperationResult:
         """View a file or directory from the session workspace."""
 

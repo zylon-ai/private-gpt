@@ -105,7 +105,9 @@ async def test_text_editor_tool_builder_wraps_file_operations() -> None:
         new_str="extra",
     )
 
-    session.view.assert_awaited_once_with("file.txt", view_range=(1, 1))
+    session.view.assert_awaited_once_with(
+        "file.txt", view_range=(1, 1), include_line_numbers=True
+    )
     session.str_replace.assert_awaited_once_with("file.txt", "old", "new")
     session.create.assert_awaited_once_with("file.txt", "body")
     session.insert.assert_awaited_once_with("file.txt", 1, "extra")
@@ -140,6 +142,36 @@ async def test_text_editor_view_puts_no_output_in_empty_file_content() -> None:
     assert view_result[0].content == "(no-output)"
     assert view_result[0].num_lines == 0
     assert view_result[0].total_lines == 0
+
+
+@pytest.mark.asyncio
+async def test_text_editor_view_include_line_numbers_config() -> None:
+    session = SimpleNamespace(
+        view=AsyncMock(
+            return_value=FileOperationResult(success=True, output="1: line")
+        )
+    )
+    builder = TextEditorToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        ),
+        settings=_settings(),
+    )
+
+    tool_default = await builder.build_view_tool("corr-ln-default")
+    await tool_default.async_fn(path="file.txt", view_range=[1, 1])
+    session.view.assert_awaited_once_with(
+        "file.txt", view_range=(1, 1), include_line_numbers=True
+    )
+    session.view.reset_mock()
+
+    tool_raw = await builder.build_view_tool(
+        "corr-ln-off", include_line_numbers=False
+    )
+    await tool_raw.async_fn(path="file.txt", view_range=[1, 1])
+    session.view.assert_awaited_once_with(
+        "file.txt", view_range=(1, 1), include_line_numbers=False
+    )
 
 
 @pytest.mark.asyncio

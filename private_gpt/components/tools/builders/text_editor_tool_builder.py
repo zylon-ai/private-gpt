@@ -74,6 +74,7 @@ class TextEditorToolBuilder:
         name: str = TEXT_EDITOR_VIEW_TOOL_NAME,
         type: str = TEXT_EDITOR_VIEW_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_VIEW_TOOL_FN.metadata.description,
+        include_line_numbers: bool = True,
     ) -> ToolSpec:
         async def view(
             path: str,
@@ -89,6 +90,7 @@ class TextEditorToolBuilder:
             result = await session.view(
                 path,
                 view_range=resolved_view_range,
+                include_line_numbers=include_line_numbers,
             )
             if not result.success:
                 raise RuntimeError(result.error or "Unable to view file")
@@ -124,6 +126,7 @@ class TextEditorToolBuilder:
                     "name": name,
                     "type": type,
                     "description": description,
+                    "include_line_numbers": include_line_numbers,
                 },
             ),
         )

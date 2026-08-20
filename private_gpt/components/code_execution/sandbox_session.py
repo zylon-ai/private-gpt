@@ -58,7 +58,10 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
         )
 
     async def view(
-        self, path: str, view_range: tuple[int, int] | None = None
+        self,
+        path: str,
+        view_range: tuple[int, int] | None = None,
+        include_line_numbers: bool = True,
     ) -> FileOperationResult:
         path = self._resolve_path(path)
         self._env.touch()
@@ -83,7 +86,8 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
                 view_lines = all_lines[start_idx:end_idx]
                 base_line = start_idx + 1
             output = "\n".join(
-                f"{i}: {line}" for i, line in enumerate(view_lines, start=base_line)
+                f"{i}: {line}" if include_line_numbers else line
+                for i, line in enumerate(view_lines, start=base_line)
             )
             return FileOperationResult(success=True, output=output, total_lines=total)
         except Exception as exc:
