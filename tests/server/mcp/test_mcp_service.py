@@ -1,10 +1,12 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from mcp.shared.auth import OAuthToken
 from mcp.types import ListToolsResult, Tool
 
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.tools.remote_execution import rebuild_tool_from_spec
+from private_gpt.server.mcp._runtime import RequestOAuthTokenStorage
 from private_gpt.server.mcp.config import McpServerConfig, McpServerToolConfig
 from private_gpt.server.mcp.mcp_service import (
     McpClient,
@@ -25,8 +27,32 @@ def _remote_tool_def() -> McpToolDefinition:
     )
 
 
+@pytest.mark.asyncio
+async def test_successful_refresh_is_recorded_when_tokens_do_not_rotate() -> None:
+    storage = RequestOAuthTokenStorage(
+        access_token="access-before",
+        refresh_token="refresh-before",
+        client_id="client-id",
+        client_secret=None,
+    )
+
+    await storage.set_tokens(
+        OAuthToken(
+            access_token="access-before",
+            refresh_token="refresh-before",
+        )
+    )
+
+    assert storage.refreshed_tokens == (
+        "access-before",
+        "refresh-before",
+        "refresh-before",
+    )
+
+
 def test_mcp_tool_spec_json_roundtrip_preserves_rebuild_config() -> None:
     config = McpServerConfig(name="tools", url="https://mcp.example.com")
+
     spec = mcp_tool_to_spec(config, _remote_tool_def())
 
     restored = ToolSpec.model_validate_json(spec.model_dump_json())
@@ -168,6 +194,7 @@ async def test_mcp_client_list_tools_preserves_remote_input_schema() -> None:
     runtime_client.list_tools = AsyncMock(
         return_value=ListToolsResult(tools=[remote_tool, ignored_tool])
     )
+    runtime_client.refreshed_tokens = None
 
     with patch(
         "private_gpt.server.mcp.mcp_service._load_runtime",

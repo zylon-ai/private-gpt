@@ -104,12 +104,16 @@ class McpToolDefinition:
         )
 
 
+MCP_PREVIOUS_REFRESH_TOKEN_KEY = "_pgpt_previous_refresh_token"
+MCP_REFRESH_FAILED_KEY = "_pgpt_refresh_failed"
+MCP_TOKEN_REFRESH_KEY = "_pgpt_mcp_token_refresh"
+
+
 class McpClient:
     """MCP client that preserves original tool schemas and invokes tools directly."""
 
     def __init__(self, config: McpServerConfig) -> None:
         self.config = config
-        self.client: PersistentMCPClient | None = None
 
         persistent_mcp_client_cls = _load_runtime()
 
@@ -121,7 +125,23 @@ class McpClient:
             command_or_url=config.url,
             headers=headers,
             timeout=10 * 60,
+            refresh_token=config.refresh_token,
+            client_id=config.client_id,
+            client_secret=config.client_secret,
+            token_endpoint_auth_method=config.token_endpoint_auth_method,
         )
+
+    def _sync_tokens(self) -> None:
+        refreshed_tokens = self.client.refreshed_tokens
+        if refreshed_tokens is None:
+            if self.client.refresh_attempted:
+                self.config.metadata[MCP_REFRESH_FAILED_KEY] = True
+            return
+        access_token, refresh_token, previous_refresh_token = refreshed_tokens
+        self.config.authorization_token = access_token
+        self.config.refresh_token = refresh_token
+        self.config.metadata[MCP_PREVIOUS_REFRESH_TOKEN_KEY] = previous_refresh_token
+        self.config.metadata.pop(MCP_REFRESH_FAILED_KEY, None)
 
     async def list_tools(self) -> list[McpToolDefinition]:
         """List tools from the MCP server using the original input schema."""
@@ -134,7 +154,10 @@ class McpClient:
         ):
             return []
 
-        response = await self.client.list_tools()
+        try:
+            response = await self.client.list_tools()
+        finally:
+            self._sync_tokens()
         allowed = self.config.tool_configuration.allowed_tools
 
         tools: list[McpToolDefinition] = []
@@ -148,7 +171,10 @@ class McpClient:
         """Invoke a tool on the MCP server with the given arguments."""
         if self.client is None:
             raise RuntimeError("MCP client is not initialized")
-        return await self.client.call_tool(name=name, arguments=arguments)
+        try:
+            return await self.client.call_tool(name=name, arguments=arguments)
+        finally:
+            self._sync_tokens()
 
     async def close(self) -> None:
         """Close the underlying MCP session in the task that owns it."""
