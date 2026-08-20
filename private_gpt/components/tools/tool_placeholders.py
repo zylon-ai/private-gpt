@@ -131,7 +131,7 @@ TEXT_EDITOR_CODE_EXECUTION_TOOL_FN = _placeholder_tool(
     "`str_replace` (replace a single exact `old_str` with `new_str`; the match must be unique), "
     "`insert` (insert text after line `insert_line`). Always pass an absolute `path`. "
     "When viewing a file, always pass `view_range=[start, end]` — 1-based and inclusive, "
-    "e.g. `[11, 20]` shows lines 11–20 and `end=-1` shows from `start` to the end of the "
+    "e.g. `[11, 20]` shows lines 11-20 and `end=-1` shows from `start` to the end of the "
     "file. Never view a whole large file in one call: the output is truncated at a fixed "
     "limit, and the result reports the visible line range plus the file's total line count, "
     "so page through large files window by window.",
@@ -141,7 +141,7 @@ TEXT_EDITOR_VIEW_TOOL_FN = _placeholder_tool(
     TEXT_EDITOR_VIEW_TOOL_NAME,
     "View a file or list a directory in the session workspace. "
     "When viewing a file, always pass `view_range=[start, end]` — 1-based and inclusive, "
-    "e.g. `[11, 20]` shows lines 11–20 and `end=-1` shows from `start` to the end of the "
+    "e.g. `[11, 20]` shows lines 11-20 and `end=-1` shows from `start` to the end of the "
     "file. Never view a whole large file in one call: output is truncated at a fixed limit, "
     "and the result reports the visible line range plus the file's total line count, so page "
     "through large files window by window.",

@@ -74,8 +74,9 @@ class TextEditorToolBuilder:
         name: str = TEXT_EDITOR_VIEW_TOOL_NAME,
         type: str = TEXT_EDITOR_VIEW_TOOL_NAME + "_v1",
         description: str = TEXT_EDITOR_VIEW_TOOL_FN.metadata.description,
-        include_line_numbers: bool = True,
     ) -> ToolSpec:
+        view_settings = self._settings.code_execution.tools.text_editor.view
+
         async def view(
             path: str,
             view_range: list[int] | None = None,
@@ -90,21 +91,28 @@ class TextEditorToolBuilder:
             result = await session.view(
                 path,
                 view_range=resolved_view_range,
-                include_line_numbers=include_line_numbers,
+                include_line_numbers=view_settings.include_line_numbers,
             )
             if not result.success:
                 raise RuntimeError(result.error or "Unable to view file")
             output = _truncated(
                 result.output, self._settings.code_execution.max_output_bytes
             )
-            num_lines = len(output.splitlines())
+            lines = output.splitlines()
+            full_num_lines = len(lines)
+            if (
+                view_settings.max_lines is not None
+                and len(lines) > view_settings.max_lines
+            ):
+                lines = lines[: view_settings.max_lines]
+            num_lines = len(lines)
             start_line = resolved_view_range[0] if resolved_view_range else 1
             total_lines = (
-                result.total_lines if result.total_lines is not None else num_lines
+                result.total_lines if result.total_lines is not None else full_num_lines
             )
             return [
                 TextEditorCodeExecutionViewResultBlock(
-                    content=output if output.strip() else NO_TOOL_CONTENT,
+                    content="\n".join(lines) if lines else NO_TOOL_CONTENT,
                     num_lines=num_lines,
                     start_line=start_line,
                     total_lines=total_lines,
@@ -126,7 +134,6 @@ class TextEditorToolBuilder:
                     "name": name,
                     "type": type,
                     "description": description,
-                    "include_line_numbers": include_line_numbers,
                 },
             ),
         )

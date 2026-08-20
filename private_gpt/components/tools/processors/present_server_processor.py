@@ -24,7 +24,7 @@ class PresentServerProcessor(ToolProcessor):
         settings: Settings,
     ) -> None:
         self._builder = present_server_tool_builder
-        self._enabled = settings.code_execution.tools.present_server_enabled
+        self._enabled = settings.code_execution.tools.present_server.enabled
 
     async def intercept(self, request: ResolvedChatRequest) -> bool:
         for tool in request.tool_config.tools:

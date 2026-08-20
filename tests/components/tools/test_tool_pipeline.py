@@ -34,7 +34,7 @@ from private_gpt.components.tools.processors.text_editor_processor import (
 )
 from private_gpt.components.tools.tool_pipeline import ToolPipeline
 from private_gpt.server.utils.artifact_input import SkillArtifact
-from private_gpt.settings.settings import unsafe_typed_settings
+from private_gpt.settings.settings import settings as _load_settings
 
 
 def _request(tools: list[ToolSpec]) -> ResolvedChatRequest:
@@ -163,7 +163,7 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
         web_search_processor=noop,
         skill_management_processor=noop,
         code_execution_processor=CodeExecutionProcessor(),
-        bash_processor=BashProcessor(bash_builder),
+        bash_processor=BashProcessor(bash_builder, _settings()),
         text_editor_processor=TextEditorProcessor(
             text_editor_child_builder, unified_text_editor_builder
         ),
@@ -260,7 +260,7 @@ def _make_pipeline(
         web_search_processor=noop,
         skill_management_processor=skill_processor or noop,
         code_execution_processor=CodeExecutionProcessor(),
-        bash_processor=BashProcessor(_make_bash_builder()),
+        bash_processor=BashProcessor(_make_bash_builder(), _settings()),
         text_editor_processor=TextEditorProcessor(
             _make_text_editor_child_builder(), _make_text_editor_builder()
         ),
@@ -391,7 +391,7 @@ def _skill_version() -> SkillVersionEntity:
 
 
 def _settings():
-    settings = unsafe_typed_settings.model_copy(deep=True)
+    settings = _load_settings().model_copy(deep=True)
     settings.skills.skill_injection_mode = "system_prompt"
     return settings
 

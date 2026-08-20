@@ -23,11 +23,11 @@ from private_gpt.components.tools.events.adapters import (
     PresentFilesEventAdapter,
     TextEditorCodeExecutionEventAdapter,
 )
-from private_gpt.settings.settings import unsafe_typed_settings
+from private_gpt.settings.settings import settings as _load_settings
 
 
 def _settings():
-    settings = unsafe_typed_settings.model_copy(deep=True)
+    settings = _load_settings().model_copy(deep=True)
     settings.code_execution.max_output_bytes = 10_000
     return settings
 
@@ -106,7 +106,7 @@ async def test_text_editor_tool_builder_wraps_file_operations() -> None:
     )
 
     session.view.assert_awaited_once_with(
-        "file.txt", view_range=(1, 1), include_line_numbers=True
+        "file.txt", view_range=(1, 1), include_line_numbers=False
     )
     session.str_replace.assert_awaited_once_with("file.txt", "old", "new")
     session.create.assert_awaited_once_with("file.txt", "body")
@@ -147,9 +147,7 @@ async def test_text_editor_view_puts_no_output_in_empty_file_content() -> None:
 @pytest.mark.asyncio
 async def test_text_editor_view_include_line_numbers_config() -> None:
     session = SimpleNamespace(
-        view=AsyncMock(
-            return_value=FileOperationResult(success=True, output="1: line")
-        )
+        view=AsyncMock(return_value=FileOperationResult(success=True, output="1: line"))
     )
     builder = TextEditorToolBuilder(
         code_execution_component=SimpleNamespace(
@@ -158,20 +156,56 @@ async def test_text_editor_view_include_line_numbers_config() -> None:
         settings=_settings(),
     )
 
+    # Default: line numbers disabled.
     tool_default = await builder.build_view_tool("corr-ln-default")
     await tool_default.async_fn(path="file.txt", view_range=[1, 1])
     session.view.assert_awaited_once_with(
-        "file.txt", view_range=(1, 1), include_line_numbers=True
+        "file.txt", view_range=(1, 1), include_line_numbers=False
     )
     session.view.reset_mock()
 
-    tool_raw = await builder.build_view_tool(
-        "corr-ln-off", include_line_numbers=False
+    # Config enabled via settings: line numbers on.
+    settings = _settings()
+    settings.code_execution.tools.text_editor.view.include_line_numbers = True
+    builder_enabled = TextEditorToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        ),
+        settings=settings,
     )
-    await tool_raw.async_fn(path="file.txt", view_range=[1, 1])
+    tool_enabled = await builder_enabled.build_view_tool("corr-ln-on")
+    await tool_enabled.async_fn(path="file.txt", view_range=[1, 1])
     session.view.assert_awaited_once_with(
-        "file.txt", view_range=(1, 1), include_line_numbers=False
+        "file.txt", view_range=(1, 1), include_line_numbers=True
     )
+
+
+@pytest.mark.asyncio
+async def test_text_editor_view_max_lines_cap() -> None:
+    session = SimpleNamespace(
+        view=AsyncMock(
+            return_value=FileOperationResult(
+                success=True,
+                output="\n".join(f"{i}: line" for i in range(1, 11)),
+            )
+        )
+    )
+    settings = _settings()
+    settings.code_execution.tools.text_editor.view.max_lines = 3
+    builder = TextEditorToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        ),
+        settings=settings,
+    )
+
+    view_tool = await builder.build_view_tool("corr-max-lines")
+    view_result = await view_tool.async_fn(path="file.txt")
+
+    assert view_result[0].num_lines == 3
+    assert view_result[0].content == "\n".join(f"{i}: line" for i in range(1, 4))
+    # total_lines still reflects the full file (10 lines), not the capped view.
+    assert view_result[0].total_lines == 10
 
 
 @pytest.mark.asyncio

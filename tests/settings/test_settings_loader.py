@@ -85,3 +85,13 @@ def test_multiple_environment_variables_without_default_fails() -> None:
     """
     with pytest.raises(ValueError):
         load_yaml_with_envvars(io.StringIO(sample_yaml), {})
+
+
+def test_empty_default_envvar_resolves_to_empty_string() -> None:
+    # A `${VAR:}` empty default with the env var unset yields an empty string,
+    # which the pydantic model maps to None for nullable fields.
+    sample_yaml = """
+    max_lines: ${PGPT_VIEW_MAX_LINES:}
+    """
+    loaded = load_yaml_with_envvars(io.StringIO(sample_yaml), {})
+    assert loaded["max_lines"] == ""
