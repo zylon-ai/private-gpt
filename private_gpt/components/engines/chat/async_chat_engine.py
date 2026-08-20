@@ -98,9 +98,8 @@ from private_gpt.components.llm.priorities import DefinedPriorities
 from private_gpt.components.tools.processors.base import _session_id
 from private_gpt.components.tools.remote_execution import (
     ToolExecutionInterceptor,
-    ToolExecutionRequest,
     ToolExecutionResponse,
-    build_tool_execution_context,
+    build_tool_execution_request,
 )
 from private_gpt.components.tools.tool_scheduler import (
     BaseToolScheduler,
@@ -1593,12 +1592,12 @@ class AsyncChatEngine:
 
         if self._tool_scheduler.is_async:
             handle = await self._tool_scheduler.async_execute(
-                ToolExecutionRequest(
+                build_tool_execution_request(
                     tool_id=call_id,
                     tool_name=tool_call.tool_name or "",
                     tool_kwargs=tool_call.tool_kwargs,
                     tool_spec=tool_spec,
-                    context=build_tool_execution_context(run.state),
+                    state=run.state,
                     hooks=run.hooks,
                 ),
                 state_ctx=run.state,
@@ -1616,12 +1615,12 @@ class AsyncChatEngine:
 
         async with semaphore if semaphore is not None else contextlib.nullcontext():
             response = await self._tool_scheduler.execute(
-                ToolExecutionRequest(
+                build_tool_execution_request(
                     tool_id=call_id,
                     tool_name=tool_call.tool_name or "",
                     tool_kwargs=tool_call.tool_kwargs,
                     tool_spec=tool_spec,
-                    context=build_tool_execution_context(run.state),
+                    state=run.state,
                     hooks=run.hooks,
                 ),
                 state_ctx=run.state,

@@ -20,6 +20,7 @@ from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
 )
 from private_gpt.components.engines.chat.utils.tool_utils import execute_tool_call
+from private_gpt.components.tools.tool_execution_context import ToolExecutionContext
 from private_gpt.components.tools.tool_execution_outcome import (
     ToolExecutionError,
     ToolExecutionFailure,
@@ -53,6 +54,13 @@ class ToolExecutionRequest(BaseModel):
     context: dict[str, Any] = Field(default_factory=dict)
     hooks: ExecutionHooks = Field(default_factory=ExecutionHooks)
     interceptor_paths: list[str] = Field(default_factory=list)
+    tool_context: ToolExecutionContext | None = Field(
+        default=None,
+        description=(
+            "Request-scoped context captured at execution time (current mounts, "
+            "and future fields) used to rebuild server tools with fresh state."
+        ),
+    )
 
 
 async def invoke_execution_hook(
@@ -156,7 +164,10 @@ class ToolExecutor:
     ) -> ToolExecutionResponse:
         tool_kwargs = dict(request.tool_kwargs)
         try:
-            tool = await rebuild_tool_from_spec(request.tool_spec)
+            tool = await rebuild_tool_from_spec(
+                request.tool_spec,
+                tool_context=request.tool_context,
+            )
 
             before_context = ToolExecutionInterceptorContext(
                 phase=InterceptorPhase.BEFORE_TOOL,
@@ -243,12 +254,15 @@ def build_rebuild_metadata(
     )
 
 
-async def rebuild_tool_from_spec(tool_spec: ToolSpec) -> AsyncBaseTool:
+async def rebuild_tool_from_spec(
+    tool_spec: ToolSpec,
+    tool_context: ToolExecutionContext | None = None,
+) -> AsyncBaseTool:
     metadata = tool_spec.execution_metadata
     if metadata is None:
         return adapt_to_async_tool(tool_spec.to_function_tool())
 
-    rebuilt = await _invoke_rebuild(metadata)
+    rebuilt = await _invoke_rebuild(metadata, tool_context=tool_context)
     return adapt_to_async_tool(rebuilt.to_function_tool())
 
 
@@ -277,6 +291,32 @@ def build_tool_execution_context(state: ChatState) -> dict[str, Any]:
     }
 
 
+def build_tool_execution_request(
+    *,
+    tool_id: str,
+    tool_name: str,
+    tool_kwargs: dict[str, Any],
+    tool_spec: ToolSpec,
+    state: ChatState,
+    hooks: ExecutionHooks,
+) -> ToolExecutionRequest:
+    """Build a ToolExecutionRequest carrying the typed request-scoped context.
+
+    Server tools are built once at VALIDATION, before request-scoped state
+    (loaded-skill mounts, etc.) exists. The typed ``tool_context`` captures the
+    current state so the worker/engine can rebuild tools with fresh values.
+    """
+    return ToolExecutionRequest(
+        tool_id=tool_id,
+        tool_name=tool_name,
+        tool_kwargs=tool_kwargs,
+        tool_spec=tool_spec,
+        context=build_tool_execution_context(state),
+        tool_context=ToolExecutionContext.from_state(state),
+        hooks=hooks,
+    )
+
+
 def restore_chat_history_from_context(context: dict[str, Any]) -> list[ChatMessage]:
     return [
         ChatMessage.model_validate(message_data)
@@ -284,9 +324,35 @@ def restore_chat_history_from_context(context: dict[str, Any]) -> list[ChatMessa
     ]
 
 
-async def _invoke_rebuild(metadata: ToolExecutionMetadata) -> ToolSpec:
+def _overlay_execution_context(
+    kwargs: dict[str, Any],
+    tool_context: ToolExecutionContext | None,
+) -> dict[str, Any]:
+    """Apply the typed request-scoped context onto a tool config in *kwargs*.
+
+    Generic: overlays every request-scoped field the config exposes (today
+    mounts; see ``ToolExecutionContext`` for the typed shape). Returns a
+    shallow copy of *kwargs* with ``config`` replaced when the config exposes
+    matching fields and the context provides a value.
+    """
+    if tool_context is None:
+        return kwargs
+    config = kwargs.get("config")
+    if config is None or not hasattr(config, "model_copy"):
+        return kwargs
+    updated = tool_context.overlay_on(config)
+    if updated is config:
+        return kwargs
+    return {**kwargs, "config": updated}
+
+
+async def _invoke_rebuild(
+    metadata: ToolExecutionMetadata,
+    tool_context: ToolExecutionContext | None = None,
+) -> ToolSpec:
     rebuild_callable = _import_callable(metadata.rebuild_callable)
-    rebuilt = rebuild_callable(**metadata.rebuild_kwargs)
+    kwargs = _overlay_execution_context(metadata.rebuild_kwargs, tool_context)
+    rebuilt = rebuild_callable(**kwargs)
     if inspect.isawaitable(rebuilt):
         rebuilt = await rebuilt
     if not isinstance(rebuilt, ToolSpec):
