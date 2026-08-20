@@ -572,7 +572,9 @@ async def test_async_engine_rebuilds_runtime_before_condensation_after_tool_resu
         for observation in before_iteration
     )
     assert all(observation.has_tokenizer for observation in before_iteration)
-    assert llm_component.get_tokenizer.call_count == 3
+    # The runtime caches the tokenizer once on the first iteration, so
+    # get_tokenizer is called a single time (not per-iteration).
+    assert llm_component.get_tokenizer.call_count == 1
 
 
 @pytest.mark.asyncio

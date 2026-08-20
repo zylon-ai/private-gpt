@@ -291,7 +291,7 @@ async def test_loop_handles_tool_call_with_missing_spec(
         isinstance(event, RawContentBlockStartEvent)
         and isinstance(event.content_block, ToolResultBlock)
         and event.content_block.is_error
-        and event.content_block.content == "Tool not found."
+        and event.content_block.content == "Tool 'str_replace' not found."
         for event in events
     )
 
