@@ -141,7 +141,6 @@ class CeleryToolScheduler(BaseToolScheduler):
         state_ctx: ChatState | None = None,
         interceptors: list[ToolExecutionInterceptor] | None = None,
     ) -> ToolExecutionResponse:
-        del state_ctx
         request = request.model_copy(
             update={"interceptor_paths": tool_execution_interceptor_paths(interceptors)}
         )

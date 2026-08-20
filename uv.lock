@@ -2379,17 +2379,18 @@ wheels = [
 
 [[package]]
 name = "nltk"
-version = "3.9.4"
+version = "3.10.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
+    { name = "defusedxml" },
     { name = "joblib" },
     { name = "regex" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/74/a1/b3b4adf15585a5bc4c357adde150c01ebeeb642173ded4d871e89468767c/nltk-3.9.4.tar.gz", hash = "sha256:ed03bc098a40481310320808b2db712d95d13ca65b27372f8a403949c8b523d0", size = 2946864, upload-time = "2026-03-24T06:13:40.641Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e0/e6/fe51d2bb1a3b446f59c5c8165999a9fee208bc346af90a7cbf7657bc0d75/nltk-3.10.3.tar.gz", hash = "sha256:bb9327a461c3811c2fa4900e03840401f2126adfb30c0072827c433bd2444ea4", size = 5137152, upload-time = "2026-08-12T23:46:37.258Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/91/04e965f8e717ba0ab4bdca5c112deeab11c9e750d94c4d4602f050295d39/nltk-3.9.4-py3-none-any.whl", hash = "sha256:f2fa301c3a12718ce4a0e9305c5675299da5ad9e26068218b69d692fda84828f", size = 1552087, upload-time = "2026-03-24T06:13:38.47Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/6d/ebd2af4640b12168fdf0cb74b6118df2f32a2f62ec7e0c06fbfd80706639/nltk-3.10.3-py3-none-any.whl", hash = "sha256:ff9598a8e20518ee0d557745890cc4435b9578489e2dcbc69c4f81fa060caf7c", size = 1798643, upload-time = "2026-08-12T23:44:13.478Z" },
 ]
 
 [[package]]
@@ -3640,7 +3641,7 @@ requires-dist = [
     { name = "mistune", marker = "extra == 'ingest-markup'", specifier = ">=3.2.1,<4" },
     { name = "mypy-boto3-s3", marker = "extra == 'typecheck'", specifier = ">=1.42.37" },
     { name = "nest-asyncio", specifier = ">=1.6.0" },
-    { name = "nltk", specifier = ">=3.9.1,<4" },
+    { name = "nltk", specifier = ">=3.10.0,<4" },
     { name = "noisereduce", marker = "extra == 'media-audio'", specifier = ">=3.0.3" },
     { name = "openai", marker = "extra == 'sdk-openai'", specifier = ">=2.0.0,<3" },
     { name = "openai-harmony", marker = "extra == 'sdk-openai'", specifier = ">=0.0.8" },

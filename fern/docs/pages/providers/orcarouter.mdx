@@ -1,0 +1,129 @@
+---
+title: "OrcaRouter"
+description: "Use OrcaRouter as an OpenAI-compatible cloud gateway — access 150+ models from OpenAI, Anthropic, Google, DeepSeek, Qwen and more through a single endpoint."
+---
+
+[OrcaRouter](https://www.orcarouter.ai) is a model routing gateway with an OpenAI-compatible endpoint at `https://api.orcarouter.ai/v1`. It fronts models from multiple providers (OpenAI, Anthropic, Google, DeepSeek, Qwen, and others) behind a single API key, and can route each request to the best upstream automatically. It also runs gateway-level, zero-trust security for AI agents on the same endpoint — screening every prompt/response and governing every tool call on a default-deny basis.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ✅ |
+| Tool / function calling | ✅ model-dependent |
+| Structured output | ✅ model-dependent |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Get an OrcaRouter API key">
+    1. Sign up at [orcarouter.ai](https://www.orcarouter.ai).
+    2. Go to the console and create an API key. Keys start with `sk-orca-`.
+    3. Note the model IDs you want to use — OrcaRouter model IDs are namespaced, e.g. `openai/gpt-5.5` or `anthropic/claude-sonnet-5`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://api.orcarouter.ai/v1 \
+          OPENAI_API_KEY=your-orcarouter-api-key \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://api.orcarouter.ai/v1 \
+          -e OPENAI_API_KEY=your-orcarouter-api-key \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://api.orcarouter.ai/v1 \
+          OPENAI_API_KEY=your-orcarouter-api-key \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    <Tip>
+      Store the API key in an `.env` file or use `OPENAI_API_KEY` as an environment variable to avoid exposing it in shell history.
+    </Tip>
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+```yaml
+# settings-model.yaml
+llm:
+  default_model: openai/gpt-5.5
+
+models:
+  - name: openai/gpt-5.5
+    type: llm
+    mode: openai
+    context_window: 128000
+    support_tools: true
+    support_reasoning: true
+    sampling_params:
+      temperature: 0.7
+
+  - name: anthropic/claude-sonnet-5
+    type: llm
+    mode: openai
+    context_window: 200000
+    support_tools: true
+    support_reasoning: true
+    sampling_params:
+      temperature: 0.7
+
+  - name: google/gemini-2.5-pro
+    type: llm
+    mode: openai
+    context_window: 1048576
+    support_tools: true
+    support_reasoning: true
+    sampling_params:
+      temperature: 0.7
+```
+
+Run with a profile:
+
+```bash
+OPENAI_API_BASE=https://api.orcarouter.ai/v1 \
+  OPENAI_API_KEY=your-orcarouter-api-key \
+  PGPT_PROFILES=model \
+  uv run python -m private_gpt
+```
+
+---
+
+## settings.yaml override
+
+You can also set the endpoint directly in `settings.yaml` instead of environment variables:
+
+```yaml
+openai:
+  api_base: https://api.orcarouter.ai/v1
+  api_key: ${ORCAROUTER_API_KEY:}
+```
+
+---
+
+## Notes
+
+- **Model IDs** are namespaced by upstream provider (`openai/`, `anthropic/`, `google/`, `deepseek/`, `qwen/`, ...). See the full catalog at [orcarouter.ai/models](https://www.orcarouter.ai/models).
+- **Embeddings are available** through `/v1/embeddings`, e.g. `openai/text-embedding-3-small`.
+- Because OrcaRouter does not expose `/tokenize`, set `context_window` explicitly in your model profiles for accurate token management.
+- The routing model `orcarouter/auto` picks an upstream per request based on task type and difficulty. For deterministic structured output, prefer a fixed model such as `openai/gpt-5.5` instead.

@@ -8,6 +8,12 @@ from urllib.parse import urlparse
 if TYPE_CHECKING:
     import httpx2
     from mcp import ClientSession, MCPError
+    from mcp.client.auth import OAuthClientProvider, TokenStorage
+    from mcp.shared.auth import (
+        OAuthClientInformationFull,
+        OAuthClientMetadata,
+        OAuthToken,
+    )
     from mcp.types import (
         AudioContent,
         CallToolResult,
@@ -18,11 +24,17 @@ if TYPE_CHECKING:
 else:
     import httpx2
     from mcp import ClientSession, MCPError
+    from mcp.client.auth import OAuthClientProvider, TokenStorage
     from mcp.client.sse import sse_client
     from mcp.client.stdio import StdioServerParameters, stdio_client
     from mcp.client.streamable_http import (
         create_mcp_http_client,
         streamable_http_client,
+    )
+    from mcp.shared.auth import (
+        OAuthClientInformationFull,
+        OAuthClientMetadata,
+        OAuthToken,
     )
     from mcp.types import (
         AudioContent,
@@ -33,6 +45,7 @@ else:
     )
 
 logger = logging.getLogger(__name__)
+MISSING_ACCESS_TOKEN = "mcp-missing-access-token"
 
 __all__ = [
     "AudioContent",
@@ -56,9 +69,85 @@ def _prefer_sse(url: str) -> bool:
     return path.endswith("/sse") or "/sse/" in path
 
 
-async def _check_auth(url: str, headers: dict[str, Any]) -> None:
+class RequestOAuthTokenStorage(TokenStorage):
+    """Request-scoped OAuth storage initialized from the MCP request."""
+
+    def __init__(
+        self,
+        *,
+        access_token: str | None,
+        refresh_token: str,
+        client_id: str,
+        client_secret: str | None,
+        token_endpoint_auth_method: str | None = None,
+    ) -> None:
+        # The placeholder represents a missing access token, not a refresh.
+        self._tokens = OAuthToken(
+            access_token=access_token or MISSING_ACCESS_TOKEN,
+            refresh_token=refresh_token,
+        )
+        self._refreshed_tokens: tuple[str, str, str] | None = None
+        self._client_info = OAuthClientInformationFull(
+            client_id=client_id,
+            client_secret=client_secret,
+            token_endpoint_auth_method=token_endpoint_auth_method
+            or ("client_secret_basic" if client_secret else "none"),
+            redirect_uris=[],
+        )
+        self.refresh_attempted = False
+
+    @property
+    def refreshed_tokens(self) -> tuple[str, str, str] | None:
+        return self._refreshed_tokens
+
+    async def get_tokens(self) -> OAuthToken | None:
+        return self._tokens
+
+    async def set_tokens(self, tokens: OAuthToken) -> None:
+        previous_refresh_token = self._tokens.refresh_token
+        assert previous_refresh_token is not None
+        if tokens.refresh_token is None:
+            tokens.refresh_token = previous_refresh_token
+        self._tokens = tokens
+        self._refreshed_tokens = (
+            tokens.access_token,
+            tokens.refresh_token or previous_refresh_token,
+            previous_refresh_token,
+        )
+
+    async def get_client_info(self) -> OAuthClientInformationFull | None:
+        return self._client_info
+
+    async def set_client_info(self, client_info: OAuthClientInformationFull) -> None:
+        self._client_info = client_info
+
+
+class HeadlessOAuthClientProvider(OAuthClientProvider):
+    """OAuth provider that discovers endpoints and only permits refresh."""
+
+    async def _refresh_token(self) -> httpx2.Request:
+        storage = self.context.storage
+        if isinstance(storage, RequestOAuthTokenStorage):
+            storage.refresh_attempted = True
+        return await super()._refresh_token()
+
+    async def _perform_authorization(self) -> httpx2.Request:
+        if not self.context.can_refresh_token():
+            raise RuntimeError("MCP OAuth refresh requires a refresh token")
+        return await self._refresh_token()
+
+
+async def _check_auth(
+    url: str,
+    headers: dict[str, Any],
+    auth: httpx2.Auth | None = None,
+) -> None:
     """Do a pre-flight POST to detect 401/403 before entering the MCP transport."""
-    async with httpx2.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+    async with httpx2.AsyncClient(
+        auth=auth,
+        follow_redirects=True,
+        timeout=10.0,
+    ) as client:
         response = await client.post(url, headers=headers, content=b"{}")
         if response.status_code in (401, 403):
             response.raise_for_status()
@@ -82,6 +171,10 @@ class PersistentMCPClient:
         sse_read_timeout: float = 300.0,
         max_retries: int = 3,
         retry_delay: float = 1.0,
+        refresh_token: str | None = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
+        token_endpoint_auth_method: str | None = None,
         **_: Any,
     ) -> None:
         self.command_or_url = command_or_url
@@ -92,11 +185,44 @@ class PersistentMCPClient:
         self.sse_read_timeout = sse_read_timeout
         self._max_retries = max_retries
         self._retry_delay = retry_delay
+        self.oauth_storage = (
+            RequestOAuthTokenStorage(
+                access_token=self.headers.get("Authorization", "").removeprefix(
+                    "Bearer "
+                )
+                or None,
+                refresh_token=refresh_token,
+                client_id=client_id,
+                client_secret=client_secret,
+                token_endpoint_auth_method=token_endpoint_auth_method,
+            )
+            if refresh_token and client_id
+            else None
+        )
+        self.auth = (
+            HeadlessOAuthClientProvider(
+                server_url=command_or_url,
+                client_metadata=OAuthClientMetadata(
+                    redirect_uris=["http://127.0.0.1/mcp-oauth"]
+                ),
+                storage=self.oauth_storage,
+            )
+            if self.oauth_storage
+            else None
+        )
 
         self._persistent_session: ClientSession | None = None
         self._session_context: AsyncExitStack | None = None
         self._session_lock = asyncio.Lock()
         self._closed = False
+
+    @property
+    def refresh_attempted(self) -> bool:
+        return bool(self.oauth_storage and self.oauth_storage.refresh_attempted)
+
+    @property
+    def refreshed_tokens(self) -> tuple[str, str, str] | None:
+        return self.oauth_storage.refreshed_tokens if self.oauth_storage else None
 
     async def _create_session(self) -> ClientSession:
         """Create and initialize a new MCP session, keeping resources open."""
@@ -114,11 +240,12 @@ class PersistentMCPClient:
                             headers=self.headers or None,
                             timeout=self.timeout,
                             sse_read_timeout=self.sse_read_timeout,
+                            auth=self.auth,
                         )
                     )
                 else:
-                    await _check_auth(self.command_or_url, self.headers)
-                    http_client = create_mcp_http_client()
+                    await _check_auth(self.command_or_url, self.headers, self.auth)
+                    http_client = create_mcp_http_client(auth=self.auth)
                     if self.headers:
                         http_client.headers.update(self.headers)
                     await stack.enter_async_context(http_client)
