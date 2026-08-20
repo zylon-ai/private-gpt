@@ -7,9 +7,11 @@ from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.tools.remote_execution import rebuild_tool_from_spec
 from private_gpt.server.mcp.config import McpServerConfig, McpServerToolConfig
 from private_gpt.server.mcp.mcp_service import (
+    MAX_PUBLIC_NAME_LENGTH,
     McpClient,
     McpToolDefinition,
     mcp_tool_to_spec,
+    normalize_mcp_tool_name,
 )
 
 
@@ -177,6 +179,87 @@ async def test_mcp_client_list_tools_preserves_remote_input_schema() -> None:
         tools = await client.list_tools()
 
     assert len(tools) == 1
-    assert tools[0].name == "Call_test_tool_object_"
+    # The public name is collision-safe normalized and namespaced by server.
+    assert tools[0].name == normalize_mcp_tool_name("Test MCP", "Call_test_tool_object_")
+    # The raw MCP name is preserved for the wire.
+    assert tools[0].raw_name == "Call_test_tool_object_"
     assert tools[0].input_schema == original_schema
     assert "type" not in tools[0].input_schema["properties"]["object_param"]
+
+
+# ---------------------------------------------------------------------------
+# Name normalization (mirrors the deepseek-harness mcp-client contract)
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_clean_name_is_verbatim() -> None:
+    assert (
+        normalize_mcp_tool_name("files", "read_file")
+        == "mcp__files__read_file"
+    )
+
+
+def test_normalize_replaces_invalid_chars_and_hashes() -> None:
+    public = normalize_mcp_tool_name("Test MCP", "Call_test_tool_object_")
+    assert public.startswith("mcp__Test_MCP__Call_test_tool_object_")
+    # A 12-hex SHA-256 suffix is appended when normalization is lossy.
+    assert len(public) <= MAX_PUBLIC_NAME_LENGTH
+    assert "_" in public
+    suffix = public.split("_")[-1]
+    assert len(suffix) == 12
+    assert all(c in "0123456789abcdef" for c in suffix)
+
+
+def test_normalize_truncates_overlong_names_with_hash() -> None:
+    raw = "very_long_tool_" + "x" * 80
+    public = normalize_mcp_tool_name("srv", raw)
+    assert len(public) <= MAX_PUBLIC_NAME_LENGTH
+    assert "_" in public
+    suffix = public.split("_")[-1]
+    assert len(suffix) == 12
+
+
+def test_normalize_two_colliding_names_stay_distinct() -> None:
+    # After replacement both become the same prefix, so the hash must
+    # disambiguate them.
+    first = normalize_mcp_tool_name("srv", "a.b")
+    second = normalize_mcp_tool_name("srv", "a b")
+    assert first != second
+    assert first.startswith("mcp__srv__a_b")
+    assert second.startswith("mcp__srv__a_b")
+
+
+def test_normalize_is_deterministic() -> None:
+    assert normalize_mcp_tool_name("srv", "a.b") == normalize_mcp_tool_name(
+        "srv", "a.b"
+    )
+    assert normalize_mcp_tool_name("srv", "a.b") != normalize_mcp_tool_name(
+        "other", "a.b"
+    )
+
+
+@pytest.mark.asyncio
+async def test_call_tool_resolves_public_name_to_raw_name() -> None:
+    config = McpServerConfig(name="srv", url="https://mcp.example.com")
+    raw_tool = Tool(
+        name="Call_test_tool_object_",
+        description="d",
+        inputSchema={"type": "object", "properties": {}},
+    )
+    runtime_client = MagicMock()
+    runtime_client.list_tools = AsyncMock(
+        return_value=ListToolsResult(tools=[raw_tool])
+    )
+    runtime_client.call_tool = AsyncMock(return_value="ok")
+    with patch(
+        "private_gpt.server.mcp.mcp_service._load_runtime",
+        return_value=MagicMock(return_value=runtime_client),
+    ):
+        client = McpClient(config)
+        await client.list_tools()
+        public_name = normalize_mcp_tool_name("srv", "Call_test_tool_object_")
+        await client.call_tool(public_name, {"x": 1})
+
+    runtime_client.call_tool.assert_awaited_once_with(
+        name="Call_test_tool_object_", arguments={"x": 1}
+    )

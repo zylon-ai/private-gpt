@@ -1,4 +1,6 @@
 import base64
+import hashlib
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
@@ -24,6 +26,33 @@ if TYPE_CHECKING:
 
     from private_gpt.components.chat.models.chat_config_models import ToolSpec
     from private_gpt.server.mcp._runtime import PersistentMCPClient
+
+# Model-facing function-name contract: at most 64 chars from `[A-Za-z0-9_-]`.
+MAX_PUBLIC_NAME_LENGTH = 64
+INVALID_NAME_CHARS = re.compile(r"[^A-Za-z0-9_-]")
+# Hex chars of the SHA-256 identity hash appended on lossy normalization.
+HASH_LENGTH = 12
+
+
+def normalize_mcp_tool_name(server_name: str, raw_name: str) -> str:
+    """Derive the model-facing public name for one MCP tool.
+
+    Deterministic pure function of ``(server_name, raw_name)``. The clean case
+    is ``mcp__<server_name>__<raw_name>`` verbatim. When character replacement
+    or truncation to the function-name contract (64 chars, ``[A-Za-z0-9_-]``)
+    changes the name, a 12-hex-char SHA-256 hash of the identity is appended so
+    distinct MCP identities never collapse into the same public name.
+
+    The raw name is never parsed back out of the public name — calls always
+    resolve through ``McpToolDefinition.raw_name``.
+    """
+    joined = f"mcp__{server_name}__{raw_name}"
+    normalized = INVALID_NAME_CHARS.sub("_", joined)
+    if normalized == joined and len(normalized) <= MAX_PUBLIC_NAME_LENGTH:
+        return normalized
+    digest = hashlib.sha256(f"{server_name}\0{raw_name}".encode("utf-8")).hexdigest()
+    suffix = digest[:HASH_LENGTH]
+    return f"{normalized[: MAX_PUBLIC_NAME_LENGTH - HASH_LENGTH - 1]}_{suffix}"
 
 
 def _load_runtime() -> type["PersistentMCPClient"]:
@@ -85,22 +114,35 @@ def get_mcp_tool_result_content(value: object) -> list[object] | None:
 
 @dataclass(frozen=True)
 class McpToolDefinition:
-    """Typed MCP tool definition with the original input schema preserved."""
+    """Typed MCP tool definition with the original input schema preserved.
+
+    ``name`` is the model-facing public name (collision-safe normalized);
+    ``raw_name`` is the MCP server's own tool name, used on the wire.
+    """
 
     name: str
     description: str | None
     input_schema: dict[str, Any]
+    raw_name: str | None = None
 
     @classmethod
-    def from_mcp_tool(cls, tool: "Tool") -> "McpToolDefinition":
+    def from_mcp_tool(
+        cls, tool: "Tool", server_name: str | None = None
+    ) -> "McpToolDefinition":
         schema = tool.input_schema
         if not isinstance(schema, dict):
             schema = {"type": "object", "properties": {}}
+        public_name = (
+            normalize_mcp_tool_name(server_name, tool.name)
+            if server_name
+            else tool.name
+        )
         return cls(
-            name=tool.name,
+            name=public_name,
             description=tool.description,
             # Preserve original schema as-is (including untyped properties).
             input_schema=dict(schema),
+            raw_name=tool.name,
         )
 
 
@@ -110,6 +152,7 @@ class McpClient:
     def __init__(self, config: McpServerConfig) -> None:
         self.config = config
         self.client: PersistentMCPClient | None = None
+        self._last_tools: list[McpToolDefinition] = []
 
         persistent_mcp_client_cls = _load_runtime()
 
@@ -141,14 +184,37 @@ class McpClient:
         for remote_tool in response.tools:
             if allowed is not None and remote_tool.name not in allowed:
                 continue
-            tools.append(McpToolDefinition.from_mcp_tool(remote_tool))
+            tools.append(
+                McpToolDefinition.from_mcp_tool(remote_tool, server_name=self.config.name)
+            )
+        # Remember the last-listed generation so call_tool can resolve a
+        # public name back to the raw MCP name before hitting the wire.
+        self._last_tools = tools
         return tools
 
     async def call_tool(self, name: str, arguments: dict[str, Any]) -> "CallToolResult":
-        """Invoke a tool on the MCP server with the given arguments."""
+        """Invoke a tool on the MCP server with the given arguments.
+
+        ``name`` is the model-facing public name; it is resolved to the raw
+        MCP tool name before calling, because the wire protocol only
+        understands the server's own names.
+        """
         if self.client is None:
             raise RuntimeError("MCP client is not initialized")
-        return await self.client.call_tool(name=name, arguments=arguments)
+        raw_name = self._resolve_raw_name(name)
+        return await self.client.call_tool(name=raw_name, arguments=arguments)
+
+    def _resolve_raw_name(self, public_name: str) -> str:
+        """Map a public name back to the raw MCP tool name, if known.
+
+        Falls back to passing the public name through unchanged so callers
+        that pre-date normalization (or that invoke a tool never listed)
+        still reach the wire with a best-effort name.
+        """
+        for tool in getattr(self, "_last_tools", None) or []:
+            if tool.name == public_name:
+                return tool.raw_name or public_name
+        return public_name
 
     async def close(self) -> None:
         """Close the underlying MCP session in the task that owns it."""
@@ -164,10 +230,15 @@ class McpService:
 
 
 def mcp_tool_to_spec(config: McpServerConfig, tool: McpToolDefinition) -> "ToolSpec":
-    """Convert a discovered MCP tool into a durable, rebuildable tool spec."""
+    """Convert a discovered MCP tool into a durable, rebuildable tool spec.
+
+    The model-facing ``ToolSpec.name`` is the collision-safe public name; the
+    raw MCP name travels in ``tool_name`` so ``call_tool`` hits the wire with
+    the server's own name.
+    """
     return rebuild_mcp_tool(
         config=config,
-        tool_name=tool.name,
+        tool_name=tool.raw_name or tool.name,
         name=tool.name,
         type=None,
         description=tool.description,
@@ -193,13 +264,16 @@ def rebuild_mcp_tool(
         client = McpClient(config)
         try:
             tools = await client.list_tools()
+            # ``name`` is the model-facing public name; the client resolves it
+            # back to the raw MCP name before calling the wire protocol.
+            public_name = name or tool_name
             available = {item.name for item in tools}
-            if tool_name not in available:
+            if public_name not in available:
                 raise ValueError(
-                    f"MCP tool {tool_name!r} is no longer available from "
+                    f"MCP tool {public_name!r} is no longer available from "
                     f"server {config.name!r}."
                 )
-            return await client.call_tool(tool_name, dict(kwargs))
+            return await client.call_tool(public_name, dict(kwargs))
         finally:
             await client.close()
 
