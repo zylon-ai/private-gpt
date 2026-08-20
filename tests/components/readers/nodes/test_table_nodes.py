@@ -1,4 +1,3 @@
-import datetime
 import json
 import re
 import uuid
@@ -89,7 +88,7 @@ def test_table_node_serialization_with_non_serializable_data(
     json_str = json.dumps(serialized)
     json_obj = json.loads(json_str)
     deserialized = TableNode.from_dict(json_obj)
-    assert deserializedclear
+    assert deserialized
 
 
 def test_get_content_all_metadata(valid_dataframe: pd.DataFrame) -> None:
