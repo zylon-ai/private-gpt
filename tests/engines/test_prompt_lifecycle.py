@@ -23,7 +23,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
-from llama_index.core.llms.function_calling import FunctionCallingLLM
 from llama_index.core.llms.llm import ToolSelection
 from pydantic import Field
 

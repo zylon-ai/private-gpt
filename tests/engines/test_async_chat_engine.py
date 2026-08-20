@@ -330,6 +330,8 @@ async def _run_async_engine(
                     has_output_usage=state.runtime.has_output_usage,
                 ),
                 original_input=state.original_input,
+                runtime_cache=state.runtime.cache,
+                runtime=state.runtime,
             ),
             channel=channel2,
         )
@@ -350,6 +352,35 @@ class _RecordingRequestInterceptor(ChatRequestLoopInterceptor):
                 [message.role for message in context.state.input.request.messages],
             )
         )
+
+
+@pytest.mark.asyncio
+async def test_execute_continues_when_tokenizer_is_unpickleable(
+    base_request: ResolvedChatRequest,
+) -> None:
+    """VALIDATION installs a real tokenizer; the next iteration must copy
+    runtime without pickling it (HF tokenizers hold a thread lock).
+    """
+    import threading
+
+    lock = threading.Lock()
+
+    def tokenizer(text: str) -> list[int]:
+        with lock:
+            return [1]
+
+    class _InstallTokenizer(ChatRequestLoopInterceptor):
+        async def intercept(self, context: ChatInterceptorContext) -> None:
+            if context.phase == InterceptorPhase.VALIDATION:
+                context.state.runtime.tokenizer_fn = tokenizer
+
+    result = await _run_async_engine(
+        base_request.model_copy(deep=True),
+        get_mock_function_calling_llm(["hello", " world"]),
+        tool_scheduler=_FakeAsyncToolScheduler(),
+        request_interceptors=[_InstallTokenizer()],
+    )
+    assert [state.output.status for state in result.states] == [ChatStatus.COMPLETED]
 
 
 @pytest.mark.asyncio
@@ -871,6 +902,8 @@ async def test_extract_citation_interceptor_converts_bracket_refs_on_resume(
                     has_output_usage=state.runtime.has_output_usage,
                 ),
                 original_input=state.original_input,
+                runtime_cache=state.runtime.cache,
+                runtime=state.runtime,
             ),
             channel=channel2,
         )

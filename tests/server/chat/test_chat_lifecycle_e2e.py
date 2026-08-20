@@ -102,15 +102,36 @@ from llama_index.core.base.llms.types import ChatMessage, ChatResponse, MessageR
 from llama_index.core.llms.llm import ToolSelection
 
 from private_gpt.chat.input_models import MessageInput, PromptConfig, System
+from private_gpt.components.engines.chat.async_chat_engine import (
+    AsyncChatCheckpoint,
+    LocalEventChannel,
+)
+from private_gpt.components.engines.chat.checkpoint_store import ChatCheckpoint
+from private_gpt.components.engines.chat.models.chat_state import (
+    ChatInputState,
+    ChatState,
+    ChatStatus,
+)
+from private_gpt.components.engines.chat.resumable_runner import ResumableChatRunner
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.skills.models.skill_entities import SkillFilter
+from private_gpt.components.tools.remote_execution import (
+    ToolExecutionRequest,
+    execute_tool_request,
+)
 from private_gpt.components.tools.tool_names import (
     SKILL_LOAD_TOOL_NAME,
     SKILL_UNLOAD_TOOL_NAME,
 )
+from private_gpt.components.tools.tool_scheduler import BaseToolScheduler
 from private_gpt.events.models import Message
 from private_gpt.events.models import TextBlock as OutTextBlock
+from private_gpt.server.chat.chat_request_mapper import ChatRequestMapper
 from private_gpt.server.chat.chat_router import ChatBody
+from private_gpt.server.chat.chat_service import ChatService
+from private_gpt.server.chat.interceptors.chat_interceptor_service import (
+    ChatInterceptorService,
+)
 from private_gpt.server.utils.artifact_input import IngestedArtifact, SkillArtifact
 from private_gpt.settings.settings import Settings
 from tests.fixtures.mock_function_llm import get_mock_function_calling_llm
@@ -311,6 +332,135 @@ def _assistant_load_then_unload_history(skill_name: str) -> list[dict[str, Any]]
             ],
         },
     ]
+
+
+class _WorkerToolScheduler(BaseToolScheduler):
+    """Stand-in for chat/tool workers: queue the call, complete it later."""
+
+    def __init__(self) -> None:
+        self.pending: dict[str, ToolExecutionRequest] = {}
+        self._next = 0
+
+    @property
+    def is_async(self) -> bool:
+        return True
+
+    async def execute(
+        self,
+        request: ToolExecutionRequest,
+        state_ctx: ChatState | None = None,
+        interceptors: Any = None,
+    ) -> Any:
+        del request, state_ctx, interceptors
+        raise NotImplementedError
+
+    async def async_execute(
+        self,
+        request: ToolExecutionRequest,
+        state_ctx: ChatState | None = None,
+        interceptors: Any = None,
+    ) -> str:
+        del state_ctx, interceptors
+        self._next += 1
+        handle = f"handle-{self._next}"
+        self.pending[request.tool_id] = request
+        return handle
+
+    async def cancel(
+        self,
+        request: ToolExecutionRequest,
+        task_id: str | None = None,
+    ) -> bool:
+        del request, task_id
+        return False
+
+    async def complete_pending(self) -> list[Any]:
+        responses = []
+        for tool_id in list(self.pending):
+            request = self.pending.pop(tool_id)
+            responses.append(await execute_tool_request(request))
+        return responses
+
+
+def _checkpoint_from_state(state: ChatState) -> ChatCheckpoint:
+    """Serialize loop state the way a chat/tool worker pause does."""
+    return ChatCheckpoint(
+        correlation_id="e2e-worker",
+        request_data=state.input.request.model_dump(mode="json"),
+        context_stack_data=state.input.context_stack.checkpoint_dump(),
+        original_input_data=ResumableChatRunner._dump_original_input(
+            state.original_input
+        ),
+        runtime_data=ResumableChatRunner._dump_runtime(state),
+        runtime_cache_data=ResumableChatRunner._dump_runtime_cache(state),
+        stream_type="chat_completion",
+        metadata={},
+        iteration=state.runtime.iteration,
+        checkpoint=state.output.pause_type,
+        checkpoint_payload=ResumableChatRunner._checkpoint_payload(state),
+        next_block_count=state.runtime.next_block_count,
+        checkpoint_id="e2e-cp",
+    )
+
+
+def _async_checkpoint_from_saved(
+    saved: ChatCheckpoint,
+    responses: list[Any],
+) -> AsyncChatCheckpoint:
+    """Rebuild the resume payload the way ResumableChatRunner does."""
+    request_data = dict(saved.request_data)
+    request_data["messages"] = [
+        *list(request_data.get("messages", [])),
+        *(response.tool_message.model_dump(mode="json") for response in responses),
+    ]
+    return AsyncChatCheckpoint(
+        checkpoint=saved.checkpoint,
+        input=ChatInputState(
+            request=ResumableChatRunner._request(request_data),
+            context_stack=ResumableChatRunner._context_stack(saved, request_data),
+        ),
+        iteration=saved.iteration,
+        next_block_count=saved.next_block_count,
+        payload=saved.checkpoint_payload.model_copy(
+            update={"tool_responses": responses}
+        ),
+        original_input=ResumableChatRunner._original_input(saved),
+        runtime_cache=ResumableChatRunner._runtime_cache(saved),
+        runtime=ResumableChatRunner._runtime(saved),
+    )
+
+
+async def _execute_with_worker_resume(
+    engine: Any,
+    request: Any,
+    tool_scheduler: _WorkerToolScheduler,
+) -> ChatState:
+    """Run the async engine across worker pause/resume checkpoints."""
+    channel = LocalEventChannel()
+    state = await engine.execute(request, channel=channel)
+    await channel.close()
+    while state.output.status == ChatStatus.WAITING:
+        responses = await tool_scheduler.complete_pending()
+        assert responses, "worker scheduler completed no tool results"
+        resume_channel = LocalEventChannel()
+        state = await engine.resume(
+            _async_checkpoint_from_saved(_checkpoint_from_state(state), responses),
+            channel=resume_channel,
+        )
+        await resume_channel.close()
+    return state
+
+
+def _build_worker_engine(
+    injector: MockInjector, tool_scheduler: _WorkerToolScheduler
+) -> Any:
+    chat_service = injector.get(ChatService)
+    original_scheduler = chat_service._tool_scheduler
+    chat_service._tool_scheduler = tool_scheduler
+    try:
+        return chat_service.build_async_engine()
+    finally:
+        chat_service._tool_scheduler = original_scheduler
 
 
 # ---------------------------------------------------------------------------
@@ -696,6 +846,220 @@ class TestDocumentsAndCitations:
             json={"collection": collection, "artifact": artifact},
         )
 
+    async def test_documents_refresh_across_worker_resume(
+        self, async_test_client: AsyncClient, injector: MockInjector
+    ) -> None:
+        """Retrieved documents must appear after a worker tool resume."""
+        settings = injector.get(Settings)
+        previous_flag = settings.chat.add_context_to_system_prompt
+        settings.chat.add_context_to_system_prompt = True
+        chat_interceptor_service = injector.get(ChatInterceptorService)
+        previous_conditions = []
+        for entry in chat_interceptor_service._chain.entries:
+            if entry.name == "recalculate":
+                previous_conditions.append((entry, entry.condition))
+                entry.condition = True
+        try:
+            capture = ChainCapture()
+            await install_capturing_llm(
+                injector,
+                capture,
+                deltas=[
+                    [
+                        ToolSelection(
+                            tool_id="s1",
+                            tool_name="semantic_search",
+                            tool_kwargs={"query": "artifact text"},
+                        )
+                    ],
+                    ["final with context"],
+                ],
+            )
+
+            collection = str(uuid.uuid4())
+            artifact = str(uuid.uuid4())
+            ingest_response = await async_test_client.post(
+                "/v1/artifacts/ingest",
+                json={
+                    "metadata": {},
+                    "input": {
+                        "type": "text",
+                        "value": "WORKERDOC lorem ipsum dolor sit amet",
+                    },
+                    "collection": collection,
+                    "artifact": artifact,
+                },
+            )
+            assert ingest_response.status_code == 200
+
+            body = ChatBody(
+                messages=[MessageInput(content="search it", role="user")],
+                tools=[{"name": "semantic_search", "type": "semantic_search_v1"}],
+                tool_choice={"type": "tool", "name": "semantic_search"},
+                tool_context=[
+                    IngestedArtifact(
+                        context_filter={
+                            "collection": collection,
+                            "artifacts": [artifact],
+                        }
+                    )
+                ],
+            )
+            request = await injector.get(ChatRequestMapper).create_request_from_body(
+                body
+            )
+            tool_scheduler = _WorkerToolScheduler()
+            engine = _build_worker_engine(injector, tool_scheduler)
+            state = await _execute_with_worker_resume(engine, request, tool_scheduler)
+            assert state.output.status == ChatStatus.COMPLETED
+            assert len(capture.system_prompts) == 2
+            assert (
+                "WORKERDOC lorem ipsum dolor sit amet" not in capture.system_prompts[0]
+            )
+            assert (
+                capture.system_prompts[1].count("WORKERDOC lorem ipsum dolor sit amet")
+                == 1
+            )
+
+            await async_test_client.post(
+                "/v1/artifacts/delete",
+                json={"collection": collection, "artifact": artifact},
+            )
+        finally:
+            settings.chat.add_context_to_system_prompt = previous_flag
+            for entry, condition in previous_conditions:
+                entry.condition = condition
+
+    async def test_citations_resolve_across_worker_resume(
+        self, async_test_client: AsyncClient, injector: MockInjector
+    ) -> None:
+        """Citation identifiers from a worker tool result must be usable
+        on the resumed iteration.
+        """
+        capture = ChainCapture()
+        identifier_pattern = re.compile(r"Citation identifier \[(\w{4})\]")
+
+        mock_llm = get_mock_function_calling_llm(["placeholder"])
+        mock_llm.metadata.is_function_calling_model = True
+
+        def get_tool_calls_from_response(
+            response: Any, error_on_no_tool_call: bool = True, **kwargs: Any
+        ) -> list[ToolSelection]:
+            return response.additional_kwargs.get("tool_calls", [])
+
+        mock_llm.get_tool_calls_from_response = get_tool_calls_from_response
+
+        call_count = 0
+
+        async def dynamic_astream(
+            tools: Any,
+            user_msg: Any = None,
+            chat_history: list[ChatMessage] | None = None,
+            **kwargs: Any,
+        ) -> Any:
+            nonlocal call_count
+            capture.record(tools, chat_history)
+            call_count += 1
+
+            if call_count == 1:
+                text: str | None = None
+                tool_calls = [
+                    ToolSelection(
+                        tool_id="s1",
+                        tool_name="semantic_search",
+                        tool_kwargs={"query": "artifact text"},
+                    )
+                ]
+            else:
+                history_text = "\n".join(
+                    str(message.content or "") for message in (chat_history or [])
+                )
+                match = identifier_pattern.search(history_text)
+                identifier = match.group(1) if match else "XXXX"
+                text = f"citing the source [{identifier}]."
+                tool_calls = None
+
+            message = ChatMessage(
+                content=text,
+                role=MessageRole.ASSISTANT,
+                additional_kwargs={"tool_calls": tool_calls},
+            )
+            yield ChatResponse(
+                message=message,
+                raw=message,
+                delta=text,
+                additional_kwargs=message.additional_kwargs,
+            )
+
+        async def coro(*args: Any, **kwargs: Any) -> Any:
+            return dynamic_astream(*args, **kwargs)
+
+        mock_llm.astream_chat_with_tools = coro
+        llm_component = injector.get(LLMComponent)
+        llm_component.get_llm = Mock(return_value=mock_llm)
+        injector.bind_mock(LLMComponent, llm_component)
+
+        collection = str(uuid.uuid4())
+        artifact = str(uuid.uuid4())
+        ingest_response = await async_test_client.post(
+            "/v1/artifacts/ingest",
+            json={
+                "metadata": {},
+                "input": {"type": "text", "value": "Worker citable fact."},
+                "collection": collection,
+                "artifact": artifact,
+            },
+        )
+        assert ingest_response.status_code == 200
+
+        body = ChatBody(
+            messages=[MessageInput(content="cite it", role="user")],
+            tools=[{"name": "semantic_search", "type": "semantic_search_v1"}],
+            tool_choice={"type": "tool", "name": "semantic_search"},
+            tool_context=[
+                IngestedArtifact(
+                    context_filter={"collection": collection, "artifacts": [artifact]}
+                )
+            ],
+            system=System(citations={"enabled": True}),
+        )
+        request = await injector.get(ChatRequestMapper).create_request_from_body(body)
+        tool_scheduler = _WorkerToolScheduler()
+        engine = _build_worker_engine(injector, tool_scheduler)
+        channel = LocalEventChannel()
+        state = await engine.execute(request, channel=channel)
+        await channel.close()
+        assert state.output.status == ChatStatus.WAITING
+
+        responses = await tool_scheduler.complete_pending()
+        resume_channel = LocalEventChannel()
+        state = await engine.resume(
+            _async_checkpoint_from_saved(_checkpoint_from_state(state), responses),
+            channel=resume_channel,
+        )
+        await resume_channel.close()
+        assert state.output.status == ChatStatus.COMPLETED
+        assert call_count >= 2
+
+        history_text = "\n".join(
+            str(message.content or "") for message in capture.histories[-1]
+        )
+        assert identifier_pattern.search(history_text), history_text
+        resume_events = [event async for event in resume_channel.stream()]
+        cited = False
+        for event in resume_events:
+            delta = getattr(event, "delta", None)
+            citations = getattr(delta, "citations", None) if delta is not None else None
+            if citations:
+                cited = True
+                break
+        assert cited, "resumed iteration did not emit citation deltas"
+
+        await async_test_client.post(
+            "/v1/artifacts/delete",
+            json={"collection": collection, "artifact": artifact},
+        )
+
 
 # ---------------------------------------------------------------------------
 # 8-10: tool uniqueness, deferred visibility, MCP caching
@@ -946,6 +1310,72 @@ class TestSkillLifecycle:
             assert sentinel not in capture.system_prompts[-1]
             assert SKILL_LOAD_TOOL_NAME in capture.tool_names[-1]
             assert SKILL_UNLOAD_TOOL_NAME not in capture.tool_names[-1]
+        finally:
+            settings.skills.skill_injection_mode = previous_mode
+
+    async def test_body_visible_after_load_across_worker_resume(
+        self, async_test_client: AsyncClient, injector: MockInjector
+    ) -> None:
+        """Worker pause/resume must keep skill cache so the next iteration
+        still injects ``<skill_content>``.
+
+        Local (no-worker) execution already covers this in
+        ``test_catalog_visible_then_body_visible_after_load_same_request``.
+        Workers serialize state through ``ChatCheckpoint`` and resume without
+        re-running VALIDATION, so the skill cache has to travel with the
+        checkpoint.
+        """
+        collection = str(uuid.uuid4())
+        sentinel = "SKILL_BODY_SENTINEL_WORKER"
+        await _create_skill(
+            async_test_client,
+            collection=collection,
+            name="worker-skill",
+            body=sentinel,
+        )
+        settings = injector.get(Settings)
+        previous_mode = settings.skills.skill_injection_mode
+        settings.skills.skill_injection_mode = "system_prompt"
+        try:
+            capture = ChainCapture()
+            await install_capturing_llm(
+                injector,
+                capture,
+                deltas=[
+                    [
+                        ToolSelection(
+                            tool_id="t1",
+                            tool_name=SKILL_LOAD_TOOL_NAME,
+                            tool_kwargs={"name": "worker-skill"},
+                        )
+                    ],
+                    ["done"],
+                ],
+            )
+
+            body = ChatBody(
+                messages=[MessageInput(content="help", role="user")],
+                tools=_skill_tools(),
+                tool_context=[
+                    SkillArtifact(skill_filter=SkillFilter(collection=collection))
+                ],
+            )
+            request = await injector.get(ChatRequestMapper).create_request_from_body(
+                body
+            )
+
+            tool_scheduler = _WorkerToolScheduler()
+            engine = _build_worker_engine(injector, tool_scheduler)
+            state = await _execute_with_worker_resume(engine, request, tool_scheduler)
+            assert state.output.status == ChatStatus.COMPLETED
+            assert SKILL_LOAD_TOOL_NAME in capture.tool_names[0]
+            assert "<available_skills>" in capture.system_prompts[0]
+            assert sentinel not in capture.system_prompts[0]
+            assert "<skill_content" not in capture.system_prompts[0]
+            assert len(capture.system_prompts) == 2
+            assert "<available_skills>" not in capture.system_prompts[1]
+            assert sentinel in capture.system_prompts[1]
+            assert "<skill_content" in capture.system_prompts[1]
         finally:
             settings.skills.skill_injection_mode = previous_mode
 

@@ -55,6 +55,20 @@ class ChatRuntimeState(BaseModel):
     has_input_usage: bool = False
     has_output_usage: bool = False
 
+    def model_copy(
+        self, *, update: Mapping[str, Any] | None = None, deep: bool = False
+    ) -> Self:
+        # HF tokenizers (and similar) are not pickleable. Share the callable
+        # across copies the same way ChatState does.
+        tokenizer_fn = self.tokenizer_fn
+        self.tokenizer_fn = None
+        try:
+            copied = super().model_copy(update=update, deep=deep)
+        finally:
+            self.tokenizer_fn = tokenizer_fn
+        copied.tokenizer_fn = tokenizer_fn
+        return copied
+
 
 class ChatStatus(StrEnum):
     RUNNING = "running"
