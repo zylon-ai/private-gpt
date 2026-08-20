@@ -84,6 +84,7 @@ async def test_discovery_emits_refreshed_tokens_as_a_chat_event() -> None:
     event = McpTokensRefreshedEvent(
         name="mcp",
         url="https://mcp.example.com",
+        previous_refresh_token="refresh-before",
         authorization_token="access-after",
         refresh_token="refresh-after",
         metadata={"artifact_id": "artifact-123"},
@@ -109,6 +110,7 @@ async def test_discovery_emits_refreshed_tokens_before_wrapping_error() -> None:
     event = McpTokensRefreshedEvent(
         name="mcp",
         url="https://mcp.example.com",
+        previous_refresh_token="refresh-before",
         authorization_token="access-after",
         refresh_token="refresh-after",
         metadata={"artifact_id": "artifact-123"},
@@ -228,6 +230,7 @@ async def test_tool_refresh_is_consumed_by_interceptor_and_persisted() -> None:
         McpTokensRefreshedEvent(
             name="tools",
             url=config.url,
+            previous_refresh_token="refresh-before",
             authorization_token="access-after",
             refresh_token="refresh-after",
             metadata={"artifact_id": "artifact-123"},

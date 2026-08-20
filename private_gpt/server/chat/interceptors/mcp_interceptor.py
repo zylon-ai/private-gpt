@@ -125,11 +125,16 @@ class McpRequestInterceptor(
         payload: _McpTokenRefreshPayload,
     ) -> McpTokensRefreshedEvent | McpTokensRefreshFailedEvent | None:
         if payload.status == "success":
-            if not payload.authorization_token or not payload.refresh_token:
+            if (
+                not payload.previous_refresh_token
+                or not payload.authorization_token
+                or not payload.refresh_token
+            ):
                 return None
             return McpTokensRefreshedEvent(
                 name=payload.name,
                 url=payload.url,
+                previous_refresh_token=payload.previous_refresh_token,
                 authorization_token=payload.authorization_token,
                 refresh_token=payload.refresh_token,
                 metadata=payload.metadata,
