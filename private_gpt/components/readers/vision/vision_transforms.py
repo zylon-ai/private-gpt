@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 def vision_docs_transformations(
-    reader_settings: TransformationReadersSettings
+    reader_settings: TransformationReadersSettings,
 ) -> Iterable[TransformComponent]:
     # Deduplicate images in text(if apply)
     # yield ImageDeduplicationTransform.from_defaults()

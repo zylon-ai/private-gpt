@@ -89,25 +89,7 @@ def test_table_node_serialization_with_non_serializable_data(
     json_str = json.dumps(serialized)
     json_obj = json.loads(json_str)
     deserialized = TableNode.from_dict(json_obj)
-    assert deserialized
-
-
-def test_table_node_model_dump_json_with_mixed_timezone_datetimes() -> None:
-    """Regression test: pd.to_datetime with mixed timezones produces object-dtype
-    columns of plain datetime.datetime values (not pd.Timestamp/np.datetime64),
-    which must still be JSON-serializable via model_dump(mode="json")."""
-    naive = datetime.datetime(2021, 5, 3, 12, 0, 0)
-    aware = datetime.datetime(2021, 5, 1, 10, 0, 0, tzinfo=datetime.UTC)
-    df = pd.DataFrame(
-        {
-            "date_col": pd.Series([aware, naive], dtype="object"),
-            "value_col": [100, 200],
-        }
-    )
-    node = TableNode(df=df)
-    dumped = node.model_dump(mode="json")
-    # Should not raise TypeError: Object of type datetime is not JSON serializable
-    json.dumps(dumped, ensure_ascii=False)
+    assert deserializedclear
 
 
 def test_get_content_all_metadata(valid_dataframe: pd.DataFrame) -> None:

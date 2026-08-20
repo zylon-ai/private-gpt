@@ -157,10 +157,16 @@ class ParseComponent:
                 )
                 if nodes:
                     return nodes, reader
-            except (PdfInspectorFallbackError, ExtractionUnsuccessfulError, RuntimeError) as e:
+            except (
+                PdfInspectorFallbackError,
+                ExtractionUnsuccessfulError,
+                RuntimeError,
+            ) as e:
                 logger.warning("Reader %s failed for %s: %s", reader, extension, e)
             except Exception as e:
-                logger.error("Unexpected error with reader %s: %s", reader, e, exc_info=True)
+                logger.error(
+                    "Unexpected error with reader %s: %s", reader, e, exc_info=True
+                )
 
             reader = self._next_reader(extension, reader)
 

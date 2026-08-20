@@ -158,6 +158,7 @@ def has_any_text(markdown: str) -> bool:
 
 class QualityIssue(BaseModel):
     """A quality dimension that failed for a document."""
+
     model_config = ConfigDict(frozen=True)
     name: str
     reason: str
@@ -175,6 +176,7 @@ class QualityFilter(BaseModel):
     dimension. The document fails this filter when the ratio of bad pages
     among applicable pages exceeds `threshold`.
     """
+
     model_config = ConfigDict(frozen=True)
     name: str
     applies: PageChecker

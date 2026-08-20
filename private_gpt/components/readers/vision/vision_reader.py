@@ -32,22 +32,27 @@ logger = logging.getLogger(__name__)
 # JPEG at this resolution, staying well within VLM context windows.
 _RENDER_SCALE = 1.5
 
+
 class VisionReaderDisabledError(RuntimeError):
     """Raised when the vision reader is disabled in settings."""
+
     def __init__(self, file_name: str) -> None:
         super().__init__(f"Vision reader is disabled in settings (file: {file_name})")
 
 
 class NoMultimodalModelError(RuntimeError):
     """Raised when no multimodal LLM is configured/available."""
+
     def __init__(self, file_name: str) -> None:
         super().__init__(f"No multimodal LLM available (file: {file_name})")
 
 
 class PdfRenderError(RuntimeError):
     """Raised when a PDF cannot be rendered into page images."""
+
     def __init__(self, file_name: str) -> None:
         super().__init__(f"Failed to render PDF to images (file: {file_name})")
+
 
 class MetadataChunk(Enum):
     PAGE = "page"
@@ -152,24 +157,23 @@ class VisionReader(IngestionReader):
             )
         return docs
 
-
     def _check_multimodal_llm_available(self) -> bool:
         llm_component = get_global_injector().get(LLMComponent)
         if not llm_component:
             return False
         return any(llm_component.filter(lambda llm, cfg: supports_images(llm, cfg)))
 
-
     def _ensure_vision_available(self, file_name: str) -> None:
         """Raises if the vision pipeline can't run for this file."""
         if not self._reader_settings or not self._reader_settings.vision.is_enabled:
-            logger.debug("Vision reader is disabled in settings, skipping file: %s", file_name)
+            logger.debug(
+                "Vision reader is disabled in settings, skipping file: %s", file_name
+            )
             raise VisionReaderDisabledError(file_name)
 
         if not self._check_multimodal_llm_available():
             logger.debug("No multimodal LLM available, skipping file: %s", file_name)
             raise NoMultimodalModelError(file_name)
-
 
     async def lazy_load_data(
         self,
@@ -208,8 +212,9 @@ class VisionReader(IngestionReader):
                 yield node
             return
 
-        logger.debug("Starting PDF vision transformations of file: %s", file_info.file_name)
-
+        logger.debug(
+            "Starting PDF vision transformations of file: %s", file_info.file_name
+        )
 
         transformed_nodes = await self._run_transformations_with_timing(
             docs,
