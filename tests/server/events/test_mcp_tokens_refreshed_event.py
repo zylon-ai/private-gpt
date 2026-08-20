@@ -14,7 +14,6 @@ def _event() -> McpTokensRefreshedEvent:
     return McpTokensRefreshedEvent(
         name="tools",
         url="https://mcp.example.com",
-        previous_refresh_token="refresh-before-sentinel",
         authorization_token="access-after-sentinel",
         refresh_token="refresh-after-sentinel",
         metadata={"artifact_id": "artifact-123"},
@@ -29,7 +28,6 @@ def test_mcp_tokens_refreshed_event_roundtrips_exactly_and_redacts_strings() -> 
         "type": "mcp_tokens_refreshed",
         "name": "tools",
         "url": "https://mcp.example.com",
-        "previous_refresh_token": "refresh-before-sentinel",
         "authorization_token": "access-after-sentinel",
         "refresh_token": "refresh-after-sentinel",
         "_meta": {"artifact_id": "artifact-123"},
@@ -39,7 +37,6 @@ def test_mcp_tokens_refreshed_event_roundtrips_exactly_and_redacts_strings() -> 
     assert "tools" in str(event)
     assert "https://mcp.example.com" in repr(event)
     for sentinel in (
-        "refresh-before-sentinel",
         "access-after-sentinel",
         "refresh-after-sentinel",
     ):
