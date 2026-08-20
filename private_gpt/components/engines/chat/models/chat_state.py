@@ -47,7 +47,7 @@ class ChatRuntimeState(BaseModel):
     tokenizer_fn: TokenizerFn | AsyncTokenizerFn | None = None
 
     iteration: int = 0
-    max_iterations: int = 40
+    max_iterations: int | None = None
     cache: "ChatRuntimeCache" = Field(default_factory=lambda: ChatRuntimeCache())
     next_block_count: int = 0
     total_input_tokens: int = 0

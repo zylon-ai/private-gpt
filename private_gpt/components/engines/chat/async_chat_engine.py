@@ -328,7 +328,7 @@ class AsyncChatEngine:
         chat_scheduler: "BaseChatScheduler",
         request_interceptors: list[ChatRequestLoopInterceptor] | None = None,
         response_interceptors: list[ChatResponseLoopInterceptor] | None = None,
-        max_iterations: int = 40,
+        max_iterations: int | None = None,
         container_registry: ContainerRegistry | None = None,
         tool_scheduler: BaseToolScheduler | None = None,
         tool_interceptors: list[ToolExecutionInterceptor] | None = None,
@@ -602,7 +602,7 @@ class AsyncChatEngine:
         runtime_cache: ChatRuntimeCache | None = None,
     ) -> ChatState:
         while True:
-            if iteration >= self._max_iterations:
+            if self._max_iterations is not None and iteration >= self._max_iterations:
                 return await self._execute_close(
                     request,
                     StopReasonEnum.MAX_TOKENS.value,

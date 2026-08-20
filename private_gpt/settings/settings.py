@@ -525,6 +525,10 @@ class ChatSettings(BaseModel):
         default="async",
         description="Chat engine selected behind the runtime feature flag.",
     )
+    max_iterations: int = Field(
+        default=100,
+        description="Maximum number of iterations for the chat loop.",
+    )
     allow_use_default_prompt: bool = Field(
         True,
         description="Flag indicating if the chat engine should use default prompts or not.",

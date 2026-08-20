@@ -211,7 +211,7 @@ class ChatLoopEngine:
         llm_component: LLMComponent,
         request_interceptors: list[ChatRequestLoopInterceptor] | None = None,
         response_interceptors: list[ChatResponseLoopInterceptor] | None = None,
-        max_iterations: int = 40,
+        max_iterations: int | None = None,
         container_registry: ContainerRegistry | None = None,
         tool_scheduler: BaseToolScheduler | None = None,
         tool_interceptors: list[ToolExecutionInterceptor] | None = None,
@@ -295,9 +295,9 @@ class ChatLoopEngine:
             handler,
         )
 
-        while (
-            not run.stopped
-            and run.state.runtime.iteration < run.state.runtime.max_iterations
+        while not run.stopped and (
+            run.state.runtime.max_iterations is None
+            or run.state.runtime.iteration < run.state.runtime.max_iterations
         ):
             await self._run_intercepted_iteration(run, handler)
 
