@@ -1,7 +1,8 @@
 import json
 import logging
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import Any
 
 from injector import inject, singleton
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
@@ -23,7 +24,11 @@ from private_gpt.components.engines.chat.models.chat_interceptor_context import 
 from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
-from private_gpt.components.skills.models.skill_entities import SkillFilter
+from private_gpt.components.skills.models.skill_entities import (
+    SkillFilter,
+    SkillVersionEntity,
+    SkillVersionWithSkillEntity,
+)
 from private_gpt.components.skills.paths import skill_mount_path
 from private_gpt.components.skills.services.skill_loader import SkillLoader
 from private_gpt.components.skills.services.skill_service import SkillService
@@ -33,9 +38,6 @@ from private_gpt.components.tools.tool_names import (
 )
 from private_gpt.server.utils.artifact_input import ArtifactType, SkillArtifact
 from private_gpt.settings.settings import Settings
-
-if TYPE_CHECKING:
-    from private_gpt.components.skills.models.skill_entities import SkillVersionEntity
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +205,75 @@ def _resolve_active_skill_names(
     return active
 
 
+def find_skill_filter(
+    tool_context: Sequence[ArtifactType] | None = None,
+    tools: Sequence[Any] | None = None,
+) -> SkillFilter | None:
+    """Resolve the skill filter from request context or per-tool context."""
+    for artifact in tool_context or []:
+        if isinstance(artifact, SkillArtifact):
+            return artifact.skill_filter
+    for tool in tools or []:
+        for artifact in getattr(tool, "context", None) or []:
+            if isinstance(artifact, SkillArtifact):
+                return artifact.skill_filter
+    return None
+
+
+@dataclass(frozen=True)
+class _SkillPartition:
+    eager_versions: list[SkillVersionEntity]
+    active_lazy_versions: list[SkillVersionEntity]
+    catalog_entries: list[SkillCatalogEntry]
+    eager_version_ids: set[str]
+    loaded_names: set[str]
+
+
+def partition_skill_entries(
+    entries: Sequence[SkillVersionWithSkillEntity],
+    active_names: set[str],
+) -> _SkillPartition:
+    """Split resolved skills into always-loaded eager, active lazy, and catalog.
+
+    Eager skills are loaded for every turn (body + mounts). Lazy skills are
+    loaded only after ``load_skill`` (``active_names``). Everything else is
+    catalog-only — the set ``list_skills`` should return.
+    """
+    eager_versions: list[SkillVersionEntity] = []
+    active_lazy_versions: list[SkillVersionEntity] = []
+    catalog_entries: list[SkillCatalogEntry] = []
+    eager_version_ids: set[str] = set()
+    loaded_names: set[str] = set()
+
+    for entry in entries:
+        version = entry.version
+        name = version.frontmatter.name
+        if entry.skill.loading == "eager":
+            eager_versions.append(version)
+            eager_version_ids.add(version.id)
+            loaded_names.add(name)
+        elif name in active_names:
+            active_lazy_versions.append(version)
+            loaded_names.add(name)
+        else:
+            catalog_entries.append(
+                SkillCatalogEntry(
+                    id=version.skill_id,
+                    name=name,
+                    description=version.frontmatter.description,
+                    loading=entry.skill.loading,
+                )
+            )
+
+    return _SkillPartition(
+        eager_versions=eager_versions,
+        active_lazy_versions=active_lazy_versions,
+        catalog_entries=catalog_entries,
+        eager_version_ids=eager_version_ids,
+        loaded_names=loaded_names,
+    )
+
+
 @singleton
 class SkillsInterceptor(ChatRequestLoopInterceptor):
     @inject
@@ -221,9 +292,12 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
             return
 
         state = context.state
-        filter_input = self._find_skill_filter(state.input.request.tool_context)
-
         stack = state.input.context_stack
+        filter_input = find_skill_filter(
+            state.input.request.tool_context,
+            stack.all_tools(),
+        )
+
         stack = stack.remove_layers_of_type(LayerType.SKILL_CATALOG)
         stack = stack.remove_layers_of_type(LayerType.SKILL_BODY)
         stack = stack.remove_layers_of_source("skills")
@@ -248,41 +322,23 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
             state.input.request.messages,
             maximum_loaded_skills=state.input.request.context.maximum_loaded_skills,
         )
-        active_versions: list[SkillVersionEntity] = []
-        mounted_versions: list[SkillVersionEntity] = []
-        catalog_entries: list[SkillCatalogEntry] = []
-        eager_version_ids: set[str] = set()
+        partition = partition_skill_entries(entries, active_skill_names)
+        body_versions: list[SkillVersionEntity] = list(partition.eager_versions)
+        mounted_versions: list[SkillVersionEntity] = [
+            *partition.eager_versions,
+            *partition.active_lazy_versions,
+        ]
+        if self._skill_injection_mode == "system_prompt":
+            body_versions.extend(partition.active_lazy_versions)
 
-        for entry in entries:
-            skill = entry.skill
-            version = entry.version
-            name = version.frontmatter.name
-            loading = skill.loading
-            if loading == "eager":
-                active_versions.append(version)
-                eager_version_ids.add(version.id)
-            elif name in active_skill_names:
-                if self._skill_injection_mode == "system_prompt":
-                    active_versions.append(version)
-                mounted_versions.append(version)
-            else:
-                catalog_entries.append(
-                    SkillCatalogEntry(
-                        id=version.skill_id,
-                        name=name,
-                        description=version.frontmatter.description,
-                        loading=loading,
-                    )
-                )
-
-        if catalog_entries and self._skill_injection_mode == "system_prompt":
+        if partition.catalog_entries and self._skill_injection_mode == "system_prompt":
             stack = stack.append_layer(
-                SkillCatalogLayer(entries=catalog_entries, source="skills")
+                SkillCatalogLayer(entries=partition.catalog_entries, source="skills")
             )
 
         mounted_names = {v.frontmatter.name for v in mounted_versions}
 
-        for version in active_versions:
+        for version in body_versions:
             try:
                 instructions = await self._skill_service.get_skill_body(version)
             except Exception as exc:
@@ -291,7 +347,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
                 )
                 continue
             is_mounted = version.frontmatter.name in mounted_names
-            is_eager = version.id in eager_version_ids
+            is_eager = version.id in partition.eager_version_ids
             stack = stack.append_layer(
                 SkillBodyLayer(
                     skill_id=version.skill_id,
@@ -313,11 +369,3 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
 
         state.input.context_stack = stack
         context.set_state(state)
-
-    def _find_skill_filter(
-        self, tool_context: Sequence[ArtifactType]
-    ) -> SkillFilter | None:
-        for artifact in tool_context:
-            if isinstance(artifact, SkillArtifact):
-                return artifact.skill_filter
-        return None

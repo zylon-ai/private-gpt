@@ -37,6 +37,7 @@ def _resolved(
     version: str = "1000000",
     name: str = "my-skill",
     description: str = "Test skill",
+    loading: str = "lazy",
 ) -> SkillVersionWithSkillEntity:
     version_entity = SkillVersionEntity(
         id=version_id,
@@ -51,7 +52,7 @@ def _resolved(
         collection="tenant",
         display_title="My Skill",
         source="custom",
-        loading="lazy",
+        loading=loading,  # type: ignore[arg-type]
         readonly=False,
         latest_version=version,
         created_at=datetime.now(tz=UTC),
@@ -134,6 +135,29 @@ async def test_list_skills_returns_resolved_versions(
         "total": 1,
         "has_more": False,
     }
+
+
+@pytest.mark.asyncio
+async def test_list_skills_omits_eager_and_already_loaded() -> None:
+    service = SimpleNamespace(
+        recover_versions=AsyncMock(
+            return_value=[
+                _resolved(name="eager-guide", skill_id="skill_eager", loading="eager"),
+                _resolved(name="already-loaded", skill_id="skill_loaded"),
+                _resolved(name="available", skill_id="skill_available"),
+            ]
+        ),
+        get_skill_body=AsyncMock(return_value="Skill body"),
+    )
+    builder = SkillManagementToolBuilder(
+        skill_service=service,
+        skill_filter=SkillFilter(collection="tenant", skill_or_version_ids=None),
+        loaded_names=["already-loaded"],
+    )
+    result = await builder.build_list_skills().async_fn()
+    data = _parse(result)
+    assert [skill["name"] for skill in data["skills"]] == ["available"]
+    assert data["total"] == 1
 
 
 @pytest.mark.asyncio

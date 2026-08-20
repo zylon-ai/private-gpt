@@ -213,3 +213,100 @@ async def test_deferred_tool_appears_only_after_skill_is_loaded() -> None:
         "echo",
         "present_files",
     }
+
+
+@pytest.mark.anyio
+async def test_eager_skill_unhides_deferred_tools_without_load() -> None:
+    from datetime import UTC, datetime
+
+    from llama_index.core.base.llms.types import ChatMessage, MessageRole
+
+    from private_gpt.components.chat.models.chat_config_models import (
+        ResolvedChatRequest,
+        ResolvedSystemConfig,
+        ResolvedToolConfig,
+    )
+    from private_gpt.components.context.models.context_layer import ToolDefinitionsLayer
+    from private_gpt.components.context.models.context_stack import ContextStack
+    from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+        ChatInterceptorContext,
+    )
+    from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
+    from private_gpt.components.engines.chat.models.chat_state import (
+        ChatInputState,
+        ChatOutputState,
+        ChatRuntimeCache,
+        ChatRuntimeState,
+        ChatState,
+        SkillsRuntimeCache,
+    )
+    from private_gpt.components.skills.models.skill_entities import (
+        SkillEntity,
+        SkillFilter,
+        SkillFrontmatter,
+        SkillVersionEntity,
+        SkillVersionWithSkillEntity,
+    )
+    from private_gpt.server.utils.artifact_input import SkillArtifact
+    from tests.fixtures.mock_function_llm import get_mock_function_calling_llm
+
+    now = datetime.now(UTC)
+    entry = SkillVersionWithSkillEntity(
+        skill=SkillEntity(
+            id="guidelines",
+            collection="col",
+            display_title="guidelines",
+            source="zylon",
+            loading="eager",
+            readonly=True,
+            created_at=now,
+            updated_at=now,
+        ),
+        version=SkillVersionEntity(
+            id="ver-guidelines",
+            skill_id="guidelines",
+            version="1",
+            frontmatter=SkillFrontmatter(name="guidelines", description="Always on"),
+            storage_prefix="skills/guidelines",
+            created_at=now,
+        ),
+    )
+    deferred = ToolSpec.from_defaults(
+        name="present_files",
+        type="present_files",
+        defer_loading=True,
+        input_schema={"type": "object", "properties": {}},
+    )
+    always = ToolSpec.from_defaults(
+        name="echo",
+        type="echo",
+        input_schema={"type": "object", "properties": {}},
+    )
+    request = ResolvedChatRequest(
+        messages=[ChatMessage(role=MessageRole.USER, content="hi")],
+        system=ResolvedSystemConfig(prompt="sys"),
+        tool_config=ResolvedToolConfig(tools=[always, deferred]),
+        tool_context=[SkillArtifact(skill_filter=SkillFilter(collection="col"))],
+    )
+    stack = ContextStack(
+        layers=[ToolDefinitionsLayer(tools=[always, deferred], source="request")]
+    )
+    context = ChatInterceptorContext(
+        state=ChatState(
+            input=ChatInputState(request=request, context_stack=stack),
+            runtime=ChatRuntimeState(
+                cache=ChatRuntimeCache(skill=SkillsRuntimeCache(entries=[entry]))
+            ),
+            output=ChatOutputState(),
+            timeline=[],
+        ),
+        llm=get_mock_function_calling_llm(["ok"]),
+        phase=InterceptorPhase.BEFORE_ITERATION,
+        emit_fn=lambda _: None,
+    )
+
+    await SkillToolVisibilityInterceptor().intercept(context)
+    assert {t.name for t in context.state.input.context_stack.all_tools()} == {
+        "echo",
+        "present_files",
+    }

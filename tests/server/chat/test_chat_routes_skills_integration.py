@@ -12,6 +12,7 @@ from private_gpt.chat.input_models import MessageInput
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.skills.models.skill_entities import SkillFilter
 from private_gpt.components.tools.tool_names import (
+    SKILL_LIST_TOOL_NAME,
     SKILL_LOAD_TOOL_NAME,
     SKILL_UNLOAD_TOOL_NAME,
 )
@@ -31,6 +32,7 @@ class SkillChatCapture:
     def __init__(self) -> None:
         self.system_prompts: list[str] = []
         self.tool_names_per_call: list[list[str]] = []
+        self.histories: list[list[ChatMessage]] = []
 
 
 async def mock_llm_with_capture(
@@ -55,6 +57,7 @@ async def mock_llm_with_capture(
             if name:
                 names.append(str(name))
         capture.tool_names_per_call.append(names)
+        capture.histories.append(list(chat_history or []))
 
         if chat_history:
             system_messages = [m for m in chat_history if m.role.value == "system"]
@@ -621,3 +624,113 @@ async def test_maximum_loaded_skills_evicts_oldest_loaded_skill(
         assert "BODY_ALPHA" not in prompt
     finally:
         settings.skills.skill_injection_mode = previous_mode
+
+
+@pytest.mark.anyio
+async def test_eager_skill_loaded_without_load_skill_and_omitted_from_catalog(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    collection = str(uuid.uuid4())
+    await _create_skill(
+        async_test_client,
+        collection=collection,
+        name="eager-guide",
+        loading="eager",
+        body="EAGER_SENTINEL",
+    )
+    await _create_skill(
+        async_test_client,
+        collection=collection,
+        name="lazy-skill",
+        loading="lazy",
+        body="LAZY_SENTINEL",
+    )
+
+    settings = injector.get(Settings)
+    previous_mode = settings.skills.skill_injection_mode
+    settings.skills.skill_injection_mode = "system_prompt"
+    try:
+        capture = SkillChatCapture()
+        await mock_llm_with_capture(injector, capture)
+
+        body = ChatBody(
+            messages=[MessageInput(content="hello", role="user")],
+            tools=_skill_tools(),
+            tool_context=[
+                SkillArtifact(skill_filter=SkillFilter(collection=collection))
+            ],
+        )
+        response = await async_test_client.post("/v1/messages", json=body.model_dump())
+        assert response.status_code == 200
+        prompt = capture.system_prompts[-1]
+        assert "EAGER_SENTINEL" in prompt
+        assert "LAZY_SENTINEL" not in prompt
+        assert "<name>lazy-skill</name>" in prompt
+        assert "<name>eager-guide</name>" not in prompt
+        assert SKILL_LOAD_TOOL_NAME in capture.tool_names_per_call[-1]
+        assert SKILL_LIST_TOOL_NAME in capture.tool_names_per_call[-1]
+        assert SKILL_UNLOAD_TOOL_NAME not in capture.tool_names_per_call[-1]
+    finally:
+        settings.skills.skill_injection_mode = previous_mode
+
+
+@pytest.mark.anyio
+async def test_list_skills_returns_only_unloaded_lazy_skills(
+    async_test_client: AsyncClient, injector: MockInjector
+) -> None:
+    collection = str(uuid.uuid4())
+    await _create_skill(
+        async_test_client,
+        collection=collection,
+        name="eager-guide",
+        loading="eager",
+        body="EAGER_SENTINEL",
+    )
+    await _create_skill(
+        async_test_client,
+        collection=collection,
+        name="lazy-skill",
+        loading="lazy",
+        body="LAZY_SENTINEL",
+    )
+
+    capture = SkillChatCapture()
+    await mock_llm_with_capture(
+        injector,
+        capture,
+        deltas=[
+            [
+                ToolSelection(
+                    tool_id="tu_list",
+                    tool_name=SKILL_LIST_TOOL_NAME,
+                    tool_kwargs={"page": 0, "page_size": 20},
+                )
+            ],
+            ["done"],
+        ],
+    )
+
+    body = ChatBody(
+        messages=[MessageInput(content="what skills can I load", role="user")],
+        tools=_skill_tools(),
+        tool_context=[SkillArtifact(skill_filter=SkillFilter(collection=collection))],
+    )
+    response = await async_test_client.post("/v1/messages", json=body.model_dump())
+    assert response.status_code == 200
+    assert len(capture.histories) >= 2
+
+    listed_names: set[str] = set()
+    for message in capture.histories[-1]:
+        raw = message.content
+        if not isinstance(raw, str) or "skills" not in raw:
+            continue
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict) and isinstance(payload.get("skills"), list):
+            listed_names = {
+                str(item["name"]) for item in payload["skills"] if "name" in item
+            }
+            break
+    assert listed_names == {"lazy-skill"}

@@ -17,6 +17,8 @@ from private_gpt.server.chat.interceptors.server_tool_result_text_interceptor im
 from private_gpt.server.chat.interceptors.skills_loop_interceptor import (
     _resolve_active_skill_names,
     _resolve_skill_states,
+    find_skill_filter,
+    partition_skill_entries,
 )
 
 
@@ -349,7 +351,12 @@ def _skill_request(messages: list[ChatMessage]):
 
 
 def _skill_context(
-    request, *, names: list[str], messages: list[ChatMessage] | None = None
+    request,
+    *,
+    names: list[str],
+    messages: list[ChatMessage] | None = None,
+    loadings: dict[str, str] | None = None,
+    resources: dict[str, list[str]] | None = None,
 ):
     from private_gpt.components.context.models.context_stack import ContextStack
     from private_gpt.components.engines.chat.models.chat_interceptor_context import (
@@ -373,7 +380,14 @@ def _skill_context(
         runtime=ChatRuntimeState(
             cache=ChatRuntimeCache(
                 skill=SkillsRuntimeCache(
-                    entries=[_skill_cache_entry(name=name) for name in names]
+                    entries=[
+                        _skill_cache_entry(
+                            name=name,
+                            loading=(loadings or {}).get(name, "lazy"),
+                        )
+                        for name in names
+                    ],
+                    resources=resources or {},
                 )
             )
         ),
@@ -543,3 +557,60 @@ async def test_skill_catalog_and_body_follow_load_and_unload_messages() -> None:
     assert catalog
     assert "skill-creator" in catalog[0].render()
     assert not body
+
+
+def test_partition_skill_entries_eager_is_loaded_lazy_is_catalog() -> None:
+    eager = _skill_cache_entry(name="guidelines", loading="eager")
+    lazy = _skill_cache_entry(name="skill-creator", loading="lazy")
+    partition = partition_skill_entries([eager, lazy], active_names=set())
+
+    assert [v.frontmatter.name for v in partition.eager_versions] == ["guidelines"]
+    assert partition.active_lazy_versions == []
+    assert partition.loaded_names == {"guidelines"}
+    assert [entry.name for entry in partition.catalog_entries] == ["skill-creator"]
+
+
+def test_find_skill_filter_reads_tool_context() -> None:
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+    from private_gpt.components.skills.models.skill_entities import SkillFilter
+    from private_gpt.server.utils.artifact_input import SkillArtifact
+
+    artifact = SkillArtifact(skill_filter=SkillFilter(collection="from-tool"))
+    tool = ToolSpec(name="list_skills", type="list_skills_v1", context=[artifact])
+
+    assert find_skill_filter(tool_context=[], tools=[tool]) is artifact.skill_filter
+    assert find_skill_filter(tool_context=None, tools=None) is None
+
+
+@pytest.mark.anyio
+async def test_eager_skill_is_injected_and_mounted_without_load() -> None:
+    from private_gpt.components.context.models.layer_type import LayerType
+    from private_gpt.components.skills.paths import skill_mount_path
+
+    request = _skill_request(
+        [ChatMessage(role=MessageRole.USER, content="create a skill")]
+    )
+    interceptor = _skills_interceptor(body="EAGER BODY")
+
+    context = _skill_context(
+        request,
+        names=["guidelines", "skill-creator"],
+        loadings={"guidelines": "eager", "skill-creator": "lazy"},
+        resources={"skill-guidelines": ["scripts/init.py"]},
+    )
+    await interceptor.intercept(context)
+
+    stack = context.state.input.context_stack
+    catalog = stack.layers_of_type(LayerType.SKILL_CATALOG)
+    body = stack.layers_of_type(LayerType.SKILL_BODY)
+    assert catalog
+    assert "skill-creator" in catalog[0].render()
+    assert "guidelines" not in catalog[0].render()
+    assert len(body) == 1
+    rendered = body[0].render()
+    assert "EAGER BODY" in rendered
+    assert skill_mount_path("guidelines") in rendered
+    assert "<skill_content" not in rendered
+
+    mounted = interceptor._skill_loader.mounts_for_versions.call_args[0][0]
+    assert [version.frontmatter.name for version in mounted] == ["guidelines"]

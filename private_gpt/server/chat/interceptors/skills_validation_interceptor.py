@@ -1,5 +1,3 @@
-from collections.abc import Sequence
-
 from injector import inject, singleton
 
 from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
@@ -14,9 +12,10 @@ from private_gpt.components.engines.chat.models.chat_phase import (
 from private_gpt.components.engines.chat.models.chat_state import (
     SkillsRuntimeCache,
 )
-from private_gpt.components.skills.models.skill_entities import SkillFilter
 from private_gpt.components.skills.services.skill_service import SkillService
-from private_gpt.server.utils.artifact_input import ArtifactType, SkillArtifact
+from private_gpt.server.chat.interceptors.skills_loop_interceptor import (
+    find_skill_filter,
+)
 
 
 @singleton
@@ -35,7 +34,10 @@ class SkillsValidationInterceptor(ChatRequestLoopInterceptor):
             return
 
         state = context.state
-        skill_filter = self._find_skill_filter(state.input.request.tool_context)
+        skill_filter = find_skill_filter(
+            state.input.request.tool_context,
+            state.input.context_stack.all_tools(),
+        )
         if skill_filter is None:
             return
 
@@ -58,11 +60,3 @@ class SkillsValidationInterceptor(ChatRequestLoopInterceptor):
             resources=resources,
         )
         context.set_state(state)
-
-    def _find_skill_filter(
-        self, tool_context: Sequence[ArtifactType]
-    ) -> SkillFilter | None:
-        for artifact in tool_context:
-            if isinstance(artifact, SkillArtifact):
-                return artifact.skill_filter
-        return None

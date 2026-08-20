@@ -1,4 +1,5 @@
 import json
+from collections.abc import Sequence
 from typing import Any
 
 from private_gpt.components.chat.models.chat_config_models import (
@@ -7,7 +8,7 @@ from private_gpt.components.chat.models.chat_config_models import (
 )
 from private_gpt.components.skills.models.skill_entities import (
     SkillFilter,
-    SkillVersionEntity,
+    SkillVersionWithSkillEntity,
 )
 from private_gpt.components.skills.services.skill_service import SkillService
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
@@ -36,14 +37,15 @@ class SkillManagementToolBuilder:
         skill_service: SkillService,
         skill_filter: SkillFilter,
         skill_injection_mode: str = "system_prompt",
+        loaded_names: Sequence[str] | None = None,
     ) -> None:
         self._skill_service = skill_service
         self._skill_filter = skill_filter
         self._skill_injection_mode = skill_injection_mode
+        self._loaded_names = {name for name in (loaded_names or []) if name}
 
-    async def _versions(self) -> list[SkillVersionEntity]:
-        resolved = await self._skill_service.recover_versions(self._skill_filter)
-        return [item.version for item in resolved]
+    async def _resolved(self) -> list[SkillVersionWithSkillEntity]:
+        return await self._skill_service.recover_versions(self._skill_filter)
 
     def build_load_skill(
         self,
@@ -51,8 +53,8 @@ class SkillManagementToolBuilder:
         type: str = SKILL_LOAD_TOOL_NAME + "_v1",
     ) -> ToolSpec:
         async def load_skill(name: str) -> list[ResultContentBlockType]:
-            versions = await self._versions()
-            for version in versions:
+            for item in await self._resolved():
+                version = item.version
                 if version.frontmatter.name == name:
                     payload: dict[str, Any] = {
                         "name": version.frontmatter.name,
@@ -119,10 +121,15 @@ class SkillManagementToolBuilder:
         async def list_skills(
             page: int = 0, page_size: int = 20
         ) -> list[ResultContentBlockType]:
-            versions = await self._versions()
-            total = len(versions)
+            available = [
+                item.version
+                for item in await self._resolved()
+                if item.skill.loading != "eager"
+                and item.version.frontmatter.name not in self._loaded_names
+            ]
+            total = len(available)
             start = page * page_size
-            page_versions = versions[start : start + page_size]
+            page_versions = available[start : start + page_size]
             return _ok(
                 {
                     "skills": [
@@ -145,7 +152,11 @@ class SkillManagementToolBuilder:
             name=name,
             type=type,
             runtime="server",
-            description="Browse the skill catalog (paginated). Use page/page_size to navigate large catalogs.",
+            description=(
+                "Browse skills that are not currently loaded (paginated). "
+                "Eager skills are always loaded and omitted. Use page/page_size "
+                "to navigate large catalogs."
+            ),
             async_fn=list_skills,
             requirements=[ToolRequirements.SANDBOX],
             execution_metadata=build_rebuild_metadata(
@@ -155,6 +166,7 @@ class SkillManagementToolBuilder:
                     "skill_injection_mode": self._skill_injection_mode,
                     "name": name,
                     "type": type,
+                    "loaded_names": sorted(self._loaded_names),
                 },
             ),
         )
@@ -163,12 +175,14 @@ class SkillManagementToolBuilder:
 def _builder(
     skill_filter: SkillFilter,
     skill_injection_mode: str,
+    loaded_names: Sequence[str] | None = None,
 ) -> "SkillManagementToolBuilder":
     injector = get_global_injector()
     return SkillManagementToolBuilder(
         skill_service=injector.get(SkillService),
         skill_filter=skill_filter,
         skill_injection_mode=skill_injection_mode,
+        loaded_names=loaded_names,
     )
 
 
@@ -201,8 +215,11 @@ def rebuild_list_skills_tool(
     skill_injection_mode: str,
     name: str = SKILL_LIST_TOOL_NAME,
     type: str = SKILL_LIST_TOOL_NAME + "_v1",
+    loaded_names: Sequence[str] | None = None,
 ) -> ToolSpec:
-    return _builder(skill_filter, skill_injection_mode).build_list_skills(
+    return _builder(
+        skill_filter, skill_injection_mode, loaded_names=loaded_names
+    ).build_list_skills(
         name=name,
         type=type,
     )
