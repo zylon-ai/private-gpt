@@ -57,19 +57,35 @@ class Principal:
         return self.headers.get("authorization")
 
     @property
-    def api_key(self) -> str | None:
-        """Bearer token extracted from the Authorization header.
+    def authorization_prefix(self) -> str | None:
+        """Scheme prefix of the ``Authorization`` header (e.g. ``Bearer``)."""
+        auth = self.authorization
+        if not auth:
+            return None
+        prefix, sep, _value = auth.partition(" ")
+        return prefix if sep else None
 
-        Returns the raw key without the ``Bearer `` prefix.
+    @property
+    def authorization_value(self) -> str | None:
+        """Credential value of the ``Authorization`` header, prefix stripped.
+
+        Rebuild the full header as
+        ``f"{authorization_prefix} {authorization_value}"``.
         """
         auth = self.authorization
-        if auth and auth.lower().startswith("bearer "):
-            return auth[7:]
+        if not auth:
+            return None
+        _prefix, sep, value = auth.partition(" ")
+        if sep:
+            return value.strip()
         return auth
 
     @property
-    def api_key_header(self) -> str | None:
-        """Raw ``x-api-key`` header value (used by Anthropic SDK for API key auth)."""
+    def api_key(self) -> str | None:
+        """``x-api-key`` header value (API key sent as ``X-Api-Key``).
+
+        Independent of ``authorization`` — the two are distinct credentials.
+        """
         return self.headers.get("x-api-key")
 
     # -- Context management ----------------------------------------------------
@@ -117,16 +133,17 @@ class Principal:
         return not self.headers and not self.cookies
 
     def as_env(self, *, prefix: str = "ANTHROPIC") -> dict[str, str]:
-        """Return principal credentials as env vars for subprocess tools.
+        """Principal credentials as env vars for subprocess tools.
 
-        * ``x-api-key`` header → ``{PREFIX}_API_KEY``
-        * ``Authorization`` header → ``{PREFIX}_AUTH_TOKEN``
+        ``x-api-key`` → ``{PREFIX}_API_KEY``; ``Authorization`` →
+        ``{PREFIX}_AUTH_TOKEN`` (bare value; prefix available via
+        :attr:`authorization_prefix`).
         """
         result: dict[str, str] = {}
-        if self.api_key_header:
-            result[f"{prefix}_API_KEY"] = self.api_key_header
-        if self.authorization:
-            result[f"{prefix}_AUTH_TOKEN"] = self.authorization
+        if self.api_key:
+            result[f"{prefix}_API_KEY"] = self.api_key
+        if self.authorization_value:
+            result[f"{prefix}_AUTH_TOKEN"] = self.authorization_value
 
         return result
 
@@ -135,16 +152,18 @@ class Principal:
 
         Supported sentinels:
 
-        * ``$PRINCIPAL_AUTH_TOKEN`` → ``authorization`` header (e.g. ``Bearer sk-...``)
-        * ``$PRINCIPAL_BEARER`` → ``api_key`` (Bearer token without the prefix)
-        * ``$PRINCIPAL_API_KEY`` → ``x-api-key`` header (API key sent as ``X-Api-Key``)
+        * ``$PRINCIPAL_AUTH_TOKEN`` → full ``authorization`` header
+        * ``$PRINCIPAL_BEARER`` → ``authorization_value`` (bare credential,
+          prefix stripped)
+        * ``$PRINCIPAL_API_KEY`` → ``api_key`` (``x-api-key`` header, distinct
+          from the ``Authorization`` credential)
 
         ``$PRINCIPAL_*`` sentinels with no resolved value are omitted.
         """
         sentinel_map: dict[str, str | None] = {
             "$PRINCIPAL_AUTH_TOKEN": self.authorization,
-            "$PRINCIPAL_BEARER": self.api_key,
-            "$PRINCIPAL_API_KEY": self.api_key_header,
+            "$PRINCIPAL_BEARER": self.authorization_value,
+            "$PRINCIPAL_API_KEY": self.api_key,
         }
         result: dict[str, str] = {}
         for key, value in env_vars.items():

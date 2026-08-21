@@ -2744,7 +2744,7 @@ async def test_principal_is_propagated_to_background_task(
         # This coroutine runs inside the asyncio task spawned by TaskManager.
         # The task was created with copy_context(), so Principal.current() here
         # must return the principal that was active during the HTTP request.
-        captured.append(Principal.current().api_key)
+        captured.append(Principal.current().authorization_value)
         await original_process_stream(
             correlation_id,
             stream_type,
@@ -2771,8 +2771,8 @@ async def test_principal_is_propagated_to_background_task(
 
     assert len(captured) == 1, "process_stream must be called exactly once per request"
     assert captured[0] == "sk-test-principal", (
-        f"Task saw api_key={captured[0]!r}, expected 'sk-test-principal' — "
-        "Principal was not propagated into the background task"
+        f"Task saw authorization_value={captured[0]!r}, expected "
+        "'sk-test-principal' — Principal was not propagated into the background task"
     )
 
 

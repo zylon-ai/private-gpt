@@ -16,7 +16,8 @@ def test_principal_reads_and_writes_the_context_bag() -> None:
     p.set_current()
     try:
         assert Principal.current().authorization == "Bearer sk-abc"
-        assert Principal.current().api_key == "sk-abc"
+        assert Principal.current().authorization_value == "sk-abc"
+        assert Principal.current().authorization_prefix == "Bearer"
         # The underlying bag carries the data.
         assert snapshot()["headers"]["authorization"] == "Bearer sk-abc"
     finally:
@@ -51,7 +52,7 @@ def test_principal_survives_broker_hop_via_bag() -> None:
     # Worker side — the transported bag is reinstalled.
     with reinstall(bag):
         assert Principal.current().authorization == "Bearer sk-job"
-        assert Principal.current().api_key == "sk-job"
+        assert Principal.current().authorization_value == "sk-job"
     # Restored after the job.
     assert Principal.current().anonymous is True
 
@@ -64,7 +65,7 @@ def test_principal_survives_broker_hop_via_bag_with_api_key() -> None:
         Principal.reset()
 
     with reinstall(bag):
-        assert Principal.current().api_key_header == "sk-header"
+        assert Principal.current().api_key == "sk-header"
     assert Principal.current().anonymous is True
 
 
@@ -88,3 +89,78 @@ def test_resolve_env_with_headers_on_worker() -> None:
         "ANTHROPIC_BASE_URL": "http://backend/gpt",
         "ANTHROPIC_AUTH_TOKEN": "sk-abc",
     }
+
+
+def test_authorization_prefix_and_value() -> None:
+    assert (
+        Principal(headers={"authorization": "Bearer sk-abc"}).authorization_prefix
+        == "Bearer"
+    )
+    assert (
+        Principal(headers={"authorization": "Bearer sk-abc"}).authorization_value
+        == "sk-abc"
+    )
+    assert (
+        Principal(headers={"authorization": "Basic dXNlcjpwYXNz"}).authorization_prefix
+        == "Basic"
+    )
+    assert (
+        Principal(headers={"authorization": "Basic dXNlcjpwYXNz"}).authorization_value
+        == "dXNlcjpwYXNz"
+    )
+    assert (
+        Principal(headers={"authorization": "Digest qop=auth"}).authorization_value
+        == "qop=auth"
+    )
+    # No prefix/value shape — value is the raw header; prefix is None.
+    assert Principal(headers={"authorization": "sk-abc"}).authorization_prefix is None
+    assert Principal(headers={"authorization": "sk-abc"}).authorization_value == (
+        "sk-abc"
+    )
+    # Empty value after the prefix yields empty (not the raw header).
+    assert Principal(headers={"authorization": "Bearer "}).authorization_value == ""
+    assert Principal().authorization_prefix is None
+    assert Principal().authorization_value is None
+
+
+def test_api_key_is_distinct_from_authorization() -> None:
+    """``api_key`` is the ``x-api-key`` value, independent of the bearer."""
+    p = Principal(
+        headers={
+            "authorization": "Bearer sk-bearer",
+            "x-api-key": "sk-header",
+        }
+    )
+    assert p.api_key == "sk-header"
+    assert p.authorization_value == "sk-bearer"
+    assert p.authorization_prefix == "Bearer"
+    # No x-api-key header → api_key is None (not the bearer value).
+    assert Principal(headers={"authorization": "Bearer sk-abc"}).api_key is None
+    assert Principal().api_key is None
+
+
+def test_as_env_emits_bare_auth_token() -> None:
+    """The sandbox receives the bare value; the prefix stays rebuildable."""
+    p = Principal(headers={"authorization": "Bearer sk-abc"})
+    assert p.as_env() == {"ANTHROPIC_AUTH_TOKEN": "sk-abc"}
+    # Prefix + value rebuild the full Authorization line.
+    assert f"{p.authorization_prefix} {p.as_env()['ANTHROPIC_AUTH_TOKEN']}" == (
+        "Bearer sk-abc"
+    )
+
+
+def test_as_env_handles_basic_and_api_key() -> None:
+    p = Principal(
+        headers={
+            "authorization": "Basic dXNlcjpwYXNz",
+            "x-api-key": "sk-header",
+        }
+    )
+    env = p.as_env()
+    assert env == {
+        "ANTHROPIC_API_KEY": "sk-header",
+        "ANTHROPIC_AUTH_TOKEN": "dXNlcjpwYXNz",
+    }
+    assert f"{p.authorization_prefix} {env['ANTHROPIC_AUTH_TOKEN']}" == (
+        "Basic dXNlcjpwYXNz"
+    )
