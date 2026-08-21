@@ -50,7 +50,7 @@ def normalize_mcp_tool_name(server_name: str, raw_name: str) -> str:
     normalized = INVALID_NAME_CHARS.sub("_", joined)
     if normalized == joined and len(normalized) <= MAX_PUBLIC_NAME_LENGTH:
         return normalized
-    digest = hashlib.sha256(f"{server_name}\0{raw_name}".encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(f"{server_name}\0{raw_name}".encode()).hexdigest()
     suffix = digest[:HASH_LENGTH]
     return f"{normalized[: MAX_PUBLIC_NAME_LENGTH - HASH_LENGTH - 1]}_{suffix}"
 
@@ -185,7 +185,9 @@ class McpClient:
             if allowed is not None and remote_tool.name not in allowed:
                 continue
             tools.append(
-                McpToolDefinition.from_mcp_tool(remote_tool, server_name=self.config.name)
+                McpToolDefinition.from_mcp_tool(
+                    remote_tool, server_name=self.config.name
+                )
             )
         # Remember the last-listed generation so call_tool can resolve a
         # public name back to the raw MCP name before hitting the wire.

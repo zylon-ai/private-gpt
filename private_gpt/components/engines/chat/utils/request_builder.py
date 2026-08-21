@@ -50,7 +50,7 @@ def build_initial_context_stack(
 
 
 def build_request_from_context_stack(
-    base_request: ChatRequest,
+    base_request: ResolvedChatRequest,
     context_stack: ContextStack,
 ) -> ResolvedChatRequest:
     """Materialize a ChatRequest from the latest context stack layers."""
