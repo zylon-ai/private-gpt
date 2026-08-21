@@ -3,7 +3,7 @@
   "info": {
     "title": "Private-GPT API",
     "description": "PrivateGPT -built by Zylon- is a production-ready AI project that allows you to ask questions about your documents using the power\nof Large Language Models (LLMs), even in scenarios without an Internet connection. 100% private, no data leaves your\nexecution environment at any point.",
-    "version": "1.0.1"
+    "version": "1.1.0"
   },
   "paths": {
     "/v1/messages": {
@@ -4730,6 +4730,297 @@
         "title": "Base64Source",
         "description": "Base64Source schema."
       },
+      "BaseNode": {
+        "properties": {
+          "id_": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique ID of the node."
+          },
+          "embedding": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding",
+            "description": "Embedding of the node."
+          },
+          "extra_info": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Extra Info",
+            "description": "A flat dictionary of metadata fields"
+          },
+          "excluded_embed_metadata_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Excluded Embed Metadata Keys",
+            "description": "Metadata keys that are excluded from text for the embed model."
+          },
+          "excluded_llm_metadata_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Excluded Llm Metadata Keys",
+            "description": "Metadata keys that are excluded from text for the LLM."
+          },
+          "relationships": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RelatedNodeInfo"
+                },
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/RelatedNodeInfo"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/NodeRelationship"
+            },
+            "type": "object",
+            "title": "Relationships",
+            "description": "A mapping of relationships to other node information."
+          },
+          "metadata_template": {
+            "type": "string",
+            "title": "Metadata Template",
+            "description": "Template for how metadata is formatted, with {key} and {value} placeholders.",
+            "default": "{key}: {value}"
+          },
+          "metadata_seperator": {
+            "type": "string",
+            "title": "Metadata Seperator",
+            "description": "Separator between metadata fields when converting to string.",
+            "default": "\n"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name",
+            "default": "base_component",
+            "description": "class name field."
+          }
+        },
+        "type": "object",
+        "title": "BaseNode",
+        "description": "Base node Object.\n\nGeneric abstract interface for retrievable nodes"
+      },
+      "BashCodeExecutionResultBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "bash_code_execution_result",
+            "title": "Type",
+            "default": "bash_code_execution_result",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "stdout": {
+            "type": "string",
+            "title": "Stdout",
+            "description": "Standard output from the bash command."
+          },
+          "stderr": {
+            "type": "string",
+            "title": "Stderr",
+            "description": "Standard error output from the bash command."
+          },
+          "return_code": {
+            "type": "integer",
+            "title": "Return Code",
+            "description": "Exit code of the bash command. 0 indicates success."
+          },
+          "content": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BashExecutionFileEntry"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content",
+            "description": "Files created during execution."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "return_code",
+          "stderr",
+          "stdout",
+          "type"
+        ],
+        "title": "BashCodeExecutionResultBlock",
+        "description": "BashCodeExecutionResultBlock schema."
+      },
+      "BashCodeExecutionToolResultBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "bash_code_execution_tool_result",
+            "title": "Type",
+            "default": "bash_code_execution_tool_result",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "cache_control": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CacheControlEphemeral"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "ephemeral": "#/components/schemas/CacheControlEphemeral"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Control",
+            "description": "cache control field."
+          },
+          "tool_use_id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "title": "Tool Use Id",
+            "description": "ID of the ToolUseBlock this result answers"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BashCodeExecutionResultBlock"
+              },
+              {
+                "$ref": "#/components/schemas/CodeExecutionToolResultErrorBlock"
+              }
+            ],
+            "title": "Content",
+            "description": "content field."
+          },
+          "is_error": {
+            "type": "boolean",
+            "title": "Is Error",
+            "default": false,
+            "description": "is error field."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "content",
+          "tool_use_id",
+          "type"
+        ],
+        "title": "BashCodeExecutionToolResultBlock",
+        "description": "BashCodeExecutionToolResultBlock schema."
+      },
+      "BashExecutionFileEntry": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "bash_code_execution_output",
+            "title": "Type",
+            "description": "type field."
+          },
+          "file_id": {
+            "type": "string",
+            "title": "File Id",
+            "description": "Identifier for the created file, retrievable via the Files API."
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "file_id"
+        ],
+        "title": "BashExecutionFileEntry",
+        "description": "A file created during bash code execution, retrievable via the Files API."
+      },
       "BinaryBlock": {
         "properties": {
           "type": {
@@ -5900,6 +6191,27 @@
                 },
                 {
                   "$ref": "#/components/schemas/TLDRBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/BashCodeExecutionResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/CodeExecutionToolResultErrorBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/TextEditorCodeExecutionViewResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/TextEditorCodeExecutionCreateResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/TextEditorCodeExecutionStrReplaceResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/WebSearchResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/WebFetchResultBlock"
                 }
               ]
             },
@@ -5976,6 +6288,71 @@
         "type": "object",
         "title": "Citations",
         "description": "Configuration for citation generation in AI responses."
+      },
+      "CodeExecutionToolResultErrorBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "bash_code_execution_tool_result_error",
+              "text_editor_code_execution_tool_result_error"
+            ],
+            "title": "Type",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "error_code": {
+            "type": "string",
+            "enum": [
+              "unavailable",
+              "execution_time_exceeded",
+              "invalid_tool_input",
+              "too_many_requests",
+              "output_file_too_large"
+            ],
+            "title": "Error Code",
+            "description": "error code field."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "error_code",
+          "type"
+        ],
+        "title": "CodeExecutionToolResultErrorBlock",
+        "description": "CodeExecutionToolResultErrorBlock schema."
       },
       "CompletionInput": {
         "properties": {
@@ -7989,6 +8366,21 @@
           "ingest_body": {
             "$ref": "#/components/schemas/IngestBody",
             "description": "Document ingestion parameters including artifact, collection, input data, and optional metadata"
+          },
+          "nodes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BaseNode"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes",
+            "description": "Parsed nodes produced by parse_task, consumed by store_vectors_task."
           }
         },
         "type": "object",
@@ -8558,6 +8950,65 @@
             "title": "Authorization Token",
             "description": "The authorization token to use when connecting to the MCP server."
           },
+          "refresh_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Token",
+            "description": "The OAuth refresh token used to renew the authorization token."
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id",
+            "description": "The OAuth client ID associated with the refresh token."
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Secret",
+            "description": "The optional OAuth client secret associated with the client ID."
+          },
+          "token_endpoint_auth_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "client_secret_basic",
+                  "client_secret_post"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Endpoint Auth Method",
+            "description": "The authentication method registered for the OAuth token endpoint. Defaults to client_secret_basic when a client secret is provided."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": "Opaque metadata copied into internal MCP events."
+          },
           "tool_configuration": {
             "$ref": "#/components/schemas/McpServerToolConfig",
             "description": "Configuration for tool filtering from the MCP server"
@@ -8674,7 +9125,43 @@
                   "$ref": "#/components/schemas/TLDRBlock"
                 },
                 {
+                  "$ref": "#/components/schemas/BashCodeExecutionResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/CodeExecutionToolResultErrorBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/TextEditorCodeExecutionViewResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/TextEditorCodeExecutionCreateResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/TextEditorCodeExecutionStrReplaceResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/WebSearchResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/WebFetchResultBlock"
+                },
+                {
                   "$ref": "#/components/schemas/ToolResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/ServerToolResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/BashCodeExecutionToolResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/TextEditorCodeExecutionToolResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/WebSearchToolResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/WebFetchToolResultBlock"
                 }
               ]
             },
@@ -8815,13 +9302,52 @@
                       "$ref": "#/components/schemas/TLDRBlock"
                     },
                     {
+                      "$ref": "#/components/schemas/BashCodeExecutionResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CodeExecutionToolResultErrorBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TextEditorCodeExecutionViewResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TextEditorCodeExecutionCreateResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TextEditorCodeExecutionStrReplaceResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WebSearchResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WebFetchResultBlock"
+                    },
+                    {
                       "$ref": "#/components/schemas/ToolResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServerToolResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BashCodeExecutionToolResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TextEditorCodeExecutionToolResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WebSearchToolResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WebFetchToolResultBlock"
                     }
                   ],
                   "discriminator": {
                     "propertyName": "type",
                     "mapping": {
                       "audio": "#/components/schemas/AudioBlock-Input",
+                      "bash_code_execution_result": "#/components/schemas/BashCodeExecutionResultBlock-Input",
+                      "bash_code_execution_tool_result": "#/components/schemas/BashCodeExecutionToolResultBlock-Input",
+                      "bash_code_execution_tool_result_error": "#/components/schemas/CodeExecutionToolResultErrorBlock-Input",
                       "binary": "#/components/schemas/BinaryBlock-Input",
                       "container_upload": "#/components/schemas/ContainerUploadBlock-Input",
                       "document": "#/components/schemas/DocumentBlock-Input",
@@ -8832,13 +9358,23 @@
                       "resource": "#/components/schemas/ResourceBlock-Input",
                       "resource_link": "#/components/schemas/ResourceLinkBlock-Input",
                       "search_result": "#/components/schemas/SearchResultBlock-Input",
+                      "server_tool_result": "#/components/schemas/ServerToolResultBlock-Input",
                       "server_tool_use": "#/components/schemas/ServerToolUseBlock-Input",
                       "source": "#/components/schemas/SourceBlock-Input",
                       "text": "#/components/schemas/TextBlock-Input",
+                      "text_editor_code_execution_create_result": "#/components/schemas/TextEditorCodeExecutionCreateResultBlock-Input",
+                      "text_editor_code_execution_str_replace_result": "#/components/schemas/TextEditorCodeExecutionStrReplaceResultBlock-Input",
+                      "text_editor_code_execution_tool_result": "#/components/schemas/TextEditorCodeExecutionToolResultBlock-Input",
+                      "text_editor_code_execution_tool_result_error": "#/components/schemas/CodeExecutionToolResultErrorBlock-Input",
+                      "text_editor_code_execution_view_result": "#/components/schemas/TextEditorCodeExecutionViewResultBlock-Input",
                       "thinking": "#/components/schemas/ThinkingBlock-Input",
                       "tldr": "#/components/schemas/TLDRBlock-Input",
                       "tool_result": "#/components/schemas/ToolResultBlock-Input",
-                      "tool_use": "#/components/schemas/ToolUseBlock-Input"
+                      "tool_use": "#/components/schemas/ToolUseBlock-Input",
+                      "web_fetch_result": "#/components/schemas/WebFetchResultBlock-Input",
+                      "web_fetch_tool_result": "#/components/schemas/WebFetchToolResultBlock-Input",
+                      "web_search_result": "#/components/schemas/WebSearchResultBlock-Input",
+                      "web_search_tool_result": "#/components/schemas/WebSearchToolResultBlock-Input"
                     }
                   }
                 },
@@ -9141,6 +9677,30 @@
         "title": "ModelListOutput",
         "description": "Paginated model list payload."
       },
+      "NodeRelationship": {
+        "type": "string",
+        "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "title": "NodeRelationship",
+        "description": "Node relationships used in `BaseNode` class.\n\nAttributes:\n    SOURCE: The node is the source document.\n    PREVIOUS: The node is the previous node in the document.\n    NEXT: The node is the next node in the document.\n    PARENT: The node is the parent node in the document.\n    CHILD: The node is a child node in the document."
+      },
+      "ObjectType": {
+        "type": "string",
+        "enum": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "title": "ObjectType",
+        "description": "ObjectType schema."
+      },
       "OpenAPIValidationErrorResponse": {
         "properties": {
           "detail": {
@@ -9165,7 +9725,7 @@
           "detail"
         ],
         "title": "OpenAPIValidationErrorResponse",
-        "description": "Standard 422 validation error response matching FastAPI's HTTPValidationError shape."
+        "description": "Standard 422 validation error response."
       },
       "OutputConfigInput": {
         "properties": {
@@ -9448,6 +10008,60 @@
         ],
         "title": "RefusalStopDetails",
         "description": "Additional metadata when generation stops due to refusal."
+      },
+      "RelatedNodeInfo": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "title": "Node Id",
+            "description": "node id field."
+          },
+          "node_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectType"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Type",
+            "description": "node type field."
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "metadata field."
+          },
+          "hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hash",
+            "description": "hash field."
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name",
+            "default": "RelatedNodeInfo",
+            "description": "class name field."
+          }
+        },
+        "type": "object",
+        "required": [
+          "node_id"
+        ],
+        "title": "RelatedNodeInfo",
+        "description": "RelatedNodeInfo schema."
       },
       "Resource": {
         "properties": {
@@ -9891,7 +10505,7 @@
         "properties": {
           "tool_id": {
             "type": "string",
-            "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+            "pattern": "^[a-zA-Z0-9_]+$",
             "title": "Tool Id",
             "description": "Server tool identifier."
           },
@@ -9915,7 +10529,7 @@
         "properties": {
           "tool_id": {
             "type": "string",
-            "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+            "pattern": "^[a-zA-Z0-9_]+$",
             "title": "Tool Id",
             "description": "Server tool identifier."
           },
@@ -9934,6 +10548,214 @@
         ],
         "title": "ServerToolCaller20260120",
         "description": "ServerToolCaller20260120 schema."
+      },
+      "ServerToolResultBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "server_tool_result",
+            "title": "Type",
+            "default": "server_tool_result",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "cache_control": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CacheControlEphemeral"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "ephemeral": "#/components/schemas/CacheControlEphemeral"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Control",
+            "description": "cache control field."
+          },
+          "tool_use_id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "title": "Tool Use Id",
+            "description": "ID of the ToolUseBlock this result answers"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/TextBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ImageBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AudioBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BinaryBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/LocalResourceBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ResourceLinkBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ResourceBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SourceBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ThinkingBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RedactedThinkingBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ToolUseBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ServerToolUseBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ContainerUploadBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DocumentBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SearchResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MidConvSystemBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TLDRBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BashCodeExecutionResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CodeExecutionToolResultErrorBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TextEditorCodeExecutionViewResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TextEditorCodeExecutionCreateResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TextEditorCodeExecutionStrReplaceResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WebSearchResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WebFetchResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ToolReferenceBlock"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "audio": "#/components/schemas/AudioBlock-Input",
+                      "bash_code_execution_result": "#/components/schemas/BashCodeExecutionResultBlock-Input",
+                      "bash_code_execution_tool_result_error": "#/components/schemas/CodeExecutionToolResultErrorBlock-Input",
+                      "binary": "#/components/schemas/BinaryBlock-Input",
+                      "container_upload": "#/components/schemas/ContainerUploadBlock-Input",
+                      "document": "#/components/schemas/DocumentBlock-Input",
+                      "image": "#/components/schemas/ImageBlock-Input",
+                      "local_resource": "#/components/schemas/LocalResourceBlock-Input",
+                      "mid_conv_system": "#/components/schemas/MidConvSystemBlock-Input",
+                      "redacted_thinking": "#/components/schemas/RedactedThinkingBlock-Input",
+                      "resource": "#/components/schemas/ResourceBlock-Input",
+                      "resource_link": "#/components/schemas/ResourceLinkBlock-Input",
+                      "search_result": "#/components/schemas/SearchResultBlock-Input",
+                      "server_tool_use": "#/components/schemas/ServerToolUseBlock-Input",
+                      "source": "#/components/schemas/SourceBlock-Input",
+                      "text": "#/components/schemas/TextBlock-Input",
+                      "text_editor_code_execution_create_result": "#/components/schemas/TextEditorCodeExecutionCreateResultBlock-Input",
+                      "text_editor_code_execution_str_replace_result": "#/components/schemas/TextEditorCodeExecutionStrReplaceResultBlock-Input",
+                      "text_editor_code_execution_tool_result_error": "#/components/schemas/CodeExecutionToolResultErrorBlock-Input",
+                      "text_editor_code_execution_view_result": "#/components/schemas/TextEditorCodeExecutionViewResultBlock-Input",
+                      "thinking": "#/components/schemas/ThinkingBlock-Input",
+                      "tldr": "#/components/schemas/TLDRBlock-Input",
+                      "tool_reference": "#/components/schemas/ToolReferenceBlock-Input",
+                      "tool_use": "#/components/schemas/ToolUseBlock-Input",
+                      "web_fetch_result": "#/components/schemas/WebFetchResultBlock-Input",
+                      "web_search_result": "#/components/schemas/WebSearchResultBlock-Input"
+                    }
+                  }
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Content",
+            "description": "Tool execution result",
+            "default": ""
+          },
+          "is_error": {
+            "type": "boolean",
+            "title": "Is Error",
+            "description": "Whether the tool result indicates an error.",
+            "default": false
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "tool_use_id",
+          "type"
+        ],
+        "title": "ServerToolResultBlock",
+        "description": "Default result produced by a server-executed tool."
       },
       "ServerToolUsage": {
         "properties": {
@@ -10021,21 +10843,14 @@
           },
           "id": {
             "type": "string",
-            "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+            "pattern": "^[a-zA-Z0-9_]+$",
             "title": "Id",
             "description": "Unique identifier for this server tool use"
           },
           "name": {
             "type": "string",
-            "enum": [
-              "web_search",
-              "web_fetch",
-              "code_execution",
-              "bash_code_execution",
-              "text_editor_code_execution",
-              "tool_search_tool_regex",
-              "tool_search_tool_bm25"
-            ],
+            "maxLength": 200,
+            "minLength": 1,
             "title": "Name",
             "description": "Name of the server tool being called"
           },
@@ -11182,6 +11997,339 @@
         "title": "TextBlock",
         "description": "Plain-text content block."
       },
+      "TextEditorCodeExecutionCreateResultBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "text_editor_code_execution_create_result",
+            "title": "Type",
+            "default": "text_editor_code_execution_create_result",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "is_file_update": {
+            "type": "boolean",
+            "title": "Is File Update",
+            "default": false,
+            "description": "is file update field."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "TextEditorCodeExecutionCreateResultBlock",
+        "description": "TextEditorCodeExecutionCreateResultBlock schema."
+      },
+      "TextEditorCodeExecutionStrReplaceResultBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "text_editor_code_execution_str_replace_result",
+            "title": "Type",
+            "default": "text_editor_code_execution_str_replace_result",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "old_start": {
+            "type": "integer",
+            "title": "Old Start",
+            "default": 0,
+            "description": "old start field."
+          },
+          "old_lines": {
+            "type": "integer",
+            "title": "Old Lines",
+            "default": 0,
+            "description": "old lines field."
+          },
+          "new_start": {
+            "type": "integer",
+            "title": "New Start",
+            "default": 0,
+            "description": "new start field."
+          },
+          "new_lines": {
+            "type": "integer",
+            "title": "New Lines",
+            "default": 0,
+            "description": "new lines field."
+          },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lines",
+            "description": "lines field."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "TextEditorCodeExecutionStrReplaceResultBlock",
+        "description": "TextEditorCodeExecutionStrReplaceResultBlock schema."
+      },
+      "TextEditorCodeExecutionToolResultBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "text_editor_code_execution_tool_result",
+            "title": "Type",
+            "default": "text_editor_code_execution_tool_result",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "cache_control": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CacheControlEphemeral"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "ephemeral": "#/components/schemas/CacheControlEphemeral"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Control",
+            "description": "cache control field."
+          },
+          "tool_use_id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "title": "Tool Use Id",
+            "description": "ID of the ToolUseBlock this result answers"
+          },
+          "content": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TextEditorCodeExecutionViewResultBlock"
+              },
+              {
+                "$ref": "#/components/schemas/TextEditorCodeExecutionCreateResultBlock"
+              },
+              {
+                "$ref": "#/components/schemas/TextEditorCodeExecutionStrReplaceResultBlock"
+              },
+              {
+                "$ref": "#/components/schemas/CodeExecutionToolResultErrorBlock"
+              }
+            ],
+            "title": "Content",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "bash_code_execution_tool_result_error": "#/components/schemas/CodeExecutionToolResultErrorBlock-Input",
+                "text_editor_code_execution_create_result": "#/components/schemas/TextEditorCodeExecutionCreateResultBlock-Input",
+                "text_editor_code_execution_str_replace_result": "#/components/schemas/TextEditorCodeExecutionStrReplaceResultBlock-Input",
+                "text_editor_code_execution_tool_result_error": "#/components/schemas/CodeExecutionToolResultErrorBlock-Input",
+                "text_editor_code_execution_view_result": "#/components/schemas/TextEditorCodeExecutionViewResultBlock-Input"
+              }
+            },
+            "description": "content field."
+          },
+          "is_error": {
+            "type": "boolean",
+            "title": "Is Error",
+            "default": false,
+            "description": "is error field."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "content",
+          "tool_use_id",
+          "type"
+        ],
+        "title": "TextEditorCodeExecutionToolResultBlock",
+        "description": "TextEditorCodeExecutionToolResultBlock schema."
+      },
+      "TextEditorCodeExecutionViewResultBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "text_editor_code_execution_view_result",
+            "title": "Type",
+            "default": "text_editor_code_execution_view_result",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "file_type": {
+            "type": "string",
+            "const": "text",
+            "title": "File Type",
+            "default": "text",
+            "description": "file type field."
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "content field."
+          },
+          "num_lines": {
+            "type": "integer",
+            "title": "Num Lines",
+            "description": "num lines field."
+          },
+          "start_line": {
+            "type": "integer",
+            "title": "Start Line",
+            "description": "start line field."
+          },
+          "total_lines": {
+            "type": "integer",
+            "title": "Total Lines",
+            "description": "total lines field."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "content",
+          "num_lines",
+          "start_line",
+          "total_lines",
+          "type"
+        ],
+        "title": "TextEditorCodeExecutionViewResultBlock",
+        "description": "TextEditorCodeExecutionViewResultBlock schema."
+      },
       "Thinking": {
         "properties": {
           "enabled": {
@@ -11537,6 +12685,27 @@
                 },
                 {
                   "$ref": "#/components/schemas/TLDRBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/BashCodeExecutionResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/CodeExecutionToolResultErrorBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/TextEditorCodeExecutionViewResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/TextEditorCodeExecutionCreateResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/TextEditorCodeExecutionStrReplaceResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/WebSearchResultBlock"
+                },
+                {
+                  "$ref": "#/components/schemas/WebFetchResultBlock"
                 }
               ]
             },
@@ -11707,6 +12876,27 @@
                       "$ref": "#/components/schemas/TLDRBlock"
                     },
                     {
+                      "$ref": "#/components/schemas/BashCodeExecutionResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CodeExecutionToolResultErrorBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TextEditorCodeExecutionViewResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TextEditorCodeExecutionCreateResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TextEditorCodeExecutionStrReplaceResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WebSearchResultBlock"
+                    },
+                    {
+                      "$ref": "#/components/schemas/WebFetchResultBlock"
+                    },
+                    {
                       "$ref": "#/components/schemas/ToolReferenceBlock"
                     }
                   ],
@@ -11714,6 +12904,8 @@
                     "propertyName": "type",
                     "mapping": {
                       "audio": "#/components/schemas/AudioBlock-Input",
+                      "bash_code_execution_result": "#/components/schemas/BashCodeExecutionResultBlock-Input",
+                      "bash_code_execution_tool_result_error": "#/components/schemas/CodeExecutionToolResultErrorBlock-Input",
                       "binary": "#/components/schemas/BinaryBlock-Input",
                       "container_upload": "#/components/schemas/ContainerUploadBlock-Input",
                       "document": "#/components/schemas/DocumentBlock-Input",
@@ -11727,10 +12919,16 @@
                       "server_tool_use": "#/components/schemas/ServerToolUseBlock-Input",
                       "source": "#/components/schemas/SourceBlock-Input",
                       "text": "#/components/schemas/TextBlock-Input",
+                      "text_editor_code_execution_create_result": "#/components/schemas/TextEditorCodeExecutionCreateResultBlock-Input",
+                      "text_editor_code_execution_str_replace_result": "#/components/schemas/TextEditorCodeExecutionStrReplaceResultBlock-Input",
+                      "text_editor_code_execution_tool_result_error": "#/components/schemas/CodeExecutionToolResultErrorBlock-Input",
+                      "text_editor_code_execution_view_result": "#/components/schemas/TextEditorCodeExecutionViewResultBlock-Input",
                       "thinking": "#/components/schemas/ThinkingBlock-Input",
                       "tldr": "#/components/schemas/TLDRBlock-Input",
                       "tool_reference": "#/components/schemas/ToolReferenceBlock-Input",
-                      "tool_use": "#/components/schemas/ToolUseBlock-Input"
+                      "tool_use": "#/components/schemas/ToolUseBlock-Input",
+                      "web_fetch_result": "#/components/schemas/WebFetchResultBlock-Input",
+                      "web_search_result": "#/components/schemas/WebSearchResultBlock-Input"
                     }
                   }
                 },
@@ -11755,7 +12953,7 @@
           "type"
         ],
         "title": "ToolResultBlock",
-        "description": "Result produced by a prior tool_use block."
+        "description": "Shared interface for results produced by tool-use blocks."
       },
       "ToolSpecBody": {
         "properties": {
@@ -11995,7 +13193,7 @@
           "type"
         ],
         "title": "ToolUseBlock",
-        "description": "Represents a model-initiated tool call."
+        "description": "Shared interface for model-initiated tool calls."
       },
       "URIBinarySource": {
         "properties": {
@@ -12269,6 +13467,189 @@
         "title": "WebFetchBody",
         "description": "Request body for web content fetching using the tool."
       },
+      "WebFetchResultBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "web_fetch_result",
+            "title": "Type",
+            "default": "web_fetch_result",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "url field."
+          },
+          "content": {
+            "$ref": "#/components/schemas/DocumentBlock",
+            "description": "content field."
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieved At",
+            "description": "ISO-8601 timestamp of when the page was fetched."
+          },
+          "markdown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Markdown",
+            "description": "[Zylon extension] Raw markdown content before DocumentBlock wrapping."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "content",
+          "type",
+          "url"
+        ],
+        "title": "WebFetchResultBlock",
+        "description": "Fetched page content from web_fetch.\n\nMirrors Anthropic's web_fetch_tool_result content shape:\n``url`` + ``content`` (a document block)."
+      },
+      "WebFetchToolResultBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "web_fetch_tool_result",
+            "title": "Type",
+            "default": "web_fetch_tool_result",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "cache_control": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CacheControlEphemeral"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "ephemeral": "#/components/schemas/CacheControlEphemeral"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Control",
+            "description": "cache control field."
+          },
+          "tool_use_id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "title": "Tool Use Id",
+            "description": "ID of the ToolUseBlock this result answers"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WebFetchResultBlock"
+              },
+              {
+                "$ref": "#/components/schemas/CodeExecutionToolResultErrorBlock"
+              }
+            ],
+            "title": "Content",
+            "description": "content field."
+          },
+          "is_error": {
+            "type": "boolean",
+            "title": "Is Error",
+            "default": false,
+            "description": "is error field."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "content",
+          "tool_use_id",
+          "type"
+        ],
+        "title": "WebFetchToolResultBlock",
+        "description": "Anthropic-shaped result for an internally-executed web_fetch call.\n\n``anthropic`` mode: emitted as-is.\n``zylon`` mode: downgrades to ToolResultBlock with a TextBlock of the markdown."
+      },
       "WebSearchQueryBody": {
         "properties": {
           "query": {
@@ -12286,6 +13667,253 @@
         ],
         "title": "WebSearchQueryBody",
         "description": "Request body for web search using the tool."
+      },
+      "WebSearchResultBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "web_search_result",
+            "title": "Type",
+            "default": "web_search_result",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "url field."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "title field."
+          },
+          "encrypted_content": {
+            "type": "string",
+            "title": "Encrypted Content",
+            "description": "encrypted content field."
+          },
+          "page_age": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Age",
+            "description": "page age field."
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content",
+            "description": "[Zylon extension] Plain-text result content. Mirrors encrypted_content for Zylon consumers."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "[Zylon extension] Short description or snippet from the search provider."
+          },
+          "favicon_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favicon Url",
+            "description": "[Zylon extension] URL of the website favicon."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "encrypted_content",
+          "title",
+          "type",
+          "url"
+        ],
+        "title": "WebSearchResultBlock",
+        "description": "Result from a single web search hit.\n\nMirrors Anthropic's WebSearchResultBlock.\n``encrypted_content`` is filled with the actual result text (Zylon executes\nlocally, so there is no encrypted payload). ``content`` is a Zylon extension\nthat carries the same text in plain form; Anthropic-only clients should use\n``encrypted_content``."
+      },
+      "WebSearchToolResultBlock": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "web_search_tool_result",
+            "title": "Type",
+            "default": "web_search_tool_result",
+            "description": "type field."
+          },
+          "start_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Timestamp",
+            "description": "start timestamp field."
+          },
+          "stop_timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Timestamp",
+            "description": "stop timestamp field."
+          },
+          "_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Meta",
+            "description": " meta field."
+          },
+          "cache_control": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CacheControlEphemeral"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "ephemeral": "#/components/schemas/CacheControlEphemeral"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Control",
+            "description": "cache control field."
+          },
+          "tool_use_id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "title": "Tool Use Id",
+            "description": "ID of the ToolUseBlock this result answers"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WebSearchResultBlock"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/components/schemas/WebSearchToolResultError"
+              }
+            ],
+            "title": "Content",
+            "description": "content field."
+          },
+          "is_error": {
+            "type": "boolean",
+            "title": "Is Error",
+            "default": false,
+            "description": "is error field."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "content",
+          "tool_use_id",
+          "type"
+        ],
+        "title": "WebSearchToolResultBlock",
+        "description": "Anthropic-shaped result for an internally-executed web_search call.\n\n``anthropic`` mode: emitted as-is (matches Anthropic wire format).\n``zylon`` mode: downgrades to ToolResultBlock + SourceBlock/TextBlock entries."
+      },
+      "WebSearchToolResultError": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "web_search_tool_result_error",
+            "title": "Type",
+            "default": "web_search_tool_result_error",
+            "description": "type field."
+          },
+          "error_code": {
+            "type": "string",
+            "enum": [
+              "invalid_tool_input",
+              "unavailable",
+              "max_uses_exceeded",
+              "too_many_requests",
+              "query_too_long",
+              "request_too_large"
+            ],
+            "title": "Error Code",
+            "description": "error code field."
+          }
+        },
+        "type": "object",
+        "required": [
+          "error_code"
+        ],
+        "title": "WebSearchToolResultError",
+        "description": "SDK-compatible error result for a web_search tool call."
       },
       "Website": {
         "properties": {
