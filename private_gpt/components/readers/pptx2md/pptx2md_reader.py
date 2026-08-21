@@ -11,7 +11,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from llama_index.core.ingestion import arun_transformations
 from llama_index.core.schema import BaseNode, Document
 from pptx2md import convert  # ty:ignore[unresolved-import]
 
@@ -243,52 +242,53 @@ class PPTX2MdReader(IngestionReader):
         docs: list[Document] = []
 
         try:
-            docs = await asyncio.to_thread(
-                self._create_docs,
-                file_info=file_info,
-                extra_info=extra_info,
-                temp_dir=temp_dir,
-            )
-
-            if self._reader_settings.vision.is_enabled:
-                if notification:
-                    notification(
-                        percentage=0,
-                        warnings=[IngestionParseErrors.USING_VLM_FOR_EXTRACTION],
-                    )
-
-                transform = (
-                    PPTXSlideToImageDeepTransform()
-                    if vision_mode == "deep"
-                    else PPTXSlideToImageTransform()
+            with self._timed_phase("parsing", file_info.file_name):
+                docs = await asyncio.to_thread(
+                    self._create_docs,
+                    file_info=file_info,
+                    extra_info=extra_info,
+                    temp_dir=temp_dir,
                 )
 
-                (
-                    converted_file_info,
-                    exported_images,
-                ) = await transform.transform_file(file_info)
-                target_file_info = converted_file_info or file_info
-                if exported_images:
-                    converted_docs = self._create_docs(
-                        file_info=target_file_info,
-                        extra_info=extra_info,
-                        temp_dir=temp_dir,
-                        exported_images=exported_images,
+                if self._reader_settings.vision.is_enabled:
+                    if notification:
+                        notification(
+                            percentage=0,
+                            warnings=[IngestionParseErrors.USING_VLM_FOR_EXTRACTION],
+                        )
+
+                    transform = (
+                        PPTXSlideToImageDeepTransform()
+                        if vision_mode == "deep"
+                        else PPTXSlideToImageTransform()
                     )
-                    if converted_docs:
-                        docs = converted_docs
-                elif (
-                    converted_file_info
-                    and converted_file_info.file_data != file_info.file_data
-                ):
-                    converted_docs = await asyncio.to_thread(
-                        self._create_docs,
-                        file_info=converted_file_info,
-                        extra_info=extra_info,
-                        temp_dir=temp_dir,
-                    )
-                    if converted_docs:
-                        docs = converted_docs
+
+                    (
+                        converted_file_info,
+                        exported_images,
+                    ) = await transform.transform_file(file_info)
+                    target_file_info = converted_file_info or file_info
+                    if exported_images:
+                        converted_docs = self._create_docs(
+                            file_info=target_file_info,
+                            extra_info=extra_info,
+                            temp_dir=temp_dir,
+                            exported_images=exported_images,
+                        )
+                        if converted_docs:
+                            docs = converted_docs
+                    elif (
+                        converted_file_info
+                        and converted_file_info.file_data != file_info.file_data
+                    ):
+                        converted_docs = await asyncio.to_thread(
+                            self._create_docs,
+                            file_info=converted_file_info,
+                            extra_info=extra_info,
+                            temp_dir=temp_dir,
+                        )
+                        if converted_docs:
+                            docs = converted_docs
 
             logger.info(f"Created {len(docs)} documents from {file_info.file_name}")
 
@@ -314,14 +314,14 @@ class PPTX2MdReader(IngestionReader):
             file_info.file_name,
         )
 
-        for transformed_node in await arun_transformations(
-            nodes=docs,
-            transformations=list(
-                slides_transformations(
-                    reader_settings=self._reader_settings, vision_mode=vision_mode
-                )
+        transformed_nodes = await self._run_transformations_with_timing(
+            docs,
+            slides_transformations(
+                reader_settings=self._reader_settings, vision_mode=vision_mode
             ),
-        ):
+            file_info.file_name,
+        )
+        for transformed_node in transformed_nodes:
             yield transformed_node
 
         logger.debug(

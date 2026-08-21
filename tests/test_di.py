@@ -1,6 +1,6 @@
 import asyncio
 import threading
-from typing import Any
+from typing import Any, ClassVar
 
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.vector_store.vector_store_component import (
@@ -17,12 +17,14 @@ from private_gpt.di import (
 def test_injector_is_shared_across_loops_when_global_root_exists() -> None:
     class IdentifiableService:
         instance_count = 0
+        instances: ClassVar[list["IdentifiableService"]] = []
 
         def __init__(self) -> None:
             self.id: int = id(self)
             self.instance_number: int = IdentifiableService.instance_count
             IdentifiableService.instance_count += 1
             self.created_in_thread: int = threading.get_ident()
+            IdentifiableService.instances.append(self)
 
         async def operation(self, should_fail: bool = False) -> dict[str, Any]:
             if should_fail:

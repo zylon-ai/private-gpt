@@ -162,6 +162,21 @@ docling:
   langs: ${PGPT_DOCLING_LANGS:["en-US", "fr-FR", "de-DE", "es-ES"]}
   use_async: ${PGPT_DOCLING_USE_ASYNC:true}
 
+pdf_inspector:
+  hybrid_ocr_page_threshold: ${PGPT_PDF_INSPECTOR_HYBRID_OCR_PAGE_THRESHOLD:0.15}
+  hybrid_ocr_reader: ${PGPT_PDF_INSPECTOR_HYBRID_OCR_READER:docling}
+  max_ocr_groups: ${PGPT_PDF_INSPECTOR_MAX_OCR_GROUPS:20}
+  hybrid_min_pages: ${PGPT_PDF_INSPECTOR_HYBRID_MIN_PAGES:5}
+  broken_table_avg_words_per_cell: ${PGPT_PDF_INSPECTOR_BROKEN_TABLE_AVG_WORDS_PER_CELL:5.0}
+  broken_table_pct_long_cells: ${PGPT_PDF_INSPECTOR_BROKEN_TABLE_PCT_LONG_CELLS:0.35}
+  broken_table_page_threshold: ${PGPT_PDF_INSPECTOR_BROKEN_TABLE_PAGE_THRESHOLD:0.3}
+  fragmented_text_short_token_ratio: ${PGPT_PDF_INSPECTOR_FRAGMENTED_TEXT_SHORT_TOKEN_RATIO:0.5}
+  fragmented_text_page_threshold: ${PGPT_PDF_INSPECTOR_FRAGMENTED_TEXT_PAGE_THRESHOLD:0.2}
+  sparse_chart_table_empty_cell_ratio: ${PGPT_PDF_INSPECTOR_SPARSE_CHART_TABLE_EMPTY_CELL_RATIO:0.25}
+  sparse_chart_table_page_threshold: ${PGPT_PDF_INSPECTOR_SPARSE_CHART_TABLE_PAGE_THRESHOLD:0.2}
+  glued_numbers_cell_ratio: ${PGPT_PDF_INSPECTOR_GLUED_NUMBERS_CELL_RATIO:0.1}
+  glued_numbers_page_threshold: ${PGPT_PDF_INSPECTOR_GLUED_NUMBERS_PAGE_THRESHOLD:0.3}
+
 celery:
   use_workers: true
   acks_late: ${PGPT_CELERY_ACKS_LATE:true}

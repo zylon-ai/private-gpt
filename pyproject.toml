@@ -114,6 +114,10 @@ ingest-markitdown = [
     "private-gpt[ingest-core]",
     "markitdown[docx,pdf,pptx,xls,xlsx]>=0.1.5",
 ]
+ingest-pdf-inspector = [
+    "private-gpt[ingest-core]",
+    "pdf-inspector>=0.1,<1",
+]
 ingest-markup = [
     "private-gpt[ingest-core]",
     "mistune>=3.2.1,<4",
@@ -124,7 +128,7 @@ ingest-markup = [
     "lxml-html-clean>=0.4.4",
 ]
 ingest = [
-    "private-gpt[ingest-documents,ingest-markup, ingest-markitdown]",
+    "private-gpt[ingest-documents,ingest-markup, ingest-markitdown, ingest-pdf-inspector]",
 ]
 
 # ---------------------------------------------------------------------------

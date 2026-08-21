@@ -6,7 +6,6 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from llama_index.core import Document as LIDocument
-from llama_index.core.ingestion import arun_transformations
 from llama_index.core.schema import BaseNode
 from pydantic import Field
 
@@ -163,9 +162,10 @@ class DoclingApiReader(IngestionReader):
         pages = file_info.config.get("pages", None)
 
         try:
-            conversion_result = await self.client.convert_from_bytes(
-                file_name, file_bytes, to_formats=["md"], pages=pages, **load_kwargs
-            )
+            with self._timed_phase("parsing", file_name):
+                conversion_result = await self.client.convert_from_bytes(
+                    file_name, file_bytes, to_formats=["md"], pages=pages, **load_kwargs
+                )
         except Exception as e:
             raise ValueError(f"Document conversion failed: {e}") from e
 
@@ -234,10 +234,12 @@ class DoclingApiReader(IngestionReader):
             docling_transformations,
         )
 
-        for transformed_node in await arun_transformations(
-            nodes=docs,
-            transformations=list(docling_transformations(self.reader_settings)),
-        ):
+        transformed_nodes = await self._run_transformations_with_timing(
+            docs,
+            docling_transformations(self.reader_settings),
+            file_info.file_name,
+        )
+        for transformed_node in transformed_nodes:
             yield transformed_node
 
         logger.debug(

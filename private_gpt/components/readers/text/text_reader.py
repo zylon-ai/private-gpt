@@ -4,7 +4,6 @@ from collections.abc import AsyncIterator, Iterable, Iterator
 from pathlib import Path
 from typing import Any
 
-from llama_index.core.ingestion import arun_transformations
 from llama_index.core.schema import BaseNode, Document, TransformComponent
 
 from private_gpt.components.ingest.transformations.combine_tree_transform import (
@@ -109,15 +108,16 @@ class TextReader(IngestionReader):
         logger.debug(
             "Starting %s parsing of file: %s", reader_name, file_info.file_name
         )
-        documents = await asyncio.to_thread(
-            lambda: list(
-                self.lazy_document_load(
-                    file_path=file_info.file_data,
-                    encoding=file_info.encoding,
-                    extra_info=extra_info,
+        with self._timed_phase("parsing", file_info.file_name):
+            documents = await asyncio.to_thread(
+                lambda: list(
+                    self.lazy_document_load(
+                        file_path=file_info.file_data,
+                        encoding=file_info.encoding,
+                        extra_info=extra_info,
+                    )
                 )
             )
-        )
         logger.debug(
             "Finished %s parsing of file: %s.",
             reader_name,
@@ -137,10 +137,11 @@ class TextReader(IngestionReader):
             reader_name,
             file_info.file_name,
         )
-        transformed_nodes = await arun_transformations(
-            documents,
-            list(self._tranformations()),
+
+        transformed_nodes = await self._run_transformations_with_timing(
+            documents, self._tranformations(), file_info.file_name
         )
+
         for node in transformed_nodes:
             yield node
         logger.debug(

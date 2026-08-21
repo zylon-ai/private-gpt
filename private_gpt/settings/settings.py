@@ -1340,6 +1340,140 @@ class DoclingSettings(BaseModel):
         super().__init__(**data)
 
 
+class PdfInspectorSettings(BaseModel):
+    hybrid_ocr_page_threshold: float = Field(
+        0.15,
+        description=(
+            "Max ratio of pages needing OCR (0-1) to still use the hybrid "
+            "per-page split pipeline. Above this ratio, the whole document "
+            "falls back to the next full-document reader instead."
+        ),
+    )
+    hybrid_ocr_reader: str = Field(
+        "auto",
+        description=(
+            "Reader name used to process the page groups that need OCR in "
+            "the hybrid pipeline (e.g. 'docling', 'vision'). 'auto' uses "
+            "the next reader configured after 'pdf-inspector-hybrid' in "
+            "the extension's reader chain."
+        ),
+    )
+    max_ocr_groups: int = Field(
+        20,
+        description=(
+            "Max number of page groups (consecutive-page ranges) the "
+            "hybrid pipeline will send to the OCR reader. If exceeded "
+            "(e.g. many alternating OCR/non-OCR pages), falls back to "
+            "processing the whole document with the next reader instead, "
+            "to avoid excessive memory/request overhead from too many "
+            "small groups."
+        ),
+    )
+    hybrid_min_pages: int = Field(
+        10,
+        description=(
+            "Min number of pages a document must have to use the hybrid "
+            "per-page split pipeline. Below this, the document falls back "
+            "directly to the next full-document reader (e.g. docling), "
+            "since there is no meaningful benefit to the hybrid split on "
+            "very short documents and the next reader typically produces "
+            "better results overall."
+        ),
+    )
+    broken_table_avg_words_per_cell: float = Field(
+        5.0,
+        description=(
+            "A markdown table on a page is considered 'broken' (narrative "
+            "text mis-segmented into a table by pdf-inspector, rather than "
+            "a real data table) if the average number of words per cell is "
+            "at or above this value, or if broken_table_pct_long_cells is "
+            "met."
+        ),
+    )
+    broken_table_pct_long_cells: float = Field(
+        0.35,
+        description=(
+            "A markdown table on a page is considered 'broken' if the "
+            "fraction (0-1) of its cells with 5 or more words is at or "
+            "above this value, or if broken_table_avg_words_per_cell is "
+            "met."
+        ),
+    )
+    broken_table_page_threshold: float = Field(
+        0.3,
+        description=(
+            "Max ratio (0-1) of pages with a 'broken' markdown table (see "
+            "broken_table_avg_words_per_cell / broken_table_pct_long_cells) "
+            "among pages containing any markdown table, to still use the "
+            "hybrid per-page split pipeline. Above this ratio, the whole "
+            "document falls back to the next full-document reader instead, "
+            "since pdf-inspector's per-page markdown is unreliable on this "
+            "document."
+        ),
+    )
+    fragmented_text_short_token_ratio: float = Field(
+        0.5,
+        description=(
+            "A page's markdown is considered to contain 'fragmented' text "
+            "(e.g. a chart/figure whose labels and numbers were chopped up "
+            "character-by-character, such as '2 8. 5 9' instead of '28.59') "
+            "if the fraction (0-1) of its tokens that are one or two "
+            "characters long is at or above this value."
+        ),
+    )
+    fragmented_text_page_threshold: float = Field(
+        0.2,
+        description=(
+            "Max ratio (0-1) of pages with 'fragmented' text (see "
+            "fragmented_text_short_token_ratio) among all pages, to still "
+            "use the hybrid per-page split pipeline. Above this ratio, the "
+            "whole document falls back to the next full-document reader "
+            "instead, since pdf-inspector's per-page markdown is unreliable "
+            "on this document."
+        ),
+    )
+    sparse_chart_table_empty_cell_ratio: float = Field(
+        0.25,
+        description=(
+            "A page's markdown table is considered a mis-extracted chart "
+            "(e.g. a bar/line plot converted into a sparse table with one "
+            "value per row and the rest of the columns empty) if the "
+            "fraction (0-1) of its cells that are empty is at or above this "
+            "value."
+        ),
+    )
+    sparse_chart_table_page_threshold: float = Field(
+        0.2,
+        description=(
+            "Max ratio (0-1) of pages with a 'sparse' chart-like table (see "
+            "sparse_chart_table_empty_cell_ratio) among pages containing any "
+            "markdown table, to still use the hybrid per-page split "
+            "pipeline. Above this ratio, the whole document falls back to "
+            "the next full-document reader instead."
+        ),
+    )
+    glued_numbers_cell_ratio: float = Field(
+        0.1,
+        description=(
+            "A page's markdown table is considered to have 'glued' numbers "
+            "(e.g. '0.3830.207' instead of two separate cells '0.383' and "
+            "'0.207', from a lost column separator) if the fraction (0-1) "
+            "of its cells containing 2+ separate decimal numbers "
+            "concatenated together is at or above this value."
+        ),
+    )
+    glued_numbers_page_threshold: float = Field(
+        0.3,
+        description=(
+            "Max ratio (0-1) of pages with 'glued' numbers in their table "
+            "cells (see glued_numbers_cell_ratio) among pages containing any "
+            "markdown table, to still use the hybrid per-page split "
+            "pipeline. Above this ratio, the whole document falls back to "
+            "the next full-document reader instead."
+        ),
+    )
+
+
 class S3Settings(BaseModel):
     endpoint_url: str = Field(description="S3 endpoint override")
     public_endpoint_url: str = Field(description="Public S3 endpoint override")
@@ -1832,6 +1966,7 @@ class Settings(BaseModel):
     huggingface: HuggingFaceSettings
     openai: OpenAISettings
     docling: DoclingSettings
+    pdf_inspector: PdfInspectorSettings
     vectorstore: VectorstoreSettings
     node_store: NodeStoreSettings
     qdrant: QdrantSettings

@@ -3007,6 +3007,19 @@ wheels = [
 ]
 
 [[package]]
+name = "pdf-inspector"
+version = "0.2.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/7a/525ee06cad5c46d8aa7357c15b8f72c60e803246f3b7e24523e602f01f6d/pdf_inspector-0.2.6.tar.gz", hash = "sha256:5bb387f39bf7a93b02b49188b670b9798f8ccc7e58f68eee5883a512aa05ceb2", size = 1481660, upload-time = "2026-07-31T23:16:55.116Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8c/dc/9963c292151dd82678dddb63e1c640ec420e37d400f304dca2780c6d11a3/pdf_inspector-0.2.6-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:c935a354facbfb935e88cb4f3f60fd158402f2af661c1a25a3da328eb21f19fb", size = 2719559, upload-time = "2026-07-31T23:16:46.721Z" },
+    { url = "https://files.pythonhosted.org/packages/72/70/2049766fec20c2ee6c01776cc2b7b8599fc9cf2d48e8940419600f65d4a0/pdf_inspector-0.2.6-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:d2b2aaa95b242da38630bbd0644ffe9a929466f9c4e6406d6f1957b59b413d08", size = 2630319, upload-time = "2026-07-31T23:16:48.871Z" },
+    { url = "https://files.pythonhosted.org/packages/45/f3/be670e07df2eb57a1adaeb63b1011d17061fd3036370d9f903984eda94e4/pdf_inspector-0.2.6-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:79ba33b224029b68edbd30e7f6dc034f730663749ba0bea12e5873b31435ca28", size = 2808903, upload-time = "2026-07-31T23:16:50.368Z" },
+    { url = "https://files.pythonhosted.org/packages/59/af/be72ab2bd310b6532e4311cf06175eb722802ccea29dbd9281f66c645bd8/pdf_inspector-0.2.6-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:df76dd100504b705ce92ef2c668f152f05277d942abd94a7d3f252cb5448d56d", size = 2903593, upload-time = "2026-07-31T23:16:51.906Z" },
+    { url = "https://files.pythonhosted.org/packages/84/8a/22e2bf7413444036138f55a0c9f2b6420f7ef54b6a044755f4dbb3a7395b/pdf_inspector-0.2.6-cp38-abi3-win_amd64.whl", hash = "sha256:89814af887c5ff90f013702ba285ec8a4c5ae4e2ccbdb948f3e421f7c4b4f89d", size = 2550798, upload-time = "2026-07-31T23:16:53.64Z" },
+]
+
+[[package]]
 name = "pdfminer-six"
 version = "20251230"
 source = { registry = "https://pypi.org/simple" }
@@ -3218,6 +3231,7 @@ core = [
     { name = "openpyxl" },
     { name = "pandas" },
     { name = "pandasai" },
+    { name = "pdf-inspector" },
     { name = "playwright" },
     { name = "pptx2md" },
     { name = "psycopg2-binary" },
@@ -3330,6 +3344,7 @@ ingest = [
     { name = "marko" },
     { name = "mistune" },
     { name = "openpyxl" },
+    { name = "pdf-inspector" },
     { name = "pptx2md" },
     { name = "python-magic" },
     { name = "python-pptx" },
@@ -3373,6 +3388,14 @@ ingest-markup = [
     { name = "markdownify" },
     { name = "marko" },
     { name = "mistune" },
+    { name = "python-magic" },
+]
+ingest-pdf-inspector = [
+    { name = "chardet" },
+    { name = "levenshtein" },
+    { name = "llama-index-readers-file" },
+    { name = "llama-index-utils-workflow" },
+    { name = "pdf-inspector" },
     { name = "python-magic" },
 ]
 lint = [
@@ -3633,6 +3656,7 @@ requires-dist = [
     { name = "pandas-stubs", marker = "extra == 'typecheck'", specifier = ">=2.2.3.241009,<3" },
     { name = "pandasai", marker = "extra == 'data-pandasai'", specifier = ">=3.0.0" },
     { name = "partial-json-parser", specifier = ">=0.2.1.1.post7,<0.3" },
+    { name = "pdf-inspector", marker = "extra == 'ingest-pdf-inspector'", specifier = ">=0.1,<1" },
     { name = "pika", marker = "extra == 'queue-rabbitmq'", specifier = ">=1.3.2,<2" },
     { name = "pika-stubs", marker = "extra == 'typecheck'", specifier = ">=0.1.3,<0.2" },
     { name = "playwright", marker = "extra == 'tool-web-scraping'", specifier = "==1.60.0" },
@@ -3653,7 +3677,8 @@ requires-dist = [
     { name = "private-gpt", extras = ["ingest-core"], marker = "extra == 'ingest-documents'" },
     { name = "private-gpt", extras = ["ingest-core"], marker = "extra == 'ingest-markitdown'" },
     { name = "private-gpt", extras = ["ingest-core"], marker = "extra == 'ingest-markup'" },
-    { name = "private-gpt", extras = ["ingest-documents", "ingest-markup", "ingest-markitdown"], marker = "extra == 'ingest'" },
+    { name = "private-gpt", extras = ["ingest-core"], marker = "extra == 'ingest-pdf-inspector'" },
+    { name = "private-gpt", extras = ["ingest-documents", "ingest-markup", "ingest-markitdown", "ingest-pdf-inspector"], marker = "extra == 'ingest'" },
     { name = "private-gpt", extras = ["lint", "test", "typecheck"], marker = "extra == 'dev'" },
     { name = "private-gpt", extras = ["llm-openai"], marker = "extra == 'model-openai'" },
     { name = "private-gpt", extras = ["llm-openai-compatible"], marker = "extra == 'model-openai-compatible'" },
@@ -3713,7 +3738,7 @@ requires-dist = [
     { name = "types-tqdm", marker = "extra == 'typecheck'", specifier = ">=4.67.0.20250809" },
     { name = "watchdog", specifier = ">=4.0.1,<5" },
 ]
-provides-extras = ["sdk-openai", "llm-openai", "llm-openai-compatible", "llm-mistral", "llm-anthropic", "tokenizer-local", "tokenizer", "embedding-openai", "embedding-openai-compatible", "model-openai", "model-openai-compatible", "ingest-core", "ingest-documents", "ingest-markitdown", "ingest-markup", "ingest", "storage-s3", "storage-smb", "storage", "vectorstore-qdrant", "nodestore-postgres", "indexstore-postgres", "redis-core", "redis", "database-core", "database-postgres", "database-mysql", "database-mssql", "database-db2", "database", "queue-celery", "queue-rabbitmq", "queue", "data-pandas", "data-pandasai", "tool-mcp", "tool-tabular", "tool-database", "tool-web-scraping", "tools", "media-core", "media-image", "media-audio", "media-video", "media", "observability-arize-phoenix", "observability-opik", "observability", "core", "lint", "test", "typecheck", "dev"]
+provides-extras = ["sdk-openai", "llm-openai", "llm-openai-compatible", "llm-mistral", "llm-anthropic", "tokenizer-local", "tokenizer", "embedding-openai", "embedding-openai-compatible", "model-openai", "model-openai-compatible", "ingest-core", "ingest-documents", "ingest-markitdown", "ingest-pdf-inspector", "ingest-markup", "ingest", "storage-s3", "storage-smb", "storage", "vectorstore-qdrant", "nodestore-postgres", "indexstore-postgres", "redis-core", "redis", "database-core", "database-postgres", "database-mysql", "database-mssql", "database-db2", "database", "queue-celery", "queue-rabbitmq", "queue", "data-pandas", "data-pandasai", "tool-mcp", "tool-tabular", "tool-database", "tool-web-scraping", "tools", "media-core", "media-image", "media-audio", "media-video", "media", "observability-arize-phoenix", "observability-opik", "observability", "core", "lint", "test", "typecheck", "dev"]
 
 [[package]]
 name = "prometheus-client"
