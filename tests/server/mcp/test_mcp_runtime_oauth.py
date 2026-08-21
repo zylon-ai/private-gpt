@@ -1,14 +1,17 @@
 import base64
+from functools import partial
 from urllib.parse import parse_qs
 
 import httpx2
 import pytest
+from mcp.client.auth import OAuthFlowError
 from mcp.shared.auth import OAuthClientMetadata
 
 from private_gpt.server.mcp._runtime import (
     MISSING_ACCESS_TOKEN,
     HeadlessOAuthClientProvider,
     RequestOAuthTokenStorage,
+    _check_auth,
 )
 
 
@@ -140,3 +143,54 @@ async def test_headless_oauth_discovers_and_refreshes(
         "refresh-after",
         "refresh-before",
     )
+
+
+@pytest.mark.asyncio
+async def test_auth_discovery_failure_marks_refresh_attempted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        if str(request.url) == "https://resource.example.com/mcp":
+            return httpx2.Response(
+                401,
+                headers={
+                    "WWW-Authenticate": (
+                        'Bearer resource_metadata="https://resource.example.com/'
+                        '.well-known/oauth-protected-resource/mcp"'
+                    )
+                },
+            )
+        if str(request.url) == (
+            "https://resource.example.com/.well-known/oauth-protected-resource/mcp"
+        ):
+            return httpx2.Response(
+                200,
+                json={
+                    "resource": "https://different.example.com/mcp",
+                    "authorization_servers": ["https://auth.example.com"],
+                },
+            )
+        return httpx2.Response(500)
+
+    storage = RequestOAuthTokenStorage(
+        access_token="expired-access",
+        refresh_token="refresh-before",
+        client_id="client-id",
+        client_secret=None,
+    )
+    auth = HeadlessOAuthClientProvider(
+        server_url="https://resource.example.com/mcp",
+        client_metadata=OAuthClientMetadata(
+            redirect_uris=["http://127.0.0.1/mcp-oauth"]
+        ),
+        storage=storage,
+    )
+    monkeypatch.setattr(
+        "private_gpt.server.mcp._runtime.httpx2.AsyncClient",
+        partial(httpx2.AsyncClient, transport=httpx2.MockTransport(handler)),
+    )
+
+    with pytest.raises(OAuthFlowError):
+        await _check_auth("https://resource.example.com/mcp", {}, auth)
+
+    assert storage.refresh_attempted is True
