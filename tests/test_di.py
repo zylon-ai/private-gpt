@@ -1,6 +1,6 @@
 import asyncio
 import threading
-from typing import Any
+from typing import Any, ClassVar
 
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.components.vector_store.vector_store_component import (
@@ -17,11 +17,7 @@ from private_gpt.di import (
 def test_injector_is_shared_across_loops_when_global_root_exists() -> None:
     class IdentifiableService:
         instance_count = 0
-        # Keep every instance alive for the duration of the test so that
-        # CPython never reuses a garbage-collected instance's id() for a
-        # later instance, which would make the id() equality checks below
-        # unreliable.
-        instances: list["IdentifiableService"] = []
+        instances: ClassVar[list["IdentifiableService"]] = []
 
         def __init__(self) -> None:
             self.id: int = id(self)
