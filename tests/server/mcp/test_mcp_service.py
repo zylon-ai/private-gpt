@@ -180,7 +180,9 @@ async def test_mcp_client_list_tools_preserves_remote_input_schema() -> None:
 
     assert len(tools) == 1
     # The public name is collision-safe normalized and namespaced by server.
-    assert tools[0].name == normalize_mcp_tool_name("Test MCP", "Call_test_tool_object_")
+    assert tools[0].name == normalize_mcp_tool_name(
+        "Test MCP", "Call_test_tool_object_"
+    )
     # The raw MCP name is preserved for the wire.
     assert tools[0].raw_name == "Call_test_tool_object_"
     assert tools[0].input_schema == original_schema
@@ -193,10 +195,7 @@ async def test_mcp_client_list_tools_preserves_remote_input_schema() -> None:
 
 
 def test_normalize_clean_name_is_verbatim() -> None:
-    assert (
-        normalize_mcp_tool_name("files", "read_file")
-        == "mcp__files__read_file"
-    )
+    assert normalize_mcp_tool_name("files", "read_file") == "mcp__files__read_file"
 
 
 def test_normalize_replaces_invalid_chars_and_hashes() -> None:
