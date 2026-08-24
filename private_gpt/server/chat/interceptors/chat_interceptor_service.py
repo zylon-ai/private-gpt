@@ -37,6 +37,9 @@ from private_gpt.server.chat.interceptors.filter_event_by_type_interceptor impor
 from private_gpt.server.chat.interceptors.internal_tools_interceptor import (
     InternalToolRequestInterceptor,
 )
+from private_gpt.server.chat.interceptors.loop_detection_interceptor import (
+    LoopDetectionRequestInterceptor,
+)
 from private_gpt.server.chat.interceptors.mcp_interceptor import McpRequestInterceptor
 from private_gpt.server.chat.interceptors.multimodal_interceptor import (
     MultimodalRequestInterceptor,
@@ -106,6 +109,7 @@ class ChatInterceptorService:
         citation_interceptor: CitationRequestInterceptor,
         platform_guidelines_interceptor: PlatformGuidelinesInterceptor,
         condensation_interceptor: CondensationRequestInterceptor,
+        loop_detection_interceptor: LoopDetectionRequestInterceptor,
         # --- response interceptors (run each iteration, order matters) ---
         extract_citation_response_interceptor: ExtractCitationInterceptor,
         filter_event_by_type_interceptor: FilterZylonInterceptor,
@@ -193,6 +197,8 @@ class ChatInterceptorService:
                 ],
                 condition=settings.chat.add_context_to_system_prompt,
             )
+            # Run last so loop recovery can discard every accumulated layer.
+            .add_range("loop_detection", requests=[loop_detection_interceptor])
             # --- Response ---
             # Extract citations if they are enabled
             .add_range(

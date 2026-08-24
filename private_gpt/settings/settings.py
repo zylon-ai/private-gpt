@@ -529,6 +529,14 @@ class ChatSettings(BaseModel):
         default=100,
         description="Maximum number of iterations for the chat loop.",
     )
+    loop_detection_interval: int | None = Field(
+        default=None,
+        description=(
+            "Evaluate the conversation for loops after each N assistant messages "
+            "since the latest user message. None and non-positive values disable "
+            "loop detection."
+        ),
+    )
     allow_use_default_prompt: bool = Field(
         True,
         description="Flag indicating if the chat engine should use default prompts or not.",
@@ -621,6 +629,11 @@ class ChatSettings(BaseModel):
         # If tldr_timeout is set to 0, set it to None
         if self.tldr_timeout == 0:
             self.tldr_timeout = None
+        if (
+            self.loop_detection_interval is not None
+            and self.loop_detection_interval <= 0
+        ):
+            self.loop_detection_interval = None
         super().model_post_init(__context)
 
 
