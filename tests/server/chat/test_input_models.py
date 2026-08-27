@@ -19,6 +19,7 @@ from private_gpt.events.models import (
     ClientToolUseBlock,
     ImageBlock,
     MidConvSystemBlock,
+    ServerToolResultBlock,
     ServerToolUseBlock,
     SourceBlock,
     TextBlock,
@@ -182,6 +183,10 @@ def test_client_and_server_tool_blocks_convert_to_same_messages() -> None:
         stderr="",
         return_code=0,
     )
+    server_result = BashCodeExecutionToolResultBlock(
+        tool_use_id=tool_id,
+        content=result_content,
+    )
 
     client_messages = [
         MessageInput(
@@ -194,7 +199,7 @@ def test_client_and_server_tool_blocks_convert_to_same_messages() -> None:
                 ),
                 ClientToolResultBlock(
                     tool_use_id=tool_id,
-                    content=[result_content],
+                    content=server_result.render(),
                 ),
             ],
         )
@@ -208,10 +213,7 @@ def test_client_and_server_tool_blocks_convert_to_same_messages() -> None:
                     name="bash_code_execution",
                     input=tool_input,
                 ),
-                BashCodeExecutionToolResultBlock(
-                    tool_use_id=tool_id,
-                    content=result_content,
-                ),
+                server_result,
             ],
         )
     ]
@@ -219,6 +221,68 @@ def test_client_and_server_tool_blocks_convert_to_same_messages() -> None:
     assert MessageInput.convert_from_llama_index_messages(
         client_messages
     ) == MessageInput.convert_from_llama_index_messages(server_messages)
+
+
+def test_tool_use_and_result_match_server_tool_use_and_result() -> None:
+    """Standalone tool_use/tool_result must match server_tool_use/server_tool_result.
+
+    The server result is reduced to its ``render()`` text so both paths produce
+    the same llama-index assistant tool call plus tool observation.
+    """
+    tool_id = "srvtoolu_standalone"
+    tool_input = {
+        "command": "view",
+        "path": "/home/agent/workspace/Ivan_Martinez_CV.md",
+    }
+    rendered_result = "Presented 2 file(s): Ivan_Martinez_CV.md, Ivan_Martinez_CV.html"
+    server_result = ServerToolResultBlock(
+        tool_use_id=tool_id,
+        content=[
+            TextBlock(text=rendered_result),
+            TextBlock(text="extra-line"),
+        ],
+    )
+
+    client_messages = [
+        MessageInput(
+            role="assistant",
+            content=[
+                ToolUseBlock(
+                    id=tool_id,
+                    name="present_files",
+                    input=tool_input,
+                ),
+                ToolResultBlock(
+                    tool_use_id=tool_id,
+                    content=server_result.render(),
+                ),
+            ],
+        )
+    ]
+    server_messages = [
+        MessageInput(
+            role="assistant",
+            content=[
+                ServerToolUseBlock(
+                    id=tool_id,
+                    name="present_files",
+                    input=tool_input,
+                ),
+                server_result,
+            ],
+        )
+    ]
+
+    client_converted = MessageInput.convert_from_llama_index_messages(client_messages)
+    server_converted = MessageInput.convert_from_llama_index_messages(server_messages)
+
+    assert client_converted == server_converted
+    assert len(server_converted) == 2
+    assert server_converted[0].role == MessageRole.ASSISTANT
+    assert server_converted[1].role == MessageRole.TOOL
+    assert server_converted[1].content == server_result.render()
+    assert server_converted[1].additional_kwargs["tool_call_id"] == tool_id
+    assert server_converted[1].additional_kwargs["tool_call_name"] == "present_files"
 
 
 def test_tool_result_with_empty_content() -> None:
@@ -234,7 +298,7 @@ def test_tool_result_with_empty_content() -> None:
 
     assert len(result) == 1
     assert result[0].role == MessageRole.TOOL
-    assert result[0].content == "No content"
+    assert result[0].content == "(no-output)"
     assert result[0].additional_kwargs["tool_call_id"] == "tool1"
     assert result[0].additional_kwargs["tool_call_name"] == "calculator"
 
@@ -272,6 +336,52 @@ def test_extract_text_content_with_various_inputs() -> None:
     blocks, custom_blocks = message._extract_content(None)
     assert blocks is None
     assert custom_blocks is None
+
+
+def test_extract_content_renders_bash_result_stdout() -> None:
+    message = MessageInput(role="user", content="test")
+    result = BashCodeExecutionResultBlock(
+        stdout="# Potato\n",
+        stderr="",
+        return_code=0,
+    )
+
+    blocks, custom_blocks = message._extract_content([result])
+
+    assert blocks is not None
+    text_block = next(b for b in blocks if isinstance(b, LITextBlock))
+    assert text_block.text == result.render()
+    assert custom_blocks is not None
+    assert "bash_code_execution_result" in custom_blocks
+
+
+def test_nested_bash_result_in_tool_result_becomes_message_content() -> None:
+    result = BashCodeExecutionResultBlock(
+        stdout="# Potato\n",
+        stderr="",
+        return_code=0,
+    )
+    tool_result = ToolResultBlock(
+        type="tool_result",
+        tool_use_id="tool1",
+        content=[result],
+    )
+    message = MessageInput(role="assistant", content=[tool_result])
+    tool_uses = {
+        "tool1": ToolUseBlock(
+            type="tool_use",
+            id="tool1",
+            name="bash_code_execution",
+            input={},
+        )
+    }
+
+    converted, _ = message._convert_into_llama_index_messages(tool_uses)
+
+    assert len(converted) == 1
+    assert converted[0].role == MessageRole.TOOL
+    assert converted[0].content == result.render()
+    assert converted[0].content != "(no-output)"
 
 
 def test_convert_from_llama_index_messages_with_reordering() -> None:

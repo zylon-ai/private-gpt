@@ -11,10 +11,13 @@ from llama_index.core.llms import ChatMessage
 from llama_index.core.tools import AsyncBaseTool, ToolOutput
 
 from private_gpt.events.models import (
+    NO_TOOL_CONTENT,
     ContentBlockType,
     from_tool_output,
+    normalize_tool_result_content,
     to_llama_index_blocks,
 )
+from private_gpt.events.models._tool_result_blocks import Renderable
 from private_gpt.server.mcp.mcp_service import (
     convert_mcp_blocks_to_llama_index,
     get_mcp_tool_result_content,
@@ -153,10 +156,11 @@ async def execute_tool_call(
 
     # Double check that content is stored in blocks, not as content string
     # Llama Index always converts blocks to string content...
+    li_blocks: list[ContentBlock] = list(getattr(tool_output, "blocks", None) or [])
     if tool_output.raw_output and isinstance(tool_output.raw_output, list):
         # We are returning directly a list of blocks
         content_blocks = tool_output.raw_output
-        li_blocks: list[ContentBlock] = []
+        li_blocks = []
 
         for block in content_blocks:
             if isinstance(block, TextBlock | ImageBlock | AudioBlock):
@@ -177,8 +181,40 @@ async def execute_tool_call(
             converted_blocks.append(converted_block)
         tool_output.blocks = converted_blocks
 
-    # Build the tool message
-    tool_result_block = from_tool_output(tool_output.raw_output)
+    # Build the tool message. Empty outputs must remain visible to the model;
+    # otherwise the tokenizer can drop the TOOL message and leave an unresolved
+    # assistant tool call in the next iteration.
+    tool_result_block = normalize_tool_result_content(
+        from_tool_output(tool_output.raw_output)
+    )
+    content_text = str(tool_output.content or "")
+    is_none_placeholder = (
+        tool_output.raw_output is None and content_text.strip() == "None"
+    )
+    rendered_texts = [
+        block.text
+        for block in li_blocks
+        if isinstance(block, TextBlock) and block.text.strip()
+    ]
+    if not rendered_texts:
+        rendered_texts = [
+            text
+            for block in tool_result_block
+            if isinstance(block, Renderable) and (text := block.render().strip())
+        ]
+    if rendered_texts and not is_none_placeholder:
+        tool_output.content = "\n\n".join(rendered_texts)
+    elif not content_text.strip() or is_none_placeholder:
+        tool_output.content = NO_TOOL_CONTENT
+    if (
+        not li_blocks
+        or all(
+            isinstance(block, TextBlock) and not block.text.strip()
+            for block in li_blocks
+        )
+        or is_none_placeholder
+    ):
+        li_blocks = [TextBlock(text=tool_output.content or NO_TOOL_CONTENT)]
     unique_types = {result.type for result in tool_result_block}
     tool_result_block_map = {
         block_type: [block for block in tool_result_block if block.type == block_type]

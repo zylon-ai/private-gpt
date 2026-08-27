@@ -7,7 +7,7 @@ from injector import inject, singleton
 from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 from private_gpt.components.context.models.context_layer import (
-    ContentBundlesLayer,
+    MountsLayer,
     SkillBodyLayer,
     SkillCatalogEntry,
     SkillCatalogLayer,
@@ -115,7 +115,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
         stack = state.input.context_stack
         stack = stack.remove_layers_of_type(LayerType.SKILL_CATALOG)
         stack = stack.remove_layers_of_type(LayerType.SKILL_BODY)
-        stack = stack.remove_layers_of_type(LayerType.CONTENT_BUNDLES)
+        stack = stack.remove_layers_of_type(LayerType.MOUNTS)
         if filter_input is None:
             state.input.context_stack = stack
             context.set_state(state)
@@ -129,7 +129,7 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
             context.set_state(state)
             return
 
-        active_skill_names, to_remove_names = _resolve_skill_states(
+        active_skill_names, _ = _resolve_skill_states(
             state.input.request.messages,
             maximum_loaded_skills=state.input.request.context.maximum_loaded_skills,
         )
@@ -192,14 +192,9 @@ class SkillsInterceptor(ChatRequestLoopInterceptor):
                 )
             )
 
-        to_remove_paths = [skill_mount_path(n) for n in to_remove_names]
-        bundles = self._skill_loader.bundles_for_versions(mounted_versions)
-        if bundles or to_remove_paths:
-            stack = stack.append_layer(
-                ContentBundlesLayer(
-                    bundles=bundles, to_remove=to_remove_paths, source="skills"
-                )
-            )
+        mounts = self._skill_loader.mounts_for_versions(mounted_versions)
+        if mounts:
+            stack = stack.append_layer(MountsLayer(mounts=mounts, source="skills"))
 
         state.input.context_stack = stack
         context.set_state(state)

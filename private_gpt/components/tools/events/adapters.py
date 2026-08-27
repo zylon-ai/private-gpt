@@ -12,6 +12,7 @@ from private_gpt.events.models import (
     ClientToolResultBlock,
     ClientToolUseBlock,
     CodeExecutionToolResultErrorBlock,
+    ErrorDetail,
     ServerToolResultBlock,
     ServerToolUseBlock,
     TextBlock,
@@ -21,9 +22,11 @@ from private_gpt.events.models import (
     TextEditorCodeExecutionViewResultBlock,
     WebFetchResultBlock,
     WebFetchToolResultBlock,
+    WebFetchToolResultErrorBlock,
     WebSearchResultBlock,
     WebSearchToolResultBlock,
     WebSearchToolResultError,
+    normalize_tool_result_content,
 )
 from private_gpt.events.models._tool_result_blocks import Renderable
 
@@ -89,7 +92,7 @@ class ClientToolEventAdapter(ToolEventAdapter):
                 content=outcome.error.message,
                 is_error=True,
             )
-        content = _render_blocks(outcome.content)
+        content = normalize_tool_result_content(_render_blocks(outcome.content))
         return ClientToolResultBlock(tool_use_id=tool_use_id, content=content)
 
 
@@ -115,7 +118,10 @@ class ServerToolEventAdapter(ToolEventAdapter):
                 content=outcome.error.message,
                 is_error=True,
             )
-        return ServerToolResultBlock(tool_use_id=tool_use_id, content=outcome.content)
+        return ServerToolResultBlock(
+            tool_use_id=tool_use_id,
+            content=normalize_tool_result_content(outcome.content),
+        )
 
 
 class BashCodeExecutionEventAdapter(ServerToolEventAdapter):
@@ -128,6 +134,10 @@ class BashCodeExecutionEventAdapter(ServerToolEventAdapter):
                 content=CodeExecutionToolResultErrorBlock(
                     type="bash_code_execution_tool_result_error",
                     error_code="unavailable",
+                    detail=ErrorDetail(
+                        code=outcome.error.code,
+                        explanation=outcome.error.message,
+                    ),
                 ),
             )
         return BashCodeExecutionToolResultBlock(
@@ -158,6 +168,10 @@ class TextEditorCodeExecutionEventAdapter(ServerToolEventAdapter):
                 content=CodeExecutionToolResultErrorBlock(
                     type="text_editor_code_execution_tool_result_error",
                     error_code="unavailable",
+                    detail=ErrorDetail(
+                        code=outcome.error.code,
+                        explanation=outcome.error.message,
+                    ),
                 ),
             )
         result = _single_result(outcome.content, TextEditorResultTypes)
@@ -171,11 +185,12 @@ def _single_result(
     content: list[ResultContentBlockType],
     expected_type: type | tuple[type, ...],
 ):
-    if len(content) != 1 or not isinstance(content[0], expected_type):
-        raise ValueError(
-            "Specialized tool adapter requires exactly one compatible result block"
-        )
-    return content[0]
+    matches = [block for block in content if isinstance(block, expected_type)]
+    if len(matches) == 1:
+        return matches[0]
+    raise ValueError(
+        "Specialized tool adapter requires exactly one compatible result block"
+    )
 
 
 class WebSearchEventAdapter(ServerToolEventAdapter):
@@ -185,7 +200,13 @@ class WebSearchEventAdapter(ServerToolEventAdapter):
         if isinstance(outcome, ToolExecutionFailure):
             return WebSearchToolResultBlock(
                 tool_use_id=tool_use_id,
-                content=WebSearchToolResultError(error_code="unavailable"),
+                content=WebSearchToolResultError(
+                    error_code="unavailable",
+                    detail=ErrorDetail(
+                        code=outcome.error.code,
+                        explanation=outcome.error.message,
+                    ),
+                ),
             )
         return WebSearchToolResultBlock(
             tool_use_id=tool_use_id,
@@ -202,13 +223,14 @@ class WebFetchEventAdapter(ServerToolEventAdapter):
         self, *, tool_use_id: str, outcome: ToolExecutionOutcome
     ) -> ToolResultBlock:
         if isinstance(outcome, ToolExecutionFailure):
-            from private_gpt.events.models import CodeExecutionToolResultErrorBlock
-
             return WebFetchToolResultBlock(
                 tool_use_id=tool_use_id,
-                content=CodeExecutionToolResultErrorBlock(
-                    type="bash_code_execution_tool_result_error",
+                content=WebFetchToolResultErrorBlock(
                     error_code="unavailable",
+                    detail=ErrorDetail(
+                        code=outcome.error.code,
+                        explanation=outcome.error.message,
+                    ),
                 ),
             )
         return WebFetchToolResultBlock(

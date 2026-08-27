@@ -19,3 +19,6 @@ class FileOperationResult(BaseModel):
     success: bool
     output: str = ""
     error: str | None = None
+    start_line: int | None = None
+    total_lines: int | None = None
+    is_update: bool = False

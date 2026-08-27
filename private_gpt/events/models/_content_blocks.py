@@ -27,6 +27,12 @@ from private_gpt.events.models._base import (
     StandardContentProtocol,
 )
 from private_gpt.events.models._callers import ToolCaller  # noqa: TC001
+from private_gpt.events.models._error_messages import (
+    CODE_EXECUTION_ERROR_MESSAGES,
+    WEB_FETCH_ERROR_MESSAGES,
+    WEB_SEARCH_ERROR_MESSAGES,
+)
+from private_gpt.events.models._errors import ErrorDetail
 
 if TYPE_CHECKING:
     from llama_index.core.schema import NodeWithScore
@@ -738,10 +744,27 @@ class CodeExecutionToolResultErrorBlock(BaseContentBlock, StandardContentProtoco
         "invalid_tool_input",
         "too_many_requests",
         "output_file_too_large",
+        "file_not_found",
     ]
+    detail: ErrorDetail | None = Field(
+        default=None,
+        description="[Zylon extension] Real error detail from the execution environment.",
+    )
 
     def render(self) -> str:
-        return f"Error: {self.error_code}"
+        if self.detail:
+            explanation = self.detail.explanation
+            if isinstance(explanation, str) and explanation:
+                return f"Error: {explanation}"
+        message = CODE_EXECUTION_ERROR_MESSAGES.get(self.error_code, self.error_code)
+        return f"Error: {message}"
+
+    def for_response_mode(
+        self, response_mode: Literal["anthropic", "zylon"]
+    ) -> CodeExecutionToolResultErrorBlock | None:
+        if response_mode == "anthropic" and self.detail is not None:
+            return self.model_copy(update={"detail": None})
+        return super().for_response_mode(response_mode)
 
 
 class TextEditorCodeExecutionViewResultBlock(BaseContentBlock, StandardContentProtocol):
@@ -755,6 +778,9 @@ class TextEditorCodeExecutionViewResultBlock(BaseContentBlock, StandardContentPr
     total_lines: int
 
     def render(self) -> str:
+        if self.start_line > 1 or self.num_lines < self.total_lines:
+            header = f"[lines {self.start_line}-{self.start_line + self.num_lines - 1} / {self.total_lines}]\n"
+            return header + self.content
         return self.content
 
 
@@ -767,7 +793,7 @@ class TextEditorCodeExecutionCreateResultBlock(
     is_file_update: bool = False
 
     def render(self) -> str:
-        return self.model_dump_json()
+        return "File updated." if self.is_file_update else "File created."
 
 
 class TextEditorCodeExecutionStrReplaceResultBlock(
@@ -783,7 +809,11 @@ class TextEditorCodeExecutionStrReplaceResultBlock(
     lines: list[str] = Field(default_factory=list)
 
     def render(self) -> str:
-        return self.model_dump_json()
+        location = f" at line {self.new_start}" if self.new_start > 0 else ""
+        header = f"Applied{location} (-{self.old_lines} +{self.new_lines}):"
+        if self.lines:
+            return header + "\n" + "\n".join(self.lines)
+        return header
 
 
 class WebSearchResultBlock(BaseContentBlock, StandardContentProtocol):
@@ -882,6 +912,42 @@ class WebFetchResultBlock(BaseContentBlock, StandardContentProtocol):
         )
 
 
+class WebFetchToolResultErrorBlock(BaseContentBlock, StandardContentProtocol):
+    """Mirrors Anthropic's web_fetch_tool_result_error content block."""
+
+    type: Literal["web_fetch_tool_result_error"] = "web_fetch_tool_result_error"
+    error_code: Literal[
+        "invalid_tool_input",
+        "url_too_long",
+        "url_not_allowed",
+        "url_not_in_prior_context",
+        "url_not_accessible",
+        "unsupported_content_type",
+        "too_many_requests",
+        "max_uses_exceeded",
+        "unavailable",
+    ]
+    detail: ErrorDetail | None = Field(
+        default=None,
+        description="[Zylon extension] Real error detail from the execution environment.",
+    )
+
+    def render(self) -> str:
+        if self.detail:
+            explanation = self.detail.explanation
+            if isinstance(explanation, str) and explanation:
+                return f"Web fetch error: {explanation}"
+        message = WEB_FETCH_ERROR_MESSAGES.get(self.error_code, self.error_code)
+        return f"Web fetch error: {message}"
+
+    def for_response_mode(
+        self, response_mode: Literal["anthropic", "zylon"]
+    ) -> WebFetchToolResultErrorBlock | None:
+        if response_mode == "anthropic" and self.detail is not None:
+            return self.model_copy(update={"detail": None})
+        return super().for_response_mode(response_mode)
+
+
 WebToolResultContentBlockType = WebSearchResultBlock | WebFetchResultBlock
 
 CodeExecutionResultContentBlockType = (
@@ -912,3 +978,15 @@ class WebSearchToolResultError(BaseModel):
         "query_too_long",
         "request_too_large",
     ]
+    detail: ErrorDetail | None = Field(
+        default=None,
+        description="[Zylon extension] Real error detail from the execution environment.",
+    )
+
+    def render(self) -> str:
+        if self.detail:
+            explanation = self.detail.explanation
+            if isinstance(explanation, str) and explanation:
+                return f"Web search error: {explanation}"
+        message = WEB_SEARCH_ERROR_MESSAGES.get(self.error_code, self.error_code)
+        return f"Web search error: {message}"

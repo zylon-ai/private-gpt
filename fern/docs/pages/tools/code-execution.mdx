@@ -89,6 +89,9 @@ code_execution:
   provider: ${PGPT_CODE_EXECUTION_PROVIDER:local}
   workspace_path: ${PGPT_CODE_EXECUTION_WORKSPACE_PATH:}
   timeout: ${PGPT_CODE_EXECUTION_TIMEOUT:60}
+  internet_enabled: ${PGPT_CODE_EXECUTION_INTERNET_ENABLED:false}
+  preinstalled_packages: ${PGPT_CODE_EXECUTION_PREINSTALLED_PACKAGES:pandas,numpy,...}
+  preinstalled_cli_tools: ${PGPT_CODE_EXECUTION_PREINSTALLED_CLI_TOOLS:unzip,unrar,7zip,bc,rg,fd,sqlite3}
   max_output_bytes: ${PGPT_CODE_EXECUTION_MAX_OUTPUT_BYTES:1048576}
   volume_root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:./local_data/private_gpt/volumes}
 ```
@@ -98,6 +101,9 @@ code_execution:
 | `code_execution.provider` | `str` | `"local"` | Code execution provider. Only `"local"` is supported by default. |
 | `code_execution.workspace_path` | `str \| null` | `null` | Filesystem path for persistent workspaces. Falls back to `{local_data_folder}/code_execution_workspaces` when unset. |
 | `code_execution.timeout` | `int` | `60` | Default bash execution timeout in seconds. |
+| `code_execution.internet_enabled` | `bool` | `false` | When `false`, system prompt instructs the model that outbound network, package installs, and downloads are unavailable. |
+| `code_execution.preinstalled_packages` | `list[str]` | Anthropic-like data/science set | Python packages advertised in the system prompt as preinstalled. Env var accepts a comma-separated string. |
+| `code_execution.preinstalled_cli_tools` | `list[str]` | `unzip,unrar,7zip,bc,rg,fd,sqlite3` | CLI tools advertised in the system prompt as available. Env var accepts a comma-separated string. |
 | `code_execution.max_output_bytes` | `int` | `1048576` | Maximum output size returned to the LLM from code execution tools (1 MiB). Output is truncated at this limit after `output_cap_bytes`. |
 | `code_execution.volume_root` | `str \| null` | `null` | Host filesystem root for session volumes. Required for Files API integration when `storage_provider` is `"local"`. |
 | `code_execution.session_ttl_seconds` | `int` | `1800` | Idle TTL in seconds before a session kernel is destroyed (30 min). Workspace files are preserved. |

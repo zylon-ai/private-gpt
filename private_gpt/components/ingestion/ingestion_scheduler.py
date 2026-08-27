@@ -520,7 +520,9 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
         assert isinstance(parse_result_value, str)
         from celery.result import AsyncResult
 
-        store_result = AsyncResult(parse_result_value)
+        from private_gpt.celery.celery import celery_app
+
+        store_result = AsyncResult(parse_result_value, app=celery_app)
         return IngestResponse.model_validate(wait_for_celery_result(store_result))
 
     async def ingest_for_request(self, ingest_body: IngestBody) -> IngestResponse:

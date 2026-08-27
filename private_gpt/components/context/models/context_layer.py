@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.context.models.layer_type import LayerType
 from private_gpt.components.engines.citations.types import Document
-from private_gpt.components.sandbox.content_bundle import ContentBundle
+from private_gpt.components.sandbox.mount import Mount
 
 
 class BaseContextLayer(BaseModel):
@@ -217,18 +217,16 @@ class ContextPromptLayer(BaseContextLayer):
         return self.text
 
 
-class ContentBundlesLayer(BaseContextLayer):
-    """Skill content bundles — consumed by tool builders, not rendered."""
+class MountsLayer(BaseContextLayer):
+    """Mounts (skills, artifacts, ...) — consumed by tool builders, not rendered.
 
-    type: Literal[LayerType.CONTENT_BUNDLES] = Field(
-        default=LayerType.CONTENT_BUNDLES, frozen=True
-    )
+    The layer carries the same ``Mount`` model used everywhere else; a
+    storage-backed skill is a mount with a ``uri_source`` ref.
+    """
+
+    type: Literal[LayerType.MOUNTS] = Field(default=LayerType.MOUNTS, frozen=True)
     priority: int = Field(default=2000, frozen=True)
-    bundles: list[ContentBundle] = Field(default_factory=list)
-    to_remove: list[str] = Field(
-        default_factory=list,
-        description="Canonical paths of skill bundles to remove from the sandbox.",
-    )
+    mounts: list[Mount] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
@@ -245,6 +243,6 @@ AnyContextLayer = Annotated[
     | ToolInstructionsLayer
     | DocumentLayer
     | ToolDefinitionsLayer
-    | ContentBundlesLayer,
+    | MountsLayer,
     Field(discriminator="type"),
 ]

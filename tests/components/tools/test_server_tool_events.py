@@ -19,6 +19,7 @@ from private_gpt.events.models import (
     ClientToolUseBlock,
     ServerToolUseBlock,
     TextBlock,
+    TextEditorCodeExecutionToolResultBlock,
     TextEditorCodeExecutionViewResultBlock,
     ToolResultBlock,
     ToolUseBlock,
@@ -133,6 +134,29 @@ def test_bash_tool_resolves_specialized_adapter() -> None:
     assert use.name == "bash_code_execution"
     assert isinstance(result, BashCodeExecutionToolResultBlock)
     assert result.content.stdout == "ok"
+
+
+def test_text_editor_adapter_keeps_empty_view_and_ignores_pad() -> None:
+    adapter = TextEditorCodeExecutionEventAdapter()
+    result = adapter.build_tool_result(
+        tool_use_id="srvtoolu_view",
+        outcome=ToolExecutionSuccess(
+            content=[
+                TextEditorCodeExecutionViewResultBlock(
+                    content="",
+                    num_lines=0,
+                    start_line=1,
+                    total_lines=0,
+                ),
+                TextBlock(text="(no-output)"),
+            ]
+        ),
+    )
+
+    assert isinstance(result, TextEditorCodeExecutionToolResultBlock)
+    assert result.content.type == "text_editor_code_execution_view_result"
+    assert result.content.content == ""
+    assert result.content.num_lines == 0
 
 
 def test_specialized_adapter_owns_error_format() -> None:

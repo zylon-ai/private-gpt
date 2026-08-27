@@ -38,11 +38,14 @@ from private_gpt.events.models._content_blocks import (
     TLDRBlock,
     ToolUseBlock,
     WebFetchResultBlock,
+    WebFetchToolResultErrorBlock,
     WebSearchResultBlock,
     WebSearchToolResultError,
 )
 from private_gpt.events.models._converters import (
+    NO_TOOL_CONTENT,
     from_tool_output,
+    normalize_tool_result_content,
     to_llama_index_blocks,
 )
 from private_gpt.events.models._deltas import (
@@ -55,7 +58,7 @@ from private_gpt.events.models._deltas import (
     ThinkingDelta,
     TLDRDelta,
 )
-from private_gpt.events.models._errors import ErrorBlock, FatalError
+from private_gpt.events.models._errors import ErrorBlock, ErrorDetail, FatalError
 from private_gpt.events.models._events import (
     Event,
     McpTokensRefreshedEvent,
@@ -159,6 +162,7 @@ _types = [
 ]
 
 __all__ = [
+    "NO_TOOL_CONTENT",
     "AudioBlock",
     "BaseContentBlock",
     "BashCodeExecutionResultBlock",
@@ -178,6 +182,7 @@ __all__ = [
     "DirectCaller",
     "DocumentBlock",
     "ErrorBlock",
+    "ErrorDetail",
     "Event",
     "ExtendedContentProtocol",
     "FatalError",
@@ -226,10 +231,12 @@ __all__ = [
     "Usage",
     "WebFetchResultBlock",
     "WebFetchToolResultBlock",
+    "WebFetchToolResultErrorBlock",
     "WebSearchResultBlock",
     "WebSearchToolResultBlock",
     "WebSearchToolResultError",
     "from_tool_output",
+    "normalize_tool_result_content",
     "serialize_datetime",
     "to_llama_index_blocks",
 ]

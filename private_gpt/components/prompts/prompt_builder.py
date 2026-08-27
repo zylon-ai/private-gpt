@@ -541,6 +541,9 @@ class PromptBuilderService:
         self,
         tools: list["ToolSpec"],
         few_shots: bool = False,
+        internet_enabled: bool | None = None,
+        preinstalled_packages: list[str] | None = None,
+        preinstalled_cli_tools: list[str] | None = None,
     ) -> BasePromptTemplate:
         """Create the code execution environment instructions prompt.
 
@@ -550,17 +553,35 @@ class PromptBuilderService:
         Returns an empty template when the template is missing or rendering fails.
         """
         from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
+        from private_gpt.components.sandbox.mount import Mount
         from private_gpt.components.skills.paths import SKILLS_MOUNT_ROOT
+
+        code_execution = settings().code_execution
+        if internet_enabled is None:
+            internet_enabled = code_execution.internet_enabled
+        if preinstalled_packages is None:
+            preinstalled_packages = list(code_execution.preinstalled_packages)
+        if preinstalled_cli_tools is None:
+            preinstalled_cli_tools = list(code_execution.preinstalled_cli_tools)
 
         namespace = _build_tool_namespace(tools)
         template_path = "chat/tools/bash.j2"
+        skills_mount = Mount(
+            name="skills",
+            target=SKILLS_MOUNT_ROOT,
+            access="ro",
+            description="Mounted skill content (one sub-directory per loaded skill)",
+        )
+        layout = (*DEFAULT_SESSION_LAYOUT, skills_mount)
         try:
             template = self.template_service.get_template(template_path)
             rendered = template.render(
                 namespace=namespace,
                 few_shots=str(few_shots),
-                layout=DEFAULT_SESSION_LAYOUT,
-                skills_prefix=SKILLS_MOUNT_ROOT,
+                layout=layout,
+                internet_enabled=internet_enabled,
+                preinstalled_packages=preinstalled_packages,
+                preinstalled_cli_tools=preinstalled_cli_tools,
             )
             return PromptTemplate(template=rendered.strip())
         except Exception as exc:

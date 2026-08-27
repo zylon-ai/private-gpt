@@ -714,7 +714,7 @@ ZYLON_ONLY_REGISTRY: list[TypeMapping] = [
         our_type=WebSearchToolResultError,
         sdk_schema_name="WebSearchToolResultError",
         openapi_schema_name=None,
-        zylon_only_fields=frozenset(),
+        zylon_only_fields=frozenset({"detail"}),
         sdk_only_fields=frozenset(),
         sdk_sample={
             "type": "web_search_tool_result_error",

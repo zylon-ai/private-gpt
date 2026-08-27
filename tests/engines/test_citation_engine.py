@@ -57,6 +57,19 @@ def random_id_with_length(length: int) -> str:
     return "".join(choice(ascii_uppercase) for i in range(length))
 
 
+def distinct_random_ids_with_length(length: int, count: int) -> list[str]:
+    """Generate `count` distinct random ids of the given length.
+
+    Independent calls to random_id_with_length() can collide (especially for
+    short ids), which breaks tests that rely on two distinct citation
+    identifiers mapping to two distinct documents.
+    """
+    ids: set[str] = set()
+    while len(ids) < count:
+        ids.add(random_id_with_length(length))
+    return list(ids)
+
+
 @pytest.fixture
 def mock_retriever() -> Mock:
     return Mock(spec=BaseRetriever)
@@ -474,8 +487,7 @@ def test_extract_citations_with_citations_and_quotes(
 def test_unknown_citations_in_history(
     mock_retriever: Mock, start_token: str, end_token: str, id_length: int
 ) -> None:
-    id_1 = random_id_with_length(id_length)
-    id_2 = random_id_with_length(id_length)
+    id_1, id_2 = distinct_random_ids_with_length(id_length, 2)
     mock_retriever.retrieve.return_value = [
         NodeWithScore(
             node=TextNode(
@@ -516,8 +528,7 @@ def test_unknown_citations_in_history(
 def test_success_citations_in_history(
     mock_retriever: Mock, start_token: str, end_token: str, id_length: int
 ) -> None:
-    id_1 = random_id_with_length(id_length)
-    id_2 = random_id_with_length(id_length)
+    id_1, id_2 = distinct_random_ids_with_length(id_length, 2)
     mock_retriever.retrieve.return_value = [
         NodeWithScore(
             node=TextNode(
@@ -762,8 +773,7 @@ def test_multiple_documents_with_section_indices() -> None:
 def test_extract_citations_with_inline_code_preceding_citation(
     mock_retriever: Mock, start_token: str, end_token: str, id_length: int
 ) -> None:
-    id_1 = random_id_with_length(id_length)
-    id_2 = random_id_with_length(id_length)
+    id_1, id_2 = distinct_random_ids_with_length(id_length, 2)
     mock_retriever.retrieve.return_value = [
         NodeWithScore(
             node=TextNode(
@@ -841,8 +851,7 @@ def test_extract_citations_with_inline_code_preceding_citation(
 def test_streaming_partial_citations(
     mock_retriever: Mock, start_token: str, end_token: str, id_length: int
 ) -> None:
-    id_1 = random_id_with_length(id_length)
-    id_2 = random_id_with_length(id_length)
+    id_1, id_2 = distinct_random_ids_with_length(id_length, 2)
     mock_retriever.retrieve.return_value = [
         NodeWithScore(
             node=TextNode(

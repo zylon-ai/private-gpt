@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import shutil
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
@@ -121,11 +122,16 @@ class LocalObjectStorage(ObjectStorage):
             mime = magic.Magic(mime=True).from_file(str(target))
         except Exception:
             mime = "application/octet-stream"
+        try:
+            etag = hashlib.md5(target.read_bytes()).hexdigest()
+        except OSError:
+            etag = None
         return FileInfo(
             path=path,
             size_bytes=stat.st_size,
             created_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
             mime_type=mime,
+            etag=etag,
         )
 
     async def list_files_meta(self, prefix: str) -> list[FileInfo]:
@@ -136,7 +142,7 @@ class LocalObjectStorage(ObjectStorage):
         if not root.exists():
             return []
         results: list[FileInfo] = []
-        for entry in root.iterdir():
+        for entry in root.rglob("*"):
             if not entry.is_file():
                 continue
             stat = entry.stat()
@@ -144,12 +150,17 @@ class LocalObjectStorage(ObjectStorage):
                 mime = magic.Magic(mime=True).from_file(str(entry))
             except Exception:
                 mime = "application/octet-stream"
+            try:
+                etag = hashlib.md5(entry.read_bytes()).hexdigest()
+            except OSError:
+                etag = None
             results.append(
                 FileInfo(
                     path=str(entry.relative_to(root)),
                     size_bytes=stat.st_size,
                     created_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
                     mime_type=mime,
+                    etag=etag,
                 )
             )
         return results
@@ -255,9 +266,12 @@ class S3ObjectStorage(ObjectStorage):
             if isinstance(last_modified, datetime)
             else datetime.now(tz=UTC)
         )
+        raw_etag = meta.get("etag")
+        etag = str(raw_etag).strip('"') if raw_etag else None
         return FileInfo(
             path=path,
             size_bytes=int(str(meta.get("content_length", 0))),
             created_at=created_at,
             mime_type=str(meta.get("content_type", "application/octet-stream")),
+            etag=etag,
         )
