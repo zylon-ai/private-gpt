@@ -38,6 +38,7 @@ async def enqueue_resume_iteration_job(
         args=(correlation_id, checkpoint_id),
         job_id=job_id,
         correlation_id=correlation_id,
+        worker_type="chat",
     )
 
 
@@ -67,6 +68,7 @@ async def enqueue_tool_timeout_job(
         args=(correlation_id, tool_id, tool_name, task_id, delay_seconds),
         job_id=job_id,
         correlation_id=correlation_id,
+        worker_type="chat",
         defer_seconds=delay_seconds,
     )
 
@@ -105,6 +107,7 @@ async def enqueue_tool_resume_job(
         args=(correlation_id, tool_id, result),
         job_id=job_id,
         correlation_id=correlation_id,
+        worker_type="chat",
     )
 
 

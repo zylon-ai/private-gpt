@@ -50,4 +50,5 @@ async def test_enqueue_start_chat_job_dispatches_generic_arq_job(
         ),
         job_id=expected_job_id,
         correlation_id="execution-id",
+        worker_type="chat",
     )

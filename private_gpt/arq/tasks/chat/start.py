@@ -33,6 +33,7 @@ async def enqueue_start_chat_job(
         args=(request_data, correlation_id, stream_type, metadata),
         job_id=job_id or f"{correlation_id}:start",
         correlation_id=correlation_id,
+        worker_type="chat",
     )
 
 
