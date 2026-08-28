@@ -128,8 +128,11 @@ class DataFramePreprocessor:
                 if not datetime_column.isna().all():
                     return datetime_column
 
-        # Return as cleaned string
-        return column.astype("string").str.strip()
+        # Keep the established object dtype for text columns. The intermediate
+        # nullable string dtype provides safe string operations without turning
+        # missing values into literal strings; converting back to object preserves
+        # the public output contract and survives TableNode's JSON round trip.
+        return column.astype("string").str.strip().astype(object)
 
     def _is_default_header(self, df: pd.DataFrame) -> bool:
         """Check if DataFrame has default numeric headers."""
