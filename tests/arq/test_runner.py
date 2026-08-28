@@ -1,12 +1,7 @@
-import json
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from arq.worker import Worker
 
-from private_gpt.arq import liveness
-from private_gpt.arq.liveness import HeartbeatWorker
 from private_gpt.arq.runner import _keep_result_seconds, _queue_name, _task_packages
 
 
@@ -56,32 +51,3 @@ def test_keep_result_can_be_configured(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PGPT_ARQ_KEEP_RESULT", "900")
 
     assert _keep_result_seconds(MagicMock()) == 900
-
-
-async def test_heartbeat_worker_records_liveness_on_poll(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    heartbeat = tmp_path / "arq_worker_heartbeat"
-    ready = tmp_path / "arq_ready"
-    monkeypatch.setattr(liveness, "HEARTBEAT_FILE", heartbeat)
-    monkeypatch.setattr(liveness, "READINESS_FILE", ready)
-
-    async def fake_heart_beat(self: Worker) -> None:
-        del self
-
-    monkeypatch.setattr(Worker, "heart_beat", fake_heart_beat)
-
-    async def noop(ctx: object) -> None:
-        del ctx
-
-    worker = HeartbeatWorker(
-        functions=[noop],
-        redis_pool=MagicMock(),
-        handle_signals=False,
-    )
-    await worker.heart_beat()
-
-    assert ready.is_file()
-    payload = json.loads(heartbeat.read_text(encoding="utf-8"))
-    assert payload["ongoing"] == 0
-    assert payload["max_jobs"] == worker.max_jobs

@@ -7,10 +7,10 @@ import sys
 from collections.abc import Callable
 
 from arq.typing import StartupShutdown
+from arq.worker import Worker
 
 from private_gpt.arq.hooks import on_job_end
 from private_gpt.arq.lifecycle import shutdown, startup
-from private_gpt.arq.liveness import HeartbeatWorker, clear_worker_liveness
 from private_gpt.arq.settings import get_queue_name, get_redis_settings
 from private_gpt.arq.tasks import autodiscover_registered_tasks
 from private_gpt.settings.settings import Settings, settings
@@ -62,11 +62,9 @@ def run_arq_worker(
     api_port = os.environ.get("API_PORT", "8091")
     healthcheck_app = f"{app_module}.arq.healthcheck:app"
     procs: list[subprocess.Popen[bytes]] = []
-    clear_worker_liveness()
 
     def _cleanup(signum: int = 0, frame: object | None = None) -> None:
         del frame
-        clear_worker_liveness()
         for proc in procs:
             proc.terminate()
         for proc in procs:
@@ -101,7 +99,7 @@ def run_arq_worker(
         )
 
     async def _main() -> None:
-        worker = HeartbeatWorker(
+        worker = Worker(
             functions=autodiscover_registered_tasks(*task_packages),
             queue_name=queue_name,
             redis_settings=get_redis_settings(current_settings),
