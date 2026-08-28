@@ -50,7 +50,7 @@ def build_initial_context_stack(
 
 
 def build_request_from_context_stack(
-    base_request: ResolvedChatRequest,
+    base_request: ChatRequest,
     context_stack: ContextStack,
 ) -> ResolvedChatRequest:
     """Materialize a ChatRequest from the latest context stack layers."""
@@ -68,7 +68,11 @@ def build_request_from_context_stack(
     # materializations. The rendered prompt is overwritten below; consumers
     # that need the user's own system prompt (e.g. database query tool) can
     # read ``original_prompt`` without leaking platform layers.
-    if request.system.original_prompt is None and base_request.system.prompt:
+    if (
+        isinstance(base_request, ResolvedChatRequest)
+        and request.system.original_prompt is None
+        and base_request.system.prompt
+    ):
         request.system.original_prompt = base_request.system.prompt
 
     request.system.prompt = _render_system_prompt_text(context_stack)
