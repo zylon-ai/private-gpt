@@ -184,7 +184,11 @@ async def preprocess_multimodal_message(
             final_blocks.append(audio_msg.blocks[-1])
 
     yield MultimodalProcessingResponse(
-        modified_message=ChatMessage(role=message.role, blocks=final_blocks)
+        modified_message=ChatMessage(
+            role=message.role,
+            blocks=final_blocks,
+            additional_kwargs=dict(message.additional_kwargs),
+        )
     )
 
 
@@ -287,7 +291,11 @@ async def preprocess_multimodal_history(
             if isinstance(block, TextBlock) or id(block) in kept_ids
         ]
         return (
-            ChatMessage(role=message.role, blocks=new_blocks),
+            ChatMessage(
+                role=message.role,
+                blocks=new_blocks,
+                additional_kwargs=dict(message.additional_kwargs),
+            ),
             new_image_budget,
             new_audio_budget,
         )
@@ -326,6 +334,7 @@ async def preprocess_multimodal_history(
                         for block in message.blocks
                         if isinstance(block, TextBlock)
                     ],
+                    additional_kwargs=dict(message.additional_kwargs),
                 )
             )
 

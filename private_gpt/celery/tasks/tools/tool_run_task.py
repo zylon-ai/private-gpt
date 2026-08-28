@@ -22,6 +22,7 @@ from private_gpt.components.tools.tool_execution_outcome import (
     ToolExecutionFailure,
 )
 from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
+from private_gpt.context import reinstall
 from private_gpt.di import get_global_injector
 from private_gpt.settings.settings import settings
 
@@ -45,88 +46,95 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
 
     correlation_id = request.context.get("correlation_id")
     message_id = request.context.get("message_id") or correlation_id
-    if not await _claim_tool_execution(request):
-        logger.warning(
-            "Duplicate tool execution suppressed correlation_id=%s message_id=%s "
-            "tool_id=%s tool_name=%s",
-            correlation_id,
-            message_id,
-            request.tool_id,
-            request.tool_name,
-        )
-        return _duplicate_execution_response(request).model_dump(mode="json")
-    logger.info(
-        "Tool execution started correlation_id=%s message_id=%s tool_id=%s",
-        correlation_id,
-        message_id,
-        request.tool_id,
-    )
-    try:
-        response = await execute_tool_request(
-            request,
-            interceptors=resolve_tool_execution_interceptors(request.interceptor_paths),
-        )
-    except Exception as exc:
-        logger.exception(
-            "Tool execution raised an exception correlation_id=%s message_id=%s "
-            "tool_id=%s",
+    # The request's context bag is not serialized across the broker; reinstall
+    # it (from the snapshot captured at dispatch time) for the whole task so
+    # tool rebuilds, sandbox session creation and the completion enqueue all
+    # see the same request context.
+    with reinstall(request.context.get("_context")):
+        if not await _claim_tool_execution(request):
+            logger.warning(
+                "Duplicate tool execution suppressed correlation_id=%s message_id=%s "
+                "tool_id=%s tool_name=%s",
+                correlation_id,
+                message_id,
+                request.tool_id,
+                request.tool_name,
+            )
+            return _duplicate_execution_response(request).model_dump(mode="json")
+        logger.info(
+            "Tool execution started correlation_id=%s message_id=%s tool_id=%s",
             correlation_id,
             message_id,
             request.tool_id,
         )
-        response = ToolExecutionResponse(
-            tool_name=request.tool_name,
-            tool_id=request.tool_id,
-            outcome=ToolExecutionFailure(
-                error=ToolExecutionError(
-                    message=str(exc),
-                    exception_type=type(exc).__name__,
-                )
-            ),
-            tool_message=request_error_message(request, str(exc)),
-        )
-    else:
+        try:
+            response = await execute_tool_request(
+                request,
+                interceptors=resolve_tool_execution_interceptors(
+                    request.interceptor_paths
+                ),
+            )
+        except Exception as exc:
+            logger.exception(
+                "Tool execution raised an exception correlation_id=%s message_id=%s "
+                "tool_id=%s",
+                correlation_id,
+                message_id,
+                request.tool_id,
+            )
+            response = ToolExecutionResponse(
+                tool_name=request.tool_name,
+                tool_id=request.tool_id,
+                outcome=ToolExecutionFailure(
+                    error=ToolExecutionError(
+                        message=str(exc),
+                        exception_type=type(exc).__name__,
+                    )
+                ),
+                tool_message=request_error_message(request, str(exc)),
+            )
+        else:
+            logger.debug(
+                "Tool execution completed correlation_id=%s "
+                "message_id=%s tool_id=%s tool_name=%s is_error=%s",
+                correlation_id,
+                message_id,
+                request.tool_id,
+                request.tool_name,
+                isinstance(response.outcome, ToolExecutionFailure),
+            )
+
         logger.debug(
-            "Tool execution completed correlation_id=%s "
+            "Notifying tool completion correlation_id=%s "
             "message_id=%s tool_id=%s tool_name=%s is_error=%s",
             correlation_id,
             message_id,
             request.tool_id,
             request.tool_name,
-            isinstance(response.outcome, ToolExecutionFailure),
+            response.is_error,
         )
-
-    logger.debug(
-        "Notifying tool completion correlation_id=%s "
-        "message_id=%s tool_id=%s tool_name=%s is_error=%s",
-        correlation_id,
-        message_id,
-        request.tool_id,
-        request.tool_name,
-        response.is_error,
-    )
-    try:
-        await _notify_completion(request, response)
-    except Exception:
-        logger.exception(
-            "Tool completion notification failed correlation_id=%s message_id=%s "
-            "tool_id=%s",
+        try:
+            await _notify_completion(request, response)
+        except Exception:
+            logger.exception(
+                "Tool completion notification failed correlation_id=%s message_id=%s "
+                "tool_id=%s",
+                correlation_id,
+                message_id,
+                request.tool_id,
+            )
+            raise
+        finish_log = logger.error if response.is_error else logger.info
+        finish_log(
+            "Tool execution finished correlation_id=%s message_id=%s tool_id=%s "
+            "is_error=%s result=%s",
             correlation_id,
             message_id,
             request.tool_id,
+            isinstance(response.outcome, ToolExecutionFailure),
+            _result_fragment(response),
         )
-        raise
-    finish_log = logger.error if response.is_error else logger.info
-    finish_log(
-        "Tool execution finished correlation_id=%s message_id=%s tool_id=%s "
-        "is_error=%s result=%s",
-        correlation_id,
-        message_id,
-        request.tool_id,
-        isinstance(response.outcome, ToolExecutionFailure),
-        _result_fragment(response),
-    )
-    return response.model_dump(mode="json")
+        return response.model_dump(mode="json")
 
 
 async def _claim_tool_execution(request: ToolExecutionRequest) -> bool:

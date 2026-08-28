@@ -61,3 +61,15 @@ async def test_str_replace_rejects_missing_new_str() -> None:
     assert result.success is False
     assert result.error == "str_replace requires the new_str parameter."
     session._sandbox.read_file.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_write_file_delegates_to_sandbox() -> None:
+    session = _session()
+    session._env.touch = lambda: None
+
+    await session.write_file("notes.txt", b"hello")
+
+    session._sandbox.write_file.assert_awaited_once_with(
+        "/home/agent/workspace/notes.txt", b"hello"
+    )

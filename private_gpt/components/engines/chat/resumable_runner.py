@@ -24,6 +24,8 @@ from private_gpt.components.engines.chat.execution_scheduler import (
 )
 from private_gpt.components.engines.chat.models.chat_state import (
     ChatInputState,
+    ChatRuntimeCache,
+    ChatRuntimeState,
     ChatStatus,
 )
 from private_gpt.components.engines.chat.models.execution_hooks import (
@@ -193,6 +195,8 @@ class ResumableChatRunner:
                         update={"tool_responses": responses}
                     ),
                     original_input=self._original_input(saved),
+                    runtime_cache=self._runtime_cache(saved),
+                    runtime=self._runtime(saved),
                 ),
                 hooks=_RESUME_HOOKS,
                 channel=channel,
@@ -251,6 +255,8 @@ class ResumableChatRunner:
                 request_data=state.input.request.model_dump(mode="json"),
                 context_stack_data=state.input.context_stack.checkpoint_dump(),
                 original_input_data=self._dump_original_input(state.original_input),
+                runtime_data=self._dump_runtime(state),
+                runtime_cache_data=self._dump_runtime_cache(state),
                 stream_type=stream_type,
                 metadata=metadata,
                 iteration=state.runtime.iteration,
@@ -395,6 +401,42 @@ class ResumableChatRunner:
         if original_input is None or not isinstance(original_input, ChatInputState):
             return None
         return original_input.model_dump(mode="json")
+
+    @staticmethod
+    def _dump_runtime(state: ChatState) -> dict[str, Any] | None:
+        runtime = getattr(state, "runtime", None)
+        if not isinstance(runtime, ChatRuntimeState):
+            return None
+        return runtime.model_dump(mode="json", exclude={"tokenizer_fn"})
+
+    @staticmethod
+    def _dump_runtime_cache(state: ChatState) -> dict[str, Any] | None:
+        cache = getattr(getattr(state, "runtime", None), "cache", None)
+        if not isinstance(cache, ChatRuntimeCache):
+            return None
+        return cache.model_dump(mode="json")
+
+    @staticmethod
+    def _runtime(checkpoint: ChatCheckpoint) -> ChatRuntimeState | None:
+        if checkpoint.runtime_data:
+            data = dict(checkpoint.runtime_data)
+            data["tokenizer_fn"] = None
+            return ChatRuntimeState.model_validate(data)
+        cache = ResumableChatRunner._runtime_cache(checkpoint)
+        if cache is None:
+            return None
+        return ChatRuntimeState(cache=cache)
+
+    @staticmethod
+    def _runtime_cache(checkpoint: ChatCheckpoint) -> ChatRuntimeCache | None:
+        if checkpoint.runtime_cache_data:
+            return ChatRuntimeCache.model_validate(checkpoint.runtime_cache_data)
+        runtime = None
+        if checkpoint.runtime_data:
+            runtime = ChatRuntimeState.model_validate(
+                {**checkpoint.runtime_data, "tokenizer_fn": None}
+            )
+        return runtime.cache if runtime is not None else None
 
     @staticmethod
     def _original_input(checkpoint: ChatCheckpoint) -> ChatInputState | None:

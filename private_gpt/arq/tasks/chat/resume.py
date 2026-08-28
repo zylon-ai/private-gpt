@@ -18,6 +18,7 @@ from private_gpt.components.tools.tool_execution_outcome import (
     ToolExecutionFailure,
 )
 from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
+from private_gpt.context import reinstall, snapshot
 from private_gpt.di import get_global_injector
 from private_gpt.server.chat.chat_service import ChatService
 from private_gpt.settings.settings import settings
@@ -27,7 +28,11 @@ logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
 
 
 async def enqueue_resume_iteration_job(
-    *, correlation_id: str, checkpoint_id: str, job_id: str
+    *,
+    correlation_id: str,
+    checkpoint_id: str,
+    job_id: str,
+    context: dict[str, Any] | None = None,
 ) -> None:
     logger.debug(
         "Dispatching chat resume correlation_id=%s message_id=%s job_id=%s",
@@ -38,7 +43,11 @@ async def enqueue_resume_iteration_job(
     await enqueue_job(
         task_name=RESUME_ITERATION_TASK_NAME,
         queue_name=get_queue_name(settings()),
-        args=(correlation_id, checkpoint_id),
+        args=(
+            correlation_id,
+            checkpoint_id,
+            context if context is not None else snapshot(),
+        ),
         job_id=job_id,
         correlation_id=correlation_id,
     )
@@ -52,6 +61,7 @@ async def enqueue_tool_timeout_job(
     tool_name: str,
     task_id: str,
     delay_seconds: int,
+    context: dict[str, Any] | None = None,
 ) -> None:
     job_id = f"{correlation_id}:tool-timeout:{checkpoint_id}:{tool_id}"
     logger.debug(
@@ -67,7 +77,14 @@ async def enqueue_tool_timeout_job(
     await enqueue_job(
         task_name=TOOL_TIMEOUT_TASK_NAME,
         queue_name=get_queue_name(settings()),
-        args=(correlation_id, tool_id, tool_name, task_id, delay_seconds),
+        args=(
+            correlation_id,
+            tool_id,
+            tool_name,
+            task_id,
+            delay_seconds,
+            context if context is not None else snapshot(),
+        ),
         job_id=job_id,
         correlation_id=correlation_id,
         defer_seconds=delay_seconds,
@@ -91,7 +108,11 @@ async def abort_tool_timeout_job(
 
 
 async def enqueue_tool_resume_job(
-    *, correlation_id: str, tool_id: str, result: dict[str, Any]
+    *,
+    correlation_id: str,
+    tool_id: str,
+    result: dict[str, Any],
+    context: dict[str, Any] | None = None,
 ) -> bool:
     job_id = f"{correlation_id}:tool-result:{tool_id}"
     logger.debug(
@@ -105,7 +126,12 @@ async def enqueue_tool_resume_job(
     return await enqueue_job(
         task_name=TOOL_RESUME_TASK_NAME,
         queue_name=get_queue_name(settings()),
-        args=(correlation_id, tool_id, result),
+        args=(
+            correlation_id,
+            tool_id,
+            result,
+            context if context is not None else snapshot(),
+        ),
         job_id=job_id,
         correlation_id=correlation_id,
     )
@@ -154,6 +180,7 @@ async def tool_resume_job(
     correlation_id: str,
     tool_id: str,
     result: dict[str, Any],
+    context: dict[str, Any] | None = None,
 ) -> None:
     await _run_logged(
         ctx,
@@ -161,24 +188,33 @@ async def tool_resume_job(
         correlation_id=correlation_id,
         tool_id=tool_id,
         function_name=TOOL_RESUME_TASK_NAME,
-        operation=lambda: _engine(ctx).record_callback(
-            execution_id=correlation_id, tool_id=tool_id, result=result
+        operation=lambda: _run_with_context(
+            context,
+            _engine(ctx).record_callback(
+                execution_id=correlation_id, tool_id=tool_id, result=result
+            ),
         ),
     )
 
 
 @arq_task(name=RESUME_ITERATION_TASK_NAME)
 async def resume_iteration_job(
-    ctx: dict[Any, Any], correlation_id: str, checkpoint_id: str
+    ctx: dict[Any, Any],
+    correlation_id: str,
+    checkpoint_id: str,
+    context: dict[str, Any] | None = None,
 ) -> None:
     await _run_logged(
         ctx,
         action="resume",
         correlation_id=correlation_id,
         function_name=RESUME_ITERATION_TASK_NAME,
-        operation=lambda: _engine(ctx).execute_scheduled_resume(
-            execution_id=correlation_id,
-            checkpoint_id=checkpoint_id,
+        operation=lambda: _run_with_context(
+            context,
+            _engine(ctx).execute_scheduled_resume(
+                execution_id=correlation_id,
+                checkpoint_id=checkpoint_id,
+            ),
         ),
     )
 
@@ -191,6 +227,7 @@ async def timeout_tool_job(
     tool_name: str,
     task_id: str,
     delay_seconds: int,
+    context: dict[str, Any] | None = None,
 ) -> None:
     del ctx
     response = _timeout_response(
@@ -202,10 +239,25 @@ async def timeout_tool_job(
         correlation_id=correlation_id,
         tool_id=tool_id,
         result=response.model_dump(mode="json"),
+        context=context,
     )
     if accepted:
         injector = get_global_injector(allow_to_generate_new_injectors=True)
         await injector.get(ToolSchedulerFactory).get().cancel_task(task_id)
+
+
+async def _run_with_context(
+    context: dict[str, Any] | None, coro: Awaitable[None]
+) -> None:
+    """Await *coro* with the transported context bag reinstalled.
+
+    ContextVars are not serialized across the broker, so the request's
+    context bag (principal headers, cookies, …) is restored from the snapshot
+    captured at enqueue time for the duration of the awaited operation (which
+    may build sandboxes / tools).
+    """
+    with reinstall(context):
+        await coro
 
 
 async def _run_logged(

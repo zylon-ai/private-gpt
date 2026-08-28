@@ -57,6 +57,8 @@ class RestoreStatelessInputInterceptorRequest(ChatRequestLoopInterceptor):
         for layer in current.layers:
             current_by_type[layer.type].append(layer)
 
+        original_sources = {(layer.type, layer.source) for layer in original.layers}
+
         merged_layers = []
         for original_layer in original.layers:
             layer_type = original_layer.type
@@ -64,11 +66,19 @@ class RestoreStatelessInputInterceptorRequest(ChatRequestLoopInterceptor):
             if source[layer_type]:
                 merged_layers.append(source[layer_type].popleft())
 
-        # Keep any extra current layers for non-reset types.
+        # Keep extra current layers:
+        # - non-reset types (skills, platform tool instructions, ...)
+        # - reset types whose source was not in the original snapshot
+        #   (MCP / internal tools added after loop start).
         for layer_type, remaining in current_by_type.items():
-            if layer_type in reset_types:
+            if layer_type not in reset_types:
+                merged_layers.extend(remaining)
                 continue
-            merged_layers.extend(remaining)
+            merged_layers.extend(
+                layer
+                for layer in remaining
+                if (layer_type, layer.source) not in original_sources
+            )
 
         return ContextStack(layers=merged_layers)
 

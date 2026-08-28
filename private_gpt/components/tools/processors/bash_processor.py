@@ -15,13 +15,19 @@ from private_gpt.components.tools.tool_names import (
     BASH_TOOL_NAME,
 )
 from private_gpt.server.principal import Principal
+from private_gpt.settings.settings import Settings
 
 
 @singleton
 class BashProcessor(ToolProcessor):
     @inject
-    def __init__(self, bash_tool_builder: BashToolBuilder) -> None:
+    def __init__(
+        self,
+        bash_tool_builder: BashToolBuilder,
+        settings: Settings,
+    ) -> None:
         self._bash_builder = bash_tool_builder
+        self._enabled = settings.code_execution.tools.bash.enabled
 
     async def intercept(self, request: ResolvedChatRequest) -> bool:
         for tool in request.tool_config.tools:
@@ -29,6 +35,8 @@ class BashProcessor(ToolProcessor):
                 tool, BASH_TOOL_NAME, BASH_CODE_EXECUTION_TOOL_NAME
             ) or not _is_unresolved_tool(tool):
                 continue
+            if not self._enabled:
+                return _replace_tool(request, tool, [])
 
             config = CodeExecutionSessionConfig(
                 session_id=_session_id(request),

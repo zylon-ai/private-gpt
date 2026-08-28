@@ -11,6 +11,13 @@ from private_gpt.components.skills.errors import (
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
 _NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+_STRING_FRONTMATTER_KEYS = {
+    "name",
+    "description",
+    "license",
+    "compatibility",
+    "allowed-tools",
+}
 
 
 class SkillFrontmatter(BaseModel):
@@ -84,10 +91,12 @@ def parse_skill_markdown(skill_markdown: str) -> ParsedSkillDocument:
     try:
         parsed_yaml = yaml.safe_load(raw_frontmatter)
     except yaml.YAMLError as e:
-        raise SkillDomainError(
-            SkillErrorCode.INVALID_FRONTMATTER,
-            "The SKILL.md frontmatter is not valid YAML.",
-        ) from e
+        parsed_yaml = _parse_legacy_frontmatter(raw_frontmatter)
+        if parsed_yaml is None:
+            raise SkillDomainError(
+                SkillErrorCode.INVALID_FRONTMATTER,
+                "The SKILL.md frontmatter is not valid YAML.",
+            ) from e
     if not isinstance(parsed_yaml, dict):
         raise SkillDomainError(
             SkillErrorCode.INVALID_FRONTMATTER,
@@ -102,6 +111,34 @@ def parse_skill_markdown(skill_markdown: str) -> ParsedSkillDocument:
 
     body = skill_markdown[match.end() :].strip()
     return ParsedSkillDocument(frontmatter=frontmatter, body=body)
+
+
+def _parse_legacy_frontmatter(raw_frontmatter: str) -> dict[str, object] | None:
+    lines = raw_frontmatter.splitlines()
+    parsed: dict[str, object] = {}
+    current_key: str | None = None
+
+    for line in lines:
+        if not line.strip():
+            continue
+        match = re.match(r"^([A-Za-z][A-Za-z0-9_-]*):(?:[ \t]*(.*))?$", line)
+        if match:
+            current_key = match.group(1)
+            value = match.group(2) or ""
+            if current_key in _STRING_FRONTMATTER_KEYS:
+                parsed[current_key] = value
+                continue
+            try:
+                parsed[current_key] = yaml.safe_load(value) if value else ""
+            except yaml.YAMLError:
+                parsed[current_key] = value
+            continue
+        if current_key in _STRING_FRONTMATTER_KEYS:
+            parsed[current_key] = f"{parsed[current_key]} {line.strip()}".strip()
+            continue
+        return None
+
+    return parsed or None
 
 
 def _pydantic_error_to_skill_error(error: dict[str, object]) -> SkillDomainError:

@@ -2744,6 +2744,47 @@
       opacity: 0.6;
       flex: 0 0 auto;
     }
+    .code-exec-file-output {
+      display: grid;
+      gap: 6px;
+    }
+    .code-exec-files-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .code-exec-image-preview {
+      display: block;
+      max-width: 100%;
+      max-height: 360px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.2);
+      object-fit: contain;
+    }
+    .session-id-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .session-id-chip code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--muted-strong);
+      user-select: all;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+    }
 
     /* ── Code execution server links (present_server) ──────────────────── */
     .code-exec-server-link {
@@ -3553,6 +3594,13 @@
                   <h3>No active code execution session</h3>
                   <p class="subtle">Open a chat and enable Code Execution from the Tools menu, then return here to manage session files.</p>
                 </div>
+              </div>
+              <div class="settings-card" id="codeExecSessionInfo" style="display:none">
+                <div>
+                  <h3>Active session</h3>
+                  <p class="subtle">Files below are scoped to this chat's sandbox session. Use the same session when continuing this chat.</p>
+                </div>
+                <div class="session-id-chip"><span>Session</span><code id="codeExecSessionId"></code></div>
               </div>
               <div class="source-list" id="sessionFilesList"></div>
             </section>
@@ -5024,16 +5072,21 @@
       const chat = activeChat();
       const enabled = Boolean(chat?.settings?.enabledCodeExecution);
       const info = $("#codeExecInfo");
+      const sessionInfo = $("#codeExecSessionInfo");
+      const sessionId = $("#codeExecSessionId");
       const list = $("#sessionFilesList");
       const actions = $("#codeExecPanelActions");
       if (!info || !list || !actions) return;
       if (!enabled) {
         info.style.display = "";
+        if (sessionInfo) sessionInfo.style.display = "none";
         list.innerHTML = "";
         actions.style.display = "none";
         return;
       }
       info.style.display = "none";
+      if (sessionInfo) sessionInfo.style.display = "";
+      if (sessionId && chat) sessionId.textContent = chat.id;
       actions.style.display = "";
       if (runtime.contextTab === "codeExecution") {
         refreshSessionFiles({ showToast: false });
@@ -5055,18 +5108,18 @@
           progress?.update("No session files.", "ok");
           return;
         }
-        const base = (state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
         files.forEach(f => {
           const row = document.createElement("div");
           row.className = "source-row";
           const isGenerated = f.downloadable;
           const sizeLabel = f.size_bytes < 1024 ? `${f.size_bytes} B` : f.size_bytes < 1048576 ? `${(f.size_bytes / 1024).toFixed(1)} KB` : `${(f.size_bytes / 1048576).toFixed(1)} MB`;
-          const downloadUrl = `${base}/v1/files/${encodeURIComponent(f.id)}/content?scope_id=${encodeURIComponent(chat.id)}`;
+          const downloadUrl = sessionFileUrl(f.id, chat.id);
+          const pathLabel = filePathFromId(f.id, f.id || f.filename || "");
           row.innerHTML = `
             <span class="source-icon">${icons.file}</span>
             <span class="source-main">
               <span class="source-title">${escapeHtml(f.filename)}</span>
-              <span class="source-meta">${escapeHtml(f.mime_type)} · ${sizeLabel}${isGenerated ? " · generated" : " · uploaded"}</span>
+              <span class="source-meta">${escapeHtml(f.mime_type)} · ${sizeLabel}${isGenerated ? " · generated" : " · uploaded"} · ${escapeHtml(pathLabel)}</span>
             </span>
             <span class="source-actions">
               <a class="mini-button" href="${escapeAttr(downloadUrl)}" download="${escapeAttr(f.filename)}" target="_blank" title="Download">${icons.download}</a>
@@ -5118,7 +5171,8 @@
         return;
       }
       $("#activeChatTitle").textContent = chat.title || "New chat";
-      $("#activeChatSubtitle").textContent = `${state.context.documents.defaultCollection || "pgpt_collection"} · ${chat.messages.length} messages`;
+      const sessionPart = chat.settings.enabledCodeExecution ? ` · session ${chat.id}` : "";
+      $("#activeChatSubtitle").textContent = `${state.context.documents.defaultCollection || "pgpt_collection"} · ${chat.messages.length} messages${sessionPart}`;
       $("#chatPanel").classList.add("active");
       renderModelSelect();
       renderToolMenu();
@@ -5626,29 +5680,140 @@
       return `<img src="${escapeHtml(src)}" style="max-width:100%;border-radius:8px;margin:4px 0;display:block;" alt="Tool output image">`;
     }
 
+    function sessionFileUrl(fileId, chatId, disposition) {
+      const base = (state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
+      const params = new URLSearchParams();
+      if (chatId) params.set("scope_id", chatId);
+      if (disposition) params.set("disposition", disposition);
+      return `${base}/v1/files/${encodeURIComponent(fileId)}/content?${params.toString()}`;
+    }
+
+    function fileLabelFromId(fileId, fallback) {
+      if (!fileId) return fallback || "file";
+      const b64 = fileId.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = b64 + "=".repeat((4 - b64.length % 4) % 4);
+      try {
+        const decoded = decodeURIComponent(escape(atob(padded)));
+        const last = decoded.split("/").pop();
+        if (last) return last;
+      } catch {}
+      return fallback || fileId;
+    }
+
+    function filePathFromId(fileId, fallback) {
+      if (!fileId) return fallback || "";
+      const b64 = fileId.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = b64 + "=".repeat((4 - b64.length % 4) % 4);
+      try {
+        const decoded = decodeURIComponent(escape(atob(padded)));
+        if (decoded) return decoded;
+      } catch {}
+      return fallback || fileId;
+    }
+
+    function renderLocalResourceBlock(file, chatId) {
+      const extMatch = file.file_path ? file.file_path.match(/(\.[^/.]+)$/) : null;
+      const ext = extMatch ? extMatch[1] : "";
+      const fileName = file.name ? (file.name + ext) : (file.filename || fileLabelFromId(file.file_id, file.file_id || "file"));
+      if (!file.file_id || !chatId) {
+        return `<div class="code-exec-present-file"><span class="file-icon">${icons.file}</span><span class="file-name">${escapeHtml(fileName)}</span></div>`;
+      }
+      const downloadUrl = sessionFileUrl(file.file_id, chatId);
+      const mime = file.mime_type || "";
+      const preview = mime.startsWith("image/")
+        ? `<img class="code-exec-image-preview" src="${escapeAttr(sessionFileUrl(file.file_id, chatId, "inline"))}" alt="${escapeAttr(fileName)}" loading="lazy" />`
+        : "";
+      return `<div class="code-exec-file-output"><a class="code-exec-download" href="${escapeAttr(downloadUrl)}" download="${escapeAttr(fileName)}" target="_blank">${icons.download}<span class="code-exec-file-name">${escapeHtml(fileName)}</span><span class="code-exec-mime">${escapeHtml(mime)}</span></a>${preview}</div>`;
+    }
+
+    function renderResourceLinkBlock(link) {
+      const url = link.uri || "";
+      const svc = link.name || "App";
+      const desc = link.description ? escapeHtml(link.description) : "";
+      if (url) {
+        return `<div class="code-exec-file-output"><a class="code-exec-server-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${icons.globe}<span class="code-exec-server-name">${escapeHtml(svc)}</span><span class="code-exec-server-url">${escapeHtml(url)}</span></a>${desc ? `<div class="code-exec-terminal" style="margin-top:6px">${desc}</div>` : ""}</div>`;
+      }
+      return `<div class="code-exec-present-file"><span class="file-icon">${icons.globe}</span><span class="file-name">${escapeHtml(svc)}</span></div>`;
+    }
+
     function renderToolResultContent(content) {
       if (typeof content === "string") return `<pre>${escapeHtml(content)}</pre>`;
-      if (!Array.isArray(content)) return `<pre>${escapeHtml(JSON.stringify(content, null, 2))}</pre>`;
-      return content.map(item => {
-        if (typeof item === "string") return `<pre>${escapeHtml(item)}</pre>`;
-        if (!item || typeof item !== "object") return "";
-        if (item.type === "image") return renderImageSource(item.source);
-        if (item.type === "text") return `<pre>${escapeHtml(item.text || "")}</pre>`;
-        return `<pre>${escapeHtml(JSON.stringify(item, null, 2))}</pre>`;
-      }).join("");
+      if (Array.isArray(content)) {
+        return content.map(item => renderToolResultContent(item)).filter(Boolean).join("");
+      }
+      if (!content || typeof content !== "object") return "";
+      if (content.type === "image") return renderImageSource(content.source);
+      if (content.type === "text") return `<pre>${escapeHtml(content.text || "")}</pre>`;
+      if (content.type === "bash_code_execution_result") {
+        const parts = [];
+        if (content.stdout) parts.push(`<div class="code-exec-terminal">${escapeHtml(content.stdout)}</div>`);
+        if (content.stderr) parts.push(`<div class="code-exec-terminal is-stderr">${escapeHtml(content.stderr)}</div>`);
+        if (content.return_code != null) {
+          parts.push(`<div class="code-exec-result-meta"><span class="exit-code ${content.return_code === 0 ? "ok" : "error"}">Exit: ${content.return_code}</span></div>`);
+        }
+        if (Array.isArray(content.content) && content.content.length) {
+          const chatId = activeChat()?.id;
+          const files = content.content.map(f => {
+            const fileName = f.filename || f.name || fileLabelFromId(f.file_id, f.file_id || "file");
+            if (f.file_id && chatId) {
+              return `<a class="code-exec-download" href="${escapeAttr(sessionFileUrl(f.file_id, chatId))}" download="${escapeAttr(fileName)}" target="_blank">${icons.download}<span class="code-exec-file-name">${escapeHtml(fileName)}</span><span class="code-exec-mime">${escapeHtml(f.mime_type || "file")}</span></a>`;
+            }
+            return `<div class="code-exec-present-file"><span class="file-icon">${icons.file}</span><span class="file-name">${escapeHtml(fileName)}</span></div>`;
+          }).join("");
+          parts.push(`<div class="code-exec-present-files"><div class="code-exec-files-label">Files created</div>${files}</div>`);
+        }
+        return parts.join("");
+      }
+      if (content.type === "text_editor_code_execution_view_result") return renderFileView(content.content || "");
+      if (content.type === "text_editor_code_execution_create_result") return `<div class="code-exec-terminal">${escapeHtml(content.is_file_update ? "File updated." : "File created.")}</div>`;
+      if (content.type === "text_editor_code_execution_str_replace_result") return renderDiffView((content.lines || []).join("\n"));
+      if (content.type === "local_resource") return renderLocalResourceBlock(content, activeChat()?.id);
+      if (content.type === "resource_link") return renderResourceLinkBlock(content);
+      if (String(content.type || "").includes("_tool_result_error")) {
+        const errDetail = content.detail?.explanation || content.detail?.code || content.error_code || "Execution error";
+        return `<div class="code-exec-terminal is-stderr">Error: ${escapeHtml(errDetail)}</div>`;
+      }
+      if (content.type === "server_tool_result" || content.type === "tool_result" || content.type === "bash_code_execution_tool_result" || content.type === "text_editor_code_execution_tool_result" || content.type === "web_search_tool_result" || content.type === "web_fetch_tool_result") return renderToolResultContent(content.content);
+      return `<pre>${escapeHtml(JSON.stringify(content, null, 2))}</pre>`;
     }
 
     function isCodeExecTool(name) {
-      return ["bash", "view", "str_replace", "create", "insert", "present_files", "present_server"].includes(name);
+      return ["bash", "bash_code_execution", "view", "str_replace", "create", "insert", "text_editor", "text_editor_code_execution", "str_replace_based_edit_tool", "present_files", "present_server", "code_execution"].includes(name);
+    }
+
+    function normalizeCodeExecToolName(name) {
+      if (name === "bash_code_execution") return "bash";
+      if (name === "text_editor" || name === "text_editor_code_execution" || name === "str_replace_based_edit_tool") return "text_editor";
+      return name;
     }
 
     function codeExecToolLabel(name) {
-      const map = { bash: "Bash", view: "Read", str_replace: "Edit", create: "Create", insert: "Insert", present_files: "Present", present_server: "Server" };
+      const map = {
+        bash: "Bash",
+        bash_code_execution: "Bash",
+        view: "Read",
+        str_replace: "Edit",
+        create: "Create",
+        insert: "Insert",
+        text_editor: "Text Editor",
+        text_editor_code_execution: "Text Editor",
+        str_replace_based_edit_tool: "Text Editor",
+        present_files: "Files",
+        present_server: "Server",
+        code_execution: "Code Execution"
+      };
       return map[name] || name;
     }
 
-    function codeExecToolLabelClass(name) {
-      if (name === "bash") return "bash";
+    function codeExecToolLabelClass(name, input = {}) {
+      const kind = normalizeCodeExecToolName(name);
+      if (kind === "bash") return "bash";
+      if (kind === "text_editor") {
+        const command = input.command || "view";
+        if (command === "create") return "create";
+        if (command === "str_replace") return "edit";
+        return "file";
+      }
       if (name === "view" || name === "insert") return "file";
       if (name === "create") return "create";
       if (name === "str_replace") return "edit";
@@ -5657,18 +5822,35 @@
       return "file";
     }
 
+    function isToolResultBlockType(type) {
+      return ["tool_result", "server_tool_result", "bash_code_execution_tool_result", "text_editor_code_execution_tool_result", "web_search_tool_result", "web_fetch_tool_result"].includes(type);
+    }
+
     function renderCodeExecToolUse(block, resultBlock) {
       const name = block.name || "";
       const input = block.input || {};
+      const kind = normalizeCodeExecToolName(name);
       const label = codeExecToolLabel(name);
-      const labelClass = codeExecToolLabelClass(name);
+      const labelClass = codeExecToolLabelClass(name, input);
       let detail = "";
 
-      if (name === "bash") {
+      if (kind === "bash") {
         detail = `<div class="code-exec-command"><span class="prompt">$</span>${escapeHtml(input.command || "")}</div>`;
+      } else if (kind === "text_editor") {
+        const command = input.command || "view";
+        const range = command === "view" && Array.isArray(input.view_range) && input.view_range.length === 2
+          ? ` (lines ${input.view_range[0]}-${input.view_range[1]})`
+          : "";
+        if (command === "create") {
+          detail = `<div class="code-exec-file-info">${icons.file}<span class="code-exec-file-path">Create: ${escapeHtml(input.path || "")}</span></div>`;
+        } else if (command === "insert") {
+          detail = `<div class="code-exec-file-info">${icons.file}<span class="code-exec-file-path">${escapeHtml(input.path || "")} at line ${input.insert_line}</span></div>`;
+        } else {
+          detail = `<div class="code-exec-file-info">${icons.file}<span class="code-exec-file-path">${escapeHtml(input.path || "")}${range}</span></div>`;
+        }
       } else if (name === "view") {
         const range = Array.isArray(input.view_range) && input.view_range.length === 2
-          ? ` (lines ${input.view_range[0] + 1}-${input.view_range[1]})`
+          ? ` (lines ${input.view_range[0]}-${input.view_range[1]})`
           : "";
         detail = `<div class="code-exec-file-info">${icons.file}<span class="code-exec-file-path">${escapeHtml(input.path || "")}${range}</span></div>`;
       } else if (name === "str_replace") {
@@ -5678,8 +5860,8 @@
       } else if (name === "insert") {
         detail = `<div class="code-exec-file-info">${icons.file}<span class="code-exec-file-path">${escapeHtml(input.path || "")} at line ${input.insert_line}</span></div>`;
       } else if (name === "present_files") {
-        const files = Array.isArray(input.files) ? input.files : [];
-        detail = `<div class="code-exec-present-files">${files.map(f => `<div class="code-exec-present-file"><span class="file-icon">${icons.file}</span><span class="file-name">${escapeHtml(typeof f === "string" ? f : f.path || f.name || "")}</span></div>`).join("")}</div>`;
+        const files = Array.isArray(input.filepaths) ? input.filepaths : (Array.isArray(input.files) ? input.files : []);
+        detail = `<div class="code-exec-present-files">${files.map(f => `<div class="code-exec-present-file"><span class="file-icon">${icons.file}</span><span class="file-name">${escapeHtml(typeof f === "string" ? f : f.filepath || f.path || f.name || "")}</span></div>`).join("")}</div>`;
       } else if (name === "present_server") {
         const port = input.port != null ? `:${input.port}` : "";
         const service = input.service_name || "App";
@@ -5691,24 +5873,69 @@
       let resultHtml = "";
       if (resultBlock) {
         const rawText = extractToolResultText(resultBlock.content);
-        if (name === "bash") {
-          const result = parseBashResult(rawText);
+        const innerContent = (() => {
+          const c = resultBlock.content;
+          if (c && typeof c === "object" && !Array.isArray(c)) return c;
+          if (Array.isArray(c)) {
+            return c.find(b => b && typeof b === "object" && (b.type === "bash_code_execution_result" || b.type === "text_editor_code_execution_view_result" || b.type === "text_editor_code_execution_create_result" || b.type === "text_editor_code_execution_str_replace_result" || String(b.type || "").includes("_tool_result_error"))) || null;
+          }
+          return null;
+        })();
+
+        if (kind === "bash") {
           const parts = [];
-          if (result.stdout) {
-            parts.push(`<div class="code-exec-terminal">${escapeHtml(result.stdout)}</div>`);
+          let stdout = "", stderr = "", exitCode = null, duration = null, files = [];
+          if (innerContent && innerContent.type === "bash_code_execution_result") {
+            stdout = innerContent.stdout || "";
+            stderr = innerContent.stderr || "";
+            exitCode = innerContent.return_code ?? null;
+            files = Array.isArray(innerContent.content) ? innerContent.content : [];
+          } else {
+            const parsed = parseBashResult(rawText);
+            stdout = parsed.stdout;
+            stderr = parsed.stderr;
+            exitCode = parsed.exitCode;
+            duration = parsed.duration;
           }
-          if (result.stderr) {
-            parts.push(`<div class="code-exec-terminal is-stderr">${escapeHtml(result.stderr)}</div>`);
+          if (innerContent && String(innerContent.type || "").includes("_tool_result_error")) {
+            const errDetail = innerContent.detail?.explanation || innerContent.detail?.code || innerContent.error_code || "Execution error";
+            parts.push(`<div class="code-exec-terminal is-stderr">Error: ${escapeHtml(errDetail)}</div>`);
           }
-          if (result.exitCode != null || result.duration != null) {
-            parts.push(`<div class="code-exec-result-meta">
-              ${result.exitCode != null ? `<span class="exit-code ${result.exitCode === 0 ? "ok" : "error"}">Exit: ${result.exitCode}</span>` : ""}
-              ${result.duration != null ? `<span>${result.duration}ms</span>` : ""}
-            </div>`);
+          if (stdout) parts.push(`<div class="code-exec-terminal">${escapeHtml(stdout)}</div>`);
+          if (stderr) parts.push(`<div class="code-exec-terminal is-stderr">${escapeHtml(stderr)}</div>`);
+          if (exitCode != null || duration != null) {
+            parts.push(`<div class="code-exec-result-meta">${exitCode != null ? `<span class="exit-code ${exitCode === 0 ? "ok" : "error"}">Exit: ${exitCode}</span>` : ""}${duration != null ? `<span>${duration}ms</span>` : ""}</div>`);
+          }
+          if (files.length) {
+            const chatId = activeChat()?.id;
+            const fileLinks = files.map(f => {
+              const fileName = f.filename || f.name || fileLabelFromId(f.file_id, f.file_id || "file");
+              if (f.file_id && chatId) {
+                return `<a class="code-exec-download" href="${escapeAttr(sessionFileUrl(f.file_id, chatId))}" download="${escapeAttr(fileName)}" target="_blank">${icons.download}<span class="code-exec-file-name">${escapeHtml(fileName)}</span><span class="code-exec-mime">${escapeHtml(f.mime_type || "file")}</span></a>`;
+              }
+              return `<div class="code-exec-present-file"><span class="file-icon">${icons.file}</span><span class="file-name">${escapeHtml(fileName)}</span></div>`;
+            }).join("");
+            parts.push(`<div class="code-exec-present-files"><div class="code-exec-files-label">Files created</div>${fileLinks}</div>`);
           }
           resultHtml = parts.join("");
-        } else if (name === "str_replace") {
-          resultHtml = renderDiffView(rawText);
+        } else if (kind === "text_editor") {
+          const command = input.command || "view";
+          if (innerContent && innerContent.type === "text_editor_code_execution_view_result") {
+            resultHtml = renderFileView(innerContent.content || "");
+          } else if (innerContent && innerContent.type === "text_editor_code_execution_create_result") {
+            resultHtml = `<div class="code-exec-terminal">${escapeHtml(innerContent.is_file_update ? "File updated." : "File created.")}</div>`;
+          } else if (innerContent && innerContent.type === "text_editor_code_execution_str_replace_result") {
+            resultHtml = renderDiffView((innerContent.lines || []).join("\n"));
+          } else if (innerContent && String(innerContent.type || "").includes("_tool_result_error")) {
+            const errDetail = innerContent.detail?.explanation || innerContent.detail?.code || innerContent.error_code || "Execution error";
+            resultHtml = `<div class="code-exec-terminal is-stderr">Error: ${escapeHtml(errDetail)}</div>`;
+          } else if (command === "str_replace") {
+            resultHtml = renderDiffView(rawText);
+          } else if (command === "create") {
+            resultHtml = rawText ? `<div class="code-exec-terminal">${escapeHtml(rawText)}</div>` : "";
+          } else {
+            resultHtml = renderFileView(rawText);
+          }
         } else if (name === "present_files") {
           const content = resultBlock.content;
           if (Array.isArray(content)) {
@@ -5716,20 +5943,13 @@
             const textItems = content.filter(b => b?.type === "text" || typeof b === "string");
             const textHtml = textItems.map(b => escapeHtml(typeof b === "string" ? b : (b.text || ""))).join(" ");
             if (fileItems.length > 0) {
-              const base = (state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
               const chatId = activeChat()?.id;
-              resultHtml = `<div class="code-exec-present-files">${fileItems.map(f => {
-                const ext = f.file_path ? "." + f.file_path.split(".").pop() : "";
-                const fileName = f.name + ext;
-                if (f.file_id && chatId) {
-                  const url = `${base}/v1/files/${encodeURIComponent(f.file_id)}/content?scope_id=${encodeURIComponent(chatId)}`;
-                  return `<a class="code-exec-download" href="${escapeAttr(url)}" download="${escapeAttr(fileName)}" target="_blank">${icons.download}<span class="code-exec-file-name">${escapeHtml(fileName)}</span><span class="code-exec-mime">${escapeHtml(f.mime_type || "")}</span></a>`;
-                }
-                return `<div class="code-exec-present-file"><span class="file-icon">${icons.file}</span><span class="file-name">${escapeHtml(fileName)}</span></div>`;
-              }).join("")}</div>${textHtml ? `<div class="code-exec-terminal" style="margin-top:8px">${textHtml}</div>` : ""}`;
+              resultHtml = `<div class="code-exec-present-files">${fileItems.map(f => renderLocalResourceBlock(f, chatId)).join("")}</div>${textHtml ? `<div class="code-exec-terminal" style="margin-top:8px">${textHtml}</div>` : ""}`;
             } else {
               resultHtml = textHtml ? `<div class="code-exec-terminal">${textHtml}</div>` : "";
             }
+          } else if (content && typeof content === "object" && content.type === "local_resource") {
+            resultHtml = `<div class="code-exec-present-files">${renderLocalResourceBlock(content, activeChat()?.id)}</div>`;
           } else {
             resultHtml = rawText ? `<div class="code-exec-terminal">${escapeHtml(rawText)}</div>` : "";
           }
@@ -5740,18 +5960,12 @@
             const textItems = content.filter(b => b?.type === "text" || typeof b === "string");
             const textHtml = textItems.map(b => escapeHtml(typeof b === "string" ? b : (b.text || ""))).join(" ");
             if (linkItems.length > 0) {
-              resultHtml = `<div class="code-exec-present-files">${linkItems.map(l => {
-                const url = l.uri || "";
-                const svc = l.name || "App";
-                const desc = l.description ? escapeHtml(l.description) : "";
-                if (url) {
-                  return `<a class="code-exec-server-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${icons.globe}<span class="code-exec-server-name">${escapeHtml(svc)}</span><span class="code-exec-server-url">${escapeHtml(url)}</span></a>${desc ? `<div class="code-exec-terminal" style="margin-top:6px">${desc}</div>` : ""}`;
-                }
-                return `<div class="code-exec-present-file"><span class="file-icon">${icons.globe}</span><span class="file-name">${escapeHtml(svc)}</span></div>`;
-              }).join("")}</div>${textHtml ? `<div class="code-exec-terminal" style="margin-top:8px">${textHtml}</div>` : ""}`;
+              resultHtml = `<div class="code-exec-present-files">${linkItems.map(renderResourceLinkBlock).join("")}</div>${textHtml ? `<div class="code-exec-terminal" style="margin-top:8px">${textHtml}</div>` : ""}`;
             } else {
               resultHtml = textHtml ? `<div class="code-exec-terminal">${textHtml}</div>` : "";
             }
+          } else if (content && typeof content === "object" && content.type === "resource_link") {
+            resultHtml = `<div class="code-exec-present-files">${renderResourceLinkBlock(content)}</div>`;
           } else {
             resultHtml = rawText ? `<div class="code-exec-terminal">${escapeHtml(rawText)}</div>` : "";
           }
@@ -5763,19 +5977,35 @@
         }
       }
 
-      const summaryLabel = name === "bash" ? (input.command ? input.command.split("\n")[0].slice(0, 60) + (input.command.length > 60 ? "…" : "") : "") : name === "present_server" ? `${input.service_name || "App"}${input.port != null ? `:${input.port}` : ""}` : (input.path || "");
+      let summaryLabel;
+      if (kind === "bash") {
+        summaryLabel = input.command ? input.command.split("\n")[0].slice(0, 60) + (input.command.length > 60 ? "…" : "") : "";
+      } else if (kind === "text_editor") {
+        const command = input.command || "view";
+        const op = command === "str_replace" ? "edit" : command;
+        summaryLabel = `${op}: ${input.path || ""}`;
+      } else if (name === "present_server") {
+        summaryLabel = `${input.service_name || "App"}${input.port != null ? `:${input.port}` : ""}`;
+      } else {
+        summaryLabel = input.path || "";
+      }
       return `<details class="code-exec-block"${resultBlock ? " open" : ""}><summary><span class="code-exec-tool-label ${labelClass}">${label}</span>${escapeHtml(summaryLabel)}</summary><div class="code-exec-body">${detail}</div></details>`;
     }
 
     function extractToolResultText(content) {
       if (typeof content === "string") return content;
       if (Array.isArray(content)) {
-        return content.map(item => {
-          if (typeof item === "string") return item;
-          if (item?.type === "text") return item.text || "";
-          return "";
-        }).filter(Boolean).join("");
+        return content.map(item => extractToolResultText(item)).filter(Boolean).join("\n");
       }
+      if (!content || typeof content !== "object") return "";
+      if (content.type === "text") return content.text || "";
+      if (content.type === "bash_code_execution_result") {
+        return [content.stdout, content.stderr].filter(Boolean).join("\n");
+      }
+      if (content.type === "text_editor_code_execution_view_result") return content.content || "";
+      if (content.type === "text_editor_code_execution_create_result") return content.is_file_update ? "File updated." : "File created.";
+      if (content.type === "text_editor_code_execution_str_replace_result") return (content.lines || []).join("\n");
+      if (content.content !== undefined) return extractToolResultText(content.content);
       return JSON.stringify(content, null, 2);
     }
 
@@ -5843,7 +6073,7 @@
         const block = blocks[i];
         if ((block?.type === "tool_use" || block?.type === "server_tool_use") && isCodeExecTool(block.name)) {
           const nextBlock = i + 1 < blocks.length ? blocks[i + 1] : null;
-          if (nextBlock?.type === "tool_result" && nextBlock.tool_use_id === block.id) {
+          if (nextBlock && isToolResultBlockType(nextBlock.type) && nextBlock.tool_use_id === block.id) {
             paired.push({ toolUse: block, toolResult: nextBlock });
             i += 2;
             continue;
@@ -5875,13 +6105,19 @@
           if (block.type === "image") {
             return renderImageSource(block.source);
           }
+          if (block.type === "local_resource") {
+            return renderLocalResourceBlock(block, activeChat()?.id);
+          }
+          if (block.type === "resource_link") {
+            return renderResourceLinkBlock(block);
+          }
           if (block.type === "tool_use" || block.type === "server_tool_use") {
             if (isCodeExecTool(block.name)) {
               return renderCodeExecToolUse(block);
             }
             return `<details class="tool-call"><summary>Tool requested: ${escapeHtml(block.name)}</summary><pre>${escapeHtml(JSON.stringify(block.input || {}, null, 2))}</pre></details>`;
           }
-          if (block.type === "tool_result") {
+          if (isToolResultBlockType(block.type)) {
             const body = renderToolResultContent(block.content);
             return `<details class="tool-call"><summary>Tool result</summary>${body}</details>`;
           }
@@ -5926,7 +6162,7 @@
         if (block.type === "text" && Array.isArray(block.citations)) {
           context.explicitCitations.push(...block.citations);
         }
-        if (block.type === "tool_result") {
+        if (isToolResultBlockType(block.type)) {
           collectToolResultCitationSources(block.content, context);
           if (Array.isArray(block.content)) collectCitationSources(block.content, context);
         }
@@ -6439,7 +6675,7 @@
               } else if (block?.type === "thinking" && event.delta?.type === "thinking_delta") {
                 block.thinking = (block.thinking || "") + event.delta.thinking;
                 onDelta?.(messageData.content.filter(Boolean));
-              } else if (block?.type === "tool_use" && event.delta?.type === "input_json_delta") {
+              } else if ((block?.type === "tool_use" || block?.type === "server_tool_use") && event.delta?.type === "input_json_delta") {
                 const delta = event.delta;
                 if (delta.partial_json_obj && Object.keys(delta.partial_json_obj).length > 0) {
                   block.input = delta.partial_json_obj;
@@ -6924,7 +7160,7 @@
         if (msg.role === "assistant" && Array.isArray(msg.content)) {
           let buffer = [];
           for (const block of msg.content) {
-            if (block?.type === "tool_result") {
+            if (isToolResultBlockType(block?.type)) {
               if (buffer.length) { expanded.push({ role: "assistant", content: buffer }); buffer = []; }
               expanded.push({ role: "assistant", content: [block] });
             } else {

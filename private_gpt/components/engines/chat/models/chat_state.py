@@ -5,7 +5,9 @@ from typing import Any, Self
 from llama_index.core.llms.llm import ToolSelection
 from pydantic import BaseModel, ConfigDict, Field
 
-from private_gpt.components.chat.models.chat_config_models import ChatRequest
+from private_gpt.components.chat.models.chat_config_models import (
+    ResolvedChatRequest,
+)
 from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat.models.chat_llm_params import (
     ChatLLMParameters,
@@ -31,7 +33,7 @@ class ChatInputState(BaseModel):
     The engine materializes ``request`` from the stack just before calling the LLM.
     """
 
-    request: ChatRequest
+    request: ResolvedChatRequest
     context_stack: ContextStack = Field(default_factory=ContextStack)
     sampling_params: dict[str, Any] = Field(default_factory=dict)
     llm_kwargs: ChatLLMParameters = Field(default_factory=ChatLLMParameters)
@@ -47,13 +49,27 @@ class ChatRuntimeState(BaseModel):
     tokenizer_fn: TokenizerFn | AsyncTokenizerFn | None = None
 
     iteration: int = 0
-    max_iterations: int = 40
+    max_iterations: int | None = None
     cache: "ChatRuntimeCache" = Field(default_factory=lambda: ChatRuntimeCache())
     next_block_count: int = 0
     total_input_tokens: int = 0
     total_output_tokens: int = 0
     has_input_usage: bool = False
     has_output_usage: bool = False
+
+    def model_copy(
+        self, *, update: Mapping[str, Any] | None = None, deep: bool = False
+    ) -> Self:
+        # HF tokenizers (and similar) are not pickleable. Share the callable
+        # across copies the same way ChatState does.
+        tokenizer_fn = self.tokenizer_fn
+        self.tokenizer_fn = None
+        try:
+            copied = super().model_copy(update=update, deep=deep)
+        finally:
+            self.tokenizer_fn = tokenizer_fn
+        copied.tokenizer_fn = tokenizer_fn
+        return copied
 
 
 class ChatStatus(StrEnum):

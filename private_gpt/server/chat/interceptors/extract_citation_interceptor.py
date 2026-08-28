@@ -38,6 +38,9 @@ class ExtractCitationInterceptor(ChatResponseLoopInterceptor):
         self._send_citations = []
         self._current_text = ""
         self._last_delta_type = None
+        # Do not snapshot documents here: BEFORE_ITERATION has not run yet.
+        self._documents = []
+        self._citation_indices = {}
 
     async def on_iteration_end(self, context: ChatInterceptorContext) -> None:
         # Mutate the context state to include the final citations for this iteration
@@ -52,13 +55,26 @@ class ExtractCitationInterceptor(ChatResponseLoopInterceptor):
         self._documents = []
         self._citation_indices = {}
 
+    def _documents_for_prompt(
+        self, context: ChatInterceptorContext
+    ) -> list["Document"]:
+        """Freeze the document set that was injected into this iteration's prompt.
+
+        ``on_iteration_start`` runs before BEFORE_ITERATION, so the stack is
+        still empty then. The first streamed event is after the prompt was
+        built — snapshot that set and keep it even if the stack later changes.
+        """
+        if not self._documents:
+            self._documents = list(context.state.input.context_stack.all_documents())
+        return self._documents
+
     async def intercept_event(
         self,
         event: Event,
         context: ChatInterceptorContext,
     ) -> Event | None:
         citations_is_enabled = context.state.input.request.citation.enabled
-        documents = self._documents or context.state.input.context_stack.all_documents()
+        documents = self._documents_for_prompt(context)
 
         if not (citations_is_enabled and bool(documents)):
             return event

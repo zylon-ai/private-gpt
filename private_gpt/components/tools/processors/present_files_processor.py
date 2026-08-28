@@ -26,7 +26,7 @@ class PresentFilesProcessor(ToolProcessor):
         settings: Settings,
     ) -> None:
         self._builder = present_files_tool_builder
-        self._enabled = settings.code_execution.tools.present_files_enabled
+        self._enabled = settings.code_execution.tools.present_files.enabled
 
     async def intercept(self, request: ResolvedChatRequest) -> bool:
         for tool in request.tool_config.tools:

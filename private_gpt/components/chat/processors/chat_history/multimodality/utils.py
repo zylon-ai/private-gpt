@@ -33,4 +33,5 @@ def remove_multimodal_blocks(message: ChatMessage) -> ChatMessage:
         role=message.role,
         content=message.content,
         blocks=filtered_blocks,
+        additional_kwargs=dict(message.additional_kwargs),
     )

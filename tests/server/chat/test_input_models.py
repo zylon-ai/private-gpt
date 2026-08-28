@@ -2544,3 +2544,29 @@ def test_server_tool_use_without_internal_name_falls_back_to_public_name() -> No
     tool_calls = assistant_msg.additional_kwargs.get("tool_calls", [])
     assert len(tool_calls) == 1
     assert tool_calls[0].tool_name == "bash_code_execution"
+
+
+def test_validate_system_config_merges_prompt_flags() -> None:
+    """Merging system blocks must OR PromptConfig flags, not drop them."""
+    from private_gpt.chat.input_models import (
+        PromptConfig,
+        System,
+        validate_system_config,
+    )
+
+    merged = validate_system_config(
+        [
+            System(
+                text="You are Zylon",
+                prompt=PromptConfig(tools=True, skills=True, code_execution=True),
+            ),
+            System(text="Extra instructions"),
+        ]
+    )
+
+    assert merged.text == "You are Zylon\nExtra instructions"
+    assert merged.prompt.tools is True
+    assert merged.prompt.skills is True
+    assert merged.prompt.code_execution is True
+    assert merged.prompt.citations is False
+    assert merged.prompt.thinking is False

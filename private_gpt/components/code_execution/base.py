@@ -25,7 +25,10 @@ class CodeExecutionSession(ABC):
 
     @abstractmethod
     async def view(
-        self, path: str, view_range: tuple[int, int] | None = None
+        self,
+        path: str,
+        view_range: tuple[int, int] | None = None,
+        include_line_numbers: bool = True,
     ) -> FileOperationResult:
         """View a file or directory from the session workspace."""
 
@@ -48,6 +51,10 @@ class CodeExecutionSession(ABC):
     @abstractmethod
     async def read_file(self, path: str) -> bytes:
         """Read raw file bytes from the session workspace."""
+
+    @abstractmethod
+    async def write_file(self, path: str, content: bytes) -> None:
+        """Write raw file bytes into the session workspace."""
 
     @abstractmethod
     async def path_exists(self, path: str) -> bool:

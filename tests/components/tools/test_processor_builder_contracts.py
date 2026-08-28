@@ -68,10 +68,15 @@ from private_gpt.server.utils.artifact_input import (
     IngestedArtifact,
     SqlDatabaseArtifact,
 )
+from private_gpt.settings.settings import settings as _load_settings
 
 
 def _tool(name: str) -> ToolSpec:
     return ToolSpec(name=name, type=f"{name}_v1")
+
+
+def _settings():
+    return _load_settings().model_copy(deep=True)
 
 
 def _resolved(name: str) -> ToolSpec:
@@ -313,7 +318,7 @@ async def test_bash_builder_receives_complete_session_contract() -> None:
         mounts=[mount],
     )
 
-    assert await BashProcessor(builder).intercept(request)
+    assert await BashProcessor(builder, _settings()).intercept(request)
 
     config = builder.build_tool.await_args.args[0]
     assert config.session_id == "contract-correlation"
@@ -374,7 +379,7 @@ async def test_present_files_builder_receives_complete_request_contract() -> Non
     )
     settings = SimpleNamespace(
         code_execution=SimpleNamespace(
-            tools=SimpleNamespace(present_files_enabled=True)
+            tools=SimpleNamespace(present_files=SimpleNamespace(enabled=True))
         )
     )
 
@@ -399,7 +404,7 @@ async def test_present_server_builder_receives_complete_request_contract() -> No
     )
     settings = SimpleNamespace(
         code_execution=SimpleNamespace(
-            tools=SimpleNamespace(present_server_enabled=True)
+            tools=SimpleNamespace(present_server=SimpleNamespace(enabled=True))
         )
     )
 

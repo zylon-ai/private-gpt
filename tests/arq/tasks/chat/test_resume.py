@@ -32,7 +32,11 @@ async def test_enqueue_resume_iteration_job_allows_multiple_rounds(
     assert enqueue_job.await_count == 2
     job_ids = []
     for index, call in enumerate(enqueue_job.await_args_list, start=1):
-        assert call.kwargs["args"] == ("chat-1", f"checkpoint-{index}")
+        assert call.kwargs["args"] == (
+            "chat-1",
+            f"checkpoint-{index}",
+            {},  # context snapshot — no principal in test context
+        )
         assert call.kwargs["correlation_id"] == "chat-1"
         assert call.kwargs["job_id"].startswith("chat-1:resume:checkpoint-")
         job_ids.append(call.kwargs["job_id"])
@@ -67,7 +71,7 @@ async def test_enqueue_tool_resume_job_passes_error_result_as_arq_argument(
     assert accepted is False
     enqueue_job.assert_awaited_once()
     call = enqueue_job.await_args.kwargs
-    assert call["args"] == ("chat-1", "semantic-search-1", result)
+    assert call["args"] == ("chat-1", "semantic-search-1", result, {})
     assert call["correlation_id"] == "chat-1"
     assert call["job_id"] == "chat-1:tool-result:semantic-search-1"
 
@@ -122,6 +126,7 @@ async def test_enqueue_tool_timeout_job_is_deferred_and_separate_from_result_job
         "search",
         "celery-task-1",
         30,
+        {},
     )
 
 

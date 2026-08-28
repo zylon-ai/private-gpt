@@ -6,6 +6,7 @@ from llama_index.core.base.llms.types import ChatMessage
 
 from private_gpt.components.chat.models.chat_config_models import (
     ChatRequest,
+    ResolvedChatRequest,
     ToolSpec,
 )
 from private_gpt.components.context.models.context_layer import ToolDefinitionsLayer
@@ -193,7 +194,7 @@ async def test_tool_refresh_is_consumed_by_interceptor_and_persisted() -> None:
         "metadata": {"artifact_id": "artifact-123"},
     }
     input_state = ChatInputState(
-        request=ChatRequest(
+        request=ResolvedChatRequest(
             messages=[
                 ChatMessage(
                     role="tool",
@@ -267,7 +268,7 @@ async def test_stale_tool_refresh_is_consumed_without_overwriting_newer_tokens()
     )
     tool = _mcp_tool("lookup", config)
     input_state = ChatInputState(
-        request=ChatRequest(
+        request=ResolvedChatRequest(
             messages=[
                 ChatMessage(
                     role="tool",

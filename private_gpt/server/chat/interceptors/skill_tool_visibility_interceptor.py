@@ -1,5 +1,4 @@
 import re
-from collections.abc import Sequence
 
 from injector import inject, singleton
 
@@ -17,7 +16,6 @@ from private_gpt.components.engines.chat.models.chat_interceptor_context import 
 from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
 )
-from private_gpt.components.skills.models.skill_entities import SkillFilter
 from private_gpt.components.tools.tool_names import (
     SKILL_LIST_TOOL_NAME,
     SKILL_LOAD_TOOL_NAME,
@@ -26,8 +24,9 @@ from private_gpt.components.tools.tool_names import (
 )
 from private_gpt.server.chat.interceptors.skills_loop_interceptor import (
     _resolve_active_skill_names,
+    find_skill_filter,
+    partition_skill_entries,
 )
-from private_gpt.server.utils.artifact_input import ArtifactType, SkillArtifact
 
 
 @singleton
@@ -57,35 +56,31 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
         has_catalog = False  # at least one non-eager skill not yet loaded
         has_loaded_non_eager = False  # at least one non-eager skill currently loaded
         allowed_tools: set[str] = set()
+        loaded_names: list[str] = []
 
-        skill_filter = self._find_skill_filter(state.input.request.tool_context)
+        skill_filter = find_skill_filter(state.input.request.tool_context, tools)
         if skill_filter is not None and state.runtime.cache.skill is not None:
             cache = state.runtime.cache.skill
-            entries = cache.entries
             active_names = _resolve_active_skill_names(state.input.request.messages)
-
-            for entry in entries:
-                skill = entry.skill
-                version = entry.version
-                loading = skill.loading
-                name = version.frontmatter.name
-                is_eager = loading == "eager"
-                is_active = is_eager or name in active_names
-
-                if is_active:
-                    has_loaded_skill = True
-                    if not is_eager:
-                        has_loaded_non_eager = True
-                    if version.frontmatter.allowed_tools:
-                        allowed_tools.update(
-                            self._normalize_token(item)
-                            for item in version.frontmatter.allowed_tools
-                        )
-                else:
-                    has_catalog = True
+            partition = partition_skill_entries(cache.entries, active_names)
+            loaded_names = sorted(partition.loaded_names)
+            has_loaded_skill = bool(partition.loaded_names)
+            has_catalog = bool(partition.catalog_entries)
+            has_loaded_non_eager = bool(partition.active_lazy_versions)
+            for version in (
+                *partition.eager_versions,
+                *partition.active_lazy_versions,
+            ):
+                if version.frontmatter.allowed_tools:
+                    allowed_tools.update(
+                        self._normalize_token(item)
+                        for item in version.frontmatter.allowed_tools
+                    )
 
         filtered = [
-            tool
+            self._with_loaded_names(tool, loaded_names)
+            if tool.name == SKILL_LIST_TOOL_NAME
+            else tool
             for tool in tools
             if self._is_visible(
                 tool=tool,
@@ -104,13 +99,22 @@ class SkillToolVisibilityInterceptor(ChatRequestLoopInterceptor):
         state.input.context_stack = stack
         context.set_state(state)
 
-    def _find_skill_filter(
-        self, tool_context: Sequence[ArtifactType]
-    ) -> SkillFilter | None:
-        for artifact in tool_context:
-            if isinstance(artifact, SkillArtifact):
-                return artifact.skill_filter
-        return None
+    @staticmethod
+    def _with_loaded_names(tool: ToolSpec, loaded_names: list[str]) -> ToolSpec:
+        metadata = tool.execution_metadata
+        if metadata is None:
+            return tool
+        kwargs = dict(metadata.rebuild_kwargs)
+        if kwargs.get("loaded_names") == loaded_names:
+            return tool
+        kwargs["loaded_names"] = loaded_names
+        return tool.model_copy(
+            update={
+                "execution_metadata": metadata.model_copy(
+                    update={"rebuild_kwargs": kwargs}
+                )
+            }
+        )
 
     def _is_visible(
         self,

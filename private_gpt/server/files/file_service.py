@@ -157,8 +157,8 @@ class FileService:
         filename = upload.filename or "upload"
         mime_type = _detect_mime_from_bytes(content)
 
-        rel_path = self._normalize_upload_path(path=path, fallback=filename)
-        prefix = self._uploads_prefix(scope_id)
+        folder, rel_path = self._split_session_target(path=path, fallback=filename)
+        prefix = f"{folder}/{scope_id}"
         await storage.write_file(prefix, rel_path, content, mime_type)
 
         file_info = await storage.stat_file(prefix, rel_path)
@@ -166,7 +166,7 @@ class FileService:
             raise HTTPException(
                 status_code=500, detail="File written but could not be read back."
             )
-        file_info = file_info.model_copy(update={"path": f"uploads/{rel_path}"})
+        file_info = file_info.model_copy(update={"path": f"{folder}/{rel_path}"})
         return self._to_metadata(file_info, scope_id)
 
     async def put_file(
@@ -176,15 +176,16 @@ class FileService:
         content: bytes,
         mime_type: str | None = None,
     ) -> FileMetadata:
-        """S3/blob-style put-object: store *content* at an arbitrary key.
+        """S3/blob-style put-object: store *content* at an arbitrary session key.
 
-        The key is interpreted relative to the session's uploads mount (i.e.
-        ``/mnt/user-data/uploads/`` in the sandbox), so files pushed this way
-        stay visible to the agent and to the existing listing/download flows.
+        Keys default to the uploads mount (i.e. ``/mnt/user-data/uploads/``).
+        A leading ``outputs/`` segment selects the outputs mount instead, which
+        lets callers push generated deliverables directly into
+        ``/mnt/user-data/outputs/``.
         """
         storage = self._require_storage()
-        rel_path = self._normalize_upload_path(path=path, fallback="upload")
-        prefix = self._uploads_prefix(scope_id)
+        folder, rel_path = self._split_session_target(path=path, fallback="upload")
+        prefix = f"{folder}/{scope_id}"
         await storage.write_file(
             prefix, rel_path, content, mime_type or _detect_mime_from_bytes(content)
         )
@@ -194,7 +195,7 @@ class FileService:
             raise HTTPException(
                 status_code=500, detail="File written but could not be read back."
             )
-        file_info = file_info.model_copy(update={"path": f"uploads/{rel_path}"})
+        file_info = file_info.model_copy(update={"path": f"{folder}/{rel_path}"})
         return self._to_metadata(file_info, scope_id)
 
     async def list_files(
@@ -546,6 +547,27 @@ class FileService:
                 entry.unlink()
                 count += 1
         return count
+
+    def _split_session_target(self, path: str | None, fallback: str) -> tuple[str, str]:
+        """Return the virtual session mount and key for a write request.
+
+        Unless a request explicitly selects ``outputs/``, ordinary keys are
+        written to ``uploads/``. A leading ``outputs/`` segment selects the
+        output mount; nested occurrences (including under an explicit
+        ``uploads/`` prefix) remain part of the requested key.
+        """
+        normalized = self._normalize_upload_path(path=path, fallback=fallback)
+        parts = PurePosixPath(normalized).parts
+        if parts and parts[0] == "outputs":
+            relative = "/".join(parts[1:])
+            if not relative:
+                raise HTTPException(
+                    status_code=400,
+                    detail="path must point to a file below 'outputs/', "
+                    "not the directory itself.",
+                )
+            return "outputs", relative
+        return "uploads", normalized
 
     @staticmethod
     def _validate_file_id(file_id: str) -> None:
