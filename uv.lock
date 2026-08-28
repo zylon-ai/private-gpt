@@ -3613,7 +3613,7 @@ vectorstore-qdrant = [
 [package.metadata]
 requires-dist = [
     { name = "aiobotocore", marker = "extra == 'storage-s3'", specifier = ">=3.6.0,<3.10" },
-    { name = "anthropic", marker = "extra == 'llm-anthropic'", specifier = ">=0.122.0" },
+    { name = "anthropic", marker = "extra == 'llm-anthropic'", specifier = ">=1.2.0" },
     { name = "arq", specifier = ">=0.26,<0.29" },
     { name = "asyncpg", marker = "extra == 'database-postgres'", specifier = ">=0.31.0,<0.32" },
     { name = "beautifulsoup4", marker = "extra == 'ingest-markup'", specifier = ">=4.14.3,<5" },
