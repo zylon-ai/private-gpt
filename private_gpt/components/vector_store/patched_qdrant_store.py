@@ -237,9 +237,7 @@ class PatchedQdrantVectorStore(QdrantVectorStore):
             return
 
         if not self._client.collection_exists(collection_name=collection_name):
-            from qdrant_client.qdrant_fastembed import (  # ty:ignore[unresolved-import]
-                IDF_EMBEDDING_MODELS,
-            )
+            from qdrant_client.fastembed_common import IDF_EMBEDDING_MODELS
 
             # Create collection with config
             dense_config = models.VectorParams(
