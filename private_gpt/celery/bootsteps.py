@@ -2,7 +2,7 @@ import fcntl
 import logging
 import os
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any
 
 from celery import bootsteps  # ty:ignore[unresolved-import]
 from celery.signals import (
@@ -28,21 +28,21 @@ class LivenessProbe(bootsteps.StartStopStep):
     https://github.com/celery/celery/issues/4079#issuecomment-1270085680
     """
 
-    requires: ClassVar[set[str]] = {"celery.worker.components:Timer"}
+    requires: tuple[str, ...] = ("celery.worker.components:Timer",)
 
     def __init__(self, parent: Any, **kwargs: Any) -> None:
         super().__init__(parent, **kwargs)
         self.tref = None
 
-    def start(self, worker: Any) -> None:
-        self.tref = worker.timer.call_repeatedly(
+    def start(self, parent: Any) -> None:
+        self.tref = parent.timer.call_repeatedly(
             1.0,
             self.update_heartbeat_file,
-            (worker,),
+            (parent,),
             priority=10,  # Every second
         )
 
-    def stop(self, worker: Any) -> None:
+    def stop(self, parent: Any) -> None:
         HEARTBEAT_FILE.unlink(missing_ok=True)
 
     def update_heartbeat_file(self, worker: Any) -> None:

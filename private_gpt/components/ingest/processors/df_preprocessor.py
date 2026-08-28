@@ -70,7 +70,7 @@ class DataFramePreprocessor:
             return False
 
         # First check if values match common datetime patterns
-        str_values = non_empty.astype(str).str.strip()
+        str_values = non_empty.astype("string").str.strip()
         combined_pattern = "|".join(self._datetime_patterns)
         pattern_matches = str_values.str.match(combined_pattern).sum()
 
@@ -129,7 +129,7 @@ class DataFramePreprocessor:
                     return datetime_column
 
         # Return as cleaned string
-        return column.astype(str).str.strip()
+        return column.astype("string").str.strip()
 
     def _is_default_header(self, df: pd.DataFrame) -> bool:
         """Check if DataFrame has default numeric headers."""

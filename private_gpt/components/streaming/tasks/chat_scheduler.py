@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from typing import cast
 
 from injector import Injector, inject, singleton
 
@@ -65,12 +66,16 @@ class ChatSchedulerFactory:
             raise ValueError(f"Unknown scheduler.chat.mode: {mode}")
 
     def get(self) -> BaseChatScheduler:
-        if self._scheduler is None:
-            mode = self._settings.scheduler.chat.mode
-            provider = _CHAT_SCHEDULERS[mode]
-            self._scheduler = (
-                self._injector.get(provider)
-                if isinstance(provider, type)
-                else provider(self._injector)
-            )
-        return self._scheduler
+        if self._scheduler is not None:
+            return self._scheduler
+
+        mode = self._settings.scheduler.chat.mode
+        provider = _CHAT_SCHEDULERS[mode]
+        scheduler = cast(
+            BaseChatScheduler,
+            self._injector.get(provider)
+            if isinstance(provider, type)
+            else provider(self._injector),
+        )
+        self._scheduler = scheduler
+        return scheduler

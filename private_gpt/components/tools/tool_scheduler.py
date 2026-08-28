@@ -5,7 +5,7 @@ import logging
 from abc import ABC, abstractmethod
 from asyncio import CancelledError, to_thread
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from celery.exceptions import TimeoutError as CeleryTimeoutError
 from injector import Injector, inject, singleton
@@ -285,14 +285,18 @@ class ToolSchedulerFactory:
         self._scheduler: BaseToolScheduler | None = None
 
     def get(self) -> BaseToolScheduler:
-        if self._scheduler is None:
-            mode = self._settings.scheduler.tools.mode
-            provider = _TOOL_SCHEDULERS.get(mode)
-            if provider is None:
-                raise ValueError(f"Unknown scheduler.tools.mode: {mode}")
-            self._scheduler = (
-                self._injector.get(provider)
-                if isinstance(provider, type)
-                else provider(self._injector)
-            )
-        return self._scheduler
+        if self._scheduler is not None:
+            return self._scheduler
+
+        mode = self._settings.scheduler.tools.mode
+        provider = _TOOL_SCHEDULERS.get(mode)
+        if provider is None:
+            raise ValueError(f"Unknown scheduler.tools.mode: {mode}")
+        scheduler = cast(
+            BaseToolScheduler,
+            self._injector.get(provider)
+            if isinstance(provider, type)
+            else provider(self._injector),
+        )
+        self._scheduler = scheduler
+        return scheduler

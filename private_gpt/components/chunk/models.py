@@ -140,14 +140,17 @@ class Chunk(BaseModel):
     @classmethod
     def from_node(cls: type["Chunk"], node: NodeWithScore) -> "Chunk":
         """Create a Chunk instance from a NodeWithScore object."""
-        metadata = {k: v for k, v in node.metadata.items() if k in list(MetadataChunk)}
-        if MetadataChunk.ABS_IDX not in metadata:
+        valid_metadata_values = {member.value for member in MetadataChunk}
+        metadata: dict[str, Any] = {
+            k: v for k, v in node.metadata.items() if k in valid_metadata_values
+        }
+        if MetadataChunk.ABS_IDX.value not in metadata:
             abs_idx = node.node.abs_idx if isinstance(node.node, TreeNode) else 0
-            metadata[MetadataChunk.ABS_IDX] = abs_idx
+            metadata[MetadataChunk.ABS_IDX.value] = abs_idx
 
-        if MetadataChunk.REL_IDX not in metadata:
+        if MetadataChunk.REL_IDX.value not in metadata:
             idx = node.node.idx if isinstance(node.node, TreeNode) else 0
-            metadata[MetadataChunk.REL_IDX] = idx
+            metadata[MetadataChunk.REL_IDX.value] = idx
 
         mimetype = getattr(node.node, "mimetype", "text/markdown")
         if not isinstance(mimetype, str):
