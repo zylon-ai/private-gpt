@@ -120,7 +120,7 @@ CONTENT_BLOCK_REGISTRY: list[TypeMapping] = [
         sdk_schema_name="ToolUseBlock",
         openapi_schema_name=None,
         zylon_only_fields=_CACHEABLE_ZYLON_FIELDS,
-        sdk_only_fields=frozenset(),
+        sdk_only_fields=frozenset({"toolset_name"}),
         sdk_sample={
             "type": "tool_use",
             "id": "toolu_01abc",

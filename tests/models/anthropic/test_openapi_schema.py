@@ -423,7 +423,7 @@ class TestOpenAPISchemaCompatibility:
                     "stop_reason": "stop_sequence",
                     "model": "claude-sonnet-4-6",
                 },
-                sdk_types.Completion,
+                None,  # Text Completions types were removed in anthropic SDK 1.x
             ),
             (
                 "ListResponse_ModelInfo_",

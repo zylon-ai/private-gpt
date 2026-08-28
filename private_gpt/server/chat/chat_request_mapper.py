@@ -25,7 +25,7 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.filesystems.mount_resolver import MountResolver
 from private_gpt.components.tools.tool_pipeline import ToolPipeline
 from private_gpt.components.tools.types import ToolValidationMode
-from private_gpt.server.chat.chat_models import ChatBody
+from private_gpt.server.chat.chat_models import ChatBody, resolve_container_id
 from private_gpt.settings.settings import Settings
 
 
@@ -217,7 +217,7 @@ class ChatRequestMapper:
                 user_id=body.metadata.user_id
                 if body.metadata and body.metadata.user_id
                 else str(uuid.uuid4()),
-                container=body.container,
+                container=resolve_container_id(body.container),
                 mounts=self._mount_resolver.resolve(body.mounts or []),
                 maximum_context_length=self._settings.chat.maximum_context_length,
                 maximum_loaded_skills=(

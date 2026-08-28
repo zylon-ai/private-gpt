@@ -255,7 +255,12 @@ class MarkdownTreeNodeParser(TransformComponent):
             markdown: str = _MD_CONVERTER.process_tag(  # ty:ignore[unresolved-attribute]
                 element
             )
-            markdown = markdown.replace("\\", "")
+            # markdownify wraps block-level output (e.g. <p>) in a leading
+            # "\n\n" as well as a trailing one. Since these markdown chunks
+            # are concatenated with sibling nodes (which already end in
+            # their own trailing blank line), keeping the leading newlines
+            # causes blank lines to double up between consecutive blocks.
+            markdown = markdown.replace("\\", "").lstrip("\n")
             markdown = MarkdownHelper.sanitize_markdown(markdown)
             return markdown
 
