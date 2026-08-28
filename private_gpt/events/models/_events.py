@@ -4,7 +4,11 @@ from uuid import uuid4
 
 from pydantic import Field
 
-from private_gpt.events.models._base import BaseContentBlock, StandardContentProtocol
+from private_gpt.events.models._base import (
+    BaseContentBlock,
+    ExtendedContentProtocol,
+    StandardContentProtocol,
+)
 from private_gpt.events.models._deltas import ContentBlockDeltaType
 from private_gpt.events.models._errors import FatalError
 from private_gpt.events.models._message import Message, MessageOutputDelta, Usage
@@ -127,6 +131,33 @@ class PingEvent(BaseContentBlock, StandardContentProtocol):
     type: Literal["ping"] = Field(default="ping")
 
 
+class McpTokensRefreshedEvent(BaseContentBlock, ExtendedContentProtocol):
+    """Zylon-only notification carrying refreshed MCP OAuth credentials."""
+
+    type: Literal["mcp_tokens_refreshed"] = Field(default="mcp_tokens_refreshed")
+    name: str = Field(description="The MCP server name.")
+    url: str = Field(description="The MCP server URL.")
+    authorization_token: str = Field(description="The rotated access token.")
+    refresh_token: str = Field(description="The rotated refresh token.")
+
+    def __str__(self) -> str:
+        return f"McpTokensRefreshedEvent(type={self.type!r}, name={self.name!r}, url={self.url!r})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+class McpTokensRefreshFailedEvent(BaseContentBlock, ExtendedContentProtocol):
+    """Zylon-only notification that MCP OAuth refresh failed."""
+
+    type: Literal["mcp_tokens_refresh_failed"] = Field(
+        default="mcp_tokens_refresh_failed"
+    )
+    name: str = Field(description="The MCP server name.")
+    url: str = Field(description="The MCP server URL.")
+    error: str = Field(description="A sanitized refresh failure description.")
+
+
 Event = Annotated[
     RawContentBlockStartEvent
     | RawContentBlockDeltaEvent
@@ -135,6 +166,8 @@ Event = Annotated[
     | RawMessageDeltaEvent
     | RawMessageStopEvent
     | PingEvent
+    | McpTokensRefreshedEvent
+    | McpTokensRefreshFailedEvent
     | FatalError,
     Field(discriminator="type"),
 ]

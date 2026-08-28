@@ -83,6 +83,9 @@ navigation:
           - page: DaoXE
             slug: providers/daoxe
             path: ./docs/pages/providers/daoxe.mdx
+          - page: OrcaRouter
+            slug: providers/orcarouter
+            path: ./docs/pages/providers/orcarouter.mdx
       - section: Integrations
         skip-slug: true
         contents:

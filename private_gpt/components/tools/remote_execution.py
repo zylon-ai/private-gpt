@@ -38,9 +38,7 @@ from private_gpt.events.models import (
 if TYPE_CHECKING:
     from llama_index.core.tools import AsyncBaseTool
 
-    from private_gpt.components.engines.chat.models.chat_state import (
-        ChatState,
-    )
+    from private_gpt.components.engines.chat.models.chat_state import ChatState
     from private_gpt.components.engines.chat.models.execution_hooks import (
         ToolExecutionHook,
     )

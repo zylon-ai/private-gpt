@@ -201,11 +201,11 @@ PrivateGPT 1.0 is the evolution of that idea — rebuilt from the ground up as a
 
 <!-- Read the [PrivateGPT 1.0 launch post](https://blog.zylon.ai/privategpt-launch) for context on where it started and why. -->
 
-<a href="https://www.star-history.com/?repos=zylon-ai%2Fprivate-gpt&type=date&legend=top-left">
+<a href="https://star-history.dera.page/#zylon-ai/private-gpt&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=zylon-ai/private-gpt&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=zylon-ai/private-gpt&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=zylon-ai/private-gpt&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=zylon-ai/private-gpt&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=zylon-ai/private-gpt&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=zylon-ai/private-gpt&type=date&legend=top-left" />
  </picture>
 </a>
 

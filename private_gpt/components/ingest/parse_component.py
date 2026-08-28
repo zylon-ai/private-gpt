@@ -30,6 +30,9 @@ from private_gpt.components.ingest.utils import (
 from private_gpt.components.readers.docling.docling_api_reader import (
     ExtractionUnsuccessfulError,
 )
+from private_gpt.components.readers.pdf_inspector.pdf_inspector_reader import (
+    PdfInspectorFallbackError,
+)
 from private_gpt.components.readers.reader_component import ReaderComponent
 from private_gpt.settings.settings import Settings
 
@@ -91,69 +94,36 @@ class ParseComponent:
         warnings: list[str] | None = None,
     ) -> FileParseResult:
         converted_file = convert_unsupported_file(file_info)
-        resolved_reader = reader_name or self._resolve_reader(converted_file.extension)
 
-        try:
-            nodes = self._load_data(
-                converted_file,
-                file_metadata,
-                notification=notification,
-                warnings=warnings,
-                reader_name=resolved_reader,
-            )
-        except ExtractionUnsuccessfulError as e:
-            logger.warning("Extraction unsuccessful for %s: %s", file_info.file_name, e)
-            try:
-                vision_nodes = self._extract_with_vision_fallback(
-                    converted_file,
-                    file_metadata,
-                    notification=notification,
-                    warnings=warnings,
-                )
-            except Exception as vision_error:
-                # Vision reader was available but failed during extraction
-                logger.error(
-                    "Vision reader fallback failed for %s: %s",
-                    file_info.file_name,
-                    vision_error,
-                    exc_info=True,
-                )
-                raise InvalidFileError(
-                    errors=[IngestionParseErrors.PARSING_FAILURE],
-                    warnings=warnings,
-                ) from vision_error
+        # 1) Try the reader chain for the original format
+        nodes, resolved_reader = self._try_readers(
+            converted_file,
+            file_metadata,
+            extension=converted_file.extension,
+            preferred_reader=reader_name,
+            notification=notification,
+            warnings=warnings,
+        )
 
-            if vision_nodes:
-                nodes = vision_nodes
-            else:
-                raise InvalidFileError(
-                    errors=[IngestionParseErrors.PARSING_FAILURE],
-                    warnings=warnings,
-                ) from e
-        except RuntimeError as e:
-            raise InvalidFileError(errors=[IngestionParseErrors.PARSING_FAILURE]) from e
-        except Exception as e:
-            logger.error("Error loading file: %s", e, exc_info=True)
-
+        # 2) If nothing worked, convert to PDF as a last resort
+        if not nodes:
             converted_fallback = convert_unsupported_file_as_fallback(file_info)
             if converted_fallback:
-                resolved_reader = self._resolve_reader(converted_fallback.extension)
                 if notification:
                     notification(
                         percentage=0,
                         warnings=[IngestionParseErrors.FALLBACK_TO_PDF_TO_TEXT],
                     )
-                nodes = self._load_data(
+                nodes, resolved_reader = self._try_readers(
                     converted_fallback,
                     file_metadata,
+                    extension=converted_fallback.extension,
+                    preferred_reader=None,  # let it resolve from scratch for pdf
                     notification=notification,
                     warnings=warnings,
-                    reader_name=resolved_reader,
                 )
-            else:
-                nodes = []
 
-        if not nodes:
+        if not nodes or not resolved_reader:
             logger.info("No valid nodes found in the file.")
             raise InvalidFileError(
                 errors=[IngestionLoadErrors.NO_VALID_FILES], warnings=warnings
@@ -161,9 +131,63 @@ class ParseComponent:
 
         return FileParseResult(nodes=nodes, reader=resolved_reader)
 
+    def _try_readers(
+        self,
+        file_obj,
+        file_metadata: dict[str, Any] | None,
+        extension: str | None,
+        preferred_reader: str | None,
+        notification: NotifyProtocol | None,
+        warnings: list[str] | None,
+    ) -> tuple[list, str | None]:
+        """Tries readers in a chain for a given file/extension.
+
+        Returns (nodes, reader_used), or ([], None) if all of them fail.
+        """
+        reader = preferred_reader or self._resolve_reader(extension)
+
+        while reader is not None:
+            try:
+                nodes = self._load_data(
+                    file_obj,
+                    file_metadata,
+                    notification=notification,
+                    warnings=warnings,
+                    reader_name=reader,
+                )
+                if nodes:
+                    return nodes, reader
+            except (
+                PdfInspectorFallbackError,
+                ExtractionUnsuccessfulError,
+                RuntimeError,
+            ) as e:
+                logger.warning("Reader %s failed for %s: %s", reader, extension, e)
+            except Exception as e:
+                logger.error(
+                    "Unexpected error with reader %s: %s", reader, e, exc_info=True
+                )
+
+            reader = self._next_reader(extension, reader)
+
+        return [], None
+
     def _resolve_reader(self, extension: str | None) -> str:
         names = self.reader_component.get_reader_names(extension=extension or "")
         return names[0] if names else "text"
+
+    def _next_reader(self, extension: str | None, current_reader: str) -> str | None:
+        """Return the reader configured to run after ``current_reader``.
+
+        Used to fall back to the next entry in the extension's reader chain
+        (e.g. pdf-inspector -> docling) without hardcoding a specific name.
+        """
+        names = self.reader_component.get_reader_names(extension=extension or "")
+        names_iter = iter(names)
+        for name in names_iter:
+            if name == current_reader:
+                return next(names_iter, None)
+        return None
 
     def _get_file_info(
         self,

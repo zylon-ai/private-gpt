@@ -15,8 +15,12 @@ class MarkdownHelper:
         if any(char in processed for char in "●·•◦▪▫"):
             processed = re.sub(r"[●·•◦▪▫]\s*", "- ", processed)
 
+        # Table rows keep their inline formatting (bold, italic, links, code)
+        # intact so it survives HTML conversion and table cell parsing.
+        is_table_row = processed.strip().startswith("|")
+
         # Quick check if any formatting exists
-        if "*" in processed or "_" in processed:
+        if not is_table_row and ("*" in processed or "_" in processed):
             # 1. Remove bold-italic first (***text*** or ___text___)
             if "***" in processed:
                 processed = re.sub(r"\*\*\*(.*?)\*\*\*", r"\1", processed)

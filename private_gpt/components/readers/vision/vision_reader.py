@@ -10,13 +10,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from llama_index.core.ingestion import arun_transformations
 from llama_index.core.schema import BaseNode, Document
 from PIL import Image
 
 from private_gpt.celery.notify import NotifyProtocol
 from private_gpt.components.ingest.progress.errors import IngestionParseErrors
 from private_gpt.components.ingest.utils import FileInfo
+from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import supports_images
 from private_gpt.components.readers.base_reader import IngestionReader
 from private_gpt.components.readers.vision.vision_transforms import (
@@ -31,6 +31,27 @@ logger = logging.getLogger(__name__)
 # Lower than slide renders: documents are dense text which benefits from
 # JPEG at this resolution, staying well within VLM context windows.
 _RENDER_SCALE = 1.5
+
+
+class VisionReaderDisabledError(RuntimeError):
+    """Raised when the vision reader is disabled in settings."""
+
+    def __init__(self, file_name: str) -> None:
+        super().__init__(f"Vision reader is disabled in settings (file: {file_name})")
+
+
+class NoMultimodalModelError(RuntimeError):
+    """Raised when no multimodal LLM is configured/available."""
+
+    def __init__(self, file_name: str) -> None:
+        super().__init__(f"No multimodal LLM available (file: {file_name})")
+
+
+class PdfRenderError(RuntimeError):
+    """Raised when a PDF cannot be rendered into page images."""
+
+    def __init__(self, file_name: str) -> None:
+        super().__init__(f"Failed to render PDF to images (file: {file_name})")
 
 
 class MetadataChunk(Enum):
@@ -136,45 +157,54 @@ class VisionReader(IngestionReader):
             )
         return docs
 
+    def _check_multimodal_llm_available(self) -> bool:
+        llm_component = get_global_injector().get(LLMComponent)
+        if not llm_component:
+            return False
+        return any(llm_component.filter(lambda llm, cfg: supports_images(llm, cfg)))
+
+    def _ensure_vision_available(self, file_name: str) -> None:
+        """Raises if the vision pipeline can't run for this file."""
+        if not self._reader_settings or not self._reader_settings.vision.is_enabled:
+            logger.debug(
+                "Vision reader is disabled in settings, skipping file: %s", file_name
+            )
+            raise VisionReaderDisabledError(file_name)
+
+        if not self._check_multimodal_llm_available():
+            logger.debug("No multimodal LLM available, skipping file: %s", file_name)
+            raise NoMultimodalModelError(file_name)
+
     async def lazy_load_data(
         self,
         file_info: FileInfo,
         extra_info: dict[str, Any] | None = None,
         execute_transformations: bool = True,
         notification: NotifyProtocol | None = None,
-        *args: Any,
-        **load_kwargs: Any,
     ) -> AsyncIterable[BaseNode]:
-        # Resolve the vision mode (deep / lite / none) the same way as pptx.
-        vision_mode: str = "none"
-        if self._reader_settings and self._reader_settings.vision.is_enabled:
-            from private_gpt.components.llm.llm_component import LLMComponent
+        file_name = file_info.file_name or "unknown"
+        self._ensure_vision_available(file_name)
 
-            llm_component = get_global_injector().get(LLMComponent)
-            have_multimodal_model = (
-                any(llm_component.filter(lambda llm, cfg: supports_images(llm, cfg)))
-                if llm_component
-                else False
-            )
-            vision_mode = self._reader_settings.vision.get_vision_mode(
-                have_multimodal_model
-            )
+        with self._timed_phase("parsing", file_name):
+            try:
+                page_images = await asyncio.to_thread(
+                    self._render_pdf_to_images,
+                    file_info.file_data.absolute(),
+                    _RENDER_SCALE,
+                )
+            except Exception as e:
+                logger.exception("Failed to render PDF to images: %s", file_name)
+                raise PdfRenderError(file_name) from e
 
-        # Rasterize the PDF (blocking / CPU-bound -> thread).
-        page_images = await asyncio.to_thread(
-            self._render_pdf_to_images,
-            file_info.file_data.absolute(),
-            _RENDER_SCALE,
-        )
         docs = self._create_docs(page_images=page_images, extra_info=extra_info)
 
-        if self._reader_settings.vision.is_enabled and notification:
+        if notification:
             notification(
                 percentage=0,
                 warnings=[IngestionParseErrors.USING_VLM_FOR_EXTRACTION],
             )
 
-        logger.info(f"Created {len(docs)} documents from {file_info.file_name}")
+        logger.info("Created %d documents from %s", len(docs), file_info.file_name)
 
         if not execute_transformations:
             logger.debug("Skipping transformations for file: %s", file_info.file_name)
@@ -186,14 +216,12 @@ class VisionReader(IngestionReader):
             "Starting PDF vision transformations of file: %s", file_info.file_name
         )
 
-        for transformed_node in await arun_transformations(
-            nodes=docs,
-            transformations=list(
-                vision_docs_transformations(
-                    reader_settings=self._reader_settings, vision_mode=vision_mode
-                )
-            ),
-        ):
+        transformed_nodes = await self._run_transformations_with_timing(
+            docs,
+            vision_docs_transformations(reader_settings=self._reader_settings),
+            file_info.file_name,
+        )
+        for transformed_node in transformed_nodes:
             yield transformed_node
 
         logger.debug("Finished PDF vision parsing of file: %s", file_info.file_name)
