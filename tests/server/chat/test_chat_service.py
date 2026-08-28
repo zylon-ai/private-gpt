@@ -77,6 +77,49 @@ def _mock_engine_for(stream: AsyncGenerator[Event, None]) -> MagicMock:
     return mock_engine
 
 
+def test_build_engines_use_configured_max_iterations(
+    injector: MockInjector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    injector.bind_settings({"chat": {"engine_mode": "async", "max_iterations": 7}})
+    service = injector.get(ChatService)
+    service.chat_interceptor_service = MagicMock()
+    chain = MagicMock()
+    chain.request_interceptors = []
+    chain.response_interceptors = []
+    chain.tool_interceptors = []
+    service.chat_interceptor_service.get_chain.return_value = chain
+
+    captured: dict[str, int] = {}
+
+    class FakeAsyncEngine:
+        def __init__(self, **kwargs: object) -> None:
+            captured["async"] = int(kwargs["max_iterations"])
+
+    class FakeLoopEngine:
+        def __init__(self, **kwargs: object) -> None:
+            self.max_iterations = int(kwargs["max_iterations"])
+
+    class FakeLoopAdapter:
+        def __init__(self, **kwargs: object) -> None:
+            captured["loop_adapter"] = kwargs["engine"].max_iterations
+
+    monkeypatch.setattr(
+        "private_gpt.server.chat.chat_service.AsyncChatEngine", FakeAsyncEngine
+    )
+    monkeypatch.setattr(
+        "private_gpt.server.chat.chat_service.ChatLoopEngine", FakeLoopEngine
+    )
+    monkeypatch.setattr(
+        "private_gpt.server.chat.chat_service.LoopChatEngineAdapter", FakeLoopAdapter
+    )
+
+    service.build_async_engine()
+    service.build_loop_engine()
+
+    assert captured["async"] == 7
+    assert captured["loop_adapter"] == 7
+
+
 @pytest.mark.asyncio
 async def test_chat_folds_loop_events(injector: MockInjector) -> None:
     service: ChatService = injector.get(ChatService)

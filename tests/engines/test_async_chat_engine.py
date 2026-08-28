@@ -330,6 +330,8 @@ async def _run_async_engine(
                     has_output_usage=state.runtime.has_output_usage,
                 ),
                 original_input=state.original_input,
+                runtime_cache=state.runtime.cache,
+                runtime=state.runtime,
             ),
             channel=channel2,
         )
@@ -350,6 +352,35 @@ class _RecordingRequestInterceptor(ChatRequestLoopInterceptor):
                 [message.role for message in context.state.input.request.messages],
             )
         )
+
+
+@pytest.mark.asyncio
+async def test_execute_continues_when_tokenizer_is_unpickleable(
+    base_request: ResolvedChatRequest,
+) -> None:
+    """VALIDATION installs a real tokenizer; the next iteration must copy
+    runtime without pickling it (HF tokenizers hold a thread lock).
+    """
+    import threading
+
+    lock = threading.Lock()
+
+    def tokenizer(text: str) -> list[int]:
+        with lock:
+            return [1]
+
+    class _InstallTokenizer(ChatRequestLoopInterceptor):
+        async def intercept(self, context: ChatInterceptorContext) -> None:
+            if context.phase == InterceptorPhase.VALIDATION:
+                context.state.runtime.tokenizer_fn = tokenizer
+
+    result = await _run_async_engine(
+        base_request.model_copy(deep=True),
+        get_mock_function_calling_llm(["hello", " world"]),
+        tool_scheduler=_FakeAsyncToolScheduler(),
+        request_interceptors=[_InstallTokenizer()],
+    )
+    assert [state.output.status for state in result.states] == [ChatStatus.COMPLETED]
 
 
 @pytest.mark.asyncio
@@ -541,7 +572,9 @@ async def test_async_engine_rebuilds_runtime_before_condensation_after_tool_resu
         for observation in before_iteration
     )
     assert all(observation.has_tokenizer for observation in before_iteration)
-    assert llm_component.get_tokenizer.call_count == 3
+    # The runtime caches the tokenizer once on the first iteration, so
+    # get_tokenizer is called a single time (not per-iteration).
+    assert llm_component.get_tokenizer.call_count == 1
 
 
 @pytest.mark.asyncio
@@ -871,6 +904,8 @@ async def test_extract_citation_interceptor_converts_bracket_refs_on_resume(
                     has_output_usage=state.runtime.has_output_usage,
                 ),
                 original_input=state.original_input,
+                runtime_cache=state.runtime.cache,
+                runtime=state.runtime,
             ),
             channel=channel2,
         )
@@ -1003,3 +1038,223 @@ async def test_initialize_run_reuses_provided_original_input() -> None:
     )
     assert second_layers
     assert second_layers[0].text == [TextBlock(text="USER PROMPT")]
+
+
+@pytest.mark.asyncio
+async def test_initialize_run_keeps_platform_layers_when_stack_is_carried() -> None:
+    """Later iterations must not collapse platform layers into USER_INSTRUCTIONS."""
+    from llama_index.core.base.llms.types import TextBlock
+    from llama_index.core.llms.function_calling import FunctionCallingLLM
+
+    from private_gpt.chat.input_models import PromptConfig
+    from private_gpt.components.context.models.context_layer import (
+        SkillBodyLayer,
+        SkillCatalogEntry,
+        SkillCatalogLayer,
+        ToolInstructionsLayer,
+        UserInstructionsLayer,
+    )
+    from private_gpt.components.context.models.context_stack import ContextStack
+    from private_gpt.components.context.models.layer_type import LayerType
+    from private_gpt.components.engines.chat.models.chat_state import ChatRuntimeCache
+    from private_gpt.components.engines.chat.utils.request_builder import (
+        build_request_from_context_stack,
+    )
+
+    class _FakeFunctionLLM(FunctionCallingLLM):
+        @property
+        def metadata(self):
+            return MagicMock(is_function_calling_model=True, context_window=8192)
+
+        def _prepare_chat_with_tools(self, *a, **k):
+            return {}
+
+        async def achat(self, *a, **k):
+            raise NotImplementedError
+
+        def chat(self, *a, **k):
+            raise NotImplementedError
+
+        def stream_chat(self, *a, **k):
+            raise NotImplementedError
+
+        async def astream_chat(self, *a, **k):
+            raise NotImplementedError
+
+        def complete(self, *a, **k):
+            raise NotImplementedError
+
+        async def acomplete(self, *a, **k):
+            raise NotImplementedError
+
+        def stream_complete(self, *a, **k):
+            raise NotImplementedError
+
+        async def astream_complete(self, *a, **k):
+            raise NotImplementedError
+
+        def chat_with_tools(self, *a, **k):
+            raise NotImplementedError
+
+        async def achat_with_tools(self, *a, **k):
+            raise NotImplementedError
+
+        def stream_chat_with_tools(self, *a, **k):
+            raise NotImplementedError
+
+        async def astream_chat_with_tools(self, *a, **k):
+            raise NotImplementedError
+
+        def get_tool_calls_from_response(self, *a, **k):
+            return []
+
+    first_request = ResolvedChatRequest(
+        messages=[ChatMessage(role=MessageRole.USER, content="hello")],
+        system=ResolvedSystemConfig(
+            model="default",
+            prompt=[TextBlock(text="You are Zylon")],
+            platform_prompts=PromptConfig(tools=True, skills=True, code_execution=True),
+        ),
+    )
+    platform_stack = ContextStack(
+        layers=[
+            UserInstructionsLayer(text="You are Zylon", source="request"),
+            SkillCatalogLayer(
+                entries=[
+                    SkillCatalogEntry(
+                        id="1",
+                        name="skill-creator",
+                        description="Create skills",
+                        loading="lazy",
+                    )
+                ],
+                source="skills",
+            ),
+            SkillBodyLayer(
+                skill_id="rg",
+                name="response-guidelines",
+                version="1",
+                instructions="<response_formatting>Be clear.</response_formatting>",
+                source="skill:response-guidelines",
+                render_as_xml=False,
+            ),
+            ToolInstructionsLayer(
+                tool_name="bash",
+                instructions="BASH PLATFORM INSTRUCTIONS",
+                source="platform:code_execution",
+            ),
+        ]
+    )
+
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = _FakeFunctionLLM()
+    engine = AsyncChatEngine(
+        llm_component=llm_component,
+        chat_scheduler=MagicMock(),
+    )
+
+    first_run = engine.initialize_run(first_request, context_stack=platform_stack)
+    rendered = build_request_from_context_stack(
+        first_run.state.input.request, first_run.state.input.context_stack
+    )
+
+    # Mutated request (what the loop used to rebuild from) contains the full prompt.
+    assert "skill-creator" in "\n".join(
+        block.text for block in rendered.system.prompt or []
+    )
+
+    second_run = engine.initialize_run(
+        rendered,
+        context_stack=first_run.state.input.context_stack,
+        original_input=first_run.state.original_input,
+        runtime_cache=first_run.state.runtime.cache or ChatRuntimeCache(),
+    )
+    types = [layer.type for layer in second_run.state.input.context_stack.layers]
+    assert LayerType.SKILL_CATALOG in types
+    assert LayerType.SKILL_BODY in types
+    assert LayerType.TOOL_INSTRUCTIONS in types
+
+    rebuilt_without_stack = engine.initialize_run(
+        rendered,
+        original_input=first_run.state.original_input,
+    )
+    collapsed_types = [
+        layer.type for layer in rebuilt_without_stack.state.input.context_stack.layers
+    ]
+    assert LayerType.SKILL_CATALOG not in collapsed_types
+    assert LayerType.SKILL_BODY not in collapsed_types
+
+
+@pytest.mark.asyncio
+async def test_mcp_tool_survives_resumable_async_executor(
+    base_request: ResolvedChatRequest,
+) -> None:
+    """MCP discovery runs on the initial validation/iteration and the
+    discovered tool must remain executable when the async engine resumes
+    after a server-tool checkpoint."""
+    from unittest.mock import AsyncMock, patch
+
+    from private_gpt.server.chat.interceptors.mcp_interceptor import (
+        McpRequestInterceptor,
+    )
+    from private_gpt.server.mcp.config import McpServerConfig
+    from private_gpt.server.mcp.mcp_service import McpToolDefinition
+
+    request = base_request.model_copy(deep=True)
+    request.mcp_servers = [McpServerConfig(url="https://mcp.example.invalid")]
+    request.tool_config = ResolvedToolConfig(tools=[])
+
+    fake_client = MagicMock()
+    fake_client.list_tools = AsyncMock(
+        return_value=[
+            McpToolDefinition(
+                name="mcp_lookup",
+                description="MCP lookup",
+                input_schema={"type": "object", "properties": {}},
+            )
+        ]
+    )
+    fake_client.call_tool = AsyncMock(return_value="mcp-result")
+    fake_client.close = AsyncMock()
+
+    fake_mcp_service = MagicMock()
+    fake_mcp_service.create_client.return_value = fake_client
+
+    mock_llm = get_mock_function_calling_llm(
+        [
+            [
+                ToolSelection(
+                    tool_id="mcp-1",
+                    tool_name="mcp_lookup",
+                    tool_kwargs={"query": "x"},
+                )
+            ],
+            ["done"],
+        ]
+    )
+
+    with patch(
+        "private_gpt.server.mcp.mcp_service.McpClient",
+        return_value=fake_client,
+    ):
+        async_result = await _run_async_engine(
+            request,
+            mock_llm,
+            tool_scheduler=_FakeAsyncToolScheduler(),
+            request_interceptors=[McpRequestInterceptor(fake_mcp_service)],
+        )
+
+    assert [state.output.status for state in async_result.states] == [
+        ChatStatus.WAITING,
+        ChatStatus.COMPLETED,
+    ]
+    assert _tool_result_texts(async_result.events) == ["mcp-result"]
+    # Discovery happened once on the initial run; resume did not re-fetch.
+    assert fake_mcp_service.create_client.call_count == 1
+    # The discovered MCP tool is present in the final resumed state.
+    final_tools = [
+        tool.name
+        for tool in async_result.states[-1].input.context_stack.all_tools()
+        if tool.name
+    ]
+    assert "mcp_lookup" in final_tools

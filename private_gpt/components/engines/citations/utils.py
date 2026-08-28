@@ -221,11 +221,21 @@ def _extract_citations_from_text(
             for attr_match in attr_pattern.finditer(attributes)
         }
 
-        # Extract element value
+        # Extract element value. This text can originate from prior
+        # conversation history (client-supplied, not just model-generated),
+        # so a malformed body must never crash the whole request — skip
+        # just this one match instead.
         elements = match.group(2)
         if not elements:
-            elements = "{}"
-        element_value = json.loads(elements) if elements else {}
+            element_value: dict[str, Any] = {}
+        else:
+            try:
+                parsed_elements = json.loads(elements)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                continue
+            if not isinstance(parsed_elements, dict):
+                continue
+            element_value = parsed_elements
 
         # Merge attributes and element value
         values = {**element_value, **attr_dict}

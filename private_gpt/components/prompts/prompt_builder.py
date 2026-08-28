@@ -102,6 +102,18 @@ class PromptBuilderService:
             few_shots=few_shots,
         )
 
+    def create_loop_detection_prompt(
+        self,
+        conversation: str,
+        examples: str,
+    ) -> BasePromptTemplate:
+        """Build the classifier prompt used by the chat loop detector."""
+        return self.template_service.create_prompt_template(
+            "chat/loop_detection/evaluate.j2",
+            conversation=conversation,
+            examples=examples,
+        )
+
     def create_chat_header_prompt(
         self,
         assistant_name: str | None = None,

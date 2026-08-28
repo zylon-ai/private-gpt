@@ -733,3 +733,42 @@ class TestParametrizedPreprocessing:
         else:
             assert result.content == multimodal_message.content
             assert result.role == multimodal_message.role
+
+
+@pytest.mark.asyncio
+async def test_history_preprocessing_preserves_tool_metadata(main_llm: LLM) -> None:
+    tool_calls = [{"tool_id": "call-1", "tool_name": "load_skill", "tool_kwargs": {}}]
+    history = [
+        ChatMessage(role=MessageRole.USER, content="Create a skill"),
+        ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content=None,
+            additional_kwargs={"tool_calls": tool_calls},
+        ),
+        ChatMessage(
+            role=MessageRole.TOOL,
+            content='{"loaded": true}',
+            additional_kwargs={
+                "tool_call_id": "call-1",
+                "tool_call_name": "load_skill",
+            },
+        ),
+        ChatMessage(role=MessageRole.USER, content="Continue"),
+    ]
+
+    responses: list[MultimodalProcessingResponse] = []
+    async for response in preprocess_multimodal_history(
+        main_llm,
+        history,
+        image_multimodal_llm=main_llm,
+        audio_multimodal_llm=main_llm,
+    ):
+        responses.append(response)
+
+    result = responses[-1].chat_history
+    assert result is not None
+    assert result[1].additional_kwargs["tool_calls"] == tool_calls
+    assert result[2].additional_kwargs == {
+        "tool_call_id": "call-1",
+        "tool_call_name": "load_skill",
+    }

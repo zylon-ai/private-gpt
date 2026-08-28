@@ -4,11 +4,11 @@ import pytest
 
 from private_gpt.components.code_execution.base import CodeExecutionSessionConfig
 from private_gpt.components.code_execution.local import LocalCodeExecutionProvider
-from private_gpt.settings.settings import unsafe_typed_settings
+from private_gpt.settings.settings import settings as _load_settings
 
 
 def _settings(tmp_path: Path):
-    settings = unsafe_typed_settings.model_copy(deep=True)
+    settings = _load_settings().model_copy(deep=True)
     settings.code_execution.provider = "local"
     settings.filesystems.namespaces = {}
     settings.code_execution.workspace_path = str(tmp_path / "workspaces")

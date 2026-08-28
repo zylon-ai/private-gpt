@@ -74,6 +74,7 @@ from private_gpt.components.engines.chat.models.chat_phase import (
 from private_gpt.components.engines.chat.models.chat_state import (
     ChatInputState,
     ChatOutputState,
+    ChatRuntimeCache,
     ChatRuntimeState,
     ChatState,
     ChatStatus,
@@ -97,9 +98,8 @@ from private_gpt.components.llm.priorities import DefinedPriorities
 from private_gpt.components.tools.processors.base import _session_id
 from private_gpt.components.tools.remote_execution import (
     ToolExecutionInterceptor,
-    ToolExecutionRequest,
     ToolExecutionResponse,
-    build_tool_execution_context,
+    build_tool_execution_request,
 )
 from private_gpt.components.tools.tool_scheduler import (
     BaseToolScheduler,
@@ -121,6 +121,7 @@ from private_gpt.events.models import (
     ThinkingBlock,
     ThinkingDelta,
     ToolResultBlock,
+    ToolUseBlock,
     Usage,
 )
 
@@ -176,6 +177,8 @@ class AsyncChatCheckpoint(BaseModel):
         default_factory=IterationCheckpointPayload
     )
     original_input: ChatInputState | None = None
+    runtime_cache: ChatRuntimeCache | None = None
+    runtime: ChatRuntimeState | None = None
 
 
 @dataclass
@@ -187,6 +190,8 @@ class _CheckpointContext:
         default_factory=IterationCheckpointPayload
     )
     original_input: ChatInputState | None = None
+    runtime_cache: ChatRuntimeCache | None = None
+    runtime: ChatRuntimeState | None = None
 
 
 @dataclass
@@ -325,7 +330,7 @@ class AsyncChatEngine:
         chat_scheduler: "BaseChatScheduler",
         request_interceptors: list[ChatRequestLoopInterceptor] | None = None,
         response_interceptors: list[ChatResponseLoopInterceptor] | None = None,
-        max_iterations: int = 40,
+        max_iterations: int | None = None,
         container_registry: ContainerRegistry | None = None,
         tool_scheduler: BaseToolScheduler | None = None,
         tool_interceptors: list[ToolExecutionInterceptor] | None = None,
@@ -377,6 +382,9 @@ class AsyncChatEngine:
             hooks,
             channel,
             original_input=state.original_input,
+            context_stack=state.input.context_stack,
+            runtime_cache=state.runtime.cache,
+            runtime=state.runtime,
         )
 
     async def resume(
@@ -392,6 +400,8 @@ class AsyncChatEngine:
             payload=checkpoint.payload,
             context_stack=checkpoint.input.context_stack,
             original_input=checkpoint.original_input,
+            runtime_cache=checkpoint.runtime_cache,
+            runtime=checkpoint.runtime,
         )
         handler = self._resolve_checkpoint_handler(checkpoint.checkpoint)
         state = await handler(
@@ -434,6 +444,9 @@ class AsyncChatEngine:
             hooks,
             channel,
             original_input=state.original_input,
+            context_stack=state.input.context_stack,
+            runtime_cache=state.runtime.cache,
+            runtime=state.runtime,
         )
 
     async def run(
@@ -549,11 +562,17 @@ class AsyncChatEngine:
         hooks: ExecutionHooks | None,
         channel: EventChannel,
         original_input: ChatInputState | None = None,
+        context_stack: ContextStack | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
+        runtime: ChatRuntimeState | None = None,
     ) -> ChatState:
         context = self._build_checkpoint_context(
             checkpoint=_IterationCheckpoint.BEFORE_ITERATION,
             payload=payload,
             original_input=original_input,
+            context_stack=context_stack,
+            runtime_cache=runtime_cache,
+            runtime=runtime,
         )
         return await self._execute_before_iteration_checkpoint(
             request, iteration, next_block_count, channel, hooks, context
@@ -587,9 +606,12 @@ class AsyncChatEngine:
         hooks: ExecutionHooks | None,
         channel: EventChannel,
         original_input: ChatInputState | None = None,
+        context_stack: ContextStack | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
+        runtime: ChatRuntimeState | None = None,
     ) -> ChatState:
         while True:
-            if iteration >= self._max_iterations:
+            if self._max_iterations is not None and iteration >= self._max_iterations:
                 return await self._execute_close(
                     request,
                     StopReasonEnum.MAX_TOKENS.value,
@@ -606,11 +628,21 @@ class AsyncChatEngine:
                 hooks,
                 channel,
                 original_input=original_input,
+                context_stack=context_stack,
+                runtime_cache=runtime_cache,
+                runtime=runtime,
             )
             # Keep the first-iteration snapshot for the whole loop. Later
             # checkpoints rebuild run state from the materialized request, so
             # re-snapshotting here would poison restore/system-prompt rebuilds.
             original_input = state.original_input or original_input
+            # Carry the working stack and interceptor cache forward. Rebuilding
+            # the stack from the mutated request collapses platform layers
+            # (skills, tool instructions, header) into USER_INSTRUCTIONS and
+            # then Restore drops them.
+            context_stack = state.input.context_stack
+            runtime_cache = state.runtime.cache
+            runtime = state.runtime
             new_payload = IterationCheckpointPayload(
                 model_id=state.runtime.model_id,
                 total_input_tokens=state.runtime.total_input_tokens,
@@ -652,6 +684,8 @@ class AsyncChatEngine:
         payload: IterationCheckpointPayload | None = None,
         context_stack: ContextStack | None = None,
         original_input: ChatInputState | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
+        runtime: ChatRuntimeState | None = None,
     ) -> _CheckpointContext:
         return _CheckpointContext(
             checkpoint=checkpoint,
@@ -659,6 +693,8 @@ class AsyncChatEngine:
             context_stack=context_stack,
             payload=payload or IterationCheckpointPayload(),
             original_input=original_input,
+            runtime_cache=runtime_cache,
+            runtime=runtime,
         )
 
     def _resolve_checkpoint_handler(
@@ -705,6 +741,8 @@ class AsyncChatEngine:
             context_stack=checkpoint_context.context_stack,
             hooks=hooks,
             original_input=checkpoint_context.original_input,
+            runtime_cache=checkpoint_context.runtime_cache,
+            runtime=checkpoint_context.runtime,
         )
         run.state.runtime.iteration = iteration
         run.state.runtime.next_block_count = next_block_count
@@ -764,6 +802,8 @@ class AsyncChatEngine:
             hooks=hooks,
             checkpoint_payload=checkpoint_context.payload,
             original_input=checkpoint_context.original_input,
+            runtime_cache=checkpoint_context.runtime_cache,
+            runtime=checkpoint_context.runtime,
         )
 
     async def _continue_tools_checkpoint(
@@ -776,6 +816,8 @@ class AsyncChatEngine:
         hooks: ExecutionHooks | None = None,
         checkpoint_payload: IterationCheckpointPayload | None = None,
         original_input: ChatInputState | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
+        runtime: ChatRuntimeState | None = None,
     ) -> ChatState:
         """Continue from the tools checkpoint without re-running the LLM call."""
         try:
@@ -784,6 +826,8 @@ class AsyncChatEngine:
                 context_stack=context_stack,
                 hooks=hooks,
                 original_input=original_input,
+                runtime_cache=runtime_cache,
+                runtime=runtime,
             )
             run.state.runtime.iteration = iteration
             run.state.runtime.next_block_count = next_block_count
@@ -918,12 +962,16 @@ class AsyncChatEngine:
         context_stack: ContextStack | None = None,
         hooks: ExecutionHooks | None = None,
         original_input: ChatInputState | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
+        runtime: ChatRuntimeState | None = None,
     ) -> _Run:
         return self._initialize_run(
             request,
             context_stack=context_stack,
             hooks=hooks,
             original_input=original_input,
+            runtime_cache=runtime_cache,
+            runtime=runtime,
         )
 
     async def _pipe_events_through_interceptors(
@@ -1278,25 +1326,33 @@ class AsyncChatEngine:
 
                     async with lock:
                         unique_id = tool_state.tool_id_map[raw_id]
+                        tool_name = tool_call.tool_name or "unknown"
+                        tool_spec = tool_specs_by_name.get(tool_name)
+                        if tool_spec is None:
+                            content_block: ToolUseBlock = ToolUseBlock(
+                                id=unique_id,
+                                name=tool_name,
+                                input={},
+                            )
+                        else:
+                            content_block = (
+                                tool_spec.resolve_event_adapter().build_tool_use(
+                                    tool_id=unique_id,
+                                    tool_name=tool_name,
+                                    tool_input={},
+                                )
+                            )
                         use_start = RawContentBlockStartEvent(
                             index=run.block_count,
                             block_id=f"block_{uuid4().hex}",
-                            content_block=(
-                                tool_specs_by_name[tool_call.tool_name or ""]
-                                .resolve_event_adapter()
-                                .build_tool_use(
-                                    tool_id=unique_id,
-                                    tool_name=tool_call.tool_name or "",
-                                    tool_input={},
-                                )
-                            ),
+                            content_block=content_block,
                         )
                         run.block_count += 1
                         handler.emit(use_start)
 
                     tool_state.active_tool_block = use_start
                     tool_state.active_tool_raw_id = raw_id
-                    tool_state.tool_name_map[raw_id] = tool_call.tool_name or ""
+                    tool_state.tool_name_map[raw_id] = tool_name
                     tool_state.last_serialized[raw_id] = ""
 
                 if tool_call.tool_kwargs and tool_state.active_tool_block is not None:
@@ -1536,12 +1592,12 @@ class AsyncChatEngine:
 
         if self._tool_scheduler.is_async:
             handle = await self._tool_scheduler.async_execute(
-                ToolExecutionRequest(
+                build_tool_execution_request(
                     tool_id=call_id,
                     tool_name=tool_call.tool_name or "",
                     tool_kwargs=tool_call.tool_kwargs,
                     tool_spec=tool_spec,
-                    context=build_tool_execution_context(run.state),
+                    state=run.state,
                     hooks=run.hooks,
                 ),
                 state_ctx=run.state,
@@ -1559,12 +1615,12 @@ class AsyncChatEngine:
 
         async with semaphore if semaphore is not None else contextlib.nullcontext():
             response = await self._tool_scheduler.execute(
-                ToolExecutionRequest(
+                build_tool_execution_request(
                     tool_id=call_id,
                     tool_name=tool_call.tool_name or "",
                     tool_kwargs=tool_call.tool_kwargs,
                     tool_spec=tool_spec,
-                    context=build_tool_execution_context(run.state),
+                    state=run.state,
                     hooks=run.hooks,
                 ),
                 state_ctx=run.state,
@@ -1597,12 +1653,30 @@ class AsyncChatEngine:
     # Initialization and interceptor phases
     # ------------------------------------------------------------------
 
+    def _restore_runtime(
+        self,
+        *,
+        runtime: ChatRuntimeState | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
+    ) -> ChatRuntimeState:
+        if runtime is not None:
+            restored = runtime.model_copy(deep=True)
+            if restored.max_iterations is None:
+                restored.max_iterations = self._max_iterations
+            return restored
+        return ChatRuntimeState(
+            max_iterations=self._max_iterations,
+            cache=runtime_cache or ChatRuntimeCache(),
+        )
+
     def _initialize_run(
         self,
         request: ChatRequest,
         context_stack: ContextStack | None = None,
         hooks: ExecutionHooks | None = None,
         original_input: ChatInputState | None = None,
+        runtime_cache: ChatRuntimeCache | None = None,
+        runtime: ChatRuntimeState | None = None,
     ) -> _Run:
         llm = self._llm_component.get_llm(request.system.model)
         if not isinstance(llm, FunctionCallingLLM):
@@ -1611,33 +1685,42 @@ class AsyncChatEngine:
         if not isinstance(request, ResolvedChatRequest) and context_stack is None:
             raise ValueError("Configured context stack is required")
 
-        llm_kwargs = ChatLLMParameters.model_validate(request.sampling_params)
-        if request.thinking.enabled and request.thinking.type:
-            llm_kwargs = llm_kwargs.model_copy(
-                update={
-                    "reasoning_effort": ReasoningEffort.from_str(request.thinking.type)
-                }
-            )
-        if request.response_format and request.response_format.output_cls:
-            structured = StructuredOutputsParams.from_optional(
-                output_cls=request.response_format.output_cls,
-            )
-            if structured is not None:
+        if original_input is not None:
+            sampling_params = dict(original_input.sampling_params)
+            llm_kwargs = original_input.llm_kwargs.model_copy(deep=True)
+        else:
+            sampling_params = dict(request.sampling_params)
+            llm_kwargs = ChatLLMParameters.model_validate(request.sampling_params)
+            if request.thinking.enabled and request.thinking.type:
                 llm_kwargs = llm_kwargs.model_copy(
-                    update={"structured_outputs": structured}
+                    update={
+                        "reasoning_effort": ReasoningEffort.from_str(
+                            request.thinking.type
+                        )
+                    }
                 )
+            if request.response_format and request.response_format.output_cls:
+                structured = StructuredOutputsParams.from_optional(
+                    output_cls=request.response_format.output_cls,
+                )
+                if structured is not None:
+                    llm_kwargs = llm_kwargs.model_copy(
+                        update={"structured_outputs": structured}
+                    )
+
+        restored_runtime = self._restore_runtime(
+            runtime=runtime,
+            runtime_cache=runtime_cache,
+        )
 
         state = ChatState(
             input=ChatInputState(
                 request=request,
                 context_stack=context_stack or build_initial_context_stack(request),
-                sampling_params=dict(request.sampling_params),
+                sampling_params=sampling_params,
                 llm_kwargs=llm_kwargs,
             ),
-            runtime=ChatRuntimeState(
-                iteration=0,
-                max_iterations=self._max_iterations,
-            ),
+            runtime=restored_runtime,
             output=ChatOutputState(),
             timeline=[],
         )

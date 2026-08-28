@@ -818,6 +818,8 @@ def test_create_code_execution_prompt_requires_present_files(
         "does not surface" in formatted.lower() or "writing a file" in formatted.lower()
     )
     assert outputs.target in formatted
+    assert "already under" in formatted
+    assert "Copy files into" in formatted or "copy it into" in formatted.lower()
     assert "`present_server`" in formatted
     assert "`text_editor_code_execution`" in formatted
 

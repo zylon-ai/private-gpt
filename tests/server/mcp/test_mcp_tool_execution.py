@@ -22,16 +22,17 @@ from private_gpt.server.mcp.mcp_service import (
 async def test_tool_execution_returns_mutated_mcp_request_state() -> None:
     config = McpServerConfig(name="tools", url="https://mcp.example.com")
     tool = McpToolDefinition(
-        name="lookup",
+        name="mcp__tools__lookup",
         description="Look something up",
         input_schema={"type": "object", "properties": {}},
+        raw_name="lookup",
     )
     runtime_client = MagicMock()
     runtime_client.list_tools = AsyncMock(
         return_value=ListToolsResult(
             tools=[
                 Tool(
-                    name=tool.name,
+                    name="lookup",
                     description=tool.description,
                     inputSchema=tool.input_schema,
                 )

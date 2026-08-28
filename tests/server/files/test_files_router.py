@@ -239,6 +239,54 @@ def test_upload_with_uploads_prefix_is_normalized(
     assert not (volume_root / "uploads" / _SESSION_ID / "uploads").exists()
 
 
+def test_upload_with_outputs_prefix_targets_output_mount(
+    files_client: TestClient,
+    volume_root: Path,
+) -> None:
+    """A top-level outputs/ key is not treated as an ordinary uploads subfolder."""
+    resp = files_client.post(
+        f"/v1/files?scope_id={_SESSION_ID}&path=outputs/reports/result.mdx",
+        files={"file": ("result.mdx", io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+    )
+    assert resp.status_code == 200, resp.text
+
+    meta = FileMetadata.model_validate(resp.json())
+    canonical_id = _decode_file_id(meta.id)
+    assert canonical_id == "/mnt/user-data/outputs/reports/result.mdx"
+    assert meta.downloadable is True
+
+    stored = volume_root / "outputs" / _SESSION_ID / "reports" / "result.mdx"
+    assert stored.read_bytes() == _FILE_CONTENT
+    assert not (
+        volume_root / "uploads" / _SESSION_ID / "outputs" / "reports" / "result.mdx"
+    ).exists()
+
+    content_resp = files_client.get(_file_url(meta.id, _SESSION_ID, suffix="/content"))
+    assert content_resp.status_code == 200
+    assert content_resp.content == _FILE_CONTENT
+
+
+def test_nested_outputs_key_stays_on_upload_mount(
+    files_client: TestClient,
+    volume_root: Path,
+) -> None:
+    """Only a top-level outputs/ segment selects the output mount."""
+    resp = files_client.post(
+        f"/v1/files?scope_id={_SESSION_ID}&path=data/outputs/report.pdf",
+        files={"file": ("report.pdf", io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+    )
+    assert resp.status_code == 200, resp.text
+
+    meta = FileMetadata.model_validate(resp.json())
+    assert _decode_file_id(meta.id) == (
+        "/mnt/user-data/uploads/data/outputs/report.pdf"
+    )
+    assert meta.downloadable is False
+
+    stored = volume_root / "uploads" / _SESSION_ID / "data" / "outputs" / "report.pdf"
+    assert stored.read_bytes() == _FILE_CONTENT
+
+
 def test_upload_with_invalid_path_rejected(files_client: TestClient) -> None:
     for bad in ("/abs/path.txt", "a/../b.txt", "dir/"):
         resp = files_client.post(
@@ -316,6 +364,31 @@ def test_put_object_uploads_prefix_normalized(
     )
     stored = volume_root / "uploads" / _SESSION_ID / "data" / "2024" / "report.pdf"
     assert stored.read_bytes() == _FILE_CONTENT
+
+
+def test_put_object_outputs_prefix_targets_output_mount(
+    files_client: TestClient,
+    volume_root: Path,
+) -> None:
+    resp = files_client.put(
+        f"/v1/files/outputs/generated/result.mdx?scope_id={_SESSION_ID}",
+        content=_FILE_CONTENT,
+        headers={"Content-Type": "text/markdown"},
+    )
+    assert resp.status_code == 200, resp.text
+
+    meta = FileMetadata.model_validate(resp.json())
+    assert _decode_file_id(meta.id) == "/mnt/user-data/outputs/generated/result.mdx"
+
+    stored = volume_root / "outputs" / _SESSION_ID / "generated" / "result.mdx"
+    assert stored.read_bytes() == _FILE_CONTENT
+    assert not (
+        volume_root / "uploads" / _SESSION_ID / "outputs" / "generated" / "result.mdx"
+    ).exists()
+
+    content_resp = files_client.get(_file_url(meta.id, _SESSION_ID, suffix="/content"))
+    assert content_resp.status_code == 200
+    assert content_resp.content == _FILE_CONTENT
 
 
 def test_put_object_invalid_path_rejected(files_client: TestClient) -> None:

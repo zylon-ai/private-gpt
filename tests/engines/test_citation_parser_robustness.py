@@ -207,3 +207,47 @@ def test_existing_indices_continue_without_renumbering() -> None:
     )
     assert [citation.value["index"] for citation in citations] == ["7", "8"]
     assert indices == {first.id_: 7, second.id_: 8}
+
+
+class TestExtractCitationsFromTextDefensiveParsing:
+    """`_extract_citations_from_text` runs over arbitrary conversation
+    history text — not just model-generated output — so a malformed
+    `<citation ...>body</citation>` marker (bad JSON body, non-object body,
+    etc.) must be skipped instead of crashing the whole request. See the
+    end-to-end lifecycle suite for the full-chain regression this guards.
+    """
+
+    def test_non_dict_json_body_is_skipped_not_raised(self) -> None:
+        from private_gpt.components.engines.citations.utils import (
+            _extract_citations_from_text,
+        )
+
+        # Body is valid JSON but not an object — used to raise
+        # `TypeError: 'int' object is not a mapping`.
+        result = _extract_citations_from_text(
+            "citing the source <citation index='1'>1</citation> here."
+        )
+        assert result == []
+
+    def test_malformed_json_body_is_skipped_not_raised(self) -> None:
+        from private_gpt.components.engines.citations.utils import (
+            _extract_citations_from_text,
+        )
+
+        result = _extract_citations_from_text(
+            "broken <citation id='x'>{not valid json</citation> marker."
+        )
+        assert result == []
+
+    def test_valid_marker_still_parses_after_a_malformed_one(self) -> None:
+        from private_gpt.components.engines.citations.utils import (
+            _extract_citations_from_text,
+        )
+
+        text = (
+            "bad <citation index='1'>1</citation> then good "
+            "<citation id='AB12'></citation>."
+        )
+        result = _extract_citations_from_text(text)
+        assert len(result) == 1
+        assert result[0].doc_id == "AB12"

@@ -250,6 +250,15 @@ def validate_system_config(
                     )
                 ),
                 blob_visibility=item.blob_visibility,
+                prompt=PromptConfig(
+                    tools=item.prompt.tools or potential_system.prompt.tools,
+                    citations=item.prompt.citations
+                    or potential_system.prompt.citations,
+                    thinking=item.prompt.thinking or potential_system.prompt.thinking,
+                    code_execution=item.prompt.code_execution
+                    or potential_system.prompt.code_execution,
+                    skills=item.prompt.skills or potential_system.prompt.skills,
+                ),
             )
 
         return potential_system

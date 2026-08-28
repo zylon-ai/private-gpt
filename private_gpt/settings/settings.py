@@ -525,6 +525,18 @@ class ChatSettings(BaseModel):
         default="async",
         description="Chat engine selected behind the runtime feature flag.",
     )
+    max_iterations: int = Field(
+        default=100,
+        description="Maximum number of iterations for the chat loop.",
+    )
+    loop_detection_interval: int | None = Field(
+        default=None,
+        description=(
+            "Evaluate the conversation for loops after each N assistant messages "
+            "since the latest user message. None and non-positive values disable "
+            "loop detection."
+        ),
+    )
     allow_use_default_prompt: bool = Field(
         True,
         description="Flag indicating if the chat engine should use default prompts or not.",
@@ -617,6 +629,11 @@ class ChatSettings(BaseModel):
         # If tldr_timeout is set to 0, set it to None
         if self.tldr_timeout == 0:
             self.tldr_timeout = None
+        if (
+            self.loop_detection_interval is not None
+            and self.loop_detection_interval <= 0
+        ):
+            self.loop_detection_interval = None
         super().model_post_init(__context)
 
 
@@ -1787,14 +1804,88 @@ class BashSettings(BaseModel):
     )
 
 
-class CodeExecutionToolsSettings(BaseModel):
-    present_files_enabled: bool = Field(
+class BashToolSettings(BaseModel):
+    """Config for the bash / bash_code_execution tool."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Feature flag to enable the bash tool.",
+    )
+
+
+class ViewToolSettings(BaseModel):
+    """Config for the view text-editor command."""
+
+    include_line_numbers: bool = Field(
+        default=False,
+        description=(
+            "Prefix each viewed line with its line number. "
+            "Deployment config only — the model does not see or set this."
+        ),
+    )
+    max_lines: int | None = Field(
+        default=None,
+        description=(
+            "Cap on the number of lines returned by a single view call. "
+            "None means no line cap (output is still bounded by max_output_bytes)."
+        ),
+    )
+
+    @field_validator("max_lines", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: object) -> object:
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
+
+class TextEditorToolSettings(BaseModel):
+    """Config for the text_editor (view/str_replace/create/insert) family."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Feature flag to enable the text_editor tool.",
+    )
+    view: ViewToolSettings = Field(
+        default_factory=ViewToolSettings,
+        description="Config for the view command of the text_editor tool.",
+    )
+
+
+class PresentFilesToolSettings(BaseModel):
+    """Config for the present_files tool."""
+
+    enabled: bool = Field(
         default=True,
         description="Feature flag to enable the present_files tool.",
     )
-    present_server_enabled: bool = Field(
+
+
+class PresentServerToolSettings(BaseModel):
+    """Config for the present_server tool."""
+
+    enabled: bool = Field(
         default=True,
         description="Feature flag to enable the present_server tool.",
+    )
+
+
+class CodeExecutionToolsSettings(BaseModel):
+    bash: BashToolSettings = Field(
+        default_factory=BashToolSettings,
+        description="Config for the bash tool.",
+    )
+    text_editor: TextEditorToolSettings = Field(
+        default_factory=TextEditorToolSettings,
+        description="Config for the text_editor tool family.",
+    )
+    present_files: PresentFilesToolSettings = Field(
+        default_factory=PresentFilesToolSettings,
+        description="Config for the present_files tool.",
+    )
+    present_server: PresentServerToolSettings = Field(
+        default_factory=PresentServerToolSettings,
+        description="Config for the present_server tool.",
     )
     server_tool_result_mode: Literal["full", "client"] = Field(
         default="full",

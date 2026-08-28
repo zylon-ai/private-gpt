@@ -23,11 +23,11 @@ from private_gpt.components.tools.events.adapters import (
     PresentFilesEventAdapter,
     TextEditorCodeExecutionEventAdapter,
 )
-from private_gpt.settings.settings import unsafe_typed_settings
+from private_gpt.settings.settings import settings as _load_settings
 
 
 def _settings():
-    settings = unsafe_typed_settings.model_copy(deep=True)
+    settings = _load_settings().model_copy(deep=True)
     settings.code_execution.max_output_bytes = 10_000
     return settings
 
@@ -105,7 +105,9 @@ async def test_text_editor_tool_builder_wraps_file_operations() -> None:
         new_str="extra",
     )
 
-    session.view.assert_awaited_once_with("file.txt", view_range=(1, 1))
+    session.view.assert_awaited_once_with(
+        "file.txt", view_range=(1, 1), include_line_numbers=False
+    )
     session.str_replace.assert_awaited_once_with("file.txt", "old", "new")
     session.create.assert_awaited_once_with("file.txt", "body")
     session.insert.assert_awaited_once_with("file.txt", 1, "extra")
@@ -143,8 +145,80 @@ async def test_text_editor_view_puts_no_output_in_empty_file_content() -> None:
 
 
 @pytest.mark.asyncio
-async def test_present_files_builder_presents_existing_files() -> None:
-    session = SimpleNamespace(path_exists=AsyncMock(return_value=True))
+async def test_text_editor_view_include_line_numbers_config() -> None:
+    session = SimpleNamespace(
+        view=AsyncMock(return_value=FileOperationResult(success=True, output="1: line"))
+    )
+    builder = TextEditorToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        ),
+        settings=_settings(),
+    )
+
+    # Default: line numbers disabled.
+    tool_default = await builder.build_view_tool("corr-ln-default")
+    await tool_default.async_fn(path="file.txt", view_range=[1, 1])
+    session.view.assert_awaited_once_with(
+        "file.txt", view_range=(1, 1), include_line_numbers=False
+    )
+    session.view.reset_mock()
+
+    # Config enabled via settings: line numbers on.
+    settings = _settings()
+    settings.code_execution.tools.text_editor.view.include_line_numbers = True
+    builder_enabled = TextEditorToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        ),
+        settings=settings,
+    )
+    tool_enabled = await builder_enabled.build_view_tool("corr-ln-on")
+    await tool_enabled.async_fn(path="file.txt", view_range=[1, 1])
+    session.view.assert_awaited_once_with(
+        "file.txt", view_range=(1, 1), include_line_numbers=True
+    )
+
+
+@pytest.mark.asyncio
+async def test_text_editor_view_max_lines_cap() -> None:
+    session = SimpleNamespace(
+        view=AsyncMock(
+            return_value=FileOperationResult(
+                success=True,
+                output="\n".join(f"{i}: line" for i in range(1, 11)),
+            )
+        )
+    )
+    settings = _settings()
+    settings.code_execution.tools.text_editor.view.max_lines = 3
+    builder = TextEditorToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        ),
+        settings=settings,
+    )
+
+    view_tool = await builder.build_view_tool("corr-max-lines")
+    view_result = await view_tool.async_fn(path="file.txt")
+
+    assert view_result[0].num_lines == 3
+    assert view_result[0].content == "\n".join(f"{i}: line" for i in range(1, 4))
+    # total_lines still reflects the full file (10 lines), not the capped view.
+    assert view_result[0].total_lines == 10
+
+
+@pytest.mark.asyncio
+async def test_present_files_builder_presents_existing_output_files() -> None:
+    existing = {
+        "/mnt/user-data/outputs/chart.png",
+        "/mnt/user-data/outputs/report.md",
+    }
+
+    async def path_exists(path: str) -> bool:
+        return path in existing
+
+    session = SimpleNamespace(path_exists=AsyncMock(side_effect=path_exists))
     builder = PresentFilesToolBuilder(
         code_execution_component=SimpleNamespace(
             get_or_create_session=AsyncMock(return_value=session)
@@ -153,12 +227,14 @@ async def test_present_files_builder_presents_existing_files() -> None:
 
     tool = await builder.build_tool("corr-present")
     result = await tool.async_fn(
-        filepaths=["/mnt/user-data/outputs/chart.png", "/tmp/notes.md"]
+        filepaths=[
+            "/mnt/user-data/outputs/chart.png",
+            "/mnt/user-data/outputs/report.md",
+        ]
     )
 
-    assert session.path_exists.await_count == 2
     session.path_exists.assert_any_await("/mnt/user-data/outputs/chart.png")
-    session.path_exists.assert_any_await("/tmp/notes.md")
+    session.path_exists.assert_any_await("/mnt/user-data/outputs/report.md")
     assert [block.type for block in result] == [
         "local_resource",
         "local_resource",
@@ -167,10 +243,71 @@ async def test_present_files_builder_presents_existing_files() -> None:
     assert result[0].file_path == "/mnt/user-data/outputs/chart.png"
     assert result[0].name == "chart"
     assert result[0].mime_type == "image/png"
-    assert result[1].file_path == "/tmp/notes.md"
+    assert result[1].file_path == "/mnt/user-data/outputs/report.md"
     assert result[1].mime_type == "text/markdown"
-    assert result[2].text == "Presented 2 file(s): chart.png, notes.md"
+    assert result[2].text == "Presented 2 file(s): chart.png, report.md"
     assert tool.event_adapter is PresentFilesEventAdapter
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "filepath",
+    [
+        "/tmp/notes.md",
+        "/home/agent/workspace/chart.png",
+        "/mnt/user-data/uploads/report.csv",
+        "/home/agent/.claude/skills/technical-dashboard/SKILL.md",
+        "/mnt/user-data/outputs/../uploads/secret.txt",
+        "chart.png",
+        "/mnt/user-data/outputs",
+        "/mnt/user-data/outputs/",
+    ],
+)
+async def test_present_files_rejects_non_output_paths(filepath: str) -> None:
+    session = SimpleNamespace(
+        path_exists=AsyncMock(return_value=True),
+        read_file=AsyncMock(),
+        write_file=AsyncMock(),
+    )
+    builder = PresentFilesToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        )
+    )
+
+    tool = await builder.build_tool("corr-reject")
+    result = await tool.async_fn(filepaths=[filepath])
+
+    session.path_exists.assert_not_awaited()
+    session.read_file.assert_not_awaited()
+    session.write_file.assert_not_awaited()
+    assert result[0].type == "text"
+    assert "only present files already inside /mnt/user-data/outputs/" in result[0].text
+    assert "Copy the file into outputs first" in result[0].text
+    assert result[1].text == "No files could be presented."
+
+
+@pytest.mark.asyncio
+async def test_present_files_mixed_list_presents_outputs_and_rejects_others() -> None:
+    session = SimpleNamespace(path_exists=AsyncMock(return_value=True))
+    builder = PresentFilesToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        )
+    )
+
+    tool = await builder.build_tool("corr-mixed")
+    result = await tool.async_fn(
+        filepaths=[
+            "/mnt/user-data/outputs/chart.png",
+            "/home/agent/workspace/chart.png",
+        ]
+    )
+
+    assert result[0].type == "local_resource"
+    assert result[0].file_path == "/mnt/user-data/outputs/chart.png"
+    assert "only present files already inside /mnt/user-data/outputs/" in result[1].text
+    assert result[2].text == "Presented 1 file(s): chart.png"
 
 
 @pytest.mark.asyncio

@@ -54,8 +54,18 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
         self._preprocess_settings = settings.chat.preprocess.documents
 
     async def intercept(self, context: ChatInterceptorContext) -> None:
-        """Convert document blocks to text before inference."""
-        if context.phase != InterceptorPhase.BEFORE_ITERATION:
+        """Convert document blocks to text before inference.
+
+        This runs only on the first iteration of a request. Once a document
+        block has been converted to plain text it is not present in later
+        iterations; later iterations still see the updated message history
+        through the document/citation/system-prompt interceptors, which are
+        intentionally *not* gated.
+        """
+        if (
+            context.phase != InterceptorPhase.BEFORE_ITERATION
+            or context.state.runtime.iteration > 0
+        ):
             return
 
         state = context.state
