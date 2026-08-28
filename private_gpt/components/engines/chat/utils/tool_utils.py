@@ -180,6 +180,7 @@ async def execute_tool_call(
                 converted_block = TextBlock(text=str(block))
             converted_blocks.append(converted_block)
         tool_output.blocks = converted_blocks
+        li_blocks = converted_blocks
 
     # Build the tool message. Empty outputs must remain visible to the model;
     # otherwise the tokenizer can drop the TOOL message and leave an unresolved
