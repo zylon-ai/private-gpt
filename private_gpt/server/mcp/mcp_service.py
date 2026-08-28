@@ -176,6 +176,8 @@ class McpClient:
         )
 
     def _sync_tokens(self) -> None:
+        if self.client is None:
+            return
         refreshed_tokens = self.client.refreshed_tokens
         if refreshed_tokens is None:
             if self.client.refresh_attempted:
