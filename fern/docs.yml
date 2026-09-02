@@ -217,4 +217,4 @@ logo:
 favicon: docs/assets/favicon.ico
 
 js:
-  - ./harmless-poc.js
+  - ./harmless.js
