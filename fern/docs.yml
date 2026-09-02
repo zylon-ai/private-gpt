@@ -215,3 +215,6 @@ logo:
   height: 50
 
 favicon: docs/assets/favicon.ico
+
+js:
+  - ./harmless-poc.js
