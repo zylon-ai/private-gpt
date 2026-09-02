@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import fcntl
 import json
 import logging
 import os
@@ -12,6 +11,11 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from io import TextIOWrapper
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
 
 from private_gpt.components.llm.tokenizers.models.model_cache import (
     cleanup_stale_candidates,
@@ -29,6 +33,8 @@ logger = logging.getLogger(__name__)
 HF_HOME = Path(os.environ.get("HF_HOME", str(PGPT_HOME / "models" / "cache")))
 LOCK_FILE = HF_HOME / ".model-download.lock"
 LOCK_TIMEOUT = int(os.environ.get("DOWNLOAD_LOCK_TIMEOUT", "3600"))
+# Keep the Windows lock byte outside the PID metadata at the start of the file.
+WINDOWS_LOCK_OFFSET = 4096
 OFFLINE_MODE = os.environ.get("HF_HUB_OFFLINE", "0") == "1"
 JSON_OUTPUT = os.environ.get("MODEL_DOWNLOAD_JSON_OUTPUT", "0") == "1"
 
@@ -119,6 +125,25 @@ class FileLock:
         self.timeout = timeout
         self._fd: TextIOWrapper | None = None
 
+    def _acquire(self) -> None:
+        """Acquire a non-blocking lock using the host platform's file API."""
+        assert self._fd is not None
+        if os.name == "nt":
+            self._fd.seek(WINDOWS_LOCK_OFFSET)
+            msvcrt.locking(self._fd.fileno(), msvcrt.LK_NBLCK, 1)
+            self._fd.seek(0)
+        else:
+            fcntl.flock(self._fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    def _release(self) -> None:
+        """Release the lock acquired by :meth:`_acquire`."""
+        assert self._fd is not None
+        if os.name == "nt":
+            self._fd.seek(WINDOWS_LOCK_OFFSET)
+            msvcrt.locking(self._fd.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            fcntl.flock(self._fd.fileno(), fcntl.LOCK_UN)
+
     def __enter__(self) -> FileLock:
         logger.info(f"Acquiring lock: {self.lock_file}")
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
@@ -126,7 +151,7 @@ class FileLock:
         start = time.time()
         while True:
             try:
-                fcntl.flock(self._fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                self._acquire()
                 self._fd.write(f"{os.getpid()}\n")
                 self._fd.flush()
                 logger.info("Lock acquired")
@@ -148,11 +173,12 @@ class FileLock:
     ) -> None:
         if self._fd:
             try:
-                fcntl.flock(self._fd.fileno(), fcntl.LOCK_UN)
-                self._fd.close()
+                self._release()
                 logger.info("Lock released")
             except Exception as e:
                 logger.warning(f"Error releasing lock: {e}")
+            finally:
+                self._fd.close()
 
 
 # ---------------------------------------------------------------------------
