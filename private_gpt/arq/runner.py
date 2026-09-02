@@ -7,10 +7,16 @@ import sys
 from collections.abc import Callable
 
 from arq.typing import StartupShutdown
-from arq.worker import Worker
 
 from private_gpt.arq.hooks import on_job_end
 from private_gpt.arq.lifecycle import shutdown, startup
+from private_gpt.arq.liveness import (
+    HeartbeatWorker,
+    arq_health_check_interval,
+    arq_health_check_key,
+    clear_worker_liveness,
+)
+from private_gpt.arq.routing import expected_queue_for_worker
 from private_gpt.arq.settings import get_queue_name, get_redis_settings
 from private_gpt.arq.tasks import autodiscover_registered_tasks
 from private_gpt.settings.settings import Settings, settings
@@ -33,11 +39,22 @@ def _task_packages() -> tuple[str, ...]:
     return task_packages
 
 
-def _queue_name() -> str:
+def _queue_name(current_settings: Settings | None = None) -> str:
     queue = os.environ.get("PGPT_ARQ_QUEUE", "").strip()
     if not queue:
         raise ValueError("PGPT_ARQ_QUEUE must configure a queue")
-    return get_queue_name(queue)
+    queue_name = get_queue_name(queue)
+
+    worker_type = os.environ.get("PGPT_STATEFUL_WORKER_TYPE", "").strip()
+    if current_settings is not None and worker_type:
+        expected_queue = expected_queue_for_worker(current_settings, worker_type)
+        if expected_queue is not None and queue_name != expected_queue:
+            raise ValueError(
+                "PGPT_ARQ_QUEUE does not match scheduler queue for "
+                f"worker_type={worker_type!r}: "
+                f"configured={queue_name!r}, expected={expected_queue!r}"
+            )
+    return queue_name
 
 
 def _keep_result_seconds(current_settings: Settings) -> int:
@@ -54,17 +71,20 @@ def run_arq_worker(
     app_module = os.environ.get("PGPT_WORKER_APP_MODULE", "private_gpt")
     current_settings = settings_resolver()
     task_packages = _task_packages()
-    queue_name = _queue_name()
+    queue_name = _queue_name(current_settings)
     max_jobs = int(os.environ.get("PGPT_ARQ_MAX_JOBS", str(_default_concurrency())))
     job_timeout = int(os.environ.get("PGPT_ARQ_JOB_TIMEOUT", "21600"))
     keep_result = _keep_result_seconds(current_settings)
+    health_check_interval = arq_health_check_interval()
     api_enabled = os.environ.get("API_ENABLED", "true").lower() == "true"
     api_port = os.environ.get("API_PORT", "8091")
     healthcheck_app = f"{app_module}.arq.healthcheck:app"
     procs: list[subprocess.Popen[bytes]] = []
+    clear_worker_liveness()
 
     def _cleanup(signum: int = 0, frame: object | None = None) -> None:
         del frame
+        clear_worker_liveness()
         for proc in procs:
             proc.terminate()
         for proc in procs:
@@ -99,7 +119,7 @@ def run_arq_worker(
         )
 
     async def _main() -> None:
-        worker = Worker(
+        worker = HeartbeatWorker(
             functions=autodiscover_registered_tasks(*task_packages),
             queue_name=queue_name,
             redis_settings=get_redis_settings(current_settings),
@@ -113,7 +133,8 @@ def run_arq_worker(
             retry_jobs=False,
             keep_result=keep_result,
             job_timeout=job_timeout,
-            health_check_interval=30,
+            health_check_interval=health_check_interval,
+            health_check_key=arq_health_check_key(queue_name),
             job_completion_wait=5,
         )
         loop = asyncio.get_running_loop()
@@ -134,7 +155,8 @@ def run_arq_worker(
 
     print(
         f"Starting arq worker queue={queue_name} task_packages={','.join(task_packages)} "
-        f"max_jobs={max_jobs} job_timeout={job_timeout} keep_result={keep_result}"
+        f"max_jobs={max_jobs} job_timeout={job_timeout} keep_result={keep_result} "
+        f"health_check_interval={health_check_interval}"
     )
     try:
         asyncio.run(_main())

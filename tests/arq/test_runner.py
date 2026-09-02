@@ -39,6 +39,29 @@ def test_queue_is_required(monkeypatch: pytest.MonkeyPatch) -> None:
         _queue_name()
 
 
+def test_queue_must_match_scheduler_for_worker_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PGPT_ARQ_QUEUE", "wrong-chat")
+    monkeypatch.setenv("PGPT_STATEFUL_WORKER_TYPE", "chat")
+    current_settings = MagicMock()
+    current_settings.scheduler.chat.celery_queue = "chat"
+
+    with pytest.raises(ValueError, match="does not match scheduler queue"):
+        _queue_name(current_settings)
+
+
+def test_queue_matches_scheduler_for_worker_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PGPT_ARQ_QUEUE", "chat")
+    monkeypatch.setenv("PGPT_STATEFUL_WORKER_TYPE", "chat")
+    current_settings = MagicMock()
+    current_settings.scheduler.chat.celery_queue = "chat"
+
+    assert _queue_name(current_settings) == "private_gpt:arq:queue:chat"
+
+
 def test_keep_result_outlives_tool_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("PGPT_ARQ_KEEP_RESULT", raising=False)
     current_settings = MagicMock()
