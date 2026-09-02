@@ -137,8 +137,13 @@ class SandboxSession(ABC):
         return None
 
     @abstractmethod
-    async def close(self) -> None:
-        """Release resources."""
+    async def close(self, force: bool = False) -> None:
+        """Release resources.
+
+        ``force=True`` also releases the backend resource instead of leaving
+        it available for reuse (e.g. kills an OpenSandbox container). Backends
+        that never pool/reuse sessions may ignore the flag.
+        """
 
 
 class SandboxProvider(ABC):
