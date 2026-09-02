@@ -2570,3 +2570,41 @@ def test_validate_system_config_merges_prompt_flags() -> None:
     assert merged.prompt.code_execution is True
     assert merged.prompt.citations is False
     assert merged.prompt.thinking is False
+
+
+def test_chat_body_accepts_string_container() -> None:
+    from private_gpt.server.chat.chat_models import ChatBody, resolve_container_id
+
+    body = ChatBody.model_validate(
+        {"messages": [{"role": "user", "content": "hi"}], "container": "sess-1"}
+    )
+    assert body.container == "sess-1"
+    assert resolve_container_id(body.container) == "sess-1"
+
+
+def test_chat_body_accepts_container_object_and_ignores_skills() -> None:
+    from private_gpt.server.chat.chat_models import (
+        ChatBody,
+        ContainerParams,
+        resolve_container_id,
+    )
+
+    body = ChatBody.model_validate(
+        {
+            "messages": [{"role": "user", "content": "hi"}],
+            "container": {
+                "id": "sess-2",
+                "skills": [
+                    {"skill_id": "pdf", "type": "anthropic", "version": "latest"}
+                ],
+                "future_key": "kept",
+            },
+        }
+    )
+    assert isinstance(body.container, ContainerParams)
+    assert body.container.id == "sess-2"
+    assert body.container.skills is not None
+    assert body.container.skills[0].skill_id == "pdf"
+    assert body.container.skills[0].type == "anthropic"
+    assert body.container.model_dump()["future_key"] == "kept"
+    assert resolve_container_id(body.container) == "sess-2"

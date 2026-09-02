@@ -6,7 +6,7 @@ from llama_index.core.llms.llm import ToolSelection
 from pydantic import BaseModel, ConfigDict, Field
 
 from private_gpt.components.chat.models.chat_config_models import (
-    ResolvedChatRequest,
+    ChatRequest,
 )
 from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat.models.chat_llm_params import (
@@ -33,7 +33,7 @@ class ChatInputState(BaseModel):
     The engine materializes ``request`` from the stack just before calling the LLM.
     """
 
-    request: ResolvedChatRequest
+    request: ChatRequest
     context_stack: ContextStack = Field(default_factory=ContextStack)
     sampling_params: dict[str, Any] = Field(default_factory=dict)
     llm_kwargs: ChatLLMParameters = Field(default_factory=ChatLLMParameters)

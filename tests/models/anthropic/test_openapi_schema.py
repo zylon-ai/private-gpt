@@ -8,7 +8,7 @@ import pytest
 
 from tests.models.anthropic.registry import ALL_MAPPINGS, TypeMapping
 
-OPENAPI_SPEC_URL = "https://storage.googleapis.com/stainless-sdk-openapi-specs/anthropic/anthropic-a7e4acae16310e3406239da76326e03d63fa5b470c9cf9b87bd64afb2eb42784.yml"
+OPENAPI_SPEC_URL = "https://storage.googleapis.com/stainless-sdk-openapi-specs/anthropic/anthropic-319861ef873b46e22d6feb51442e743643815093bdd2b3324df52ed202d7ab93.yml"
 OPENAPI_DRIFT_WHITELIST_PATH = Path(__file__).with_name("openapi_drift_whitelist.json")
 
 
@@ -423,7 +423,7 @@ class TestOpenAPISchemaCompatibility:
                     "stop_reason": "stop_sequence",
                     "model": "claude-sonnet-4-6",
                 },
-                sdk_types.Completion,
+                None,  # Text Completions types were removed in anthropic SDK 1.x
             ),
             (
                 "ListResponse_ModelInfo_",

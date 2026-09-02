@@ -4,7 +4,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from injector import Injector, inject, singleton
 
@@ -615,14 +615,18 @@ class IngestionSchedulerFactory:
         self._scheduler: BaseIngestionScheduler | None = None
 
     def get(self) -> BaseIngestionScheduler:
-        if self._scheduler is None:
-            mode = self._settings.scheduler.ingestion.mode
-            provider = _INGESTION_SCHEDULERS.get(mode)
-            if provider is None:
-                raise ValueError(f"Unknown scheduler.ingestion.mode: {mode}")
-            self._scheduler = (
-                self._injector.get(provider)
-                if isinstance(provider, type)
-                else provider(self._injector)
-            )
-        return self._scheduler
+        if self._scheduler is not None:
+            return self._scheduler
+
+        mode = self._settings.scheduler.ingestion.mode
+        provider = _INGESTION_SCHEDULERS.get(mode)
+        if provider is None:
+            raise ValueError(f"Unknown scheduler.ingestion.mode: {mode}")
+        scheduler = cast(
+            BaseIngestionScheduler,
+            self._injector.get(provider)
+            if isinstance(provider, type)
+            else provider(self._injector),
+        )
+        self._scheduler = scheduler
+        return scheduler

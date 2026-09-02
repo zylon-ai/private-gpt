@@ -2,7 +2,7 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from annotated_types import Ge, Le
 from llama_index.core.base.llms.types import ChatMessage
-from pydantic import ConfigDict, Field, WithJsonSchema, model_validator
+from pydantic import BaseModel, ConfigDict, Field, WithJsonSchema, model_validator
 
 from private_gpt.chat.input_models import (
     CompletionMetadata,
@@ -17,6 +17,55 @@ from private_gpt.components.filesystems.mount_entry import MountEntry
 from private_gpt.events.models import TLDRBlock, ToolResultBlock, ToolUseBlock
 from private_gpt.server.mcp.config import McpServerConfig
 from private_gpt.server.utils.artifact_input import ArtifactType
+
+
+class ContainerSkillParams(BaseModel):
+    """Skill to load in a container (Anthropic `SkillParams`). Unused today."""
+
+    model_config = ConfigDict(extra="allow")
+
+    skill_id: str = Field(
+        description="Skill ID",
+        min_length=1,
+        max_length=64,
+    )
+    type: Literal["anthropic", "custom"] = Field(
+        description="Type of skill - either 'anthropic' (built-in) or 'custom'."
+    )
+    version: str | None = Field(
+        default=None,
+        description="Skill version or 'latest' for the most recent version.",
+        min_length=1,
+        max_length=64,
+    )
+
+
+class ContainerParams(BaseModel):
+    """Anthropic container object.
+
+    Accepts the documented `{id, skills}` shape plus any future keys. Only `id`
+    is forwarded into the chat session; `skills` and extras are parsed and kept
+    on the request model but otherwise unused.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    id: str | None = Field(
+        default=None,
+        description="Container identifier for reuse across requests.",
+    )
+    skills: list[ContainerSkillParams] | None = Field(
+        default=None,
+        description="List of skills to load in the container. Currently unused.",
+        max_length=20,
+    )
+
+
+def resolve_container_id(container: str | ContainerParams | None) -> str | None:
+    """Return the string container id, if one was provided."""
+    if isinstance(container, ContainerParams):
+        return container.id
+    return container
 
 
 class ChatBody(MessagesInputBase):
@@ -35,9 +84,12 @@ class ChatBody(MessagesInputBase):
         default_factory=list,
         description="""List of MCP servers to use for tool retrieval. Each server can have its own configuration.""",
     )
-    container: str | None = Field(
+    container: str | ContainerParams | None = Field(
         default=None,
-        description="Container identifier for reuse across requests.",
+        description=(
+            "Container identifier for reuse across requests. Accepts a string id "
+            "or Anthropic's `{id, skills}` object; only `id` is forwarded."
+        ),
     )
     mounts: list[MountEntry] | None = Field(
         default=None,

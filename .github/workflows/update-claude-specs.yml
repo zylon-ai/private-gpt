@@ -26,7 +26,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B chore/update-claude-specs
+          BRANCH="chore/update-claude-specs-$(date +%Y%m%d-%H%M%S)"
+          git checkout -B "$BRANCH"
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
 
       - name: Update Claude specs and lock file
         run: uv run python scripts/update_claude_specs.py
@@ -36,10 +38,10 @@ jobs:
           git add .
           git diff --staged --quiet && exit 0
           git commit -m "chore(deps): update Claude specs and anthropic SDK"
-          git push --force origin chore/update-claude-specs
+          git push --force origin "$BRANCH"
           echo "CHANGES=true" >> "$GITHUB_ENV"
 
-      - name: Create or update PR
+      - name: Create PR
         if: env.CHANGES == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -51,22 +53,10 @@ jobs:
 
           _Opened automatically by the \`update-claude-specs\` workflow — review and merge when tests pass._"
 
-          PR_STATE=$(gh pr view chore/update-claude-specs --json state --jq '.state' 2>/dev/null || echo "NOT_FOUND")
-
-          if [ "$PR_STATE" = "OPEN" ]; then
-            echo "PR is open — updating title and body"
-            gh pr edit chore/update-claude-specs \
-              --title "chore(deps): update Claude specs and anthropic SDK" \
-              --body "$PR_BODY"
-          elif [ "$PR_STATE" = "NOT_FOUND" ]; then
-            echo "No PR found — creating a new one"
-            gh pr create \
-              --title "chore(deps): update Claude specs and anthropic SDK" \
-              --body "$PR_BODY" \
-              --draft \
-              --label dependencies \
-              --base main \
-              --head chore/update-claude-specs
-          else
-            echo "PR is $PR_STATE — skipping PR update"
-          fi
+          gh pr create \
+            --title "chore(deps): update Claude specs and anthropic SDK" \
+            --body "$PR_BODY" \
+            --draft \
+            --label dependencies \
+            --base main \
+            --head "$BRANCH"

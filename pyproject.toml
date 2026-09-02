@@ -11,7 +11,7 @@ dependencies = [
     # DI + config
     "injector>=0.24.0,<0.25",
     "pyyaml>=6.0.3,<7",
-    "watchdog>=4.0.1,<5",
+    "watchdog>=4.0.1,<7",
     # Core framework
     "llama-index-core>=0.14.21,<0.15.0",
     # Utilities
@@ -21,7 +21,7 @@ dependencies = [
     "retry-async>=0.1.4,<0.2",
     "nest-asyncio>=1.6.0",
     "nltk>=3.10.0,<4",
-    "arq>=0.26,<0.27",
+    "arq>=0.26,<0.29",
 ]
 
 [project.scripts]
@@ -51,7 +51,7 @@ llm-mistral = [
 ]
 llm-anthropic = [
     "langchain-anthropic>=1.4.3",
-    "anthropic>=0.122.0",
+    "anthropic>=1.2.0",
 ]
 
 # ---------------------------------------------------------------------------
@@ -96,7 +96,7 @@ model-openai-compatible = [
 # ---------------------------------------------------------------------------
 # ingest-core: shared base for all ingest-* extras
 ingest-core = [
-    "chardet>=5.2.0,<6",
+    "chardet>=5.2.0,<8",
     "python-magic>=0.4.27,<0.5",
     "llama-index-readers-file",
     "llama-index-utils-workflow",
@@ -116,15 +116,15 @@ ingest-markitdown = [
 ]
 ingest-pdf-inspector = [
     "private-gpt[ingest-core]",
-    "pdf-inspector>=0.1,<1",
+    "pdf-inspector>=0.1,<2",
 ]
 ingest-markup = [
     "private-gpt[ingest-core]",
     "mistune>=3.2.1,<4",
     "beautifulsoup4>=4.14.3,<5",
-    "html2text>=2024.2.26,<2025",
+    "html2text>=2024.2.26,<2026",
     "marko>=2.2.0,<3",
-    "markdownify>=0.13.1,<0.14",
+    "markdownify>=0.13.1,<1.3",
     "lxml-html-clean>=0.4.4",
 ]
 ingest = [
@@ -136,7 +136,7 @@ ingest = [
 # ---------------------------------------------------------------------------
 storage-s3 = [
     "boto3>=1.35.0,<1.43.2",
-    "aiobotocore>=3.6.0,<3.7",
+    "aiobotocore>=3.6.0,<3.10",
 ]
 storage-smb = [
     "smbprotocol>=1.16.1,<2",
@@ -207,7 +207,7 @@ database = [
 # Queue / Task processing
 # ---------------------------------------------------------------------------
 queue-celery = [
-    "celery==5.4.0,<6",
+    "celery==5.6.3",
     "flower>=2.0.1,<3",
 ]
 queue-rabbitmq = [
@@ -241,7 +241,7 @@ tool-database = [
     "private-gpt[database]",
 ]
 tool-web-scraping = [
-    "playwright==1.60.0",
+    "playwright==1.62.0",
 ]
 tools = [
     "private-gpt[tool-mcp,tool-tabular,tool-database,tool-web-scraping]",
@@ -316,19 +316,19 @@ typecheck = [
     "types-pyyaml>=6.0.12.12,<7",
     "pika-stubs>=0.1.3,<0.2",
     "types-retry>=0.9.9.4,<0.10",
-    "celery-types>=0.20.0,<0.21",
+    "celery-types>=0.20.0,<0.27",
     "types-psycopg2>=2.9.21.20241019,<3",
-    "pandas-stubs>=2.2.3.241009,<3",
+    "pandas-stubs>=2.2.3.241009,<4",
     "types-requests>=2.32.0.20241016,<3",
     "types-markdown>=3.7.0.20240822,<4",
     "types-beautifulsoup4>=4.12.0.20241020,<5",
     "types-openpyxl>=3.1.5.20241126,<4",
-    "types-psutil>=6.1.0.20241221,<7",
+    "types-psutil>=6.1.0.20241221,<8",
     "types-tqdm>=4.67.0.20250809",
-    "types-cachetools>=6.2.0.20251022,<7",
+    "types-cachetools>=6.2.0.20251022,<8",
     "mypy-boto3-s3>=1.42.37",
     "types-regex>=2026.1.15.20260116",
-    "ty==0.0.59",
+    "ty==0.0.74",
 ]
 dev = [
     "private-gpt[lint,test,typecheck]",

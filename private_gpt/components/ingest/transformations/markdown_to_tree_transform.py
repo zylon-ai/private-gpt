@@ -113,9 +113,9 @@ class MarkdownTreeNodeParser(TransformComponent):
             if isinstance(child, NavigableString):
                 parts.append(str(child).strip())
             elif isinstance(child, Tag):
-                markdown = _MD_CONVERTER.process_tag(
-                    child, convert_as_inline=False
-                ).replace("\\", "")
+                markdown = _MD_CONVERTER.process_tag(child).replace(  # ty:ignore[unresolved-attribute]
+                    "\\", ""
+                )
                 parts.append(markdown.strip())
         return " ".join(p for p in parts if p).strip()
 
@@ -252,8 +252,15 @@ class MarkdownTreeNodeParser(TransformComponent):
         if isinstance(element, NavigableString):
             return element
         else:
-            markdown: str = _MD_CONVERTER.process_tag(element, convert_as_inline=False)
-            markdown = markdown.replace("\\", "")
+            markdown: str = _MD_CONVERTER.process_tag(  # ty:ignore[unresolved-attribute]
+                element
+            )
+            # markdownify wraps block-level output (e.g. <p>) in a leading
+            # "\n\n" as well as a trailing one. Since these markdown chunks
+            # are concatenated with sibling nodes (which already end in
+            # their own trailing blank line), keeping the leading newlines
+            # causes blank lines to double up between consecutive blocks.
+            markdown = markdown.replace("\\", "").lstrip("\n")
             markdown = MarkdownHelper.sanitize_markdown(markdown)
             return markdown
 

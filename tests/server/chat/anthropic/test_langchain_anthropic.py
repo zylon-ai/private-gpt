@@ -4,7 +4,7 @@ from typing import Any, get_args
 from unittest.mock import Mock
 
 import anthropic
-import httpx
+import httpx2
 import pytest
 from anthropic.types import ModelParam
 from langchain_anthropic import ChatAnthropic
@@ -15,7 +15,6 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from llama_index.core.llms.llm import ToolSelection
-from pytest_httpx import HTTPXMock
 from starlette.testclient import TestClient
 
 from private_gpt.chat.extensions.context_filter import ContextFilter
@@ -28,12 +27,9 @@ from private_gpt.events.interceptors.ping_event_interceptor import (
     _DEFAULT_PING_INTERVAL,
 )
 from private_gpt.server.utils.artifact_input import ArtifactType, IngestedArtifact
+from tests.fixtures.anthropic_httpx2_client import create_mock_http_client
 from tests.fixtures.mock_function_llm import get_mock_function_calling_llm
 from tests.fixtures.mock_injector import MockInjector
-
-# Add decorator to all tests to allow unused httpx mock responses
-pytestmark = pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-
 
 WEATHER_TOOL_NAME = "get_weather"
 WEATHER_TOOL_SCHEMA = {
@@ -144,52 +140,6 @@ def setup_mock_llm(
     injector.bind_mock(LLMComponent, llm_component)
 
 
-def create_mock_http_client(
-    test_client: TestClient,
-    httpx_mock: HTTPXMock,
-    is_async: bool = False,
-) -> httpx.Client | httpx.AsyncClient:
-    def build_response(request: httpx.Request) -> httpx.Response:
-        starlette_request = test_client.build_request(
-            method=request.method,
-            url=request.url.path,
-            headers=request.headers,
-            content=request.content,
-            params=request.url.params,
-        )
-        response = test_client.send(starlette_request)
-        content_type = response.headers.get("Content-Type", "")
-
-        if "text/event-stream" in content_type:
-            response_content = response.content
-            response = httpx.Response(
-                status_code=response.status_code,
-                headers=response.headers,
-                content=response_content,
-            )
-            response.read()
-            _ = response.text  # force to read
-            return response
-
-        if "application/json" in content_type:
-            return httpx.Response(
-                status_code=response.status_code,
-                headers=response.headers,
-                json=response.json(),
-            )
-
-        return httpx.Response(
-            status_code=response.status_code,
-            headers=response.headers,
-            content=response.content,
-        )
-
-    httpx_mock.add_callback(build_response)
-    httpx_mock.add_response()
-
-    return httpx.AsyncClient() if is_async else httpx.Client()
-
-
 def ingest_test_artifact(test_client: TestClient) -> IngestedArtifact:
     collection_id = str(uuid.uuid4())
     artifact_id = str(uuid.uuid4())
@@ -272,8 +222,8 @@ def validate_langchain_streaming_response(
 
 def create_langchain_chat_model(
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     is_async: bool = False,
+    handler: Any | None = None,
     **kwargs: Any,
 ) -> ChatAnthropic:
     """Create a ChatAnthropic instance with mock HTTP client."""
@@ -296,7 +246,7 @@ def create_langchain_chat_model(
 
     # Create mock clients with proper parameters
     mock_http_client = create_mock_http_client(
-        test_client, httpx_mock, is_async=is_async
+        test_client, is_async=is_async, handler=handler
     )
 
     # Create the Anthropic client with the mock HTTP client
@@ -326,11 +276,9 @@ def create_langchain_chat_model(
     ],
     ids=["normal_chat", "semantic_search_tool", "custom_weather_tool"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_sync_chat_non_streaming(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     tools: list[ToolConfig],
     expected_text: str,
     has_internal_tools: bool,
@@ -339,7 +287,7 @@ def test_langchain_sync_chat_non_streaming(
     setup_mock_llm(injector, prepared_tools)
 
     # Create LangChain ChatAnthropic instance
-    chat_model = create_langchain_chat_model(test_client, httpx_mock)
+    chat_model = create_langchain_chat_model(test_client)
 
     # Prepare messages
     messages = [HumanMessage(content="Test message")]
@@ -368,11 +316,9 @@ def test_langchain_sync_chat_non_streaming(
     ],
     ids=["normal_chat", "semantic_search_tool", "custom_weather_tool"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_sync_chat_streaming(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     tools: list[ToolConfig],
     expected_text: str,
     has_internal_tools: bool,
@@ -380,7 +326,7 @@ def test_langchain_sync_chat_streaming(
     prepared_tools = prepare_tools_with_context(tools, test_client)
     setup_mock_llm(injector, prepared_tools)
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock)
+    chat_model = create_langchain_chat_model(test_client)
 
     messages = [HumanMessage(content="Test message")]
 
@@ -410,11 +356,9 @@ def test_langchain_sync_chat_streaming(
     ],
     ids=["normal_chat", "semantic_search_tool", "custom_weather_tool"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_langchain_async_chat_non_streaming(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     tools: list[ToolConfig],
     expected_text: str,
     has_internal_tools: bool,
@@ -422,7 +366,7 @@ async def test_langchain_async_chat_non_streaming(
     prepared_tools = prepare_tools_with_context(tools, test_client)
     setup_mock_llm(injector, prepared_tools)
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock, is_async=True)
+    chat_model = create_langchain_chat_model(test_client, is_async=True)
 
     messages = [HumanMessage(content="Test message")]
 
@@ -450,11 +394,9 @@ async def test_langchain_async_chat_non_streaming(
     ],
     ids=["normal_chat", "semantic_search_tool", "custom_weather_tool"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_langchain_async_chat_streaming(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     tools: list[ToolConfig],
     expected_text: str,
     has_internal_tools: bool,
@@ -462,7 +404,7 @@ async def test_langchain_async_chat_streaming(
     prepared_tools = prepare_tools_with_context(tools, test_client)
     setup_mock_llm(injector, prepared_tools)
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock, is_async=True)
+    chat_model = create_langchain_chat_model(test_client, is_async=True)
 
     messages = [HumanMessage(content="Test message")]
 
@@ -487,11 +429,9 @@ async def test_langchain_async_chat_streaming(
     [True, False],
     ids=["with_valid_context", "without_context"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_semantic_search_requires_context(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     use_valid_context: bool,
 ) -> None:
     tool = (
@@ -501,7 +441,7 @@ def test_langchain_semantic_search_requires_context(
     )
     setup_mock_llm(injector, [tool])
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock)
+    chat_model = create_langchain_chat_model(test_client)
 
     langchain_tools = convert_to_langchain_tools([tool])
     chat_model = chat_model.bind_tools(langchain_tools)
@@ -517,15 +457,13 @@ def test_langchain_semantic_search_requires_context(
     #         chat_model.invoke(messages)
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_multiple_messages_conversation(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock)
+    chat_model = create_langchain_chat_model(test_client)
 
     messages = [
         HumanMessage(content="First message"),
@@ -539,30 +477,26 @@ def test_langchain_multiple_messages_conversation(
     assert len(response.content) > 0
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_empty_messages_raises_error(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock)
+    chat_model = create_langchain_chat_model(test_client)
 
     with pytest.raises(anthropic.APIError):
         chat_model.invoke([])
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_langchain_async_empty_messages_raises_error(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock, is_async=True)
+    chat_model = create_langchain_chat_model(test_client, is_async=True)
 
     with pytest.raises(anthropic.APIError):
         await chat_model.ainvoke([])
@@ -585,16 +519,14 @@ async def test_langchain_async_empty_messages_raises_error(
         "stop_sequences",
     ],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_additional_request_parameters(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     extra_params: dict[str, Any],
 ) -> None:
     setup_mock_llm(injector, [])
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock, **extra_params)
+    chat_model = create_langchain_chat_model(test_client, **extra_params)
 
     messages = [HumanMessage(content="Test message")]
     response = chat_model.invoke(messages)
@@ -612,18 +544,14 @@ def test_langchain_additional_request_parameters(
     ],
     ids=["temperature", "sampling_params", "stop_sequences"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_langchain_async_additional_request_parameters(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     extra_params: dict[str, Any],
 ) -> None:
     setup_mock_llm(injector, [])
 
-    chat_model = create_langchain_chat_model(
-        test_client, httpx_mock, is_async=True, **extra_params
-    )
+    chat_model = create_langchain_chat_model(test_client, is_async=True, **extra_params)
 
     messages = [HumanMessage(content="Test message")]
     response = await chat_model.ainvoke(messages)
@@ -636,18 +564,14 @@ async def test_langchain_async_additional_request_parameters(
     [1, 100, 1024, 4096, 8192],
     ids=["min", "small", "medium", "large", "xlarge"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_various_max_tokens_values(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     max_tokens_value: int,
 ) -> None:
     setup_mock_llm(injector, [])
 
-    chat_model = create_langchain_chat_model(
-        test_client, httpx_mock, max_tokens=max_tokens_value
-    )
+    chat_model = create_langchain_chat_model(test_client, max_tokens=max_tokens_value)
 
     messages = [HumanMessage(content="Test message")]
     response = chat_model.invoke(messages)
@@ -655,15 +579,13 @@ def test_langchain_various_max_tokens_values(
     assert isinstance(response, AIMessage)
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_system_message_parameter(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock)
+    chat_model = create_langchain_chat_model(test_client)
 
     messages = [
         SystemMessage(content="You are a helpful assistant."),
@@ -675,15 +597,13 @@ def test_langchain_system_message_parameter(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_langchain_async_system_message_parameter(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock, is_async=True)
+    chat_model = create_langchain_chat_model(test_client, is_async=True)
 
     messages = [
         SystemMessage(content="You are a helpful assistant."),
@@ -694,17 +614,14 @@ async def test_langchain_async_system_message_parameter(
     assert isinstance(response, AIMessage)
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_streaming_with_additional_parameters(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     chat_model = create_langchain_chat_model(
         test_client,
-        httpx_mock,
         max_tokens=2048,
         temperature=0.8,
         top_p=0.95,
@@ -715,17 +632,14 @@ def test_langchain_streaming_with_additional_parameters(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_langchain_async_streaming_with_additional_parameters(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     chat_model = create_langchain_chat_model(
         test_client,
-        httpx_mock,
         is_async=True,
         max_tokens=2048,
         temperature=0.8,
@@ -745,18 +659,16 @@ async def test_langchain_async_streaming_with_additional_parameters(
         pytest.param(500, "api_error", id="api_error"),
     ],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_http_error_parsing(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     status_code: int,
     error_type: str,
 ) -> None:
     setup_mock_llm(injector, [])
 
-    def error_callback(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
+    def error_callback(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(
             status_code=status_code,
             json={
                 "type": "error",
@@ -767,9 +679,7 @@ def test_http_error_parsing(
             },
         )
 
-    httpx_mock.add_callback(error_callback)
-
-    chat_model = create_langchain_chat_model(test_client, httpx_mock)
+    chat_model = create_langchain_chat_model(test_client, handler=error_callback)
     messages = [HumanMessage(content="Test message")]
 
     with pytest.raises(anthropic.APIStatusError) as exc_info:
@@ -802,43 +712,25 @@ def test_http_error_parsing(
         ),
     ],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_http_error_parsing_streaming(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     error_type: str,
     max_tokens: int,
     message_content: str,
 ) -> None:
     setup_mock_llm(injector, [])
 
-    def error_sse_callback(request: httpx.Request) -> httpx.Response:
+    def error_sse_callback(request: httpx2.Request) -> httpx2.Response:
         error_event = f'event: error\ndata: {{"type": "error", "error": {{"type": "{error_type}", "message": "Test error for {error_type}"}}}}\n\n'
-        response = httpx.Response(
+        return httpx2.Response(
             status_code=200,
             headers={"Content-Type": "text/event-stream"},
             content=error_event.encode("utf-8"),
         )
-        response.read()
-        _ = response.text  # force to read
-        return response
 
-    httpx_mock.add_callback(error_sse_callback)
-    httpx_mock.add_response()
-
-    chat_model = ChatAnthropic(
-        model="default",
-        anthropic_api_url="http://testserver",
-        anthropic_api_key="test_key",
-        max_tokens=max_tokens,
-        max_retries=0,
-    )
-    chat_model.__dict__["_client"] = anthropic.Client(
-        api_key="test_key",
-        base_url="http://testserver",
-        max_retries=0,
-        http_client=httpx.Client(),
+    chat_model = create_langchain_chat_model(
+        test_client, handler=error_sse_callback, max_tokens=max_tokens
     )
 
     messages = [HumanMessage(content=message_content)]
@@ -863,11 +755,9 @@ def test_langchain_http_error_parsing_streaming(
         ),
     ],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_http_error_parsing_real(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     status_code: int,
     error_type: str,
     max_tokens: int,
@@ -875,9 +765,7 @@ def test_langchain_http_error_parsing_real(
 ) -> None:
     setup_mock_llm(injector, [])
 
-    chat_model = create_langchain_chat_model(
-        test_client, httpx_mock, max_tokens=max_tokens
-    )
+    chat_model = create_langchain_chat_model(test_client, max_tokens=max_tokens)
     messages = [HumanMessage(content=message_content)]
 
     with pytest.raises(anthropic.APIStatusError) as exc_info:
@@ -887,15 +775,13 @@ def test_langchain_http_error_parsing_real(
     assert error_type in str(exc_info.value)
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_langchain_http_error_parsing_streaming_real(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock, max_tokens=1024)
+    chat_model = create_langchain_chat_model(test_client, max_tokens=1024)
     messages = [HumanMessage(content="x" * 50_000)]
 
     with pytest.raises(anthropic.APIStatusError) as exc_info:
@@ -907,14 +793,12 @@ def test_langchain_http_error_parsing_streaming_real(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_custom_content_blocks(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
-    chat_model = create_langchain_chat_model(test_client, httpx_mock, is_async=True)
+    chat_model = create_langchain_chat_model(test_client, is_async=True)
 
     messages = [
         HumanMessage(content="This is message number"),
@@ -947,14 +831,12 @@ async def test_custom_content_blocks(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_streaming_ping_events_with_slow_response(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     tools = [create_semantic_tool([ingest_test_artifact(test_client)])]
-    chat_model = create_langchain_chat_model(test_client, httpx_mock, is_async=True)
+    chat_model = create_langchain_chat_model(test_client, is_async=True)
 
     setup_mock_llm(injector, tools, _DEFAULT_PING_INTERVAL + 1)
 
@@ -978,16 +860,14 @@ ALL_CLAUDE_MODELS = list(get_args(get_args(ModelParam)[0]))
 
 
 @pytest.mark.parametrize("model", ALL_CLAUDE_MODELS, ids=ALL_CLAUDE_MODELS)
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_all_models_run_without_crash(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     model: str,
 ) -> None:
     setup_mock_llm(injector, [])
 
-    chat_model = create_langchain_chat_model(test_client, httpx_mock, model=model)
+    chat_model = create_langchain_chat_model(test_client, model=model)
     response = chat_model.invoke([HumanMessage(content="Test message")])
 
     assert isinstance(response, AIMessage)
@@ -1000,16 +880,14 @@ def test_all_models_run_without_crash(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_langchain_multi_turn_server_tool_use_with_internal_name(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     """LangChain: sending history with server_tool_use blocks that carry
     internal_name (PrivateGPT-emitted) must succeed without crashing."""
     setup_mock_llm(injector, [])
-    chat_model = create_langchain_chat_model(test_client, httpx_mock, is_async=True)
+    chat_model = create_langchain_chat_model(test_client, is_async=True)
 
     tool_use_id = "srvtoolu_5ce5f7ffca47420b9fa126c570f72a35"
 
@@ -1046,16 +924,14 @@ async def test_langchain_multi_turn_server_tool_use_with_internal_name(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_langchain_multi_turn_server_tool_use_without_internal_name(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     """LangChain: sending history with server_tool_use blocks WITHOUT internal_name
     (native Anthropic API blocks) must also succeed, falling back to public name."""
     setup_mock_llm(injector, [])
-    chat_model = create_langchain_chat_model(test_client, httpx_mock, is_async=True)
+    chat_model = create_langchain_chat_model(test_client, is_async=True)
 
     tool_use_id = "srvtoolu_f87591591b7f4f8fa3f448f954334ed7"
 

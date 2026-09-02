@@ -5,7 +5,7 @@ from typing import Any, get_args
 from unittest.mock import AsyncMock, Mock
 
 import anthropic
-import httpx
+import httpx2
 import pytest
 from anthropic import APIError, APIStatusError
 from anthropic.types import (
@@ -16,7 +16,6 @@ from anthropic.types import (
     ToolUseBlockParam,
 )
 from llama_index.core.llms.llm import ToolSelection
-from pytest_httpx import HTTPXMock, IteratorStream
 from starlette.testclient import TestClient
 
 from private_gpt.chat.extensions.context_filter import ContextFilter
@@ -45,6 +44,7 @@ from private_gpt.server.chat.chat_service import ChatService
 from private_gpt.server.chat.chat_service import Completion as ChatCompletion
 from private_gpt.server.models.models_service import ModelsService
 from private_gpt.server.utils.artifact_input import ArtifactType, IngestedArtifact
+from tests.fixtures.anthropic_httpx2_client import create_mock_http_client
 from tests.fixtures.mock_function_llm import get_mock_function_calling_llm
 from tests.fixtures.mock_injector import MockInjector
 
@@ -295,53 +295,6 @@ def setup_mock_llm(
     injector.bind_mock(LLMComponent, llm_component)
 
 
-def create_mock_http_client(
-    test_client: TestClient,
-    httpx_mock: HTTPXMock,
-    is_async: bool = False,
-) -> httpx.Client | httpx.AsyncClient:
-    def build_response(request: httpx.Request) -> httpx.Response:
-        starlette_request = test_client.build_request(
-            method=request.method,
-            url=request.url.path,
-            headers=request.headers,
-            content=request.content,
-            params=request.url.params,
-        )
-        response = test_client.send(starlette_request)
-        content_type = response.headers.get("Content-Type", "")
-
-        if "text/event-stream" in content_type:
-            raw_events = [
-                (item + "\n\n").encode("utf-8")
-                for item in response.text.split("\n\n")
-                if item.strip()
-            ]
-            return httpx.Response(
-                status_code=response.status_code,
-                headers=response.headers,
-                stream=IteratorStream(raw_events),
-            )
-
-        if "application/json" in content_type:
-            return httpx.Response(
-                status_code=response.status_code,
-                headers=response.headers,
-                json=response.json(),
-            )
-
-        return httpx.Response(
-            status_code=response.status_code,
-            headers=response.headers,
-            content=response.content,
-        )
-
-    httpx_mock.add_callback(build_response)
-    httpx_mock.add_response(is_reusable=True)
-
-    return httpx.AsyncClient() if is_async else httpx.Client()
-
-
 def ingest_test_artifact(test_client: TestClient) -> IngestedArtifact:
     collection_id = str(uuid.uuid4())
     artifact_id = str(uuid.uuid4())
@@ -439,6 +392,26 @@ CLIENT_KWARGS = {
     "max_retries": 0,
 }
 
+# anthropic>=1 dropped these as named args on messages.create/stream; the API
+# still accepts them, so they are forwarded via extra_body.
+_SDK_REMOVED_SAMPLING_PARAMS = frozenset({"temperature", "top_p", "top_k"})
+
+
+def sdk_create_kwargs(params: dict[str, Any]) -> dict[str, Any]:
+    """Move sampling params the anthropic>=1 SDK rejects into extra_body."""
+    extra_body = dict(params.get("extra_body") or {})
+    kwargs: dict[str, Any] = {}
+    for key, value in params.items():
+        if key == "extra_body":
+            continue
+        if key in _SDK_REMOVED_SAMPLING_PARAMS:
+            extra_body[key] = value
+        else:
+            kwargs[key] = value
+    if extra_body:
+        kwargs["extra_body"] = extra_body
+    return kwargs
+
 
 @pytest.mark.parametrize(
     ("tools", "expected_text", "has_internal_tools"),
@@ -449,11 +422,9 @@ CLIENT_KWARGS = {
     ],
     ids=["normal_chat", "semantic_search_tool", "custom_weather_tool"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_sync_chat_non_streaming(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     tools: list[ToolConfig],
     expected_text: str,
     has_internal_tools: bool,
@@ -462,7 +433,7 @@ def test_sync_chat_non_streaming(
     setup_mock_llm(injector, prepared_tools)
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     response = client.messages.create(
         model="default",
@@ -488,11 +459,9 @@ def test_sync_chat_non_streaming(
     ],
     ids=["normal_chat", "semantic_search_tool", "custom_weather_tool"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_sync_chat_streaming(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     tools: list[ToolConfig],
     expected_text: str,
     has_internal_tools: bool,
@@ -501,7 +470,7 @@ def test_sync_chat_streaming(
     setup_mock_llm(injector, prepared_tools)
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     collected_text = []
     tool_use_count = 0
@@ -548,11 +517,9 @@ def test_sync_chat_streaming(
     ],
     ids=["normal_chat", "semantic_search_tool", "custom_weather_tool"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_async_chat_non_streaming(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     tools: list[ToolConfig],
     expected_text: str,
     has_internal_tools: bool,
@@ -561,7 +528,7 @@ async def test_async_chat_non_streaming(
     setup_mock_llm(injector, prepared_tools)
 
     client = anthropic.AsyncAnthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock, is_async=True)
+    client._client = create_mock_http_client(test_client, is_async=True)
 
     response = await client.messages.create(
         model="default",
@@ -588,11 +555,9 @@ async def test_async_chat_non_streaming(
     ],
     ids=["normal_chat", "semantic_search_tool", "custom_weather_tool"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_async_chat_streaming(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     tools: list[ToolConfig],
     expected_text: str,
     has_internal_tools: bool,
@@ -601,7 +566,7 @@ async def test_async_chat_streaming(
     setup_mock_llm(injector, prepared_tools)
 
     client = anthropic.AsyncAnthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock, is_async=True)
+    client._client = create_mock_http_client(test_client, is_async=True)
 
     collected_text = []
     tool_use_count = 0
@@ -643,11 +608,9 @@ async def test_async_chat_streaming(
     [True, False],
     ids=["with_valid_context", "without_context"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_semantic_search_requires_context(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     use_valid_context: bool,
 ) -> None:
     tool = (
@@ -658,7 +621,7 @@ def test_semantic_search_requires_context(
     setup_mock_llm(injector, [tool])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     if use_valid_context:
         response = client.messages.create(
@@ -678,16 +641,14 @@ def test_semantic_search_requires_context(
             )
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_multiple_messages_conversation(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     messages = [
         MessageParam(role="user", content="First message"),
@@ -705,11 +666,9 @@ def test_multiple_messages_conversation(
     assert len(response.content) > 0
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_legacy_completion_endpoint(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     chat_service = Mock()
     chat_service.chat = AsyncMock(
@@ -721,24 +680,26 @@ def test_legacy_completion_endpoint(
     )
     injector.bind_mock(ChatService, chat_service)
 
-    client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
-
-    response = client.completions.create(
-        model="default",
-        max_tokens_to_sample=64,
-        prompt="\n\nHuman: Say hello\n\nAssistant:",
+    # anthropic>=1 removed the Completions resource; hit the legacy endpoint
+    # directly so we still cover our /v1/complete compatibility API.
+    response = test_client.post(
+        "/v1/complete",
+        json={
+            "model": "default",
+            "max_tokens_to_sample": 64,
+            "prompt": "\n\nHuman: Say hello\n\nAssistant:",
+        },
     )
 
-    assert response.type == "completion"
-    assert isinstance(response.completion, str)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["type"] == "completion"
+    assert isinstance(payload["completion"], str)
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_legacy_completion_endpoint_forwards_all_supported_params(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     chat_service = Mock()
     chat_service.chat = AsyncMock(
@@ -750,20 +711,21 @@ def test_legacy_completion_endpoint_forwards_all_supported_params(
     )
     injector.bind_mock(ChatService, chat_service)
 
-    client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
-
-    _ = client.completions.create(
-        model="default",
-        max_tokens_to_sample=128,
-        prompt="\n\nHuman: Test forwarding\n\nAssistant:",
-        metadata={"user_id": "sdk_user"},
-        stop_sequences=["STOP", "END"],
-        stream=False,
-        temperature=0.42,
-        top_k=25,
-        top_p=0.91,
+    response = test_client.post(
+        "/v1/complete",
+        json={
+            "model": "default",
+            "max_tokens_to_sample": 128,
+            "prompt": "\n\nHuman: Test forwarding\n\nAssistant:",
+            "metadata": {"user_id": "sdk_user"},
+            "stop_sequences": ["STOP", "END"],
+            "stream": False,
+            "temperature": 0.42,
+            "top_k": 25,
+            "top_p": 0.91,
+        },
     )
+    assert response.status_code == 200
 
     chat_service.chat.assert_awaited_once()
     chat_request = chat_service.chat.await_args.args[0]
@@ -778,11 +740,9 @@ def test_legacy_completion_endpoint_forwards_all_supported_params(
     assert chat_request.messages[0].content == "Test forwarding"
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_models_list_and_retrieve_endpoints(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     mock_model = ModelInfoOutput(
         id="mock",
@@ -805,27 +765,20 @@ def test_models_list_and_retrieve_endpoints(
     models_service.get_model = Mock(return_value=mock_model)
     injector.bind_mock(ModelsService, models_service)
 
-    # NOTE: create_mock_http_client currently registers a one-shot callback.
-    # Use separate clients/mocks for list and retrieve so each call gets routed.
-    list_client = anthropic.Anthropic(**CLIENT_KWARGS)
-    list_client._client = create_mock_http_client(test_client, httpx_mock)
-    listed = list_client.models.list()
+    client = anthropic.Anthropic(**CLIENT_KWARGS)
+    client._client = create_mock_http_client(test_client)
+    listed = client.models.list()
     assert listed.data
 
-    httpx_mock.reset()
-    retrieve_client = anthropic.Anthropic(**CLIENT_KWARGS)
-    retrieve_client._client = create_mock_http_client(test_client, httpx_mock)
     first_id = listed.data[0].id
-    retrieved = retrieve_client.models.retrieve(first_id)
+    retrieved = client.models.retrieve(first_id)
     assert retrieved.id == first_id
     assert retrieved.type == "model"
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_models_list_endpoint_forwards_pagination_params(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     mock_model = ModelInfoOutput(
         id="mock-after",
@@ -848,7 +801,7 @@ def test_models_list_endpoint_forwards_pagination_params(
     injector.bind_mock(ModelsService, models_service)
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     listed = client.models.list(after_id="model_1", limit=7)
     assert listed.data[0].id == "mock-after"
@@ -856,11 +809,9 @@ def test_models_list_endpoint_forwards_pagination_params(
     models_service.list_models.assert_called_once_with(None, "model_1", 7)
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_messages_count_tokens_endpoint(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     chat_service = Mock()
     chat_service.count_tokens = AsyncMock(
@@ -869,7 +820,7 @@ def test_messages_count_tokens_endpoint(
     injector.bind_mock(ChatService, chat_service)
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     counted = client.messages.count_tokens(
         model="default",
@@ -878,11 +829,9 @@ def test_messages_count_tokens_endpoint(
     assert counted.input_tokens > 0
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_messages_count_tokens_endpoint_forwards_message_input_and_options(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     injector.get(ChatService)
     chat_service = Mock()
@@ -892,7 +841,7 @@ def test_messages_count_tokens_endpoint_forwards_message_input_and_options(
     injector.bind_mock(ChatService, chat_service)
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     counted = client.messages.count_tokens(
         model="default",
@@ -929,11 +878,9 @@ def test_messages_count_tokens_endpoint_forwards_message_input_and_options(
     assert chat_request.tool_config.tools[0].name == "get_weather"
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_messages_count_tokens_forwards_output_config_effort_and_format(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     chat_service = Mock()
     chat_service.count_tokens = AsyncMock(
@@ -942,7 +889,7 @@ def test_messages_count_tokens_forwards_output_config_effort_and_format(
     injector.bind_mock(ChatService, chat_service)
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     counted = client.messages.count_tokens(
         model="default",
@@ -970,11 +917,9 @@ def test_messages_count_tokens_forwards_output_config_effort_and_format(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_async_messages_count_tokens_endpoint_forwards_message_input(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     chat_service = Mock()
     chat_service.count_tokens = AsyncMock(
@@ -983,7 +928,7 @@ async def test_async_messages_count_tokens_endpoint_forwards_message_input(
     injector.bind_mock(ChatService, chat_service)
 
     client = anthropic.AsyncAnthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock, is_async=True)
+    client._client = create_mock_http_client(test_client, is_async=True)
 
     counted = await client.messages.count_tokens(
         model="default",
@@ -1000,16 +945,14 @@ async def test_async_messages_count_tokens_endpoint_forwards_message_input(
     assert chat_request.system.prompt == "Async system"
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_empty_tool_list_behaves_like_no_tools(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     response_with_none = client.messages.create(
         model="default",
@@ -1023,16 +966,14 @@ def test_empty_tool_list_behaves_like_no_tools(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_async_empty_messages_raises_error(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.AsyncAnthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock, is_async=True)
+    client._client = create_mock_http_client(test_client, is_async=True)
 
     with pytest.raises(APIError):
         await client.messages.create(
@@ -1061,23 +1002,21 @@ async def test_async_empty_messages_raises_error(
         "metadata",
     ],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_additional_request_parameters(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     extra_params: dict[str, Any],
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     response = client.messages.create(
         model="default",
         max_tokens=1024,
         messages=[MessageParam(role="user", content="Test message")],
-        **extra_params,
+        **sdk_create_kwargs(extra_params),
     )
 
     assert response, "Responses should not be None"
@@ -1094,23 +1033,21 @@ def test_additional_request_parameters(
     ],
     ids=["temperature", "sampling_params", "stop_sequences"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_async_additional_request_parameters(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     extra_params: dict[str, Any],
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.AsyncAnthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock, is_async=True)
+    client._client = create_mock_http_client(test_client, is_async=True)
 
     response = await client.messages.create(
         model="default",
         max_tokens=1024,
         messages=[MessageParam(role="user", content="Test message")],
-        **extra_params,
+        **sdk_create_kwargs(extra_params),
     )
 
     assert response, "Responses should not be None"
@@ -1122,17 +1059,15 @@ async def test_async_additional_request_parameters(
     [1, 100, 1024, 4096, 8192],
     ids=["min", "small", "medium", "large", "xlarge"],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_various_max_tokens_values(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     max_tokens_value: int,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     response = client.messages.create(
         model="default",
@@ -1144,16 +1079,14 @@ def test_various_max_tokens_values(
     assert response.role == "assistant"
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_system_message_parameter(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     response = client.messages.create(
         model="default",
@@ -1167,16 +1100,14 @@ def test_system_message_parameter(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_async_system_message_parameter(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.AsyncAnthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock, is_async=True)
+    client._client = create_mock_http_client(test_client, is_async=True)
 
     response = await client.messages.create(
         model="default",
@@ -1188,16 +1119,14 @@ async def test_async_system_message_parameter(
     assert response.role == "assistant"
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_invalid_tool_definition_raises_error(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     with pytest.raises(APIError):
         client.messages.create(
@@ -1208,16 +1137,14 @@ def test_invalid_tool_definition_raises_error(
         )
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_message_with_only_assistant_role_raises_error(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     with pytest.raises(APIError):
         client.messages.create(
@@ -1227,24 +1154,21 @@ def test_message_with_only_assistant_role_raises_error(
         )
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_streaming_with_additional_parameters(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     with (
         client.messages.stream(
             model="custom-model",
             max_tokens=2048,
-            temperature=0.8,
-            top_p=0.95,
             messages=[MessageParam(role="user", content="Test message")],
+            **sdk_create_kwargs({"temperature": 0.8, "top_p": 0.95}),
         ) as stream,
         pytest.raises(APIStatusError),
     ):
@@ -1252,23 +1176,20 @@ def test_streaming_with_additional_parameters(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_async_streaming_with_additional_parameters(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.AsyncAnthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock, is_async=True)
+    client._client = create_mock_http_client(test_client, is_async=True)
 
     async with client.messages.stream(
         model="custom-model",
         max_tokens=2048,
-        temperature=0.8,
-        top_p=0.95,
         messages=[MessageParam(role="user", content="Test message")],
+        **sdk_create_kwargs({"temperature": 0.8, "top_p": 0.95}),
     ) as stream:
 
         async def collector() -> None:
@@ -1290,19 +1211,17 @@ async def test_async_streaming_with_additional_parameters(
         pytest.param(500, "api_error", id="api_error"),
     ],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_http_error_parsing(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     status_code: int,
     error_type: str,
 ) -> None:
     """Test that HTTP errors are correctly parsed and raise appropriate exceptions."""
     setup_mock_llm(injector, [])
 
-    def error_callback(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
+    def error_callback(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(
             status_code=status_code,
             json={
                 "type": "error",
@@ -1313,10 +1232,8 @@ def test_http_error_parsing(
             },
         )
 
-    httpx_mock.add_callback(error_callback)
-
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = httpx.Client()
+    client._client = create_mock_http_client(handler=error_callback)
 
     with pytest.raises(APIStatusError) as exc_info:
         client.messages.create(
@@ -1352,11 +1269,9 @@ def test_http_error_parsing(
         ),
     ],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_http_error_parsing_streaming(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     error_type: str,
     max_tokens: int,
     message_content: str,
@@ -1364,18 +1279,16 @@ def test_http_error_parsing_streaming(
     """Test that HTTP errors are correctly parsed in streaming mode via SSE events."""
     setup_mock_llm(injector, [])
 
-    def error_sse_callback(request: httpx.Request) -> httpx.Response:
+    def error_sse_callback(request: httpx2.Request) -> httpx2.Response:
         error_event = f'event: error\ndata: {{"type": "error", "error": {{"type": "{error_type}", "message": "Test error for {error_type}"}}}}\n\n'
-        return httpx.Response(
+        return httpx2.Response(
             status_code=200,  # SSE always returns 200, errors are in the stream
             headers={"Content-Type": "text/event-stream"},
             content=error_event.encode("utf-8"),
         )
 
-    httpx_mock.add_callback(error_sse_callback)
-
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = httpx.Client()
+    client._client = create_mock_http_client(handler=error_sse_callback)
 
     with pytest.raises(anthropic.APIStatusError) as exc_info:  # noqa: SIM117, PT012
         with client.messages.stream(
@@ -1402,11 +1315,9 @@ def test_http_error_parsing_streaming(
         ),
     ],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_real_http_error_parsing(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     status_code: int,
     error_type: str,
     max_tokens: int,
@@ -1416,7 +1327,7 @@ def test_real_http_error_parsing(
     setup_mock_llm(injector, [])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     with pytest.raises(anthropic.APIStatusError) as exc_info:
         client.messages.create(
@@ -1429,16 +1340,14 @@ def test_real_http_error_parsing(
     assert error_type in str(exc_info.value)
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_http_error_parsing_streaming_real(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     with pytest.raises(anthropic.APIStatusError) as exc_info:  # noqa: SIM117, PT012
         with client.messages.stream(
@@ -1454,16 +1363,14 @@ def test_http_error_parsing_streaming_real(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_custom_content_blocks(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.AsyncAnthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock, is_async=True)
+    client._client = create_mock_http_client(test_client, is_async=True)
 
     messages = [
         MessageParam(role="user", content="This is message number"),
@@ -1507,17 +1414,15 @@ async def test_custom_content_blocks(
 
 
 @pytest.mark.asyncio
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_streaming_ping_events_with_slow_response(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     tools = [create_semantic_tool([ingest_test_artifact(test_client)])]
     setup_mock_llm(injector, tools, _DEFAULT_PING_INTERVAL + 1)
 
     client = anthropic.AsyncAnthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock, is_async=True)
+    client._client = create_mock_http_client(test_client, is_async=True)
 
     async with client.messages.stream(
         model="claude-opus-4-6",  # default
@@ -1533,17 +1438,15 @@ ALL_CLAUDE_MODELS = list(get_args(get_args(ModelParam)[0]))
 
 
 @pytest.mark.parametrize("model", ALL_CLAUDE_MODELS, ids=ALL_CLAUDE_MODELS)
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_all_models_run_without_crash(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     model: str,
 ) -> None:
     setup_mock_llm(injector, [])
 
     client = anthropic.AsyncAnthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock, is_async=True)
+    client._client = create_mock_http_client(test_client, is_async=True)
 
     response = await client.messages.create(
         model=model,
@@ -1693,11 +1596,9 @@ _BASE = {
         pytest.param({"max_tokens": 8192}, id="max_tokens_large"),
     ],
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 async def test_all_create_parameter_combinations(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     extra_params: dict[str, Any],
 ) -> None:
     tools = (
@@ -1709,9 +1610,9 @@ async def test_all_create_parameter_combinations(
     setup_mock_llm(injector, tools)
 
     client = anthropic.AsyncAnthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock, is_async=True)
+    client._client = create_mock_http_client(test_client, is_async=True)
 
-    params = {**_BASE, **extra_params}
+    params = sdk_create_kwargs({**_BASE, **extra_params})
     response = await client.messages.create(**params)
 
     assert response.role == "assistant"
@@ -1733,11 +1634,9 @@ _CODE_EXECUTION_MODE_PARAMS = [
     ("mode", "has_internal_tools"),
     _CODE_EXECUTION_MODE_PARAMS,
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_code_execution_tool(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     mode: str,
     has_internal_tools: bool,
 ) -> None:
@@ -1751,7 +1650,7 @@ def test_code_execution_tool(
     setup_mock_llm(injector, [tool])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     response = client.messages.create(
         model="default",
@@ -1777,11 +1676,9 @@ _WEB_SEARCH_MODE_PARAMS = [
     ("mode", "has_internal_tools"),
     _WEB_SEARCH_MODE_PARAMS,
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_web_search_tool(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     mode: str,
     has_internal_tools: bool,
 ) -> None:
@@ -1795,7 +1692,7 @@ def test_web_search_tool(
     setup_mock_llm(injector, [tool])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     response = client.messages.create(
         model="default",
@@ -1821,11 +1718,9 @@ _WEB_FETCH_MODE_PARAMS = [
     ("mode", "has_internal_tools"),
     _WEB_FETCH_MODE_PARAMS,
 )
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_web_fetch_tool(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
     mode: str,
     has_internal_tools: bool,
 ) -> None:
@@ -1839,7 +1734,7 @@ def test_web_fetch_tool(
     setup_mock_llm(injector, [tool])
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     response = client.messages.create(
         model="default",
@@ -1860,11 +1755,9 @@ def test_web_fetch_tool(
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_multi_turn_server_tool_use_history_with_internal_name(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     """Sending history that contains a server_tool_use block with internal_name
     (as emitted by PrivateGPT) must not crash and must produce a valid response.
@@ -1877,7 +1770,7 @@ def test_multi_turn_server_tool_use_history_with_internal_name(
     setup_mock_llm(injector, [], sleep_between_blocks=0)
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     tool_use_id = "srvtoolu_5ce5f7ffca47420b9fa126c570f72a35"
 
@@ -1925,11 +1818,9 @@ def test_multi_turn_server_tool_use_history_with_internal_name(
     assert len(response.content) > 0
 
 
-@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 def test_multi_turn_server_tool_use_history_without_internal_name(
     injector: MockInjector,
     test_client: TestClient,
-    httpx_mock: HTTPXMock,
 ) -> None:
     """Sending history that contains a server_tool_use block WITHOUT internal_name
     (as emitted by the native Anthropic API) must also work — falling back to the
@@ -1939,7 +1830,7 @@ def test_multi_turn_server_tool_use_history_without_internal_name(
     setup_mock_llm(injector, [], sleep_between_blocks=0)
 
     client = anthropic.Anthropic(**CLIENT_KWARGS)
-    client._client = create_mock_http_client(test_client, httpx_mock)
+    client._client = create_mock_http_client(test_client)
 
     tool_use_id = "srvtoolu_f87591591b7f4f8fa3f448f954334ed7"
 
