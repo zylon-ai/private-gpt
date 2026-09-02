@@ -175,7 +175,7 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
 
         try:
             if self._client:
-                self._run(self._client.close())
+                self._run(self._client.close(force=True))
             if self._temp_dir and self._temp_dir.exists():
                 shutil.rmtree(self._temp_dir, ignore_errors=True)
         except Exception as e:

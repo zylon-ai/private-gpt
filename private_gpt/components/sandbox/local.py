@@ -155,7 +155,8 @@ class BashExecutorSandbox(SandboxSession):
             await anyio.to_thread.run_sync(_write)
             await anyio.to_thread.run_sync(_chmod)
 
-    async def close(self) -> None:
+    async def close(self, force: bool = False) -> None:
+        del force  # local sessions are not pooled; close is always final
         pass
 
 
@@ -172,7 +173,8 @@ class LocalSandboxSession(BashExecutorSandbox):
         super().__init__(mounts, executor, env=env)
         self._workdir = workdir
 
-    async def close(self) -> None:
+    async def close(self, force: bool = False) -> None:
+        del force  # local sessions are not pooled; close is always final
         await anyio.to_thread.run_sync(
             lambda: shutil.rmtree(self._workdir, ignore_errors=True)
         )

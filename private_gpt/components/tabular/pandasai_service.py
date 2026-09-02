@@ -332,17 +332,18 @@ class PandasAIService(BaseModel):
             + (f" over sandbox: {sandbox.__class__.__name__}" if sandbox else "")
         )
 
-        result = await asyncio.to_thread(
-            self._run_analysis_sync, query, smart_dataframes, sandbox
-        )
+        try:
+            result = await asyncio.to_thread(
+                self._run_analysis_sync, query, smart_dataframes, sandbox
+            )
 
-        logger.debug(
-            f"Result: {result.response} "
-            f"Type: {type(result.response)} "
-            f"Last code executed: {result.response.last_code_executed}"
-        )
+            logger.debug(
+                f"Result: {result.response} "
+                f"Type: {type(result.response)} "
+                f"Last code executed: {result.response.last_code_executed}"
+            )
 
-        if sandbox is not None:
-            await asyncio.to_thread(sandbox.stop)
-
-        return result
+            return result
+        finally:
+            if sandbox is not None:
+                await asyncio.shield(asyncio.to_thread(sandbox.stop))
