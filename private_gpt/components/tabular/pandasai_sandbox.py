@@ -198,10 +198,11 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
         temp_dir = f"/tmp/{self._user_id}"
         colors_repr = repr(self._CUSTOM_COLORS)
 
-        setup_code = textwrap.dedent(
-            f"""
-            {self._PREAMBLE}
-
+        setup_code = (
+            self._PREAMBLE
+            + "\n\n"
+            + textwrap.dedent(
+                f"""
             CUSTOM_COLORS = {colors_repr}
 
             plt.rcParams.update({{
@@ -253,7 +254,8 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
                     raise ValueError(f"Unsupported format: {{fmt}}")
                 return filepath
         """
-        ).strip()
+            ).strip()
+        )
 
         try:
             result = self._run(
