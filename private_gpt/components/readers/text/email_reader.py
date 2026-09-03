@@ -116,7 +116,6 @@ class EmailContent(BaseModel):
                 "\n".join(parts),
                 heading_style="ATX",
                 bullets="bullet_list",
-                bullets_strong=True,
             )
             return markdown
         except ImportError:

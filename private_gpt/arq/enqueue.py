@@ -7,6 +7,7 @@ from typing import Any
 from arq import create_pool
 from arq.jobs import Job
 
+from private_gpt.arq.routing import publish_route
 from private_gpt.arq.settings import get_redis_settings
 from private_gpt.settings.settings import settings as _settings
 
@@ -39,6 +40,7 @@ async def enqueue_job(
     queue_name: str,
     args: tuple[Any, ...] = (),
     correlation_id: str,
+    worker_type: str,
     job_id: str | None = None,
     defer_seconds: int | None = None,
 ) -> bool:
@@ -52,6 +54,18 @@ async def enqueue_job(
     )
     redis = await create_pool(get_redis_settings(current_settings))
     try:
+        try:
+            await publish_route(
+                current_settings,
+                worker_type=worker_type,
+                queue_name=queue_name,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to publish ARQ route worker_type=%s queue=%s",
+                worker_type,
+                queue_name,
+            )
         options: dict[str, Any] = {"_queue_name": queue_name}
         if job_id is not None:
             options["_job_id"] = job_id

@@ -346,4 +346,4 @@ class PandasAIService(BaseModel):
             return result
         finally:
             if sandbox is not None:
-                await asyncio.to_thread(sandbox.stop)
+                await asyncio.shield(asyncio.to_thread(sandbox.stop))
