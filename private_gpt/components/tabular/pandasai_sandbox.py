@@ -164,11 +164,12 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
             self._started = True
             logger.debug("Remote sandbox session started successfully")
         except Exception as e:
+            self.stop()
             logger.error("Failed to start remote sandbox: %s", e)
             raise RuntimeError(f"Failed to start sandbox: {e}") from e
 
     def stop(self) -> None:
-        if not self._started:
+        if not self._started and self._client is None and self._temp_dir is None:
             return
 
         logger.debug("Stopping remote sandbox session for user: %s", self._user_id)
@@ -262,9 +263,10 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
                 self._client.run_code(setup_code, SandboxCodeOptions(language="python"))
             )
             if not result.success:
-                logger.warning("Environment setup warning: %s", result.error)
+                raise RuntimeError(result.error or "Environment setup failed")
         except Exception as e:
-            logger.warning("Error during environment setup: %s", e)
+            logger.error("Error during environment setup: %s", e)
+            raise
 
     # ------------------------------------------------------------------
     # Code execution
