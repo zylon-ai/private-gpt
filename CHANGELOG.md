@@ -1,5 +1,70 @@
 # Changelog
 
+## [1.1.0](https://github.com/zylon-ai/private-gpt/compare/v1.0.1...v1.1.0) (2026-09-03)
+
+
+### Features
+
+* add code execution ui ([#2289](https://github.com/zylon-ai/private-gpt/issues/2289)) ([bfd2633](https://github.com/zylon-ai/private-gpt/commit/bfd2633d89468d9038abd2079474d80c2c466c8e))
+* add compatibility with skill creator ([#2342](https://github.com/zylon-ai/private-gpt/issues/2342)) ([cdf4d33](https://github.com/zylon-ai/private-gpt/commit/cdf4d332dfb44de4736f26014501e45f9309e2dc))
+* add db2 native connection ([#2292](https://github.com/zylon-ai/private-gpt/issues/2292)) ([0426d91](https://github.com/zylon-ai/private-gpt/commit/0426d91ba13b9b74af494059bfce5fd0fd9e1ea7))
+* add new health check ([23bcf16](https://github.com/zylon-ai/private-gpt/commit/23bcf16876efcf1f6a101159038acfbdb9db6b4f))
+* add reader overrides ([#2317](https://github.com/zylon-ai/private-gpt/issues/2317)) ([5219fc6](https://github.com/zylon-ai/private-gpt/commit/5219fc65754e28d2f9860eaaa8459395a6fb8d61))
+* add validation skill endpoint + skill prompt ([#2272](https://github.com/zylon-ai/private-gpt/issues/2272)) ([42a6c04](https://github.com/zylon-ai/private-gpt/commit/42a6c047d0c63ae862bf4981d1adf9d359df646b))
+* add websearch in a sandbox ([#2300](https://github.com/zylon-ai/private-gpt/issues/2300)) ([576589b](https://github.com/zylon-ai/private-gpt/commit/576589bdc5970813d60d3dd3295a6d6c9d5f8e8f))
+* ai docs ([#2330](https://github.com/zylon-ai/private-gpt/issues/2330)) ([f9e32c5](https://github.com/zylon-ai/private-gpt/commit/f9e32c50354571b3eb3916faa59c56fa4ba13586))
+* allow to attach files as Anthropic does ([#2265](https://github.com/zylon-ai/private-gpt/issues/2265)) ([4cca7d0](https://github.com/zylon-ai/private-gpt/commit/4cca7d0b97007f720d62c32d8ccce350f54a64e3))
+* anthropic server tool results ([#2319](https://github.com/zylon-ai/private-gpt/issues/2319)) ([a17ce76](https://github.com/zylon-ai/private-gpt/commit/a17ce76fc833bb5d064c97d8c92cf509f4c5b59e))
+* bump mcp to 2.0 ([#2320](https://github.com/zylon-ai/private-gpt/issues/2320)) ([94710b9](https://github.com/zylon-ai/private-gpt/commit/94710b9272b70d5e78c9cba3a17351c10511f628))
+* code execution v2 ([#2278](https://github.com/zylon-ai/private-gpt/issues/2278)) ([f2cffd1](https://github.com/zylon-ai/private-gpt/commit/f2cffd1ab93be08175c19613cd65e90d64130b38))
+* code execution v4 ([#2295](https://github.com/zylon-ai/private-gpt/issues/2295)) ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* control docs parser ([#2273](https://github.com/zylon-ai/private-gpt/issues/2273)) ([78a1e8b](https://github.com/zylon-ai/private-gpt/commit/78a1e8b9f64a1c2b2dc5223f800519a62cf0d8a6))
+* improve docs pipeline ([#2332](https://github.com/zylon-ai/private-gpt/issues/2332)) ([d8d8f05](https://github.com/zylon-ai/private-gpt/commit/d8d8f05ca9e7662f9031a02814234aa974287539))
+* improve web search ([#2274](https://github.com/zylon-ai/private-gpt/issues/2274)) ([5d60141](https://github.com/zylon-ai/private-gpt/commit/5d60141f08f9f4a274915c5149049aa832b4d8de))
+* refresh mcp ([#2338](https://github.com/zylon-ai/private-gpt/issues/2338)) ([53ec2ad](https://github.com/zylon-ai/private-gpt/commit/53ec2ad3e704f1ff9ea47198937d463b42fbe639))
+* resumable chat worker + tool worker + async tokenizer ([#2298](https://github.com/zylon-ai/private-gpt/issues/2298)) ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+
+
+### Bug Fixes
+
+* async_playwright for test ([5d60141](https://github.com/zylon-ai/private-gpt/commit/5d60141f08f9f4a274915c5149049aa832b4d8de))
+* avoid duplicating deltas ([#2321](https://github.com/zylon-ai/private-gpt/issues/2321)) ([b6be07c](https://github.com/zylon-ai/private-gpt/commit/b6be07c2aef58e0a7cade77dfbfdca1331c2e16c))
+* change sql prompt ([#2313](https://github.com/zylon-ai/private-gpt/issues/2313)) ([ae31dc1](https://github.com/zylon-ai/private-gpt/commit/ae31dc1db9fc375ad1750ce9a018a483766db148))
+* chat engine ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* chat engine ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* context stack ([#2323](https://github.com/zylon-ai/private-gpt/issues/2323)) ([0216db9](https://github.com/zylon-ai/private-gpt/commit/0216db9f4adfc21ddbf54fdae21bd3f610a5472f))
+* CVE-2026-44209 security vulnerability ([#2283](https://github.com/zylon-ai/private-gpt/issues/2283)) ([4641db3](https://github.com/zylon-ai/private-gpt/commit/4641db358c9655ecf0e345be9350e5533f5c6950))
+* extended thinking ([#2333](https://github.com/zylon-ai/private-gpt/issues/2333)) ([e4344ae](https://github.com/zylon-ai/private-gpt/commit/e4344ae741d1f4ddcceb2ea1465321486216bf0f))
+* fix deps ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* fix deps ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* improve perf ([#2322](https://github.com/zylon-ai/private-gpt/issues/2322)) ([e534667](https://github.com/zylon-ai/private-gpt/commit/e534667c98a9c67736c2392fe94b6da31cc90be6))
+* loop ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* loop ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* mcp oauth error ([#2325](https://github.com/zylon-ai/private-gpt/issues/2325)) ([f672481](https://github.com/zylon-ai/private-gpt/commit/f672481277eebc7e4d6409f5557c81f415dabc65))
+* mypy ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* mypy ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* mypy ([5d60141](https://github.com/zylon-ai/private-gpt/commit/5d60141f08f9f4a274915c5149049aa832b4d8de))
+* openai compatibility ([#2340](https://github.com/zylon-ai/private-gpt/issues/2340)) ([7d9081b](https://github.com/zylon-ai/private-gpt/commit/7d9081b12d81d477928b84a95cd5778d86be3891))
+* prepare stable version ([#2318](https://github.com/zylon-ai/private-gpt/issues/2318)) ([e7b579e](https://github.com/zylon-ai/private-gpt/commit/e7b579e3e3bb8d806a68ae0ba42601a7ed7587c0))
+* random bugs ([#2301](https://github.com/zylon-ai/private-gpt/issues/2301)) ([091d5f7](https://github.com/zylon-ai/private-gpt/commit/091d5f7020bf5612190c4b3220935918dee83f7b))
+* random bugs v3 ([#2307](https://github.com/zylon-ai/private-gpt/issues/2307)) ([cdf0b35](https://github.com/zylon-ai/private-gpt/commit/cdf0b35b77a04d5875012255155d4f075a454221))
+* refactor ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* refactor ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* refresh flag exception ([#2341](https://github.com/zylon-ai/private-gpt/issues/2341)) ([ab89a0d](https://github.com/zylon-ai/private-gpt/commit/ab89a0d67bf6a30481081bdc7c487b484d82f91b))
+* remove parent chat job ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* remove parent chat job ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* remove pub sub ([#2328](https://github.com/zylon-ai/private-gpt/issues/2328)) ([4269d7e](https://github.com/zylon-ai/private-gpt/commit/4269d7e04b20b00f4ef76a71c8e23bf818a63011))
+* remove tool result ([#2327](https://github.com/zylon-ai/private-gpt/issues/2327)) ([a5c6d24](https://github.com/zylon-ai/private-gpt/commit/a5c6d241b27f9b66ab18d91b07d23f76b978befd))
+* revert usleess changes ([21d42fd](https://github.com/zylon-ai/private-gpt/commit/21d42fd97aface1854ef8a4c1d7b1c8d7f9a9f6f))
+* revert usleess changes ([cd8ca22](https://github.com/zylon-ai/private-gpt/commit/cd8ca2214ac832162a3ee9b91fb2f87b49a75c09))
+* split celery task in two (parser & store), and reuse in the attach documents ([#2326](https://github.com/zylon-ai/private-gpt/issues/2326)) ([3acd63d](https://github.com/zylon-ai/private-gpt/commit/3acd63d4b5011b0bff6ffe2df4f30d9a028335ba))
+* support Windows model download locking ([#2352](https://github.com/zylon-ai/private-gpt/issues/2352)) ([f31b550](https://github.com/zylon-ai/private-gpt/commit/f31b550ab63aac0b7b454e7f553dd87869c9d696))
+* tabular sandbox ([#2359](https://github.com/zylon-ai/private-gpt/issues/2359)) ([0658140](https://github.com/zylon-ai/private-gpt/commit/065814007608a95a6160102c370f6ea52ba290d6))
+* **tabular:** force-close sandbox after analysis to avoid leaks ([#2357](https://github.com/zylon-ai/private-gpt/issues/2357)) ([39b3a79](https://github.com/zylon-ai/private-gpt/commit/39b3a79b3cc21f0a7a025323e7df667d2f7f1935))
+* update fern & resolve fern preview ([#2288](https://github.com/zylon-ai/private-gpt/issues/2288)) ([f3d24b5](https://github.com/zylon-ai/private-gpt/commit/f3d24b54138360429ee637ee9645e1eb957b0992))
+* use ARQ liveness and recover stale chat jobs ([23bcf16](https://github.com/zylon-ai/private-gpt/commit/23bcf16876efcf1f6a101159038acfbdb9db6b4f))
+* worker health ([#2358](https://github.com/zylon-ai/private-gpt/issues/2358)) ([23bcf16](https://github.com/zylon-ai/private-gpt/commit/23bcf16876efcf1f6a101159038acfbdb9db6b4f))
+
 ## [1.0.1](https://github.com/zylon-ai/private-gpt/compare/v1.0.0...v1.0.1) (2026-06-16)
 
 
