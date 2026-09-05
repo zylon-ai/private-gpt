@@ -84,15 +84,15 @@ def get_condense_memory_strategy(
     injector: Injector | None = None,
     **kwargs: Any,
 ) -> BaseMemoryStrategy:
-    """Get the condense strategy from a string or CondenseStrategy enum.
+    """Get the memory strategy matching the given CondenseStrategyType.
 
     Args:
-        strategy (str | CondenseStrategy): The strategy to get.
+        strategy (str | CondenseStrategyType): The strategy to get.
         injector (Injector | None): Optional dependency injector for workflow builders.
         **kwargs: Additional keyword arguments to pass to the strategy constructor.
 
     Returns:
-        CondenseStrategy: The corresponding CondenseStrategy enum.
+        BaseMemoryStrategy: The strategy instance for the given type.
     """
     strategy_enum = (
         strategy
