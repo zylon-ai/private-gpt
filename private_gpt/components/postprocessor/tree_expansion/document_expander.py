@@ -112,11 +112,10 @@ class DocumentTreeExpander:
         return self.result_nodes_ids, token_count
 
     def _get_token_count_by_id(self, node_id: str) -> int | None:
-        """Calculate the token count of a node and its subtree (if applicable).
+        """Get the cached token count of a node.
 
         Args:
-            node_id: The node ID to count tokens for
-            include_subtree: Whether to include tokens from all descendant nodes
+            node_id: The node ID to look up
 
         Returns:
             Total token count
