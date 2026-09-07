@@ -8,6 +8,8 @@ usually PID 1, not the uvicorn child):
 
 - ``kill -USR1 <pid>`` — asyncio tasks, ARQ jobs, Python thread stacks
 - ``kill -USR2 <pid>`` — C/native stacks (use if the loop is blocked in gRPC)
+- ``GET :9464/metrics`` — Prometheus gauges (occupancy, job age, loop lag)
+- ``GET :9464/debug`` — JSON snapshot + stacks (works even if the loop is stuck)
 
 These dumps only log. They do not change ``/health``.
 """
@@ -35,6 +37,12 @@ _LOOP: asyncio.AbstractEventLoop | None = None
 _JOB_FIRST_SEEN: dict[str, float] = {}
 _JOB_LAST_DUMP: dict[str, float] = {}
 _SIGNALS_INSTALLED = False
+_SNAPSHOT_LOCK = threading.Lock()
+_SNAPSHOT: dict[str, Any] = {
+    "event_loop_lag_seconds": 0.0,
+    "event_loop_heartbeat_unix": 0.0,
+    "asyncio_tasks": 0,
+}
 
 
 def _env_float(name: str, default: float) -> float:
@@ -213,6 +221,93 @@ def reset_debug_state() -> None:
     _JOB_FIRST_SEEN.clear()
     _JOB_LAST_DUMP.clear()
     _DUMP_REQUESTED.clear()
+    with _SNAPSHOT_LOCK:
+        _SNAPSHOT.clear()
+        _SNAPSHOT.update(
+            {
+                "event_loop_lag_seconds": 0.0,
+                "event_loop_heartbeat_unix": 0.0,
+                "asyncio_tasks": 0,
+            }
+        )
+
+
+def collect_worker_stats() -> dict[str, Any]:
+    """Numbers for /metrics. Safe to call from the metrics HTTP thread."""
+    worker = _WORKER
+    tasks = getattr(worker, "tasks", {}) or {} if worker is not None else {}
+    live = {str(job_id) for job_id in tasks}
+    now = time.monotonic()
+    for job_id in list(_JOB_FIRST_SEEN):
+        if job_id not in live:
+            _JOB_FIRST_SEEN.pop(job_id, None)
+            _JOB_LAST_DUMP.pop(job_id, None)
+    for job_id in live:
+        _JOB_FIRST_SEEN.setdefault(job_id, now)
+    ages = [now - _JOB_FIRST_SEEN[job_id] for job_id in live]
+    with _SNAPSHOT_LOCK:
+        lag = float(_SNAPSHOT.get("event_loop_lag_seconds") or 0.0)
+        heartbeat = float(_SNAPSHOT.get("event_loop_heartbeat_unix") or 0.0)
+        aio_tasks = int(_SNAPSHOT.get("asyncio_tasks") or 0)
+    return {
+        "pid": os.getpid(),
+        "jobs_ongoing": len(tasks),
+        "jobs_max": int(getattr(worker, "max_jobs", 0) or 0)
+        if worker is not None
+        else 0,
+        "jobs_complete": int(getattr(worker, "jobs_complete", 0) or 0)
+        if worker is not None
+        else 0,
+        "jobs_failed": int(getattr(worker, "jobs_failed", 0) or 0)
+        if worker is not None
+        else 0,
+        "job_timeout_s": float(getattr(worker, "job_timeout_s", 0) or 0)
+        if worker is not None
+        else 0.0,
+        "oldest_job_age_seconds": max(ages, default=0.0),
+        "event_loop_lag_seconds": lag,
+        "event_loop_heartbeat_unix": heartbeat,
+        "asyncio_tasks": aio_tasks,
+        "in_flight": sorted(live),
+    }
+
+
+def _record_loop_sample(*, lag_seconds: float, asyncio_tasks: int) -> None:
+    with _SNAPSHOT_LOCK:
+        _SNAPSHOT["event_loop_lag_seconds"] = max(0.0, lag_seconds)
+        _SNAPSHOT["event_loop_heartbeat_unix"] = time.time()
+        _SNAPSHOT["asyncio_tasks"] = asyncio_tasks
+
+
+def build_debug_payload(*, dump_timeout_s: float = 1.0) -> dict[str, Any]:
+    """JSON for GET /debug. Thread stacks always; asyncio dump if the loop answers."""
+    stats = collect_worker_stats()
+    heartbeat = float(stats.get("event_loop_heartbeat_unix") or 0.0)
+    heartbeat_age = (time.time() - heartbeat) if heartbeat else None
+    payload: dict[str, Any] = {
+        **stats,
+        "heartbeat_age_seconds": heartbeat_age,
+        "loop_blocked": bool(heartbeat_age is not None and heartbeat_age > 5.0),
+        "threads": _format_threads(),
+        "dump": None,
+    }
+    loop = _LOOP
+    if loop is None or not loop.is_running():
+        return payload
+
+    async def _dump() -> str:
+        return format_debug_dump()
+
+    future = asyncio.run_coroutine_threadsafe(_dump(), loop)
+    try:
+        payload["dump"] = future.result(timeout=dump_timeout_s)
+        payload["loop_blocked"] = False
+    except TimeoutError:
+        payload["loop_blocked"] = True
+        future.cancel()
+    except Exception as exc:
+        payload["dump_error"] = repr(exc)
+    return payload
 
 
 async def _monitor() -> None:
@@ -229,7 +324,13 @@ async def _monitor() -> None:
                 logger.exception("ARQ debug dump failed")
         t0 = time.monotonic()
         await asyncio.sleep(interval)
-        lag_ms = (time.monotonic() - t0 - interval) * 1000.0
+        lag_s = time.monotonic() - t0 - interval
+        try:
+            aio_tasks = len(asyncio.all_tasks())
+        except Exception:
+            aio_tasks = 0
+        _record_loop_sample(lag_seconds=lag_s, asyncio_tasks=aio_tasks)
+        lag_ms = lag_s * 1000.0
         if lag_ms >= warn_ms:
             logger.warning(
                 "event loop lag %.0fms (threshold %.0fms) — loop was blocked",
@@ -263,12 +364,16 @@ def start_worker_debug(worker: Any) -> asyncio.Task[None] | None:
     except RuntimeError:
         _LOOP = None
     _install_signals()
+    from private_gpt.arq.metrics import start_metrics_server
+
+    metrics_port = start_metrics_server()
     logger.info(
         "ARQ debug enabled pid=%s SIGUSR1=asyncio/threads SIGUSR2=native stacks "
-        "loop_lag_warn_ms=%s job_stuck_warn_s=%s",
+        "loop_lag_warn_ms=%s job_stuck_warn_s=%s metrics_port=%s",
         os.getpid(),
         _env_float("PGPT_ARQ_LOOP_LAG_WARN_MS", 2000.0),
         _env_float("PGPT_ARQ_JOB_STUCK_WARN_S", 1800.0),
+        metrics_port if metrics_port is not None else "off",
     )
     disabled = os.environ.get("PGPT_ARQ_DEBUG", "1").strip().lower() in {
         "0",
