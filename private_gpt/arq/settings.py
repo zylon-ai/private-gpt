@@ -1,3 +1,4 @@
+import os
 from dataclasses import replace
 
 from arq.connections import RedisSettings
@@ -11,6 +12,11 @@ QUEUE_PREFIX = "private_gpt:arq:queue"
 
 def get_queue_name(queue: str) -> str:
     return f"{QUEUE_PREFIX}:{queue}"
+
+
+def arq_health_check_key(queue_name: str) -> str:
+    worker_name = os.environ.get("HOSTNAME", "worker").strip() or "worker"
+    return f"{queue_name}:health-check:{worker_name}"
 
 
 def get_redis_settings(settings: Settings) -> RedisSettings:
@@ -41,11 +47,4 @@ def get_healthcheck_redis_settings(settings: Settings) -> RedisSettings:
         conn_retry_delay=1,
         conn_timeout=1,
         retry=Retry(ExponentialBackoff(cap=1, base=0.1), retries=1),
-    )
-
-
-def get_control_redis_settings(settings: Settings) -> RedisSettings:
-    return replace(
-        get_healthcheck_redis_settings(settings),
-        database=0,
     )
