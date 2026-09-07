@@ -12,6 +12,8 @@ from private_gpt.components.readers.factories.pdf_inspector import (
 from private_gpt.components.readers.factories.pptx2md import PPTX2MdReaderFactory
 from private_gpt.components.readers.factories.text import TextReaderFactory
 from private_gpt.components.readers.factories.vision import VisionReaderFactory
+from private_gpt.components.readers.factories.zyloncsv import ZylonCsvReaderFactory
+from private_gpt.components.readers.factories.zylonxlsx import ZylonXlsxReaderFactory
 from private_gpt.settings.settings import Settings
 
 ReaderFactoryProvider = (
@@ -44,6 +46,8 @@ class ReaderFactoryRegistry:
             "pdf-inspector-hybrid": HybridPdfReaderFactory(settings, injector),
             "text": TextReaderFactory(settings, injector),
             "vision": VisionReaderFactory(settings, injector),
+            "zyloncsv": ZylonCsvReaderFactory(settings, injector),
+            "zylonxlsx": ZylonXlsxReaderFactory(settings, injector),
         }
         self._factories: dict[str, ReaderFactory] = {
             **built_ins,

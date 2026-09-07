@@ -6,7 +6,7 @@ _DEFAULT_EXTENSION_READERS: dict[str, list[str]] = {
     ".pdf": ["pdf-inspector-hybrid", "markitdown", "docling", "vision"],
     ".pptx": ["markitdown", "pptx2md"],
     ".docx": ["markitdown", "docling"],
-    ".xlsx": ["markitdown", "docling"],
+    ".xlsx": ["zylonxlsx", "markitdown", "docling"],
     ".xls": ["markitdown"],
     # Text-like formats stay on the text reader pipeline.
     ".md": ["text"],
@@ -18,7 +18,7 @@ _DEFAULT_EXTENSION_READERS: dict[str, list[str]] = {
     ".shtm": ["text"],
     ".stm": ["text"],
     ".txt": ["text"],
-    ".csv": ["text"],
+    ".csv": ["zyloncsv", "text"],
     ".tsv": ["text"],
     ".psv": ["text"],
     ".eml": ["text"],

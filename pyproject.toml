@@ -109,6 +109,7 @@ ingest-documents = [
     "openpyxl>=3.1.5,<4",
     "pptx2md>=1.7.1",
     "scipy>=1.10.0,<2",
+    "python-calamine>=0.8.2",
 ]
 ingest-markitdown = [
     "private-gpt[ingest-core]",
