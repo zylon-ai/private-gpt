@@ -44,6 +44,18 @@ class ConvertBody(BaseModel):
         description="Output format: 'markdown' returns text, 'object' returns a content tree.",
         examples=["markdown", "object"],
     )
+    execute_transformations: bool = Field(
+        default=False,
+        description=(
+            "Whether to run the transformation pipeline (chunking, tokenization, "
+            "tree building, etc.) on the parsed content. Defaults to False because "
+            "this endpoint is meant as a lightweight preview/conversion of a file, "
+            "and transformations are costly and only needed to obtain a fully "
+            "structured 'object' content tree. Set to True to get a chunked tree "
+            "when using format='object'; with format='markdown' this has no "
+            "practical effect since only the flat parsed text is returned."
+        ),
+    )
 
     model_config = {
         "json_schema_extra": {
@@ -301,6 +313,12 @@ def list_readers(request: Request) -> ReadersResponse:
                 "Format Options:\n"
                 "* markdown (default): Returns parsed content as a flat markdown string\n"
                 "* object: Returns a hierarchical content tree with typed nodes\n\n"
+                "Transformations:\n"
+                "* 'execute_transformations' defaults to False - the transformation "
+                "pipeline is skipped since this endpoint is meant as a lightweight "
+                "preview/conversion, not ingestion\n"
+                "* Set it to True to get a fully chunked content tree when using "
+                "format='object'\n\n"
                 "Reader Selection:\n"
                 "* Omit 'reader' to use the default reader for the detected file type\n"
                 "* Use GET /v1/artifacts/readers to list available readers and their supported extensions"
@@ -312,8 +330,8 @@ def convert_content(request: Request, body: ConvertBody) -> ConvertResponse:
     service: ConvertService = request.state.injector.get(ConvertService)
     registry: ReaderRegistry = request.state.injector.get(ReaderRegistry)
 
-    content = body.input.to_binary_content(get_file_name(body.metadata))
-    extension = get_extension(content.filename)
+    input_content = body.input.to_binary_content(get_file_name(body.metadata))
+    extension = get_extension(input_content.filename)
 
     if body.reader:
         valid_readers = registry.get_reader_names(extension)
@@ -326,21 +344,22 @@ def convert_content(request: Request, body: ConvertBody) -> ConvertResponse:
                 ),
             )
 
-    # For markdown output we only need the parsed text, not the chunked tree
-    # nodes - so skip the RAG transformation pipeline (chunking, tokenization,
-    # etc.) entirely. It's only needed to build the structured "object" tree.
-    execute_transformations = body.format != ContentFormat.Markdown
-
     with service.temporary_file(
         lambda: service.data_path_from_bin_data(
-            content.data, get_extension(content.filename)
+            input_content.data, get_extension(input_content.filename)
         )
     ) as data_path:
         result = service.convert_file(
             file_data=data_path,
-            file_metadata={**(body.metadata or {}), "file_name": content.filename},
+            file_metadata={
+                **(body.metadata or {}),
+                "file_name": input_content.filename,
+            },
             reader=body.reader,
-            execute_transformations=execute_transformations,
+            # Transformations (chunking, tokenization, tree building) are only
+            # run when explicitly requested via `body.execute_transformations`
+            # (default False) - see ConvertBody.execute_transformations for why.
+            execute_transformations=body.execute_transformations,
         )
 
     metadata_mode = (
