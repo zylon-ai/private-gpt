@@ -45,10 +45,10 @@ def test_sync_celery_ingest_preserves_filename_and_extension(
     store_result_mock.result = IngestResponse(
         object="list", model="private-gpt", data=[]
     )
-    monkeypatch.setattr(
-        "celery.result.AsyncResult",
-        lambda *a, **kw: store_result_mock,
-    )
+    async_result = MagicMock(return_value=store_result_mock)
+    monkeypatch.setattr("celery.result.AsyncResult", async_result)
+    celery_app = MagicMock()
+    monkeypatch.setattr("private_gpt.celery.celery.celery_app", celery_app)
 
     ingest_service = MagicMock()
     s3_helper = MagicMock()
@@ -65,6 +65,7 @@ def test_sync_celery_ingest_preserves_filename_and_extension(
         )
     )
 
+    async_result.assert_called_once_with("store-task-id", app=celery_app)
     assert dispatched_body is not None
     assert dispatched_body.ingest_body.metadata == {"file_name": expected_filename}
     assert isinstance(dispatched_body.ingest_body.input, UriArtifact)
