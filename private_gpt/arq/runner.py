@@ -9,6 +9,7 @@ from collections.abc import Callable
 from arq.typing import StartupShutdown
 from arq.worker import Worker
 
+from private_gpt.arq.debug import start_worker_debug
 from private_gpt.arq.hooks import on_job_end
 from private_gpt.arq.lifecycle import shutdown, startup
 from private_gpt.arq.settings import (
@@ -121,24 +122,32 @@ def run_arq_worker(
             health_check_key=arq_health_check_key(queue_name),
             job_completion_wait=5,
         )
+        debug_task = start_worker_debug(worker)
         loop = asyncio.get_running_loop()
         stop_event = asyncio.Event()
         for sig in (signal.SIGINT, signal.SIGTERM):
             loop.add_signal_handler(sig, stop_event.set)
         worker_task = asyncio.create_task(worker.async_run())
         stop_task = asyncio.create_task(stop_event.wait())
-        done, pending = await asyncio.wait(
-            {worker_task, stop_task}, return_when=asyncio.FIRST_COMPLETED
-        )
-        if stop_task in done and not worker_task.done():
-            await worker.close()
-            with contextlib.suppress(asyncio.CancelledError):
-                await worker_task
-        for task in pending:
-            task.cancel()
+        try:
+            done, pending = await asyncio.wait(
+                {worker_task, stop_task}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if stop_task in done and not worker_task.done():
+                await worker.close()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await worker_task
+            for task in pending:
+                task.cancel()
+        finally:
+            if debug_task is not None:
+                debug_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await debug_task
 
     print(
-        f"Starting arq worker queue={queue_name} task_packages={','.join(task_packages)} "
+        f"Starting arq worker pid={os.getpid()} queue={queue_name} "
+        f"task_packages={','.join(task_packages)} "
         f"max_jobs={max_jobs} job_timeout={job_timeout} keep_result={keep_result}"
     )
     try:
