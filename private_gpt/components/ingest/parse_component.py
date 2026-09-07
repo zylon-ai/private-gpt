@@ -92,6 +92,7 @@ class ParseComponent:
         reader_name: str | None = None,
         notification: NotifyProtocol | None = None,
         warnings: list[str] | None = None,
+        execute_transformations: bool = True,
     ) -> FileParseResult:
         converted_file = convert_unsupported_file(file_info)
 
@@ -103,6 +104,7 @@ class ParseComponent:
             preferred_reader=reader_name,
             notification=notification,
             warnings=warnings,
+            execute_transformations=execute_transformations,
         )
 
         # 2) If nothing worked, convert to PDF as a last resort
@@ -121,6 +123,7 @@ class ParseComponent:
                     preferred_reader=None,  # let it resolve from scratch for pdf
                     notification=notification,
                     warnings=warnings,
+                    execute_transformations=execute_transformations,
                 )
 
         if not nodes or not resolved_reader:
@@ -139,6 +142,7 @@ class ParseComponent:
         preferred_reader: str | None,
         notification: NotifyProtocol | None,
         warnings: list[str] | None,
+        execute_transformations: bool = True,
     ) -> tuple[list, str | None]:
         """Tries readers in a chain for a given file/extension.
 
@@ -154,6 +158,7 @@ class ParseComponent:
                     notification=notification,
                     warnings=warnings,
                     reader_name=reader,
+                    execute_transformations=execute_transformations,
                 )
                 if nodes:
                     return nodes, reader
@@ -219,6 +224,7 @@ class ParseComponent:
         notification: NotifyProtocol | None = None,
         warnings: list[str] | None = None,
         reader_name: str | None = None,
+        execute_transformations: bool = True,
     ) -> list[BaseNode]:
         return asyncio.run(
             self._aload_data(
@@ -227,6 +233,7 @@ class ParseComponent:
                 notification=notification,
                 warnings=warnings,
                 reader_name=reader_name,
+                execute_transformations=execute_transformations,
             )
         )
 
@@ -237,6 +244,7 @@ class ParseComponent:
         notification: NotifyProtocol | None = None,
         warnings: list[str] | None = None,
         reader_name: str | None = None,
+        execute_transformations: bool = True,
     ) -> list[BaseNode]:
         if reader_name:
             loader = self.reader_component.get_reader(reader_name, file_info.extension)
@@ -250,6 +258,7 @@ class ParseComponent:
             extra_info=file_metadata,
             notification=notification,
             warnings=warnings,
+            execute_transformations=execute_transformations,
         ):
             nodes.append(node)
         return nodes

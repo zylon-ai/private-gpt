@@ -326,6 +326,11 @@ def convert_content(request: Request, body: ConvertBody) -> ConvertResponse:
                 ),
             )
 
+    # For markdown output we only need the parsed text, not the chunked tree
+    # nodes - so skip the RAG transformation pipeline (chunking, tokenization,
+    # etc.) entirely. It's only needed to build the structured "object" tree.
+    execute_transformations = body.format != ContentFormat.Markdown
+
     with service.temporary_file(
         lambda: service.data_path_from_bin_data(
             content.data, get_extension(content.filename)
@@ -335,6 +340,7 @@ def convert_content(request: Request, body: ConvertBody) -> ConvertResponse:
             file_data=data_path,
             file_metadata={**(body.metadata or {}), "file_name": content.filename},
             reader=body.reader,
+            execute_transformations=execute_transformations,
         )
 
     metadata_mode = (
@@ -346,10 +352,22 @@ def convert_content(request: Request, body: ConvertBody) -> ConvertResponse:
         MetadataMode.ALL if body.format == ContentFormat.Markdown else MetadataMode.NONE
     )
     roots = [n for n in result.nodes if isinstance(n, TreeNode) and n.parent is None]
-    if roots:
-        tree = ContentTree.from_node(roots[0], mode=metadata_mode)
+
+    if body.format == ContentFormat.Markdown:
+        if roots:
+            content: str | ContentTree = ContentTree.from_node(
+                roots[0], mode=metadata_mode
+            ).content
+        else:
+            content = "\n\n".join(
+                text
+                for n in result.nodes
+                if (text := n.get_content(metadata_mode=generic_metadata_mode))
+            )
+    elif roots:
+        content = ContentTree.from_node(roots[0], mode=metadata_mode)
     else:
-        tree = ContentTree(
+        content = ContentTree(
             id="root",
             type="document",
             content="",
@@ -364,7 +382,4 @@ def convert_content(request: Request, body: ConvertBody) -> ConvertResponse:
             ],
         )
 
-    return ConvertResponse(
-        content=(tree.content if body.format == ContentFormat.Markdown else tree),
-        reader=result.reader,
-    )
+    return ConvertResponse(content=content, reader=result.reader)

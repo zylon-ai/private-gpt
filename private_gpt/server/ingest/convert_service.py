@@ -28,11 +28,17 @@ class ConvertService:
         file_data: Path,
         file_metadata: dict[str, Any] | None = None,
         reader: str | None = None,
+        execute_transformations: bool = True,
     ) -> FileParseResult:
         file_info, _, _ = self.parse_component.load_and_validate_file(
             file_data, file_metadata
         )
-        return self.parse_component.file_to_nodes(file_info, file_metadata, reader)
+        return self.parse_component.file_to_nodes(
+            file_info,
+            file_metadata,
+            reader,
+            execute_transformations=execute_transformations,
+        )
 
     def data_path_from_data(
         self,
