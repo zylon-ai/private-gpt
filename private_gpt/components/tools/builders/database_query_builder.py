@@ -1,4 +1,6 @@
 import asyncio
+import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from injector import inject, singleton
@@ -16,6 +18,7 @@ from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.database.connection_factory import (
     mask_connection_secrets,
 )
+from private_gpt.components.environment.layout import storage_to_canonical_path
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.tools.binary_block_decorators import (
     auto_resolve_media_blocks,
@@ -27,12 +30,16 @@ from private_gpt.components.tools.types import ToolValidationMode
 from private_gpt.di import get_global_injector
 from private_gpt.events.models import (
     BinaryBlock,
+    LocalResourceBlock,
     ResultContentBlockType,
     TextBlock,
 )
+from private_gpt.server.files.file_service import FileService
 from private_gpt.server.utils.artifact_input import SqlDatabaseArtifact
 from private_gpt.settings.settings import Settings
 from private_gpt.utils.dependencies import format_missing_dependency_message
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from private_gpt.components.tabular.database_query_generator import (
@@ -89,11 +96,13 @@ class DatabaseQueryToolBuilder:
         settings: Settings,
         llm_component: LLMComponent,
         cache: CacheService,
+        file_service: FileService,
     ):
         """Initialize the DatabaseQueryToolBuilder with necessary components."""
         self.settings = settings
         self.llm_component = llm_component
         self.cache = cache
+        self.file_service = file_service
         self.sample_size = (
             # number of characters to sample from the result for display
             # TODO: this should be moved to tokens instead
@@ -185,10 +194,55 @@ class DatabaseQueryToolBuilder:
         additional_context = additional_context.strip()
         return additional_context or None
 
+    async def _build_csv_block(
+        self,
+        csv: str,
+        filename: str,
+        session_id: str | None,
+    ) -> ResultContentBlockType:
+        """Return the block carrying the query result as a CSV file.
+
+        With code execution enabled the CSV is written to the session outputs
+        mount through the files service and referenced as a local file, the same
+        way the present_files tool does. Otherwise it is embedded as a blob.
+        """
+        binary_block = BinaryBlock.from_text(
+            text=csv,
+            filename=filename,
+            mime_type="text/csv",
+        )
+        if not self.settings.code_execution.provider or not session_id:
+            return binary_block
+
+        storage_path = f"outputs/{filename}"
+        try:
+            metadata = await self.file_service.put_file(
+                scope_id=session_id,
+                path=storage_path,
+                content=csv.encode(),
+                mime_type="text/csv",
+            )
+        except Exception:
+            logger.warning(
+                "Could not store the query result at %s, falling back to an "
+                "embedded blob.",
+                storage_path,
+                exc_info=True,
+            )
+            return binary_block
+
+        return LocalResourceBlock(
+            file_path=storage_to_canonical_path(storage_path),
+            file_id=metadata.id,
+            name=Path(filename).stem,
+            mime_type=metadata.mime_type,
+        )
+
     async def build_tool(
         self,
         sql_artifacts: list[SqlDatabaseArtifact],
         chat_history: list[ChatMessage] | None = None,
+        session_id: str | None = None,
         name: str = DATABASE_QUERY_TOOL_NAME,
         type: str = DATABASE_QUERY_TOOL_NAME + "_v1",
         description: str = DATABASE_QUERY_TOOL_FN.metadata.description,
@@ -315,7 +369,7 @@ class DatabaseQueryToolBuilder:
                     results = query_with_results
 
                 result_as_block_list: list[list[ResultContentBlockType]] = []
-                for sql_artifact, db_query_result in results:
+                for index, (sql_artifact, db_query_result) in enumerate(results):
                     prefix = (
                         f"Database: {mask_connection_secrets(sql_artifact.connection_string)}\n"
                         if len(results) > 1
@@ -347,13 +401,14 @@ class DatabaseQueryToolBuilder:
 
                     if db_query_result.row_count > 0:
                         csv = db_query_result.as_csv()
-                        filename = f"csv_{hash(query)}.csv"
-                        csv_block = BinaryBlock.from_text(
-                            text=csv,
-                            filename=filename,
-                            mime_type="text/csv",
+                        filename = f"csv_{abs(hash(query))}_{index}.csv"
+                        blocks.append(
+                            await self._build_csv_block(
+                                csv=csv,
+                                filename=filename,
+                                session_id=session_id,
+                            )
                         )
-                        blocks.append(csv_block)
 
                         if len(csv) > sample_size:
                             blocks.append(
@@ -415,6 +470,7 @@ class DatabaseQueryToolBuilder:
                 {
                     "sql_artifacts": sql_artifacts,
                     "chat_history": chat_history,
+                    "session_id": session_id,
                     "name": name,
                     "type": type,
                     "description": description,

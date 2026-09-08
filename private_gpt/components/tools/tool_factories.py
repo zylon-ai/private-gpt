@@ -16,6 +16,7 @@ from private_gpt.components.tools.builders.summary_builder import (
 from private_gpt.components.vector_store.vector_store_component import (
     VectorStoreComponent,
 )
+from private_gpt.server.files.file_service import FileService
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
@@ -128,10 +129,12 @@ class DatabaseQueryToolBuilderFactory:
         settings: Settings,
         llm_component: LLMComponent,
         cache: CacheService,
+        file_service: FileService,
     ) -> None:
         self.settings = settings
         self.llm_component = llm_component
         self.cache = cache
+        self.file_service = file_service
 
     def create(self) -> "DatabaseQueryToolBuilder":
         from private_gpt.components.tools.builders.database_query_builder import (
@@ -142,6 +145,7 @@ class DatabaseQueryToolBuilderFactory:
             settings=self.settings,
             llm_component=self.llm_component,
             cache=self.cache,
+            file_service=self.file_service,
         )
         return builder
 
