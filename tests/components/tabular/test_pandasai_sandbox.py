@@ -12,7 +12,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def test_stop_force_closes_session_and_removes_temporary_directory(tmp_path: Path) -> None:
+def test_stop_force_closes_session_and_removes_temporary_directory(
+    tmp_path: Path,
+) -> None:
     client = AsyncMock(spec=SandboxSession)
     adapter = PandasAISandboxAdapter(client=client)
     adapter._started = True
@@ -91,4 +93,25 @@ def test_stop_cleans_up_partially_initialized_session(tmp_path: Path) -> None:
     assert not temp_dir.exists()
     assert adapter._client is None
     assert adapter._temp_dir is None
+    assert not adapter._started
+
+
+def test_stop_removes_temporary_directory_when_remote_close_fails(
+    tmp_path: Path,
+) -> None:
+    client = AsyncMock(spec=SandboxSession)
+    client.close.side_effect = RuntimeError("sandbox server unavailable")
+    adapter = PandasAISandboxAdapter(client=client)
+    temp_dir = tmp_path / "sandbox"
+    temp_dir.mkdir()
+    (temp_dir / "chart.png").write_bytes(b"chart")
+    adapter._temp_dir = temp_dir
+    adapter._started = True
+
+    adapter.stop()
+
+    client.close.assert_awaited_once_with(force=True)
+    assert not temp_dir.exists()
+    assert adapter._temp_dir is None
+    assert adapter._client is None
     assert not adapter._started
