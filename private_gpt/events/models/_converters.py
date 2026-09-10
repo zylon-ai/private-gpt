@@ -5,6 +5,7 @@ from llama_index.core.base.llms.types import AudioBlock as LIAudioBlock
 from llama_index.core.base.llms.types import ContentBlock
 from llama_index.core.base.llms.types import ImageBlock as LIImageBlock
 from llama_index.core.base.llms.types import TextBlock as LITextBlock
+from llama_index.core.base.llms.types import VideoBlock as LIVideoBlock
 from llama_index.core.schema import NodeWithScore
 from PIL.Image import Image
 
@@ -16,6 +17,7 @@ from private_gpt.events.models._content_blocks import (
     ResultContentBlockType,
     SourceBlock,
     TextBlock,
+    VideoBlock,
 )
 from private_gpt.server.mcp.mcp_service import (
     convert_mcp_blocks_to_llama_index,
@@ -116,6 +118,17 @@ def from_tool_output(tool_output: Any) -> list[ResultContentBlockType]:
                 )
             ]
 
+        case LIVideoBlock():
+            video_b64 = tool_output.video_to_base64.decode()
+            return [
+                VideoBlock.from_base64(
+                    data=video_b64,
+                    mime_type=tool_output.video_mimetype or "video/mp4",
+                    detail=tool_output.detail,
+                    fps=tool_output.fps,
+                )
+            ]
+
         case _ if is_mcp_content_block(tool_output):
             li_block = convert_mcp_blocks_to_llama_index(tool_output)
             return from_tool_output(li_block) if li_block else []
@@ -131,7 +144,7 @@ def to_llama_index_blocks(tool_output: Any) -> list[ContentBlock]:
     """Convert tool output to a list of LlamaIndex ``ContentBlock`` objects."""
     li_blocks: list[ContentBlock] = []
     for block in from_tool_output(tool_output):
-        if isinstance(block, TextBlock | ImageBlock | AudioBlock):
+        if isinstance(block, TextBlock | ImageBlock | AudioBlock | VideoBlock):
             li_blocks.append(block.to_llama_index())
             continue
         rendered = _rendered_text(block)

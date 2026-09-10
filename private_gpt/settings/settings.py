@@ -762,6 +762,10 @@ class LLMModelConfig(BaseModel):
         default=None,
         description="The number of audio tokens that the model can process. If None, the model does not support audio inputs.",
     )
+    support_video: int | None = Field(
+        default=None,
+        description="The number of video inputs that the model can process. If None, the model does not support video inputs.",
+    )
     api_type: Literal["chat_completions", "responses"] = Field(
         default="chat_completions",
         description="The OpenAI API type to use: 'chat_completions' (default) or 'responses' (Responses API).",

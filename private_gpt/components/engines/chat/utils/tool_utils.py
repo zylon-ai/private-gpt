@@ -6,6 +6,7 @@ from llama_index.core.base.llms.types import (
     AudioBlock,
     ImageBlock,
     TextBlock,
+    VideoBlock,
 )
 from llama_index.core.llms import ChatMessage
 from llama_index.core.tools import AsyncBaseTool, ToolOutput
@@ -163,7 +164,7 @@ async def execute_tool_call(
         li_blocks = []
 
         for block in content_blocks:
-            if isinstance(block, TextBlock | ImageBlock | AudioBlock):
+            if isinstance(block, TextBlock | ImageBlock | AudioBlock | VideoBlock):
                 li_blocks.append(block)
             elif isinstance(block, ContentBlockType):
                 li_blocks.extend(to_llama_index_blocks([block]))
