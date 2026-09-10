@@ -52,6 +52,30 @@ class TestFileLocking:
             content = lock_file.read_text()
             assert str(os.getpid()) in content
 
+    def test_failed_acquisition_keeps_holder_pid(self, hf_cache_dir: Path):
+        """A process that fails to acquire must not erase the holder's PID."""
+        import os
+
+        lock_file = hf_cache_dir / ".test.lock"
+
+        with FileLock(lock_file, timeout=5):
+            waiter = FileLock(lock_file, timeout=0)
+            with pytest.raises(TimeoutError, match="Failed to acquire lock"), waiter:
+                pass
+
+            assert str(os.getpid()) in lock_file.read_text()
+
+    def test_failed_acquisition_closes_lock_file(self, hf_cache_dir: Path):
+        """A process that fails to acquire must not leak its file handle."""
+        lock_file = hf_cache_dir / ".test.lock"
+
+        with FileLock(lock_file, timeout=5):
+            waiter = FileLock(lock_file, timeout=0)
+            with pytest.raises(TimeoutError, match="Failed to acquire lock"), waiter:
+                pass
+
+            assert waiter._fd is None
+
 
 class TestConcurrentDownloadSimulation:
     """Scenario 1.1: Multiple pods download same model (simplified simulation)."""

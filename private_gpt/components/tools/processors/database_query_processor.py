@@ -10,6 +10,7 @@ from private_gpt.components.tools.processors.base import (
     _get_tool_context,
     _is_unresolved_tool,
     _replace_tool,
+    _session_id,
     _tool_matches,
 )
 from private_gpt.components.tools.tool_names import DATABASE_QUERY_TOOL_NAME
@@ -58,6 +59,7 @@ class DatabaseQueryProcessor(ToolProcessor):
                 type=tool.type or DATABASE_QUERY_TOOL_NAME + "_v1",
                 sql_artifacts=sql_artifacts,
                 chat_history=chat_history,
+                session_id=_session_id(request),
                 validate=request.tool_config.validation_mode,
                 blob_visibility=request.system.blob_visibility,
             )

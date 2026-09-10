@@ -144,26 +144,42 @@ class FileLock:
         else:
             fcntl.flock(self._fd.fileno(), fcntl.LOCK_UN)
 
+    def _write_pid(self) -> None:
+        """Publish this process' PID as the only content of the lock file."""
+        assert self._fd is not None
+        # The file is opened in append mode, so the write lands at the new
+        # end of file left by the truncation.
+        self._fd.truncate(0)
+        self._fd.write(f"{os.getpid()}\n")
+        self._fd.flush()
+
     def __enter__(self) -> FileLock:
         logger.info(f"Acquiring lock: {self.lock_file}")
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
-        self._fd = open(self.lock_file, "w")
+        # Append mode creates the file without truncating it: a process that is
+        # only waiting must not erase the PID the current holder published.
+        self._fd = open(self.lock_file, "a+")
         start = time.time()
-        while True:
-            try:
-                self._acquire()
-                self._fd.write(f"{os.getpid()}\n")
-                self._fd.flush()
-                logger.info("Lock acquired")
-                return self
-            except OSError as e:
-                elapsed = time.time() - start
-                if elapsed >= self.timeout:
-                    raise TimeoutError(
-                        f"Failed to acquire lock within {self.timeout}s"
-                    ) from e
-                logger.info(f"Waiting for lock… ({elapsed:.0f}s / {self.timeout}s)")
-                time.sleep(5)
+        try:
+            while True:
+                try:
+                    self._acquire()
+                    self._write_pid()
+                    logger.info("Lock acquired")
+                    return self
+                except OSError as e:
+                    elapsed = time.time() - start
+                    if elapsed >= self.timeout:
+                        raise TimeoutError(
+                            f"Failed to acquire lock within {self.timeout}s"
+                        ) from e
+                    logger.info(f"Waiting for lock… ({elapsed:.0f}s / {self.timeout}s)")
+                    time.sleep(5)
+        except BaseException:
+            # __exit__ never runs when __enter__ raises, so close the handle here.
+            self._fd.close()
+            self._fd = None
+            raise
 
     def __exit__(
         self,

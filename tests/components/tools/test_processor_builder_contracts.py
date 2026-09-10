@@ -152,6 +152,7 @@ def _request(
             {
                 "sql_artifacts",
                 "chat_history",
+                "session_id",
                 "name",
                 "type",
                 "description",
@@ -273,6 +274,7 @@ async def test_database_builder_receives_complete_request_contract() -> None:
         "type": "database_query_v1",
         "sql_artifacts": [artifact],
         "chat_history": kwargs["chat_history"],
+        "session_id": kwargs["session_id"],
         "validate": ToolValidationMode.EAGER,
         "blob_visibility": BlobVisibilityMode.INTERNAL,
     }
