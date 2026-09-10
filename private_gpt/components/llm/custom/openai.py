@@ -324,9 +324,7 @@ class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
 
         return coro()
 
-    def _chat(
-        self, messages: Sequence[ChatMessage], **kwargs: Any
-    ) -> ChatResponse:
+    def _chat(self, messages: Sequence[ChatMessage], **kwargs: Any) -> ChatResponse:
         messages = [*messages]
         messages = self._normalize_chat_messages(messages)
         with _video_aware_openai_conversion():

@@ -415,9 +415,7 @@ class VideoBlock(CacheableContentBlock, StandardContentProtocol):
         fps: float | None = None,
     ) -> VideoBlock:
         return cls(
-            source=Base64VideoSource(
-                type="base64", data=data, media_type=mime_type
-            ),
+            source=Base64VideoSource(type="base64", data=data, media_type=mime_type),
             detail=detail,
             fps=fps,
         )
@@ -430,9 +428,7 @@ class VideoBlock(CacheableContentBlock, StandardContentProtocol):
         detail: Literal["low", "default", "high"] | None = None,
         fps: float | None = None,
     ) -> VideoBlock:
-        return cls(
-            source=URLSource(type="url", url=url), detail=detail, fps=fps
-        )
+        return cls(source=URLSource(type="url", url=url), detail=detail, fps=fps)
 
     def to_llama_index(self) -> LIVideoBlock:
         if isinstance(self.source, URLSource):
