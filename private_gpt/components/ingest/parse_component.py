@@ -16,13 +16,11 @@ from private_gpt.components.ingest.fake_progress import (
 from private_gpt.components.ingest.ingest_helper import IngestionHelper
 from private_gpt.components.ingest.progress.errors import (
     IngestionLoadErrors,
-    IngestionParseErrors,
 )
 from private_gpt.components.ingest.progress.models import ValidationProgressStatus
 from private_gpt.components.ingest.utils import (
     FileInfo,
     convert_unsupported_file,
-    convert_unsupported_file_as_fallback,
     get_file_info,
     get_file_name,
     get_filesize,
