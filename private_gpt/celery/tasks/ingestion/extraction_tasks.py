@@ -121,7 +121,9 @@ def parse_task(body: IngestAsyncBody, dispatch_store: bool = True) -> Any:
 
         convert = ConvertService(service.parse_component)
         extension = get_extension(content.filename) or ""
-        return convert.bytes_to_text(content.data.read(), extension)
+        return convert.bytes_to_text(
+            content.data.read(), extension, execute_transformations=False
+        )
 
     with service.temporary_file(
         lambda: service.data_path_from_bin_data(

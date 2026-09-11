@@ -60,20 +60,34 @@ class ConvertService:
     ) -> Path:
         return self.data_path_from_data(raw_file_data.read(), extension)
 
-    def bytes_to_text(self, raw: bytes, ext: str) -> str:
+    def bytes_to_text(
+        self, raw: bytes, ext: str, execute_transformations: bool = False
+    ) -> str:
         with self.temporary_file(
             lambda: self.data_path_from_data(raw, ext)
         ) as tmp_path:
-            result = self.convert_file(tmp_path)
+            result = self.convert_file(
+                tmp_path, execute_transformations=execute_transformations
+            )
 
-            roots = [
-                n for n in result.nodes if isinstance(n, TreeNode) and n.parent is None
-            ]
-            if not roots:
+            if execute_transformations:
+                # Transformations build a TreeNode hierarchy; only the root
+                # nodes hold the full combined content.
+                nodes = [
+                    n
+                    for n in result.nodes
+                    if isinstance(n, TreeNode) and n.parent is None
+                ]
+            else:
+                # Without transformations, readers yield plain (untreed)
+                # nodes whose content is already the full parsed document.
+                nodes = result.nodes
+
+            if not nodes:
                 raise ValueError("No root node found in parse result.")
 
             content = [
-                node.get_content(metadata_mode=TreeMetadataMode.USER) for node in roots
+                node.get_content(metadata_mode=TreeMetadataMode.USER) for node in nodes
             ]
             return "\n\n".join([c for c in content if c])
 

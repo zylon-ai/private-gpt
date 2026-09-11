@@ -258,7 +258,7 @@ class LocalIngestionScheduler(BaseIngestionScheduler):
         from private_gpt.server.ingest.convert_service import ConvertService
 
         return ConvertService(self._ingest_service.parse_component).bytes_to_text(
-            raw, ext
+            raw, ext, execute_transformations=False
         )
 
 
