@@ -56,7 +56,11 @@ def cleanup_temporal_files(func: Callable[..., T]) -> Callable[..., T]:
     autoretry_for=AUTORETRY_EXCEPTIONS,
 )
 @cleanup_temporal_files
-def parse_task(body: IngestAsyncBody, dispatch_store: bool = True) -> Any:
+def parse_task(
+    body: IngestAsyncBody,
+    dispatch_store: bool = True,
+    execute_transformations: bool = False,
+) -> Any:
     """Parse the source file into tree nodes.
 
     First half of the two-step ingestion pipeline.  Runs atomically:
@@ -122,7 +126,9 @@ def parse_task(body: IngestAsyncBody, dispatch_store: bool = True) -> Any:
         convert = ConvertService(service.parse_component)
         extension = get_extension(content.filename) or ""
         return convert.bytes_to_text(
-            content.data.read(), extension, execute_transformations=False
+            content.data.read(),
+            extension,
+            execute_transformations=execute_transformations,
         )
 
     with service.temporary_file(

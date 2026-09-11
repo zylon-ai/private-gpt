@@ -87,27 +87,6 @@ async def condense_chat_history(
 
         remaining_max_length -= system_token_count
 
-    # 2b. Fail if the most recent message alone cannot fit in context.
-    if conversation_history:
-        last_message_token_count = await estimate_token_count(
-            [conversation_history[-1]],
-            tokenizer_fn=tokenizer_fn,
-            message_to_input=message_to_input,
-            **kwargs,
-        )
-        if last_message_token_count >= remaining_max_length:
-            logger.debug(
-                "The most recent message alone exceeds the available context length. "
-                "Current token count: %d, Available max length: %d, Max length: %d",
-                last_message_token_count,
-                remaining_max_length,
-                max_length,
-            )
-            raise ValueError(
-                "The most recent message alone exceeds the available context "
-                "length. Cannot condense conversation history."
-            )
-
     if condense_strategy is None:
         strategy_type = CondenseStrategyType.from_string(str(strategy_type))
         if strategy_type == CondenseStrategyType.UNKNOWN:
