@@ -107,25 +107,6 @@ class ParseComponent:
             execute_transformations=execute_transformations,
         )
 
-        # 2) If nothing worked, convert to PDF as a last resort
-        if not nodes:
-            converted_fallback = convert_unsupported_file_as_fallback(file_info)
-            if converted_fallback:
-                if notification:
-                    notification(
-                        percentage=0,
-                        warnings=[IngestionParseErrors.FALLBACK_TO_PDF_TO_TEXT],
-                    )
-                nodes, resolved_reader = self._try_readers(
-                    converted_fallback,
-                    file_metadata,
-                    extension=converted_fallback.extension,
-                    preferred_reader=None,  # let it resolve from scratch for pdf
-                    notification=notification,
-                    warnings=warnings,
-                    execute_transformations=execute_transformations,
-                )
-
         if not nodes or not resolved_reader:
             logger.info("No valid nodes found in the file.")
             raise InvalidFileError(

@@ -61,7 +61,7 @@ class ConvertService:
         return self.data_path_from_data(raw_file_data.read(), extension)
 
     def bytes_to_text(
-        self, raw: bytes, ext: str, execute_transformations: bool = False
+        self, raw: bytes, ext: str, execute_transformations: bool = True
     ) -> str:
         with self.temporary_file(
             lambda: self.data_path_from_data(raw, ext)
