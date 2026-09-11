@@ -81,7 +81,7 @@ class ConvertService:
             else:
                 # Without transformations, readers yield plain (untreed)
                 # nodes whose content is already the full parsed document.
-                nodes = result.nodes
+                nodes = [n for n in result.nodes if isinstance(n, TreeNode)]
 
             if not nodes:
                 raise ValueError("No root node found in parse result.")
