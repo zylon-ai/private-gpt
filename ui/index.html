@@ -3139,6 +3139,28 @@
       box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
     }
 
+    /* The message action row hard-codes white text, which is invisible on a light
+       background. Now that a row can be permanently visible on a collapsed
+       message, and carries Copy as well as Retry and Delete, give it colours the
+       light theme can actually show. */
+    body[data-theme-mode="light"] .msg-action-btn {
+      color: rgba(15, 23, 42, 0.6);
+      border-color: rgba(15, 23, 42, 0.12);
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    body[data-theme-mode="light"] .msg-action-btn:hover {
+      color: rgba(15, 23, 42, 0.92);
+      border-color: rgba(15, 23, 42, 0.2);
+      background: rgba(255, 255, 255, 0.86);
+    }
+
+    body[data-theme-mode="light"] .msg-action-btn.danger:hover {
+      color: rgba(150, 20, 20, 0.95);
+      border-color: rgba(190, 40, 40, 0.28);
+      background: rgba(255, 70, 70, 0.1);
+    }
+
     body[data-theme-mode="light"] .composer::before {
       background: linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.6));
       border-color: var(--border);
