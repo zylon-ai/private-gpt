@@ -46,6 +46,7 @@
       --radius-md: 16px;
       --radius-sm: 10px;
       --sidebar: 286px;
+      --chat-max: 1100px;
       --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -139,7 +140,7 @@
       grid-template-columns: var(--sidebar) minmax(0, 1fr);
       width: 100vw;
       height: 100vh;
-      padding: 16px;
+      padding: 12px;
       gap: 16px;
     }
 
@@ -994,7 +995,7 @@
       flex: 1;
       flex-direction: column;
       align-items: center;
-      padding: 12px 22px 22px;
+      padding: 8px 22px 18px;
       gap: 14px;
     }
 
@@ -1002,7 +1003,7 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
-      width: min(860px, 100%);
+      width: min(var(--chat-max), 100%);
       min-height: 0;
       flex: 1;
       overflow: auto;
@@ -1036,7 +1037,7 @@
     .message-content {
       display: grid;
       gap: 5px;
-      max-width: min(620px, 76%);
+      max-width: 100%;
       min-width: 0;
     }
 
@@ -1046,6 +1047,7 @@
 
     .message.user .message-content {
       justify-items: end;
+      max-width: min(620px, 76%);
     }
 
     .message.assistant,
@@ -1440,7 +1442,7 @@
     }
 
     .composer {
-      width: min(860px, 100%);
+      width: min(var(--chat-max), 100%);
       border-radius: 22px;
       padding: 10px 12px 9px;
     }
@@ -2895,7 +2897,7 @@
         grid-template-columns: 1fr;
       }
 
-      .message-bubble {
+      .message.user .message-content {
         max-width: 88%;
       }
     }
@@ -3749,6 +3751,18 @@
                     <label class="color-field" for="appearanceBackgroundColor"><span>Background base</span><input id="appearanceBackgroundColor" type="color" /></label>
                   </div>
                   <div class="field">
+                    <h3>Chat layout</h3>
+                    <small>How much of the window the message column uses. Replies fill the column; your own messages stay narrower so the two roles stay easy to tell apart.</small>
+                  </div>
+                  <div class="field">
+                    <label for="appearanceChatWidth">Chat width</label>
+                    <select id="appearanceChatWidth">
+                      <option value="comfortable">Comfortable (860px)</option>
+                      <option value="wide">Wide (1100px)</option>
+                      <option value="full">Full width</option>
+                    </select>
+                  </div>
+                  <div class="field">
                     <h3>Optional sections</h3>
                     <small>Hide parts of the workbench when you want a narrower, simpler surface.</small>
                   </div>
@@ -4016,9 +4030,19 @@
       download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>'
     };
 
+    // Maps a chat width preset onto the --chat-max custom property. "full" lets the
+    // message column use the whole pane; the two fixed widths keep line length in a
+    // comfortable reading range on wide monitors.
+    const CHAT_WIDTHS = Object.freeze({
+      comfortable: "860px",
+      wide: "1100px",
+      full: "100%"
+    });
+
     const DEFAULT_APPEARANCE = Object.freeze({
       brief: "",
       themeMode: "auto",
+      chatWidth: "wide",
       brandName: "PrivateGPT",
       welcomeTitle: "Ask PrivateGPT",
       welcomeSubtitle: "Use your local documents, tools, databases, MCP servers, skills, and custom browser tools from one chat.",
@@ -4348,6 +4372,7 @@
       return {
         brief: $(`#${ids.brief}`)?.value.trim() || "",
         themeMode: state.uiAppearance?.themeMode || DEFAULT_APPEARANCE.themeMode,
+        chatWidth: state.uiAppearance?.chatWidth || DEFAULT_APPEARANCE.chatWidth,
         brandName: $(`#${ids.brandName}`)?.value.trim() || DEFAULT_APPEARANCE.brandName,
         welcomeTitle: $(`#${ids.welcomeTitle}`)?.value.trim() || DEFAULT_APPEARANCE.welcomeTitle,
         welcomeSubtitle: $(`#${ids.welcomeSubtitle}`)?.value.trim() || DEFAULT_APPEARANCE.welcomeSubtitle,
@@ -4461,6 +4486,7 @@
         isLightTheme ? 0.82 : 0.74
       ));
       root.style.setProperty("--sidebar-glow", withAlpha(palette.secondary || DEFAULT_APPEARANCE.palette.secondary, isLightTheme ? 0.14 : 0.24));
+      root.style.setProperty("--chat-max", CHAT_WIDTHS[appearance.chatWidth] || CHAT_WIDTHS[DEFAULT_APPEARANCE.chatWidth]);
       document.body.dataset.themeMode = isLightTheme ? "light" : "dark";
       const brandLogo = $("#brandLogo");
       if (brandLogo) {
@@ -4747,6 +4773,8 @@
       $("#onboardingUsername").value = state.privateGptUsername || "";
       $("#onboardingPassword").value = state.privateGptPassword || "";
       $("#onboardingCollection").value = state.context.documents.defaultCollection || "pgpt_collection";
+      const chatWidthSelect = $("#appearanceChatWidth");
+      if (chatWidthSelect) chatWidthSelect.value = state.uiAppearance?.chatWidth || DEFAULT_APPEARANCE.chatWidth;
       populateAppearanceForm("appearance");
       populateAppearanceForm("onboarding");
       setAppearanceGeneratorStatus("appearance", runtime.appearanceGeneration.statusByPrefix.appearance || "");
@@ -4866,6 +4894,9 @@
         ...candidate,
         brief: typeof candidate?.brief === "string" && candidate.brief.trim() ? candidate.brief.trim() : fallbackBrief,
         themeMode: ["light", "dark", "auto"].includes(candidate?.themeMode) ? candidate.themeMode : DEFAULT_APPEARANCE.themeMode,
+        chatWidth: CHAT_WIDTHS[candidate?.chatWidth]
+          ? candidate.chatWidth
+          : (state.uiAppearance?.chatWidth || DEFAULT_APPEARANCE.chatWidth),
         palette: {
           ...DEFAULT_APPEARANCE.palette,
           ...(candidate?.palette || {})
@@ -7904,6 +7935,10 @@
       });
       $("#defaultCollection").addEventListener("change", async event => {
         await switchActiveCollection(event.target.value, { showToast: false });
+      });
+      $("#appearanceChatWidth").addEventListener("change", event => {
+        applyAppearanceState({ ...state.uiAppearance, chatWidth: event.target.value });
+        saveState();
       });
       $("#onboardingCheckButton").addEventListener("click", runOnboardingCheck);
       $("#onboardingStepPill1").addEventListener("click", () => {
