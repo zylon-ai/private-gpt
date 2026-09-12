@@ -999,11 +999,58 @@
       gap: 14px;
     }
 
+    .messages-wrap {
+      position: relative;
+      display: flex;
+      width: min(var(--chat-max), 100%);
+      min-height: 0;
+      flex: 1;
+    }
+
+    /* `display` here is an author rule, so it would otherwise win over the user
+       agent's `[hidden] { display: none }` and the control would never hide. */
+    .jump-latest[hidden] {
+      display: none;
+    }
+
+    .jump-latest {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      transform: translateX(-50%);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--glass-strong);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      box-shadow: var(--shadow);
+      color: var(--text);
+      font-size: 12.5px;
+      font-weight: 650;
+      cursor: pointer;
+      animation: jumpLatestIn 160ms ease-out both;
+    }
+
+    .jump-latest:hover {
+      background: var(--glass);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    @keyframes jumpLatestIn {
+      from { opacity: 0; transform: translate(-50%, 6px); }
+      to   { opacity: 1; transform: translate(-50%, 0); }
+    }
+
     .messages {
       display: flex;
       flex-direction: column;
       gap: 14px;
-      width: min(var(--chat-max), 100%);
+      width: 100%;
       min-height: 0;
       flex: 1;
       overflow: auto;
@@ -1923,7 +1970,8 @@
       .menu-panel.closing,
       .effort-panel,
       .model-option,
-      .effort-option { animation: none !important; }
+      .effort-option,
+      .jump-latest { animation: none !important; }
     }
 
     .model-option:hover {
@@ -3026,6 +3074,7 @@
     body[data-theme-mode="light"] .chat-row,
     body[data-theme-mode="light"] .nav-button,
     body[data-theme-mode="light"] .github-widget,
+    body[data-theme-mode="light"] .jump-latest,
     body[data-theme-mode="light"] .production-notice-button {
       background:
         linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.54));
@@ -3825,7 +3874,12 @@
         </div>
 
         <div class="chat-workspace" id="chatPanel">
-          <div class="messages" id="messages"></div>
+          <div class="messages-wrap">
+            <div class="messages" id="messages"></div>
+            <button class="jump-latest" id="jumpToLatestButton" type="button" hidden>
+              <span aria-hidden="true">&#8595;</span>Jump to latest
+            </button>
+          </div>
           <form class="composer" id="composer">
             <div class="composer-row">
               <textarea id="composerInput" placeholder="How can I help?" rows="1"></textarea>
@@ -4136,7 +4190,12 @@
           appearance: ""
         }
       },
-      sendingChatIds: new Set()
+      sendingChatIds: new Set(),
+      // Whether new content should pull the transcript down. Derived from scroll
+      // position rather than from which code path scrolled, so a programmatic
+      // scroll back to the bottom re-arms it without any extra bookkeeping.
+      stickToBottom: true,
+      lastRenderedChatId: null
     };
 
     const $ = (selector, root = document) => root.querySelector(selector);
@@ -5492,6 +5551,9 @@
     function renderMessages() {
       const chat = activeChat();
       const wrap = $("#messages");
+      // Opening a different chat should always start at the newest message.
+      const switchedChat = runtime.lastRenderedChatId !== chat.id;
+      runtime.lastRenderedChatId = chat.id;
       const visibleMessages = chat.messages.filter(message => !message.hidden);
       const showLoading = runtime.sendingChatIds.has(chat.id) && !chat.messages.some(m => m.streaming);
       runtime.citations = new Map();
@@ -5506,6 +5568,7 @@
             </div>
           `;
         }
+        renderJumpToLatest();
         return;
       }
 
@@ -5541,8 +5604,7 @@
         loadingNode.dataset.loadingMessage = "true";
         wrap.appendChild(loadingNode);
       }
-      wrap.scrollTop = wrap.scrollHeight;
-      updateMessagesFade();
+      scrollMessagesToBottom({ force: switchedChat });
     }
 
     function updateMessageNode(node, message) {
@@ -7031,6 +7093,7 @@
       saveState();
       $("#composerInput").value = "";
       render();
+      scrollMessagesToBottom({ force: true });
       try {
         await requestAssistant(chat, 0);
       } catch (error) {
@@ -7090,8 +7153,7 @@
             // Scroll thinking pre to bottom so latest lines are always visible
             const thinkingPre = streamingTextEl.querySelector(".thinking-pre-wrap pre");
             if (thinkingPre) thinkingPre.scrollTop = thinkingPre.scrollHeight;
-            const wrap = document.querySelector(`[data-message-id="${displayId}"]`)?.closest(".messages");
-            if (wrap) { wrap.scrollTop = wrap.scrollHeight; updateMessagesFade(); }
+            scrollMessagesToBottom();
           }
         });
 
@@ -7704,6 +7766,43 @@
       el.style.setProperty("--fade-bot-stop", max - st > 6 ? "28px" : "0px");
     }
 
+    // A few pixels of tolerance: sub-pixel layout and the bottom mask mean an
+    // element parked at the bottom rarely reports an exact zero distance.
+    const STICK_TO_BOTTOM_THRESHOLD = 32;
+
+    function messagesAtBottom(el) {
+      return el.scrollHeight - el.scrollTop - el.clientHeight <= STICK_TO_BOTTOM_THRESHOLD;
+    }
+
+    // Called on every scroll, so it also re-arms sticking when the reader
+    // returns to the bottom under their own steam.
+    function syncStickToBottom() {
+      const el = $("#messages");
+      if (!el) return;
+      runtime.stickToBottom = messagesAtBottom(el);
+      renderJumpToLatest();
+    }
+
+    function renderJumpToLatest() {
+      const button = $("#jumpToLatestButton");
+      if (!button) return;
+      const el = $("#messages");
+      const hasOverflow = Boolean(el) && el.scrollHeight - el.clientHeight > STICK_TO_BOTTOM_THRESHOLD;
+      button.hidden = runtime.stickToBottom || !hasOverflow;
+    }
+
+    // Only pulls the transcript down when the reader is already at the bottom.
+    // `force` is for the moments where following the newest content is the whole
+    // point: sending a message, opening a chat, or asking for it explicitly.
+    function scrollMessagesToBottom({ force = false } = {}) {
+      const el = $("#messages");
+      if (!el) return;
+      if (force) runtime.stickToBottom = true;
+      if (runtime.stickToBottom) el.scrollTop = el.scrollHeight;
+      updateMessagesFade();
+      renderJumpToLatest();
+    }
+
     function updateChatListFade() {
       const wrap = $("#chatListWrap");
       if (!wrap) return;
@@ -8082,7 +8181,11 @@
       updateChatListFade();
 
       // Scroll fades for the messages list
-      $("#messages").addEventListener("scroll", updateMessagesFade, { passive: true });
+      $("#messages").addEventListener("scroll", () => {
+        updateMessagesFade();
+        syncStickToBottom();
+      }, { passive: true });
+      $("#jumpToLatestButton").addEventListener("click", () => scrollMessagesToBottom({ force: true }));
       updateMessagesFade();
     }
 
