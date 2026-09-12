@@ -404,7 +404,7 @@ Settings include:
 - Optional workspace instructions prepended ahead of the system prompt.
 - Use citations toggle, enabled by default.
 - **Collection** — the active document collection name used for document ingestion, listing, deletion, search, and chat requests. This field belongs in Settings because it is a global Workbench-level pointer, not a per-context source configuration.
-- Look-and-feel overrides for brand copy, welcome copy, palette, and optional visible sections.
+- Look-and-feel overrides for brand copy, welcome copy, palette, chat width, and optional visible sections.
 - Run onboarding again.
 - Test API connection.
 - Save settings.
@@ -786,6 +786,35 @@ Message rendering:
 - Do not show a raw response block in Chat; raw request/response details belong in Debugger.
 - While waiting for PrivateGPT, show an in-chat pending response indicator using the PrivateGPT circular avatar with a subtle breathing animation.
 
+Message width:
+
+- Assistant and tool replies use the full width of the message column. User messages stay within a narrower bubble, so the two roles remain easy to tell apart without relying on alignment alone.
+- The column width itself is a user preference, set in Settings > Appearance and applied through the `--chat-max` custom property: Comfortable (860px), Wide (1100px, the default), or Full width. Comfortable line length depends on both taste and monitor size, so this is a setting rather than a fixed value.
+
+Transcript scrolling:
+
+- New content follows the bottom of the transcript only while the reader is already at the bottom. Scrolling up during a streaming answer must not be undone by the next token.
+- Whether the transcript is "at the bottom" is derived from scroll position, not from which code path scrolled. Scrolling back down by hand therefore resumes following, as does any programmatic scroll to the bottom.
+- Three actions scroll unconditionally, because following the newest message is their purpose: sending a message, opening a chat, and pressing Jump to latest.
+- A "Jump to latest" control appears over the bottom of the transcript whenever it is scrolled away from the bottom and there is something to scroll to.
+
+Long messages:
+
+- A user message taller than 340px is collapsed to 300px on arrival, with a fade at the cut, so a long pasted prompt cannot push the reply that answers it off screen.
+- The collapsed message carries an expander in its action row, labelled "Expand text" and "Collapse text" with matching `aria-expanded`.
+- Assistant replies are never auto-collapsed; they are the thing the reader asked to see.
+- Expanded state is session-scoped rather than persisted, so a reload starts tidy.
+- Because overflow depends on the column width, the measurement re-runs on window resize and whenever the chat width preference changes.
+
+Message actions:
+
+- Each message shows an action row, revealed on hover. It stays permanently visible on a collapsible message, which would otherwise give no hint that it can be expanded.
+- Copy — available on every message. Copies the underlying markdown, not the rendered HTML.
+- Expand / Collapse — user messages only, and only when the message overflows.
+- Retry — assistant messages. Re-runs the request from that point.
+- Delete — user messages.
+- Every fenced code block carries its own copy control, revealed on hover or keyboard focus, which copies just the code.
+
 Request behavior:
 
 - Use `POST /v1/messages`.
@@ -983,6 +1012,10 @@ Streaming/async endpoints can be deferred:
 21. The implementation references the repository's relative OpenAPI file as the API contract and does not hardcode payload assumptions that contradict the schema.
 22. Sidebar includes a GitHub repository widget and a Not for Production disclosure.
 23. Settings includes a Clear local data action for this Workbench's browser state.
+24. Scrolling up during a streaming answer is not undone by incoming tokens, and a Jump to latest control returns the reader to the newest message.
+25. A long user message is collapsed on arrival and can be expanded and re-collapsed from its action row.
+26. Any message, and any fenced code block, can be copied as markdown.
+27. The chat column width can be changed in Settings and applies immediately.
 
 ## Suggested Build Order
 

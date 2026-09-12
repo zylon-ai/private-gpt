@@ -39,6 +39,10 @@ refresh path, otherwise it silently goes stale and a page reload will not fix it
 refreshed on startup, by the refresh-models control beside the model picker, and by Settings >
 Test API.
 
+Some UI state is deliberately **not** persisted and lives on `runtime` instead, so that a reload
+starts from a clean view: `runtime.stickToBottom` and `runtime.lastRenderedChatId` (transcript
+scroll following) and `runtime.expandedMessages` (which long messages the reader has opened).
+
 ## Serving Note
 
 `index.html` is read into memory when the PrivateGPT server starts (`launcher.py` serves it via
@@ -70,6 +74,11 @@ These are things not obvious from reading `index.html` that future agents should
 - **Composer actions are consolidated under the plus button** — the plus trigger opens one menu containing Add files followed by the existing chat tool/context controls. There is no separate Build mode or Build button.
 - **Hash navigation** — `syncHash()` / `restoreFromHash()` keep the URL in sync with the active view and context tab. Format: `#context/{tab}`, `#chat/{id}`, `#settings`, `#apiDebugger`.
 - **Scroll fades** — `.chat-list-wrap` and `.messages` both use `mask-image` with `--fade-top-stop`/`--fade-bot-stop` custom properties updated on scroll by `updateChatListFade()` and `updateMessagesFade()`.
+- **Transcript scrolling goes through `scrollMessagesToBottom()`** — never assign `scrollTop` directly. It follows new content only while `runtime.stickToBottom` is set, which `syncStickToBottom()` derives from scroll position on every scroll event. Pass `{ force: true }` only where following the newest message is the point: sending, opening a chat, and the Jump to latest control.
+- **`.messages` sits inside `.messages-wrap`** — the wrapper owns the column width and gives the Jump to latest control a positioning context, so it can float over the transcript instead of taking part in the column's vertical flow, which the composer already resizes.
+- **Chat width is an appearance value** — `state.uiAppearance.chatWidth` is one of `comfortable`, `wide`, or `full`, mapped through `CHAT_WIDTHS` onto the `--chat-max` custom property by `paintAppearance()`. Like `themeMode`, it has its own control rather than a shared appearance form field, so `readAppearanceForm()` and `normalizeAppearanceSuggestion()` both carry the existing value forward — otherwise saving a palette or generating a theme would silently reset the layout.
+- **Message collapse is measured, not guessed** — `applyMessageCollapse()` runs once at the end of `renderMessages()`, when nodes are in the DOM. It removes the `collapsed` class from every candidate, then reads every height, then writes the classes, so the pass costs one layout rather than one per message. Streaming messages are skipped.
+- **Message actions are dispatched by class** — the delegated handler matches `.msg-action-btn` and switches on `data-action`, so a new action needs no change to the selector.
 - **Toggle switches** — all `input[type="checkbox"]` elements are styled as custom CSS pill toggles with no native appearance.
 - **Floating panel frost** — `.modal-card`, `.menu-panel`, and `.model-dropdown` override the shared glass group with a near-solid dark background (`rgba(10,12,22,0.82–0.94)`), `blur(72px) saturate(1.4)`, and a `to bottom` gradient (lighter at top, denser at bottom) for readability and visual grounding.
 - **Code Execution tools** — the Code Execution toggle in the Tools menu sends `{ name: "code_execution", type: "code_execution_v1" }` in the tools array. The backend expands this into `bash`, `text_editor` (view/str_replace/create/insert), `present_files`, and `present_server`. Tool use blocks for these tools render as styled `.code-exec-block` details elements with terminal output, line-numbered file views, diff highlighting, and exit-code badges. Adjacent tool_use + tool_result blocks are combined into a single block via blocks pairing in `blocksToHtml`. The `isCodeExecTool` allowlist (`bash`, `view`, `str_replace`, `create`, `insert`, `present_files`, `present_server`) drives pairing and per-tool rendering. The toggle is stored per-chat in `chat.settings.enabledCodeExecution`.
