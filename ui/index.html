@@ -1297,6 +1297,25 @@
       transition: opacity 0.15s;
     }
     .message-content:hover .message-actions { opacity: 1; }
+    /* A collapsed message must advertise its own expander, so this row cannot
+       wait for a hover the reader has no reason to try. */
+    .message.collapsible-message .message-actions { opacity: 1; }
+    .message-bubble:not(.collapsible) ~ .message-actions .msg-action-collapse { display: none; }
+
+    .message-bubble.collapsible.collapsed .message-text {
+      max-height: 300px;
+      overflow: hidden;
+      mask-image: linear-gradient(to bottom, black calc(100% - 56px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 56px), transparent 100%);
+    }
+
+    .msg-action-collapse .collapse-caret {
+      display: inline-block;
+      transition: transform 0.15s ease;
+    }
+    .msg-action-collapse[aria-expanded="true"] .collapse-caret {
+      transform: rotate(180deg);
+    }
     .message.user .message-actions { justify-content: flex-end; }
 
     .msg-action-btn {
@@ -1972,6 +1991,7 @@
       .model-option,
       .effort-option,
       .jump-latest { animation: none !important; }
+      .msg-action-collapse .collapse-caret { transition: none !important; }
     }
 
     .model-option:hover {
@@ -4195,7 +4215,10 @@
       // position rather than from which code path scrolled, so a programmatic
       // scroll back to the bottom re-arms it without any extra bookkeeping.
       stickToBottom: true,
-      lastRenderedChatId: null
+      lastRenderedChatId: null,
+      // Which long messages the reader has opened. Session-scoped on purpose:
+      // a reload should start tidy rather than restoring a wall of text.
+      expandedMessages: new Set()
     };
 
     const $ = (selector, root = document) => root.querySelector(selector);
@@ -5604,6 +5627,7 @@
         loadingNode.dataset.loadingMessage = "true";
         wrap.appendChild(loadingNode);
       }
+      applyMessageCollapse();
       scrollMessagesToBottom({ force: switchedChat });
     }
 
@@ -5635,6 +5659,52 @@
       if (!message.streaming && (message.role === "assistant" || message.role === "user") && contentWrap) {
         contentWrap.appendChild(renderMessageActions(message));
       }
+    }
+
+    // Messages taller than this are collapsed on arrival. Sits a little above the
+    // collapsed height so a message is never clipped to save a handful of pixels.
+    const COLLAPSE_THRESHOLD_PX = 340;
+
+    function setCollapseButtonState(button, expanded) {
+      const hint = expanded ? "Collapse text" : "Expand text";
+      button.title = hint;
+      button.setAttribute("aria-label", hint);
+      button.setAttribute("aria-expanded", expanded ? "true" : "false");
+      const label = $(".collapse-label", button);
+      if (label) label.textContent = expanded ? "Collapse" : "Expand";
+    }
+
+    // Long prompts push the reply off screen, so they arrive collapsed with an
+    // expander. Applied to what the reader wrote, not to answers, which are the
+    // thing they asked for. Reads are batched after the writes so the whole pass
+    // costs one layout pass rather than one per message.
+    function applyMessageCollapse() {
+      const wrap = $("#messages");
+      if (!wrap) return;
+      const candidates = $$(".message.user", wrap)
+        .map(node => ({ node, bubble: $(".message-bubble", node), text: $(".message-text", node) }))
+        .filter(entry => entry.bubble && entry.text);
+      candidates.forEach(({ bubble }) => bubble.classList.remove("collapsed"));
+      const measured = candidates.map(entry => ({
+        ...entry,
+        collapsible: entry.text.scrollHeight > COLLAPSE_THRESHOLD_PX
+      }));
+      measured.forEach(({ node, bubble, collapsible }) => {
+        const expanded = runtime.expandedMessages.has(node.dataset.messageId);
+        bubble.classList.toggle("collapsible", collapsible);
+        bubble.classList.toggle("collapsed", collapsible && !expanded);
+        node.classList.toggle("collapsible-message", collapsible);
+        const button = $(".msg-action-collapse", node);
+        if (button) setCollapseButtonState(button, expanded);
+      });
+    }
+
+    function toggleMessageCollapse(messageId) {
+      if (!messageId) return;
+      if (runtime.expandedMessages.has(messageId)) runtime.expandedMessages.delete(messageId);
+      else runtime.expandedMessages.add(messageId);
+      applyMessageCollapse();
+      renderJumpToLatest();
     }
 
     function messageRenderKey(message) {
@@ -5739,6 +5809,17 @@
         retryBtn.disabled = !state.selectedModel;
         actions.appendChild(retryBtn);
       } else {
+        const expanded = runtime.expandedMessages.has(message.id);
+        const collapseBtn = document.createElement("button");
+        collapseBtn.type = "button";
+        collapseBtn.className = "msg-action-btn msg-action-collapse";
+        collapseBtn.dataset.action = "toggle-message-collapse";
+        collapseBtn.dataset.chatId = chatId;
+        collapseBtn.dataset.messageId = message.id;
+        collapseBtn.innerHTML = `<span class="collapse-caret" aria-hidden="true">&#9662;</span><span class="collapse-label"></span>`;
+        setCollapseButtonState(collapseBtn, expanded);
+        actions.appendChild(collapseBtn);
+
         const delBtn = document.createElement("button");
         delBtn.type = "button";
         delBtn.className = "msg-action-btn danger";
@@ -8038,6 +8119,7 @@
       $("#appearanceChatWidth").addEventListener("change", event => {
         applyAppearanceState({ ...state.uiAppearance, chatWidth: event.target.value });
         saveState();
+        applyMessageCollapse();
       });
       $("#onboardingCheckButton").addEventListener("click", runOnboardingCheck);
       $("#onboardingStepPill1").addEventListener("click", () => {
@@ -8148,11 +8230,12 @@
           openCitationModal(citationButton.dataset.citationRef);
           return;
         }
-        const msgActionBtn = event.target.closest("[data-action='retry-message'],[data-action='delete-message']");
+        const msgActionBtn = event.target.closest(".msg-action-btn");
         if (msgActionBtn) {
           const { action, chatId, messageId } = msgActionBtn.dataset;
           if (action === "retry-message") retryFromMessage(chatId, messageId);
           else if (action === "delete-message") deleteMessage(chatId, messageId);
+          else if (action === "toggle-message-collapse") toggleMessageCollapse(messageId);
           return;
         }
         if (!event.target.closest(".tool-menu-wrap") && !event.target.closest(".menu-panel")) closeToolsMenu();
@@ -8186,6 +8269,12 @@
         syncStickToBottom();
       }, { passive: true });
       $("#jumpToLatestButton").addEventListener("click", () => scrollMessagesToBottom({ force: true }));
+      // Whether a message overflows depends on the column width, so re-measure
+      // when the window changes size or the width preset does.
+      window.addEventListener("resize", () => {
+        applyMessageCollapse();
+        renderJumpToLatest();
+      }, { passive: true });
       updateMessagesFade();
     }
 
