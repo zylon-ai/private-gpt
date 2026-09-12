@@ -1302,6 +1302,43 @@
     .message.collapsible-message .message-actions { opacity: 1; }
     .message-bubble:not(.collapsible) ~ .message-actions .msg-action-collapse { display: none; }
 
+    .code-block {
+      position: relative;
+      min-width: 0;
+    }
+
+    /* Keeps the copy control clear of the first line, which has no padding of
+       its own to hide behind. */
+    .code-block pre {
+      padding-right: 52px;
+    }
+
+    .code-copy-button {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      z-index: 1;
+      padding: 3px 9px;
+      border: 1px solid var(--border-soft);
+      border-radius: 8px;
+      background: var(--glass-soft);
+      color: var(--muted-strong);
+      font-size: 11.5px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .code-block:hover .code-copy-button,
+    .code-copy-button:focus-visible {
+      opacity: 1;
+    }
+
+    .code-copy-button:hover {
+      color: var(--text);
+      border-color: var(--border);
+    }
+
     .message-bubble.collapsible.collapsed .message-text {
       max-height: 300px;
       overflow: hidden;
@@ -5699,6 +5736,21 @@
       });
     }
 
+    // Copies what was written or received, not the rendered HTML: markdown is
+    // what is useful to paste somewhere else.
+    function copyMessage(chatId, messageId) {
+      const chat = state.chats.find(c => c.id === chatId);
+      const message = chat?.messages.find(m => m.id === messageId);
+      if (!message) return;
+      const text = message.text
+        || (message.contentBlocks || []).filter(block => block?.type === "text").map(block => block.text).join("");
+      if (!text) {
+        toast("Nothing to copy.", "error");
+        return;
+      }
+      copyText(text, "Message copied");
+    }
+
     function toggleMessageCollapse(messageId) {
       if (!messageId) return;
       if (runtime.expandedMessages.has(messageId)) runtime.expandedMessages.delete(messageId);
@@ -5798,6 +5850,18 @@
       const actions = document.createElement("div");
       actions.className = "message-actions";
       const chatId = activeChat()?.id || "";
+
+      const copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "msg-action-btn";
+      copyBtn.dataset.action = "copy-message";
+      copyBtn.dataset.chatId = chatId;
+      copyBtn.dataset.messageId = message.id;
+      copyBtn.title = "Copy message";
+      copyBtn.setAttribute("aria-label", "Copy message");
+      copyBtn.textContent = "Copy";
+      actions.appendChild(copyBtn);
+
       if (message.role === "assistant") {
         const retryBtn = document.createElement("button");
         retryBtn.type = "button";
@@ -6530,7 +6594,10 @@
       let match;
       while ((match = fence.exec(text))) {
         if (match.index > cursor) segments.push(renderMarkdownText(text.slice(cursor, match.index)));
-        segments.push(`<pre><code>${escapeHtml(match[1].replace(/^\w+\n/, ""))}</code></pre>`);
+        segments.push(
+          `<div class="code-block"><button class="code-copy-button" type="button" data-copy-code title="Copy code" aria-label="Copy code">Copy</button>` +
+          `<pre><code>${escapeHtml(match[1].replace(/^\w+\n/, ""))}</code></pre></div>`
+        );
         cursor = match.index + match[0].length;
       }
       if (cursor < text.length) segments.push(renderMarkdownText(text.slice(cursor)));
@@ -8236,6 +8303,13 @@
           if (action === "retry-message") retryFromMessage(chatId, messageId);
           else if (action === "delete-message") deleteMessage(chatId, messageId);
           else if (action === "toggle-message-collapse") toggleMessageCollapse(messageId);
+          else if (action === "copy-message") copyMessage(chatId, messageId);
+          return;
+        }
+        const codeCopyButton = event.target.closest("[data-copy-code]");
+        if (codeCopyButton) {
+          const code = $("pre code", codeCopyButton.parentElement);
+          copyText(code?.textContent || "", "Code copied");
           return;
         }
         if (!event.target.closest(".tool-menu-wrap") && !event.target.closest(".menu-panel")) closeToolsMenu();
