@@ -31,6 +31,20 @@ Workbench should follow the Fern-generated OpenAPI schema at:
 
 Do not maintain a duplicated UI-local OpenAPI snapshot.
 
+## Client-Side Persistence
+
+`state` is persisted to `localStorage` under `privategpt-workbench-state-v1`, and that includes
+server-derived data such as `state.models`. Anything cached from the server must have a defined
+refresh path, otherwise it silently goes stale and a page reload will not fix it. `state.models` is
+refreshed on startup, by the refresh-models control beside the model picker, and by Settings >
+Test API.
+
+## Serving Note
+
+`index.html` is read into memory when the PrivateGPT server starts (`launcher.py` serves it via
+`HTMLResponse(content=_index_html)`, not from disk per request). Edits to `index.html` therefore
+require a server restart before they are served — a browser reload alone shows the old page.
+
 ## Working Rules
 
 - Product requirements belong in `docs/PRD.md`.

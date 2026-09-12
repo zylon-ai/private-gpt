@@ -6741,8 +6741,9 @@
       }
     }
 
-    async function loadModels() {
-      const progress = toast("Testing PrivateGPT connection...", "loading", { persistent: true });
+    async function loadModels(options = {}) {
+      const { showToast = true } = options;
+      const progress = showToast ? toast("Testing PrivateGPT connection...", "loading", { persistent: true }) : null;
       try {
         const result = await apiFetch("/v1/models", {}, { label: "Load models" });
         state.models = Array.isArray(result?.data) ? result.data : [];
@@ -6751,9 +6752,10 @@
         }
         saveState();
         render();
-        progress.update("Connected to PrivateGPT.", "ok");
+        progress?.update("Connected to PrivateGPT.", "ok");
       } catch (error) {
-        progress.update(`Could not load models: ${error.message}`, "error");
+        progress?.update(`Could not load models: ${error.message}`, "error");
+        if (!progress) toast(`Could not load models: ${error.message}`, "error");
       }
     }
 
@@ -7985,7 +7987,7 @@
           setTimeout(() => $("#modelSearchInput", dropdown)?.focus(), 0);
         }
       });
-      $("#refreshModelsButton").addEventListener("click", loadModels);
+      $("#refreshModelsButton").addEventListener("click", () => { void loadModels(); });
       $("#composerFileInput").addEventListener("change", async event => {
         const files = Array.from(event.target.files || []);
         const chat = activeChat();
@@ -8203,6 +8205,11 @@
     restoreFromHash();
     if (!state.chats.length) createChat();
     else render();
+    // state.models is persisted, so without this the model picker keeps showing whatever
+    // was cached the last time someone pressed "Test API" -- models added or removed on the
+    // server since then never appear, and a reload does not help. Refresh quietly on boot;
+    // on failure the cached list is left in place so the picker still works offline.
+    loadModels({ showToast: false });
     refreshSkills({ showToast: false });
     loadGitHubStars();
   </script>

@@ -745,7 +745,8 @@ Main non-technical experience.
 Header controls (in the composer toolbar below the textarea):
 
 - Model selector — a custom glass dropdown populated from `GET /v1/models`, showing the current model name with an animated chevron. Selecting a model updates `state.selectedModel`.
-- Refresh models icon button next to the model selector.
+- Refresh models icon button next to the model selector, which re-runs `GET /v1/models`.
+- The model list is fetched on startup as well as on demand. `state.models` is persisted, so without a startup refresh the dropdown keeps rendering whatever was cached the last time the list was fetched: models added to or removed from the server never appear, stale display names persist, and reloading the page does not help. The startup refresh is quiet (no toast on success) and non-destructive — if the request fails the cached list is kept so the picker still works while the server is unreachable, and the current `state.selectedModel` is preserved whenever it still exists in the refreshed list.
 - Reasoning effort is selected inside the model dropdown rather than through a standalone Thinking button. The dropdown places searchable models on the left and a capability-aware effort rail on the right with None, Low, Medium, High, Max, and XHigh choices.
 - The selected effort is stored per chat and sent to the messages API as `thinking: { enabled: Boolean(effort), type: effort }`. Unsupported effort choices are disabled using the selected model's `capabilities.effort` metadata.
 - Tools button — opens the Tools menu popup with per-category toggles:
@@ -789,7 +790,7 @@ Request behavior:
 
 - Use `POST /v1/messages`.
 - Build `ChatBody` from chat messages plus chat-selected context/tools.
-- Use the selected model id from the `/v1/models` response. If models have not been loaded yet, fall back to `default`.
+- Use the selected model id from the `/v1/models` response. If models have not been loaded yet, fall back to `default`. If the persisted `state.selectedModel` is absent from a refreshed model list, selection falls back to the first available model.
 - Prefer the user-configured Settings system prompt when present.
 - If no system prompt or skill instructions are present, omit system prompt text.
 - When Documents are enabled and Settings > Use citations is on, send `system.citations.enabled: true` so semantic-search answers can include citation tags. This may require a top-level `system` object even when no prompt text is configured.
@@ -961,7 +962,7 @@ Streaming/async endpoints can be deferred:
 
 1. User can configure API base URL.
 2. User can configure an optional API key / bearer token from the UI.
-3. User can load models from `GET /v1/models` and select one for each chat.
+3. User can load models from `GET /v1/models` and select one for each chat. The list refreshes automatically on startup, so models added or removed on the server appear without any manual step.
 4. User can create, rename, delete, and switch local chat sessions.
 5. Chat sessions persist across reload.
 6. Chat-specific tool toggles persist across reload.
