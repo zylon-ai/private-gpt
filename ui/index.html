@@ -1021,6 +1021,15 @@
       height: 20px;
     }
 
+    .icon-button.send .stop-icon,
+    .icon-button.send.stopping .send-icon {
+      display: none;
+    }
+
+    .icon-button.send.stopping .stop-icon {
+      display: block;
+    }
+
     .icon-button.send:disabled {
       opacity: 0.35;
       cursor: not-allowed;
@@ -4054,7 +4063,7 @@
                 <button class="icon-button composer-circle" id="refreshModelsButton" type="button" aria-label="Refresh models" title="Refresh models"><svg class="composer-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 11.9-2"/></svg></button>
               </div>
               <div class="composer-tool-group">
-                <button class="icon-button send" type="submit" aria-label="Send"><svg class="composer-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m7 11 5-5 5 5M12 6v12"/></svg></button>
+                <button class="icon-button send" id="sendButton" type="submit" aria-label="Send" title="Send"><svg class="composer-control-icon send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m7 11 5-5 5 5M12 6v12"/></svg><svg class="composer-control-icon stop-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg></button>
               </div>
             </div>
           </form>
@@ -4342,6 +4351,9 @@
         }
       },
       sendingChatIds: new Set(),
+      // One AbortController per in-flight chat, so Stop can cancel the request
+      // for the chat the reader is looking at without touching the others.
+      abortControllers: new Map(),
       // Whether new content should pull the transcript down. Derived from scroll
       // position rather than from which code path scrolled, so a programmatic
       // scroll back to the bottom re-arms it without any extra bookkeeping.
@@ -5433,8 +5445,21 @@
       renderModelSelect();
       renderToolMenu();
       renderMessages();
-      const sendBtn = $(".icon-button.send");
-      if (sendBtn) sendBtn.disabled = !state.selectedModel;
+      renderSendButton();
+    }
+
+    function renderSendButton() {
+      const button = $("#sendButton");
+      if (!button) return;
+      const chat = activeChat();
+      const sending = Boolean(chat) && runtime.sendingChatIds.has(chat.id);
+      const label = sending ? "Stop generating" : "Send";
+      button.classList.toggle("stopping", sending);
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      // Stop has to stay clickable even when no model is selected, otherwise a
+      // request started before the model list changed could not be cancelled.
+      button.disabled = !sending && !state.selectedModel;
     }
 
     function renderModelSelect() {
@@ -6967,7 +6992,7 @@
       throw lastError;
     }
 
-    async function apiStreamFetch(path, { method = "POST", body, headers = {} } = {}, debugMeta = {}, onDelta) {
+    async function apiStreamFetch(path, { method = "POST", body, headers = {}, signal } = {}, debugMeta = {}, onDelta) {
       const base = (state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
       const url = `${base}${path}`;
       const requestHeaders = { "Content-Type": "application/json", ...headers };
@@ -6979,7 +7004,8 @@
       const response = await fetch(url, {
         method,
         headers: requestHeaders,
-        body: body !== undefined ? JSON.stringify(body) : undefined
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal
       });
       if (!response.ok) {
         const text = await response.text();
@@ -7393,7 +7419,9 @@
       let streamingTextEl = null;
 
       try {
-        const response = await apiStreamFetch("/v1/messages", { method: "POST", body }, { label: "Chat message" }, (blocks) => {
+        const controller = new AbortController();
+        runtime.abortControllers.set(chat.id, controller);
+        const response = await apiStreamFetch("/v1/messages", { method: "POST", body, signal: controller.signal }, { label: "Chat message" }, (blocks) => {
           const allBlocks = [...prefixBlocks, ...blocks];
           displayMessage.contentBlocks = allBlocks;
           displayMessage.text = allBlocks.filter(b => b?.type === "text").map(b => b.text).join("");
@@ -7476,6 +7504,22 @@
           await requestAssistant(chat, depth + 1, displayMessage);
         }
       } catch (error) {
+        // A stop is not a failure: keep whatever streamed, drop the streaming
+        // state, and let the caller return quietly.
+        if (error?.name === "AbortError") {
+          const stoppedIdx = chat.messages.findIndex(m => m.id === displayMessage.id);
+          if (stoppedIdx >= 0) {
+            const msg = chat.messages[stoppedIdx];
+            msg.streaming = false;
+            const hasRealContent = msg.text || msg.contentBlocks.some(b => b?.type !== "text" || b.text);
+            if (!hasRealContent) chat.messages.splice(stoppedIdx, 1);
+            else msg.apiMessage = { role: "assistant", content: msg.contentBlocks };
+          }
+          touchChat(chat);
+          saveState();
+          renderMessages();
+          return;
+        }
         if (mergeIntoMessage) {
           mergeIntoMessage.streaming = false;
           mergeIntoMessage.error = apiErrorMessage(error);
@@ -7497,7 +7541,18 @@
         saveState();
         renderMessages();
         throw error;
+      } finally {
+        runtime.abortControllers.delete(chat.id);
       }
+    }
+
+    // Cancels the in-flight request for a chat. Partial output is kept: the
+    // reader stopped because they had seen enough, not because it was wrong.
+    function stopGenerating(chatId) {
+      const controller = runtime.abortControllers.get(chatId);
+      if (!controller) return false;
+      controller.abort();
+      return true;
     }
 
     function sanitizeMessages(chatMessages) {
@@ -8357,6 +8412,11 @@
       });
       $("#composer").addEventListener("submit", event => {
         event.preventDefault();
+        const chat = activeChat();
+        if (chat && runtime.sendingChatIds.has(chat.id)) {
+          stopGenerating(chat.id);
+          return;
+        }
         sendChat($("#composerInput").value);
       });
       $("#composerInput").addEventListener("keydown", event => {
@@ -8443,6 +8503,9 @@
         if ($("#modalBackdrop").classList.contains("open")) { closeModal(); return; }
         if ($("#modelDropdown")?.classList.contains("open")) { closeModelDropdown(); return; }
         if ($("#toolsMenu").classList.contains("open")) { closeToolsMenu(); return; }
+        // Last, so Escape still closes an overlay in preference to stopping a stream.
+        const chat = activeChat();
+        if (chat && runtime.sendingChatIds.has(chat.id)) stopGenerating(chat.id);
       });
 
       // Browser back/forward restores the view
