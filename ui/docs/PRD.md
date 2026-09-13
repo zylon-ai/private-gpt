@@ -354,6 +354,13 @@ On reload:
 
 ## Sidebar Behavior
 
+The sidebar can be collapsed to a narrow rail, handing its width to the message column. It
+collapses to a rail rather than disappearing so the navigation icons stay reachable and the
+control that restores it is still where it was used to collapse it. The choice is persisted in
+`state.sidebarCollapsed`. This applies only to the two-column layout; the narrow layout already
+stacks the shell, so the control is hidden there.
+
+
 Sidebar items:
 
 1. **Context**
@@ -765,9 +772,18 @@ For databases, MCP, skills, and custom tools:
 Message composer:
 
 - Text input.
-- Send button.
+- Send button. While a response is streaming it becomes Stop, and pressing it cancels the request. `Escape` also stops, after any overlay dismissal so it still closes a menu in preference.
+- Stopping is not a failure: whatever streamed is kept and recorded in the API history so the next turn can refer to it, with no error badge and no toast. A stop before any content arrived removes the empty message. Stop stays available even when no model is selected, or a request started before the model list changed could not be cancelled.
 - Pressing `Enter` while focused in the composer sends the message.
 - Pressing `Shift+Enter` inserts a line break.
+
+Context window meter:
+
+- A meter beside the model selector shows how much of the selected model's input window the conversation is using, against `max_input_tokens` from `GET /v1/models`. It turns amber past 75% and red past 90%.
+- The figure comes from the `usage` the server reports on each response. Clicking the meter recounts through `POST /v1/messages/count_tokens`, which measures the request that would actually be sent next — more accurate once documents or tools have been toggled.
+- That endpoint rejects an empty conversation, so the control is disabled until there is something to count.
+- **Max output tokens** is a per-chat setting in the tools menu, sent as `max_tokens`. It defaults to whatever the selected model advertises rather than a fixed value; clearing it returns to that default.
+- The **input** context window is not editable from Workbench. It is not a `ChatBody` field: it comes from the model's `context_window` in the server's model settings, and changing it means editing that file and restarting PrivateGPT — and making sure the inference server's own loaded context is at least as large.
 
 Message rendering:
 
@@ -811,6 +827,7 @@ Message actions:
 - Each message shows an action row, revealed on hover. It stays permanently visible on a collapsible message, which would otherwise give no hint that it can be expanded.
 - Copy — available on every message. Copies the underlying markdown, not the rendered HTML.
 - Expand / Collapse — user messages only, and only when the message overflows.
+- Edit — user messages. Opens the message in place. Saving rewrites it and drops every turn that followed, because those answers were answering a question that is no longer there, then re-runs the turn. Cancel leaves the message untouched, Escape cancels, and Cmd/Ctrl+Enter saves.
 - Retry — assistant messages. Re-runs the request from that point.
 - Delete — user messages.
 - Every fenced code block carries its own copy control, revealed on hover or keyboard focus, which copies just the code.
@@ -1016,6 +1033,10 @@ Streaming/async endpoints can be deferred:
 25. A long user message is collapsed on arrival and can be expanded and re-collapsed from its action row.
 26. Any message, and any fenced code block, can be copied as markdown.
 27. The chat column width can be changed in Settings and applies immediately.
+28. A streaming response can be stopped, and the partial answer is kept rather than discarded.
+29. A user message can be edited and resent, dropping the turns that followed it.
+30. Context window usage is visible, and max output tokens can be set per chat.
+31. The sidebar can be collapsed to a rail and the choice survives a reload.
 
 ## Suggested Build Order
 

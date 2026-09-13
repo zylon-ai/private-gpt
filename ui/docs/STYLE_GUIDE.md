@@ -124,6 +124,10 @@ Requirements:
 - The chat list fills all available vertical space between the nav buttons and the bottom group, using `flex: 1 1 0` and `min-height: 0`.
 - Apply scroll-aware top/bottom fade masks to the chat list using CSS `mask-image` with `--fade-top-stop`/`--fade-bot-stop` custom properties, updated on scroll.
 
+Collapsed, the sidebar becomes a 62px rail: labels, chat list and footer widgets are hidden and
+the navigation icons centre themselves. The toggle sits at the top of the sidebar in both states.
+The shell transitions its `grid-template-columns`, disabled under `prefers-reduced-motion`.
+
 ### Main Chat
 
 The chat view should be centered and spacious.
@@ -507,11 +511,23 @@ The Extended Thinking toggle in the composer uses:
 
 ### Message Actions
 
-A row of small chips under each message: Copy, then Expand/Collapse, Retry, or Delete.
+A row of small chips under each message: Copy, then Expand/Collapse, Edit, Retry, or Delete.
 
 - Normally revealed on hover of the message. It stays visible when the message is collapsible, because a collapsed message must advertise its own expander.
 - Colours must come from the theme rather than hard-coded white, so the row stays legible in both themes.
 - Destructive actions use the `danger` modifier, which tints red on hover only.
+
+### Message Editor
+
+- Replaces the bubble in place rather than opening a dialogue, so the message keeps its position in the transcript.
+- Matches the user bubble's width and its asymmetric corner radius, so it reads as the same message rather than a new surface.
+- Cancel and Save sit at the bottom right; Save carries the `primary` modifier.
+
+### Context Meter
+
+- A pill beside the model selector: a short bar plus a tabular-numerals label.
+- The fill is the accent blue, amber past 75%, red past 90%. The label takes the same colour so the state survives a glance without relying on the bar alone.
+- Disabled, at reduced opacity, when there is nothing to count.
 
 ### Code Blocks
 
