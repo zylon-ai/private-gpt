@@ -1411,6 +1411,45 @@
       border-color: var(--border);
     }
 
+    .message.editing .message-bubble,
+    .message.editing .message-actions {
+      display: none;
+    }
+
+    .message-editor {
+      display: grid;
+      gap: 8px;
+      width: min(620px, 100%);
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      border-top-right-radius: 7px;
+      background: var(--glass-soft);
+    }
+
+    .message-edit-input {
+      min-height: 0;
+      max-height: 320px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+
+    .message-editor-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .msg-action-btn.primary {
+      color: var(--text);
+      border-color: var(--border);
+      background: var(--glass-strong);
+    }
+
     .message-bubble.collapsible.collapsed .message-text {
       max-height: 300px;
       overflow: hidden;
@@ -4361,7 +4400,9 @@
       lastRenderedChatId: null,
       // Which long messages the reader has opened. Session-scoped on purpose:
       // a reload should start tidy rather than restoring a wall of text.
-      expandedMessages: new Set()
+      expandedMessages: new Set(),
+      // The user message currently open for editing, if any.
+      editingMessageId: null
     };
 
     const $ = (selector, root = document) => root.querySelector(selector);
@@ -5796,6 +5837,7 @@
         wrap.appendChild(loadingNode);
       }
       applyMessageCollapse();
+      applyMessageEditors();
       scrollMessagesToBottom({ force: switchedChat });
     }
 
@@ -5880,6 +5922,91 @@
         return;
       }
       copyText(text, "Message copied");
+    }
+
+    // Rendered as a pass over the finished nodes, like the collapse measurement,
+    // so it survives the re-renders that happen while the editor is open. An
+    // existing editor is left alone so an in-progress draft is never discarded.
+    function applyMessageEditors() {
+      const wrap = $("#messages");
+      if (!wrap) return;
+      $$(".message.user", wrap).forEach(node => {
+        const messageId = node.dataset.messageId;
+        const editing = runtime.editingMessageId === messageId;
+        node.classList.toggle("editing", editing);
+        const existing = $(".message-editor", node);
+        if (!editing) {
+          existing?.remove();
+          return;
+        }
+        if (existing) return;
+        const chat = activeChat();
+        const message = chat?.messages.find(m => m.id === messageId);
+        if (!message) return;
+        const editor = document.createElement("div");
+        editor.className = "message-editor";
+        editor.innerHTML = `
+          <textarea class="message-edit-input" spellcheck="false" aria-label="Edit message"></textarea>
+          <div class="message-editor-actions">
+            <button class="msg-action-btn" type="button" data-action="cancel-message-edit">Cancel</button>
+            <button class="msg-action-btn primary" type="button" data-action="save-message-edit" data-chat-id="${escapeAttr(chat.id)}" data-message-id="${escapeAttr(messageId)}">Save and resend</button>
+          </div>
+        `;
+        const input = $(".message-edit-input", editor);
+        input.value = message.text || "";
+        $(".message-content", node).appendChild(editor);
+        input.style.height = `${Math.min(input.scrollHeight, 320)}px`;
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      });
+    }
+
+    function beginMessageEdit(messageId) {
+      runtime.editingMessageId = messageId;
+      renderMessages();
+    }
+
+    function cancelMessageEdit() {
+      if (!runtime.editingMessageId) return false;
+      runtime.editingMessageId = null;
+      renderMessages();
+      return true;
+    }
+
+    // Editing rewrites the question, so every answer that followed it is now
+    // answering something that was never asked. They are dropped and the turn is
+    // run again, the same way Retry does.
+    function saveMessageEdit(chatId, messageId) {
+      const chat = state.chats.find(c => c.id === chatId);
+      if (!chat || runtime.sendingChatIds.has(chatId)) return;
+      const idx = chat.messages.findIndex(m => m.id === messageId);
+      if (idx < 0) return;
+      const input = document.querySelector(`[data-message-id="${messageId}"] .message-edit-input`);
+      const text = (input?.value || "").trim();
+      if (!text) {
+        toast("Message cannot be empty.", "error");
+        return;
+      }
+      const message = chat.messages[idx];
+      message.text = text;
+      message.contentBlocks = [{ type: "text", text }];
+      message.apiMessage = { role: "user", content: text };
+      chat.messages = chat.messages.slice(0, idx + 1);
+      runtime.editingMessageId = null;
+      runtime.expandedMessages.delete(messageId);
+      touchChat(chat);
+      saveState();
+      renderMessages();
+      runtime.sendingChatIds.add(chatId);
+      render();
+      requestAssistant(chat, 0).catch(error => {
+        toast(`Chat failed: ${apiErrorMessage(error)}`, "error");
+      }).finally(() => {
+        runtime.sendingChatIds.delete(chatId);
+        touchChat(chat);
+        saveState();
+        render();
+      });
     }
 
     function toggleMessageCollapse(messageId) {
@@ -6014,6 +6141,17 @@
         collapseBtn.innerHTML = `<span class="collapse-caret" aria-hidden="true">&#9662;</span><span class="collapse-label"></span>`;
         setCollapseButtonState(collapseBtn, expanded);
         actions.appendChild(collapseBtn);
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "msg-action-btn";
+        editBtn.dataset.action = "edit-message";
+        editBtn.dataset.chatId = chatId;
+        editBtn.dataset.messageId = message.id;
+        editBtn.title = "Edit and resend";
+        editBtn.setAttribute("aria-label", "Edit and resend");
+        editBtn.textContent = "Edit";
+        actions.appendChild(editBtn);
 
         const delBtn = document.createElement("button");
         delBtn.type = "button";
@@ -8419,6 +8557,13 @@
         }
         sendChat($("#composerInput").value);
       });
+      $("#messages").addEventListener("keydown", event => {
+        const input = event.target.closest(".message-edit-input");
+        if (!input || event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
+        event.preventDefault();
+        const button = $(".message-editor [data-action='save-message-edit']", input.closest(".message-content"));
+        if (button) saveMessageEdit(button.dataset.chatId, button.dataset.messageId);
+      });
       $("#composerInput").addEventListener("keydown", event => {
         if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();
@@ -8479,6 +8624,9 @@
           else if (action === "delete-message") deleteMessage(chatId, messageId);
           else if (action === "toggle-message-collapse") toggleMessageCollapse(messageId);
           else if (action === "copy-message") copyMessage(chatId, messageId);
+          else if (action === "edit-message") beginMessageEdit(messageId);
+          else if (action === "cancel-message-edit") cancelMessageEdit();
+          else if (action === "save-message-edit") saveMessageEdit(chatId, messageId);
           return;
         }
         const codeCopyButton = event.target.closest("[data-copy-code]");
@@ -8500,6 +8648,7 @@
       });
       document.addEventListener("keydown", event => {
         if (event.key !== "Escape") return;
+        if (cancelMessageEdit()) return;
         if ($("#modalBackdrop").classList.contains("open")) { closeModal(); return; }
         if ($("#modelDropdown")?.classList.contains("open")) { closeModelDropdown(); return; }
         if ($("#toolsMenu").classList.contains("open")) { closeToolsMenu(); return; }
