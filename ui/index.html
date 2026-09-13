@@ -142,6 +142,7 @@
       height: 100vh;
       padding: 12px;
       gap: 16px;
+      transition: grid-template-columns 200ms cubic-bezier(.2, .8, .2, 1);
     }
 
     .glass {
@@ -270,6 +271,68 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       font-weight: 720;
+    }
+
+    .sidebar-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      margin: 0 0 10px auto;
+      padding: 0;
+      flex: 0 0 auto;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+    }
+
+    .sidebar-toggle svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    .sidebar-toggle:hover {
+      color: var(--text);
+      border-color: var(--border-soft);
+      background: var(--glass-soft);
+    }
+
+    /* Collapsed, the sidebar keeps a rail rather than disappearing: the nav icons
+       stay reachable and the control that brings it back is still where it was
+       used to send it away. Scoped to the two-column layout -- below 900px the
+       shell is already stacked and there is no side column to reclaim. */
+    @media (min-width: 901px) {
+      .app.sidebar-collapsed {
+        --sidebar: 62px;
+      }
+
+      .app.sidebar-collapsed .sidebar {
+        padding: 22px 9px;
+      }
+
+      .app.sidebar-collapsed .sidebar-toggle {
+        margin-right: auto;
+        margin-left: auto;
+      }
+
+      .app.sidebar-collapsed .logo,
+      .app.sidebar-collapsed .sidebar-label,
+      .app.sidebar-collapsed .chat-list-wrap,
+      .app.sidebar-collapsed .github-widget,
+      .app.sidebar-collapsed .production-notice-button,
+      .app.sidebar-collapsed .nav-button > span:not([data-icon]) {
+        display: none;
+      }
+
+      .app.sidebar-collapsed .nav-button {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+      }
     }
 
     .logo {
@@ -2028,6 +2091,7 @@
       .model-option,
       .effort-option,
       .jump-latest { animation: none !important; }
+      .app { transition: none !important; }
       .msg-action-collapse .collapse-caret { transition: none !important; }
     }
 
@@ -3005,6 +3069,10 @@
       .message.user .message-content {
         max-width: 88%;
       }
+
+      .sidebar-toggle {
+        display: none;
+      }
     }
 
     @media (max-width: 640px) {
@@ -3566,7 +3634,10 @@
 </head>
 <body>
   <div class="app">
-    <aside class="sidebar glass">
+    <aside class="sidebar glass" id="sidebar">
+      <button class="sidebar-toggle" id="sidebarToggleButton" type="button" aria-controls="sidebar" aria-expanded="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+      </button>
       <div class="logo">
         <img id="brandLogo"  src="./references/logo-privategpt-wordmark-white-transparent.svg" alt="PrivateGPT" />
         <div class="logo-caption">
@@ -4249,7 +4320,8 @@
         customTools: [defaultCustomTool()]
       },
       chats: [],
-      activeChatId: null
+      activeChatId: null,
+      sidebarCollapsed: false
     });
 
     let state = loadState();
@@ -4806,7 +4878,19 @@
       syncHash();
     }
 
+    function applySidebarCollapsed() {
+      const collapsed = state.sidebarCollapsed === true;
+      $(".app").classList.toggle("sidebar-collapsed", collapsed);
+      const button = $("#sidebarToggleButton");
+      if (!button) return;
+      const label = collapsed ? "Expand sidebar" : "Collapse sidebar";
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      button.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    }
+
     function renderSidebar() {
+      applySidebarCollapsed();
       $("#contextNav").classList.toggle("active", runtime.view === "context");
       $("#apiDebuggerNav").classList.toggle("active", runtime.view === "apiDebugger");
       $("#settingsNav").classList.toggle("active", runtime.view === "settings");
@@ -8204,6 +8288,15 @@
       });
       $("#defaultCollection").addEventListener("change", async event => {
         await switchActiveCollection(event.target.value, { showToast: false });
+      });
+      $("#sidebarToggleButton").addEventListener("click", () => {
+        state.sidebarCollapsed = !state.sidebarCollapsed;
+        saveState();
+        applySidebarCollapsed();
+        // The message column grows or shrinks with the sidebar, so what overflows
+        // changes with it.
+        applyMessageCollapse();
+        scrollMessagesToBottom();
       });
       $("#appearanceChatWidth").addEventListener("change", event => {
         applyAppearanceState({ ...state.uiAppearance, chatWidth: event.target.value });
