@@ -1444,6 +1444,65 @@
       gap: 6px;
     }
 
+    .number-row input {
+      width: 88px;
+      padding: 5px 8px;
+      border-radius: 9px;
+      font-size: 12.5px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .context-meter {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 32px;
+      padding: 0 11px;
+      border: 1px solid var(--border-soft);
+      border-radius: 999px;
+      background: var(--glass-soft);
+      color: var(--muted-strong);
+      font-size: 12px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+    }
+
+    .context-meter:hover:not(:disabled) {
+      color: var(--text);
+      border-color: var(--border);
+      background: var(--glass);
+    }
+
+    .context-meter:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .context-meter-bar {
+      width: 34px;
+      height: 4px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--glass-strong);
+    }
+
+    .context-meter-fill {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: 999px;
+      background: var(--blue);
+      transition: width 220ms ease, background 220ms ease;
+    }
+
+    .context-meter.warn .context-meter-fill { background: var(--warn); }
+    .context-meter.danger .context-meter-fill { background: var(--danger); }
+    .context-meter.warn { color: var(--warn); }
+    .context-meter.danger { color: var(--danger); }
+
     .msg-action-btn.primary {
       color: var(--text);
       border-color: var(--border);
@@ -2139,7 +2198,8 @@
       .model-option,
       .effort-option,
       .jump-latest { animation: none !important; }
-      .app { transition: none !important; }
+      .app,
+      .context-meter-fill { transition: none !important; }
       .msg-action-collapse .collapse-caret { transition: none !important; }
     }
 
@@ -4099,6 +4159,10 @@
                   </button>
                   <div class="model-dropdown" id="modelDropdown"></div>
                 </div>
+                <button class="context-meter" id="contextMeter" type="button" hidden>
+                  <span class="context-meter-bar" aria-hidden="true"><span class="context-meter-fill" id="contextMeterFill"></span></span>
+                  <span id="contextMeterLabel">— / —</span>
+                </button>
                 <button class="icon-button composer-circle" id="refreshModelsButton" type="button" aria-label="Refresh models" title="Refresh models"><svg class="composer-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 11.9-2"/></svg></button>
               </div>
               <div class="composer-tool-group">
@@ -5487,6 +5551,95 @@
       renderToolMenu();
       renderMessages();
       renderSendButton();
+      renderContextMeter();
+    }
+
+    const DEFAULT_MAX_OUTPUT_TOKENS = 4096;
+
+    function selectedModelInfo() {
+      return state.models.find(model => model.id === state.selectedModel) || null;
+    }
+
+    function chatMaxTokens(chat) {
+      const configured = Number(chat?.settings?.maxTokens);
+      if (Number.isFinite(configured) && configured > 0) return Math.round(configured);
+      const advertised = Number(selectedModelInfo()?.max_tokens);
+      return Number.isFinite(advertised) && advertised > 0 ? advertised : DEFAULT_MAX_OUTPUT_TOKENS;
+    }
+
+    function contextWindowSize() {
+      const advertised = Number(selectedModelInfo()?.max_input_tokens);
+      return Number.isFinite(advertised) && advertised > 0 ? advertised : null;
+    }
+
+    function formatTokenCount(value) {
+      if (!Number.isFinite(value)) return "—";
+      if (value < 1000) return String(Math.round(value));
+      return `${(value / 1000).toFixed(value < 10000 ? 1 : 0)}k`;
+    }
+
+    // Shows how much of the model's input window the conversation is using.
+    // The figure comes from the usage the server reports on each response, and
+    // can be recounted on demand for the request that would be sent next.
+    function renderContextMeter() {
+      const meter = $("#contextMeter");
+      if (!meter) return;
+      const chat = activeChat();
+      const limit = contextWindowSize();
+      const used = Number(chat?.contextTokens);
+      // The count endpoint rejects an empty conversation ("Messages cannot be
+      // empty"), so there is nothing to ask for until something has been sent.
+      const countable = Boolean(chat) && sanitizeMessages(chat.messages).length > 0;
+      meter.disabled = !countable;
+      if (!chat || !limit || !Number.isFinite(used)) {
+        meter.hidden = !limit;
+        if (!meter.hidden) {
+          $("#contextMeterLabel").textContent = `— / ${formatTokenCount(limit)}`;
+          $("#contextMeterFill").style.width = "0%";
+          meter.classList.remove("warn", "danger");
+          meter.title = countable
+            ? "Context window usage. Click to count the tokens in this conversation."
+            : "Context window usage. Send a message to measure it.";
+          meter.setAttribute("aria-label", meter.title);
+        }
+        return;
+      }
+      const ratio = Math.min(used / limit, 1);
+      meter.hidden = false;
+      meter.classList.toggle("warn", ratio >= 0.75 && ratio < 0.9);
+      meter.classList.toggle("danger", ratio >= 0.9);
+      $("#contextMeterLabel").textContent = `${formatTokenCount(used)} / ${formatTokenCount(limit)}`;
+      $("#contextMeterFill").style.width = `${Math.round(ratio * 100)}%`;
+      const label = `Context: ${used.toLocaleString()} of ${limit.toLocaleString()} tokens used. Click to recount.`;
+      meter.title = label;
+      meter.setAttribute("aria-label", label);
+    }
+
+    // Counts what the next request would actually send, which is more accurate
+    // than the last response's usage once documents or tools have been toggled.
+    async function recountContextTokens() {
+      const chat = activeChat();
+      if (!chat) return;
+      if (!state.selectedModel) {
+        toast("Select a model first.", "error");
+        return;
+      }
+      const progress = toast("Counting tokens...", "loading", { persistent: true });
+      try {
+        const body = buildChatBody(chat);
+        delete body.stream;
+        delete body.max_tokens;
+        const result = await apiFetch("/v1/messages/count_tokens", { method: "POST", body }, { label: "Count tokens" });
+        const counted = Number(result?.input_tokens);
+        if (!Number.isFinite(counted)) throw new Error("No input_tokens in response");
+        chat.contextTokens = counted;
+        touchChat(chat);
+        saveState();
+        renderContextMeter();
+        progress.update(`${counted.toLocaleString()} input tokens.`, "ok");
+      } catch (error) {
+        progress.update(`Could not count tokens: ${apiErrorMessage(error)}`, "error");
+      }
     }
 
     function renderSendButton() {
@@ -5720,6 +5873,16 @@
         }));
       }
       menu.appendChild(menuGroup("Knowledge", knowledgeRows));
+      menu.appendChild(menuGroup("Response", [
+        numberRow("Max output tokens", chatMaxTokens(chat), value => {
+          const parsed = Number.parseInt(value, 10);
+          // Blank or nonsense clears the override and falls back to whatever the
+          // selected model advertises.
+          chat.settings.maxTokens = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+          touchChat(chat);
+          saveState();
+        })
+      ]));
       if (state.enableCodeExecution !== false) {
         menu.appendChild(menuGroup("Code", [
           toggleRow("Code Execution", Boolean(chat.settings.enabledCodeExecution), checked => {
@@ -5750,6 +5913,14 @@
       row.className = "toggle-row" + (disabled ? " disabled" : "");
       row.innerHTML = `<span>${escapeHtml(label)}</span><input type="checkbox" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>`;
       if (!disabled) $("input", row).addEventListener("change", event => onChange(event.target.checked));
+      return row;
+    }
+
+    function numberRow(label, value, onChange) {
+      const row = document.createElement("label");
+      row.className = "toggle-row number-row";
+      row.innerHTML = `<span>${escapeHtml(label)}</span><input type="number" inputmode="numeric" min="1" step="1" value="${escapeAttr(String(value))}">`;
+      $("input", row).addEventListener("change", event => onChange(event.target.value));
       return row;
     }
 
@@ -7156,7 +7327,7 @@
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      const messageData = { id: null, role: "assistant", content: [], stop_reason: null };
+      const messageData = { id: null, role: "assistant", content: [], stop_reason: null, usage: null };
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -7173,6 +7344,9 @@
             if (event.type === "message_start") {
               messageData.id = event.message?.id || messageData.id;
               messageData.role = event.message?.role || "assistant";
+              // message_start carries the input count; message_delta updates the
+              // output count as generation proceeds.
+              if (event.message?.usage) messageData.usage = { ...event.message.usage };
             } else if (event.type === "content_block_start") {
               const idx = event.index ?? 0;
               while (messageData.content.length <= idx) messageData.content.push(null);
@@ -7198,6 +7372,7 @@
               }
             } else if (event.type === "message_delta") {
               messageData.stop_reason = event.delta?.stop_reason || messageData.stop_reason;
+              if (event.usage) messageData.usage = { ...(messageData.usage || {}), ...event.usage };
             } else if (event.type === "error") {
               throw Object.assign(new Error(event.error?.message || "Stream error"), { body: event });
             }
@@ -7609,9 +7784,15 @@
           displayMessage = finalMessage;
         }
 
+        if (response?.usage) {
+          const used = (Number(response.usage.input_tokens) || 0) + (Number(response.usage.output_tokens) || 0);
+          if (used > 0) chat.contextTokens = used;
+        }
+
         touchChat(chat);
         saveState();
         renderMessages();
+        renderContextMeter();
 
         // Execute any browser custom tool calls and merge results into the same display block.
         const toolUses = responseBlocks.filter(block => block?.type === "tool_use");
@@ -7840,7 +8021,7 @@
         tool_context: toolContext,
         mcp_servers: mcpServers,
         stream: true,
-        max_tokens: 4096,
+        max_tokens: chatMaxTokens(chat),
         thinking: { enabled: Boolean(reasoningEffort), type: reasoningEffort }
       };
       if (chat.settings.enabledCodeExecution) {
@@ -8482,6 +8663,7 @@
       $("#defaultCollection").addEventListener("change", async event => {
         await switchActiveCollection(event.target.value, { showToast: false });
       });
+      $("#contextMeter").addEventListener("click", () => { void recountContextTokens(); });
       $("#sidebarToggleButton").addEventListener("click", () => {
         state.sidebarCollapsed = !state.sidebarCollapsed;
         saveState();
