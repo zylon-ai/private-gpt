@@ -23,7 +23,9 @@ async def test_bash_executor_sandbox_close_accepts_force(force: bool) -> None:
 
 
 @pytest.mark.parametrize("force", [False, True])
-async def test_local_sandbox_close_removes_workspace(tmp_path: Path, force: bool) -> None:
+async def test_local_sandbox_close_removes_workspace(
+    tmp_path: Path, force: bool
+) -> None:
     workdir = tmp_path / "workspace"
     workdir.mkdir()
     (workdir / "result.txt").write_text("result")
