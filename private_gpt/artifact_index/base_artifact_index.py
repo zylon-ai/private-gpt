@@ -61,10 +61,12 @@ def embed_text_for(node: BaseNode) -> str:
     # query would then match ahead of the real chunks.
     if not content.strip():
         return content
+    # Only keys the node's own rendering left out: a node that still embeds its
+    # metadata already carries them, and a second copy would be noise.
     header = "\n".join(
         f"{key}: {node.metadata[key]}"
         for key in EMBED_METADATA_KEYS
-        if node.metadata.get(key)
+        if node.metadata.get(key) and key in node.excluded_embed_metadata_keys
     )
     return f"{header}\n{content}" if header else content
 

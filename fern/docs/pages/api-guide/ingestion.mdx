@@ -77,6 +77,21 @@ make ingest /path/to/folder -- --watch
 
 ---
 
+## What gets embedded
+
+Each chunk is embedded as its text behind a one-line header naming the source file:
+
+```text
+file_name: quarterly-report.pdf
+<chunk text>
+```
+
+The header puts the document's name into every vector, so a search for a file by name can find it. It is added only for embedding: the text given to the LLM is unchanged. Other file metadata (hash, type, collection) is never embedded.
+
+Embeddings are computed at ingestion time, so documents ingested before this behaviour was introduced keep their existing vectors until they are ingested again.
+
+---
+
 ## Supported file formats
 
 PrivateGPT handles plain text natively. The following formats are also supported with built-in parsers:
