@@ -13,4 +13,4 @@ See @README.md, @docs/SOURCE_OF_TRUTH.md, @docs/PRD.md, and @docs/STYLE_GUIDE.md
 
 - Use the shared docs above as the source of truth instead of duplicating product or design rules here.
 - If implementation and docs disagree, fix the disagreement in the same change.
-- Validate `index.html` changes with the documented script and manually test changed flows when needed.
+- Validate `index.html` changes with the documented script, run `tests/ui`, and manually test changed flows when needed.
