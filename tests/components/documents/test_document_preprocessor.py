@@ -208,7 +208,9 @@ class TestDocumentPreprocessing:
             responses = await _collect(
                 preprocess_document_message(url_message, convert_service)
             )
-        convert_service.bytes_to_text.assert_called_once_with(b"pdf bytes", ".pdf")
+        convert_service.bytes_to_text.assert_called_once_with(
+            b"pdf bytes", ".pdf", execute_transformations=False
+        )
         assert responses[-1].message is not None
 
     async def test_non_document_blocks_preserved(

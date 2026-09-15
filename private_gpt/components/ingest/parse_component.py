@@ -16,13 +16,11 @@ from private_gpt.components.ingest.fake_progress import (
 from private_gpt.components.ingest.ingest_helper import IngestionHelper
 from private_gpt.components.ingest.progress.errors import (
     IngestionLoadErrors,
-    IngestionParseErrors,
 )
 from private_gpt.components.ingest.progress.models import ValidationProgressStatus
 from private_gpt.components.ingest.utils import (
     FileInfo,
     convert_unsupported_file,
-    convert_unsupported_file_as_fallback,
     get_file_info,
     get_file_name,
     get_filesize,
@@ -92,6 +90,7 @@ class ParseComponent:
         reader_name: str | None = None,
         notification: NotifyProtocol | None = None,
         warnings: list[str] | None = None,
+        execute_transformations: bool = True,
     ) -> FileParseResult:
         converted_file = convert_unsupported_file(file_info)
 
@@ -103,25 +102,8 @@ class ParseComponent:
             preferred_reader=reader_name,
             notification=notification,
             warnings=warnings,
+            execute_transformations=execute_transformations,
         )
-
-        # 2) If nothing worked, convert to PDF as a last resort
-        if not nodes:
-            converted_fallback = convert_unsupported_file_as_fallback(file_info)
-            if converted_fallback:
-                if notification:
-                    notification(
-                        percentage=0,
-                        warnings=[IngestionParseErrors.FALLBACK_TO_PDF_TO_TEXT],
-                    )
-                nodes, resolved_reader = self._try_readers(
-                    converted_fallback,
-                    file_metadata,
-                    extension=converted_fallback.extension,
-                    preferred_reader=None,  # let it resolve from scratch for pdf
-                    notification=notification,
-                    warnings=warnings,
-                )
 
         if not nodes or not resolved_reader:
             logger.info("No valid nodes found in the file.")
@@ -139,6 +121,7 @@ class ParseComponent:
         preferred_reader: str | None,
         notification: NotifyProtocol | None,
         warnings: list[str] | None,
+        execute_transformations: bool = True,
     ) -> tuple[list, str | None]:
         """Tries readers in a chain for a given file/extension.
 
@@ -154,6 +137,7 @@ class ParseComponent:
                     notification=notification,
                     warnings=warnings,
                     reader_name=reader,
+                    execute_transformations=execute_transformations,
                 )
                 if nodes:
                     return nodes, reader
@@ -219,6 +203,7 @@ class ParseComponent:
         notification: NotifyProtocol | None = None,
         warnings: list[str] | None = None,
         reader_name: str | None = None,
+        execute_transformations: bool = True,
     ) -> list[BaseNode]:
         return asyncio.run(
             self._aload_data(
@@ -227,6 +212,7 @@ class ParseComponent:
                 notification=notification,
                 warnings=warnings,
                 reader_name=reader_name,
+                execute_transformations=execute_transformations,
             )
         )
 
@@ -237,6 +223,7 @@ class ParseComponent:
         notification: NotifyProtocol | None = None,
         warnings: list[str] | None = None,
         reader_name: str | None = None,
+        execute_transformations: bool = True,
     ) -> list[BaseNode]:
         if reader_name:
             loader = self.reader_component.get_reader(reader_name, file_info.extension)
@@ -250,6 +237,7 @@ class ParseComponent:
             extra_info=file_metadata,
             notification=notification,
             warnings=warnings,
+            execute_transformations=execute_transformations,
         ):
             nodes.append(node)
         return nodes
