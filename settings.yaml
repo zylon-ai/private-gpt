@@ -96,6 +96,7 @@ chat:
     multimodal:
       max_concurrency: ${PGPT_PREPROCESS_MULTIMODAL_MAX_CONCURRENCY:-1}
       return_type: ${PGPT_PREPROCESS_MULTIMODAL_RETURN_TYPE:user_message}
+      timeout_seconds: ${PGPT_PREPROCESS_MULTIMODAL_TIMEOUT_SECONDS:600}
 
 stream:
   broker: ${PGPT_ASYNC_BROKER:memory}
@@ -238,6 +239,8 @@ s3:
   secret_access_key: ${PGPT_S3_SECRET_ACCESS_KEY:}
   durable_bucket_name: ${PGPT_S3_DURABLE_BUCKET_NAME:zylon-storage}
   temporary_bucket_name: ${PGPT_S3_TEMPORARY_BUCKET_NAME:zylon-temporary}
+  connect_timeout_seconds: ${PGPT_S3_CONNECT_TIMEOUT_SECONDS:10}
+  read_timeout_seconds: ${PGPT_S3_READ_TIMEOUT_SECONDS:120}
 
 phoenix:
   url: ${PGPT_PHOENIX_URL:http://localhost:6006}
@@ -346,6 +349,8 @@ scheduler:
   ingestion:
     mode: ${PGPT_INGESTION_SCHEDULER_MODE:local}
     celery_queue: ${PGPT_INGESTION_CELERY_QUEUE:ingestion}
+    convert_timeout_seconds: ${PGPT_INGESTION_CONVERT_TIMEOUT_SECONDS:600}
+    ingest_timeout_seconds: ${PGPT_INGESTION_INGEST_TIMEOUT_SECONDS:1800}
   chat:
     mode: ${PGPT_CHAT_SCHEDULER_MODE:local}
     celery_queue: ${PGPT_CHAT_CELERY_QUEUE:chat}

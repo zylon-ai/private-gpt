@@ -14,6 +14,8 @@ from private_gpt.components.engines.chat.checkpoint_store import (
 from private_gpt.components.tools.remote_execution import (
     ToolExecutionRequest,
     ToolExecutionResponse,
+    build_error_response,
+    build_error_tool_message,
     execute_tool_request,
     resolve_tool_execution_interceptors,
 )
@@ -82,17 +84,7 @@ async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
                 message_id,
                 request.tool_id,
             )
-            response = ToolExecutionResponse(
-                tool_name=request.tool_name,
-                tool_id=request.tool_id,
-                outcome=ToolExecutionFailure(
-                    error=ToolExecutionError(
-                        message=str(exc),
-                        exception_type=type(exc).__name__,
-                    )
-                ),
-                tool_message=request_error_message(request, str(exc)),
-            )
+            response = build_error_response(request, exc)
         else:
             logger.debug(
                 "Tool execution completed correlation_id=%s "
@@ -162,7 +154,7 @@ def _duplicate_execution_response(
                 message=message,
             )
         ),
-        tool_message=request_error_message(request, message),
+        tool_message=build_error_tool_message(request, message),
     )
 
 
@@ -195,21 +187,3 @@ def _result_fragment(response: ToolExecutionResponse) -> str:
     if len(single_line) <= RESULT_FRAGMENT_LENGTH:
         return single_line
     return f"{single_line[:RESULT_FRAGMENT_LENGTH]}..."
-
-
-def request_error_message(
-    request: ToolExecutionRequest,
-    message: str,
-) -> Any:
-    from llama_index.core.base.llms.types import ChatMessage
-
-    return ChatMessage(
-        role="tool",
-        content=message,
-        additional_kwargs={
-            "tool_call_id": request.tool_id,
-            "tool_call_name": request.tool_name,
-            "tool_call_args": request.tool_kwargs,
-            "raw_output": message,
-        },
-    )

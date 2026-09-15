@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 from typing import Any, Literal
 
@@ -6,9 +7,11 @@ from llama_index.core.base.llms.types import MessageRole, TextBlock
 from llama_index.core.llms import LLM, ChatMessage
 
 from private_gpt.components.chat.processors.chat_history.multimodality.audio_preprocessor import (
+    AUDIO_PROCESSING_FAILED_MESSAGE,
     preprocess_audio_message,
 )
 from private_gpt.components.chat.processors.chat_history.multimodality.image_preprocessor import (
+    IMAGE_PROCESSING_FAILED_MESSAGE,
     preprocess_image_message,
 )
 from private_gpt.components.chat.processors.chat_history.multimodality.models import (
@@ -21,7 +24,33 @@ from private_gpt.components.chat.processors.chat_history.multimodality.utils imp
     requires_audio_preprocessing,
     requires_image_preprocessing,
 )
-from private_gpt.events.event_errors import Errors
+
+logger = logging.getLogger(__name__)
+
+
+def _fallback_message(
+    message: ChatMessage,
+    modality: Literal["image", "audio"],
+    return_type: Literal["user_message", "tool_result"],
+) -> ChatMessage:
+    """Message with the failed media removed and the fallback text appended."""
+    media_blocks = (
+        extract_image_blocks(message)
+        if modality == "image"
+        else extract_audio_blocks(message)
+    )
+    fallback = (
+        IMAGE_PROCESSING_FAILED_MESSAGE
+        if modality == "image"
+        else AUDIO_PROCESSING_FAILED_MESSAGE
+    )
+    other_blocks = [block for block in message.blocks if block not in media_blocks]
+    final_blocks = (
+        [*other_blocks, TextBlock(text=fallback)]
+        if return_type == "user_message"
+        else other_blocks
+    )
+    return ChatMessage(role=message.role, blocks=final_blocks)
 
 
 async def _collect_image_response(
@@ -150,17 +179,26 @@ async def preprocess_multimodal_message(
 
     def normalize_result(
         result: tuple[list[MultimodalProcessingStatus], ChatMessage] | BaseException,
+        modality: Literal["image", "audio"],
+        active: bool,
     ) -> tuple[list[MultimodalProcessingStatus], ChatMessage]:
-        if isinstance(result, Errors.RequestTooLarge):
-            raise result
         if isinstance(result, Exception):
-            return [], message
+            if not active:
+                logger.exception("Unexpected %s preprocessing failure", modality)
+                return [], message
+            logger.exception("%s preprocessing failed", modality.capitalize())
+            failed = MultimodalProcessingStatus(
+                status="failed",
+                type=modality,
+                error_detail=str(result) or result.__class__.__name__,
+            )
+            return [failed], _fallback_message(message, modality, return_type)
         if isinstance(result, BaseException):
             raise result
         return result
 
-    image_statuses, image_msg = normalize_result(image_result)
-    audio_statuses, audio_msg = normalize_result(audio_result)
+    image_statuses, image_msg = normalize_result(image_result, "image", needs_image)
+    audio_statuses, audio_msg = normalize_result(audio_result, "audio", needs_audio)
 
     for status in image_statuses:
         if status.status in {"completed", "failed"}:

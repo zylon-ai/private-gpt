@@ -232,3 +232,21 @@ def test_validate_file_info_empty_file():
     assert IngestionValidationErrors.INVALID_FILE_SIZE in errors
     assert len(errors) == 1
     assert len(warnings) == 0
+
+
+def test_validate_file_info_rejects_zip_archive():
+    """A zip archive is not a document: reject it instead of parsing it as text."""
+    file_info = FileInfo(
+        file_name="deck.zip",
+        extension=".zip",
+        file_data=TEST_FILE_PATH,
+        guest_mime_type="application/zip",
+        actual_mime_type="application/zip",
+        file_size=1024,
+        config={},
+    )
+
+    errors, warnings = IngestionHelper.validate_file_info(file_info)
+
+    assert errors == [IngestionValidationErrors.UNKNOWN_FILE_EXTENSION]
+    assert warnings == []

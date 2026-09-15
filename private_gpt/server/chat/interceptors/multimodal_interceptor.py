@@ -1,10 +1,7 @@
-from typing import TYPE_CHECKING
-from uuid import uuid4
+import logging
 
 from injector import inject, singleton
-from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from llama_index.core.llms import LLM
-from llama_index.core.llms.llm import ToolSelection
 
 from private_gpt.components.chat.processors.chat_history.multimodality.multimodality_preprocessor import (
     preprocess_multimodal_history,
@@ -28,25 +25,14 @@ from private_gpt.components.llm.llm_helper import (
     supports_audio,
     supports_images,
 )
-from private_gpt.components.tools.events.adapters import ServerToolEventAdapter
-from private_gpt.components.tools.tool_execution_outcome import (
-    ToolExecutionError,
-    ToolExecutionFailure,
-    ToolExecutionSuccess,
-)
-from private_gpt.events.models import (
-    RawContentBlockStartEvent,
-    RawContentBlockStopEvent,
-    TextBlock,
-    to_llama_index_blocks,
+from private_gpt.server.chat.interceptors.preprocessing_tool_calls import (
+    PreprocessingToolCalls,
 )
 from private_gpt.settings.settings import Settings
 
-if TYPE_CHECKING:
-    from private_gpt.events.models import ResultContentBlockType
+logger = logging.getLogger(__name__)
 
 MULTIMODAL_TOOL_NAME = "multimodal_preprocessing"
-_EVENT_ADAPTER = ServerToolEventAdapter()
 
 
 @singleton
@@ -75,123 +61,57 @@ class MultimodalRequestInterceptor(ChatRequestLoopInterceptor):
             return
 
         state = context.state
-        image_model, audio_model = self.resolve_multimodal_models(state, context.llm)
-        model_config = self._llm_component.get_config(state.input.request.system.model)
-        max_images = max_images_supported(context.llm, model_config)
-        max_audios = max_audios_supported(context.llm, model_config)
-
-        tool_ids: dict[str, str] = {}
-        completed_tools: list[tuple[str, str | list[ResultContentBlockType], bool]] = []
-
-        async for response in preprocess_multimodal_history(
-            main_llm=context.llm,
-            chat_history=state.input.request.messages,
-            image_multimodal_llm=image_model,
-            audio_multimodal_llm=audio_model,
-            max_concurrency=self._preprocess_settings.max_concurrency,
+        tool_calls = PreprocessingToolCalls(
+            context,
+            tool_name=self._tool_name,
             return_type=self._preprocess_settings.return_type,
-            max_images=max_images,
-            max_audios=max_audios,
-        ):
-            processing = response.processing_status
-            if processing is not None:
-                if processing.status == "processing":
-                    tool_id = _EVENT_ADAPTER.new_tool_use_id()
-                    tool_ids[processing.type] = tool_id
-                    use_start = RawContentBlockStartEvent(
-                        block_id=f"block_{uuid4().hex}",
-                        content_block=_EVENT_ADAPTER.build_tool_use(
-                            tool_id=tool_id,
-                            tool_name=self._tool_name,
-                            tool_input={"type": processing.type},
-                        ),
-                    )
-                    context.emit_event(use_start)
-                    context.emit_event(RawContentBlockStopEvent.from_start(use_start))
-                elif processing.status in {"completed", "failed"}:
-                    tool_id = tool_ids.get(
-                        processing.type, _EVENT_ADAPTER.new_tool_use_id()
-                    )
-                    content: str | list[ResultContentBlockType] = (
-                        processing.content
-                        or processing.error_detail
-                        or "There was an error during multimodal processing."
-                    )
-                    result_start = RawContentBlockStartEvent(
-                        block_id=f"block_{uuid4().hex}",
-                        content_block=_EVENT_ADAPTER.build_tool_result(
-                            tool_use_id=tool_id,
-                            outcome=(
-                                ToolExecutionFailure(
-                                    error=ToolExecutionError(message=str(content))
-                                )
-                                if processing.status == "failed"
-                                else ToolExecutionSuccess(
-                                    content=(
-                                        content
-                                        if isinstance(content, list)
-                                        else [TextBlock(text=content)]
-                                    )
-                                )
-                            ),
-                        ),
-                    )
-                    context.emit_event(result_start)
-                    context.emit_event(
-                        RawContentBlockStopEvent.from_start(result_start)
-                    )
-                    if self._preprocess_settings.return_type == "tool_result":
-                        completed_tools.append(
-                            (tool_id, content, processing.status == "failed")
-                        )
+            default_error="There was an error during multimodal processing.",
+        )
 
-            if response.chat_history is not None:
-                state.input.request.messages = response.chat_history
-
-        if self._preprocess_settings.return_type == "tool_result" and completed_tools:
-            assistant_msg = ChatMessage(
-                role=MessageRole.ASSISTANT,
-                content="",
-                additional_kwargs={
-                    "tool_calls": [
-                        ToolSelection(
-                            tool_id=tool_id,
-                            tool_name=self._tool_name,
-                            tool_kwargs={},
-                        )
-                        for tool_id, _, _ in completed_tools
-                    ]
-                },
+        try:
+            image_model, audio_model = self.resolve_multimodal_models(
+                state, context.llm
             )
-            tool_msgs: list[ChatMessage] = []
-            for tool_id, content, _ in completed_tools:
-                kwargs = {
-                    "tool_call_id": tool_id,
-                    "tool_call_name": self._tool_name,
-                    "raw_output": content,
-                }
-                if isinstance(content, str):
-                    tool_msgs.append(
-                        ChatMessage(
-                            role=MessageRole.TOOL,
-                            content=content,
-                            additional_kwargs=kwargs,
-                        )
-                    )
-                else:
-                    tool_msgs.append(
-                        ChatMessage(
-                            role=MessageRole.TOOL,
-                            blocks=to_llama_index_blocks(content),
-                            additional_kwargs=kwargs,
-                        )
-                    )
-            state.input.request.messages = [
-                *state.input.request.messages,
-                assistant_msg,
-                *tool_msgs,
-            ]
+            model_config = self._llm_component.get_config(
+                state.input.request.system.model
+            )
+            max_images = max_images_supported(context.llm, model_config)
+            max_audios = max_audios_supported(context.llm, model_config)
 
+            async for response in preprocess_multimodal_history(
+                main_llm=context.llm,
+                chat_history=state.input.request.messages,
+                image_multimodal_llm=image_model,
+                audio_multimodal_llm=audio_model,
+                max_concurrency=self._preprocess_settings.max_concurrency,
+                return_type=self._preprocess_settings.return_type,
+                max_images=max_images,
+                max_audios=max_audios,
+                timeout=self._preprocess_settings.timeout_seconds,
+            ):
+                processing = response.processing_status
+                if processing is not None:
+                    if processing.status == "processing":
+                        tool_calls.start(processing.type, {"type": processing.type})
+                    elif processing.status in {"completed", "failed"}:
+                        tool_calls.finish(
+                            processing.type,
+                            processing.content,
+                            is_error=processing.status == "failed",
+                            error_detail=processing.error_detail,
+                        )
+
+                if response.chat_history is not None:
+                    state.input.request.messages = response.chat_history
+        except Exception as exc:
+            if not tool_calls.has_pending:
+                raise
+            logger.exception("Multimodal preprocessing failed; reporting as tool error")
+            tool_calls.fail_pending(exc)
+
+        state.input.request.messages = tool_calls.append_tool_messages(
+            state.input.request.messages
+        )
         context.set_state(state)
 
     def resolve_multimodal_models(

@@ -218,28 +218,52 @@ class ToolExecutor:
             assert after_context.response is not None
             return after_context.response
         except Exception as exc:
-            message = str(exc)
-            return ToolExecutionResponse(
-                tool_name=request.tool_name,
-                tool_id=request.tool_id,
-                outcome=ToolExecutionFailure(
-                    error=ToolExecutionError(
-                        message=message,
-                        exception_type=type(exc).__name__,
-                        details={"content": [TextBlock(text=message)]},
-                    )
-                ),
-                tool_message=ChatMessage(
-                    role="tool",
-                    content=message,
-                    additional_kwargs={
-                        "tool_call_id": request.tool_id,
-                        "tool_call_name": request.tool_name,
-                        "tool_call_args": tool_kwargs,
-                        "raw_output": message,
-                    },
-                ),
+            return build_error_response(request, exc, tool_kwargs=tool_kwargs)
+
+
+def build_error_tool_message(
+    request: ToolExecutionRequest,
+    message: str,
+    tool_kwargs: dict[str, Any] | None = None,
+) -> ChatMessage:
+    return ChatMessage(
+        role="tool",
+        content=message,
+        additional_kwargs={
+            "tool_call_id": request.tool_id,
+            "tool_call_name": request.tool_name,
+            "tool_call_args": request.tool_kwargs
+            if tool_kwargs is None
+            else tool_kwargs,
+            "raw_output": message,
+        },
+    )
+
+
+def build_error_response(
+    request: ToolExecutionRequest,
+    exc: BaseException,
+    tool_kwargs: dict[str, Any] | None = None,
+) -> ToolExecutionResponse:
+    """Error ``tool_result`` for a failure anywhere in the tool execution unit.
+
+    Every scheduler (local or worker) reports failures through this builder so
+    the model and the client see the same result regardless of where the tool
+    ran.
+    """
+    message = str(exc) or type(exc).__name__
+    return ToolExecutionResponse(
+        tool_name=request.tool_name,
+        tool_id=request.tool_id,
+        outcome=ToolExecutionFailure(
+            error=ToolExecutionError(
+                message=message,
+                exception_type=type(exc).__name__,
+                details={"content": [TextBlock(text=message)]},
             )
+        ),
+        tool_message=build_error_tool_message(request, message, tool_kwargs),
+    )
 
 
 def build_rebuild_metadata(

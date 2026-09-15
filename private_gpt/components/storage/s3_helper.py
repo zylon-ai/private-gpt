@@ -54,6 +54,7 @@ class S3Helper:
             return None
 
         import boto3  # ty:ignore[unresolved-import]
+        from botocore.config import Config  # ty:ignore[unresolved-import]
 
         boto3.set_stream_logger(
             "botocore", logging.INFO if DEBUG_MODE else logging.ERROR
@@ -64,6 +65,10 @@ class S3Helper:
             endpoint_url=s3_settings.endpoint_url,
             aws_access_key_id=s3_settings.access_key_id,
             aws_secret_access_key=s3_settings.secret_access_key,
+            config=Config(
+                connect_timeout=s3_settings.connect_timeout_seconds,
+                read_timeout=s3_settings.read_timeout_seconds,
+            ),
         )
         client.meta.events.register_last(
             "before-call.s3.PutObject",
@@ -72,6 +77,7 @@ class S3Helper:
         return client
 
     def _get_async_s3_client(self) -> Any:
+        from aiobotocore.config import AioConfig  # ty:ignore[unresolved-import]
         from aiobotocore.session import get_session  # ty:ignore[unresolved-import]
 
         return get_session().create_client(
@@ -80,6 +86,10 @@ class S3Helper:
             endpoint_url=self._s3_settings.endpoint_url,
             aws_access_key_id=self._s3_settings.access_key_id,
             aws_secret_access_key=self._s3_settings.secret_access_key,
+            config=AioConfig(
+                connect_timeout=self._s3_settings.connect_timeout_seconds,
+                read_timeout=self._s3_settings.read_timeout_seconds,
+            ),
         )
 
     def upload_file_to_s3(

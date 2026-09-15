@@ -13,6 +13,7 @@ from injector import Injector, inject, singleton
 from private_gpt.celery.dispatch import dispatch_task
 from private_gpt.celery.result import wait_for_celery_result
 from private_gpt.components.tools.remote_execution import (
+    build_error_response,
     execute_tool_request,
     invoke_execution_hook,
     tool_execution_interceptor_paths,
@@ -101,9 +102,9 @@ class LocalToolScheduler(BaseToolScheduler):
             return await execute_tool_request(
                 request, state_ctx=state_ctx, interceptors=interceptors
             )
-        except Exception:
+        except Exception as exc:
             logger.exception("Local tool '%s' execution failed", request.tool_name)
-            raise
+            return build_error_response(request, exc)
 
     async def cancel(
         self,

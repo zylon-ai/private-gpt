@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import builtins
 from typing import Any
@@ -6,6 +7,7 @@ import pytest
 from llama_index.core.base.llms.types import ImageBlock
 from llama_index.core.llms import ChatMessage
 from pydantic import Field
+from workflows.errors import WorkflowTimeoutError
 
 from private_gpt.components.llm.custom.mock import FunctionCallingLLMMock
 from private_gpt.components.multimodality.image_handler import (
@@ -13,6 +15,7 @@ from private_gpt.components.multimodality.image_handler import (
     ExtractionEvaluation,
     ExtractionStrategy,
     ImageProcessingWorkflow,
+    describe_image,
 )
 
 
@@ -357,3 +360,37 @@ async def test_max_iterations_reached(test_image_blocks: list[ImageBlock]) -> No
 #             enable_evaluation=False,
 #             kwargs={},
 #         )
+
+
+class HangingLLM(MockLLM):
+    """An LLM whose structured chat never answers (stuck provider)."""
+
+    seen_kwargs: list[dict[str, Any]] = Field(default_factory=list)
+
+    async def astructured_chat(
+        self, output_cls: type, messages: list[ChatMessage], **kwargs: Any
+    ) -> Any:
+        self.seen_kwargs.append(kwargs)
+        await asyncio.Event().wait()
+
+
+def test_image_workflow_default_timeout_is_bounded() -> None:
+    """A 100-hour default timeout is no timeout at all for a chat request."""
+    workflow = ImageProcessingWorkflow(MockLLM())
+    assert workflow._timeout is not None
+    assert workflow._timeout <= 3600
+
+
+@pytest.mark.asyncio
+async def test_describe_image_timeout_bounds_hanging_provider(
+    test_image_blocks: list[ImageBlock],
+) -> None:
+    llm = HangingLLM()
+    with pytest.raises(WorkflowTimeoutError):
+        await asyncio.wait_for(
+            describe_image(llm, test_image_blocks, "describe", timeout=0.2),
+            timeout=5,
+        )
+    # The timeout is a workflow setting; it must not leak into the LLM call.
+    assert llm.seen_kwargs
+    assert all("timeout" not in kwargs for kwargs in llm.seen_kwargs)

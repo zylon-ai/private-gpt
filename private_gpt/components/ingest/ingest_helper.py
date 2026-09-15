@@ -11,6 +11,10 @@ from private_gpt.utils.mime import is_magic_available
 
 logger = logging.getLogger(__name__)
 
+# Archives are containers, not documents. Without this check a ``.zip`` falls
+# through to the text reader, which decodes any bytes and yields garbage nodes.
+_REJECTED_EXTENSIONS = frozenset({".zip"})
+
 
 class IngestionHelper:
     @staticmethod
@@ -27,8 +31,11 @@ class IngestionHelper:
         if file_info.file_size is None or file_info.file_size <= 0:
             errors.append(IngestionValidationErrors.INVALID_FILE_SIZE)
 
-        # Check if the file info has extension
-        if not file_info.extension:
+        # Check if the file info has a supported extension
+        if (
+            not file_info.extension
+            or file_info.extension.lower() in _REJECTED_EXTENSIONS
+        ):
             errors.append(IngestionValidationErrors.UNKNOWN_FILE_EXTENSION)
 
         if is_magic_available() and not file_info.actual_mime_type:

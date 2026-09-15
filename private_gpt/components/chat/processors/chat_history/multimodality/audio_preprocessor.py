@@ -13,12 +13,18 @@ from private_gpt.components.chat.processors.chat_history.multimodality.utils imp
     requires_audio_preprocessing,
 )
 from private_gpt.components.multimodality.audio_handler import process_audio_in_message
-from private_gpt.events.event_errors import Errors
 
 
 class AudioProcessingResponse(BaseModel):
     message: ChatMessage | None = None
     processing_status: MultimodalProcessingStatus | None = None
+
+
+AUDIO_PROCESSING_FAILED_MESSAGE = (
+    "The user has included audios in their message. "
+    "However, we encountered an error while processing the audio content. "
+    "Please inform the user that audio processing failed."
+)
 
 
 async def preprocess_audio_message(
@@ -82,18 +88,6 @@ async def preprocess_audio_message(
             f"{audio_description}"
         )
 
-    except Errors.RequestTooLarge as e:
-        event = event.model_copy(
-            update={
-                "status": "failed",
-                "error_detail": str(e),
-            }
-        )
-
-        yield AudioProcessingResponse(processing_status=event)
-
-        raise
-
     except Exception as e:
         event = event.model_copy(
             update={
@@ -102,11 +96,7 @@ async def preprocess_audio_message(
             }
         )
         yield AudioProcessingResponse(processing_status=event)
-        final_message = (
-            "The user has included audios in their message. "
-            "However, we encountered an error while processing the audio content. "
-            "Please inform the user that audio processing failed."
-        )
+        final_message = AUDIO_PROCESSING_FAILED_MESSAGE
 
     other_blocks = [block for block in message.blocks if block not in audio_blocks]
     final_blocks = (

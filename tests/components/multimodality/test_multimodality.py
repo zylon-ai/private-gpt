@@ -772,3 +772,125 @@ async def test_history_preprocessing_preserves_tool_metadata(main_llm: LLM) -> N
         "tool_call_id": "call-1",
         "tool_call_name": "load_skill",
     }
+
+
+class TestMultimodalFailureIsReportedNotRaised:
+    """Per-modality failures become ``failed`` statuses, never exceptions.
+
+    ``preprocess_multimodal_message`` used to re-raise ``RequestTooLarge`` after
+    yielding the ``failed`` status, which escaped the interceptor after the
+    ``tool_use`` had already been emitted and left the chat KO.
+    """
+
+    @pytest.mark.asyncio
+    async def test_image_request_too_large_yields_failed_status(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        main_llm: LLM,
+        image_llm: LLM,
+        image_message: ChatMessage,
+    ) -> None:
+        from private_gpt.events.event_errors import Errors
+
+        async def _too_large(*_args: Any, **_kwargs: Any) -> str:
+            raise Errors.RequestTooLarge("image payload too large")
+
+        monkeypatch.setattr(
+            "private_gpt.components.chat.processors.chat_history.multimodality."
+            "image_preprocessor.process_images_in_message",
+            _too_large,
+        )
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_message(
+            main_llm, image_message, image_multimodal_llm=image_llm
+        ):
+            responses.append(response)
+
+        statuses = [r.processing_status for r in responses if r.processing_status]
+        failed = [s for s in statuses if s.status == "failed"]
+        assert len(failed) == 1
+        assert failed[0].type == "image"
+        assert "too large" in (failed[0].error_detail or "")
+
+        result = responses[-1].modified_message
+        assert result is not None
+        assert not extract_image_blocks(result)
+        assert isinstance(result.blocks[-1], TextBlock)
+        assert "unable to process these images" in result.blocks[-1].text
+
+    @pytest.mark.asyncio
+    async def test_audio_request_too_large_yields_failed_status(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        main_llm: LLM,
+        audio_llm: LLM,
+        audio_message: ChatMessage,
+    ) -> None:
+        from private_gpt.events.event_errors import Errors
+
+        async def _too_large(*_args: Any, **_kwargs: Any) -> str:
+            raise Errors.RequestTooLarge("audio payload too large")
+
+        monkeypatch.setattr(
+            "private_gpt.components.chat.processors.chat_history.multimodality."
+            "audio_preprocessor.process_audio_in_message",
+            _too_large,
+        )
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm, [audio_message], audio_multimodal_llm=audio_llm
+        ):
+            responses.append(response)
+
+        statuses = [r.processing_status for r in responses if r.processing_status]
+        failed = [s for s in statuses if s.status == "failed"]
+        assert len(failed) == 1
+        assert failed[0].type == "audio"
+        assert "too large" in (failed[0].error_detail or "")
+
+        history = responses[-1].chat_history
+        assert history is not None
+        assert not extract_audio_blocks(history[-1])
+
+    @pytest.mark.asyncio
+    async def test_unexpected_image_failure_yields_failed_status(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        main_llm: LLM,
+        image_llm: LLM,
+        image_message: ChatMessage,
+    ) -> None:
+        """A failure outside the per-modality try block must not be swallowed.
+
+        ``normalize_result`` used to turn such exceptions into "no statuses",
+        so the emitted ``processing`` status never got a terminal one and the
+        untouched image blocks were forwarded to a model that cannot read them.
+        """
+
+        async def _explode(*_args: Any, **_kwargs: Any) -> Any:
+            raise RuntimeError("image pipeline crashed")
+            yield  # pragma: no cover - makes this an async generator
+
+        monkeypatch.setattr(
+            "private_gpt.components.chat.processors.chat_history.multimodality."
+            "multimodality_preprocessor.preprocess_image_message",
+            _explode,
+        )
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_message(
+            main_llm, image_message, image_multimodal_llm=image_llm
+        ):
+            responses.append(response)
+
+        statuses = [r.processing_status for r in responses if r.processing_status]
+        assert [s.status for s in statuses] == ["processing", "failed"]
+        assert "crashed" in (statuses[-1].error_detail or "")
+
+        result = responses[-1].modified_message
+        assert result is not None
+        assert not extract_image_blocks(result)
+        assert isinstance(result.blocks[-1], TextBlock)
+        assert "unable to process these images" in result.blocks[-1].text

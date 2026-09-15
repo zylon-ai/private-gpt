@@ -269,8 +269,7 @@ class ChatService:
         except Errors.Base as e:
             errors.append(str(e))
         except Exception as e:
-            wrapped_error = Errors.build(e)
-            errors.append(wrapped_error.error_type)
+            errors.append(str(e) or type(e).__name__)
 
         return ChatValidationResult(valid=len(errors) == 0, errors=errors or None)
 

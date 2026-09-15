@@ -4,13 +4,48 @@ from urllib.parse import urlparse
 
 from private_gpt.components.storage.s3_helper import S3Helper
 from private_gpt.di import get_global_injector
+from private_gpt.settings.settings import settings
+
+DEFAULT_URL_TIMEOUT_SECONDS: tuple[float, float] = (10.0, 60.0)
+_DOWNLOAD_CHUNK_SIZE = 64 * 1024
 
 
-def _load_file_from_url(url: str, **kwargs: Any) -> BinaryIO:
+def _load_file_from_url(
+    url: str,
+    *,
+    timeout: float | tuple[float, float] | None = None,
+    max_bytes: int | None = None,
+    **kwargs: Any,
+) -> BinaryIO:
+    """Download ``url`` into memory with a timeout, status check and size cap.
+
+    The body is streamed so an oversized response is abandoned as soon as the
+    cap is crossed instead of being fully buffered first.
+    """
     import requests
 
-    r = requests.get(url, allow_redirects=True)
-    return io.BytesIO(r.content)
+    del kwargs
+    if timeout is None:
+        timeout = DEFAULT_URL_TIMEOUT_SECONDS
+    if max_bytes is None:
+        max_bytes = settings().chat.maximum_blob_size
+
+    buffer = io.BytesIO()
+    total = 0
+    with requests.get(url, allow_redirects=True, timeout=timeout, stream=True) as r:
+        r.raise_for_status()
+        for chunk in r.iter_content(chunk_size=_DOWNLOAD_CHUNK_SIZE):
+            if not chunk:
+                continue
+            total += len(chunk)
+            if total > max_bytes:
+                raise ValueError(
+                    f"Remote file {url} exceeds the maximum allowed size "
+                    f"of {max_bytes} bytes."
+                )
+            buffer.write(chunk)
+    buffer.seek(0)
+    return buffer
 
 
 def _load_file_from_base64(base64_str: str, **kwargs: Any) -> BinaryIO:
