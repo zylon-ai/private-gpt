@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, AnyStr, BinaryIO
 
 from injector import inject, singleton
+from llama_index.core.schema import MetadataMode
 
 from private_gpt.components.ingest.parse_component import (
     FileParseResult,
@@ -87,7 +88,10 @@ class ConvertService:
                 raise ValueError("No root node found in parse result.")
 
             content = [
-                node.get_content(metadata_mode=TreeMetadataMode.USER) for node in nodes
+                node.get_content(metadata_mode=TreeMetadataMode.USER)
+                if isinstance(node, TreeNode)
+                else node.get_content(metadata_mode=MetadataMode.ALL)
+                for node in nodes
             ]
             return "\n\n".join([c for c in content if c])
 
