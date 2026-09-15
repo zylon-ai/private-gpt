@@ -139,6 +139,21 @@ Message behavior:
 - Tool activity should appear as subdued inline status blocks, not large cards.
 - Apply scroll-aware top/bottom fade masks to the messages list using the same `mask-image` pattern as the chat list.
 
+Width:
+
+- The message column and the composer share one width, driven by the `--chat-max` custom property so they always agree.
+- Assistant and tool replies fill that column; user messages keep a narrower bubble. The asymmetry, not just the alignment, is what separates the two roles, and it is preserved at narrow widths rather than clamping every bubble.
+
+Long messages:
+
+- A collapsed message is clipped with a bottom `mask-image` fade rather than a hard cut, matching the treatment already used for streaming thinking text.
+- Its expander uses a caret that rotates 180 degrees between states. The rotation is disabled under `prefers-reduced-motion`.
+
+Jump to latest:
+
+- A pill floating over the bottom of the transcript, centred, on the shared glass surface.
+- It is toggled with the `hidden` attribute. Any element given an explicit `display` needs a matching `[hidden] { display: none }` rule, because an author `display` declaration outranks the user agent's `[hidden]` rule.
+
 ### Composer
 
 Use `chat-tools-composer.png` as the main composer reference.
@@ -490,6 +505,19 @@ The Extended Thinking toggle in the composer uses:
 }
 ```
 
+### Message Actions
+
+A row of small chips under each message: Copy, then Expand/Collapse, Retry, or Delete.
+
+- Normally revealed on hover of the message. It stays visible when the message is collapsible, because a collapsed message must advertise its own expander.
+- Colours must come from the theme rather than hard-coded white, so the row stays legible in both themes.
+- Destructive actions use the `danger` modifier, which tints red on hover only.
+
+### Code Blocks
+
+- Every fenced code block is wrapped in a positioned container with a copy control in its top-right corner, revealed on hover or keyboard focus.
+- The block reserves right padding for that control, since code text has no padding of its own to hide behind.
+
 ### Buttons And Chips
 
 Buttons and chips should feel like part of the glass environment:
@@ -580,6 +608,7 @@ Desktop is the primary target for v1.
 Minimum behavior:
 
 - At narrow widths, sidebar can collapse or become an overlay.
+- The chat width preference still applies, bounded by the available space.
 - Chat composer remains usable.
 - Text must not overflow buttons, chips, or rows.
 - Context rows should wrap metadata rather than clipping important labels.
