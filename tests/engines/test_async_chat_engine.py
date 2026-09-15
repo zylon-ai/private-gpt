@@ -1258,3 +1258,81 @@ async def test_mcp_tool_survives_resumable_async_executor(
         if tool.name
     ]
     assert "mcp_lookup" in final_tools
+
+
+class _RaisingInterceptor(ChatRequestLoopInterceptor):
+    """Raise inside one phase to simulate a buggy/failed request interceptor."""
+
+    phase: InterceptorPhase
+    calls: int = 0
+
+    async def intercept(self, context: ChatInterceptorContext) -> None:
+        if context.phase == self.phase:
+            self.calls += 1
+            raise RuntimeError("interceptor exploded")
+
+
+@pytest.mark.asyncio
+async def test_async_engine_propagates_before_iteration_interceptor_failure(
+    base_request: ResolvedChatRequest,
+) -> None:
+    """An interceptor failure is not swallowed: the run fails and the runner
+    turns the exception into a streamed FatalError (``ResumableChatRunner._fail``).
+    Tool-shaped failures are reported as error tool_results by the interceptor
+    itself, never by the engine.
+    """
+    interceptor = _RaisingInterceptor(phase=InterceptorPhase.BEFORE_ITERATION)
+    engine = AsyncChatEngine(
+        llm_component=_make_llm_component(get_mock_function_calling_llm(["ok"])),
+        request_interceptors=[interceptor],
+        response_interceptors=[],
+        max_iterations=6,
+        tool_scheduler=_FakeAsyncToolScheduler(),
+        chat_scheduler=_FakeChatScheduler(),
+    )
+    channel = LocalEventChannel()
+
+    with pytest.raises(RuntimeError, match="interceptor exploded"):
+        await engine.execute(base_request.model_copy(deep=True), channel=channel)
+
+    assert interceptor.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_sync_engine_propagates_before_iteration_interceptor_failure(
+    base_request: ResolvedChatRequest,
+) -> None:
+    interceptor = _RaisingInterceptor(phase=InterceptorPhase.BEFORE_ITERATION)
+    engine = ChatLoopEngine(
+        llm_component=_make_llm_component(get_mock_function_calling_llm(["ok"])),
+        request_interceptors=[interceptor],
+        response_interceptors=[],
+        max_iterations=6,
+        tool_scheduler=LocalToolScheduler(),
+    )
+
+    execution = await engine.run(base_request.model_copy(deep=True))
+    with pytest.raises(RuntimeError, match="interceptor exploded"):
+        await _collect_events(execution.events)
+    with pytest.raises(RuntimeError, match="interceptor exploded"):
+        await execution.final_state_task
+
+    assert interceptor.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_async_engine_validation_interceptor_failure_still_propagates(
+    base_request: ResolvedChatRequest,
+) -> None:
+    interceptor = _RaisingInterceptor(phase=InterceptorPhase.VALIDATION)
+    engine = AsyncChatEngine(
+        llm_component=_make_llm_component(get_mock_function_calling_llm(["ok"])),
+        request_interceptors=[interceptor],
+        response_interceptors=[],
+        max_iterations=6,
+        tool_scheduler=_FakeAsyncToolScheduler(),
+        chat_scheduler=_FakeChatScheduler(),
+    )
+
+    with pytest.raises(RuntimeError, match="interceptor exploded"):
+        await engine.validate(base_request.model_copy(deep=True))

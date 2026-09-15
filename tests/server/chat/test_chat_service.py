@@ -18,6 +18,7 @@ from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
 from private_gpt.components.engines.chat.models.chat_interceptor_context import (
     ChatInterceptorContext,
 )
+from private_gpt.events.event_errors import Errors
 from private_gpt.events.models import (
     Event,
     FatalError,
@@ -241,3 +242,45 @@ async def test_validate_returns_valid_for_good_request(
 
     assert result.valid
     assert result.errors is None
+
+
+class _RaisingInterceptor(ChatRequestLoopInterceptor):
+    def __init__(self, error: Exception) -> None:
+        self._error = error
+
+    async def intercept(self, context: ChatInterceptorContext) -> None:
+        raise self._error
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "error",
+    [
+        Errors.RequestTooLarge(
+            "The message length 9 exceeds the maximum token limit 1."
+        ),
+        ValueError("System messages should be as layer in the context stack."),
+        RuntimeError("tokenizer backend unavailable"),
+        KeyError("model-x"),
+    ],
+    ids=["known", "value", "generic", "keyerror"],
+)
+async def test_validate_returns_original_message_for_any_interceptor_error(
+    injector: MockInjector, error: Exception
+) -> None:
+    service: ChatService = injector.get(ChatService)
+    mock_chain = MagicMock()
+    mock_chain.request_interceptors = [_RaisingInterceptor(error)]
+    mock_chain.response_interceptors = []
+    service.chat_interceptor_service = MagicMock()
+    service.chat_interceptor_service.get_chain.return_value = mock_chain
+
+    request = ResolvedChatRequest(
+        messages=[ChatMessage(content="hello", role=MessageRole.USER)],
+        system=ResolvedSystemConfig(prompt="system"),
+    )
+
+    result = await service.validate(request)
+
+    assert not result.valid
+    assert result.errors == [str(error)]

@@ -473,6 +473,15 @@ class PreprocessTypeSettings(BaseModel):
             "'tool_result' carries it as a tool-use/result pair in the history."
         ),
     )
+    timeout_seconds: float | None = Field(
+        default=600.0,
+        gt=0,
+        description=(
+            "Maximum time a single preprocessing job (e.g. describing the images "
+            "or transcribing the audio of one message) may run before it is "
+            "reported as failed. None disables the bound."
+        ),
+    )
 
 
 class PreprocessSettings(BaseModel):
@@ -502,6 +511,24 @@ class SchedulerSettings(BaseModel):
         default=300,
         gt=0,
         description="Maximum time to wait for resumable chat callbacks.",
+    )
+    convert_timeout_seconds: int = Field(
+        default=600,
+        gt=0,
+        description=(
+            "Maximum time to wait for a remote document conversion (chat "
+            "attachment preprocessing) before the task is revoked and the "
+            "conversion is reported as failed. Only used when mode is 'celery'."
+        ),
+    )
+    ingest_timeout_seconds: int = Field(
+        default=1800,
+        gt=0,
+        description=(
+            "Maximum time a synchronous ingest request waits for each remote "
+            "ingestion step (parse, store) before the task is revoked and the "
+            "request fails. Only used when mode is 'celery'."
+        ),
     )
 
 
@@ -1501,6 +1528,16 @@ class S3Settings(BaseModel):
         description="Default durable S3 bucket name for persisted application data."
     )
     temporary_bucket_name: str = Field(description="S3 temporary bucket name")
+    connect_timeout_seconds: float = Field(
+        default=10.0,
+        gt=0,
+        description="Seconds to wait when opening a connection to the S3 endpoint.",
+    )
+    read_timeout_seconds: float = Field(
+        default=120.0,
+        gt=0,
+        description="Seconds to wait for data on an open S3 connection.",
+    )
 
 
 class ArizePhoenixSettings(BaseModel):

@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_WORKFLOW_TIMEOUT_SECONDS = 600.0
+
 _DEFAULT_RETRY_NUMBER = 3
 _JITTER = (15.0, 30.0)
 
@@ -122,7 +124,7 @@ class ImageProcessingWorkflow(Workflow):
         image_multimodal_llm: LLM,
         prompt_builder: PromptBuilderService | None = None,
         callback_manager: CallbackManager | None = None,
-        timeout: float | None = 360000.0,
+        timeout: float | None = DEFAULT_WORKFLOW_TIMEOUT_SECONDS,
         disable_validation: bool = False,
         verbose: bool = False,
         resource_manager: ResourceManager | None = None,
@@ -611,7 +613,8 @@ async def describe_image(
     if not image_blocks:
         return None
 
-    workflow = ImageProcessingWorkflow(image_multimodal_llm, **kwargs)
+    timeout = kwargs.pop("timeout", DEFAULT_WORKFLOW_TIMEOUT_SECONDS)
+    workflow = ImageProcessingWorkflow(image_multimodal_llm, timeout=timeout, **kwargs)
     handler: WorkflowHandler | None = None
 
     try:

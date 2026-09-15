@@ -7,6 +7,7 @@ import pytest
 from llama_index.core.base.llms.types import AudioBlock
 from llama_index.core.llms import LLM, ChatMessage
 from pydantic import Field
+from workflows.errors import WorkflowTimeoutError
 
 from private_gpt.components.llm.custom.mock import FunctionCallingLLMMock
 from private_gpt.components.multimodality.audio_handler import (
@@ -15,6 +16,7 @@ from private_gpt.components.multimodality.audio_handler import (
     TranscriptionContent,
     TranscriptionEvaluation,
     TranscriptionStrategy,
+    transcribe_audio,
 )
 
 
@@ -935,3 +937,34 @@ async def test_error_handling_in_strategy_inference() -> None:
             enable_evaluation=False,
             kwargs={},
         )
+
+
+class HangingAudioLLM(MockLLM):
+    """An LLM whose structured chat never answers (stuck provider)."""
+
+    seen_kwargs: list[dict[str, Any]] = Field(default_factory=list)
+
+    async def astructured_chat(
+        self, output_cls: type, messages: list[ChatMessage], **kwargs: Any
+    ) -> Any:
+        self.seen_kwargs.append(kwargs)
+        await asyncio.Event().wait()
+
+
+def test_audio_workflow_default_timeout_is_bounded() -> None:
+    """A 100-hour default timeout is no timeout at all for a chat request."""
+    workflow = AudioProcessingWorkflow(MockLLM())
+    assert workflow._timeout is not None
+    assert workflow._timeout <= 3600
+
+
+@pytest.mark.asyncio
+async def test_transcribe_audio_timeout_bounds_hanging_provider() -> None:
+    llm = HangingAudioLLM()
+    with pytest.raises(WorkflowTimeoutError):
+        await asyncio.wait_for(
+            transcribe_audio(llm, test_audio_blocks, "transcribe", timeout=0.2),
+            timeout=5,
+        )
+    assert llm.seen_kwargs
+    assert all("timeout" not in kwargs for kwargs in llm.seen_kwargs)

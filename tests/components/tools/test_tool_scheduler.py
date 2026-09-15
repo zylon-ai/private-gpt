@@ -8,6 +8,7 @@ import pytest
 from private_gpt.celery.result import wait_for_celery_result
 from private_gpt.components.chat.models.chat_config_models import ToolSpec
 from private_gpt.components.tools.remote_execution import ToolExecutionRequest
+from private_gpt.components.tools.tool_execution_outcome import ToolExecutionFailure
 from private_gpt.components.tools.tool_scheduler import (
     TOOL_TASK_NAME,
     CeleryToolScheduler,
@@ -29,7 +30,7 @@ def tool_request() -> ToolExecutionRequest:
 
 
 @pytest.mark.anyio
-async def test_local_tool_scheduler_logs_execution_failure(
+async def test_local_tool_scheduler_returns_error_result_on_execution_failure(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -39,15 +40,16 @@ async def test_local_tool_scheduler_logs_execution_failure(
         execute_tool_request,
     )
 
-    with (
-        caplog.at_level(
-            logging.ERROR,
-            logger="private_gpt.components.tools.tool_scheduler",
-        ),
-        pytest.raises(RuntimeError, match="boom"),
+    with caplog.at_level(
+        logging.ERROR,
+        logger="private_gpt.components.tools.tool_scheduler",
     ):
-        await LocalToolScheduler().execute(tool_request())
+        response = await LocalToolScheduler().execute(tool_request())
 
+    assert isinstance(response.outcome, ToolExecutionFailure)
+    assert response.outcome.error.message == "boom"
+    assert response.tool_message is not None
+    assert response.tool_message.additional_kwargs["tool_call_id"] == "tool-1"
     assert "Local tool 'bash' execution failed" in caplog.text
     assert "RuntimeError: boom" in caplog.text
 

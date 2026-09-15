@@ -19,6 +19,8 @@ from private_gpt.utils.dependencies import format_missing_dependency_message
 from private_gpt.utils.retry import retry_context
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_WORKFLOW_TIMEOUT_SECONDS = 600.0
 logger.setLevel(logging.FATAL)
 
 _DEFAULT_NUM_WORKERS = 4
@@ -509,7 +511,7 @@ class AudioProcessingWorkflow(Workflow):
         audio_multimodal_llm: LLM,
         prompt_builder: PromptBuilderService | None = None,
         callback_manager: CallbackManager | None = None,
-        timeout: float | None = 360000.0,
+        timeout: float | None = DEFAULT_WORKFLOW_TIMEOUT_SECONDS,
         disable_validation: bool = False,
         verbose: bool = False,
         resource_manager: ResourceManager | None = None,
@@ -1004,7 +1006,8 @@ async def transcribe_audio(
     if not audio_blocks:
         return None
 
-    workflow = AudioProcessingWorkflow(audio_multimodal_llm, **kwargs)
+    timeout = kwargs.pop("timeout", DEFAULT_WORKFLOW_TIMEOUT_SECONDS)
+    workflow = AudioProcessingWorkflow(audio_multimodal_llm, timeout=timeout, **kwargs)
     try:
         result: AudioProcessingResultEvent = await workflow.run(
             audio_blocks=audio_blocks,

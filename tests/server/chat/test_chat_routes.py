@@ -3782,3 +3782,21 @@ async def test_streaming_schema_coercion_partial_json_wire_format(
     assert inp["count"] == 42
     assert inp["tags"] == ["a", "b", "c"]
     assert inp["active"] is True
+
+
+@pytest.mark.anyio
+async def test_validate_with_a_very_long_message_returns_the_interceptor_error(
+    async_test_client: AsyncClient,
+) -> None:
+    body = ChatBody(
+        messages=[MessageInput(content="a" * 30000, role="user")],
+    )
+    response = await async_test_client.post(
+        "/v1/messages/validate", json=body.model_dump()
+    )
+
+    assert response.status_code == 400, response.json()
+    result = response.json()
+    assert result["valid"] is False
+    assert len(result["errors"]) == 1
+    assert "exceeds the maximum token limit" in result["errors"][0]

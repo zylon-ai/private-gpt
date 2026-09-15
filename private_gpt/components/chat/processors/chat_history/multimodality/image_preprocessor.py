@@ -13,12 +13,18 @@ from private_gpt.components.chat.processors.chat_history.multimodality.utils imp
     requires_image_preprocessing,
 )
 from private_gpt.components.multimodality.image_handler import process_images_in_message
-from private_gpt.events.event_errors import Errors
 
 
 class ImageProcessingResponse(BaseModel):
     message: ChatMessage | None = None
     processing_status: MultimodalProcessingStatus | None = None
+
+
+IMAGE_PROCESSING_FAILED_MESSAGE = (
+    "The user has included images in their message. "
+    "However, we were unable to process these images due to an error. "
+    "Please inform the user that image processing failed."
+)
 
 
 async def preprocess_image_message(
@@ -82,17 +88,6 @@ async def preprocess_image_message(
             f"{image_description}"
         )
 
-    except Errors.RequestTooLarge as e:
-        event = event.model_copy(
-            update={
-                "status": "failed",
-                "error_detail": str(e),
-            }
-        )
-        yield ImageProcessingResponse(processing_status=event)
-
-        raise
-
     except Exception as e:
         event = event.model_copy(
             update={
@@ -101,11 +96,7 @@ async def preprocess_image_message(
             }
         )
         yield ImageProcessingResponse(processing_status=event)
-        final_message = (
-            "The user has included images in their message. "
-            "However, we were unable to process these images due to an error. "
-            "Please inform the user that image processing failed."
-        )
+        final_message = IMAGE_PROCESSING_FAILED_MESSAGE
 
     other_blocks = [block for block in message.blocks if block not in image_blocks]
     final_blocks = (

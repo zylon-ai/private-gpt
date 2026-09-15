@@ -4,8 +4,9 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from celery.exceptions import TimeoutError as CeleryTimeoutError
 from injector import Injector, inject, singleton
 
 from private_gpt.celery.result import wait_for_celery_result
@@ -518,7 +519,8 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
             args=(async_body,),
             queue=config.scheduler.ingestion.celery_queue,
         )
-        parse_result_value = wait_for_celery_result(parse_result)
+        timeout = self._settings.scheduler.ingestion.ingest_timeout_seconds
+        parse_result_value = self._wait_bounded(parse_result, timeout, "parse")
 
         # 2. parse_task returns the store_vectors task_id; poll it.
         assert isinstance(parse_result_value, str)
@@ -527,7 +529,27 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
         from private_gpt.celery.celery import celery_app
 
         store_result = AsyncResult(parse_result_value, app=celery_app)
-        return IngestResponse.model_validate(wait_for_celery_result(store_result))
+        return IngestResponse.model_validate(
+            self._wait_bounded(store_result, timeout, "store")
+        )
+
+    def _wait_bounded(self, result: Any, timeout: float, step: str) -> Any:
+        """Wait for a Celery step, revoking it if it exceeds ``timeout``.
+
+        A worker that dies mid-task never marks its result as ready; without a
+        bound the calling request would hang forever.
+        """
+        try:
+            return wait_for_celery_result(result, timeout=timeout)
+        except CeleryTimeoutError:
+            logger.warning(
+                "Ingestion %s task %s did not finish within %ss; revoking",
+                step,
+                result.id,
+                timeout,
+            )
+            self._revoke_task(str(result.id))
+            raise
 
     async def ingest_for_request(self, ingest_body: IngestBody) -> IngestResponse:
 
@@ -588,7 +610,7 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
         from private_gpt.server.ingest.ingest_router import IngestAsyncBody, IngestBody
         from private_gpt.server.utils.artifact_input import FileArtifact
 
-        config = settings()
+        config = self._settings.scheduler.ingestion
         parse_body = IngestAsyncBody(
             ingest_body=IngestBody(
                 artifact=f"__convert_{uuid.uuid4().hex}",
@@ -604,11 +626,22 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
                 "dispatch_store": False,
                 "execute_transformations": execute_transformations,
             },
-            queue=config.scheduler.ingestion.celery_queue,
+            queue=config.celery_queue,
         )
-        result_value = wait_for_celery_result(result)
+        result_value = self._wait_bounded(
+            result, config.convert_timeout_seconds, "convert"
+        )
         assert isinstance(result_value, str)
         return result_value
+
+    @staticmethod
+    def _revoke_task(task_id: str) -> None:
+        from private_gpt.celery.celery import celery_app
+
+        try:
+            celery_app.control.revoke(task_id, terminate=True)
+        except Exception:
+            logger.exception("Failed to revoke conversion task %s", task_id)
 
 
 register_ingestion_scheduler("local", LocalIngestionScheduler)
