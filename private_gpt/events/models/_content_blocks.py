@@ -43,7 +43,9 @@ if TYPE_CHECKING:
 class DocumentConverter(Protocol):
     """Structural protocol satisfied by ConvertService."""
 
-    def bytes_to_text(self, raw: bytes, ext: str) -> str: ...
+    def bytes_to_text(
+        self, raw: bytes, ext: str, execute_transformations: bool = False
+    ) -> str: ...
 
 
 class TextBlock(CacheableContentBlock, StandardContentProtocol):
@@ -464,7 +466,9 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
             return f".{ft.extension}" if ft else ".txt"
 
         def to_text(self, convert_service: DocumentConverter) -> str:
-            return convert_service.bytes_to_text(self.to_bytes(), self.extension())
+            return convert_service.bytes_to_text(
+                self.to_bytes(), self.extension(), execute_transformations=False
+            )
 
     class PlainTextSource(BaseModel):
         type: Literal["text"] = Field(default="text")
@@ -510,7 +514,9 @@ class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
             if not ext:
                 kind = filetype.guess(data)
                 ext = f".{kind.extension}" if kind else ext
-            return convert_service.bytes_to_text(data, ext or ".txt")
+            return convert_service.bytes_to_text(
+                data, ext or ".txt", execute_transformations=False
+            )
 
     type: Literal["document"] = Field(default="document")
     source: Annotated[

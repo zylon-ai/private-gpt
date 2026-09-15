@@ -131,7 +131,9 @@ class BaseIngestionScheduler(ABC):
     # Convert (DocumentConverter protocol)
     # ------------------------------------------------------------------
 
-    def bytes_to_text(self, raw: bytes, ext: str) -> str:
+    def bytes_to_text(
+        self, raw: bytes, ext: str, execute_transformations: bool = False
+    ) -> str:
         """Parse raw bytes to plain text via the configured execution path.
 
         Satisfies the ``DocumentConverter`` protocol so chat document
@@ -254,11 +256,13 @@ class LocalIngestionScheduler(BaseIngestionScheduler):
                 },
             )
 
-    def bytes_to_text(self, raw: bytes, ext: str) -> str:
+    def bytes_to_text(
+        self, raw: bytes, ext: str, execute_transformations: bool = False
+    ) -> str:
         from private_gpt.server.ingest.convert_service import ConvertService
 
         return ConvertService(self._ingest_service.parse_component).bytes_to_text(
-            raw, ext
+            raw, ext, execute_transformations=execute_transformations
         )
 
 
@@ -572,7 +576,9 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
     # Convert (DocumentConverter protocol)
     # ------------------------------------------------------------------
 
-    def bytes_to_text(self, raw: bytes, ext: str) -> str:
+    def bytes_to_text(
+        self, raw: bytes, ext: str, execute_transformations: bool = False
+    ) -> str:
         """Dispatch parse_task in parse-only mode on the worker, return text."""
         import base64
         import uuid
@@ -594,7 +600,10 @@ class CeleryIngestionScheduler(BaseIngestionScheduler):
         result = dispatch_task(
             task_name=PARSE_TASK_NAME,
             args=(parse_body,),
-            kwargs={"dispatch_store": False},
+            kwargs={
+                "dispatch_store": False,
+                "execute_transformations": execute_transformations,
+            },
             queue=config.scheduler.ingestion.celery_queue,
         )
         result_value = wait_for_celery_result(result)
