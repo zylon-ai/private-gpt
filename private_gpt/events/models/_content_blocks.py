@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, Protocol, cast
 from llama_index.core.base.llms.types import AudioBlock as LIAudioBlock
 from llama_index.core.base.llms.types import ImageBlock as LIImageBlock
 from llama_index.core.base.llms.types import TextBlock as LITextBlock
+from llama_index.core.base.llms.types import VideoBlock as LIVideoBlock
 from pydantic import (
     AliasChoices,
     BaseModel,
@@ -372,6 +373,78 @@ class AudioBlock(CacheableContentBlock, StandardContentProtocol):
         )
 
 
+class Base64VideoSource(BaseModel):
+    """Base64-encoded video source payload."""
+
+    type: Literal["base64"]
+    data: str = Field(description="Base64-encoded video bytes")
+    media_type: str = Field(description="Video MIME type, e.g. 'video/mp4'")
+
+    model_config = ConfigDict(extra="allow")
+
+    def get_data(self) -> str:
+        return self.data
+
+    def get_media_type(self) -> str:
+        return self.media_type
+
+
+VideoSource = Annotated[Base64VideoSource | URLSource, Field(discriminator="type")]
+
+
+class VideoBlock(CacheableContentBlock, StandardContentProtocol):
+    """Video content block for models accepting OpenAI-compatible video input."""
+
+    type: Literal["video"] = Field(default="video")
+    source: VideoSource = Field(description="Video source payload")
+    detail: Literal["low", "default", "high"] | None = Field(default=None)
+    fps: float | None = Field(default=None, ge=0.2, le=5)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _upgrade_legacy_payload(cls, values: Any) -> Any:
+        return _upgrade_legacy_source_payload(values)
+
+    @classmethod
+    def from_base64(
+        cls,
+        data: str,
+        mime_type: str,
+        *,
+        detail: Literal["low", "default", "high"] | None = None,
+        fps: float | None = None,
+    ) -> VideoBlock:
+        return cls(
+            source=Base64VideoSource(type="base64", data=data, media_type=mime_type),
+            detail=detail,
+            fps=fps,
+        )
+
+    @classmethod
+    def from_url(
+        cls,
+        url: str,
+        *,
+        detail: Literal["low", "default", "high"] | None = None,
+        fps: float | None = None,
+    ) -> VideoBlock:
+        return cls(source=URLSource(type="url", url=url), detail=detail, fps=fps)
+
+    def to_llama_index(self) -> LIVideoBlock:
+        if isinstance(self.source, URLSource):
+            return LIVideoBlock(
+                url=self.source.url,
+                detail=self.detail,
+                fps=self.fps,
+            )
+        return LIVideoBlock(
+            video=base64.b64decode(self.source.data),
+            video_mimetype=self.source.media_type,
+            detail=self.detail,
+            fps=self.fps,
+        )
+
+
 class ThinkingBlock(CacheableContentBlock, StandardContentProtocol):
     """Extended thinking block containing the model's reasoning process."""
 
@@ -680,6 +753,7 @@ BasicContentBlockType = (
     TextBlock
     | ImageBlock
     | AudioBlock
+    | VideoBlock
     | BinaryBlock
     | LocalResourceBlock
     | ResourceLinkBlock

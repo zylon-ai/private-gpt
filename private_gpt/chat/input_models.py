@@ -19,6 +19,9 @@ from llama_index.core.base.llms.types import (
 from llama_index.core.base.llms.types import (
     TextBlock as LITextBlock,
 )
+from llama_index.core.base.llms.types import (
+    VideoBlock as LIVideoBlock,
+)
 from llama_index.core.llms.llm import ToolSelection
 from pydantic import (
     AliasChoices,
@@ -46,6 +49,7 @@ from private_gpt.events.models import (
     TLDRBlock,
     ToolResultBlock,
     ToolUseBlock,
+    VideoBlock,
 )
 from private_gpt.events.models._tool_result_blocks import Renderable
 from private_gpt.server.ingest.uri_loader import load_file_from_uri
@@ -984,6 +988,32 @@ class MessageInput(BaseModel):
                         format=block.source.get_media_type(),
                     )
                 )
+            elif isinstance(block, VideoBlock):
+                if block.source.type == "url":
+                    blocks.append(
+                        LIVideoBlock(
+                            url=block.source.get_data(),
+                            detail=block.detail,
+                            fps=block.fps,
+                        )
+                    )
+                    continue
+                video_bytes = load_file_from_uri(block.source.get_data())
+                video_size = len(video_bytes.read())
+                if video_size > settings().chat.maximum_blob_size:
+                    raise ValueError(
+                        f"Video size {video_size} exceeds maximum "
+                        f"allowed size of {settings().chat.maximum_blob_size} bytes."
+                    )
+                video_bytes.seek(0)
+                blocks.append(
+                    LIVideoBlock(
+                        video=video_bytes.read(),
+                        video_mimetype=block.source.get_media_type(),
+                        detail=block.detail,
+                        fps=block.fps,
+                    )
+                )
             elif isinstance(block, ContentBlockType):
                 if isinstance(block, Renderable):
                     rendered = block.render()
@@ -1469,6 +1499,9 @@ class ModelCapabilitiesOutput(BaseModel):
     )
     audio_input: CountCapabilitySupportOutput | None = Field(
         default=None, description="Audio input support."
+    )
+    video_input: CountCapabilitySupportOutput | None = Field(
+        default=None, description="Video input support."
     )
     pdf_input: CapabilitySupportOutput = Field(description="PDF input support.")
     structured_outputs: CapabilitySupportOutput = Field(
