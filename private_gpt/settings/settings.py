@@ -1898,6 +1898,15 @@ class PresentFilesToolSettings(BaseModel):
     )
 
 
+class ConvertDocumentsToolSettings(BaseModel):
+    """Config for the convert_documents tool."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Feature flag to enable the convert_documents tool.",
+    )
+
+
 class PresentServerToolSettings(BaseModel):
     """Config for the present_server tool."""
 
@@ -1923,6 +1932,10 @@ class CodeExecutionToolsSettings(BaseModel):
     present_server: PresentServerToolSettings = Field(
         default_factory=PresentServerToolSettings,
         description="Config for the present_server tool.",
+    )
+    convert_documents: ConvertDocumentsToolSettings = Field(
+        default_factory=ConvertDocumentsToolSettings,
+        description="Config for the convert_documents tool.",
     )
     server_tool_result_mode: Literal["full", "client"] = Field(
         default="full",

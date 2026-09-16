@@ -278,6 +278,8 @@ code_execution:
       enabled: ${PGPT_CODE_EXECUTION_TOOLS_PRESENT_FILES_ENABLED:true}
     present_server:
       enabled: ${PGPT_CODE_EXECUTION_TOOLS_PRESENT_SERVER_ENABLED:true}
+    convert_documents:
+      enabled: ${PGPT_CODE_EXECUTION_TOOLS_CONVERT_DOCUMENTS_ENABLED:true}
     server_tool_result_mode: ${PGPT_CODE_EXECUTION_SERVER_TOOL_RESULT_MODE:full}
   max_output_bytes: ${PGPT_CODE_EXECUTION_MAX_OUTPUT_BYTES:1048576}
 

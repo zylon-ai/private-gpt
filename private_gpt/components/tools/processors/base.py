@@ -55,6 +55,15 @@ def _is_unresolved_tool(tool: ToolSpec) -> bool:
     return tool.async_fn is _dummy_tool_async_fn
 
 
+def _has_tool(request: ResolvedChatRequest, tool_name: str) -> bool:
+    """Return True when the request already carries *tool_name*.
+
+    Used before fanning out wrapper tools so a caller that passed one of them
+    explicitly does not end up with a duplicate.
+    """
+    return any(_tool_matches(tool, tool_name) for tool in request.tool_config.tools)
+
+
 def _wrapper_tool(
     name: str,
     description: str | None = None,

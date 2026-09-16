@@ -245,3 +245,7 @@ class PresentFilesEventAdapter(ServerToolEventAdapter):
 
 class PresentServerEventAdapter(ServerToolEventAdapter):
     pass
+
+
+class ConvertDocumentsEventAdapter(ServerToolEventAdapter):
+    pass

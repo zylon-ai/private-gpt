@@ -8,6 +8,9 @@ from private_gpt.components.tools.processors.bash_processor import BashProcessor
 from private_gpt.components.tools.processors.code_execution_processor import (
     CodeExecutionProcessor,
 )
+from private_gpt.components.tools.processors.convert_documents_processor import (
+    ConvertDocumentsProcessor,
+)
 from private_gpt.components.tools.processors.database_query_processor import (
     DatabaseQueryProcessor,
 )
@@ -54,6 +57,7 @@ class ToolPipeline:
         text_editor_processor: TextEditorProcessor,
         present_files_processor: PresentFilesProcessor,
         present_server_processor: PresentServerProcessor,
+        convert_documents_processor: ConvertDocumentsProcessor,
     ) -> None:
         self._processors = [
             anthropic_tool_translation_processor,
@@ -68,6 +72,7 @@ class ToolPipeline:
             text_editor_processor,
             present_files_processor,
             present_server_processor,
+            convert_documents_processor,
         ]
 
     async def contextualize_internal_tools(

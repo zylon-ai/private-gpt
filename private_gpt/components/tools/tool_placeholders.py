@@ -6,6 +6,7 @@ from private_gpt.components.tools.tool_names import (
     BASH_CODE_EXECUTION_TOOL_NAME,
     BASH_TOOL_NAME,
     CODE_EXECUTION_TOOL_NAME,
+    CONVERT_DOCUMENTS_TOOL_NAME,
     DATABASE_QUERY_TOOL_NAME,
     PRESENT_FILES_TOOL_NAME,
     PRESENT_SERVER_TOOL_NAME,
@@ -182,6 +183,17 @@ PRESENT_SERVER_TOOL_FN = _placeholder_tool(
         "Streamlit) so the user can open or interact with it. Optionally pass `service_name` "
         "and an `initial_path` to deep-link to a specific route."
     ),
+)
+
+CONVERT_DOCUMENTS_TOOL_FN = _placeholder_tool(
+    CONVERT_DOCUMENTS_TOOL_NAME,
+    "Convert one or more documents (PDF, DOCX, XLSX, PPTX, …) into markdown and write "
+    "the result into the workspace. Pass the sandbox paths of the files to convert — "
+    "typically files the user attached, which arrive under /mnt/user-data/uploads/. "
+    "Each converted document is written to /home/agent/workspace/<name>.md and the tool "
+    "reports where the content was left, so you can then read, grep or process it. Use "
+    "this when you need the textual content of a binary document; for plain-text files "
+    "read them directly instead.",
 )
 
 SKILLS_TOOL_FN = _placeholder_tool(

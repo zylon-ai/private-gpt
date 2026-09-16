@@ -16,6 +16,9 @@ from private_gpt.components.chat.models.chat_config_models import (
 )
 from private_gpt.components.sandbox.mount import Mount
 from private_gpt.components.tools.builders.bash_tool_builder import BashToolBuilder
+from private_gpt.components.tools.builders.convert_documents_tool_builder import (
+    ConvertDocumentsToolBuilder,
+)
 from private_gpt.components.tools.builders.database_query_builder import (
     DatabaseQueryToolBuilder,
 )
@@ -39,6 +42,9 @@ from private_gpt.components.tools.builders.web_search_builder import (
     WebSearchToolBuilder,
 )
 from private_gpt.components.tools.processors.bash_processor import BashProcessor
+from private_gpt.components.tools.processors.convert_documents_processor import (
+    ConvertDocumentsProcessor,
+)
 from private_gpt.components.tools.processors.database_query_processor import (
     DatabaseQueryProcessor,
 )
@@ -196,6 +202,10 @@ def _request(
         (
             PresentServerToolBuilder.build_tool,
             {"session_id", "name", "type", "description"},
+        ),
+        (
+            ConvertDocumentsToolBuilder.build_tool,
+            {"config", "name", "type", "description"},
         ),
     ],
 )
@@ -418,4 +428,30 @@ async def test_present_server_builder_receives_complete_request_contract() -> No
         "contract-correlation",
         name="present_server",
         type="present_server_v1",
+    )
+
+
+@pytest.mark.asyncio
+async def test_convert_documents_builder_receives_complete_request_contract() -> None:
+    mount = Mount(target="/mnt/skills/convert/", access="ro")
+    builder = SimpleNamespace(
+        build_tool=AsyncMock(return_value=_resolved("convert_documents"))
+    )
+    settings = SimpleNamespace(
+        code_execution=SimpleNamespace(
+            tools=SimpleNamespace(convert_documents=SimpleNamespace(enabled=True))
+        )
+    )
+
+    assert await ConvertDocumentsProcessor(builder, settings).intercept(
+        _request(_tool("convert_documents"), mounts=[mount])
+    )
+
+    config = builder.build_tool.await_args.args[0]
+    assert config.session_id == "contract-correlation"
+    assert config.mounts == [mount]
+    builder.build_tool.assert_awaited_once_with(
+        config,
+        name="convert_documents",
+        type="convert_documents_v1",
     )
