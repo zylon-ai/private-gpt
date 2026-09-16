@@ -101,10 +101,10 @@ def _build_note(uploads: list[UploadedDocument]) -> str:
         for upload in uploads
         if not upload.ok
     )
-    lines.append(
-        "\nUse convert_documents to convert them to markdown in the workspace, or "
-        "work with them directly (bash, pandas, …)."
-    )
+    # The note states where the files are and stops there. What to do with them
+    # depends entirely on the request, and naming a tool here made the model
+    # reach for it on every attachment regardless of what was asked. The tools'
+    # own descriptions explain when they apply.
     return "\n".join(lines)
 
 

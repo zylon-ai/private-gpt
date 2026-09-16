@@ -187,13 +187,16 @@ PRESENT_SERVER_TOOL_FN = _placeholder_tool(
 
 CONVERT_DOCUMENTS_TOOL_FN = _placeholder_tool(
     CONVERT_DOCUMENTS_TOOL_NAME,
-    "Convert one or more documents (PDF, DOCX, XLSX, PPTX, …) into markdown and write "
-    "the result into the workspace. Pass the sandbox paths of the files to convert — "
-    "typically files the user attached, which arrive under /mnt/user-data/uploads/. "
-    "Each converted document is written to /home/agent/workspace/<name>.md and the tool "
-    "reports where the content was left, so you can then read, grep or process it. Use "
-    "this when you need the textual content of a binary document; for plain-text files "
-    "read them directly instead.",
+    "Extract the text of a binary document into markdown so it can be read. Takes the "
+    "sandbox paths of one or more files — typically the user's attachments, which "
+    "arrive under /mnt/user-data/uploads/ — and writes each one to "
+    "/home/agent/workspace/<name>.md, reporting where the content was left so you can "
+    "then read, grep or process it.\n\n"
+    "Use it only for formats whose bytes are not readable as text: PDF, DOCX, XLSX, "
+    "PPTX, and similar. Plain-text files (.txt, .csv, .json, .md, source code, …) are "
+    "already readable — open those directly instead; converting them adds a step and "
+    "can lose structure. Converting a file you were not asked to work with wastes a "
+    "turn, so only convert what the request actually requires.",
 )
 
 SKILLS_TOOL_FN = _placeholder_tool(

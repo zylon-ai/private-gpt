@@ -164,7 +164,9 @@ async def test_with_code_execution_documents_are_uploaded() -> None:
     note = _text(context)
     assert "/mnt/user-data/uploads/report.pdf" in note
     assert "/mnt/user-data/uploads/data.csv" in note
-    assert "convert_documents" in note
+    # The note says where the files are and nothing else. Naming a tool here
+    # made the model reach for it on every attachment, whatever was asked.
+    assert "convert_documents" not in note
     # The bytes are on disk now; the markdown must not also be inlined.
     assert "# Converted" not in note
     assert "document" not in context.state.input.request.messages[-1].additional_kwargs
