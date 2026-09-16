@@ -1,7 +1,9 @@
 import io
 import uuid
 import zipfile
+from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from tests.fixtures.mock_injector import MockInjector
@@ -169,6 +171,39 @@ def test_validate_skill_returns_errors_for_invalid_frontmatter(
             }
         ],
     }
+
+
+@pytest.mark.parametrize(
+    ("filename", "code"),
+    [
+        ("metadata-empty-key.md", "METADATA_EMPTY_KEY"),
+        ("metadata-invalid-value.md", "METADATA_INVALID_VALUE"),
+    ],
+)
+def test_validate_skill_rejects_invalid_metadata(
+    test_client: TestClient, injector: MockInjector, filename: str, code: str
+) -> None:
+    skill = (Path(__file__).parents[2] / "fixtures" / "skills" / filename).read_bytes()
+    collection = _collection()
+
+    resp = test_client.post(
+        "/v1/skills/validate",
+        data={"display_title": "Invalid Metadata", "collection": collection},
+        files=[("files", ("SKILL.md", skill, "text/markdown"))],
+    )
+
+    assert resp.status_code == 200
+    result = resp.json()
+    assert result["valid"] is False
+    assert result["name"] is None
+    assert result["description"] is None
+    assert [error["code"] for error in result["errors"]] == [code]
+    assert result["errors"][0]["message"]
+    assert result["errors"][0]["params"] is None
+
+    list_resp = test_client.get("/v1/skills", params={"collection": collection})
+    assert list_resp.status_code == 200
+    assert list_resp.json()["data"] == []
 
 
 def test_skill_crud_flow(test_client: TestClient, injector: MockInjector) -> None:
