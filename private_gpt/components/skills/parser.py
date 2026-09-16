@@ -8,6 +8,7 @@ from private_gpt.components.skills.errors import (
     SkillErrorCode,
     SkillValidationErrors,
 )
+from private_gpt.components.skills.validation import normalize_skill_metadata
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
 _NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -53,16 +54,8 @@ class SkillFrontmatter(BaseModel):
 
     @field_validator("metadata", mode="before")
     @classmethod
-    def validate_metadata(
-        cls, value: dict[str, object] | None
-    ) -> dict[str, str] | None:
-        if value is None:
-            return value
-        return {
-            key: str(val) if not isinstance(val, str) else val
-            for key, val in value.items()
-            if key
-        }
+    def validate_metadata(cls, value: object) -> dict[str, str] | None:
+        return normalize_skill_metadata(value)
 
     @field_validator("allowed_tools_raw", mode="before")
     @classmethod

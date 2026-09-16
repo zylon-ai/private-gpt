@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 
+from private_gpt.components.skills.validation import normalize_skill_metadata
+
 
 class SkillFrontmatter(BaseModel):
     name: str = Field(
@@ -33,16 +35,8 @@ class SkillFrontmatter(BaseModel):
 
     @field_validator("metadata", mode="before")
     @classmethod
-    def validate_metadata(
-        cls, value: dict[str, object] | None
-    ) -> dict[str, str] | None:
-        if value is None:
-            return value
-        return {
-            key: str(val) if not isinstance(val, str) else val
-            for key, val in value.items()
-            if key
-        }
+    def validate_metadata(cls, value: object) -> dict[str, str] | None:
+        return normalize_skill_metadata(value)
 
 
 class SkillEntity(BaseModel):
