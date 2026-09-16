@@ -7,8 +7,8 @@ from private_gpt.components.tools.processors.base import (
     ToolProcessor,
     _is_unresolved_tool,
     _replace_tool,
-    _session_id,
     _tool_matches,
+    session_id_for,
 )
 from private_gpt.components.tools.tool_names import (
     BASH_CODE_EXECUTION_TOOL_NAME,
@@ -39,7 +39,7 @@ class BashProcessor(ToolProcessor):
                 return _replace_tool(request, tool, [])
 
             config = CodeExecutionSessionConfig(
-                session_id=_session_id(request),
+                session_id=session_id_for(request),
                 env=Principal.current().as_env() or {},
                 mounts=request.context.mounts or [],
             )

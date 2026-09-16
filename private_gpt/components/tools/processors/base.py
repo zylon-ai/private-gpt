@@ -27,7 +27,14 @@ def _get_tool_context(
     return request.tool_context or []
 
 
-def _session_id(request: ResolvedChatRequest) -> str:
+def session_id_for(request: ResolvedChatRequest) -> str:
+    """Return the sandbox session id for *request*.
+
+    This doubles as the ``scope_id`` used by ``FileService``: uploads are stored
+    under ``uploads/{scope_id}`` and the mounters bind
+    ``{sessions_root}/uploads/{session_id}`` into the sandbox, so the two only
+    line up while both derive from this single helper.
+    """
     return (
         request.context.container
         or request.context.user_id

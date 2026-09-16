@@ -95,7 +95,7 @@ from private_gpt.components.llm.custom.base import StructuredOutputsParams, Zylo
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.models import ReasoningEffort
 from private_gpt.components.llm.priorities import DefinedPriorities
-from private_gpt.components.tools.processors.base import _session_id
+from private_gpt.components.tools.processors.base import session_id_for
 from private_gpt.components.tools.remote_execution import (
     ToolExecutionInterceptor,
     ToolExecutionResponse,
@@ -1888,7 +1888,7 @@ class AsyncChatEngine:
         if not isinstance(request, ResolvedChatRequest):
             return None
 
-        session_id = _session_id(request)
+        session_id = session_id_for(request)
         ttl = self._container_registry.get_ttl(session_id)
         if ttl is None:
             return None

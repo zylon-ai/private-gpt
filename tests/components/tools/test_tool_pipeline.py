@@ -21,7 +21,7 @@ from private_gpt.components.skills.models.skill_entities import (
 from private_gpt.components.tools.processors.anthropic_tool_translation_processor import (
     AnthropicToolTranslationProcessor,
 )
-from private_gpt.components.tools.processors.base import _replace_tool, _session_id
+from private_gpt.components.tools.processors.base import _replace_tool, session_id_for
 from private_gpt.components.tools.processors.bash_processor import BashProcessor
 from private_gpt.components.tools.processors.code_execution_processor import (
     CodeExecutionProcessor,
@@ -376,7 +376,7 @@ def test_tool_pipeline_uses_user_id_as_session_id() -> None:
         ),
     )
 
-    assert _session_id(request) == "session-123"
+    assert session_id_for(request) == "session-123"
 
 
 def _skill_version() -> SkillVersionEntity:
