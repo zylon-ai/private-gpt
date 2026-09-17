@@ -143,6 +143,19 @@ class ErrorQueryResult(BaseModel):
         return self.description
 
 
+class SqlAttempt(BaseModel):
+    """A previously generated SQL query together with the error it produced.
+
+    Attempts are replayed as conversation turns (assistant proposal + user
+    error feedback) instead of being appended to the system prompt, so the
+    system prompt -- which carries the whole database schema -- stays
+    byte-identical across retries.
+    """
+
+    query: str = Field(description="The SQL query the model generated.")
+    error: ErrorQueryResult = Field(description="The error that query produced.")
+
+
 class QueryResult(BaseModel):
     result_type: QueryResultType = Field(
         default=QueryResultType.SQL,
@@ -689,8 +702,7 @@ class DatabaseQueryGenerator:
         query: str,
         additional_context: str | None = None,
     ) -> QueryResult:
-        last_error: ErrorQueryResult | None = None
-        last_generated_query: str | None = None
+        attempts: list[SqlAttempt] = []
         try:
             extracted_schemas = await asyncio.to_thread(self._extract_database_schema)
         except SQLAlchemyError as e:
@@ -710,8 +722,7 @@ class DatabaseQueryGenerator:
                 natural_language_query=query,
                 schemas=extracted_schemas,
                 additional_context=additional_context,
-                last_generated_query=last_generated_query,
-                last_error=last_error,
+                previous_attempts=attempts,
             )
             stripped_response = sql_query.strip()
             if stripped_response.upper().startswith(CONTEXT_ANSWER_TAG):
@@ -729,17 +740,18 @@ class DatabaseQueryGenerator:
                     rows_text="No relevant tables found to answer the question.",
                     row_count=0,
                 )
-            last_generated_query = sql_query
 
             result = await self._query_batched_stream(sql_query)
             if result and not result.error:
                 return result
 
-            last_error = result.error if result else ErrorQueryResult("Unknown error")
+            error = result.error if result else ErrorQueryResult("Unknown error")
+            attempts.append(SqlAttempt(query=sql_query, error=error))
 
+        last_attempt = attempts[-1] if attempts else None
         return QueryResult(
-            query=last_generated_query,
-            error=last_error,
+            query=last_attempt.query if last_attempt else None,
+            error=last_attempt.error if last_attempt else None,
             row_count=-1,
         )
 
@@ -774,19 +786,14 @@ class DatabaseQueryGenerator:
             )
         return system_prompt
 
-    async def generate_sql_query(
-        self,
-        natural_language_query: str,
-        schemas: list[InspectedSchema],
-        additional_context: str | None = None,
-        last_generated_query: str | None = None,
-        last_error: ErrorQueryResult | None = None,
-    ) -> str:
-        # Need to do it lazily to avoid circular dependency
-        from private_gpt.server.chat.chat_service import ChatService
+    def _build_system_prompt(self, schemas: list[InspectedSchema]) -> str:
+        """Build the system prompt carrying the schema and the generation rules.
 
-        chat_service = get_global_injector().get(ChatService)
-
+        This is intentionally free of any per-attempt state: retry feedback
+        travels as conversation turns (see :meth:`_build_messages`) so that the
+        system prompt -- by far the largest part of the request, since it holds
+        the whole schema -- is byte-identical across every retry of a request.
+        """
         system_prompt = "Given the following database schema information:\n\n"
         system_prompt += "\n\n".join(str(schema) for schema in schemas).strip()
         system_prompt += "\n\n"
@@ -842,22 +849,70 @@ class DatabaseQueryGenerator:
         system_prompt += "If no direct foreign key exists between two tables, use intermediate tables to connect them. "
         system_prompt += "Never assume column locations or relationships not explicitly documented in the schema. "
 
-        if last_generated_query and last_error:
-            system_prompt += f"\n Previous attempt was:\n{last_generated_query}\n"
-            system_prompt += "But it resulted in an error:\n"
-            system_prompt += f"{last_error}\n"
-            system_prompt += "Please correct the SQL query."
+        return system_prompt
 
+    @staticmethod
+    def _build_messages(
+        natural_language_query: str,
+        additional_context: str | None = None,
+        previous_attempts: list[SqlAttempt] | None = None,
+    ) -> list[ChatMessage]:
+        """Build the conversation turns for a generation attempt.
+
+        Failed attempts are replayed as an assistant turn holding the SQL the
+        model proposed, followed by a user turn holding the error it produced.
+        Only these turns grow between retries -- the schema is never resent.
+        """
         user_prompt = f"Generate an SQL query for the following request: {natural_language_query}\n"
         if additional_context:
             user_prompt += f"Additional context: {additional_context}\n"
 
         messages: list[ChatMessage] = [
             ChatMessage(
-                role="user",
+                role=MessageRole.USER,
                 content=user_prompt,
             )
         ]
+
+        for attempt in previous_attempts or []:
+            messages.append(
+                ChatMessage(
+                    role=MessageRole.ASSISTANT,
+                    content=attempt.query,
+                )
+            )
+            messages.append(
+                ChatMessage(
+                    role=MessageRole.USER,
+                    content=(
+                        "That query failed with the following error:\n"
+                        f"{attempt.error}\n"
+                        "Correct the SQL query. Reply with the corrected query "
+                        "only, following the same response rules as before."
+                    ),
+                )
+            )
+
+        return messages
+
+    async def generate_sql_query(
+        self,
+        natural_language_query: str,
+        schemas: list[InspectedSchema],
+        additional_context: str | None = None,
+        previous_attempts: list[SqlAttempt] | None = None,
+    ) -> str:
+        # Need to do it lazily to avoid circular dependency
+        from private_gpt.server.chat.chat_service import ChatService
+
+        chat_service = get_global_injector().get(ChatService)
+
+        system_prompt = self._build_system_prompt(schemas)
+        messages = self._build_messages(
+            natural_language_query=natural_language_query,
+            additional_context=additional_context,
+            previous_attempts=previous_attempts,
+        )
 
         llm_component = get_global_injector().get(LLMComponent)
 
