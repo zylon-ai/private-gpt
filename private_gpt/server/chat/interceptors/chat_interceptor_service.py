@@ -41,6 +41,9 @@ from private_gpt.server.chat.interceptors.loop_detection_interceptor import (
     LoopDetectionRequestInterceptor,
 )
 from private_gpt.server.chat.interceptors.mcp_interceptor import McpRequestInterceptor
+from private_gpt.server.chat.interceptors.media_file_interceptor import (
+    MediaFilePreprocessingInterceptor,
+)
 from private_gpt.server.chat.interceptors.multimodal_interceptor import (
     MultimodalRequestInterceptor,
 )
@@ -105,6 +108,7 @@ class ChatInterceptorService:
         # --- loop interceptors (run each iteration, order matters) ---
         server_tool_result_text_interceptor: ServerToolResultTextInterceptor,
         document_file_interceptor: DocumentFilePreprocessingInterceptor,
+        media_file_interceptor: MediaFilePreprocessingInterceptor,
         multimodal_interceptor: MultimodalRequestInterceptor,
         citation_interceptor: CitationRequestInterceptor,
         platform_guidelines_interceptor: PlatformGuidelinesInterceptor,
@@ -149,6 +153,7 @@ class ChatInterceptorService:
                 requests=[
                     server_tool_result_text_interceptor,
                     document_file_interceptor,
+                    media_file_interceptor,
                     multimodal_interceptor,
                 ],
             )

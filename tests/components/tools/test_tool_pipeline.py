@@ -173,6 +173,8 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
         present_files_processor=noop,
         present_server_processor=noop,
         convert_documents_processor=noop,
+        describe_image_processor=noop,
+        transcribe_audio_processor=noop,
     )
     request = _request(
         [
@@ -234,6 +236,8 @@ async def test_code_execution_fan_out_never_duplicates_convert_documents() -> No
         convert_documents_processor=ConvertDocumentsProcessor(
             convert_builder, convert_settings
         ),
+        describe_image_processor=noop,
+        transcribe_audio_processor=noop,
     )
     request = _request(
         [
@@ -342,6 +346,8 @@ def _make_pipeline(
         present_files_processor=noop,
         present_server_processor=noop,
         convert_documents_processor=noop,
+        describe_image_processor=noop,
+        transcribe_audio_processor=noop,
     )
 
 
@@ -493,6 +499,8 @@ async def test_skill_tools_are_built_without_pre_recovery() -> None:
         present_files_processor=noop,
         present_server_processor=noop,
         convert_documents_processor=noop,
+        describe_image_processor=noop,
+        transcribe_audio_processor=noop,
     )
     request = _request(
         [
@@ -554,6 +562,8 @@ async def test_tool_pipeline_expands_skills_wrapper() -> None:
         present_files_processor=noop,
         present_server_processor=noop,
         convert_documents_processor=noop,
+        describe_image_processor=noop,
+        transcribe_audio_processor=noop,
     )
     request = _request(
         [
@@ -581,3 +591,29 @@ async def test_tool_pipeline_expands_skills_wrapper() -> None:
         "unload_skill",
         "list_skills",
     ]
+
+
+@pytest.mark.asyncio
+async def test_code_execution_fan_out_includes_the_media_tools() -> None:
+    """The media tools must reach the request, or the interceptor stays off.
+
+    ``MediaFilePreprocessingInterceptor`` only saves attachments when a resolved
+    media tool is present, and a name missing from the fan-out never gets one.
+    """
+    pipeline = _make_pipeline()
+    request = _request(
+        [
+            ToolSpec(
+                name="code_execution",
+                type="code_execution_v1",
+                input_schema={"type": "object", "properties": {}},
+            )
+        ]
+    )
+    request.system.extensions.zylon_enabled = True
+
+    resolved = await pipeline.contextualize_internal_tools(request)
+
+    types = {tool.type for tool in resolved.tool_config.tools}
+    assert "describe_image_v1" in types
+    assert "transcribe_audio_v1" in types

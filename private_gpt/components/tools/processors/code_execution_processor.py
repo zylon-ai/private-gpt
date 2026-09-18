@@ -13,9 +13,11 @@ from private_gpt.components.tools.tool_names import (
     BASH_CODE_EXECUTION_TOOL_NAME,
     CODE_EXECUTION_TOOL_NAME,
     CONVERT_DOCUMENTS_TOOL_NAME,
+    DESCRIBE_IMAGE_TOOL_NAME,
     PRESENT_FILES_TOOL_NAME,
     PRESENT_SERVER_TOOL_NAME,
     TEXT_EDITOR_CODE_EXECUTION_TOOL_NAME,
+    TRANSCRIBE_AUDIO_TOOL_NAME,
 )
 
 
@@ -43,6 +45,8 @@ class CodeExecutionProcessor(ToolProcessor):
                         PRESENT_FILES_TOOL_NAME,
                         PRESENT_SERVER_TOOL_NAME,
                         CONVERT_DOCUMENTS_TOOL_NAME,
+                        DESCRIBE_IMAGE_TOOL_NAME,
+                        TRANSCRIBE_AUDIO_TOOL_NAME,
                     )
                     if not _has_tool(request, tool_name)
                 )

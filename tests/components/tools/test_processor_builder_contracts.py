@@ -22,6 +22,9 @@ from private_gpt.components.tools.builders.convert_documents_tool_builder import
 from private_gpt.components.tools.builders.database_query_builder import (
     DatabaseQueryToolBuilder,
 )
+from private_gpt.components.tools.builders.describe_image_tool_builder import (
+    DescribeImageToolBuilder,
+)
 from private_gpt.components.tools.builders.present_files_tool_builder import (
     PresentFilesToolBuilder,
 )
@@ -37,6 +40,9 @@ from private_gpt.components.tools.builders.tabular_data_builder import (
 from private_gpt.components.tools.builders.text_editor_tool_builder import (
     TextEditorToolBuilder,
 )
+from private_gpt.components.tools.builders.transcribe_audio_tool_builder import (
+    TranscribeAudioToolBuilder,
+)
 from private_gpt.components.tools.builders.web_fetch_builder import WebFetchToolBuilder
 from private_gpt.components.tools.builders.web_search_builder import (
     WebSearchToolBuilder,
@@ -47,6 +53,9 @@ from private_gpt.components.tools.processors.convert_documents_processor import 
 )
 from private_gpt.components.tools.processors.database_query_processor import (
     DatabaseQueryProcessor,
+)
+from private_gpt.components.tools.processors.describe_image_processor import (
+    DescribeImageProcessor,
 )
 from private_gpt.components.tools.processors.present_files_processor import (
     PresentFilesProcessor,
@@ -62,6 +71,9 @@ from private_gpt.components.tools.processors.tabular_data_processor import (
 )
 from private_gpt.components.tools.processors.text_editor_processor import (
     TextEditorProcessor,
+)
+from private_gpt.components.tools.processors.transcribe_audio_processor import (
+    TranscribeAudioProcessor,
 )
 from private_gpt.components.tools.processors.web_fetch_processor import (
     WebFetchProcessor,
@@ -205,6 +217,14 @@ def _request(
         ),
         (
             ConvertDocumentsToolBuilder.build_tool,
+            {"config", "name", "type", "description"},
+        ),
+        (
+            DescribeImageToolBuilder.build_tool,
+            {"config", "name", "type", "description"},
+        ),
+        (
+            TranscribeAudioToolBuilder.build_tool,
             {"config", "name", "type", "description"},
         ),
     ],
@@ -454,4 +474,56 @@ async def test_convert_documents_builder_receives_complete_request_contract() ->
         config,
         name="convert_documents",
         type="convert_documents_v1",
+    )
+
+
+@pytest.mark.asyncio
+async def test_describe_image_builder_receives_complete_request_contract() -> None:
+    mount = Mount(target="/mnt/skills/vision/", access="ro")
+    builder = SimpleNamespace(
+        build_tool=AsyncMock(return_value=_resolved("describe_image"))
+    )
+    settings = SimpleNamespace(
+        code_execution=SimpleNamespace(
+            tools=SimpleNamespace(describe_image=SimpleNamespace(enabled=True))
+        )
+    )
+
+    assert await DescribeImageProcessor(builder, settings).intercept(
+        _request(_tool("describe_image"), mounts=[mount])
+    )
+
+    config = builder.build_tool.await_args.args[0]
+    assert config.session_id == "contract-correlation"
+    assert config.mounts == [mount]
+    builder.build_tool.assert_awaited_once_with(
+        config,
+        name="describe_image",
+        type="describe_image_v1",
+    )
+
+
+@pytest.mark.asyncio
+async def test_transcribe_audio_builder_receives_complete_request_contract() -> None:
+    mount = Mount(target="/mnt/skills/audio/", access="ro")
+    builder = SimpleNamespace(
+        build_tool=AsyncMock(return_value=_resolved("transcribe_audio"))
+    )
+    settings = SimpleNamespace(
+        code_execution=SimpleNamespace(
+            tools=SimpleNamespace(transcribe_audio=SimpleNamespace(enabled=True))
+        )
+    )
+
+    assert await TranscribeAudioProcessor(builder, settings).intercept(
+        _request(_tool("transcribe_audio"), mounts=[mount])
+    )
+
+    config = builder.build_tool.await_args.args[0]
+    assert config.session_id == "contract-correlation"
+    assert config.mounts == [mount]
+    builder.build_tool.assert_awaited_once_with(
+        config,
+        name="transcribe_audio",
+        type="transcribe_audio_v1",
     )
