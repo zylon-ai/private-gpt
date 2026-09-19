@@ -116,7 +116,6 @@ class DocumentTreeExpander:
 
         Args:
             node_id: The node ID to count tokens for
-            include_subtree: Whether to include tokens from all descendant nodes
 
         Returns:
             Total token count
