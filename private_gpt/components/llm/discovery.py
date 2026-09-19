@@ -64,7 +64,7 @@ def _check_tokenizer_mode(
         tokens = tokenizer.encode("Test tokenizer support", add_special_tokens=False)
     except Exception as exc:
         logger.warning(
-            "This provider don't support %s mode for model '%s': %s",  # TODO: add link to dos
+            "This provider doesn't support %s mode for model '%s': %s",
             tokenizer_mode,
             model_info.id,
             exc,
