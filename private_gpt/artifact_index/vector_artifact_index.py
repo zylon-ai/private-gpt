@@ -109,7 +109,9 @@ class VectorArtifactIndex(BaseArtifactIndex):
             # TODO take this to the node store component
             index.storage_context.persist(persist_dir=local_data_path / self.collection)
             # Set index as ready
-            logger.info("Finished empty vector index creation for artifact %s", self.artifact)
+            logger.info(
+                "Finished empty vector index creation for artifact %s", self.artifact
+            )
 
     # TODO pass the SummaryIndex as a parameter to avoid duplicating the dependency
     def populate(
