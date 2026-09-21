@@ -625,7 +625,7 @@ class ChatSettings(BaseModel):
     tldr_timeout: int | None = Field(
         None,
         description=(
-            "The timeout in seconds for the TDLR processor to condense the chat history.\n"
+            "The timeout in seconds for the TLDR processor to condense the chat history.\n"
             "If the condense strategy is set to `condenser`, this value will be used to limit the time spent on condensing."
         ),
     )
