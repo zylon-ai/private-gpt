@@ -71,9 +71,7 @@ chat:
   max_iterations: ${PGPT_CHAT_MAX_ITERATIONS:100}
   loop_detection_interval: ${PGPT_CHAT_LOOP_DETECTION_INTERVAL:10}
   allow_use_default_prompt: ${PGPT_ALLOW_USE_DEFAULT_PROMPT:true}
-  allow_use_context: ${PGPT_ALLOW_USE_CONTEXT:true}
   allow_generate_citations: ${PGPT_ALLOW_GENERATE_CITATIONS:true}
-  allow_use_reasoning: ${PGPT_ALLOW_USE_REASONING:true}
   return_missing_citations: ${PGPT_RETURN_MISSING_CITATIONS:false}
   deduplicate_context_in_history: ${PGPT_DEDUPLICATE_CONTEXT_IN_HISTORY:true}
   add_context_to_system_prompt: ${PGPT_ADD_CONTEXT_TO_SYSTEM_PROMPT:false}
@@ -84,7 +82,6 @@ chat:
   maximum_context_length: ${PGPT_MAXIMUM_CONTEXT_LENGTH:0}
   assistant_name: ${PGPT_ASSISTANT_NAME:PrivateGPT}
   assistant_description: ${PGPT_ASSISTANT_DESCRIPTION:}
-  maximum_history_length: ${PGPT_MAXIMUM_HISTORY_LENGTH:0}
   tldr_timeout: ${PGPT_TLDR_TIMEOUT:300}
   tldr_minimum_threshold_seconds: ${PGPT_TLDR_MINIMUM_THRESHOLD_SECONDS:1.5}
   multiplexing_threshold: ${PGPT_MULTIPLEXING_THRESHOLD:10}
@@ -217,9 +214,6 @@ cache:
   max_entries: ${PGPT_CACHE_MAX_ENTRIES:1000}
   key_prefix: ${PGPT_CACHE_KEY_PREFIX:private-gpt}
   redis_database: ${PGPT_CACHE_REDIS_DATABASE:}
-
-unstructured:
-  url: ${PGPT_UNSTRUCTURED_URL:}
 
 qdrant:
   url: ${PGPT_QDRANT_URL:}
