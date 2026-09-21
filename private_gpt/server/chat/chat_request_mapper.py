@@ -123,7 +123,7 @@ class ChatRequestMapper:
         self,
         request: ChatBody,
     ) -> dict[str, Any]:
-        """Collect sampling parameters from the request request."""
+        """Collect sampling parameters from the request."""
         sampling_params: dict[str, Any] = {}
         if request.seed is not None:
             sampling_params["seed"] = request.seed
