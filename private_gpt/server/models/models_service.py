@@ -51,6 +51,7 @@ class ModelsService:
         supports_reasoning = bool(config.support_reasoning)
         supports_image_input = bool(config.support_image)
         supports_audio_input = bool(config.support_audio)
+        supports_video_input = bool(config.support_video)
 
         thinking_enabled = self.settings.chat.allow_reasoning and supports_reasoning
 
@@ -83,6 +84,9 @@ class ModelsService:
             ),
             audio_input=CountCapabilitySupportOutput(
                 supported=supports_audio_input, maximum=config.support_audio or 0
+            ),
+            video_input=CountCapabilitySupportOutput(
+                supported=supports_video_input, maximum=config.support_video or 0
             ),
             pdf_input=unsupported,
             structured_outputs=supported,

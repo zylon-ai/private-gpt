@@ -3,7 +3,9 @@ import importlib
 import json
 import logging
 from collections.abc import Sequence
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, cast
+from uuid import uuid4
 
 from llama_index.core.base.llms.types import (
     ChatMessage,
@@ -11,6 +13,7 @@ from llama_index.core.base.llms.types import (
     ChatResponseAsyncGen,
     ChatResponseGen,
     TextBlock,
+    VideoBlock,
 )
 from llama_index.core.llms.llm import ToolSelection
 from llama_index.llms.openai.utils import O1_MODELS  # ty:ignore[unresolved-import]
@@ -26,6 +29,80 @@ if TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
+
+
+def _video_url_payload(block: VideoBlock) -> dict[str, Any]:
+    """Build an OpenAI-compatible ``video_url`` content part."""
+    if block.url:
+        url = str(block.url)
+    else:
+        encoded = block.resolve_video(as_base64=True).read().decode("utf-8")
+        url = f"data:{block.video_mimetype or 'video/mp4'};base64,{encoded}"
+
+    video_url: dict[str, Any] = {"url": url}
+    if block.detail is not None:
+        video_url["detail"] = block.detail
+    if block.fps is not None:
+        video_url["fps"] = block.fps
+    return {"type": "video_url", "video_url": video_url}
+
+
+@contextmanager
+def _video_aware_openai_conversion() -> Any:
+    """Temporarily extend llama-index OpenAI conversion with video blocks.
+
+    The installed llama-index release handles image and audio blocks but raises
+    for ``VideoBlock``. Replacing videos with unique text markers lets the
+    dependency perform all existing tool/document/audio handling, then swaps
+    only those markers for the provider's ``video_url`` content parts.
+    """
+    import llama_index.llms.openai.utils as openai_utils
+
+    original_converter = openai_utils.to_openai_message_dict
+
+    def convert_message(message: ChatMessage, *args: Any, **kwargs: Any) -> Any:
+        markers: dict[str, dict[str, Any]] = {}
+        blocks = []
+        for block in message.blocks:
+            if isinstance(block, VideoBlock):
+                marker = f"__octopatch_video_{uuid4().hex}__"
+                markers[marker] = _video_url_payload(block)
+                blocks.append(TextBlock(text=marker))
+            else:
+                blocks.append(block)
+
+        if not markers:
+            return original_converter(message, *args, **kwargs)
+
+        converted = original_converter(
+            ChatMessage(
+                role=message.role,
+                blocks=blocks,
+                additional_kwargs=dict(message.additional_kwargs),
+            ),
+            *args,
+            **kwargs,
+        )
+
+        def replace(value: Any) -> Any:
+            if isinstance(value, dict):
+                marker = value.get("text")
+                if value.get("type") == "text" and marker in markers:
+                    return markers[marker]
+                return {key: replace(item) for key, item in value.items()}
+            if isinstance(value, list):
+                return [replace(item) for item in value]
+            if isinstance(value, str) and value in markers:
+                return [markers[value]]
+            return value
+
+        return replace(converted)
+
+    openai_utils.to_openai_message_dict = convert_message
+    try:
+        yield
+    finally:
+        openai_utils.to_openai_message_dict = original_converter
 
 
 def _load_openai_base() -> type[Any]:
@@ -219,10 +296,8 @@ class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
         messages = [*messages]
         messages = self._normalize_chat_messages(messages)
 
-        response = super()._stream_chat(
-            messages=messages,
-            **kwargs,
-        )
+        with _video_aware_openai_conversion():
+            response = super()._stream_chat(messages=messages, **kwargs)
 
         for chat_response in response:
             chat_response = self._extract_reasoning_content(chat_response)
@@ -235,7 +310,8 @@ class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
         messages = [*messages]
         messages = self._normalize_chat_messages(messages)
 
-        parent_gen = super()._astream_chat(messages=messages, **kwargs)
+        with _video_aware_openai_conversion():
+            parent_gen = await super()._astream_chat(messages=messages, **kwargs)
 
         def process_chat_response(chat_response: ChatResponse) -> ChatResponse:
             chat_response = self._extract_reasoning_content(chat_response)
@@ -243,10 +319,24 @@ class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
             return chat_response
 
         async def coro() -> ChatResponseAsyncGen:
-            async for chat_response in await parent_gen:
+            async for chat_response in parent_gen:
                 yield await asyncio.to_thread(process_chat_response, chat_response)
 
         return coro()
+
+    def _chat(self, messages: Sequence[ChatMessage], **kwargs: Any) -> ChatResponse:
+        messages = [*messages]
+        messages = self._normalize_chat_messages(messages)
+        with _video_aware_openai_conversion():
+            return super()._chat(messages=messages, **kwargs)
+
+    async def _achat(
+        self, messages: Sequence[ChatMessage], **kwargs: Any
+    ) -> ChatResponse:
+        messages = [*messages]
+        messages = self._normalize_chat_messages(messages)
+        with _video_aware_openai_conversion():
+            return await super()._achat(messages=messages, **kwargs)
 
     def _get_model_kwargs(self, **kwargs: Any) -> dict[str, Any]:
         from private_gpt.components.llm.custom.base import SamplingParameters

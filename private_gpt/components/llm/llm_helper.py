@@ -49,6 +49,20 @@ def max_audios_supported(
     return int(config.support_audio or 0) if supports_audio(llm, config) else 0
 
 
+def supports_video(
+    llm: LLM,
+    config: LLMModelConfig,
+) -> bool:
+    return is_multimodal(llm) and bool(config.support_video)
+
+
+def max_videos_supported(
+    llm: LLM,
+    config: LLMModelConfig,
+) -> int:
+    return int(config.support_video or 0) if supports_video(llm, config) else 0
+
+
 TokenizerFn = Callable[..., TokenizedInput]
 AsyncTokenizerFn = Callable[..., Awaitable[TokenizedInput]]
 

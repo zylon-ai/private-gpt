@@ -21,6 +21,7 @@ DEFAULT_MODELS_VALUES: dict[str, Any] = {
     "context_window": 128_000,
     "support_image": 1,
     "support_audio": 0,
+    "support_video": 0,
     "support_tools": True,
     "support_reasoning": True,
     "api_type": "chat_completions",
@@ -185,6 +186,7 @@ def _model_info_to_config(
     supports_tools = DEFAULT_MODELS_VALUES["support_tools"]
     support_image: int | None = DEFAULT_MODELS_VALUES["support_image"]
     support_audio: int | None = DEFAULT_MODELS_VALUES["support_audio"]
+    support_video: int | None = DEFAULT_MODELS_VALUES["support_video"]
 
     if capabilities is not None:
         supports_reasoning = _capability_supported(
@@ -195,6 +197,9 @@ def _model_info_to_config(
         )
         support_image = _capability_count(capabilities.image_input, bool(support_image))
         support_audio = _capability_count(capabilities.audio_input, bool(support_audio))
+        support_video = _capability_count(
+            getattr(capabilities, "video_input", None), bool(support_video)
+        )
 
     # Default privateGPT values
     mode = mode or DEFAULT_MODELS_VALUES["mode"]
@@ -220,6 +225,7 @@ def _model_info_to_config(
         or DEFAULT_MODELS_VALUES["context_window"],
         support_image=support_image,
         support_audio=support_audio,
+        support_video=support_video,
         support_tools=supports_tools,
         support_reasoning=supports_reasoning,
         sampling_params=sampling_params,

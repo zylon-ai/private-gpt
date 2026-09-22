@@ -5,6 +5,7 @@ from llama_index.core.base.llms.types import (
     ImageBlock,
     MessageRole,
     TextBlock,
+    VideoBlock,
 )
 
 from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
@@ -20,8 +21,10 @@ from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import (
     max_audios_supported,
     max_images_supported,
+    max_videos_supported,
     supports_audio,
     supports_images,
+    supports_video,
 )
 from private_gpt.events.event_errors import Errors
 from private_gpt.utils.tokens import async_tokenizer
@@ -106,6 +109,22 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
                     Errors.Codes.INVALID_REQUEST_AUDIO_MAX_NUM_ERROR,
                 )
 
+        # Validate multimodal inputs (videos)
+        videos: list[VideoBlock] = [
+            video for video in last_user_message.blocks if isinstance(video, VideoBlock)
+        ]
+        if videos:
+            if not supports_video(llm, model_config):
+                raise Errors.InvalidRequest(
+                    "The LLM does not support videos, but the message contains video blocks.",
+                    Errors.Codes.INVALID_REQUEST_VIDEO_SUPPORT_ERROR,
+                )
+            max_num_videos = max_videos_supported(llm, model_config)
+            if len(videos) > max_num_videos:
+                raise Errors.InvalidRequest(
+                    f"The LLM supports a maximum of {max_num_videos} videos, but the message contains {len(videos)}",
+                    Errors.Codes.INVALID_REQUEST_VIDEO_MAX_NUM_ERROR,
+                )
         token_limit = context.state.runtime.effective_token_limit
         tokenize = context.state.runtime.tokenizer_fn
         if token_limit is None or tokenize is None:
