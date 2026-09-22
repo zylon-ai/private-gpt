@@ -157,8 +157,24 @@ class RedisStreamService(StreamService):
 
             updates["metadata"] = await asyncio.to_thread(process_metadata)
 
-        await self._client.hset(status_key, mapping=updates)  # type: ignore
-        await self._client.expire(status_key, self._config.expiry_seconds)
+        # A late producer must not recreate incomplete metadata after expiry/deletion.
+        await cast(Any, self._client.eval)(
+            """
+            if redis.call('exists', KEYS[1]) == 0 then
+                return 0
+            end
+            local fields = cjson.decode(ARGV[1])
+            for key, value in pairs(fields) do
+                redis.call('hset', KEYS[1], key, value)
+            end
+            redis.call('expire', KEYS[1], ARGV[2])
+            return 1
+            """,
+            1,
+            status_key,
+            json.dumps(updates),
+            self._config.expiry_seconds,
+        )
 
     async def get_stream_metadata(self, correlation_id: str) -> StreamMetadata | None:
         """Get stream metadata by correlation ID."""
@@ -203,6 +219,9 @@ class RedisStreamService(StreamService):
                 maxlen=self._config.max_stream_length,
             )
             await pipe.expire(stream_key, self._config.expiry_seconds)
+            await pipe.expire(
+                self._get_status_key(correlation_id), self._config.expiry_seconds
+            )
             results = await pipe.execute()
 
         return str(results[0])
@@ -231,7 +250,10 @@ class RedisStreamService(StreamService):
                     idx += 1
                 result_indices[correlation_id] = idx - 1
                 await pipe.expire(stream_key, self._config.expiry_seconds)
-                idx += 1
+                await pipe.expire(
+                    self._get_status_key(correlation_id), self._config.expiry_seconds
+                )
+                idx += 2
 
             results = await pipe.execute()
 

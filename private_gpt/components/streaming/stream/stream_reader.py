@@ -191,12 +191,15 @@ class StreamReader:
             metadata: (
                 StreamMetadata | None
             ) = await self.stream_service.get_stream_metadata(correlation_id)
-            if metadata and metadata.status in TERMINAL_STATUSES:
-                return True
         except Exception as e:
             logger.error(f"Error checking metadata for {correlation_id}: {e}")
+            return False
 
-        return False
+        if metadata is None:
+            raise EOFError(
+                f"Stream {correlation_id} expired or was deleted before completion"
+            )
+        return metadata.status in TERMINAL_STATUSES
 
     async def stream_events(
         self,
@@ -253,6 +256,8 @@ class StreamReader:
                 if events:
                     await event_queue.put(events)
 
+            except EOFError as e:
+                await event_queue.put([event_handler.error_event(correlation_id, e)])
             except Exception as e:
                 logger.error(f"Producer error for {correlation_id}: {e}", exc_info=True)
             finally:
@@ -451,6 +456,15 @@ class StreamMultiplexer:
                     await self._close_all_consumers(correlation_id)
                     logger.info(f"Stream {correlation_id} reached terminal status")
 
+        except EOFError as e:
+            await self._dispatch(
+                correlation_id,
+                state,
+                [event_handler.error_event(correlation_id, e)],
+                state.last_id,
+                asyncio.get_running_loop().time(),
+            )
+            await self._close_all_consumers(correlation_id)
         except Exception as e:
             logger.error(f"Error processing {correlation_id}: {e}", exc_info=True)
 

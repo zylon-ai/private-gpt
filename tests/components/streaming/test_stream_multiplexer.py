@@ -19,6 +19,7 @@ import asyncio
 import json
 import random
 from typing import Any
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from pydantic import BaseModel
@@ -208,6 +209,58 @@ async def test_both_paths_empty_stream(
     direct = await run_direct(stream_reader, handler, cid)
 
     assert mux == direct == []
+
+
+@pytest.mark.parametrize("multiplexed", [False, True])
+@pytest.mark.parametrize("completed", [False, True])
+async def test_deleted_stream_closes_existing_readers(
+    service: StreamService,
+    stream_reader: StreamReader,
+    multiplexer: StreamMultiplexer,
+    handler: SimpleEventHandler,
+    monkeypatch: pytest.MonkeyPatch,
+    multiplexed: bool,
+    completed: bool,
+) -> None:
+    monkeypatch.setattr(
+        "private_gpt.components.streaming.stream.stream_reader.STATUS_CHECK_INTERVAL", 0
+    )
+    handler.get_current_status = AsyncMock(  # type: ignore[method-assign]
+        return_value=StreamStatus.COMPLETED if completed else StreamStatus.PROCESSING
+    )
+    error_event = Mock(wraps=handler.error_event)
+    monkeypatch.setattr(handler, "error_event", error_event)
+    cid = await service.create_stream("test")
+    await service.push_event(cid, json.dumps({"n": 1}))
+
+    if multiplexed:
+        consumer = await multiplexer.add_consumer(cid, handler)
+        gen = consumer.broadcast.read_from(consumer.cursor)
+        await multiplexer.start()
+    else:
+        gen = await stream_reader.stream_events(handler, cid)
+
+    try:
+        assert (await asyncio.wait_for(anext(gen), 2)).n == 1  # type: ignore[attr-defined]
+        await service.delete_stream(cid)
+
+        async def finish() -> list[BaseModel]:
+            return [event async for event in gen]
+
+        remaining = await asyncio.wait_for(finish(), 2)
+        assert [event.n for event in remaining] == ([] if completed else [-1])  # type: ignore[attr-defined]
+        if completed:
+            error_event.assert_not_called()
+        else:
+            error_event.assert_called_once()
+            assert error_event.call_args.args[0] == cid
+            assert isinstance(error_event.call_args.args[1], EOFError)
+        if multiplexed:
+            assert cid not in multiplexer.states
+            assert cid not in multiplexer.consumers
+    finally:
+        await gen.aclose()
+        await multiplexer.stop()
 
 
 async def test_both_paths_reconnect_from_mid(
