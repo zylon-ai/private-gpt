@@ -24,6 +24,7 @@ from llama_index.core.schema import (
 from llama_index.core.utils import get_tqdm_iterable, iter_batch
 
 from private_gpt.celery.notify import NotifyProtocol
+from private_gpt.components.ingest.metadata_helper import MetadataKeys
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import settings
@@ -34,6 +35,40 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
+
+
+# Metadata keys prepended to the text handed to the embedding model, in this order.
+#
+# `MetadataHelper.exclude_general_metadata` deliberately leaves the file name
+# embeddable (`exclude_from_embed=False`) while excluding every other piece of file
+# metadata, but `MarkdownTreeNodeParser.parse` then excludes the whole of a document's
+# `extra_info`, and `_copy_metadata_to_children` copies that to every descendant. The
+# name of the source document therefore never reaches a chunk's vector, and a query
+# that *is* a file name has nothing to match on.
+#
+# Fixing it in the parser is not enough on its own: `TextNode.get_content_internal`
+# recurses into children in EMBED mode, so a section node would then repeat the header
+# once per descendant. Prepending it here instead puts it exactly once at the top of
+# whatever is embedded, whichever reader and node type produced it.
+EMBED_METADATA_KEYS: tuple[str, ...] = (MetadataKeys.FILENAME.value,)
+
+
+def embed_text_for(node: BaseNode) -> str:
+    """Return the text to embed for `node`: EMBED content behind a metadata header."""
+    content = str(node.get_content(metadata_mode=MetadataMode.EMBED))
+    # A node with no content of its own is skipped by the caller. A header would make
+    # it truthy and store a vector of nothing but a file name, which every file-name
+    # query would then match ahead of the real chunks.
+    if not content.strip():
+        return content
+    # Only keys the node's own rendering left out: a node that still embeds its
+    # metadata already carries them, and a second copy would be noise.
+    header = "\n".join(
+        f"{key}: {node.metadata[key]}"
+        for key in EMBED_METADATA_KEYS
+        if node.metadata.get(key) and key in node.excluded_embed_metadata_keys
+    )
+    return f"{header}\n{content}" if header else content
 
 
 class ArtifactIndexStatus(Enum):
@@ -515,7 +550,7 @@ class ExtendIndex(Generic[IS]):
             for node in nodes:
                 if node.embedding is None:
                     ids_to_embed.append(node.node_id)
-                    content = node.get_content(metadata_mode=MetadataMode.EMBED)
+                    content = embed_text_for(node)
                     if content:
                         # We want to prevent to send too much text to the model
                         # if we know that the model has a limit
@@ -615,7 +650,7 @@ class ExtendIndex(Generic[IS]):
             for node in nodes:
                 if node.embedding is None:
                     ids_to_embed.append(node.node_id)
-                    content = node.get_content(metadata_mode=MetadataMode.EMBED)
+                    content = embed_text_for(node)
                     if content:
                         # We want to prevent to send too much text to the model
                         # if we know that the model has a limit
