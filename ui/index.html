@@ -46,6 +46,7 @@
       --radius-md: 16px;
       --radius-sm: 10px;
       --sidebar: 286px;
+      --chat-max: 1100px;
       --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -139,8 +140,9 @@
       grid-template-columns: var(--sidebar) minmax(0, 1fr);
       width: 100vw;
       height: 100vh;
-      padding: 16px;
+      padding: 12px;
       gap: 16px;
+      transition: grid-template-columns 200ms cubic-bezier(.2, .8, .2, 1);
     }
 
     .glass {
@@ -269,6 +271,68 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       font-weight: 720;
+    }
+
+    .sidebar-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      margin: 0 0 10px auto;
+      padding: 0;
+      flex: 0 0 auto;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+    }
+
+    .sidebar-toggle svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    .sidebar-toggle:hover {
+      color: var(--text);
+      border-color: var(--border-soft);
+      background: var(--glass-soft);
+    }
+
+    /* Collapsed, the sidebar keeps a rail rather than disappearing: the nav icons
+       stay reachable and the control that brings it back is still where it was
+       used to send it away. Scoped to the two-column layout -- below 900px the
+       shell is already stacked and there is no side column to reclaim. */
+    @media (min-width: 901px) {
+      .app.sidebar-collapsed {
+        --sidebar: 62px;
+      }
+
+      .app.sidebar-collapsed .sidebar {
+        padding: 22px 9px;
+      }
+
+      .app.sidebar-collapsed .sidebar-toggle {
+        margin-right: auto;
+        margin-left: auto;
+      }
+
+      .app.sidebar-collapsed .logo,
+      .app.sidebar-collapsed .sidebar-label,
+      .app.sidebar-collapsed .chat-list-wrap,
+      .app.sidebar-collapsed .github-widget,
+      .app.sidebar-collapsed .production-notice-button,
+      .app.sidebar-collapsed .nav-button > span:not([data-icon]) {
+        display: none;
+      }
+
+      .app.sidebar-collapsed .nav-button {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+      }
     }
 
     .logo {
@@ -957,6 +1021,15 @@
       height: 20px;
     }
 
+    .icon-button.send .stop-icon,
+    .icon-button.send.stopping .send-icon {
+      display: none;
+    }
+
+    .icon-button.send.stopping .stop-icon {
+      display: block;
+    }
+
     .icon-button.send:disabled {
       opacity: 0.35;
       cursor: not-allowed;
@@ -994,15 +1067,62 @@
       flex: 1;
       flex-direction: column;
       align-items: center;
-      padding: 12px 22px 22px;
+      padding: 8px 22px 18px;
       gap: 14px;
+    }
+
+    .messages-wrap {
+      position: relative;
+      display: flex;
+      width: min(var(--chat-max), 100%);
+      min-height: 0;
+      flex: 1;
+    }
+
+    /* `display` here is an author rule, so it would otherwise win over the user
+       agent's `[hidden] { display: none }` and the control would never hide. */
+    .jump-latest[hidden] {
+      display: none;
+    }
+
+    .jump-latest {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      transform: translateX(-50%);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--glass-strong);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      box-shadow: var(--shadow);
+      color: var(--text);
+      font-size: 12.5px;
+      font-weight: 650;
+      cursor: pointer;
+      animation: jumpLatestIn 160ms ease-out both;
+    }
+
+    .jump-latest:hover {
+      background: var(--glass);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    @keyframes jumpLatestIn {
+      from { opacity: 0; transform: translate(-50%, 6px); }
+      to   { opacity: 1; transform: translate(-50%, 0); }
     }
 
     .messages {
       display: flex;
       flex-direction: column;
       gap: 14px;
-      width: min(860px, 100%);
+      width: 100%;
       min-height: 0;
       flex: 1;
       overflow: auto;
@@ -1036,7 +1156,7 @@
     .message-content {
       display: grid;
       gap: 5px;
-      max-width: min(620px, 76%);
+      max-width: 100%;
       min-width: 0;
     }
 
@@ -1046,6 +1166,7 @@
 
     .message.user .message-content {
       justify-items: end;
+      max-width: min(620px, 76%);
     }
 
     .message.assistant,
@@ -1248,6 +1369,160 @@
       transition: opacity 0.15s;
     }
     .message-content:hover .message-actions { opacity: 1; }
+    /* A collapsed message must advertise its own expander, so this row cannot
+       wait for a hover the reader has no reason to try. */
+    .message.collapsible-message .message-actions { opacity: 1; }
+    .message-bubble:not(.collapsible) ~ .message-actions .msg-action-collapse { display: none; }
+
+    .code-block {
+      position: relative;
+      min-width: 0;
+    }
+
+    /* Keeps the copy control clear of the first line, which has no padding of
+       its own to hide behind. */
+    .code-block pre {
+      padding-right: 52px;
+    }
+
+    .code-copy-button {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      z-index: 1;
+      padding: 3px 9px;
+      border: 1px solid var(--border-soft);
+      border-radius: 8px;
+      background: var(--glass-soft);
+      color: var(--muted-strong);
+      font-size: 11.5px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .code-block:hover .code-copy-button,
+    .code-copy-button:focus-visible {
+      opacity: 1;
+    }
+
+    .code-copy-button:hover {
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .message.editing .message-bubble,
+    .message.editing .message-actions {
+      display: none;
+    }
+
+    .message-editor {
+      display: grid;
+      gap: 8px;
+      width: min(620px, 100%);
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      border-top-right-radius: 7px;
+      background: var(--glass-soft);
+    }
+
+    .message-edit-input {
+      min-height: 0;
+      max-height: 320px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+
+    .message-editor-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .number-row input {
+      width: 88px;
+      padding: 5px 8px;
+      border-radius: 9px;
+      font-size: 12.5px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .context-meter {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 32px;
+      padding: 0 11px;
+      border: 1px solid var(--border-soft);
+      border-radius: 999px;
+      background: var(--glass-soft);
+      color: var(--muted-strong);
+      font-size: 12px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+    }
+
+    .context-meter:hover:not(:disabled) {
+      color: var(--text);
+      border-color: var(--border);
+      background: var(--glass);
+    }
+
+    .context-meter:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .context-meter-bar {
+      width: 34px;
+      height: 4px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--glass-strong);
+    }
+
+    .context-meter-fill {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: 999px;
+      background: var(--blue);
+      transition: width 220ms ease, background 220ms ease;
+    }
+
+    .context-meter.warn .context-meter-fill { background: var(--warn); }
+    .context-meter.danger .context-meter-fill { background: var(--danger); }
+    .context-meter.warn { color: var(--warn); }
+    .context-meter.danger { color: var(--danger); }
+
+    .msg-action-btn.primary {
+      color: var(--text);
+      border-color: var(--border);
+      background: var(--glass-strong);
+    }
+
+    .message-bubble.collapsible.collapsed .message-text {
+      max-height: 300px;
+      overflow: hidden;
+      mask-image: linear-gradient(to bottom, black calc(100% - 56px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 56px), transparent 100%);
+    }
+
+    .msg-action-collapse .collapse-caret {
+      display: inline-block;
+      transition: transform 0.15s ease;
+    }
+    .msg-action-collapse[aria-expanded="true"] .collapse-caret {
+      transform: rotate(180deg);
+    }
     .message.user .message-actions { justify-content: flex-end; }
 
     .msg-action-btn {
@@ -1440,7 +1715,7 @@
     }
 
     .composer {
-      width: min(860px, 100%);
+      width: min(var(--chat-max), 100%);
       border-radius: 22px;
       padding: 10px 12px 9px;
     }
@@ -1921,7 +2196,11 @@
       .menu-panel.closing,
       .effort-panel,
       .model-option,
-      .effort-option { animation: none !important; }
+      .effort-option,
+      .jump-latest { animation: none !important; }
+      .app,
+      .context-meter-fill { transition: none !important; }
+      .msg-action-collapse .collapse-caret { transition: none !important; }
     }
 
     .model-option:hover {
@@ -2895,8 +3174,12 @@
         grid-template-columns: 1fr;
       }
 
-      .message-bubble {
+      .message.user .message-content {
         max-width: 88%;
+      }
+
+      .sidebar-toggle {
+        display: none;
       }
     }
 
@@ -3024,11 +3307,34 @@
     body[data-theme-mode="light"] .chat-row,
     body[data-theme-mode="light"] .nav-button,
     body[data-theme-mode="light"] .github-widget,
+    body[data-theme-mode="light"] .jump-latest,
     body[data-theme-mode="light"] .production-notice-button {
       background:
         linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.54));
       border-color: var(--border);
       box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+    }
+
+    /* The message action row hard-codes white text, which is invisible on a light
+       background. Now that a row can be permanently visible on a collapsed
+       message, and carries Copy as well as Retry and Delete, give it colours the
+       light theme can actually show. */
+    body[data-theme-mode="light"] .msg-action-btn {
+      color: rgba(15, 23, 42, 0.6);
+      border-color: rgba(15, 23, 42, 0.12);
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    body[data-theme-mode="light"] .msg-action-btn:hover {
+      color: rgba(15, 23, 42, 0.92);
+      border-color: rgba(15, 23, 42, 0.2);
+      background: rgba(255, 255, 255, 0.86);
+    }
+
+    body[data-theme-mode="light"] .msg-action-btn.danger:hover {
+      color: rgba(150, 20, 20, 0.95);
+      border-color: rgba(190, 40, 40, 0.28);
+      background: rgba(255, 70, 70, 0.1);
     }
 
     body[data-theme-mode="light"] .composer::before {
@@ -3436,7 +3742,10 @@
 </head>
 <body>
   <div class="app">
-    <aside class="sidebar glass">
+    <aside class="sidebar glass" id="sidebar">
+      <button class="sidebar-toggle" id="sidebarToggleButton" type="button" aria-controls="sidebar" aria-expanded="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+      </button>
       <div class="logo">
         <img id="brandLogo"  src="./references/logo-privategpt-wordmark-white-transparent.svg" alt="PrivateGPT" />
         <div class="logo-caption">
@@ -3749,6 +4058,18 @@
                     <label class="color-field" for="appearanceBackgroundColor"><span>Background base</span><input id="appearanceBackgroundColor" type="color" /></label>
                   </div>
                   <div class="field">
+                    <h3>Chat layout</h3>
+                    <small>How much of the window the message column uses. Replies fill the column; your own messages stay narrower so the two roles stay easy to tell apart.</small>
+                  </div>
+                  <div class="field">
+                    <label for="appearanceChatWidth">Chat width</label>
+                    <select id="appearanceChatWidth">
+                      <option value="comfortable">Comfortable (860px)</option>
+                      <option value="wide">Wide (1100px)</option>
+                      <option value="full">Full width</option>
+                    </select>
+                  </div>
+                  <div class="field">
                     <h3>Optional sections</h3>
                     <small>Hide parts of the workbench when you want a narrower, simpler surface.</small>
                   </div>
@@ -3811,7 +4132,12 @@
         </div>
 
         <div class="chat-workspace" id="chatPanel">
-          <div class="messages" id="messages"></div>
+          <div class="messages-wrap">
+            <div class="messages" id="messages"></div>
+            <button class="jump-latest" id="jumpToLatestButton" type="button" hidden>
+              <span aria-hidden="true">&#8595;</span>Jump to latest
+            </button>
+          </div>
           <form class="composer" id="composer">
             <div class="composer-row">
               <textarea id="composerInput" placeholder="How can I help?" rows="1"></textarea>
@@ -3833,10 +4159,14 @@
                   </button>
                   <div class="model-dropdown" id="modelDropdown"></div>
                 </div>
+                <button class="context-meter" id="contextMeter" type="button" hidden>
+                  <span class="context-meter-bar" aria-hidden="true"><span class="context-meter-fill" id="contextMeterFill"></span></span>
+                  <span id="contextMeterLabel">— / —</span>
+                </button>
                 <button class="icon-button composer-circle" id="refreshModelsButton" type="button" aria-label="Refresh models" title="Refresh models"><svg class="composer-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 11.9-2"/></svg></button>
               </div>
               <div class="composer-tool-group">
-                <button class="icon-button send" type="submit" aria-label="Send"><svg class="composer-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m7 11 5-5 5 5M12 6v12"/></svg></button>
+                <button class="icon-button send" id="sendButton" type="submit" aria-label="Send" title="Send"><svg class="composer-control-icon send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m7 11 5-5 5 5M12 6v12"/></svg><svg class="composer-control-icon stop-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg></button>
               </div>
             </div>
           </form>
@@ -4016,9 +4346,19 @@
       download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>'
     };
 
+    // Maps a chat width preset onto the --chat-max custom property. "full" lets the
+    // message column use the whole pane; the two fixed widths keep line length in a
+    // comfortable reading range on wide monitors.
+    const CHAT_WIDTHS = Object.freeze({
+      comfortable: "860px",
+      wide: "1100px",
+      full: "100%"
+    });
+
     const DEFAULT_APPEARANCE = Object.freeze({
       brief: "",
       themeMode: "auto",
+      chatWidth: "wide",
       brandName: "PrivateGPT",
       welcomeTitle: "Ask PrivateGPT",
       welcomeSubtitle: "Use your local documents, tools, databases, MCP servers, skills, and custom browser tools from one chat.",
@@ -4092,7 +4432,8 @@
         customTools: [defaultCustomTool()]
       },
       chats: [],
-      activeChatId: null
+      activeChatId: null,
+      sidebarCollapsed: false
     });
 
     let state = loadState();
@@ -4112,7 +4453,20 @@
           appearance: ""
         }
       },
-      sendingChatIds: new Set()
+      sendingChatIds: new Set(),
+      // One AbortController per in-flight chat, so Stop can cancel the request
+      // for the chat the reader is looking at without touching the others.
+      abortControllers: new Map(),
+      // Whether new content should pull the transcript down. Derived from scroll
+      // position rather than from which code path scrolled, so a programmatic
+      // scroll back to the bottom re-arms it without any extra bookkeeping.
+      stickToBottom: true,
+      lastRenderedChatId: null,
+      // Which long messages the reader has opened. Session-scoped on purpose:
+      // a reload should start tidy rather than restoring a wall of text.
+      expandedMessages: new Set(),
+      // The user message currently open for editing, if any.
+      editingMessageId: null
     };
 
     const $ = (selector, root = document) => root.querySelector(selector);
@@ -4348,6 +4702,7 @@
       return {
         brief: $(`#${ids.brief}`)?.value.trim() || "",
         themeMode: state.uiAppearance?.themeMode || DEFAULT_APPEARANCE.themeMode,
+        chatWidth: state.uiAppearance?.chatWidth || DEFAULT_APPEARANCE.chatWidth,
         brandName: $(`#${ids.brandName}`)?.value.trim() || DEFAULT_APPEARANCE.brandName,
         welcomeTitle: $(`#${ids.welcomeTitle}`)?.value.trim() || DEFAULT_APPEARANCE.welcomeTitle,
         welcomeSubtitle: $(`#${ids.welcomeSubtitle}`)?.value.trim() || DEFAULT_APPEARANCE.welcomeSubtitle,
@@ -4461,6 +4816,7 @@
         isLightTheme ? 0.82 : 0.74
       ));
       root.style.setProperty("--sidebar-glow", withAlpha(palette.secondary || DEFAULT_APPEARANCE.palette.secondary, isLightTheme ? 0.14 : 0.24));
+      root.style.setProperty("--chat-max", CHAT_WIDTHS[appearance.chatWidth] || CHAT_WIDTHS[DEFAULT_APPEARANCE.chatWidth]);
       document.body.dataset.themeMode = isLightTheme ? "light" : "dark";
       const brandLogo = $("#brandLogo");
       if (brandLogo) {
@@ -4639,7 +4995,19 @@
       syncHash();
     }
 
+    function applySidebarCollapsed() {
+      const collapsed = state.sidebarCollapsed === true;
+      $(".app").classList.toggle("sidebar-collapsed", collapsed);
+      const button = $("#sidebarToggleButton");
+      if (!button) return;
+      const label = collapsed ? "Expand sidebar" : "Collapse sidebar";
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      button.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    }
+
     function renderSidebar() {
+      applySidebarCollapsed();
       $("#contextNav").classList.toggle("active", runtime.view === "context");
       $("#apiDebuggerNav").classList.toggle("active", runtime.view === "apiDebugger");
       $("#settingsNav").classList.toggle("active", runtime.view === "settings");
@@ -4747,6 +5115,8 @@
       $("#onboardingUsername").value = state.privateGptUsername || "";
       $("#onboardingPassword").value = state.privateGptPassword || "";
       $("#onboardingCollection").value = state.context.documents.defaultCollection || "pgpt_collection";
+      const chatWidthSelect = $("#appearanceChatWidth");
+      if (chatWidthSelect) chatWidthSelect.value = state.uiAppearance?.chatWidth || DEFAULT_APPEARANCE.chatWidth;
       populateAppearanceForm("appearance");
       populateAppearanceForm("onboarding");
       setAppearanceGeneratorStatus("appearance", runtime.appearanceGeneration.statusByPrefix.appearance || "");
@@ -4866,6 +5236,9 @@
         ...candidate,
         brief: typeof candidate?.brief === "string" && candidate.brief.trim() ? candidate.brief.trim() : fallbackBrief,
         themeMode: ["light", "dark", "auto"].includes(candidate?.themeMode) ? candidate.themeMode : DEFAULT_APPEARANCE.themeMode,
+        chatWidth: CHAT_WIDTHS[candidate?.chatWidth]
+          ? candidate.chatWidth
+          : (state.uiAppearance?.chatWidth || DEFAULT_APPEARANCE.chatWidth),
         palette: {
           ...DEFAULT_APPEARANCE.palette,
           ...(candidate?.palette || {})
@@ -5177,8 +5550,110 @@
       renderModelSelect();
       renderToolMenu();
       renderMessages();
-      const sendBtn = $(".icon-button.send");
-      if (sendBtn) sendBtn.disabled = !state.selectedModel;
+      renderSendButton();
+      renderContextMeter();
+    }
+
+    const DEFAULT_MAX_OUTPUT_TOKENS = 4096;
+
+    function selectedModelInfo() {
+      return state.models.find(model => model.id === state.selectedModel) || null;
+    }
+
+    function chatMaxTokens(chat) {
+      const configured = Number(chat?.settings?.maxTokens);
+      if (Number.isFinite(configured) && configured > 0) return Math.round(configured);
+      const advertised = Number(selectedModelInfo()?.max_tokens);
+      return Number.isFinite(advertised) && advertised > 0 ? advertised : DEFAULT_MAX_OUTPUT_TOKENS;
+    }
+
+    function contextWindowSize() {
+      const advertised = Number(selectedModelInfo()?.max_input_tokens);
+      return Number.isFinite(advertised) && advertised > 0 ? advertised : null;
+    }
+
+    function formatTokenCount(value) {
+      if (!Number.isFinite(value)) return "—";
+      if (value < 1000) return String(Math.round(value));
+      return `${(value / 1000).toFixed(value < 10000 ? 1 : 0)}k`;
+    }
+
+    // Shows how much of the model's input window the conversation is using.
+    // The figure comes from the usage the server reports on each response, and
+    // can be recounted on demand for the request that would be sent next.
+    function renderContextMeter() {
+      const meter = $("#contextMeter");
+      if (!meter) return;
+      const chat = activeChat();
+      const limit = contextWindowSize();
+      const used = Number(chat?.contextTokens);
+      // The count endpoint rejects an empty conversation ("Messages cannot be
+      // empty"), so there is nothing to ask for until something has been sent.
+      const countable = Boolean(chat) && sanitizeMessages(chat.messages).length > 0;
+      meter.disabled = !countable;
+      if (!chat || !limit || !Number.isFinite(used)) {
+        meter.hidden = !limit;
+        if (!meter.hidden) {
+          $("#contextMeterLabel").textContent = `— / ${formatTokenCount(limit)}`;
+          $("#contextMeterFill").style.width = "0%";
+          meter.classList.remove("warn", "danger");
+          meter.title = countable
+            ? "Context window usage. Click to count the tokens in this conversation."
+            : "Context window usage. Send a message to measure it.";
+          meter.setAttribute("aria-label", meter.title);
+        }
+        return;
+      }
+      const ratio = Math.min(used / limit, 1);
+      meter.hidden = false;
+      meter.classList.toggle("warn", ratio >= 0.75 && ratio < 0.9);
+      meter.classList.toggle("danger", ratio >= 0.9);
+      $("#contextMeterLabel").textContent = `${formatTokenCount(used)} / ${formatTokenCount(limit)}`;
+      $("#contextMeterFill").style.width = `${Math.round(ratio * 100)}%`;
+      const label = `Context: ${used.toLocaleString()} of ${limit.toLocaleString()} tokens used. Click to recount.`;
+      meter.title = label;
+      meter.setAttribute("aria-label", label);
+    }
+
+    // Counts what the next request would actually send, which is more accurate
+    // than the last response's usage once documents or tools have been toggled.
+    async function recountContextTokens() {
+      const chat = activeChat();
+      if (!chat) return;
+      if (!state.selectedModel) {
+        toast("Select a model first.", "error");
+        return;
+      }
+      const progress = toast("Counting tokens...", "loading", { persistent: true });
+      try {
+        const body = buildChatBody(chat);
+        delete body.stream;
+        delete body.max_tokens;
+        const result = await apiFetch("/v1/messages/count_tokens", { method: "POST", body }, { label: "Count tokens" });
+        const counted = Number(result?.input_tokens);
+        if (!Number.isFinite(counted)) throw new Error("No input_tokens in response");
+        chat.contextTokens = counted;
+        touchChat(chat);
+        saveState();
+        renderContextMeter();
+        progress.update(`${counted.toLocaleString()} input tokens.`, "ok");
+      } catch (error) {
+        progress.update(`Could not count tokens: ${apiErrorMessage(error)}`, "error");
+      }
+    }
+
+    function renderSendButton() {
+      const button = $("#sendButton");
+      if (!button) return;
+      const chat = activeChat();
+      const sending = Boolean(chat) && runtime.sendingChatIds.has(chat.id);
+      const label = sending ? "Stop generating" : "Send";
+      button.classList.toggle("stopping", sending);
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      // Stop has to stay clickable even when no model is selected, otherwise a
+      // request started before the model list changed could not be cancelled.
+      button.disabled = !sending && !state.selectedModel;
     }
 
     function renderModelSelect() {
@@ -5398,6 +5873,16 @@
         }));
       }
       menu.appendChild(menuGroup("Knowledge", knowledgeRows));
+      menu.appendChild(menuGroup("Response", [
+        numberRow("Max output tokens", chatMaxTokens(chat), value => {
+          const parsed = Number.parseInt(value, 10);
+          // Blank or nonsense clears the override and falls back to whatever the
+          // selected model advertises.
+          chat.settings.maxTokens = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+          touchChat(chat);
+          saveState();
+        })
+      ]));
       if (state.enableCodeExecution !== false) {
         menu.appendChild(menuGroup("Code", [
           toggleRow("Code Execution", Boolean(chat.settings.enabledCodeExecution), checked => {
@@ -5431,6 +5916,14 @@
       return row;
     }
 
+    function numberRow(label, value, onChange) {
+      const row = document.createElement("label");
+      row.className = "toggle-row number-row";
+      row.innerHTML = `<span>${escapeHtml(label)}</span><input type="number" inputmode="numeric" min="1" step="1" value="${escapeAttr(String(value))}">`;
+      $("input", row).addEventListener("change", event => onChange(event.target.value));
+      return row;
+    }
+
     function selectableGroup(label, items, selectedIds, setter) {
       const wrap = document.createElement("div");
       wrap.className = "menu-group";
@@ -5461,6 +5954,9 @@
     function renderMessages() {
       const chat = activeChat();
       const wrap = $("#messages");
+      // Opening a different chat should always start at the newest message.
+      const switchedChat = runtime.lastRenderedChatId !== chat.id;
+      runtime.lastRenderedChatId = chat.id;
       const visibleMessages = chat.messages.filter(message => !message.hidden);
       const showLoading = runtime.sendingChatIds.has(chat.id) && !chat.messages.some(m => m.streaming);
       runtime.citations = new Map();
@@ -5475,6 +5971,7 @@
             </div>
           `;
         }
+        renderJumpToLatest();
         return;
       }
 
@@ -5510,8 +6007,9 @@
         loadingNode.dataset.loadingMessage = "true";
         wrap.appendChild(loadingNode);
       }
-      wrap.scrollTop = wrap.scrollHeight;
-      updateMessagesFade();
+      applyMessageCollapse();
+      applyMessageEditors();
+      scrollMessagesToBottom({ force: switchedChat });
     }
 
     function updateMessageNode(node, message) {
@@ -5542,6 +6040,152 @@
       if (!message.streaming && (message.role === "assistant" || message.role === "user") && contentWrap) {
         contentWrap.appendChild(renderMessageActions(message));
       }
+    }
+
+    // Messages taller than this are collapsed on arrival. Sits a little above the
+    // collapsed height so a message is never clipped to save a handful of pixels.
+    const COLLAPSE_THRESHOLD_PX = 340;
+
+    function setCollapseButtonState(button, expanded) {
+      const hint = expanded ? "Collapse text" : "Expand text";
+      button.title = hint;
+      button.setAttribute("aria-label", hint);
+      button.setAttribute("aria-expanded", expanded ? "true" : "false");
+      const label = $(".collapse-label", button);
+      if (label) label.textContent = expanded ? "Collapse" : "Expand";
+    }
+
+    // Long prompts push the reply off screen, so they arrive collapsed with an
+    // expander. Applied to what the reader wrote, not to answers, which are the
+    // thing they asked for. Reads are batched after the writes so the whole pass
+    // costs one layout pass rather than one per message.
+    function applyMessageCollapse() {
+      const wrap = $("#messages");
+      if (!wrap) return;
+      const candidates = $$(".message.user", wrap)
+        .map(node => ({ node, bubble: $(".message-bubble", node), text: $(".message-text", node) }))
+        .filter(entry => entry.bubble && entry.text);
+      candidates.forEach(({ bubble }) => bubble.classList.remove("collapsed"));
+      const measured = candidates.map(entry => ({
+        ...entry,
+        collapsible: entry.text.scrollHeight > COLLAPSE_THRESHOLD_PX
+      }));
+      measured.forEach(({ node, bubble, collapsible }) => {
+        const expanded = runtime.expandedMessages.has(node.dataset.messageId);
+        bubble.classList.toggle("collapsible", collapsible);
+        bubble.classList.toggle("collapsed", collapsible && !expanded);
+        node.classList.toggle("collapsible-message", collapsible);
+        const button = $(".msg-action-collapse", node);
+        if (button) setCollapseButtonState(button, expanded);
+      });
+    }
+
+    // Copies what was written or received, not the rendered HTML: markdown is
+    // what is useful to paste somewhere else.
+    function copyMessage(chatId, messageId) {
+      const chat = state.chats.find(c => c.id === chatId);
+      const message = chat?.messages.find(m => m.id === messageId);
+      if (!message) return;
+      const text = message.text
+        || (message.contentBlocks || []).filter(block => block?.type === "text").map(block => block.text).join("");
+      if (!text) {
+        toast("Nothing to copy.", "error");
+        return;
+      }
+      copyText(text, "Message copied");
+    }
+
+    // Rendered as a pass over the finished nodes, like the collapse measurement,
+    // so it survives the re-renders that happen while the editor is open. An
+    // existing editor is left alone so an in-progress draft is never discarded.
+    function applyMessageEditors() {
+      const wrap = $("#messages");
+      if (!wrap) return;
+      $$(".message.user", wrap).forEach(node => {
+        const messageId = node.dataset.messageId;
+        const editing = runtime.editingMessageId === messageId;
+        node.classList.toggle("editing", editing);
+        const existing = $(".message-editor", node);
+        if (!editing) {
+          existing?.remove();
+          return;
+        }
+        if (existing) return;
+        const chat = activeChat();
+        const message = chat?.messages.find(m => m.id === messageId);
+        if (!message) return;
+        const editor = document.createElement("div");
+        editor.className = "message-editor";
+        editor.innerHTML = `
+          <textarea class="message-edit-input" spellcheck="false" aria-label="Edit message"></textarea>
+          <div class="message-editor-actions">
+            <button class="msg-action-btn" type="button" data-action="cancel-message-edit">Cancel</button>
+            <button class="msg-action-btn primary" type="button" data-action="save-message-edit" data-chat-id="${escapeAttr(chat.id)}" data-message-id="${escapeAttr(messageId)}">Save and resend</button>
+          </div>
+        `;
+        const input = $(".message-edit-input", editor);
+        input.value = message.text || "";
+        $(".message-content", node).appendChild(editor);
+        input.style.height = `${Math.min(input.scrollHeight, 320)}px`;
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      });
+    }
+
+    function beginMessageEdit(messageId) {
+      runtime.editingMessageId = messageId;
+      renderMessages();
+    }
+
+    function cancelMessageEdit() {
+      if (!runtime.editingMessageId) return false;
+      runtime.editingMessageId = null;
+      renderMessages();
+      return true;
+    }
+
+    // Editing rewrites the question, so every answer that followed it is now
+    // answering something that was never asked. They are dropped and the turn is
+    // run again, the same way Retry does.
+    function saveMessageEdit(chatId, messageId) {
+      const chat = state.chats.find(c => c.id === chatId);
+      if (!chat || runtime.sendingChatIds.has(chatId)) return;
+      const idx = chat.messages.findIndex(m => m.id === messageId);
+      if (idx < 0) return;
+      const input = document.querySelector(`[data-message-id="${messageId}"] .message-edit-input`);
+      const text = (input?.value || "").trim();
+      if (!text) {
+        toast("Message cannot be empty.", "error");
+        return;
+      }
+      const message = chat.messages[idx];
+      message.text = text;
+      message.contentBlocks = [{ type: "text", text }];
+      message.apiMessage = { role: "user", content: text };
+      chat.messages = chat.messages.slice(0, idx + 1);
+      runtime.editingMessageId = null;
+      runtime.expandedMessages.delete(messageId);
+      touchChat(chat);
+      saveState();
+      renderMessages();
+      runtime.sendingChatIds.add(chatId);
+      render();
+      requestAssistant(chat, 0).catch(error => {
+        toast(`Chat failed: ${apiErrorMessage(error)}`, "error");
+      }).finally(() => {
+        runtime.sendingChatIds.delete(chatId);
+        touchChat(chat);
+        saveState();
+        render();
+      });
+    }
+
+    function toggleMessageCollapse(messageId) {
+      if (!messageId) return;
+      if (runtime.expandedMessages.has(messageId)) runtime.expandedMessages.delete(messageId);
+      else runtime.expandedMessages.add(messageId);
+      applyMessageCollapse();
+      renderJumpToLatest();
     }
 
     function messageRenderKey(message) {
@@ -5635,6 +6279,18 @@
       const actions = document.createElement("div");
       actions.className = "message-actions";
       const chatId = activeChat()?.id || "";
+
+      const copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "msg-action-btn";
+      copyBtn.dataset.action = "copy-message";
+      copyBtn.dataset.chatId = chatId;
+      copyBtn.dataset.messageId = message.id;
+      copyBtn.title = "Copy message";
+      copyBtn.setAttribute("aria-label", "Copy message");
+      copyBtn.textContent = "Copy";
+      actions.appendChild(copyBtn);
+
       if (message.role === "assistant") {
         const retryBtn = document.createElement("button");
         retryBtn.type = "button";
@@ -5646,6 +6302,28 @@
         retryBtn.disabled = !state.selectedModel;
         actions.appendChild(retryBtn);
       } else {
+        const expanded = runtime.expandedMessages.has(message.id);
+        const collapseBtn = document.createElement("button");
+        collapseBtn.type = "button";
+        collapseBtn.className = "msg-action-btn msg-action-collapse";
+        collapseBtn.dataset.action = "toggle-message-collapse";
+        collapseBtn.dataset.chatId = chatId;
+        collapseBtn.dataset.messageId = message.id;
+        collapseBtn.innerHTML = `<span class="collapse-caret" aria-hidden="true">&#9662;</span><span class="collapse-label"></span>`;
+        setCollapseButtonState(collapseBtn, expanded);
+        actions.appendChild(collapseBtn);
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "msg-action-btn";
+        editBtn.dataset.action = "edit-message";
+        editBtn.dataset.chatId = chatId;
+        editBtn.dataset.messageId = message.id;
+        editBtn.title = "Edit and resend";
+        editBtn.setAttribute("aria-label", "Edit and resend");
+        editBtn.textContent = "Edit";
+        actions.appendChild(editBtn);
+
         const delBtn = document.createElement("button");
         delBtn.type = "button";
         delBtn.className = "msg-action-btn danger";
@@ -6356,7 +7034,10 @@
       let match;
       while ((match = fence.exec(text))) {
         if (match.index > cursor) segments.push(renderMarkdownText(text.slice(cursor, match.index)));
-        segments.push(`<pre><code>${escapeHtml(match[1].replace(/^\w+\n/, ""))}</code></pre>`);
+        segments.push(
+          `<div class="code-block"><button class="code-copy-button" type="button" data-copy-code title="Copy code" aria-label="Copy code">Copy</button>` +
+          `<pre><code>${escapeHtml(match[1].replace(/^\w+\n/, ""))}</code></pre></div>`
+        );
         cursor = match.index + match[0].length;
       }
       if (cursor < text.length) segments.push(renderMarkdownText(text.slice(cursor)));
@@ -6620,7 +7301,7 @@
       throw lastError;
     }
 
-    async function apiStreamFetch(path, { method = "POST", body, headers = {} } = {}, debugMeta = {}, onDelta) {
+    async function apiStreamFetch(path, { method = "POST", body, headers = {}, signal } = {}, debugMeta = {}, onDelta) {
       const base = (state.privateGptBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, "");
       const url = `${base}${path}`;
       const requestHeaders = { "Content-Type": "application/json", ...headers };
@@ -6632,7 +7313,8 @@
       const response = await fetch(url, {
         method,
         headers: requestHeaders,
-        body: body !== undefined ? JSON.stringify(body) : undefined
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal
       });
       if (!response.ok) {
         const text = await response.text();
@@ -6645,7 +7327,7 @@
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      const messageData = { id: null, role: "assistant", content: [], stop_reason: null };
+      const messageData = { id: null, role: "assistant", content: [], stop_reason: null, usage: null };
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -6662,6 +7344,9 @@
             if (event.type === "message_start") {
               messageData.id = event.message?.id || messageData.id;
               messageData.role = event.message?.role || "assistant";
+              // message_start carries the input count; message_delta updates the
+              // output count as generation proceeds.
+              if (event.message?.usage) messageData.usage = { ...event.message.usage };
             } else if (event.type === "content_block_start") {
               const idx = event.index ?? 0;
               while (messageData.content.length <= idx) messageData.content.push(null);
@@ -6687,6 +7372,7 @@
               }
             } else if (event.type === "message_delta") {
               messageData.stop_reason = event.delta?.stop_reason || messageData.stop_reason;
+              if (event.usage) messageData.usage = { ...(messageData.usage || {}), ...event.usage };
             } else if (event.type === "error") {
               throw Object.assign(new Error(event.error?.message || "Stream error"), { body: event });
             }
@@ -6741,8 +7427,9 @@
       }
     }
 
-    async function loadModels() {
-      const progress = toast("Testing PrivateGPT connection...", "loading", { persistent: true });
+    async function loadModels(options = {}) {
+      const { showToast = true } = options;
+      const progress = showToast ? toast("Testing PrivateGPT connection...", "loading", { persistent: true }) : null;
       try {
         const result = await apiFetch("/v1/models", {}, { label: "Load models" });
         state.models = Array.isArray(result?.data) ? result.data : [];
@@ -6751,9 +7438,10 @@
         }
         saveState();
         render();
-        progress.update("Connected to PrivateGPT.", "ok");
+        progress?.update("Connected to PrivateGPT.", "ok");
       } catch (error) {
-        progress.update(`Could not load models: ${error.message}`, "error");
+        progress?.update(`Could not load models: ${error.message}`, "error");
+        if (!progress) toast(`Could not load models: ${error.message}`, "error");
       }
     }
 
@@ -6998,6 +7686,7 @@
       saveState();
       $("#composerInput").value = "";
       render();
+      scrollMessagesToBottom({ force: true });
       try {
         await requestAssistant(chat, 0);
       } catch (error) {
@@ -7043,7 +7732,9 @@
       let streamingTextEl = null;
 
       try {
-        const response = await apiStreamFetch("/v1/messages", { method: "POST", body }, { label: "Chat message" }, (blocks) => {
+        const controller = new AbortController();
+        runtime.abortControllers.set(chat.id, controller);
+        const response = await apiStreamFetch("/v1/messages", { method: "POST", body, signal: controller.signal }, { label: "Chat message" }, (blocks) => {
           const allBlocks = [...prefixBlocks, ...blocks];
           displayMessage.contentBlocks = allBlocks;
           displayMessage.text = allBlocks.filter(b => b?.type === "text").map(b => b.text).join("");
@@ -7057,8 +7748,7 @@
             // Scroll thinking pre to bottom so latest lines are always visible
             const thinkingPre = streamingTextEl.querySelector(".thinking-pre-wrap pre");
             if (thinkingPre) thinkingPre.scrollTop = thinkingPre.scrollHeight;
-            const wrap = document.querySelector(`[data-message-id="${displayId}"]`)?.closest(".messages");
-            if (wrap) { wrap.scrollTop = wrap.scrollHeight; updateMessagesFade(); }
+            scrollMessagesToBottom();
           }
         });
 
@@ -7094,9 +7784,15 @@
           displayMessage = finalMessage;
         }
 
+        if (response?.usage) {
+          const used = (Number(response.usage.input_tokens) || 0) + (Number(response.usage.output_tokens) || 0);
+          if (used > 0) chat.contextTokens = used;
+        }
+
         touchChat(chat);
         saveState();
         renderMessages();
+        renderContextMeter();
 
         // Execute any browser custom tool calls and merge results into the same display block.
         const toolUses = responseBlocks.filter(block => block?.type === "tool_use");
@@ -7127,6 +7823,22 @@
           await requestAssistant(chat, depth + 1, displayMessage);
         }
       } catch (error) {
+        // A stop is not a failure: keep whatever streamed, drop the streaming
+        // state, and let the caller return quietly.
+        if (error?.name === "AbortError") {
+          const stoppedIdx = chat.messages.findIndex(m => m.id === displayMessage.id);
+          if (stoppedIdx >= 0) {
+            const msg = chat.messages[stoppedIdx];
+            msg.streaming = false;
+            const hasRealContent = msg.text || msg.contentBlocks.some(b => b?.type !== "text" || b.text);
+            if (!hasRealContent) chat.messages.splice(stoppedIdx, 1);
+            else msg.apiMessage = { role: "assistant", content: msg.contentBlocks };
+          }
+          touchChat(chat);
+          saveState();
+          renderMessages();
+          return;
+        }
         if (mergeIntoMessage) {
           mergeIntoMessage.streaming = false;
           mergeIntoMessage.error = apiErrorMessage(error);
@@ -7148,7 +7860,18 @@
         saveState();
         renderMessages();
         throw error;
+      } finally {
+        runtime.abortControllers.delete(chat.id);
       }
+    }
+
+    // Cancels the in-flight request for a chat. Partial output is kept: the
+    // reader stopped because they had seen enough, not because it was wrong.
+    function stopGenerating(chatId) {
+      const controller = runtime.abortControllers.get(chatId);
+      if (!controller) return false;
+      controller.abort();
+      return true;
     }
 
     function sanitizeMessages(chatMessages) {
@@ -7298,7 +8021,7 @@
         tool_context: toolContext,
         mcp_servers: mcpServers,
         stream: true,
-        max_tokens: 4096,
+        max_tokens: chatMaxTokens(chat),
         thinking: { enabled: Boolean(reasoningEffort), type: reasoningEffort }
       };
       if (chat.settings.enabledCodeExecution) {
@@ -7671,6 +8394,43 @@
       el.style.setProperty("--fade-bot-stop", max - st > 6 ? "28px" : "0px");
     }
 
+    // A few pixels of tolerance: sub-pixel layout and the bottom mask mean an
+    // element parked at the bottom rarely reports an exact zero distance.
+    const STICK_TO_BOTTOM_THRESHOLD = 32;
+
+    function messagesAtBottom(el) {
+      return el.scrollHeight - el.scrollTop - el.clientHeight <= STICK_TO_BOTTOM_THRESHOLD;
+    }
+
+    // Called on every scroll, so it also re-arms sticking when the reader
+    // returns to the bottom under their own steam.
+    function syncStickToBottom() {
+      const el = $("#messages");
+      if (!el) return;
+      runtime.stickToBottom = messagesAtBottom(el);
+      renderJumpToLatest();
+    }
+
+    function renderJumpToLatest() {
+      const button = $("#jumpToLatestButton");
+      if (!button) return;
+      const el = $("#messages");
+      const hasOverflow = Boolean(el) && el.scrollHeight - el.clientHeight > STICK_TO_BOTTOM_THRESHOLD;
+      button.hidden = runtime.stickToBottom || !hasOverflow;
+    }
+
+    // Only pulls the transcript down when the reader is already at the bottom.
+    // `force` is for the moments where following the newest content is the whole
+    // point: sending a message, opening a chat, or asking for it explicitly.
+    function scrollMessagesToBottom({ force = false } = {}) {
+      const el = $("#messages");
+      if (!el) return;
+      if (force) runtime.stickToBottom = true;
+      if (runtime.stickToBottom) el.scrollTop = el.scrollHeight;
+      updateMessagesFade();
+      renderJumpToLatest();
+    }
+
     function updateChatListFade() {
       const wrap = $("#chatListWrap");
       if (!wrap) return;
@@ -7903,6 +8663,21 @@
       $("#defaultCollection").addEventListener("change", async event => {
         await switchActiveCollection(event.target.value, { showToast: false });
       });
+      $("#contextMeter").addEventListener("click", () => { void recountContextTokens(); });
+      $("#sidebarToggleButton").addEventListener("click", () => {
+        state.sidebarCollapsed = !state.sidebarCollapsed;
+        saveState();
+        applySidebarCollapsed();
+        // The message column grows or shrinks with the sidebar, so what overflows
+        // changes with it.
+        applyMessageCollapse();
+        scrollMessagesToBottom();
+      });
+      $("#appearanceChatWidth").addEventListener("change", event => {
+        applyAppearanceState({ ...state.uiAppearance, chatWidth: event.target.value });
+        saveState();
+        applyMessageCollapse();
+      });
       $("#onboardingCheckButton").addEventListener("click", runOnboardingCheck);
       $("#onboardingStepPill1").addEventListener("click", () => {
         state.onboarding.step = 1;
@@ -7957,7 +8732,19 @@
       });
       $("#composer").addEventListener("submit", event => {
         event.preventDefault();
+        const chat = activeChat();
+        if (chat && runtime.sendingChatIds.has(chat.id)) {
+          stopGenerating(chat.id);
+          return;
+        }
         sendChat($("#composerInput").value);
+      });
+      $("#messages").addEventListener("keydown", event => {
+        const input = event.target.closest(".message-edit-input");
+        if (!input || event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return;
+        event.preventDefault();
+        const button = $(".message-editor [data-action='save-message-edit']", input.closest(".message-content"));
+        if (button) saveMessageEdit(button.dataset.chatId, button.dataset.messageId);
       });
       $("#composerInput").addEventListener("keydown", event => {
         if (event.key === "Enter" && !event.shiftKey) {
@@ -7985,7 +8772,7 @@
           setTimeout(() => $("#modelSearchInput", dropdown)?.focus(), 0);
         }
       });
-      $("#refreshModelsButton").addEventListener("click", loadModels);
+      $("#refreshModelsButton").addEventListener("click", () => { void loadModels(); });
       $("#composerFileInput").addEventListener("change", async event => {
         const files = Array.from(event.target.files || []);
         const chat = activeChat();
@@ -8012,11 +8799,22 @@
           openCitationModal(citationButton.dataset.citationRef);
           return;
         }
-        const msgActionBtn = event.target.closest("[data-action='retry-message'],[data-action='delete-message']");
+        const msgActionBtn = event.target.closest(".msg-action-btn");
         if (msgActionBtn) {
           const { action, chatId, messageId } = msgActionBtn.dataset;
           if (action === "retry-message") retryFromMessage(chatId, messageId);
           else if (action === "delete-message") deleteMessage(chatId, messageId);
+          else if (action === "toggle-message-collapse") toggleMessageCollapse(messageId);
+          else if (action === "copy-message") copyMessage(chatId, messageId);
+          else if (action === "edit-message") beginMessageEdit(messageId);
+          else if (action === "cancel-message-edit") cancelMessageEdit();
+          else if (action === "save-message-edit") saveMessageEdit(chatId, messageId);
+          return;
+        }
+        const codeCopyButton = event.target.closest("[data-copy-code]");
+        if (codeCopyButton) {
+          const code = $("pre code", codeCopyButton.parentElement);
+          copyText(code?.textContent || "", "Code copied");
           return;
         }
         if (!event.target.closest(".tool-menu-wrap") && !event.target.closest(".menu-panel")) closeToolsMenu();
@@ -8032,9 +8830,13 @@
       });
       document.addEventListener("keydown", event => {
         if (event.key !== "Escape") return;
+        if (cancelMessageEdit()) return;
         if ($("#modalBackdrop").classList.contains("open")) { closeModal(); return; }
         if ($("#modelDropdown")?.classList.contains("open")) { closeModelDropdown(); return; }
         if ($("#toolsMenu").classList.contains("open")) { closeToolsMenu(); return; }
+        // Last, so Escape still closes an overlay in preference to stopping a stream.
+        const chat = activeChat();
+        if (chat && runtime.sendingChatIds.has(chat.id)) stopGenerating(chat.id);
       });
 
       // Browser back/forward restores the view
@@ -8045,7 +8847,17 @@
       updateChatListFade();
 
       // Scroll fades for the messages list
-      $("#messages").addEventListener("scroll", updateMessagesFade, { passive: true });
+      $("#messages").addEventListener("scroll", () => {
+        updateMessagesFade();
+        syncStickToBottom();
+      }, { passive: true });
+      $("#jumpToLatestButton").addEventListener("click", () => scrollMessagesToBottom({ force: true }));
+      // Whether a message overflows depends on the column width, so re-measure
+      // when the window changes size or the width preset does.
+      window.addEventListener("resize", () => {
+        applyMessageCollapse();
+        renderJumpToLatest();
+      }, { passive: true });
       updateMessagesFade();
     }
 
@@ -8203,6 +9015,11 @@
     restoreFromHash();
     if (!state.chats.length) createChat();
     else render();
+    // state.models is persisted, so without this the model picker keeps showing whatever
+    // was cached the last time someone pressed "Test API" -- models added or removed on the
+    // server since then never appear, and a reload does not help. Refresh quietly on boot;
+    // on failure the cached list is left in place so the picker still works offline.
+    loadModels({ showToast: false });
     refreshSkills({ showToast: false });
     loadGitHubStars();
   </script>

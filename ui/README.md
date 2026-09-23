@@ -26,3 +26,11 @@ For changes to `./ui/index.html`, validate that the inline script parses:
 ```sh
 node -e "const fs=require('fs'); const html=fs.readFileSync('./ui/index.html','utf8'); const m=html.match(/<script>([\s\S]*)<\/script>/); if(!m) throw new Error('script tag not found'); new Function(m[1]); console.log('script ok')"
 ```
+
+Behaviour of the chat controls is covered by `tests/ui/`, which lifts named functions out of the inline script and runs them under Node against a small fake DOM. It needs `node` on the `PATH` and is skipped without it:
+
+```sh
+PGPT_HOME=. PYTHONPATH=. uv run pytest tests/ui
+```
+
+When a test needs a function that is not yet covered, pass its name to `run()` in `tests/ui/workbench_script.py` together with any helpers it calls; everything else in the script stays unevaluated.

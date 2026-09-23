@@ -354,6 +354,13 @@ On reload:
 
 ## Sidebar Behavior
 
+The sidebar can be collapsed to a narrow rail, handing its width to the message column. It
+collapses to a rail rather than disappearing so the navigation icons stay reachable and the
+control that restores it is still where it was used to collapse it. The choice is persisted in
+`state.sidebarCollapsed`. This applies only to the two-column layout; the narrow layout already
+stacks the shell, so the control is hidden there.
+
+
 Sidebar items:
 
 1. **Context**
@@ -404,7 +411,7 @@ Settings include:
 - Optional workspace instructions prepended ahead of the system prompt.
 - Use citations toggle, enabled by default.
 - **Collection** — the active document collection name used for document ingestion, listing, deletion, search, and chat requests. This field belongs in Settings because it is a global Workbench-level pointer, not a per-context source configuration.
-- Look-and-feel overrides for brand copy, welcome copy, palette, and optional visible sections.
+- Look-and-feel overrides for brand copy, welcome copy, palette, chat width, and optional visible sections.
 - Run onboarding again.
 - Test API connection.
 - Save settings.
@@ -745,7 +752,8 @@ Main non-technical experience.
 Header controls (in the composer toolbar below the textarea):
 
 - Model selector — a custom glass dropdown populated from `GET /v1/models`, showing the current model name with an animated chevron. Selecting a model updates `state.selectedModel`.
-- Refresh models icon button next to the model selector.
+- Refresh models icon button next to the model selector, which re-runs `GET /v1/models`.
+- The model list is fetched on startup as well as on demand. `state.models` is persisted, so without a startup refresh the dropdown keeps rendering whatever was cached the last time the list was fetched: models added to or removed from the server never appear, stale display names persist, and reloading the page does not help. The startup refresh is quiet (no toast on success) and non-destructive — if the request fails the cached list is kept so the picker still works while the server is unreachable, and the current `state.selectedModel` is preserved whenever it still exists in the refreshed list.
 - Reasoning effort is selected inside the model dropdown rather than through a standalone Thinking button. The dropdown places searchable models on the left and a capability-aware effort rail on the right with None, Low, Medium, High, Max, and XHigh choices.
 - The selected effort is stored per chat and sent to the messages API as `thinking: { enabled: Boolean(effort), type: effort }`. Unsupported effort choices are disabled using the selected model's `capabilities.effort` metadata.
 - Tools button — opens the Tools menu popup with per-category toggles:
@@ -764,9 +772,18 @@ For databases, MCP, skills, and custom tools:
 Message composer:
 
 - Text input.
-- Send button.
+- Send button. While a response is streaming it becomes Stop, and pressing it cancels the request. `Escape` also stops, after any overlay dismissal so it still closes a menu in preference.
+- Stopping is not a failure: whatever streamed is kept and recorded in the API history so the next turn can refer to it, with no error badge and no toast. A stop before any content arrived removes the empty message. Stop stays available even when no model is selected, or a request started before the model list changed could not be cancelled.
 - Pressing `Enter` while focused in the composer sends the message.
 - Pressing `Shift+Enter` inserts a line break.
+
+Context window meter:
+
+- A meter beside the model selector shows how much of the selected model's input window the conversation is using, against `max_input_tokens` from `GET /v1/models`. It turns amber past 75% and red past 90%.
+- The figure comes from the `usage` the server reports on each response. Clicking the meter recounts through `POST /v1/messages/count_tokens`, which measures the request that would actually be sent next — more accurate once documents or tools have been toggled.
+- That endpoint rejects an empty conversation, so the control is disabled until there is something to count.
+- **Max output tokens** is a per-chat setting in the tools menu, sent as `max_tokens`. It defaults to whatever the selected model advertises rather than a fixed value; clearing it returns to that default.
+- The **input** context window is not editable from Workbench. It is not a `ChatBody` field: it comes from the model's `context_window` in the server's model settings, and changing it means editing that file and restarting PrivateGPT — and making sure the inference server's own loaded context is at least as large.
 
 Message rendering:
 
@@ -785,11 +802,41 @@ Message rendering:
 - Do not show a raw response block in Chat; raw request/response details belong in Debugger.
 - While waiting for PrivateGPT, show an in-chat pending response indicator using the PrivateGPT circular avatar with a subtle breathing animation.
 
+Message width:
+
+- Assistant and tool replies use the full width of the message column. User messages stay within a narrower bubble, so the two roles remain easy to tell apart without relying on alignment alone.
+- The column width itself is a user preference, set in Settings > Appearance and applied through the `--chat-max` custom property: Comfortable (860px), Wide (1100px, the default), or Full width. Comfortable line length depends on both taste and monitor size, so this is a setting rather than a fixed value.
+
+Transcript scrolling:
+
+- New content follows the bottom of the transcript only while the reader is already at the bottom. Scrolling up during a streaming answer must not be undone by the next token.
+- Whether the transcript is "at the bottom" is derived from scroll position, not from which code path scrolled. Scrolling back down by hand therefore resumes following, as does any programmatic scroll to the bottom.
+- Three actions scroll unconditionally, because following the newest message is their purpose: sending a message, opening a chat, and pressing Jump to latest.
+- A "Jump to latest" control appears over the bottom of the transcript whenever it is scrolled away from the bottom and there is something to scroll to.
+
+Long messages:
+
+- A user message taller than 340px is collapsed to 300px on arrival, with a fade at the cut, so a long pasted prompt cannot push the reply that answers it off screen.
+- The collapsed message carries an expander in its action row, labelled "Expand text" and "Collapse text" with matching `aria-expanded`.
+- Assistant replies are never auto-collapsed; they are the thing the reader asked to see.
+- Expanded state is session-scoped rather than persisted, so a reload starts tidy.
+- Because overflow depends on the column width, the measurement re-runs on window resize and whenever the chat width preference changes.
+
+Message actions:
+
+- Each message shows an action row, revealed on hover. It stays permanently visible on a collapsible message, which would otherwise give no hint that it can be expanded.
+- Copy — available on every message. Copies the underlying markdown, not the rendered HTML.
+- Expand / Collapse — user messages only, and only when the message overflows.
+- Edit — user messages. Opens the message in place. Saving rewrites it and drops every turn that followed, because those answers were answering a question that is no longer there, then re-runs the turn. Cancel leaves the message untouched, Escape cancels, and Cmd/Ctrl+Enter saves.
+- Retry — assistant messages. Re-runs the request from that point.
+- Delete — user messages.
+- Every fenced code block carries its own copy control, revealed on hover or keyboard focus, which copies just the code.
+
 Request behavior:
 
 - Use `POST /v1/messages`.
 - Build `ChatBody` from chat messages plus chat-selected context/tools.
-- Use the selected model id from the `/v1/models` response. If models have not been loaded yet, fall back to `default`.
+- Use the selected model id from the `/v1/models` response. If models have not been loaded yet, fall back to `default`. If the persisted `state.selectedModel` is absent from a refreshed model list, selection falls back to the first available model.
 - Prefer the user-configured Settings system prompt when present.
 - If no system prompt or skill instructions are present, omit system prompt text.
 - When Documents are enabled and Settings > Use citations is on, send `system.citations.enabled: true` so semantic-search answers can include citation tags. This may require a top-level `system` object even when no prompt text is configured.
@@ -961,7 +1008,7 @@ Streaming/async endpoints can be deferred:
 
 1. User can configure API base URL.
 2. User can configure an optional API key / bearer token from the UI.
-3. User can load models from `GET /v1/models` and select one for each chat.
+3. User can load models from `GET /v1/models` and select one for each chat. The list refreshes automatically on startup, so models added or removed on the server appear without any manual step.
 4. User can create, rename, delete, and switch local chat sessions.
 5. Chat sessions persist across reload.
 6. Chat-specific tool toggles persist across reload.
@@ -982,6 +1029,14 @@ Streaming/async endpoints can be deferred:
 21. The implementation references the repository's relative OpenAPI file as the API contract and does not hardcode payload assumptions that contradict the schema.
 22. Sidebar includes a GitHub repository widget and a Not for Production disclosure.
 23. Settings includes a Clear local data action for this Workbench's browser state.
+24. Scrolling up during a streaming answer is not undone by incoming tokens, and a Jump to latest control returns the reader to the newest message.
+25. A long user message is collapsed on arrival and can be expanded and re-collapsed from its action row.
+26. Any message, and any fenced code block, can be copied as markdown.
+27. The chat column width can be changed in Settings and applies immediately.
+28. A streaming response can be stopped, and the partial answer is kept rather than discarded.
+29. A user message can be edited and resent, dropping the turns that followed it.
+30. Context window usage is visible, and max output tokens can be set per chat.
+31. The sidebar can be collapsed to a rail and the choice survives a reload.
 
 ## Suggested Build Order
 
