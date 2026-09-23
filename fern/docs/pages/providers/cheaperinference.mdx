@@ -1,0 +1,78 @@
+---
+title: "Cheaper Inference"
+description: "Use Cheaper Inference as an OpenAI-compatible cloud gateway for models from OpenAI, Anthropic, Google, DeepSeek, Z.ai and other labs."
+---
+
+[Cheaper Inference](https://cheaperinference.com) is an OpenAI-compatible gateway at `https://api.cheaperinference.com/v1`. One API key gives access to models from OpenAI, Anthropic, Google, DeepSeek, Z.ai and other labs.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ❌ |
+| Tool / function calling | ✅ model-dependent |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+The gateway has no embeddings endpoint. Use a second server for embeddings, for example [Ollama](/providers/ollama).
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Get an API key">
+    1. Sign up at [cheaperinference.com](https://cheaperinference.com).
+    2. Create an API key in the dashboard.
+  </Step>
+
+  <Step title="Start an embeddings server">
+    ```bash
+    ollama pull mxbai-embed-large
+    ```
+
+    The embeddings API is now available at `http://localhost:11434/v1`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://api.cheaperinference.com/v1 \
+          OPENAI_API_KEY=your-cheaperinference-api-key \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          PGPT_LLM_DEFAULT=gpt-5.4 \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://api.cheaperinference.com/v1 \
+          -e OPENAI_API_KEY=your-cheaperinference-api-key \
+          -e OPENAI_EMBEDDING_API_BASE=http://host.docker.internal:11434/v1 \
+          -e PGPT_LLM_DEFAULT=gpt-5.4 \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://api.cheaperinference.com/v1 \
+          OPENAI_API_KEY=your-cheaperinference-api-key \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          PGPT_LLM_DEFAULT=gpt-5.4 \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+---
+
+## Notes
+
+- `/v1/models` returns `context_length` for each chat model, so PrivateGPT sets the context window automatically.
+- `/v1/models` also lists image and video models. Set `PGPT_LLM_DEFAULT` to a chat model, such as `gpt-5.4`.
