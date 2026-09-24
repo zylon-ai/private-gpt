@@ -55,7 +55,7 @@ auto-discover-models:
 	uv run python scripts/auto_discover_models.py $(AUTO_DISCOVER_ARGS)
 
 update-openapi-spec:
-	uv run python scripts/update_claude_openapi.py
+	uv run python scripts/update_claude_specs.py
 
 
 ########################################################################################################################
