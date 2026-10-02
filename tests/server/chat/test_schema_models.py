@@ -2429,3 +2429,36 @@ class TestRealWorldSchemas:
         dumped = instance2.model_dump()
         assert dumped["labels"] == ["bug", "urgent", "backend"]
         assert dumped["links"][0]["url"] == "https://example.com"
+
+
+def test_models_are_cached_per_schema_and_name() -> None:
+    schema = {
+        "type": "object",
+        "properties": {"path": {"type": "string"}},
+        "required": ["path"],
+    }
+
+    first = create_model_from_json_schema(schema, "read_schema")
+    same = create_model_from_json_schema(json.loads(json.dumps(schema)), "read_schema")
+    other_name = create_model_from_json_schema(schema, "write_schema")
+    other_schema = create_model_from_json_schema(
+        {**schema, "required": []}, "read_schema"
+    )
+
+    assert same is first
+    assert other_name is not first
+    assert other_schema is not first
+
+
+def test_cached_model_is_isolated_from_schema_mutation() -> None:
+    schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {"query": {"type": "string"}},
+    }
+    model = create_model_from_json_schema(schema, "search_schema_iso")
+
+    schema["properties"]["extra"] = {"type": "integer"}
+    returned = model.model_json_schema()
+    returned["properties"]["other"] = {"type": "boolean"}
+
+    assert set(model.model_json_schema()["properties"]) == {"query"}
