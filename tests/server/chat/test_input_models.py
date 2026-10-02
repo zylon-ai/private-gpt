@@ -2570,3 +2570,32 @@ def test_validate_system_config_merges_prompt_flags() -> None:
     assert merged.prompt.code_execution is True
     assert merged.prompt.citations is False
     assert merged.prompt.thinking is False
+
+
+def test_inline_system_messages_stay_in_place() -> None:
+    # Claude Code sends a system message after each user turn; hoisting them into
+    # the system prompt would change the prompt prefix every turn.
+    from private_gpt.server.chat.chat_models import ChatBody
+
+    body = ChatBody.model_validate(
+        {
+            "system": "base",
+            "messages": [
+                {"role": "system", "content": "leading"},
+                {"role": "user", "content": "q1"},
+                {"role": "system", "content": [{"type": "text", "text": "r1"}]},
+                {"role": "assistant", "content": "a1"},
+                {"role": "system", "content": "before q2"},
+                {"role": "user", "content": "q2"},
+            ],
+        }
+    )
+
+    assert [s.text for s in body.system] == ["base", "leading"]
+    assert [m.role for m in body.messages] == ["user", "assistant", "user"]
+    first, last = body.messages[0].content, body.messages[2].content
+    assert isinstance(first[1], MidConvSystemBlock)
+    assert first[1].content[0].text == "r1"
+    assert isinstance(last[0], MidConvSystemBlock)
+    assert last[0].content[0].text == "before q2"
+    assert last[1].text == "q2"

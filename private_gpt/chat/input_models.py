@@ -1332,24 +1332,68 @@ class MessagesInputBase(BaseModel):
 
     @model_validator(mode="after")
     def extract_system_messages(self) -> "MessagesInputBase":
-        """Extract role=system messages and append them to the system list."""
-        system_msgs = [msg for msg in self.messages if msg.role == "system"]
-        if not system_msgs:
+        """Move role=system messages out of the message list.
+
+        Leading ones join the system list. Later ones become a MidConvSystemBlock
+        on the nearest user message (preceding, else following) so they keep their
+        position: hoisting them into the system prompt changes the prompt prefix on
+        every turn of an agent session (Claude Code sends one per turn), which
+        defeats the engine's prefix cache.
+        """
+        if not any(msg.role == "system" for msg in self.messages):
             return self
 
-        self.messages = [msg for msg in self.messages if msg.role != "system"]
+        messages: list[MessageInput] = []
+        pending: list[
+            MidConvSystemBlock
+        ] = []  # inline system text awaiting a user message
+        for msg in self.messages:
+            if msg.role != "system":
+                if pending and msg.role == "user":
+                    msg = msg.model_copy(
+                        update={"content": [*pending, *_blocks(msg.content)]}
+                    )
+                    pending = []
+                messages.append(msg)
+                continue
+            texts = _system_texts(msg.content)
+            if not texts:
+                continue
+            if not messages:
+                self.system.append(System(text="\n".join(texts)))
+                continue
+            block = MidConvSystemBlock(
+                content=[TextBlock(type="text", text=t) for t in texts]
+            )
+            if messages[-1].role == "user":
+                prev = messages[-1]
+                messages[-1] = prev.model_copy(
+                    update={"content": [*_blocks(prev.content), block]}
+                )
+            else:
+                pending.append(block)
+        if pending:  # no user message after them: keep the old behaviour
+            for block in pending:
+                self.system.append(
+                    System(text="\n".join(b.text for b in block.content))
+                )
 
-        for msg in system_msgs:
-            if isinstance(msg.content, str):
-                self.system.append(System(text=msg.content))
-            elif isinstance(msg.content, list):
-                texts = [
-                    b.text for b in msg.content if isinstance(b, TextBlock) and b.text
-                ]
-                if texts:
-                    self.system.append(System(text="\n".join(texts)))
-
+        self.messages = messages
         return self
+
+
+def _system_texts(content: str | list[Any]) -> list[str]:
+    if isinstance(content, str):
+        return [content] if content else []
+    return [b.text for b in content if isinstance(b, TextBlock) and b.text]
+
+
+def _blocks(content: str | list[Any]) -> list[Any]:
+    return (
+        [TextBlock(type="text", text=content)]
+        if isinstance(content, str)
+        else list(content)
+    )
 
 
 class CompletionInput(BaseModel):
