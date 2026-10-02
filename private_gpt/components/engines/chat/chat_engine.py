@@ -958,6 +958,17 @@ class ChatLoopEngine:
         selected = [tool for tool in tool_specs if (tool.name or "") in allowed_names]
         return [adapt_to_async_tool(tool.to_function_tool()) for tool in selected]
 
+    @staticmethod
+    def _is_client_tool(run: _LoopRun, tool_name: str | None) -> bool:
+        """Whether the request's original tools declare *tool_name* as a client tool."""
+        original = run.state.original_input
+        if original is None or not tool_name:
+            return False
+        return any(
+            tool.name == tool_name and tool.runtime == "client"
+            for tool in original.context_stack.all_tools()
+        )
+
     async def _handle_tool_use(
         self,
         run: _LoopRun,
@@ -976,6 +987,19 @@ class ChatLoopEngine:
             )
 
         tool_spec = tool_specs_by_name.get(tool_call.tool_name or "")
+
+        if tool_spec is None and self._is_client_tool(run, tool_call.tool_name):
+            # A client tool hidden from this iteration (e.g. loop recovery drops every
+            # tool) is still the caller's to execute: a server-side tool_result is not a
+            # valid block for Anthropic clients and ends their session.
+            return ToolExecutionResult(
+                status=ToolExecutionStatus.NOT_EXECUTED,
+                tool_selection=ToolSelection(
+                    tool_id=call_id,
+                    tool_name=tool_call.tool_name,
+                    tool_kwargs=tool_call.tool_kwargs,
+                ),
+            )
 
         if tool_spec is None:
             error_content = f"Tool '{tool_call.tool_name}' not found."

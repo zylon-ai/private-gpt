@@ -23,6 +23,7 @@ from private_gpt.components.chat.models.chat_config_models import (
     ResolvedToolConfig,
     ToolSpec,
 )
+from private_gpt.components.context.models.context_stack import ContextStack
 from private_gpt.components.engines.chat.async_chat_engine import (
     AsyncChatEngine,
     LocalEventChannel,
@@ -35,6 +36,10 @@ from private_gpt.components.engines.chat.chat_engine_interface import (
     LoopChatEngineAdapter,
 )
 from private_gpt.components.engines.chat.chat_runner import ChatRunner
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
+    ChatRequestLoopInterceptor,
+)
+from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.streaming.tasks.chat_scheduler import LocalChatScheduler
 from private_gpt.components.tools.tool_scheduler import LocalToolScheduler
@@ -111,10 +116,11 @@ def _build_engine(
     engine_kwargs: dict[str, Any],
     llm_component: LLMComponent,
     max_iterations: int,
+    request_interceptors: list[Any] | None = None,
 ) -> tuple[ChatEngine, ChatRunner | None]:
     engine = engine_cls(
         llm_component=llm_component,
-        request_interceptors=[],
+        request_interceptors=request_interceptors or [],
         response_interceptors=[],
         max_iterations=max_iterations,
         **engine_kwargs,
@@ -292,6 +298,76 @@ async def test_loop_handles_tool_call_with_missing_spec(
         and isinstance(event.content_block, ToolResultBlock)
         and event.content_block.is_error
         and event.content_block.content == "Tool 'str_replace' not found."
+        for event in events
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_returns_hidden_client_tool_call_to_caller(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    """A client tool removed from the iteration's stack stays the caller's to run.
+
+    Loop recovery replaces the whole context stack (no tools) for one iteration; a
+    model that still calls the client's `bash` tool must get a tool_use stop, not a
+    server-side "not found" tool_result, which Anthropic clients reject.
+    """
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[ToolSpec(name="bash", type="bash", runtime="client")]
+    )
+
+    async def _hide_tools(context: Any) -> None:
+        if context.phase != InterceptorPhase.BEFORE_ITERATION:
+            return
+        state = context.state
+        state.input.context_stack = ContextStack()
+        context.set_state(state)
+
+    hide_tools = MagicMock(spec=ChatRequestLoopInterceptor)
+    hide_tools.intercept.side_effect = _hide_tools
+
+    mock_llm = get_mock_function_calling_llm(
+        [
+            [
+                ToolSelection(
+                    tool_id="tool_1",
+                    tool_name="bash",
+                    tool_kwargs={"command": "ls"},
+                )
+            ]
+        ]
+    )
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=1,
+        request_interceptors=[hide_tools],
+    )
+
+    events = await _run_engine(engine=engine, request=request, runner=runner)
+
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolUseBlock)
+        and event.content_block.name == "bash"
+        for event in events
+    )
+    assert not any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolResultBlock)
+        for event in events
+    )
+    assert any(
+        isinstance(event, RawMessageDeltaEvent)
+        and event.delta.stop_reason == "tool_use"
         for event in events
     )
 
