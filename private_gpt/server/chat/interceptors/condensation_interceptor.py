@@ -207,9 +207,22 @@ async def _consume_and_emit_with_min_duration(
     tracker = tracker if tracker is not None else _OpenBlockTracker()
 
     if min_duration is not None:
-        await asyncio.sleep(min_duration)
-
+        # Buffer for up to min_duration, but stop as soon as the producer finishes:
+        # a fixed sleep here delayed every request (and every agent iteration) by
+        # min_duration even when no condensation was needed.
         buffered: list[Event | object | None] = []
+        deadline = asyncio.get_running_loop().time() + min_duration
+        while True:
+            remaining = deadline - asyncio.get_running_loop().time()
+            if remaining <= 0:
+                break
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=remaining)
+            except TimeoutError:
+                break
+            buffered.append(event)
+            if event is _SENTINEL:
+                break
         while not queue.empty():
             buffered.append(queue.get_nowait())
 
