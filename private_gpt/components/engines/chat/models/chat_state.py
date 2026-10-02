@@ -90,7 +90,11 @@ class ChatOutputState(BaseModel):
 
 
 class ChatTimelineEntry(BaseModel):
-    """Capture one immutable timeline snapshot for debugging."""
+    """Capture one immutable timeline snapshot for debugging.
+
+    The engines no longer record these: each entry cost a deep copy of the whole state
+    and nothing read the timeline. Kept so stored states and fixtures still validate.
+    """
 
     iteration: int
     phase: TimelinePhase

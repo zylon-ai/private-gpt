@@ -69,7 +69,6 @@ from private_gpt.components.engines.chat.models.chat_llm_params import (
 )
 from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
-    TimelinePhase,
 )
 from private_gpt.components.engines.chat.models.chat_state import (
     ChatInputState,
@@ -78,7 +77,6 @@ from private_gpt.components.engines.chat.models.chat_state import (
     ChatRuntimeState,
     ChatState,
     ChatStatus,
-    ChatTimelineEntry,
 )
 from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
@@ -772,7 +770,6 @@ class AsyncChatEngine:
         )
         channel.emit(RawMessageStartEvent.from_defaults())
         await channel.flush()
-        run.state = self._snapshot(run.state, TimelinePhase.START)
         run.state = run.state.model_copy(deep=True)
         await self.run_interceptor_phase(
             run,
@@ -875,10 +872,8 @@ class AsyncChatEngine:
                 run.state.output.pending_external_tool_calls = pending_external
                 run.state.output.stop_reason = StopReasonEnum.TOOL_USE.value
                 run.state.output.status = ChatStatus.COMPLETED
-                run.state = self._snapshot(run.state, TimelinePhase.STOP)
                 return run.state
 
-            run.state = self._snapshot(run.state, TimelinePhase.AFTER_TOOLS)
             return await self._execute_after_iteration_checkpoint(
                 request,
                 iteration,
@@ -949,7 +944,6 @@ class AsyncChatEngine:
         )
         channel.emit(RawMessageStopEvent.from_defaults())
         run.state.output.status = ChatStatus.COMPLETED
-        run.state = self._snapshot(run.state, TimelinePhase.STOP)
         return run.state
 
     # ------------------------------------------------------------------
@@ -1063,7 +1057,6 @@ class AsyncChatEngine:
             run.state.input.context_stack,
         )
         run.state.runtime.iteration += 1
-        run.state = self._snapshot(run.state, TimelinePhase.BEFORE_LLM)
 
         llm_tools = self._build_tools(run.state)
         tool_specs_by_name = {
@@ -1148,7 +1141,6 @@ class AsyncChatEngine:
             *run.state.input.request.messages,
             assistant_message,
         ]
-        run.state = self._snapshot(run.state, TimelinePhase.AFTER_LLM)
 
         if not tool_calls:
             stop_reason = assistant_message.additional_kwargs.get("stop_reason")
@@ -1190,7 +1182,6 @@ class AsyncChatEngine:
             run.state.output.pause_type = _IterationCheckpoint.TOOLS
             run.state.output.pending_async_tools = pending_async
             run.state.output.pending_external_tool_calls = pending_external
-            run.state = self._snapshot(run.state, TimelinePhase.STOP)
             return
 
         if has_external_tool:
@@ -1199,12 +1190,9 @@ class AsyncChatEngine:
             run.state.output.stop_reason = StopReasonEnum.TOOL_USE.value
             # COMPLETED: job dispatches close_chat_job
             run.state.output.status = ChatStatus.COMPLETED
-            run.state = self._snapshot(run.state, TimelinePhase.STOP)
             return
 
         # Sync tools ran inline — run AFTER_TOOLS + AFTER_ITERATION, then CONTINUE
-        run.state = self._snapshot(run.state, TimelinePhase.AFTER_TOOLS)
-
         await self.run_interceptor_phase(
             run,
             InterceptorPhase.AFTER_ITERATION,
@@ -1794,13 +1782,6 @@ class AsyncChatEngine:
         if not interceptors:
             return
 
-        phase_marker = (
-            TimelinePhase.BEFORE_INTERCEPTORS
-            if phase == InterceptorPhase.BEFORE_ITERATION
-            else TimelinePhase.AFTER_INTERCEPTORS
-        )
-        run.state = self._snapshot(run.state, phase_marker)
-
         for interceptor in interceptors:
             context = ChatInterceptorContext(
                 state=run.state,
@@ -1828,19 +1809,6 @@ class AsyncChatEngine:
     # ------------------------------------------------------------------
     # Utility helpers (identical to ChatLoopEngine)
     # ------------------------------------------------------------------
-
-    def _snapshot(self, state: ChatState, phase: TimelinePhase) -> ChatState:
-        new_state = state.model_copy(deep=True)
-        new_state.timeline.append(
-            ChatTimelineEntry(
-                iteration=new_state.runtime.iteration,
-                phase=phase,
-                conversation_size=len(new_state.input.request.to_messages()),
-                tool_count=len(new_state.input.context_stack.all_tools()),
-                stop_reason=new_state.output.stop_reason,
-            )
-        )
-        return new_state
 
     @staticmethod
     def _extract_reasoning(message: ChatMessage) -> str | None:
