@@ -64,7 +64,8 @@ class StreamProcessor:
                         )
                         is_processing = True
 
-                event_data = await asyncio.to_thread(event_handler.serialize, event)
+                # Inline: a thread hop per token cost more than the serialization.
+                event_data = event_handler.serialize(event)
                 await self.stream_service.push_event(
                     correlation_id=correlation_id,
                     event_data=event_data,
