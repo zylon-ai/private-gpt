@@ -555,7 +555,8 @@ class ChatLoopEngine:
         lock: asyncio.Lock,
     ) -> ChatResponse:
         """Handle one llm chunk with single-active-block transitions."""
-        assistant_message = current_response.message.model_copy(deep=True)
+        # Fold in place: a per-chunk copy of the growing message is quadratic.
+        assistant_message = current_response.message
         if chunk.delta:
             assistant_message.content = (assistant_message.content or "") + chunk.delta
         elif (
@@ -585,8 +586,9 @@ class ChatLoopEngine:
                         and len(existing) >= len(value)
                         and existing[-len(value) :] == value
                     ):
+                        existing.extend(value)
                         assistant_message.additional_kwargs["token_ids_delta"] = (
-                            existing + value
+                            existing
                         )
                     continue
                 if key == "tool_calls":
@@ -609,12 +611,9 @@ class ChatLoopEngine:
             additional_kwargs=assistant_message.additional_kwargs,
         )
 
-        tool_calls = await asyncio.to_thread(
-            partial(
-                llm.get_tool_calls_from_response,
-                response=folded_response,
-                error_on_no_tool_call=False,
-            )
+        tool_calls = llm.get_tool_calls_from_response(
+            response=folded_response,
+            error_on_no_tool_call=False,
         )
         if tool_calls:
             for tool_call in tool_calls:
