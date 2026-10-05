@@ -86,6 +86,9 @@ navigation:
           - page: OrcaRouter
             slug: providers/orcarouter
             path: ./docs/pages/providers/orcarouter.mdx
+          - page: Cheaper Inference
+            slug: providers/cheaperinference
+            path: ./docs/pages/providers/cheaperinference.mdx
       - section: Integrations
         skip-slug: true
         contents:
