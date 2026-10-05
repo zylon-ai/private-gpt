@@ -38,6 +38,43 @@ class ChatInputState(BaseModel):
     sampling_params: dict[str, Any] = Field(default_factory=dict)
     llm_kwargs: ChatLLMParameters = Field(default_factory=ChatLLMParameters)
 
+    def fork(self) -> Self:
+        """Copy that shares message contents but not what interceptors mutate.
+
+        Interceptors mutate the request config objects (system, context,
+        tool_config, citation, thinking) and each message's
+        ``additional_kwargs`` in place; contents and blocks are replaced,
+        never mutated. ``context_stack`` is frozen.
+        """
+        request = self.request
+        messages = [
+            message.model_copy(
+                update={"additional_kwargs": dict(message.additional_kwargs)}
+            )
+            for message in request.messages
+        ]
+        tool_config = request.tool_config.model_copy()
+        if isinstance(getattr(tool_config, "tools", None), list):
+            tool_config.tools = list(tool_config.tools)  # type: ignore[attr-defined]
+        forked_request = request.model_copy(
+            update={
+                "messages": messages,
+                "system": request.system.model_copy(),
+                "tool_config": tool_config,
+                "context": request.context.model_copy(),
+                "citation": request.citation.model_copy(),
+                "thinking": request.thinking.model_copy(),
+                "sampling_params": dict(request.sampling_params),
+            }
+        )
+        return self.model_copy(
+            update={
+                "request": forked_request,
+                "sampling_params": dict(self.sampling_params),
+                "llm_kwargs": self.llm_kwargs.model_copy(),
+            }
+        )
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
@@ -159,3 +196,30 @@ class ChatState(BaseModel):
         copied.original_input = original_input
 
         return copied
+
+    def fork(self) -> Self:
+        """Copy for a new engine step without deep-copying the conversation.
+
+        A deep copy cost ~5 ms per call on a 600 KB history and the engine
+        takes several per iteration. See ``ChatInputState.fork`` for what is
+        shared; the runtime cache and output containers get their own copies.
+        """
+        runtime = self.runtime.model_copy(
+            update={"cache": self.runtime.cache.model_copy(deep=True)}
+        )
+        output = self.output.model_copy(
+            update={
+                "pending_external_tool_calls": list(
+                    self.output.pending_external_tool_calls
+                ),
+                "pending_async_tools": dict(self.output.pending_async_tools),
+            }
+        )
+        return self.model_copy(
+            update={
+                "input": self.input.fork(),
+                "runtime": runtime,
+                "output": output,
+                "timeline": list(self.timeline),
+            }
+        )

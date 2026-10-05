@@ -429,7 +429,7 @@ class AsyncChatEngine:
                 original_input=state.original_input,
             )
             if state.output.pending_external_tool_calls:
-                close_state = close_state.model_copy(deep=True)
+                close_state = close_state.fork()
                 close_state.output.pending_external_tool_calls = list(
                     state.output.pending_external_tool_calls
                 )
@@ -660,7 +660,7 @@ class AsyncChatEngine:
                     original_input=original_input,
                 )
                 if state.output.pending_external_tool_calls:
-                    close_state = close_state.model_copy(deep=True)
+                    close_state = close_state.fork()
                     close_state.output.pending_external_tool_calls = list(
                         state.output.pending_external_tool_calls
                     )
@@ -748,9 +748,9 @@ class AsyncChatEngine:
         self._apply_payload_usage(run, checkpoint_context.payload)
         await self._run_intercepted_iteration(run, channel)
         self._store_runtime_usage(run)
-        run.state = run.state.model_copy(deep=True)
+        run.state = run.state.fork()
         run.state.runtime.next_block_count = run.block_count
-        return run.state.model_copy(deep=True)
+        return run.state.fork()
 
     async def _execute_start_checkpoint(
         self,
@@ -770,14 +770,14 @@ class AsyncChatEngine:
         )
         channel.emit(RawMessageStartEvent.from_defaults())
         await channel.flush()
-        run.state = run.state.model_copy(deep=True)
+        run.state = run.state.fork()
         await self.run_interceptor_phase(
             run,
             InterceptorPhase.VALIDATION,
             self._request_interceptors,
             channel,
         )
-        run.state = run.state.model_copy(deep=True)
+        run.state = run.state.fork()
         run.state.output.status = ChatStatus.CONTINUE
         return run.state
 
@@ -868,7 +868,7 @@ class AsyncChatEngine:
             )
 
             if pending_external:
-                run.state = run.state.model_copy(deep=True)
+                run.state = run.state.fork()
                 run.state.output.pending_external_tool_calls = pending_external
                 run.state.output.stop_reason = StopReasonEnum.TOOL_USE.value
                 run.state.output.status = ChatStatus.COMPLETED
@@ -908,7 +908,7 @@ class AsyncChatEngine:
             self._request_interceptors,
             channel,
         )
-        run.state = run.state.model_copy(deep=True)
+        run.state = run.state.fork()
         run.state.runtime.next_block_count = run.block_count
         run.state.output.status = ChatStatus.CONTINUE
         return run.state
@@ -931,7 +931,7 @@ class AsyncChatEngine:
         )
         self._apply_payload_usage(run, checkpoint_context.payload)
         stop_reason = checkpoint_context.stop_reason
-        run.state = run.state.model_copy(deep=True)
+        run.state = run.state.fork()
         run.state.output.stop_reason = stop_reason
         channel.emit(
             RawMessageDeltaEvent(
@@ -1043,7 +1043,7 @@ class AsyncChatEngine:
 
     async def _run_iteration(self, run: _Run, handler: _EventHandler) -> None:
         """One LLM call. Sets status; stop events are emitted by run_close."""
-        run.state = run.state.model_copy(deep=True)
+        run.state = run.state.fork()
 
         await self.run_interceptor_phase(
             run,
@@ -1136,7 +1136,7 @@ class AsyncChatEngine:
         self._validate_unique_tool_call_ids(assistant_message)
         self._accumulate_usage(run, assistant_message)
 
-        run.state = run.state.model_copy(deep=True)
+        run.state = run.state.fork()
         run.state.input.request.messages = [
             *run.state.input.request.messages,
             assistant_message,
@@ -1144,7 +1144,7 @@ class AsyncChatEngine:
 
         if not tool_calls:
             stop_reason = assistant_message.additional_kwargs.get("stop_reason")
-            run.state = run.state.model_copy(deep=True)
+            run.state = run.state.fork()
             run.state.output.stop_reason = stop_reason
             # COMPLETED: job dispatches close_chat_job — it emits stop events
             run.state.output.status = ChatStatus.COMPLETED
@@ -1177,7 +1177,7 @@ class AsyncChatEngine:
                     pending_async[tool_id] = result.async_handle or ""
 
         if has_pending_tool:
-            run.state = run.state.model_copy(deep=True)
+            run.state = run.state.fork()
             run.state.output.status = ChatStatus.WAITING
             run.state.output.pause_type = _IterationCheckpoint.TOOLS
             run.state.output.pending_async_tools = pending_async
@@ -1185,7 +1185,7 @@ class AsyncChatEngine:
             return
 
         if has_external_tool:
-            run.state = run.state.model_copy(deep=True)
+            run.state = run.state.fork()
             run.state.output.pending_external_tool_calls = pending_external
             run.state.output.stop_reason = StopReasonEnum.TOOL_USE.value
             # COMPLETED: job dispatches close_chat_job
@@ -1200,7 +1200,7 @@ class AsyncChatEngine:
             handler,
         )
 
-        run.state = run.state.model_copy(deep=True)
+        run.state = run.state.fork()
         run.state.output.status = ChatStatus.CONTINUE
 
     # ------------------------------------------------------------------
@@ -1583,7 +1583,7 @@ class AsyncChatEngine:
                         "raw_output": error_content,
                     },
                 )
-                run.state = run.state.model_copy(deep=True)
+                run.state = run.state.fork()
                 run.state.input.request.messages = [
                     *run.state.input.request.messages,
                     error_message,
@@ -1639,7 +1639,7 @@ class AsyncChatEngine:
             )
 
         async with lock:
-            run.state = run.state.model_copy(deep=True)
+            run.state = run.state.fork()
             run.state.input.request.messages = [
                 *run.state.input.request.messages,
                 response.tool_message,
@@ -1741,7 +1741,7 @@ class AsyncChatEngine:
         state.original_input = (
             original_input
             if original_input is not None
-            else state.input.model_copy(deep=True)
+            else state.input.fork()
         )
         run = _Run(
             state=state,
