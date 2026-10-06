@@ -54,30 +54,6 @@ class ChatAsyncService:
             },
         )
 
-    async def stream_chat_events(
-        self, request: ChatRequest, message_id: str
-    ) -> AsyncGenerator[Event, None]:
-        """Run a chat and read its engine events directly, for /v1/messages.
-
-        Unlike ``initiate_chat_stream`` + ``get_stream_events`` there is no
-        second Redis stream (XADD + XREAD + re-parse per token): the caller
-        holds the HTTP connection, so nobody else needs to observe it.
-        Closing the generator cancels the execution if it has not finished.
-        """
-        request = request.model_copy(
-            update={
-                "context": request.context.model_copy(
-                    update={"correlation_id": message_id}
-                )
-            }
-        )
-        events = await self._chat_facade.create_chat_event_generator(request=request)
-        return await PingEventInterceptor().intercept(events)
-
-    async def cancel_chat(self, message_id: str) -> bool:
-        """Cancel a chat started with ``stream_chat_events``."""
-        return await self._chat_facade.cancel(message_id)
-
     async def get_stream_events(
         self, message_id: str
     ) -> AsyncGenerator[Event, None] | None:
