@@ -88,7 +88,7 @@ async def test_worker_claims_arq_lock_with_owner_atomically() -> None:
 
     pipeline = _ClaimPipeline()
     pool = MagicMock()
-    pool.pipeline = MagicMock(return_value=pipeline)
+    pool.pipeline = MagicMock(side_effect=[_Pipeline([0]), pipeline])
     worker = HeartbeatWorker(
         functions=[noop],
         redis_pool=pool,
@@ -232,3 +232,52 @@ async def test_worker_keeps_legacy_lock_while_legacy_health_exists(
 
     assert recovered == 0
     pool.eval.assert_awaited_once()
+
+
+async def test_start_jobs_skips_running_and_locked_jobs_without_claiming() -> None:
+    async def noop(ctx: object) -> None:
+        del ctx
+
+    claim = _ClaimPipeline()
+    prefilter = _Pipeline([1, 0])  # "locked-elsewhere" locked, "new" free
+    pool = MagicMock()
+    pool.pipeline = MagicMock(side_effect=[prefilter, claim])
+    worker = HeartbeatWorker(
+        functions=[noop],
+        redis_pool=pool,
+        handle_signals=False,
+    )
+    worker.run_job = AsyncMock()  # type: ignore[method-assign]
+    running = asyncio.get_running_loop().create_future()
+    worker.tasks["mine"] = running  # type: ignore[assignment]
+
+    await worker.start_jobs([b"mine", b"locked-elsewhere", b"new"])
+    running.set_result(None)
+    await asyncio.gather(*worker.tasks.values())
+
+    # One pipelined prefilter plus exactly one claim transaction ("new").
+    assert pool.pipeline.call_count == 2
+    assert claim.claim is not None
+    assert claim.claim[0] == in_progress_key("new")
+    worker.run_job.assert_awaited_once_with("new", 1)
+
+
+async def test_start_jobs_without_candidates_does_not_touch_redis() -> None:
+    async def noop(ctx: object) -> None:
+        del ctx
+
+    pool = MagicMock()
+    pool.pipeline = MagicMock()
+    worker = HeartbeatWorker(
+        functions=[noop],
+        redis_pool=pool,
+        handle_signals=False,
+    )
+    running = asyncio.get_running_loop().create_future()
+    worker.tasks["mine"] = running  # type: ignore[assignment]
+
+    await worker.start_jobs([b"mine"])
+    running.set_result(None)
+
+    pool.pipeline.assert_not_called()
+    assert worker.job_counter == 0
