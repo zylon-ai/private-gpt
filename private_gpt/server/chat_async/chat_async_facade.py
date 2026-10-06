@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 from collections.abc import AsyncGenerator
+from uuid import uuid4
 
 from injector import inject, singleton
 from starlette.requests import Request
@@ -41,14 +42,12 @@ class ChatAsyncFacadeService:
         3. CancelledError is re-raised to maintain asyncio semantics
         """
         chat_request = await self._chat_request_mapper.create_request_from_body(body)
-        message_id = await self._chat_async_service.initiate_chat_stream(
+        message_id = message_id or str(uuid4())
+        # Read the engine's events directly: relaying them through a second
+        # Redis stream cost ~0.5 ms of API CPU per token.
+        event_generator = await self._chat_async_service.stream_chat_events(
             request=chat_request, message_id=message_id
         )
-        event_generator = await self._chat_async_service.get_stream_events(
-            message_id=message_id,
-        )
-        if event_generator is None:
-            raise ValueError(f"No event generator found for message_id: {message_id}")
 
         cancellable_generator = self._cancellable_stream_generator(
             http_request, event_generator, message_id
@@ -96,10 +95,10 @@ class ChatAsyncFacadeService:
         except asyncio.CancelledError:
             logger.debug(f"Stream generator cancelled, cleaning up: {message_id}")
             try:
-                await self._chat_async_service.cancel_stream(message_id)
+                await self._chat_async_service.cancel_chat(message_id)
             except Exception as cleanup_error:
                 logger.warning(f"Error during stream cleanup: {cleanup_error}")
             raise
         finally:
+            await event_generator.aclose()
             logger.debug(f"Stream generator completed for {message_id}")
-            await self._chat_async_service.clean_up_stream(message_id)
