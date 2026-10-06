@@ -2458,9 +2458,9 @@ async def test_chat_handles_client_disconnection_non_streaming(
     async_test_client: AsyncClient, injector
 ) -> None:
     chat_service = injector.get(ChatAsyncService)
-    original_cancel_chat = chat_service.cancel_chat
-    chat_service.cancel_chat = AsyncMock(side_effect=original_cancel_chat)
-    chat_service.stream_chat_events = AsyncMock(
+    original_cancel_stream = chat_service.cancel_stream
+    chat_service.cancel_stream = AsyncMock(side_effect=original_cancel_stream)
+    chat_service.get_stream_events = AsyncMock(
         return_value=mock_slow_stream_generator()
     )
 
@@ -2476,7 +2476,7 @@ async def test_chat_handles_client_disconnection_non_streaming(
     start_time = asyncio.get_event_loop().time()
     start_time = asyncio.get_running_loop().time()
     while asyncio.get_running_loop().time() - start_time < 5.0:
-        if chat_service.stream_chat_events.called:
+        if chat_service.get_stream_events.called:
             request_task.cancel()
             break
         await asyncio.sleep(0.1)
@@ -2485,7 +2485,7 @@ async def test_chat_handles_client_disconnection_non_streaming(
 
     with pytest.raises(asyncio.CancelledError):
         await request_task
-    assert chat_service.cancel_chat.called
+    assert chat_service.cancel_stream.called
 
 
 @pytest.mark.anyio
@@ -2493,9 +2493,9 @@ async def test_chat_handles_client_disconnection_streaming(
     async_test_client: AsyncClient, injector
 ) -> None:
     chat_service = injector.get(ChatAsyncService)
-    original_cancel_chat = chat_service.cancel_chat
-    chat_service.cancel_chat = AsyncMock(side_effect=original_cancel_chat)
-    chat_service.stream_chat_events = AsyncMock(
+    original_cancel_stream = chat_service.cancel_stream
+    chat_service.cancel_stream = AsyncMock(side_effect=original_cancel_stream)
+    chat_service.get_stream_events = AsyncMock(
         return_value=mock_slow_stream_generator()
     )
 
@@ -2510,7 +2510,7 @@ async def test_chat_handles_client_disconnection_streaming(
 
     start_time = asyncio.get_event_loop().time()
     while asyncio.get_event_loop().time() - start_time < 5.0:
-        if chat_service.stream_chat_events.called:
+        if chat_service.get_stream_events.called:
             request_task.cancel()
             break
         await asyncio.sleep(0.1)
@@ -2519,7 +2519,7 @@ async def test_chat_handles_client_disconnection_streaming(
 
     with pytest.raises(asyncio.CancelledError):
         await request_task
-    assert chat_service.cancel_chat.called
+    assert chat_service.cancel_stream.called
 
 
 @pytest.mark.anyio
@@ -2726,20 +2726,35 @@ async def test_principal_is_propagated_to_background_task(
     specific Authorization header and asserts that Principal.current() inside
     the spawned task returns the matching api_key.
     """
-    from private_gpt.components.engines.chat.async_chat_engine import (
-        AsyncChatEngine,
-    )
+    from private_gpt.components.streaming.stream.stream_processor import StreamProcessor
     from private_gpt.server.principal import Principal
 
     captured: list[str | None] = []
-    original_start = AsyncChatEngine.execute_scheduled_start
+    stream_processor = injector.get(StreamProcessor)
+    original_process_stream = stream_processor.process_stream
 
-    async def capturing_start(self, **kwargs):  # type: ignore[no-untyped-def]
-        # Runs in the task the chat scheduler spawns for the request.
+    async def capturing_process_stream(
+        correlation_id,
+        stream_type,
+        event_generator,
+        event_handler,
+        metadata=None,
+        mark_completed=True,
+    ):
+        # This coroutine runs inside the asyncio task spawned by TaskManager.
+        # The task was created with copy_context(), so Principal.current() here
+        # must return the principal that was active during the HTTP request.
         captured.append(Principal.current().authorization_value)
-        await original_start(self, **kwargs)
+        await original_process_stream(
+            correlation_id,
+            stream_type,
+            event_generator,
+            event_handler,
+            metadata,
+            mark_completed,
+        )
 
-    AsyncChatEngine.execute_scheduled_start = capturing_start  # type: ignore[method-assign]
+    stream_processor.process_stream = capturing_process_stream  # type: ignore[method-assign]
     try:
         body = ChatBody(
             messages=[MessageInput(content="test", role="user")],
@@ -2752,9 +2767,9 @@ async def test_principal_is_propagated_to_background_task(
         )
         assert response.status_code == 200
     finally:
-        AsyncChatEngine.execute_scheduled_start = original_start  # type: ignore[method-assign]
+        stream_processor.process_stream = original_process_stream  # type: ignore[method-assign]
 
-    assert len(captured) == 1, "the chat must start exactly once per request"
+    assert len(captured) == 1, "process_stream must be called exactly once per request"
     assert captured[0] == "sk-test-principal", (
         f"Task saw authorization_value={captured[0]!r}, expected "
         "'sk-test-principal' — Principal was not propagated into the background task"
