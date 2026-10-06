@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import inspect
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -43,33 +44,59 @@ class StreamProcessor:
             )
 
             is_processing = False
-            async for event in event_generator:
-                if self.task_manager.is_cancelled(correlation_id):
-                    raise asyncio.CancelledError(
-                        f"Stream processing for {correlation_id} has been cancelled."
-                    )
+            # Adaptive batching, no timer: the first event of a burst is
+            # written at once; events produced while that write is in flight
+            # go out together in the next pipeline. An idle stream keeps
+            # per-token latency; a loaded API does fewer, larger XADD
+            # pipelines instead of one round trip per token.
+            pending: list[str] = []
+            writer: asyncio.Task[None] | None = None
 
-                if not is_processing:
-                    # Do a lazy initialization of processing status.
-                    current_status = await event_handler.get_current_status(event)
-                    if (
-                        current_status is not None
-                        and current_status >= StreamStatus.PROCESSING
-                    ):
-                        # Don't submit current status since
-                        # the current event has not been processed yet.
-                        await self.stream_service.update_stream_status(
-                            correlation_id,
-                            StreamStatus.PROCESSING,
+            async def write_pending() -> None:
+                while pending:
+                    batch = pending[:]
+                    pending.clear()
+                    await self.stream_service.push_events(correlation_id, batch)
+
+            try:
+                async for event in event_generator:
+                    if self.task_manager.is_cancelled(correlation_id):
+                        raise asyncio.CancelledError(
+                            f"Stream processing for {correlation_id} has been cancelled."
                         )
-                        is_processing = True
 
-                # Inline: a thread hop per token cost more than the serialization.
-                event_data = event_handler.serialize(event)
-                await self.stream_service.push_event(
-                    correlation_id=correlation_id,
-                    event_data=event_data,
-                )
+                    if not is_processing:
+                        # Do a lazy initialization of processing status.
+                        current_status = await event_handler.get_current_status(event)
+                        if (
+                            current_status is not None
+                            and current_status >= StreamStatus.PROCESSING
+                        ):
+                            # Flush first: the status must not overtake events.
+                            if writer is not None:
+                                await writer
+                            # Don't submit current status since
+                            # the current event has not been processed yet.
+                            await self.stream_service.update_stream_status(
+                                correlation_id,
+                                StreamStatus.PROCESSING,
+                            )
+                            is_processing = True
+
+                    # Inline: a thread hop per token cost more than serializing.
+                    pending.append(event_handler.serialize(event))
+                    if writer is None or writer.done():
+                        if writer is not None:
+                            writer.result()  # surface a failed write
+                        writer = asyncio.create_task(write_pending())
+                if writer is not None:
+                    await writer
+                    writer = None
+            finally:
+                if writer is not None and not writer.done():
+                    writer.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await writer
 
             if mark_completed:
                 await self.stream_service.update_stream_status(
