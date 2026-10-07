@@ -87,6 +87,7 @@ from private_gpt.components.engines.chat.utils.request_builder import (
 )
 from private_gpt.components.engines.chat.utils.tool_utils import (
     merge_stream_tool_calls,
+    safe_tool_name,
     select_tool_names,
 )
 from private_gpt.components.llm.custom.base import StructuredOutputsParams, ZylonLLM
@@ -1283,6 +1284,9 @@ class AsyncChatEngine:
             for tool_call in tool_calls:
                 if tool_call.tool_id is None:
                     continue
+                # Never fail the stream on a malformed name: clamp it once so
+                # the block, the name map and the tool result all agree.
+                tool_call.tool_name = safe_tool_name(tool_call.tool_name)
 
                 raw_id = tool_call.tool_id
                 tool_state = stream_delta_state.tool_state

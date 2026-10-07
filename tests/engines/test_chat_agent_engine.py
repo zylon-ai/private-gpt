@@ -305,6 +305,58 @@ async def test_loop_handles_tool_call_with_missing_spec(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_survives_malformed_overlong_tool_name(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    """A tool name the model filled with call syntax must not fail the stream.
+
+    GLM-5.3 emitted ``Agent(description=..., prompt=...) ...`` (>200 chars) as
+    the name: ToolUseBlock validation (max_length=200) raised mid-stream.
+    The call is answered "not found" so the model can retry.
+    """
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[
+            ToolSpec.from_defaults(
+                name="echo", type="echo", runtime="server", async_fn=_noop_tool
+            )
+        ]
+    )
+    bad_name = 'Agent(description="Listar peer names", prompt="' + "x" * 300 + '")'
+    mock_llm = get_mock_function_calling_llm(
+        [[ToolSelection(tool_id="tool_1", tool_name=bad_name, tool_kwargs={})]]
+    )
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=1,
+    )
+
+    events = await _run_engine(engine=engine, request=request, runner=runner)
+
+    uses = [
+        event.content_block
+        for event in events
+        if isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolUseBlock)
+    ]
+    assert len(uses) == 1
+    assert uses[0].name == bad_name[:200]
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolResultBlock)
+        and event.content_block.is_error
+        and "not found" in str(event.content_block.content)
+        for event in events
+    )
+
+
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
 async def test_loop_returns_hidden_client_tool_call_to_caller(
     base_request: ResolvedChatRequest,
     engine_cls: Any,
