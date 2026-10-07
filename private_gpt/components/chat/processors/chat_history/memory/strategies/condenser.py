@@ -30,6 +30,9 @@ from private_gpt.components.prompts.prompt_builder import PromptBuilderService
 from private_gpt.components.tools.builders.summary_builder import (
     SummarizeWorkflowBuilder,
 )
+from private_gpt.components.workflows.others.summary import (
+    SUMMARY_MAX_OUTPUT_TOKENS,
+)
 from private_gpt.di import get_global_injector
 from private_gpt.utils.batches import aiter_batch
 from private_gpt.utils.tokens import (
@@ -153,6 +156,8 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
         result: BaseModel | None = await llm.astructured_predict(
             output_cls=output_cls,
             prompt=final_prompt,
+            # Never fall back to "context window - prompt" (see summary.py).
+            llm_kwargs={"max_tokens": SUMMARY_MAX_OUTPUT_TOKENS},
         )
         if not result:
             return None

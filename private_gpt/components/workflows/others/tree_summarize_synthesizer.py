@@ -51,6 +51,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
         use_async: bool = False,
         max_workers: int | None = None,
         verbose: bool = False,
+        llm_kwargs: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(
             llm=llm,
@@ -63,6 +64,11 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
         self._use_async = use_async
         self._num_workers = max_workers
         self._verbose = verbose
+        # Sent to the LLM call itself (e.g. max_tokens). response_kwargs only fill
+        # the prompt template: LLM.apredict forwards them to formatting, never to
+        # achat/acomplete, so a max_tokens there was silently dropped and the LLM
+        # fell back to "context window minus prompt".
+        self._llm_kwargs = dict(llm_kwargs or {})
 
     def _get_prompts(self) -> PromptDictType:
         """Get prompts."""
@@ -72,6 +78,32 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
         """Update prompts."""
         if "summary_template" in prompts_dict:
             self._summary_template = prompts_dict["summary_template"]
+
+    def _messages_or_prompt(
+        self, prompt: BasePromptTemplate, **prompt_args: Any
+    ) -> tuple[bool, Any]:
+        if self._llm.metadata.is_chat_model:
+            return True, prompt.format_messages(llm=self._llm, **prompt_args)
+        return False, prompt.format(llm=self._llm, **prompt_args)
+
+    async def _apredict(self, prompt: BasePromptTemplate, **prompt_args: Any) -> str:
+        """LLM.apredict, but with self._llm_kwargs passed to the LLM call."""
+        is_chat, value = self._messages_or_prompt(prompt, **prompt_args)
+        if is_chat:
+            response = await self._llm.achat(value, **self._llm_kwargs)
+            return response.message.content or ""
+        completion = await self._llm.acomplete(
+            value, formatted=True, **self._llm_kwargs
+        )
+        return completion.text
+
+    def _predict(self, prompt: BasePromptTemplate, **prompt_args: Any) -> str:
+        """LLM.predict, but with self._llm_kwargs passed to the LLM call."""
+        is_chat, value = self._messages_or_prompt(prompt, **prompt_args)
+        if is_chat:
+            response = self._llm.chat(value, **self._llm_kwargs)
+            return response.message.content or ""
+        return self._llm.complete(value, formatted=True, **self._llm_kwargs).text
 
     async def aget_response(
         self,
@@ -98,7 +130,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                 )
             else:
                 if self._output_cls is None:
-                    response = await self._llm.apredict(
+                    response = await self._apredict(
                         summary_template,
                         context_str=text_chunks[0],
                         **response_kwargs,
@@ -107,6 +139,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                     response = await self._llm.astructured_predict(
                         self._output_cls,
                         summary_template,
+                        llm_kwargs=dict(self._llm_kwargs),
                         context_str=text_chunks[0],
                         **response_kwargs,
                     )
@@ -119,7 +152,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
             tasks: list[Coroutine[Any, Any, Any]]
             if self._output_cls is None:
                 tasks = [
-                    self._llm.apredict(
+                    self._apredict(
                         summary_template,
                         context_str=text_chunk,
                         **response_kwargs,
@@ -131,6 +164,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                     self._llm.astructured_predict(
                         self._output_cls,
                         summary_template,
+                        llm_kwargs=dict(self._llm_kwargs),
                         context_str=text_chunk,
                         **response_kwargs,
                     )
@@ -179,7 +213,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                 )
             else:
                 if self._output_cls is None:
-                    response = self._llm.predict(
+                    response = self._predict(
                         summary_template,
                         context_str=text_chunks[0],
                         **response_kwargs,
@@ -188,6 +222,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                     response = self._llm.structured_predict(
                         self._output_cls,
                         summary_template,
+                        llm_kwargs=dict(self._llm_kwargs),
                         context_str=text_chunks[0],
                         **response_kwargs,
                     )
@@ -200,7 +235,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                 tasks: list[Coroutine[Any, Any, Any]]
                 if self._output_cls is None:
                     tasks = [
-                        self._llm.apredict(
+                        self._apredict(
                             summary_template,
                             context_str=text_chunk,
                             **response_kwargs,
@@ -212,6 +247,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                         self._llm.astructured_predict(
                             self._output_cls,
                             summary_template,
+                            llm_kwargs=dict(self._llm_kwargs),
                             context_str=text_chunk,
                             **response_kwargs,
                         )
@@ -233,7 +269,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
             else:
                 if self._output_cls is None:
                     summaries = [
-                        self._llm.predict(
+                        self._predict(
                             summary_template,
                             context_str=text_chunk,
                             **response_kwargs,
@@ -245,6 +281,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
                         self._llm.structured_predict(
                             self._output_cls,
                             summary_template,
+                            llm_kwargs=dict(self._llm_kwargs),
                             context_str=text_chunk,
                             **response_kwargs,
                         )

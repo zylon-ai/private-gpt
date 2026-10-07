@@ -39,6 +39,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# A summary is a few thousand tokens at most (the prompt asks for 0.75 x this in
+# words). Also reserves this much output when packing text chunks.
+SUMMARY_MAX_OUTPUT_TOKENS = 4096
+
 
 class SummarizeInputEvent(StartEvent):
     model_id: str | None = Field(default=None, description="Model identifier to use")
@@ -177,8 +181,12 @@ class SummarizeWorkflow(Workflow):
     @step
     async def execute_summarize(self, ev: SummarizeInputEvent) -> SummarizeResultEvent:
         # Configure token limits
-        max_new_tokens = self.llm_component.metadata(ev.model_id).num_output
-        max_tokens = max(4000, max_new_tokens * 4)
+        # Output budget of every summary call. It must reach the LLM call: without
+        # max_tokens the Triton LLM generates up to "context window - prompt"
+        # (~90k tokens on a 131k model), and a long condenser summary on test3
+        # ran for minutes, starving the Triton backend and stalling every other
+        # stream (zylon-gpt's 60 s stall guard fired on OpenCode turns).
+        max_tokens = SUMMARY_MAX_OUTPUT_TOKENS
 
         llm = self.llm_component.get_llm(ev.model_id)
         tokenizer = self.llm_component.get_tokenizer(ev.model_id)
@@ -193,6 +201,7 @@ class SummarizeWorkflow(Workflow):
             max_workers=self.settings.server.max_workers,
             priority=DefinedPriorities.LLM.SUMMARY_PRIORITY,
             max_tokens=max_tokens,
+            llm_kwargs={"max_tokens": max_tokens},
             output_cls=ev.output_cls,
             summary_template=await self._generate_prompt_template(
                 prompt=ev.prompt,
