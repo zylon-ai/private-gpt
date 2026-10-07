@@ -1515,15 +1515,27 @@ class AsyncChatEngine:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _is_client_tool(run: _Run, tool_name: str | None) -> bool:
-        """Whether the request's original tools declare *tool_name* as a client tool."""
+    def _is_caller_tool_call(run: _Run, tool_name: str | None) -> bool:
+        """Whether an unresolved tool call belongs to the caller rather than the server.
+
+        True when the request's original tools declare *tool_name* as a client tool
+        (hidden from this iteration, e.g. by loop recovery) or, for a name nobody
+        declared, when the request carries any client tool: the caller runs a tool
+        loop of its own, so it answers the unknown call with its own error
+        tool_result, as the Anthropic API does. A server-side ``tool_result`` block
+        inside the assistant message is not valid there and ends client sessions.
+        """
         original = run.state.original_input
-        if original is None or not tool_name:
+        if original is None:
             return False
-        return any(
-            tool.name == tool_name and tool.runtime == "client"
-            for tool in original.context_stack.all_tools()
-        )
+        tools = original.context_stack.all_tools()
+        if tool_name and any(
+            tool.name == tool_name and tool.runtime == "client" for tool in tools
+        ):
+            return True
+        if tool_name and any(tool.name == tool_name for tool in tools):
+            return False
+        return any(tool.runtime == "client" for tool in tools)
 
     async def _handle_tool_use(
         self,
@@ -1544,10 +1556,10 @@ class AsyncChatEngine:
 
         tool_spec = tool_specs_by_name.get(tool_call.tool_name or "")
 
-        if tool_spec is None and self._is_client_tool(run, tool_call.tool_name):
-            # A client tool hidden from this iteration (e.g. loop recovery drops every
-            # tool) is still the caller's to execute: a server-side tool_result is not a
-            # valid block for Anthropic clients and ends their session.
+        if tool_spec is None and self._is_caller_tool_call(run, tool_call.tool_name):
+            # A client tool hidden from this iteration, or a tool name the model made
+            # up while the caller owns the tool loop: pass the tool_use through and
+            # let the caller reply with its own (error) tool_result.
             return _ToolExecutionResult(
                 status=_ToolExecutionStatus.NOT_EXECUTED,
                 tool_selection=ToolSelection(

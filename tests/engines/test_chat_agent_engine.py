@@ -43,6 +43,7 @@ from private_gpt.components.engines.chat.models.chat_phase import InterceptorPha
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.streaming.tasks.chat_scheduler import LocalChatScheduler
 from private_gpt.components.tools.tool_scheduler import LocalToolScheduler
+from private_gpt.events.event_folding import fold
 from private_gpt.events.models import (
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
@@ -370,6 +371,88 @@ async def test_loop_returns_hidden_client_tool_call_to_caller(
         and event.delta.stop_reason == "tool_use"
         for event in events
     )
+
+
+async def _fold_events(events: list[Any]) -> Any:
+    async def _gen() -> AsyncGenerator[Any, None]:
+        for event in events:
+            yield event
+
+    return await fold(_gen())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_passes_unknown_tool_call_to_client_caller(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    """A made-up tool name is passed through when the caller owns the tool loop.
+
+    Reproduces the Qwen trace (pymodes-gnss-altitude-test): Claude Code offered Bash
+    but not Grep, the model called both. The response carried a server-side
+    ``tool_result`` for Grep inside the assistant message, which the Anthropic API
+    never does. Now both calls stop as ``tool_use`` and the caller answers Grep with
+    its own error tool_result, in the streamed events and in the folded message.
+    """
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[ToolSpec(name="Bash", type="bash", runtime="client")]
+    )
+
+    mock_llm = get_mock_function_calling_llm(
+        [
+            [
+                ToolSelection(
+                    tool_id="tool_1",
+                    tool_name="Bash",
+                    tool_kwargs={"command": "ls /work"},
+                ),
+                ToolSelection(
+                    tool_id="tool_2",
+                    tool_name="Grep",
+                    tool_kwargs={"pattern": "decode_bds05", "path": "/work"},
+                ),
+            ]
+        ]
+    )
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=1,
+    )
+
+    events = await _run_engine(engine=engine, request=request, runner=runner)
+
+    tool_uses = [
+        event.content_block.name
+        for event in events
+        if isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolUseBlock)
+    ]
+    assert tool_uses == ["Bash", "Grep"]
+    assert not any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolResultBlock)
+        for event in events
+    )
+    assert any(
+        isinstance(event, RawMessageDeltaEvent)
+        and event.delta.stop_reason == "tool_use"
+        for event in events
+    )
+
+    folded = await _fold_events(events)
+    assert [block.type for block in folded.content] == ["tool_use", "tool_use"]
+    assert folded.stop_reason == "tool_use"
+    grep_block = folded.content[1]
+    assert grep_block.name == "Grep"
+    assert grep_block.input == {"pattern": "decode_bds05", "path": "/work"}
 
 
 @pytest.mark.asyncio
