@@ -89,6 +89,9 @@ navigation:
           - page: Cheaper Inference
             slug: providers/cheaperinference
             path: ./docs/pages/providers/cheaperinference.mdx
+          - page: API Route
+            slug: providers/api-route
+            path: ./docs/pages/providers/api-route.mdx
       - section: Integrations
         skip-slug: true
         contents:
