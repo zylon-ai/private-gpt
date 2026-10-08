@@ -1898,6 +1898,33 @@ class PresentFilesToolSettings(BaseModel):
     )
 
 
+class ConvertDocumentsToolSettings(BaseModel):
+    """Config for the convert_documents tool."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Feature flag to enable the convert_documents tool.",
+    )
+
+
+class DescribeImageToolSettings(BaseModel):
+    """Config for the describe_image tool."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Feature flag to enable the describe_image tool.",
+    )
+
+
+class TranscribeAudioToolSettings(BaseModel):
+    """Config for the transcribe_audio tool."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Feature flag to enable the transcribe_audio tool.",
+    )
+
+
 class PresentServerToolSettings(BaseModel):
     """Config for the present_server tool."""
 
@@ -1923,6 +1950,18 @@ class CodeExecutionToolsSettings(BaseModel):
     present_server: PresentServerToolSettings = Field(
         default_factory=PresentServerToolSettings,
         description="Config for the present_server tool.",
+    )
+    convert_documents: ConvertDocumentsToolSettings = Field(
+        default_factory=ConvertDocumentsToolSettings,
+        description="Config for the convert_documents tool.",
+    )
+    describe_image: DescribeImageToolSettings = Field(
+        default_factory=DescribeImageToolSettings,
+        description="Config for the describe_image tool.",
+    )
+    transcribe_audio: TranscribeAudioToolSettings = Field(
+        default_factory=TranscribeAudioToolSettings,
+        description="Config for the transcribe_audio tool.",
     )
     server_tool_result_mode: Literal["full", "client"] = Field(
         default="full",

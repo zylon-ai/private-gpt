@@ -271,6 +271,28 @@ class FileService:
             has_more=has_more,
         )
 
+    async def exists(
+        self,
+        scope_id: str,
+        path: str,
+        namespace: str = "session",
+    ) -> bool:
+        """Return True when *path* already holds a file for this scope.
+
+        ``path`` is an upload-style key, interpreted exactly as
+        :meth:`put_file` interprets it: relative to the uploads mount unless it
+        starts with ``outputs/``.
+        """
+        if not self._ns_uses_storage(namespace):
+            return False
+
+        storage = self._require_storage()
+        try:
+            folder, rel_path = self._split_session_target(path=path, fallback="upload")
+        except HTTPException:
+            return False
+        return await storage.stat_file(f"{folder}/{scope_id}", rel_path) is not None
+
     async def get_file_metadata(
         self,
         scope_id: str,

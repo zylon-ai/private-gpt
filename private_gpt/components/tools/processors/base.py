@@ -27,7 +27,14 @@ def _get_tool_context(
     return request.tool_context or []
 
 
-def _session_id(request: ResolvedChatRequest) -> str:
+def session_id_for(request: ResolvedChatRequest) -> str:
+    """Return the sandbox session id for *request*.
+
+    This doubles as the ``scope_id`` used by ``FileService``: uploads are stored
+    under ``uploads/{scope_id}`` and the mounters bind
+    ``{sessions_root}/uploads/{session_id}`` into the sandbox, so the two only
+    line up while both derive from this single helper.
+    """
     return (
         request.context.container
         or request.context.user_id
@@ -46,6 +53,15 @@ def _tool_matches(tool: ToolSpec, *tool_names: str) -> bool:
 
 def _is_unresolved_tool(tool: ToolSpec) -> bool:
     return tool.async_fn is _dummy_tool_async_fn
+
+
+def _has_tool(request: ResolvedChatRequest, tool_name: str) -> bool:
+    """Return True when the request already carries *tool_name*.
+
+    Used before fanning out wrapper tools so a caller that passed one of them
+    explicitly does not end up with a duplicate.
+    """
+    return any(_tool_matches(tool, tool_name) for tool in request.tool_config.tools)
 
 
 def _wrapper_tool(
