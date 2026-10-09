@@ -1911,8 +1911,8 @@ class DescribeImageToolSettings(BaseModel):
     """Config for the describe_image tool."""
 
     enabled: bool = Field(
-        default=True,
-        description="Feature flag to enable the describe_image tool.",
+        default=False,
+        description="Feature flag to enable the describe_image tool. Off by default.",
     )
 
 
@@ -1920,8 +1920,8 @@ class TranscribeAudioToolSettings(BaseModel):
     """Config for the transcribe_audio tool."""
 
     enabled: bool = Field(
-        default=True,
-        description="Feature flag to enable the transcribe_audio tool.",
+        default=False,
+        description="Feature flag to enable the transcribe_audio tool. Off by default.",
     )
 
 

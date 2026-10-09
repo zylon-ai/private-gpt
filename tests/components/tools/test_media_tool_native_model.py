@@ -135,3 +135,21 @@ async def test_an_unknown_model_keeps_the_tool() -> None:
 
     assert await processor.intercept(request)
     builder.build_tool.assert_awaited_once()
+
+
+def test_the_media_tools_are_off_by_default() -> None:
+    from private_gpt.settings.settings import settings
+
+    tools = settings().code_execution.tools
+    assert tools.describe_image.enabled is False
+    assert tools.transcribe_audio.enabled is False
+
+
+def test_the_media_tool_settings_default_to_off() -> None:
+    from private_gpt.settings.settings import (
+        DescribeImageToolSettings,
+        TranscribeAudioToolSettings,
+    )
+
+    assert DescribeImageToolSettings().enabled is False
+    assert TranscribeAudioToolSettings().enabled is False
