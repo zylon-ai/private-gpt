@@ -1,11 +1,17 @@
 import contextlib
+import functools
 import logging
 import os
+import threading
+from collections.abc import Callable
 from typing import Any
 
 from qdrant_client import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
     AsyncQdrantClient,
     QdrantClient,
+)
+from qdrant_client.local.qdrant_local import (  # type: ignore[import-not-found]  # ty:ignore[unresolved-import]
+    QdrantLocal,
 )
 
 from private_gpt.settings.settings import Settings
@@ -78,6 +84,7 @@ class QdrantClientBuilder:
             # Local Qdrant uses one lock file for sync and async clients.
             # Remove it between client construction using the resolved path.
             client = QdrantClient(**config)
+            QdrantClientBuilder.serialize_local_access(client)
             QdrantClientBuilder.clean_lock(db_dir=db_dir)
 
             aclient = AsyncQdrantClient(**config)
@@ -91,6 +98,36 @@ class QdrantClientBuilder:
             client=client,
             aclient=aclient,
         )
+
+    @staticmethod
+    def serialize_local_access(client: QdrantClient) -> None:
+        """Make every call into an embedded QdrantLocal hold one shared lock.
+
+        QdrantLocal keeps each collection in plain lists and numpy arrays with no
+        locking, and `force_disable_check_same_thread` lets several threads use it
+        (parallel batch uploads in `add`, the `get_nodes` producer, concurrent
+        ingests). Interleaved writes leave those structures with different lengths,
+        which later fails as an `IndexError` or `AssertionError` inside Qdrant.
+        """
+        local = getattr(client, "_client", None)
+        if not isinstance(local, QdrantLocal):
+            return
+
+        # Re-entrant: QdrantLocal methods call other public methods on itself.
+        lock = threading.RLock()
+
+        def locked(method: Callable[..., Any]) -> Callable[..., Any]:
+            @functools.wraps(method)
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
+                with lock:
+                    return method(*args, **kwargs)
+
+            return wrapper
+
+        for name in dir(type(local)):
+            if name.startswith("_") or not callable(getattr(type(local), name)):
+                continue
+            setattr(local, name, locked(getattr(local, name)))
 
     @staticmethod
     def is_local_path(config: dict[str, Any]) -> bool:
