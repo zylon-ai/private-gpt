@@ -1963,6 +1963,16 @@ class CodeExecutionToolsSettings(BaseModel):
         default_factory=TranscribeAudioToolSettings,
         description="Config for the transcribe_audio tool.",
     )
+    inline_result_bytes: int = Field(
+        default=4096,
+        ge=0,
+        description=(
+            "Results of convert_documents, describe_image and transcribe_audio up "
+            "to this many UTF-8 bytes are returned inline to the model; longer ones "
+            "are written to /home/agent/workspace/<name>.md and only their path is "
+            "returned. 0 always writes a file."
+        ),
+    )
     server_tool_result_mode: Literal["full", "client"] = Field(
         default="full",
         description=(

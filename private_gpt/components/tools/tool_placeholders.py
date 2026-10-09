@@ -191,9 +191,9 @@ CONVERT_DOCUMENTS_TOOL_FN = _placeholder_tool(
     CONVERT_DOCUMENTS_TOOL_NAME,
     "Extract the text of a binary document into markdown so it can be read. Takes the "
     "sandbox paths of one or more files — typically the user's attachments, which "
-    "arrive under /mnt/user-data/uploads/ — and writes each one to "
-    "/home/agent/workspace/<name>.md, reporting where the content was left so you can "
-    "then read, grep or process it.\n\n"
+    "arrive under /mnt/user-data/uploads/. Short content is returned in the result; "
+    "longer content is written to /home/agent/workspace/<name>.md and the result gives "
+    "its path, so you can then read, grep or process it.\n\n"
     "Use it only for formats whose bytes are not readable as text: PDF, DOCX, XLSX, "
     "PPTX, and similar. Plain-text files (.txt, .csv, .json, .md, source code, …) are "
     "already readable — open those directly instead; converting them adds a step and "
@@ -205,8 +205,9 @@ DESCRIBE_IMAGE_TOOL_FN = _placeholder_tool(
     DESCRIBE_IMAGE_TOOL_NAME,
     "Describe the visual content of one or more image files in the sandbox. Takes the "
     "sandbox paths of the images — typically the user's attachments, which arrive "
-    "under /mnt/user-data/uploads/ — and writes a detailed description of each to "
-    "/home/agent/workspace/<name>.md, reporting where it was left so you can then "
+    "under /mnt/user-data/uploads/ — and produces a detailed description of each. A "
+    "short description is returned in the result; a longer one is written to "
+    "/home/agent/workspace/<name>.md and the result gives its path, so you can then "
     "read, grep or quote it.\n\n"
     "Use it when you need a written account of what an image shows and you cannot see "
     "the image yourself, or when you want a more thorough reading than a glance gives: "
@@ -221,9 +222,9 @@ TRANSCRIBE_AUDIO_TOOL_FN = _placeholder_tool(
     TRANSCRIBE_AUDIO_TOOL_NAME,
     "Transcribe the speech in one or more audio files in the sandbox. Takes the sandbox "
     "paths of the audio — typically the user's attachments, which arrive under "
-    "/mnt/user-data/uploads/ — and writes each transcript to "
-    "/home/agent/workspace/<name>.md, reporting where it was left so you can then read, "
-    "grep or quote it.\n\n"
+    "/mnt/user-data/uploads/. A short transcript is returned in the result; a longer "
+    "one is written to /home/agent/workspace/<name>.md and the result gives its path, "
+    "so you can then read, grep or quote it.\n\n"
     "Use it when you need the words spoken in a recording. For properties of the audio "
     "signal rather than its content — duration, sample rate, waveform, format "
     "conversion — read the file with code instead.",

@@ -40,7 +40,9 @@ class _FakeSession:
         self.writes.append(path)
 
 
-def _builder(session: _FakeSession | None) -> TranscribeAudioToolBuilder:
+def _builder(
+    session: _FakeSession | None, inline_result_bytes: int = 0
+) -> TranscribeAudioToolBuilder:
     component = SimpleNamespace(get_or_create_session=AsyncMock(return_value=session))
     model = MagicMock()
     llm_component = SimpleNamespace(
@@ -53,7 +55,10 @@ def _builder(session: _FakeSession | None) -> TranscribeAudioToolBuilder:
     settings = SimpleNamespace(
         chat=SimpleNamespace(
             preprocess=SimpleNamespace(multimodal=SimpleNamespace(max_concurrency=8))
-        )
+        ),
+        code_execution=SimpleNamespace(
+            tools=SimpleNamespace(inline_result_bytes=inline_result_bytes)
+        ),
     )
     return TranscribeAudioToolBuilder(component, llm_component, settings)
 
@@ -198,3 +203,27 @@ def test_rebuild_metadata_is_set_for_celery() -> None:
         "type",
         "description",
     }
+
+
+@pytest.mark.asyncio
+async def test_a_short_transcript_is_returned_inline_without_a_file() -> None:
+    session = _FakeSession({f"{UPLOADS}memo.mp3": b"ID3"})
+
+    with patch(_TRANSCRIBE, AsyncMock(return_value=_result("Hello there."))):
+        blocks = await _call(
+            _builder(session, inline_result_bytes=4096), [f"{UPLOADS}memo.mp3"]
+        )
+
+    assert session.writes == []
+    assert blocks[0].text == f"Transcript of {UPLOADS}memo.mp3:\n\nHello there."
+
+
+@pytest.mark.asyncio
+async def test_the_threshold_counts_bytes_not_characters() -> None:
+    """Five two-byte characters are ten bytes — one over a nine-byte budget."""
+    session = _FakeSession({f"{UPLOADS}memo.mp3": b"ID3"})
+
+    with patch(_TRANSCRIBE, AsyncMock(return_value=_result("ñññññ"))):
+        await _call(_builder(session, inline_result_bytes=9), [f"{UPLOADS}memo.mp3"])
+
+    assert session.writes == [f"{WORKSPACE}memo.md"]

@@ -36,7 +36,9 @@ class _FakeSession:
 
 
 def _builder(
-    session: _FakeSession | None, llm: object | None = None
+    session: _FakeSession | None,
+    llm: object | None = None,
+    inline_result_bytes: int = 0,
 ) -> DescribeImageToolBuilder:
     component = SimpleNamespace(get_or_create_session=AsyncMock(return_value=session))
     model = llm if llm is not None else MagicMock()
@@ -50,7 +52,10 @@ def _builder(
     settings = SimpleNamespace(
         chat=SimpleNamespace(
             preprocess=SimpleNamespace(multimodal=SimpleNamespace(max_concurrency=8))
-        )
+        ),
+        code_execution=SimpleNamespace(
+            tools=SimpleNamespace(inline_result_bytes=inline_result_bytes)
+        ),
     )
     return DescribeImageToolBuilder(component, llm_component, settings)
 
@@ -178,7 +183,8 @@ async def test_no_image_capable_model_reports_an_error_block() -> None:
     settings = SimpleNamespace(
         chat=SimpleNamespace(
             preprocess=SimpleNamespace(multimodal=SimpleNamespace(max_concurrency=8))
-        )
+        ),
+        code_execution=SimpleNamespace(tools=SimpleNamespace(inline_result_bytes=0)),
     )
     builder = DescribeImageToolBuilder(component, llm_component, settings)
 
@@ -220,3 +226,34 @@ def test_rebuild_metadata_is_set_for_celery() -> None:
         "type",
         "description",
     }
+
+
+@pytest.mark.asyncio
+async def test_a_short_description_is_returned_inline_without_a_file() -> None:
+    session = _FakeSession({f"{UPLOADS}chart.png": b"\x89PNG"})
+
+    with patch(_DESCRIBE, AsyncMock(return_value="A bar chart.")):
+        blocks = await _call(
+            _builder(session, inline_result_bytes=4096), [f"{UPLOADS}chart.png"]
+        )
+
+    assert session.writes == []
+    assert blocks[0].text == f"Description of {UPLOADS}chart.png:\n\nA bar chart."
+    assert blocks[-1].text == "Described 1 of 1 image(s)."
+
+
+@pytest.mark.asyncio
+async def test_a_long_description_is_written_to_the_workspace() -> None:
+    session = _FakeSession({f"{UPLOADS}chart.png": b"\x89PNG"})
+    description = "line\n" * 1000
+
+    with patch(_DESCRIBE, AsyncMock(return_value=description)):
+        blocks = await _call(
+            _builder(session, inline_result_bytes=4096), [f"{UPLOADS}chart.png"]
+        )
+
+    assert session.writes == [f"{WORKSPACE}chart.md"]
+    assert blocks[0].text == (
+        f"Described {UPLOADS}chart.png. The description (5000 bytes, 1001 lines) "
+        f"was written to {WORKSPACE}chart.md. Read what you need from there."
+    )

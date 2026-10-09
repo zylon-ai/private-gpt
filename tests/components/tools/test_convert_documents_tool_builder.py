@@ -32,13 +32,20 @@ class _FakeSession:
         self.writes.append(path)
 
 
-def _builder(session: _FakeSession | None, convert_service: object) -> tuple:
+def _builder(
+    session: _FakeSession | None,
+    convert_service: object,
+    inline_result_bytes: int = 0,
+) -> tuple:
     component = SimpleNamespace(get_or_create_session=AsyncMock(return_value=session))
     scheduler_factory = SimpleNamespace(get=MagicMock(return_value=convert_service))
     settings = SimpleNamespace(
         chat=SimpleNamespace(
             preprocess=SimpleNamespace(documents=SimpleNamespace(max_concurrency=8))
-        )
+        ),
+        code_execution=SimpleNamespace(
+            tools=SimpleNamespace(inline_result_bytes=inline_result_bytes)
+        ),
     )
     return ConvertDocumentsToolBuilder(component, scheduler_factory, settings)
 
@@ -199,3 +206,33 @@ def test_rebuild_metadata_is_set_for_celery() -> None:
         "type",
         "description",
     }
+
+
+@pytest.mark.asyncio
+async def test_a_short_document_is_returned_inline_without_a_file() -> None:
+    session = _FakeSession({f"{UPLOADS}report.pdf": b"%PDF"})
+    convert_service = MagicMock()
+    convert_service.bytes_to_text.return_value = "# Report"
+
+    blocks = await _call(
+        _builder(session, convert_service, inline_result_bytes=4096),
+        [f"{UPLOADS}report.pdf"],
+    )
+
+    assert session.writes == []
+    assert blocks[0].text == f"Content of {UPLOADS}report.pdf:\n\n# Report"
+    assert blocks[-1].text == "Converted 1 of 1 document(s)."
+
+
+@pytest.mark.asyncio
+async def test_a_result_exactly_at_the_threshold_stays_inline() -> None:
+    session = _FakeSession({f"{UPLOADS}report.pdf": b"%PDF"})
+    convert_service = MagicMock()
+    convert_service.bytes_to_text.return_value = "x" * 4096
+
+    await _call(
+        _builder(session, convert_service, inline_result_bytes=4096),
+        [f"{UPLOADS}report.pdf"],
+    )
+
+    assert session.writes == []

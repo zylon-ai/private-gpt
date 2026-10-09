@@ -18,10 +18,10 @@ from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.llm.llm_helper import supports_images
 from private_gpt.components.multimodality.image_handler import describe_image
 from private_gpt.components.tools.builders.sandbox_file_tools import (
+    inline_or_write,
     resolve_media_llm,
     run_over_paths,
     source_path_or_error,
-    write_markdown,
 )
 from private_gpt.components.tools.events.adapters import DescribeImageEventAdapter
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
@@ -60,8 +60,9 @@ async def _describe_one(
     session: CodeExecutionSession,
     image_llm: LLM,
     write_lock: asyncio.Lock,
+    inline_limit: int,
 ) -> str:
-    """Describe one sandbox image into the workspace, returning where it landed."""
+    """Describe one sandbox image, inline when short or into the workspace."""
     source = source_path_or_error(filepath, DESCRIBE_IMAGE_TOOL_NAME)
     if not await session.path_exists(source):
         raise FileNotFoundError(f"File not found: {source}")
@@ -75,10 +76,14 @@ async def _describe_one(
     if not description:
         raise ValueError(f"No description could be produced for {source}.")
 
-    target = await write_markdown(session, source, description, write_lock)
-    return (
-        f"Described {source}. The description was left at {target} "
-        f"({len(description)} characters)."
+    return await inline_or_write(
+        session,
+        source,
+        description,
+        write_lock,
+        inline_limit,
+        done=f"Described {source}.",
+        noun="description",
     )
 
 
@@ -94,6 +99,7 @@ class DescribeImageToolBuilder:
         self._component = code_execution_component
         self._llm_component = llm_component
         self._max_concurrency = settings.chat.preprocess.multimodal.max_concurrency
+        self._inline_limit = settings.code_execution.tools.inline_result_bytes
 
     async def build_tool(
         self,
@@ -112,7 +118,9 @@ class DescribeImageToolBuilder:
             image_llm = resolve_media_llm(self._llm_component, supports_images, "image")
 
             async def _worker(filepath: str, write_lock: asyncio.Lock) -> str:
-                return await _describe_one(filepath, session, image_llm, write_lock)
+                return await _describe_one(
+                    filepath, session, image_llm, write_lock, self._inline_limit
+                )
 
             return await run_over_paths(
                 filepaths,

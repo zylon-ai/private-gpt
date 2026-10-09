@@ -75,6 +75,34 @@ async def write_markdown(
     return target
 
 
+async def inline_or_write(
+    session: CodeExecutionSession,
+    source: str,
+    text: str,
+    write_lock: asyncio.Lock,
+    inline_limit: int,
+    *,
+    done: str,
+    noun: str,
+) -> str:
+    """Return *text* inline when it is short, otherwise leave it in the workspace.
+
+    A file only pays off when the content is too long to read in one go: for a
+    short result it costs the model an extra read for no gain. ``done`` is the
+    sentence reporting the work ("Described /mnt/…/chart.png.") and ``noun``
+    names what was produced ("description").
+    """
+    size = len(text.encode())
+    if size <= inline_limit:
+        return f"{noun.capitalize()} of {source}:\n\n{text}"
+
+    target = await write_markdown(session, source, text, write_lock)
+    return (
+        f"{done} The {noun} ({size} bytes, {text.count(chr(10)) + 1} lines) "
+        f"was written to {target}. Read what you need from there."
+    )
+
+
 async def run_over_paths(
     filepaths: list[str],
     worker: Callable[[str, asyncio.Lock], Awaitable[str]],

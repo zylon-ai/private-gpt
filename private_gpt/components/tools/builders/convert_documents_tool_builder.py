@@ -18,9 +18,9 @@ from private_gpt.components.ingestion.ingestion_scheduler import (
     IngestionSchedulerFactory,
 )
 from private_gpt.components.tools.builders.sandbox_file_tools import (
+    inline_or_write,
     run_over_paths,
     source_path_or_error,
-    write_markdown,
 )
 from private_gpt.components.tools.events.adapters import ConvertDocumentsEventAdapter
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
@@ -45,8 +45,9 @@ async def _convert_one(
     session: CodeExecutionSession,
     convert_service: DocumentConverter,
     write_lock: asyncio.Lock,
+    inline_limit: int,
 ) -> str:
-    """Convert one sandbox file to markdown in the workspace, return the target.
+    """Convert one sandbox file to markdown, inline when short or into the workspace.
 
     The expensive half runs concurrently: ``read_file`` is awaitable and
     ``bytes_to_text`` is offloaded to a thread, so a batch of documents converts
@@ -62,10 +63,14 @@ async def _convert_one(
     if not text:
         raise ValueError(f"No content could be extracted from {source}.")
 
-    target = await write_markdown(session, source, text, write_lock)
-    return (
-        f"Converted {source} to markdown. The content was left at {target} "
-        f"({len(text)} characters)."
+    return await inline_or_write(
+        session,
+        source,
+        text,
+        write_lock,
+        inline_limit,
+        done=f"Converted {source} to markdown.",
+        noun="content",
     )
 
 
@@ -81,6 +86,7 @@ class ConvertDocumentsToolBuilder:
         self._component = code_execution_component
         self._scheduler_factory = scheduler_factory
         self._max_concurrency = settings.chat.preprocess.documents.max_concurrency
+        self._inline_limit = settings.code_execution.tools.inline_result_bytes
 
     async def build_tool(
         self,
@@ -100,7 +106,7 @@ class ConvertDocumentsToolBuilder:
 
             async def _worker(filepath: str, write_lock: asyncio.Lock) -> str:
                 return await _convert_one(
-                    filepath, session, convert_service, write_lock
+                    filepath, session, convert_service, write_lock, self._inline_limit
                 )
 
             return await run_over_paths(

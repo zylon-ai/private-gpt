@@ -284,6 +284,7 @@ code_execution:
       enabled: ${PGPT_CODE_EXECUTION_TOOLS_DESCRIBE_IMAGE_ENABLED:true}
     transcribe_audio:
       enabled: ${PGPT_CODE_EXECUTION_TOOLS_TRANSCRIBE_AUDIO_ENABLED:true}
+    inline_result_bytes: ${PGPT_CODE_EXECUTION_TOOLS_INLINE_RESULT_BYTES:4096}
     server_tool_result_mode: ${PGPT_CODE_EXECUTION_SERVER_TOOL_RESULT_MODE:full}
   max_output_bytes: ${PGPT_CODE_EXECUTION_MAX_OUTPUT_BYTES:1048576}
 
