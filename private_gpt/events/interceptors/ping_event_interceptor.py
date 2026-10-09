@@ -3,6 +3,7 @@ import asyncio
 import contextlib
 from collections import deque
 from collections.abc import AsyncGenerator
+from typing import cast
 
 from private_gpt.events.interceptors.base_event_interceptor import BaseEventInterceptor
 from private_gpt.events.models import Event, PingEvent
@@ -76,7 +77,7 @@ class PingEventInterceptor(BaseEventInterceptor):
                     if item is _PING:
                         yield PingEvent()
                         continue
-                    yield item  # type: ignore[misc]
+                    yield cast(Event, item)
 
                 if exception_holder:
                     raise exception_holder[0]

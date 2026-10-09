@@ -126,7 +126,9 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
         # skip the tokenizer, which may be a remote call per text.
         system_prompt = self._system_prompt_text(context, request)
         text_bytes = len(user_text.encode()) + len((system_prompt or "").encode())
-        if text_bytes + _SPECIAL_TOKENS_SLACK <= token_limit:
+        # The user text and system prompt are tokenized separately, so each may
+        # carry its own special tokens.
+        if text_bytes + 2 * _SPECIAL_TOKENS_SLACK <= token_limit:
             return
 
         user_message_tokens = len(
