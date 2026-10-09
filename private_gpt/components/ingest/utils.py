@@ -51,6 +51,21 @@ def get_extension(file_name: str) -> str | None:
     return file[1].lower() if len(file) > 1 and file[1] else None
 
 
+def media_kind(head: bytes) -> str | None:
+    """Return "an image" or "audio" when *head* starts like one, else None.
+
+    Sniffed from the bytes, never the name: an attachment's extension is
+    whatever the uploader called it.
+    """
+    import filetype  # type: ignore[import-untyped]
+
+    if filetype.is_image(head):
+        return "an image"
+    if filetype.is_audio(head):
+        return "audio"
+    return None
+
+
 def get_guest_mime_type(file_data: Path) -> str | None:
     """Get the MIME type based on the file extension."""
     try:

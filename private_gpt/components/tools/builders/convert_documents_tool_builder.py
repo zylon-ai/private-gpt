@@ -14,6 +14,7 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.ingest.utils import media_kind
 from private_gpt.components.ingestion.ingestion_scheduler import (
     IngestionSchedulerFactory,
 )
@@ -58,6 +59,12 @@ async def _convert_one(
         raise FileNotFoundError(f"File not found: {source}")
 
     raw = await session.read_file(source)
+    kind = media_kind(raw[:8192])
+    if kind is not None:
+        raise ValueError(
+            f"{source} is {kind}, not a document. Look at it directly if you "
+            "can see it, or inspect it with code."
+        )
     extension = PurePosixPath(source).suffix or ".txt"
     text = await asyncio.to_thread(convert_service.bytes_to_text, raw, extension, False)
     if not text:

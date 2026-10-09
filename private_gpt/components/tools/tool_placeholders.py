@@ -195,7 +195,8 @@ CONVERT_DOCUMENTS_TOOL_FN = _placeholder_tool(
     "longer content is written to /home/agent/workspace/<name>.md and the result gives "
     "its path, so you can then read, grep or process it.\n\n"
     "Use it only for formats whose bytes are not readable as text: PDF, DOCX, XLSX, "
-    "PPTX, and similar. Plain-text files (.txt, .csv, .json, .md, source code, …) are "
+    "PPTX, and similar. Not for images or audio — it does no OCR or "
+    "transcription. Plain-text files (.txt, .csv, .json, .md, source code, …) are "
     "already readable — open those directly instead; converting them adds a step and "
     "can lose structure. Converting a file you were not asked to work with wastes a "
     "turn, so only convert what the request actually requires.",

@@ -236,3 +236,46 @@ async def test_a_result_exactly_at_the_threshold_stays_inline() -> None:
     )
 
     assert session.writes == []
+
+
+GIF = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04"
+MP3 = b"ID3\x04\x00\x00\x00\x00\x00\x00" + b"\x00" * 32
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("name", "content", "kind"),
+    [("photo.gif", GIF, "an image"), ("memo.mp3", MP3, "audio")],
+)
+async def test_images_and_audio_are_refused_by_their_bytes(
+    name: str, content: bytes, kind: str
+) -> None:
+    """Sniffed from the bytes: the converter would turn them into garbage text."""
+    session = _FakeSession({f"{UPLOADS}{name}": content})
+    convert_service = MagicMock()
+
+    blocks = await _call(_builder(session, convert_service), [f"{UPLOADS}{name}"])
+
+    convert_service.bytes_to_text.assert_not_called()
+    assert session.writes == []
+    assert f"is {kind}, not a document" in blocks[0].text
+    assert blocks[-1].text == "Converted 0 of 1 document(s)."
+
+
+@pytest.mark.asyncio
+async def test_a_misnamed_image_is_still_refused() -> None:
+    session = _FakeSession({f"{UPLOADS}scan.pdf": GIF})
+    convert_service = MagicMock()
+
+    blocks = await _call(_builder(session, convert_service), [f"{UPLOADS}scan.pdf"])
+
+    convert_service.bytes_to_text.assert_not_called()
+    assert "is an image, not a document" in blocks[0].text
+
+
+def test_the_description_rules_out_images_and_audio() -> None:
+    from private_gpt.components.tools.tool_placeholders import (
+        CONVERT_DOCUMENTS_TOOL_FN,
+    )
+
+    assert "Not for images or audio" in CONVERT_DOCUMENTS_TOOL_FN.metadata.description
