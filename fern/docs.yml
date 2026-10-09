@@ -89,6 +89,9 @@ navigation:
           - page: Cheaper Inference
             slug: providers/cheaperinference
             path: ./docs/pages/providers/cheaperinference.mdx
+          - page: Opper
+            slug: providers/opper
+            path: ./docs/pages/providers/opper.mdx
       - section: Integrations
         skip-slug: true
         contents:
