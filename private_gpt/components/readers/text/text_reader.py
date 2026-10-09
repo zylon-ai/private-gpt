@@ -30,7 +30,7 @@ from private_gpt.components.ingest.transformations.refresh_tree_node_transform i
 from private_gpt.components.ingest.transformations.sentence_tree_node_parser import (
     SentenceTreeNodeParser,
 )
-from private_gpt.components.ingest.utils import FileInfo
+from private_gpt.components.ingest.utils import FileInfo, media_kind
 from private_gpt.components.readers.base_reader import IngestionReader
 from private_gpt.settings.settings import settings
 
@@ -65,6 +65,13 @@ class TextReader(IngestionReader):
         encoding: str | None = None,
         extra_info: dict[str, Any] | None = None,
     ) -> Iterator[BaseNode]:
+        # Latin-1 decodes any byte at all, so without this an image or an
+        # archive "succeeds" and comes back as pages of garbage text.
+        with open(file_path, "rb") as file:
+            head = file.read(8192)
+        if b"\x00" in head or media_kind(head) is not None:
+            raise RuntimeError(f"{file_path.name} is binary, not a text file.")
+
         encoding = encoding.lower() if encoding else None
         encodings = SUPPORTED_ENCODINGS.copy()
 

@@ -8,8 +8,14 @@ from private_gpt.components.tools.processors.bash_processor import BashProcessor
 from private_gpt.components.tools.processors.code_execution_processor import (
     CodeExecutionProcessor,
 )
+from private_gpt.components.tools.processors.convert_documents_processor import (
+    ConvertDocumentsProcessor,
+)
 from private_gpt.components.tools.processors.database_query_processor import (
     DatabaseQueryProcessor,
+)
+from private_gpt.components.tools.processors.describe_image_processor import (
+    DescribeImageProcessor,
 )
 from private_gpt.components.tools.processors.present_files_processor import (
     PresentFilesProcessor,
@@ -28,6 +34,9 @@ from private_gpt.components.tools.processors.tabular_data_processor import (
 )
 from private_gpt.components.tools.processors.text_editor_processor import (
     TextEditorProcessor,
+)
+from private_gpt.components.tools.processors.transcribe_audio_processor import (
+    TranscribeAudioProcessor,
 )
 from private_gpt.components.tools.processors.web_fetch_processor import (
     WebFetchProcessor,
@@ -54,6 +63,9 @@ class ToolPipeline:
         text_editor_processor: TextEditorProcessor,
         present_files_processor: PresentFilesProcessor,
         present_server_processor: PresentServerProcessor,
+        convert_documents_processor: ConvertDocumentsProcessor,
+        describe_image_processor: DescribeImageProcessor,
+        transcribe_audio_processor: TranscribeAudioProcessor,
     ) -> None:
         self._processors = [
             anthropic_tool_translation_processor,
@@ -68,6 +80,9 @@ class ToolPipeline:
             text_editor_processor,
             present_files_processor,
             present_server_processor,
+            convert_documents_processor,
+            describe_image_processor,
+            transcribe_audio_processor,
         ]
 
     async def contextualize_internal_tools(

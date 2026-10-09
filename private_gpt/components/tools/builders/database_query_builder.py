@@ -199,12 +199,17 @@ class DatabaseQueryToolBuilder:
         csv: str,
         filename: str,
         session_id: str | None,
-    ) -> ResultContentBlockType:
+    ) -> tuple[ResultContentBlockType, str | None]:
         """Return the block carrying the query result as a CSV file.
 
         With code execution enabled the CSV is written to the session outputs
         mount through the files service and referenced as a local file, the same
         way the present_files tool does. Otherwise it is embedded as a blob.
+
+        The second element is the path the file can be read back from, or
+        ``None`` when there is no file to read. ``LocalResourceBlock`` is the
+        human's download attachment and never becomes model-visible text, so the
+        caller needs the path separately to be able to name it to the model.
         """
         binary_block = BinaryBlock.from_text(
             text=csv,
@@ -212,7 +217,7 @@ class DatabaseQueryToolBuilder:
             mime_type="text/csv",
         )
         if not self.settings.code_execution.provider or not session_id:
-            return binary_block
+            return binary_block, None
 
         storage_path = f"outputs/{filename}"
         try:
@@ -229,13 +234,17 @@ class DatabaseQueryToolBuilder:
                 storage_path,
                 exc_info=True,
             )
-            return binary_block
+            return binary_block, None
 
-        return LocalResourceBlock(
-            file_path=storage_to_canonical_path(storage_path),
-            file_id=metadata.id,
-            name=Path(filename).stem,
-            mime_type=metadata.mime_type,
+        canonical_path = storage_to_canonical_path(storage_path)
+        return (
+            LocalResourceBlock(
+                file_path=canonical_path,
+                file_id=metadata.id,
+                name=Path(filename).stem,
+                mime_type=metadata.mime_type,
+            ),
+            canonical_path,
         )
 
     async def build_tool(
@@ -402,20 +411,26 @@ class DatabaseQueryToolBuilder:
                     if db_query_result.row_count > 0:
                         csv = db_query_result.as_csv()
                         filename = f"csv_{abs(hash(query))}_{index}.csv"
-                        blocks.append(
-                            await self._build_csv_block(
-                                csv=csv,
-                                filename=filename,
-                                session_id=session_id,
-                            )
+                        csv_block, csv_path = await self._build_csv_block(
+                            csv=csv,
+                            filename=filename,
+                            session_id=session_id,
                         )
+                        blocks.append(csv_block)
 
                         if len(csv) > sample_size:
+                            # Only point at the file when there is one to read;
+                            # otherwise the sample is all the model will ever get.
+                            full_response = (
+                                f"read the full result at {csv_path}"
+                                if csv_path
+                                else "the full result is not available here"
+                            )
                             blocks.append(
                                 TextBlock(
-                                    text="Representative data from the query result. Information IS NOT COMPLETE, refer"
-                                    "to the generated csv file for the full response:\n"
-                                    + (csv[0:sample_size])
+                                    text="Representative data from the query result. "
+                                    "Information IS NOT COMPLETE, "
+                                    f"{full_response}:\n" + (csv[0:sample_size])
                                 )
                             )
                         else:

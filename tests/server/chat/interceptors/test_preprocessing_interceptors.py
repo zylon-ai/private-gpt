@@ -158,7 +158,9 @@ async def test_document_interceptor_closes_dangling_tool_uses_on_failure(
         _exploding_document_history,
     )
     interceptor = DocumentFilePreprocessingInterceptor(
-        scheduler_factory=MagicMock(), settings=_settings(return_type)
+        scheduler_factory=MagicMock(),
+        file_service=MagicMock(),
+        settings=_settings(return_type),
     )
     context, events = _context()
 
@@ -267,7 +269,9 @@ async def test_document_interceptor_propagates_failure_with_nothing_pending(
         _exploding_before_any_status,
     )
     interceptor = DocumentFilePreprocessingInterceptor(
-        scheduler_factory=MagicMock(), settings=_settings("tool_result")
+        scheduler_factory=MagicMock(),
+        file_service=MagicMock(),
+        settings=_settings("tool_result"),
     )
     context, events = _context()
 

@@ -391,6 +391,55 @@ def test_put_object_outputs_prefix_targets_output_mount(
     assert content_resp.content == _FILE_CONTENT
 
 
+def test_put_object_workspace_prefix_targets_workspace_mount(
+    files_client: TestClient,
+    volume_root: Path,
+) -> None:
+    resp = files_client.put(
+        f"/v1/files/workspace/knowledge/report.md?scope_id={_SESSION_ID}",
+        content=_FILE_CONTENT,
+        headers={"Content-Type": "text/markdown"},
+    )
+    assert resp.status_code == 200, resp.text
+
+    meta = FileMetadata.model_validate(resp.json())
+    assert _decode_file_id(meta.id) == "/home/agent/workspace/knowledge/report.md"
+
+    stored = volume_root / "user" / _SESSION_ID / "knowledge" / "report.md"
+    assert stored.read_bytes() == _FILE_CONTENT
+    assert not (
+        volume_root / "uploads" / _SESSION_ID / "workspace" / "knowledge" / "report.md"
+    ).exists()
+
+    content_resp = files_client.get(_file_url(meta.id, _SESSION_ID, suffix="/content"))
+    assert content_resp.status_code == 200
+    assert content_resp.content == _FILE_CONTENT
+
+
+def test_put_object_workspace_overwrites_same_key(
+    files_client: TestClient,
+    volume_root: Path,
+) -> None:
+    url = f"/v1/files/workspace/knowledge/report.md?scope_id={_SESSION_ID}"
+    files_client.put(url, content=b"old", headers={"Content-Type": "text/markdown"})
+    resp = files_client.put(
+        url, content=b"new", headers={"Content-Type": "text/markdown"}
+    )
+    assert resp.status_code == 200, resp.text
+
+    stored = volume_root / "user" / _SESSION_ID / "knowledge" / "report.md"
+    assert stored.read_bytes() == b"new"
+
+
+def test_put_object_bare_workspace_prefix_rejected(files_client: TestClient) -> None:
+    resp = files_client.put(
+        f"/v1/files/workspace?scope_id={_SESSION_ID}",
+        content=_FILE_CONTENT,
+        headers={"Content-Type": "text/markdown"},
+    )
+    assert resp.status_code == 400, resp.text
+
+
 def test_put_object_invalid_path_rejected(files_client: TestClient) -> None:
     # Note: `..` segments are normalised away by the HTTP client before they
     # reach our handler, so the traversal case is only catchable via the
