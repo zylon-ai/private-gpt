@@ -92,6 +92,9 @@ navigation:
           - page: Opper
             slug: providers/opper
             path: ./docs/pages/providers/opper.mdx
+          - page: API Route
+            slug: providers/api-route
+            path: ./docs/pages/providers/api-route.mdx
       - section: Integrations
         skip-slug: true
         contents:

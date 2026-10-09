@@ -1,0 +1,90 @@
+---
+title: "API Route"
+description: "Configure PrivateGPT with API Route for OpenAI-compatible chat models and a separate local embeddings server."
+---
+
+[API Route](https://www.api-route.com/) is a hosted, OpenAI-compatible multi-model API. PrivateGPT can use its Chat Completions endpoint at `https://global.api-route.com/v1` through the existing OpenAI-compatible integration.
+
+This setup sends chat requests to API Route and keeps embeddings on a separate local [Ollama](/providers/ollama) server. It does not require a new PrivateGPT backend.
+
+## Setup
+
+<Steps>
+  <Step title="Create a key and choose a chat model">
+    1. Create an account, add balance, and create a key in [API Keys](https://www.api-route.com/api-keys).
+    2. Set `OPENAI_API_KEY` in your environment or `.env` file. Keep the secret out of committed files.
+    3. List the models available to that key:
+
+    ```bash
+    curl https://global.api-route.com/v1/models \
+      -H "Authorization: Bearer $OPENAI_API_KEY"
+    ```
+
+    Set `API_ROUTE_MODEL` to the exact ID of a chat model from the response:
+
+    ```bash
+    export API_ROUTE_MODEL="your-chat-model-id"
+    ```
+
+    Replace the placeholder before running PrivateGPT. Availability depends on the key's group and model permissions; the [pricing page](https://www.api-route.com/pricing) shows the current catalog. See the [API access guide](https://github.com/DennyHo0917/api-route/blob/main/API.md) for the endpoint and authentication contract.
+  </Step>
+
+  <Step title="Start a local embeddings server">
+    Start Ollama and pull the embeddings model:
+
+    ```bash
+    ollama pull mxbai-embed-large
+    ```
+
+    These examples use Ollama's OpenAI-compatible API at `http://localhost:11434/v1`, with the separate placeholder key `ollama`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://global.api-route.com/v1 \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT="$API_ROUTE_MODEL" \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://global.api-route.com/v1 \
+          -e OPENAI_API_KEY \
+          -e OPENAI_EMBEDDING_API_BASE=http://host.docker.internal:11434/v1 \
+          -e OPENAI_EMBEDDING_API_KEY=ollama \
+          -e PGPT_LLM_DEFAULT="$API_ROUTE_MODEL" \
+          -e PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          zylonai/private-gpt:latest
+        ```
+
+        `host.docker.internal` is provided by Docker Desktop. On Linux Docker Engine, add `--add-host=host.docker.internal:host-gateway`. Ollama must listen on an address reachable from the container.
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://global.api-route.com/v1 \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:11434/v1 \
+          OPENAI_EMBEDDING_API_KEY=ollama \
+          PGPT_LLM_DEFAULT="$API_ROUTE_MODEL" \
+          PGPT_EMBEDDING_DEFAULT=mxbai-embed-large \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    Follow the corresponding [installation guide](/installation/package) first, including PrivateGPT's other required services.
+  </Step>
+</Steps>
+
+## Model limits and capabilities
+
+- Use the model ID returned by `/v1/models` unchanged; do not add an upstream provider prefix unless it is already part of that ID.
+- The catalog can include non-chat models. Choose a Chat Completions model for `PGPT_LLM_DEFAULT`.
+- Streaming, tools, reasoning, and image input depend on the selected model and route. A catalog entry alone does not certify every capability.
+- If discovery does not provide a context limit or capability metadata recognized by PrivateGPT, configure these explicitly in a [model profile](/configuration/advanced). Do not assume PrivateGPT's fallback context window matches the route's limit.
+- The examples use local embeddings independently of the gateway's embedding support. Retrieved document excerpts included in a chat prompt are still sent to the hosted API.
