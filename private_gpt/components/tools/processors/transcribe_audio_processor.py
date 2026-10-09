@@ -2,6 +2,11 @@ from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ResolvedChatRequest
 from private_gpt.components.code_execution.base import CodeExecutionSessionConfig
+from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.llm.llm_helper import supports_audio
+from private_gpt.components.tools.builders.sandbox_file_tools import (
+    model_handles_natively,
+)
 from private_gpt.components.tools.builders.transcribe_audio_tool_builder import (
     TranscribeAudioToolBuilder,
 )
@@ -23,9 +28,11 @@ class TranscribeAudioProcessor(ToolProcessor):
     def __init__(
         self,
         transcribe_audio_tool_builder: TranscribeAudioToolBuilder,
+        llm_component: LLMComponent,
         settings: Settings,
     ) -> None:
         self._builder = transcribe_audio_tool_builder
+        self._llm_component = llm_component
         self._enabled = settings.code_execution.tools.transcribe_audio.enabled
 
     async def intercept(self, request: ResolvedChatRequest) -> bool:
@@ -43,7 +50,9 @@ class TranscribeAudioProcessor(ToolProcessor):
 
         first, duplicates = matches[0], matches[1:]
 
-        if not self._enabled:
+        if not self._enabled or model_handles_natively(
+            self._llm_component, request.system.model, supports_audio
+        ):
             changed = _replace_tool(request, first, [])
         else:
             config = CodeExecutionSessionConfig(

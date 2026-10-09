@@ -97,6 +97,15 @@ def _settings():
     return _load_settings().model_copy(deep=True)
 
 
+def _blind_llm_component() -> Mock:
+    """An LLM component whose models cannot take media natively."""
+    component = Mock()
+    component.get_config.return_value = SimpleNamespace(
+        support_image=None, support_audio=None
+    )
+    return component
+
+
 def _resolved(name: str) -> ToolSpec:
     return ToolSpec.from_defaults(
         name=name,
@@ -489,9 +498,9 @@ async def test_describe_image_builder_receives_complete_request_contract() -> No
         )
     )
 
-    assert await DescribeImageProcessor(builder, settings).intercept(
-        _request(_tool("describe_image"), mounts=[mount])
-    )
+    assert await DescribeImageProcessor(
+        builder, _blind_llm_component(), settings
+    ).intercept(_request(_tool("describe_image"), mounts=[mount]))
 
     config = builder.build_tool.await_args.args[0]
     assert config.session_id == "contract-correlation"
@@ -515,9 +524,9 @@ async def test_transcribe_audio_builder_receives_complete_request_contract() -> 
         )
     )
 
-    assert await TranscribeAudioProcessor(builder, settings).intercept(
-        _request(_tool("transcribe_audio"), mounts=[mount])
-    )
+    assert await TranscribeAudioProcessor(
+        builder, _blind_llm_component(), settings
+    ).intercept(_request(_tool("transcribe_audio"), mounts=[mount]))
 
     config = builder.build_tool.await_args.args[0]
     assert config.session_id == "contract-correlation"

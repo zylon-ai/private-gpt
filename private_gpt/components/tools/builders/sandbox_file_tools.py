@@ -128,6 +128,25 @@ async def run_over_paths(
     return blocks
 
 
+def model_handles_natively(
+    llm_component: LLMComponent,
+    model_id: str | None,
+    supports: Callable[[LLM, LLMModelConfig], bool],
+) -> bool:
+    """Return True when the request's model takes this media as raw blocks.
+
+    Such a model already sees the attachment, so a tool that describes it with
+    another pass adds nothing. An unresolvable model counts as not native: the
+    tool is then the only way the media can be read at all.
+    """
+    try:
+        return supports(
+            llm_component.get_llm(model_id), llm_component.get_config(model_id)
+        )
+    except ValueError:
+        return False
+
+
 def resolve_media_llm(
     llm_component: LLMComponent,
     supports: Callable[[LLM, LLMModelConfig], bool],

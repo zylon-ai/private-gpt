@@ -2,8 +2,13 @@ from injector import inject, singleton
 
 from private_gpt.components.chat.models.chat_config_models import ResolvedChatRequest
 from private_gpt.components.code_execution.base import CodeExecutionSessionConfig
+from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.llm.llm_helper import supports_images
 from private_gpt.components.tools.builders.describe_image_tool_builder import (
     DescribeImageToolBuilder,
+)
+from private_gpt.components.tools.builders.sandbox_file_tools import (
+    model_handles_natively,
 )
 from private_gpt.components.tools.processors.base import (
     ToolProcessor,
@@ -23,9 +28,11 @@ class DescribeImageProcessor(ToolProcessor):
     def __init__(
         self,
         describe_image_tool_builder: DescribeImageToolBuilder,
+        llm_component: LLMComponent,
         settings: Settings,
     ) -> None:
         self._builder = describe_image_tool_builder
+        self._llm_component = llm_component
         self._enabled = settings.code_execution.tools.describe_image.enabled
 
     async def intercept(self, request: ResolvedChatRequest) -> bool:
@@ -43,7 +50,9 @@ class DescribeImageProcessor(ToolProcessor):
 
         first, duplicates = matches[0], matches[1:]
 
-        if not self._enabled:
+        if not self._enabled or model_handles_natively(
+            self._llm_component, request.system.model, supports_images
+        ):
             changed = _replace_tool(request, first, [])
         else:
             config = CodeExecutionSessionConfig(
