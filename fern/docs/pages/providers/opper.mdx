@@ -1,0 +1,76 @@
+---
+title: "Opper"
+description: "Use Opper as an OpenAI-compatible cloud gateway for 700+ models from 50+ providers, with chat and embeddings behind one key."
+---
+
+[Opper](https://opper.ai) is an EU-hosted AI gateway with an OpenAI-compatible endpoint at `https://api.opper.ai/v3/compat`. One API key gives access to 700+ models from 50+ providers, including OpenAI, Anthropic, Google, DeepSeek and Mistral. Token rates are the providers' rates with no markup.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/models`) | ✅ |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ✅ |
+| Tool / function calling | ✅ model-dependent |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+The same endpoint serves chat and embeddings, so no second server is needed.
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Get an API key">
+    1. Sign up at [platform.opper.ai](https://platform.opper.ai).
+    2. Create an API key under API Keys.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://api.opper.ai/v3/compat \
+          OPENAI_API_KEY=your-opper-api-key \
+          PGPT_LLM_DEFAULT=claude-sonnet-4-6 \
+          PGPT_EMBEDDING_DEFAULT=text-embedding-3-small \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://api.opper.ai/v3/compat \
+          -e OPENAI_API_KEY=your-opper-api-key \
+          -e PGPT_LLM_DEFAULT=claude-sonnet-4-6 \
+          -e PGPT_EMBEDDING_DEFAULT=text-embedding-3-small \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://api.opper.ai/v3/compat \
+          OPENAI_API_KEY=your-opper-api-key \
+          PGPT_LLM_DEFAULT=claude-sonnet-4-6 \
+          PGPT_EMBEDDING_DEFAULT=text-embedding-3-small \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    <Tip>
+      Store the API key in an `.env` file or use `OPENAI_API_KEY` as an environment variable to avoid exposing it in shell history.
+    </Tip>
+  </Step>
+</Steps>
+
+---
+
+## Notes
+
+- Bare model ids such as `claude-sonnet-4-6` or `gpt-5.5` route each request across the providers that serve that model. An id with a provider prefix, such as `anthropic/claude-sonnet-4-6`, pins one route.
+- `/models` returns `context_length` for each model, so PrivateGPT sets the context window automatically.
+- `/models` lists chat and embedding models together. Set `PGPT_LLM_DEFAULT` to a chat model and `PGPT_EMBEDDING_DEFAULT` to an embedding model.
+- The model catalogue is at [opper.ai/models](https://opper.ai/models).
