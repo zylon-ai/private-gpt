@@ -244,3 +244,21 @@ async def execute_tool_call(
         return_direct=tool.metadata.return_direct,
     )
     return result, tool_message
+
+
+# ToolUseBlock / ServerToolUseBlock name limits (and the next turn's tool_use).
+TOOL_NAME_MAX_LENGTH = 200
+
+
+def safe_tool_name(name: str | None) -> str:
+    """A tool name that always fits ``ToolUseBlock.name``.
+
+    Models sometimes put the whole call into the name (GLM-5.3:
+    ``Agent(description="...", prompt="...") run_in_background=false``). Such
+    a name matches no tool, so the call is answered "tool not found" and the
+    model retries; raising a validation error instead failed the whole stream.
+    """
+    name = (name or "").strip()
+    if not name:
+        return "unknown"
+    return name[:TOOL_NAME_MAX_LENGTH]

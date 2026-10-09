@@ -87,6 +87,7 @@ class SummaryQueryEngine(BaseQueryEngine):
         max_workers: int | None = None,
         streaming: bool = False,
         verbose: bool = False,
+        llm_kwargs: dict[str, Any] | None = None,
         **response_synthesizer_kwargs: Any,
     ) -> "SummaryQueryEngine":
         llm = llm or Settings.llm
@@ -104,6 +105,7 @@ class SummaryQueryEngine(BaseQueryEngine):
             use_async=use_async,
             max_workers=max_workers,
             verbose=verbose,
+            llm_kwargs=llm_kwargs,
         )
         callback_manager = callback_manager or Settings.callback_manager
         return cls(

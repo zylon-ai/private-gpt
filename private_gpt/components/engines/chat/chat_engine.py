@@ -49,7 +49,6 @@ from private_gpt.components.engines.chat.models.chat_llm_params import (
 )
 from private_gpt.components.engines.chat.models.chat_phase import (
     InterceptorPhase,
-    TimelinePhase,
 )
 from private_gpt.components.engines.chat.models.chat_state import (
     ChatInputState,
@@ -57,7 +56,6 @@ from private_gpt.components.engines.chat.models.chat_state import (
     ChatRuntimeState,
     ChatState,
     ChatStatus,
-    ChatTimelineEntry,
 )
 from private_gpt.components.engines.chat.models.execution_hooks import (
     ExecutionHooks,
@@ -69,6 +67,7 @@ from private_gpt.components.engines.chat.utils.request_builder import (
 )
 from private_gpt.components.engines.chat.utils.tool_utils import (
     merge_stream_tool_calls,
+    safe_tool_name,
     select_tool_names,
 )
 from private_gpt.components.llm.custom.base import StructuredOutputsParams, ZylonLLM
@@ -284,7 +283,6 @@ class ChatLoopEngine:
 
     async def _run_loop_core(self, run: _LoopRun, handler: _LoopEventHandler) -> None:
         handler.emit(RawMessageStartEvent.from_defaults())
-        run.state = self._snapshot(run.state, TimelinePhase.START)
 
         run.state = run.state.model_copy(deep=True)
         await self.run_interceptor_phase(
@@ -313,7 +311,6 @@ class ChatLoopEngine:
             )
             handler.emit(RawMessageStopEvent.from_defaults())
             run.state.output.status = ChatStatus.COMPLETED
-            run.state = self._snapshot(run.state, TimelinePhase.STOP)
 
     async def _run_intercepted_iteration(
         self,
@@ -391,7 +388,6 @@ class ChatLoopEngine:
             run.state.input.context_stack,
         )
         run.state.runtime.iteration += 1
-        run.state = self._snapshot(run.state, TimelinePhase.BEFORE_LLM)
 
         llm_tools = self._build_tools(run.state)
         tool_specs_by_name = {
@@ -475,7 +471,6 @@ class ChatLoopEngine:
             *run.state.input.request.messages,
             assistant_message,
         ]
-        run.state = self._snapshot(run.state, TimelinePhase.AFTER_LLM)
 
         if not tool_calls:
             stop_reason = assistant_message.additional_kwargs.get("stop_reason")
@@ -493,7 +488,6 @@ class ChatLoopEngine:
                 )
             )
             handler.emit(RawMessageStopEvent.from_defaults())
-            run.state = self._snapshot(run.state, TimelinePhase.STOP)
             return
 
         # Await all tool tasks spawned eagerly during streaming
@@ -525,7 +519,6 @@ class ChatLoopEngine:
             run.state.output.status = ChatStatus.WAITING
             run.state.output.pending_async_tools = pending_async
             run.stopped = True
-            run.state = self._snapshot(run.state, TimelinePhase.STOP)
             return
 
         if has_external_tool:
@@ -541,10 +534,7 @@ class ChatLoopEngine:
             )
             handler.emit(RawMessageStopEvent.from_defaults())
             run.state.output.status = ChatStatus.COMPLETED
-            run.state = self._snapshot(run.state, TimelinePhase.STOP)
             return
-
-        run.state = self._snapshot(run.state, TimelinePhase.AFTER_TOOLS)
 
         await self.run_interceptor_phase(
             run,
@@ -566,7 +556,8 @@ class ChatLoopEngine:
         lock: asyncio.Lock,
     ) -> ChatResponse:
         """Handle one llm chunk with single-active-block transitions."""
-        assistant_message = current_response.message.model_copy(deep=True)
+        # Fold in place: a per-chunk copy of the growing message is quadratic.
+        assistant_message = current_response.message
         if chunk.delta:
             assistant_message.content = (assistant_message.content or "") + chunk.delta
         elif (
@@ -596,8 +587,9 @@ class ChatLoopEngine:
                         and len(existing) >= len(value)
                         and existing[-len(value) :] == value
                     ):
+                        existing.extend(value)
                         assistant_message.additional_kwargs["token_ids_delta"] = (
-                            existing + value
+                            existing
                         )
                     continue
                 if key == "tool_calls":
@@ -620,17 +612,17 @@ class ChatLoopEngine:
             additional_kwargs=assistant_message.additional_kwargs,
         )
 
-        tool_calls = await asyncio.to_thread(
-            partial(
-                llm.get_tool_calls_from_response,
-                response=folded_response,
-                error_on_no_tool_call=False,
-            )
+        tool_calls = llm.get_tool_calls_from_response(
+            response=folded_response,
+            error_on_no_tool_call=False,
         )
         if tool_calls:
             for tool_call in tool_calls:
                 if tool_call.tool_id is None:
                     continue
+                # Never fail the stream on a malformed name: clamp it once so
+                # the block, the name map and the tool result all agree.
+                tool_call.tool_name = safe_tool_name(tool_call.tool_name)
 
                 raw_id = tool_call.tool_id
                 tool_state = stream_delta_state.tool_state
@@ -926,13 +918,6 @@ class ChatLoopEngine:
         if not interceptors:
             return
 
-        phase_marker = (
-            TimelinePhase.BEFORE_INTERCEPTORS
-            if phase == InterceptorPhase.BEFORE_ITERATION
-            else TimelinePhase.AFTER_INTERCEPTORS
-        )
-        run.state = self._snapshot(run.state, phase_marker)
-
         for interceptor in interceptors:
             context = ChatInterceptorContext(
                 state=run.state,
@@ -958,6 +943,29 @@ class ChatLoopEngine:
         selected = [tool for tool in tool_specs if (tool.name or "") in allowed_names]
         return [adapt_to_async_tool(tool.to_function_tool()) for tool in selected]
 
+    @staticmethod
+    def _is_caller_tool_call(run: _LoopRun, tool_name: str | None) -> bool:
+        """Whether an unresolved tool call belongs to the caller rather than the server.
+
+        True when the request's original tools declare *tool_name* as a client tool
+        (hidden from this iteration, e.g. by loop recovery) or, for a name nobody
+        declared, when the request carries any client tool: the caller runs a tool
+        loop of its own, so it answers the unknown call with its own error
+        tool_result, as the Anthropic API does. A server-side ``tool_result`` block
+        inside the assistant message is not valid there and ends client sessions.
+        """
+        original = run.state.original_input
+        if original is None:
+            return False
+        tools = original.context_stack.all_tools()
+        if tool_name and any(
+            tool.name == tool_name and tool.runtime == "client" for tool in tools
+        ):
+            return True
+        if tool_name and any(tool.name == tool_name for tool in tools):
+            return False
+        return any(tool.runtime == "client" for tool in tools)
+
     async def _handle_tool_use(
         self,
         run: _LoopRun,
@@ -976,6 +984,19 @@ class ChatLoopEngine:
             )
 
         tool_spec = tool_specs_by_name.get(tool_call.tool_name or "")
+
+        if tool_spec is None and self._is_caller_tool_call(run, tool_call.tool_name):
+            # A client tool hidden from this iteration, or a tool name the model made
+            # up while the caller owns the tool loop: pass the tool_use through and
+            # let the caller reply with its own (error) tool_result.
+            return ToolExecutionResult(
+                status=ToolExecutionStatus.NOT_EXECUTED,
+                tool_selection=ToolSelection(
+                    tool_id=call_id,
+                    tool_name=tool_call.tool_name,
+                    tool_kwargs=tool_call.tool_kwargs,
+                ),
+            )
 
         if tool_spec is None:
             error_content = f"Tool '{tool_call.tool_name}' not found."
@@ -1080,20 +1101,6 @@ class ChatLoopEngine:
             handler.emit(RawContentBlockStopEvent.from_start(result_start))
 
         return ToolExecutionResult(status=ToolExecutionStatus.EXECUTED)
-
-    def _snapshot(self, state: ChatState, phase: TimelinePhase) -> ChatState:
-        """Append one immutable timeline entry."""
-        new_state = state.model_copy(deep=True)
-        new_state.timeline.append(
-            ChatTimelineEntry(
-                iteration=new_state.runtime.iteration,
-                phase=phase,
-                conversation_size=len(new_state.input.request.to_messages()),
-                tool_count=len(new_state.input.context_stack.all_tools()),
-                stop_reason=new_state.output.stop_reason,
-            )
-        )
-        return new_state
 
     @staticmethod
     def _extract_reasoning(message: ChatMessage) -> str | None:

@@ -7,6 +7,7 @@ from llama_index.core.base.llms.types import (
     TextBlock,
 )
 
+from private_gpt.components.chat.models.chat_config_models import ResolvedChatRequest
 from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
     ChatRequestLoopInterceptor,
 )
@@ -25,6 +26,9 @@ from private_gpt.components.llm.llm_helper import (
 )
 from private_gpt.events.event_errors import Errors
 from private_gpt.utils.tokens import async_tokenizer
+
+# Upper bound on special tokens a tokenizer adds around one text (BOS/EOS etc.).
+_SPECIAL_TOKENS_SLACK = 16
 
 
 @singleton
@@ -111,6 +115,22 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
         if token_limit is None or tokenize is None:
             return
 
+        # If a system message is present in the request messages, it's a misuse
+        if self._system_message_text(context.state.input.request.messages):
+            raise RuntimeError(
+                "System messages should be as layer in the context stack."
+            )
+
+        # A token covers at least one byte of text, so when the byte counts already
+        # fit (plus a few special tokens) the exact counts cannot exceed the limit:
+        # skip the tokenizer, which may be a remote call per text.
+        system_prompt = self._system_prompt_text(context, request)
+        text_bytes = len(user_text.encode()) + len((system_prompt or "").encode())
+        # The user text and system prompt are tokenized separately, so each may
+        # carry its own special tokens.
+        if text_bytes + 2 * _SPECIAL_TOKENS_SLACK <= token_limit:
+            return
+
         user_message_tokens = len(
             await async_tokenizer(texts=user_text, tokenizer_fn=tokenize)
         )
@@ -120,30 +140,6 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
                 Errors.Codes.REQUEST_TOO_LARGE_USER_MSG,
             )
 
-        # If a system message is present in the request messages, it's a misuse
-        potential_system_message = self._system_message_text(
-            context.state.input.request.messages
-        )
-        if potential_system_message:
-            raise RuntimeError(
-                "System messages should be as layer in the context stack."
-            )
-
-        # Prefer system prompt from the context stack, fall back to prompt
-        system_prompt_block = (
-            context.state.input.context_stack.to_system_prompt()
-            or request.system.get_prompt()
-            or None
-        )
-        system_prompt = (
-            "\n".join(
-                [block.text for block in system_prompt_block]
-                if system_prompt_block
-                else []
-            )
-            if system_prompt_block
-            else None
-        )
         system_tokens = (
             len(await async_tokenizer(texts=system_prompt, tokenizer_fn=tokenize))
             if system_prompt
@@ -163,6 +159,20 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
             )
 
         return
+
+    @staticmethod
+    def _system_prompt_text(
+        context: ChatInterceptorContext, request: ResolvedChatRequest
+    ) -> str | None:
+        # Prefer system prompt from the context stack, fall back to prompt
+        system_prompt_block = (
+            context.state.input.context_stack.to_system_prompt()
+            or request.system.get_prompt()
+            or None
+        )
+        if not system_prompt_block:
+            return None
+        return "\n".join(block.text for block in system_prompt_block)
 
     @staticmethod
     def _extract_text(message: ChatMessage) -> str:

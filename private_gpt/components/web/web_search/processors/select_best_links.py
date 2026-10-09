@@ -367,6 +367,8 @@ class SelectBestLinks(BaseWebSearchResultProcessor):
             result = await llm.astructured_predict(
                 RelevanceOutput,
                 prompt,
+                # A {"relevant": bool} answer; never "context window - prompt".
+                llm_kwargs={"max_tokens": 64},
             )
 
             logger.debug(f"LLM response: {result}")

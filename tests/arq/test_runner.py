@@ -2,7 +2,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from private_gpt.arq.runner import _keep_result_seconds, _queue_name, _task_packages
+from private_gpt.arq.runner import (
+    _keep_result_seconds,
+    _poll_delay,
+    _queue_name,
+    _task_packages,
+)
 
 
 def test_task_packages_are_loaded_from_environment(
@@ -74,3 +79,15 @@ def test_keep_result_can_be_configured(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PGPT_ARQ_KEEP_RESULT", "900")
 
     assert _keep_result_seconds(MagicMock()) == 900
+
+
+def test_poll_delay_defaults_below_arq_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("PGPT_ARQ_POLL_DELAY", raising=False)
+
+    assert _poll_delay() == 0.05
+
+
+def test_poll_delay_can_be_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PGPT_ARQ_POLL_DELAY", "0.2")
+
+    assert _poll_delay() == 0.2

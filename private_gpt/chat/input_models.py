@@ -417,7 +417,9 @@ class MessageInput(BaseModel):
                     isinstance(block, ToolResultBlock) for block in msg.content
                 )
                 if any_tool_result:
-                    for block in msg.content:
+                    for block in cls._fold_mid_conv_system_into_tool_results(
+                        msg.content
+                    ):
                         if isinstance(block, ToolResultBlock):
                             # The current spec de Anthropic sends ToolResultBlock
                             # as a part of the user message.
@@ -453,6 +455,63 @@ class MessageInput(BaseModel):
                 )
 
         return converted_messages
+
+    @staticmethod
+    def _fold_mid_conv_system_into_tool_results(
+        blocks: Sequence[ContentBlockType],
+    ) -> list[ContentBlockType]:
+        """Attach inline system text to the tool results it sits next to.
+
+        Claude Code sends a ``role: system`` message after each tool result; it
+        lands here as a MidConvSystemBlock on the tool-result user message. Split
+        out on its own, it became a user turn after every tool call, so chat
+        templates that track the last user query (GLM ``clear_thinking``, DeepSeek
+        ``drop_thinking``, Qwen) treated each tool step as a new query and dropped
+        the reasoning of every earlier step of the same agent turn. Appended to the
+        nearest tool result (preceding, else following) it keeps its position, so
+        the prompt prefix stays stable, without opening a user turn.
+        """
+        if not any(isinstance(block, MidConvSystemBlock) for block in blocks):
+            return list(blocks)
+
+        def _with_text(result: ToolResultBlock, text: str, before: bool) -> Any:
+            content = result.content
+            if isinstance(content, str):
+                merged: Any = (
+                    f"{text}\n\n{content}" if before else f"{content}\n\n{text}"
+                )
+            else:
+                extra = TextBlock(type="text", text=text)
+                merged = [extra, *content] if before else [*content, extra]
+            return result.model_copy(update={"content": merged})
+
+        out: list[ContentBlockType] = []
+        pending: list[str] = []
+        for block in blocks:
+            if isinstance(block, MidConvSystemBlock):
+                text = "\n".join(b.text for b in block.content if b.text)
+                if not text:
+                    continue
+                last_result = next(
+                    (
+                        i
+                        for i in range(len(out) - 1, -1, -1)
+                        if isinstance(out[i], ToolResultBlock)
+                    ),
+                    None,
+                )
+                if last_result is None:
+                    pending.append(text)
+                else:
+                    out[last_result] = _with_text(
+                        cast(ToolResultBlock, out[last_result]), text, before=False
+                    )
+                continue
+            if pending and isinstance(block, ToolResultBlock):
+                block = _with_text(block, "\n".join(pending), before=True)
+                pending = []
+            out.append(block)
+        return out
 
     @classmethod
     def _standalone_server_tool_messages(
@@ -1332,24 +1391,68 @@ class MessagesInputBase(BaseModel):
 
     @model_validator(mode="after")
     def extract_system_messages(self) -> "MessagesInputBase":
-        """Extract role=system messages and append them to the system list."""
-        system_msgs = [msg for msg in self.messages if msg.role == "system"]
-        if not system_msgs:
+        """Move role=system messages out of the message list.
+
+        Leading ones join the system list. Later ones become a MidConvSystemBlock
+        on the nearest user message (preceding, else following) so they keep their
+        position: hoisting them into the system prompt changes the prompt prefix on
+        every turn of an agent session (Claude Code sends one per turn), which
+        defeats the engine's prefix cache.
+        """
+        if not any(msg.role == "system" for msg in self.messages):
             return self
 
-        self.messages = [msg for msg in self.messages if msg.role != "system"]
+        messages: list[MessageInput] = []
+        pending: list[
+            MidConvSystemBlock
+        ] = []  # inline system text awaiting a user message
+        for msg in self.messages:
+            if msg.role != "system":
+                if pending and msg.role == "user":
+                    msg = msg.model_copy(
+                        update={"content": [*pending, *_blocks(msg.content)]}
+                    )
+                    pending = []
+                messages.append(msg)
+                continue
+            texts = _system_texts(msg.content)
+            if not texts:
+                continue
+            if not messages:
+                self.system.append(System(text="\n".join(texts)))
+                continue
+            block = MidConvSystemBlock(
+                content=[TextBlock(type="text", text=t) for t in texts]
+            )
+            if messages[-1].role == "user":
+                prev = messages[-1]
+                messages[-1] = prev.model_copy(
+                    update={"content": [*_blocks(prev.content), block]}
+                )
+            else:
+                pending.append(block)
+        if pending:  # no user message after them: keep the old behaviour
+            for block in pending:
+                self.system.append(
+                    System(text="\n".join(b.text for b in block.content))
+                )
 
-        for msg in system_msgs:
-            if isinstance(msg.content, str):
-                self.system.append(System(text=msg.content))
-            elif isinstance(msg.content, list):
-                texts = [
-                    b.text for b in msg.content if isinstance(b, TextBlock) and b.text
-                ]
-                if texts:
-                    self.system.append(System(text="\n".join(texts)))
-
+        self.messages = messages
         return self
+
+
+def _system_texts(content: str | list[Any]) -> list[str]:
+    if isinstance(content, str):
+        return [content] if content else []
+    return [b.text for b in content if isinstance(b, TextBlock) and b.text]
+
+
+def _blocks(content: str | list[Any]) -> list[Any]:
+    return (
+        [TextBlock(type="text", text=content)]
+        if isinstance(content, str)
+        else list(content)
+    )
 
 
 class CompletionInput(BaseModel):

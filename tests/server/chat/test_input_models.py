@@ -2570,3 +2570,134 @@ def test_validate_system_config_merges_prompt_flags() -> None:
     assert merged.prompt.code_execution is True
     assert merged.prompt.citations is False
     assert merged.prompt.thinking is False
+
+
+def test_inline_system_messages_stay_in_place() -> None:
+    # Claude Code sends a system message after each user turn; hoisting them into
+    # the system prompt would change the prompt prefix every turn.
+    from private_gpt.server.chat.chat_models import ChatBody
+
+    body = ChatBody.model_validate(
+        {
+            "system": "base",
+            "messages": [
+                {"role": "system", "content": "leading"},
+                {"role": "user", "content": "q1"},
+                {"role": "system", "content": [{"type": "text", "text": "r1"}]},
+                {"role": "assistant", "content": "a1"},
+                {"role": "system", "content": "before q2"},
+                {"role": "user", "content": "q2"},
+            ],
+        }
+    )
+
+    assert [s.text for s in body.system] == ["base", "leading"]
+    assert [m.role for m in body.messages] == ["user", "assistant", "user"]
+    first, last = body.messages[0].content, body.messages[2].content
+    assert isinstance(first[1], MidConvSystemBlock)
+    assert first[1].content[0].text == "r1"
+    assert isinstance(last[0], MidConvSystemBlock)
+    assert last[0].content[0].text == "before q2"
+    assert last[1].text == "q2"
+
+
+def test_inline_system_after_tool_result_does_not_open_a_user_turn() -> None:
+    # Claude Code (h200 live traces) sends a system message after every tool
+    # result. Split out as its own user turn it made templates that keep the
+    # reasoning of the current query only (GLM clear_thinking, DeepSeek
+    # drop_thinking, Qwen) drop the reasoning of every earlier tool step.
+    from private_gpt.server.chat.chat_models import ChatBody
+
+    body = ChatBody.model_validate(
+        {
+            "messages": [
+                {"role": "user", "content": "review the table API"},
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "thinking",
+                            "thinking": "look at headers",
+                            "signature": "s",
+                        },
+                        {
+                            "type": "tool_use",
+                            "id": "t1",
+                            "name": "Bash",
+                            "input": {"command": "ls"},
+                        },
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "tool_result", "tool_use_id": "t1", "content": "a.h"}
+                    ],
+                },
+                {"role": "system", "content": "<total_tokens>9 left</total_tokens>"},
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "thinking",
+                            "thinking": "now read a.h",
+                            "signature": "s",
+                        },
+                        {
+                            "type": "tool_use",
+                            "id": "t2",
+                            "name": "Read",
+                            "input": {"file_path": "a.h"},
+                        },
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "t2",
+                            "content": [{"type": "text", "text": "int x;"}],
+                            "is_error": True,
+                        }
+                    ],
+                },
+                {
+                    "role": "system",
+                    "content": [
+                        {"type": "text", "text": "<total_tokens>8 left</total_tokens>"}
+                    ],
+                },
+            ],
+        }
+    )
+
+    messages = body.llama_index_messages()
+
+    assert [m.role for m in messages] == [
+        MessageRole.USER,
+        MessageRole.ASSISTANT,
+        MessageRole.TOOL,
+        MessageRole.ASSISTANT,
+        MessageRole.TOOL,
+    ]
+    first_tool, second_tool = messages[2], messages[4]
+    assert first_tool.content == "a.h\n\n<total_tokens>9 left</total_tokens>"
+    assert [b.text for b in second_tool.blocks] == [
+        "int x;",
+        "<total_tokens>8 left</total_tokens>",
+    ]
+    assert second_tool.additional_kwargs["tool_call_id"] == "t2"
+
+
+def test_inline_system_before_tool_result_is_prepended() -> None:
+    message_blocks = [
+        MidConvSystemBlock(content=[TextBlock(type="text", text="note")]),
+        ToolResultBlock(tool_use_id="t1", content="out"),
+    ]
+
+    folded = MessageInput._fold_mid_conv_system_into_tool_results(message_blocks)
+
+    assert len(folded) == 1
+    assert isinstance(folded[0], ToolResultBlock)
+    assert folded[0].content == "note\n\nout"

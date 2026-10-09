@@ -25,6 +25,10 @@ class EngineEventBroker(ABC):
     @abstractmethod
     async def publish(self, execution_id: str, event: Event) -> None: ...
 
+    async def publish_many(self, execution_id: str, events: list[Event]) -> None:
+        for event in events:
+            await self.publish(execution_id, event)
+
     @abstractmethod
     async def finish(self, execution_id: str) -> None: ...
 
@@ -94,6 +98,13 @@ class RedisEngineEventBroker(EngineEventBroker):
         )
         await cast(Awaitable[int], self._redis.expire(key, self._ttl))
 
+    async def publish_many(self, execution_id: str, events: list[Event]) -> None:
+        key = self._key(execution_id)
+        async with self._redis.pipeline(transaction=False) as pipe:
+            pipe.rpush(key, *(self._handler.serialize(event) for event in events))
+            pipe.expire(key, self._ttl)
+            await pipe.execute()
+
     async def finish(self, execution_id: str) -> None:
         key = self._key(execution_id)
         await cast(Awaitable[int], self._redis.rpush(key, self._FINISHED))
@@ -109,10 +120,17 @@ class RedisEngineEventBroker(EngineEventBroker):
                 )
                 if item is None:
                     continue
-                payload = item[1]
-                if payload == self._FINISHED:
-                    return
-                yield self._handler.deserialize(payload)
+                payloads = [item[1]]
+                # Drain what is already queued in one round trip.
+                more = await cast(
+                    Awaitable[list[str] | None], self._redis.lpop(key, 255)
+                )
+                if more:
+                    payloads.extend(more)
+                for payload in payloads:
+                    if payload == self._FINISHED:
+                        return
+                    yield self._handler.deserialize(payload)
         finally:
             await self.cleanup(execution_id)
 

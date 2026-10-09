@@ -94,7 +94,16 @@ class HeartbeatWorker(Worker):
         this branch), but makes ownership atomic with the in-progress lock. A
         process killed between the lock transaction and ``run_job`` therefore
         still leaves a reclaimable lock.
+
+        ARQ keeps running jobs in the queue until they finish, so every poll
+        returns all in-flight jobs ahead of new ones. Checking each with its
+        own WATCH/EXISTS/ZSCORE round trips cost ~660 claims/s per worker at
+        48 sessions and delayed new jobs behind them. Skip jobs this worker
+        runs, and drop jobs locked elsewhere with one pipelined EXISTS. The
+        claim below stays the atomic check, so a prefilter race only defers
+        a job to the next poll.
         """
+        job_ids = await self._unclaimed(job_ids)
         for job_id_bytes in job_ids:
             await self.sem.acquire()
 
@@ -135,6 +144,20 @@ class HeartbeatWorker(Worker):
                         lambda _: self._release_sem_dec_counter_on_complete()
                     )
                     self.tasks[job_id] = task
+
+    async def _unclaimed(self, job_ids: list[bytes]) -> list[bytes]:
+        candidates = [job_id for job_id in job_ids if job_id.decode() not in self.tasks]
+        if not candidates:
+            return []
+        async with self.pool.pipeline(transaction=False) as pipe:
+            for job_id in candidates:
+                pipe.exists(in_progress_key(job_id.decode()))
+            locked = await pipe.execute()
+        return [
+            job_id
+            for job_id, is_locked in zip(candidates, locked, strict=True)
+            if not is_locked
+        ]
 
     async def _recover_stale_in_progress_jobs(self) -> int:
         now = time.monotonic()
