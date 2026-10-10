@@ -151,7 +151,7 @@ class IngestService:
     def bulk_ingest(
         self, collection: str, files: list[tuple[Path, str, dict[str, Any]]]
     ) -> list[IngestedDoc]:
-        logger.info("Ingesting files =%s", [f[1] for f in files])
+        logger.info("Ingesting files=%s", [f[1] for f in files])
 
         ingested_documents = []
         for file in files:
