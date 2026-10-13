@@ -126,7 +126,7 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
         )
         if potential_system_message:
             raise RuntimeError(
-                "System messages should be as layer in the context stack."
+                "System messages must be passed as a layer in the context stack, not as request messages."
             )
 
         # Prefer system prompt from the context stack, fall back to prompt
