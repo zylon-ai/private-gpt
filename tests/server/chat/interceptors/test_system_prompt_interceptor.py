@@ -106,6 +106,20 @@ class TestSystemPromptInterceptorIdempotency:
         assert len(platform_layers) == 1, "Expected exactly 1 platform_header layer"
 
     @pytest.mark.asyncio
+    async def test_does_not_mutate_the_incoming_state(self) -> None:
+        interceptor = _make_interceptor()
+        request = _make_request()
+        context = _make_context(request)
+        before = context.state
+        before_dump = before.model_dump(exclude={"runtime": {"tokenizer_fn"}})
+
+        await interceptor.intercept(context)
+
+        assert context.state is not before
+        assert context.state.input.request is not request
+        assert before.model_dump(exclude={"runtime": {"tokenizer_fn"}}) == before_dump
+
+    @pytest.mark.asyncio
     async def test_running_n_times_does_not_accumulate_layers(self) -> None:
         """Simulates multiple BEFORE_ITERATION passes (tool-call loop)."""
         interceptor = _make_interceptor()

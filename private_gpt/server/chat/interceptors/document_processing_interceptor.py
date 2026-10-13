@@ -44,6 +44,10 @@ class DocumentProcessingRequestInterceptor(ChatRequestLoopInterceptor):
             ),
             deduplicate_documents=state.input.request.context.deduplicate_context_in_history,
         )
-        new_state = state.model_copy(deep=True)
-        new_state.input.request.messages = history or []
+        # Only ``messages`` is replaced: copy the path to it, not the state.
+        new_state = state.model_copy()
+        new_state.input = state.input.model_copy()
+        new_state.input.request = state.input.request.model_copy(
+            update={"messages": history or []}
+        )
         context.set_state(new_state)
