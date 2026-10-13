@@ -967,3 +967,50 @@ async def test_fail_abandoned_does_not_override_a_finished_chat() -> None:
     await runner.fail_abandoned("execution-done", "worker stopped")
 
     assert [event async for event in events] == []
+
+
+@pytest.mark.asyncio
+async def test_tool_result_arriving_during_resume_triggers_the_next_resume() -> None:
+    # A resume claims the execution, then dispatches the next iteration's
+    # tools before it saves the new checkpoint. A fast tool can call back in
+    # that window; dropping its result left the chat waiting for the tool
+    # timeout (50 min on test4) even though the result had arrived.
+    store = InMemoryChatCheckpointStore()
+    scheduler = MagicMock()
+    scheduler.resume = AsyncMock()
+    scheduler.tool_timeout = AsyncMock()
+    runner = _resumable_runner(store, scheduler)
+
+    def _checkpoint(checkpoint_id: str, tool_id: str, iteration: int) -> ChatCheckpoint:
+        return ChatCheckpoint(
+            correlation_id="execution-race",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=iteration,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={tool_id: f"job-{tool_id}"}
+            ),
+            checkpoint_id=checkpoint_id,
+        )
+
+    await store.save(_checkpoint("checkpoint-old", "tool-old", 0))
+    # The previous iteration's resume is running and holds the claim.
+    assert await store.claim_resume("execution-race") is True
+
+    # The next iteration's tool finishes before the new checkpoint is saved.
+    await runner.callback(
+        execution_id="execution-race",
+        tool_id="tool-new",
+        result=_tool_response("tool-new").model_dump(mode="json"),
+    )
+    scheduler.resume.assert_not_awaited()
+
+    # The resume finishes and saves the new checkpoint, then checks readiness.
+    await store.save(_checkpoint("checkpoint-new", "tool-new", 1))
+    await runner._resume_if_ready("execution-race")
+
+    scheduler.resume.assert_awaited_once_with(
+        execution_id="execution-race", checkpoint_id="checkpoint-new"
+    )
