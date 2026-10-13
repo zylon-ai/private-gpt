@@ -107,13 +107,23 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     done, without patching the caller's loop.
     """
     try:
-        asyncio.get_running_loop()
+        caller_loop = asyncio.get_running_loop()
     except RuntimeError:
         return asyncio.run(coro)
     context = contextvars.copy_context()
+    # Workers keep their injector on the running loop; carry it over so the
+    # coroutine resolves the caller's components instead of building new ones.
+    from private_gpt.di import _INJECTOR_KEY
+
+    injector = getattr(caller_loop, _INJECTOR_KEY, None)
+
+    async def with_caller_injector() -> T:
+        if injector is not None:
+            setattr(asyncio.get_running_loop(), _INJECTOR_KEY, injector)
+        return await coro
 
     def run_in_loop() -> T:
-        return asyncio.run(coro)
+        return asyncio.run(with_caller_injector())
 
     def run() -> T:
         return context.run(run_in_loop)
