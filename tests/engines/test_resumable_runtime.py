@@ -939,3 +939,31 @@ def test_checkpoint_context_stack_rejects_non_resumable_server_tool() -> None:
 
     with pytest.raises(NonResumableToolError, match="ephemeral"):
         stack.checkpoint_dump()
+
+
+@pytest.mark.asyncio
+async def test_fail_abandoned_publishes_terminal_error_and_closes_stream() -> None:
+    from private_gpt.events.models import FatalError
+
+    store = InMemoryChatCheckpointStore()
+    runner = _resumable_runner(store, MagicMock())
+    events = runner._events.listen("execution-abandoned")
+
+    await runner.fail_abandoned("execution-abandoned", "worker stopped")
+
+    received = [event async for event in events]
+    assert len(received) == 1
+    assert isinstance(received[0], FatalError)
+    assert await store.mark_terminal("execution-abandoned", "failed") is False
+
+
+@pytest.mark.asyncio
+async def test_fail_abandoned_does_not_override_a_finished_chat() -> None:
+    store = InMemoryChatCheckpointStore()
+    await store.mark_terminal("execution-done", "completed")
+    runner = _resumable_runner(store, MagicMock())
+    events = runner._events.listen("execution-done")
+
+    await runner.fail_abandoned("execution-done", "worker stopped")
+
+    assert [event async for event in events] == []
