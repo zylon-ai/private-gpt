@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from injector import Injector
 from llama_index.core.embeddings import MockEmbedding
 from llama_index.core.settings import Settings as LlamaIndexSettings
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from private_gpt.components.persistence.persistence_component import (
     PersistenceComponent,
@@ -67,6 +68,46 @@ def _build_principal(
     headers = {h: request.headers[h] for h in forwarded_headers if h in request.headers}
     cookies = {c: request.cookies[c] for c in forwarded_cookies if c in request.cookies}
     return Principal(headers=headers, cookies=cookies)
+
+
+class RequestContextMiddleware:
+    """Expose the injector on ``request.state`` and the request's principal.
+
+    Pure ASGI rather than ``@app.middleware("http")``: Starlette's
+    ``BaseHTTPMiddleware`` relays every response chunk through an anyio
+    memory stream and wraps every ``receive`` in a task group, which costs a
+    task per streamed event and per disconnect check.
+    """
+
+    def __init__(self, app: ASGIApp, root_injector: Injector) -> None:
+        self.app = app
+        self.root_injector = root_injector
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope)
+        app_state = getattr(scope.get("app"), "state", None)
+        injector = getattr(app_state, "injector", None) or self.root_injector
+        request.state.injector = injector
+
+        # Start each request with a fresh context bag so nothing leaks between
+        # requests running on the same asyncio task/loop.
+        reset_bag()
+
+        settings = injector.get(Settings)
+        _build_principal(
+            request,
+            settings.principal.forwarded_headers,
+            settings.principal.forwarded_cookies,
+        ).set_current()
+
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            reset_bag()
 
 
 def apply_migrations(injector: Injector) -> None:
@@ -167,32 +208,7 @@ def create_app(root_injector: Injector) -> FastAPI:
         RequestValidationError, request_validation_exception_adapter
     )
 
-    # Add a middleware than inject the injector to the request state
-    @app.middleware("http")
-    async def inject_injector_middleware(request: Request, call_next: Any) -> Any:
-        """Middleware to inject the injector into the request state."""
-        injector = (
-            request.app.state.injector
-            if hasattr(request.app, "state") and hasattr(request.app.state, "injector")
-            else root_injector
-        )
-        request.state.injector = injector
-
-        # Start each request with a fresh context bag so nothing leaks between
-        # requests running on the same asyncio task/loop.
-        reset_bag()
-
-        settings = injector.get(Settings)
-        _build_principal(
-            request,
-            settings.principal.forwarded_headers,
-            settings.principal.forwarded_cookies,
-        ).set_current()
-
-        try:
-            return await call_next(request)
-        finally:
-            reset_bag()
+    app.add_middleware(RequestContextMiddleware, root_injector=root_injector)
 
     app.include_router(chat_router)
     app.include_router(completion_router)
