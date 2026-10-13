@@ -43,7 +43,19 @@ class SystemPromptRequestInterceptor(ChatRequestLoopInterceptor):
         if context.phase != InterceptorPhase.BEFORE_ITERATION:
             return
 
-        state = context.state.model_copy(deep=True)
+        # Only the (immutable) stack and the request change below, and
+        # build_request_from_context_stack mutates the request's tool_config,
+        # context and system in place: copy just that path, not the whole state.
+        state = context.state.model_copy()
+        state.input = state.input.model_copy()
+        request = state.input.request
+        state.input.request = request.model_copy(
+            update={
+                "tool_config": request.tool_config.model_copy(),
+                "context": request.context.model_copy(),
+                "system": request.system.model_copy(),
+            }
+        )
         stack = state.input.context_stack
 
         stack = stack.remove_layers_of_type(LayerType.RUNTIME_INSTRUCTIONS)
