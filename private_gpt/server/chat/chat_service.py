@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -224,7 +223,9 @@ class ChatService:
         request: ChatRequest,
         hooks: ExecutionHooks | None = None,
     ) -> CompletionGen:
-        engine = await asyncio.to_thread(self.build_engine)
+        # Building is a cheap in-memory clone (~tens of µs); a worker-thread hop
+        # per request costs more than that under load.
+        engine = self.build_engine()
         execution = await engine.run(
             request=request,
             hooks=hooks,
@@ -261,7 +262,7 @@ class ChatService:
         errors: list[str] = []
 
         try:
-            engine = await asyncio.to_thread(self.build_engine)
+            engine = self.build_engine()
             await engine.validate(request=request)
         except ValidationError as e:
             for err in e.errors():
