@@ -1,7 +1,7 @@
 from collections.abc import Coroutine, Sequence
 from typing import Any
 
-from llama_index.core.async_utils import asyncio_run, run_async_tasks
+from llama_index.core.async_utils import run_async_tasks
 from llama_index.core.bridge.pydantic import BaseModel
 from llama_index.core.callbacks.base import CallbackManager
 from llama_index.core.indices.prompt_helper import PromptHelper
@@ -14,6 +14,7 @@ from llama_index.core.prompts.mixin import PromptDictType
 from llama_index.core.response_synthesizers.base import BaseSynthesizer
 from llama_index.core.types import RESPONSE_TEXT_TYPE
 
+from private_gpt.utils.async_utils import run_sync
 from private_gpt.utils.concurrency import bounded_concurrent_execute
 
 
@@ -21,7 +22,7 @@ def run_async_tasks_with_limit_concurrency(
     tasks: list[Coroutine[Any, Any, Any]],
     num_workers: int,
 ) -> list[Any]:
-    outputs: list[Any] = asyncio_run(bounded_concurrent_execute(tasks, num_workers))
+    outputs: list[Any] = run_sync(bounded_concurrent_execute(tasks, num_workers))
     return outputs
 
 

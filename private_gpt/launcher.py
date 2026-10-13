@@ -8,7 +8,6 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-import nest_asyncio
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -132,9 +131,6 @@ def create_app(root_injector: Injector) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         """Lifespan context manager to initialize and clean up resources."""
-        # Set nested loop
-        nest_asyncio.apply()
-
         # Set default thread pool limit. This executor now only serves genuine
         # blocking-I/O offloads (broker waits, sync HTTP, sync file reads); all
         # CPU-bound work is routed to dedicated workers, and chat can be routed

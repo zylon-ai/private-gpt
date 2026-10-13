@@ -1,8 +1,9 @@
 import asyncio
-from collections.abc import AsyncIterator, Callable, Iterator
+import contextvars
+from collections.abc import AsyncIterator, Callable, Coroutine, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -95,3 +96,27 @@ async def to_async_iterator(
     finally:
         if not executor:
             internal_executor.shutdown(wait=False)
+
+
+def run_sync(coro: Coroutine[Any, Any, T]) -> T:
+    """Run a coroutine to completion from synchronous code.
+
+    ``asyncio.run`` cannot run inside a running event loop. When sync code is
+    reached from one (startup hooks, sync library callbacks), the coroutine
+    runs on a fresh loop in a worker thread and this call blocks until it is
+    done, without patching the caller's loop.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    context = contextvars.copy_context()
+
+    def run_in_loop() -> T:
+        return asyncio.run(coro)
+
+    def run() -> T:
+        return context.run(run_in_loop)
+
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="run-sync") as pool:
+        return pool.submit(run).result()

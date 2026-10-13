@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
@@ -35,6 +34,7 @@ from private_gpt.components.workflows.others.summary_retriever import Retriever
 from private_gpt.components.workflows.others.tree_summarize_synthesizer import (
     TreeSummarizeSynthesizer,
 )
+from private_gpt.utils.async_utils import run_sync
 from private_gpt.utils.concurrency import (
     map_elements_in_parallel,
 )
@@ -171,7 +171,7 @@ class SummaryQueryEngine(BaseQueryEngine):
                     return results
 
                 # Run async code in sync context
-                partial_summary_nodes = asyncio.run(aprocess_nodes())
+                partial_summary_nodes = run_sync(aprocess_nodes())
             else:
                 # Synchronous processing remains unchanged
                 partial_summary_nodes = []

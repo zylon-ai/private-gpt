@@ -17,6 +17,7 @@ from private_gpt.components.multimodality.image_handler import describe_image
 from private_gpt.components.readers.nodes.image_node import IMAGE_PLACEHOLDER
 from private_gpt.di import get_global_injector
 from private_gpt.settings.settings import TransformationReadersSettings
+from private_gpt.utils.async_utils import run_sync
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ class DescribeImageTransform(TransformComponent):
         )
 
     def __call__(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:
-        return asyncio.run(self.acall(nodes, **kwargs))
+        return run_sync(self.acall(nodes, **kwargs))
 
     async def acall(
         self, nodes: Sequence[BaseNode], **kwargs: Any
