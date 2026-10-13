@@ -505,9 +505,7 @@ class MessageInput(BaseModel):
                 current_blocks: list[ContentBlockType] = []
                 # A plain-string content must stay one block; iterating it
                 # would yield one TextBlock per character.
-                content = (
-                    [msg.content] if isinstance(msg.content, str) else msg.content
-                )
+                content = [msg.content] if isinstance(msg.content, str) else msg.content
                 for block in content or []:
                     if isinstance(block, ToolUseBlock):
                         result.append(

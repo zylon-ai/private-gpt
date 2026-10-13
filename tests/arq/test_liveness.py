@@ -259,7 +259,9 @@ def _worker() -> HeartbeatWorker:
     async def noop(ctx: object) -> None:
         del ctx
 
-    return HeartbeatWorker(functions=[noop], redis_pool=MagicMock(), handle_signals=False)
+    return HeartbeatWorker(
+        functions=[noop], redis_pool=MagicMock(), handle_signals=False
+    )
 
 
 async def test_dropped_chat_resume_job_fails_the_chat(
@@ -271,9 +273,7 @@ async def test_dropped_chat_resume_job_fails_the_chat(
     runner.fail_abandoned = AsyncMock()
     injector = MagicMock()
     injector.get.return_value = runner
-    monkeypatch.setattr(
-        "private_gpt.di.get_global_injector", lambda **_: injector
-    )
+    monkeypatch.setattr("private_gpt.di.get_global_injector", lambda **_: injector)
 
     await _worker()._fail_abandoned_chat(
         "msg-1:resume:abc",
@@ -297,9 +297,7 @@ async def test_dropped_chat_start_job_fails_the_chat(
     runner.fail_abandoned = AsyncMock()
     injector = MagicMock()
     injector.get.return_value = runner
-    monkeypatch.setattr(
-        "private_gpt.di.get_global_injector", lambda **_: injector
-    )
+    monkeypatch.setattr("private_gpt.di.get_global_injector", lambda **_: injector)
 
     await _worker()._fail_abandoned_chat(
         "msg-2:start",
@@ -323,9 +321,7 @@ async def test_other_failures_do_not_fail_the_chat(
     runner.fail_abandoned = AsyncMock()
     injector = MagicMock()
     injector.get.return_value = runner
-    monkeypatch.setattr(
-        "private_gpt.di.get_global_injector", lambda **_: injector
-    )
+    monkeypatch.setattr("private_gpt.di.get_global_injector", lambda **_: injector)
     worker = _worker()
 
     # Regular task errors already publish their own error event.
