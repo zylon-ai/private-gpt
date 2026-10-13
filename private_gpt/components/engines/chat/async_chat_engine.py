@@ -988,11 +988,14 @@ class AsyncChatEngine:
         iter_handler = _EventHandler(queue=asyncio.Queue())
 
         def current_context() -> ChatInterceptorContext:
-            return ChatInterceptorContext(
+            # Built per interceptor call on the hot event path; the fields are
+            # already typed, so skip pydantic validation.
+            return ChatInterceptorContext.model_construct(
                 state=run.state,
                 llm=run.llm,
                 phase=InterceptorPhase.STREAMING,
                 emit_fn=iter_handler.emit,
+                metadata={},
             )
 
         ctx = current_context()
