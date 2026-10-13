@@ -251,8 +251,11 @@ class ChatService:
         )
 
     async def cancel(self, correlation_id: str) -> bool:
-        engine = await asyncio.to_thread(self.build_engine)
-        return await engine.cancel(correlation_id=correlation_id)
+        # Cancelling needs only the shared runner (what AsyncChatEngine.cancel
+        # delegates to); building a whole engine per stream cleanup is waste.
+        if self.settings.chat.engine_mode == "async":
+            return bool(await self._runner.cancel(correlation_id))
+        return True
 
     async def validate(self, request: ResolvedChatRequest) -> ChatValidationResult:
         errors: list[str] = []
