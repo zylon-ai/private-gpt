@@ -73,10 +73,11 @@ class ExtractCitationInterceptor(ChatResponseLoopInterceptor):
         event: Event,
         context: ChatInterceptorContext,
     ) -> Event | None:
-        citations_is_enabled = context.state.input.request.citation.enabled
+        # Checked first: with citations off, every event is a cheap pass-through.
+        if not context.state.input.request.citation.enabled:
+            return event
         documents = self._documents_for_prompt(context)
-
-        if not (citations_is_enabled and bool(documents)):
+        if not documents:
             return event
 
         if isinstance(event, RawContentBlockStartEvent):
