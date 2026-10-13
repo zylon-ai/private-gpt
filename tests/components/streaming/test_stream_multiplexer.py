@@ -773,3 +773,49 @@ async def test_multiplexed_path_ends_on_terminal_event(
 
     assert [e.n for e in events] == [0, 1, 2, -1]  # type: ignore[attr-defined]
     assert loop.time() - start < DEFAULT_BLOCK_MS / 1000
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 8. Completion latency — readers finish when the stream does, not on a poll
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("terminal_event", [True, False], ids=["event", "status"])
+async def test_reader_finishes_promptly_when_stream_completes(
+    service: StreamService,
+    stream_reader: StreamReader,
+    multiplexer: StreamMultiplexer,
+    terminal_event: bool,
+) -> None:
+    """A finished stream must end its readers at once.
+
+    Regression: a stream that completed only through a status change (no
+    terminal event) ended its readers after an empty one-second blocking read
+    plus a status poll, about a second after the producer had finished.
+    """
+    handler = TerminalEventHandler()
+    await multiplexer.start()
+    try:
+        for path in ("direct", "multiplexed"):
+            cid = await service.create_stream(
+                "test", correlation_id=f"prompt-{path}-{terminal_event}"
+            )
+            reader = (
+                run_direct(stream_reader, handler, cid)
+                if path == "direct"
+                else run_multiplexed(multiplexer, handler, cid)
+            )
+            task = asyncio.create_task(reader)
+            await asyncio.sleep(0.05)
+            loop = asyncio.get_running_loop()
+            finished_at = loop.time()
+            await service.push_event(cid, json.dumps({"n": 1}))
+            if terminal_event:
+                await service.push_event(cid, json.dumps({"n": -1}))
+            await service.update_stream_status(cid, StreamStatus.COMPLETED)
+            events = await asyncio.wait_for(task, 5)
+            assert events[0].n == 1  # type: ignore[attr-defined]
+            assert loop.time() - finished_at < 0.3, path
+    finally:
+        await multiplexer.stop()

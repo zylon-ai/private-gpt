@@ -30,6 +30,11 @@ TERMINAL_STATUSES: Final[set[StreamStatus]] = {
 }
 
 
+def _woken_early(started: float, now: float, block_ms: int) -> bool:
+    """An empty blocking read that returned early was woken by a status change."""
+    return now - started < block_ms / 1000 * 0.9
+
+
 class StreamBroadcast:
     """Append-only batch log that broadcasts to N concurrent readers.
 
@@ -239,6 +244,7 @@ class StreamReader:
                 last_status_check: float = 0.0  # 0 → check on first idle cycle
 
                 while not stop_event.is_set():
+                    read_started = asyncio.get_event_loop().time()
                     events, current_last_id = await self.read_events(
                         event_handler=event_handler,
                         correlation_id=correlation_id,
@@ -253,7 +259,11 @@ class StreamReader:
                             break
                     else:
                         current_time = asyncio.get_event_loop().time()
-                        if (current_time - last_status_check) >= STATUS_CHECK_INTERVAL:
+                        if (
+                            _woken_early(read_started, current_time, block_ms)
+                            or (current_time - last_status_check)
+                            >= STATUS_CHECK_INTERVAL
+                        ):
                             if await self.check_terminal_status(
                                 correlation_id,
                                 event_handler,
@@ -325,6 +335,8 @@ class StreamMultiplexer:
         self.worker_task: asyncio.Task[None] | None = None
         self.shutdown_event = asyncio.Event()
         self._lock = asyncio.Lock()
+        # Set when a stream is added, so an idle worker starts reading at once.
+        self._streams_added = asyncio.Event()
 
     async def start(self) -> None:
         if self.worker_task is None or self.worker_task.done():
@@ -366,6 +378,7 @@ class StreamMultiplexer:
         async with self._lock:
             if correlation_id not in self.states:
                 self.states[correlation_id] = StreamState(last_id=last_id)
+                self._streams_added.set()
 
             state = self.states[correlation_id]
             # last_id="0" means "from the start" — replay every batch already in
@@ -403,7 +416,9 @@ class StreamMultiplexer:
                     correlation_ids = list(self.states.keys())
 
                 if not correlation_ids:
-                    await asyncio.sleep(0.5)
+                    self._streams_added.clear()
+                    with contextlib.suppress(TimeoutError):
+                        await asyncio.wait_for(self._streams_added.wait(), 0.5)
                     continue
 
                 tasks = [self._process_stream(cid) for cid in correlation_ids]
@@ -430,6 +445,7 @@ class StreamMultiplexer:
                     return
                 event_handler = consumer_list[0].event_handler
 
+            read_started = asyncio.get_event_loop().time()
             events, new_last_id = await self.stream_reader.read_events(
                 event_handler=event_handler,
                 correlation_id=correlation_id,
@@ -446,7 +462,10 @@ class StreamMultiplexer:
                 )
                 terminal = await self.stream_reader.ends_stream(event_handler, events)
 
-            elif (current_time - state.last_status_check) >= STATUS_CHECK_INTERVAL:
+            elif (
+                _woken_early(read_started, current_time, DEFAULT_BLOCK_MS)
+                or (current_time - state.last_status_check) >= STATUS_CHECK_INTERVAL
+            ):
                 state.last_status_check = current_time
                 terminal = await self.stream_reader.check_terminal_status(
                     correlation_id,
