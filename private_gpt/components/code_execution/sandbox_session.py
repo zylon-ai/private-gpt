@@ -15,6 +15,20 @@ if TYPE_CHECKING:
     from private_gpt.components.sandbox.base import SandboxLink, SandboxSession
 
 
+def _as_text(raw: bytes) -> str | None:
+    """Decode *raw* as UTF-8 text, or return None when it is binary.
+
+    A lenient decode turns an image into pages of replacement characters that
+    cost tokens and tell the model nothing. NUL bytes are rejected as well: they
+    are valid UTF-8 but never appear in a text file.
+    """
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    return None if "\x00" in text else text
+
+
 class SandboxCodeExecutionSession(CodeExecutionSession):
     """CodeExecutionSession tool protocol over a managed Environment.
 
@@ -74,7 +88,16 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
                 entries = await self._sandbox.list_dir(path)
                 return FileOperationResult(success=True, output="\n".join(entries))
             raw = await self._sandbox.read_file(path)
-            text = raw.decode("utf-8", errors="replace")
+            text = _as_text(raw)
+            if text is None:
+                return FileOperationResult(
+                    success=False,
+                    error=(
+                        f"{path} is a binary file and cannot be viewed as text. "
+                        "Inspect it with code instead, or use describe_image, "
+                        "transcribe_audio or convert_documents when available."
+                    ),
+                )
             all_lines = text.splitlines()
             total = len(all_lines)
             base_line = 1

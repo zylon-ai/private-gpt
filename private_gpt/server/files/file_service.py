@@ -181,7 +181,8 @@ class FileService:
         Keys default to the uploads mount (i.e. ``/mnt/user-data/uploads/``).
         A leading ``outputs/`` segment selects the outputs mount instead, which
         lets callers push generated deliverables directly into
-        ``/mnt/user-data/outputs/``.
+        ``/mnt/user-data/outputs/``; a leading ``workspace/`` segment selects the
+        agent's working directory (``/home/agent/workspace/``).
         """
         storage = self._require_storage()
         folder, rel_path = self._split_session_target(path=path, fallback="upload")
@@ -270,6 +271,28 @@ class FileService:
             last_id=page[-1].id if page else None,
             has_more=has_more,
         )
+
+    async def exists(
+        self,
+        scope_id: str,
+        path: str,
+        namespace: str = "session",
+    ) -> bool:
+        """Return True when *path* already holds a file for this scope.
+
+        ``path`` is an upload-style key, interpreted exactly as
+        :meth:`put_file` interprets it: relative to the uploads mount unless it
+        starts with ``outputs/``.
+        """
+        if not self._ns_uses_storage(namespace):
+            return False
+
+        storage = self._require_storage()
+        try:
+            folder, rel_path = self._split_session_target(path=path, fallback="upload")
+        except HTTPException:
+            return False
+        return await storage.stat_file(f"{folder}/{scope_id}", rel_path) is not None
 
     async def get_file_metadata(
         self,
@@ -551,22 +574,28 @@ class FileService:
     def _split_session_target(self, path: str | None, fallback: str) -> tuple[str, str]:
         """Return the virtual session mount and key for a write request.
 
-        Unless a request explicitly selects ``outputs/``, ordinary keys are
-        written to ``uploads/``. A leading ``outputs/`` segment selects the
-        output mount; nested occurrences (including under an explicit
-        ``uploads/`` prefix) remain part of the requested key.
+        Unless a request explicitly selects ``outputs/`` or ``workspace/``,
+        ordinary keys are written to ``uploads/``. A leading ``outputs/``
+        segment selects the output mount and a leading ``workspace/`` segment
+        the agent's working directory (``/home/agent/workspace/``, stored under
+        ``user/``); nested occurrences (including under an explicit ``uploads/``
+        prefix) remain part of the requested key.
+
+        ``workspace/`` exists so a host-side caller can hand the agent a file it
+        can also write next to - uploads is read-only inside the sandbox.
         """
         normalized = self._normalize_upload_path(path=path, fallback=fallback)
         parts = PurePosixPath(normalized).parts
-        if parts and parts[0] == "outputs":
-            relative = "/".join(parts[1:])
-            if not relative:
-                raise HTTPException(
-                    status_code=400,
-                    detail="path must point to a file below 'outputs/', "
-                    "not the directory itself.",
-                )
-            return "outputs", relative
+        for selector, folder in (("outputs", "outputs"), ("workspace", "user")):
+            if parts and parts[0] == selector:
+                relative = "/".join(parts[1:])
+                if not relative:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"path must point to a file below '{selector}/', "
+                        "not the directory itself.",
+                    )
+                return folder, relative
         return "uploads", normalized
 
     @staticmethod

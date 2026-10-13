@@ -21,10 +21,13 @@ from private_gpt.components.skills.models.skill_entities import (
 from private_gpt.components.tools.processors.anthropic_tool_translation_processor import (
     AnthropicToolTranslationProcessor,
 )
-from private_gpt.components.tools.processors.base import _replace_tool, _session_id
+from private_gpt.components.tools.processors.base import _replace_tool, session_id_for
 from private_gpt.components.tools.processors.bash_processor import BashProcessor
 from private_gpt.components.tools.processors.code_execution_processor import (
     CodeExecutionProcessor,
+)
+from private_gpt.components.tools.processors.convert_documents_processor import (
+    ConvertDocumentsProcessor,
 )
 from private_gpt.components.tools.processors.skill_management_processor import (
     SkillManagementProcessor,
@@ -169,6 +172,9 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
         ),
         present_files_processor=noop,
         present_server_processor=noop,
+        convert_documents_processor=noop,
+        describe_image_processor=noop,
+        transcribe_audio_processor=noop,
     )
     request = _request(
         [
@@ -186,6 +192,79 @@ async def test_tool_pipeline_recursively_expands_code_execution_wrapper() -> Non
         "bash_code_execution",
         "text_editor_code_execution",
     ]
+
+
+@pytest.mark.asyncio
+async def test_code_execution_fan_out_never_duplicates_convert_documents() -> None:
+    """A caller passing convert_documents explicitly must not get two copies.
+
+    The fan-out skips tools the request already carries, and the processor
+    collapses whatever still slips through, so exactly one resolved tool
+    survives.
+    """
+    convert_builder = SimpleNamespace(
+        build_tool=AsyncMock(
+            side_effect=lambda config, name="convert_documents", type="convert_documents_v1", **kw: (
+                ToolSpec.from_defaults(
+                    name=name,
+                    type=type,
+                    description="convert",
+                    async_fn=AsyncMock(return_value=[]),
+                )
+            )
+        )
+    )
+    convert_settings = SimpleNamespace(
+        code_execution=SimpleNamespace(
+            tools=SimpleNamespace(convert_documents=SimpleNamespace(enabled=True))
+        )
+    )
+    noop = SimpleNamespace(intercept=AsyncMock(return_value=False))
+    pipeline = ToolPipeline(
+        anthropic_tool_translation_processor=noop,
+        semantic_search_processor=noop,
+        tabular_data_processor=noop,
+        database_query_processor=noop,
+        web_fetch_processor=noop,
+        web_search_processor=noop,
+        skill_management_processor=noop,
+        code_execution_processor=CodeExecutionProcessor(),
+        bash_processor=noop,
+        text_editor_processor=noop,
+        present_files_processor=noop,
+        present_server_processor=noop,
+        convert_documents_processor=ConvertDocumentsProcessor(
+            convert_builder, convert_settings
+        ),
+        describe_image_processor=noop,
+        transcribe_audio_processor=noop,
+    )
+    request = _request(
+        [
+            ToolSpec(
+                name="code_execution",
+                type="code_execution_v1",
+                input_schema={"type": "object", "properties": {}},
+            ),
+            ToolSpec(
+                name="convert_documents",
+                type="convert_documents_v1",
+                input_schema={"type": "object", "properties": {}},
+            ),
+        ]
+    )
+    request.system.extensions.zylon_enabled = True
+
+    resolved = await pipeline.contextualize_internal_tools(request)
+
+    converters = [
+        tool
+        for tool in resolved.tool_config.tools
+        if tool.type == "convert_documents_v1"
+    ]
+    assert len(converters) == 1
+    assert converters[0].async_fn is not None
+    convert_builder.build_tool.assert_awaited_once()
 
 
 _DUMMY_METADATA = ToolExecutionMetadata(
@@ -266,6 +345,9 @@ def _make_pipeline(
         ),
         present_files_processor=noop,
         present_server_processor=noop,
+        convert_documents_processor=noop,
+        describe_image_processor=noop,
+        transcribe_audio_processor=noop,
     )
 
 
@@ -376,7 +458,7 @@ def test_tool_pipeline_uses_user_id_as_session_id() -> None:
         ),
     )
 
-    assert _session_id(request) == "session-123"
+    assert session_id_for(request) == "session-123"
 
 
 def _skill_version() -> SkillVersionEntity:
@@ -416,6 +498,9 @@ async def test_skill_tools_are_built_without_pre_recovery() -> None:
         text_editor_processor=noop,
         present_files_processor=noop,
         present_server_processor=noop,
+        convert_documents_processor=noop,
+        describe_image_processor=noop,
+        transcribe_audio_processor=noop,
     )
     request = _request(
         [
@@ -476,6 +561,9 @@ async def test_tool_pipeline_expands_skills_wrapper() -> None:
         text_editor_processor=noop,
         present_files_processor=noop,
         present_server_processor=noop,
+        convert_documents_processor=noop,
+        describe_image_processor=noop,
+        transcribe_audio_processor=noop,
     )
     request = _request(
         [
@@ -503,3 +591,29 @@ async def test_tool_pipeline_expands_skills_wrapper() -> None:
         "unload_skill",
         "list_skills",
     ]
+
+
+@pytest.mark.asyncio
+async def test_code_execution_fan_out_includes_the_media_tools() -> None:
+    """The media tools must reach the request, or the interceptor stays off.
+
+    ``MediaFilePreprocessingInterceptor`` only saves attachments when a resolved
+    media tool is present, and a name missing from the fan-out never gets one.
+    """
+    pipeline = _make_pipeline()
+    request = _request(
+        [
+            ToolSpec(
+                name="code_execution",
+                type="code_execution_v1",
+                input_schema={"type": "object", "properties": {}},
+            )
+        ]
+    )
+    request.system.extensions.zylon_enabled = True
+
+    resolved = await pipeline.contextualize_internal_tools(request)
+
+    types = {tool.type for tool in resolved.tool_config.tools}
+    assert "describe_image_v1" in types
+    assert "transcribe_audio_v1" in types

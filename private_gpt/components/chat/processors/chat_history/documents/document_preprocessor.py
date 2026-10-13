@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     )
 
 
-def _extract_document_blocks(message: ChatMessage) -> list[DocumentBlock]:
+def extract_document_blocks(message: ChatMessage) -> list[DocumentBlock]:
     documents_blocks: list[DocumentBlock] = list(
         message.additional_kwargs.get("document", [])
     )
@@ -85,7 +85,7 @@ async def preprocess_document_message(
     max_concurrency limits how many documents are converted simultaneously.
     -1 (default) means unlimited.
     """
-    document_blocks = _extract_document_blocks(message)
+    document_blocks = extract_document_blocks(message)
     if not document_blocks:
         yield DocumentProcessingResponse(message=message)
         return
@@ -193,7 +193,7 @@ async def preprocess_document_history(
         yield DocumentProcessingResponse(chat_history=chat_history)
         return
 
-    if not any(_extract_document_blocks(msg) for msg in chat_history):
+    if not any(extract_document_blocks(msg) for msg in chat_history):
         yield DocumentProcessingResponse(chat_history=chat_history)
         return
 
