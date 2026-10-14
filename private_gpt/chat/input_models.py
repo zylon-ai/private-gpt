@@ -503,8 +503,7 @@ class MessageInput(BaseModel):
         for msg in messages:
             if msg.role == "assistant":
                 current_blocks: list[ContentBlockType] = []
-                # A plain-string content must stay one block; iterating it
-                # would yield one TextBlock per character.
+                # Iterating a str would yield one TextBlock per character.
                 content = [msg.content] if isinstance(msg.content, str) else msg.content
                 for block in content or []:
                     if isinstance(block, ToolUseBlock):

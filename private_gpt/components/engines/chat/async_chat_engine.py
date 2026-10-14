@@ -936,8 +936,6 @@ class AsyncChatEngine:
         )
         self._apply_payload_usage(run, checkpoint_context.payload)
         stop_reason = checkpoint_context.stop_reason
-        # run.state is fresh from _initialize_run and only its own output
-        # changes below, so no defensive copy is needed.
         run.state.output.stop_reason = stop_reason
         channel.emit(
             RawMessageDeltaEvent(
@@ -1144,8 +1142,6 @@ class AsyncChatEngine:
         self._validate_unique_tool_call_ids(assistant_message)
         self._accumulate_usage(run, assistant_message)
 
-        # Tool tasks may still hold the previous state, so copy before mutating;
-        # the copy stays private until the next await.
         run.state = run.state.model_copy(deep=True)
         run.state.input.request.messages = [
             *run.state.input.request.messages,

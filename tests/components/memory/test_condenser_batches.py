@@ -46,7 +46,6 @@ def test_summary_left_sends_each_batch_only_its_own_messages() -> None:
     )
 
     assert len(calls) > 1
-    # Each batch's summary call gets exactly one text: its own batch.
     assert all(len(texts) == 1 for texts in calls)
     joined = [texts[0] for texts in calls]
     assert len(set(joined)) == len(joined)

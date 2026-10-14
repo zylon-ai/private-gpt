@@ -43,9 +43,6 @@ return 0
 """
 
 
-# Chat tasks whose loss leaves a client stream open, mapped to the position
-# of their correlation_id argument. Tool-result/timeout jobs are left out:
-# their own timeout path already ends the chat.
 _ABANDONABLE_CHAT_TASKS: dict[str, int] = {
     "private_gpt.chat.start": 1,
     "private_gpt.chat.resume_iteration": 0,
@@ -237,13 +234,6 @@ class HeartbeatWorker(Worker):
     async def _fail_abandoned_chat(
         self, job_id: str, result_data: bytes | None
     ) -> None:
-        """Publish a terminal error for a chat job ARQ gave up on.
-
-        ARQ reaches finish_failed_job without running the task when the job
-        is past max_tries, which is how a job orphaned by a dead worker ends
-        once its stale lock is recovered. No task code runs in that case, so
-        the chat stream would otherwise stay open until it expires.
-        """
         if result_data is None:
             return
         try:

@@ -324,7 +324,6 @@ async def test_other_failures_do_not_fail_the_chat(
     monkeypatch.setattr("private_gpt.di.get_global_injector", lambda **_: injector)
     worker = _worker()
 
-    # Regular task errors already publish their own error event.
     await worker._fail_abandoned_chat(
         "msg-3:resume:x",
         _failed_result(
@@ -333,7 +332,6 @@ async def test_other_failures_do_not_fail_the_chat(
             ValueError("boom"),
         ),
     )
-    # Tool jobs have their own timeout path.
     await worker._fail_abandoned_chat(
         "msg-4:tool-result:t",
         _failed_result(

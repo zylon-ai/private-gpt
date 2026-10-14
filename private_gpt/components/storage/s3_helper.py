@@ -99,13 +99,6 @@ class S3Helper:
         }
 
     def _warm_async_session(self) -> Any:
-        """Create the shared session and fill its loader cache.
-
-        Client creation reads botocore's endpoint/service JSON synchronously.
-        Runs in a worker thread so that first load never blocks the event
-        loop; it builds a throwaway client on a private loop with the same
-        arguments as real clients, so the exact files they need are cached.
-        """
         with self._async_session_lock:
             if self._async_session is None:
                 from aiobotocore.session import (  # ty:ignore[unresolved-import]

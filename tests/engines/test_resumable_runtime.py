@@ -992,10 +992,8 @@ async def test_tool_result_arriving_during_resume_triggers_the_next_resume() -> 
         )
 
     await store.save(_checkpoint("checkpoint-old", "tool-old", 0))
-    # The previous iteration's resume is running and holds the claim.
     assert await store.claim_resume("execution-race") is True
 
-    # The next iteration's tool finishes before the new checkpoint is saved.
     await runner.callback(
         execution_id="execution-race",
         tool_id="tool-new",
@@ -1003,7 +1001,6 @@ async def test_tool_result_arriving_during_resume_triggers_the_next_resume() -> 
     )
     scheduler.resume.assert_not_awaited()
 
-    # The resume finishes and saves the new checkpoint, then checks readiness.
     await store.save(_checkpoint("checkpoint-new", "tool-new", 1))
     await runner._resume_if_ready("execution-race")
 
