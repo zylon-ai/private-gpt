@@ -119,7 +119,7 @@ CONTENT_BLOCK_REGISTRY: list[TypeMapping] = [
         our_type=ToolUseBlock,
         sdk_schema_name="ToolUseBlock",
         openapi_schema_name=None,
-        zylon_only_fields=_CACHEABLE_ZYLON_FIELDS,
+        zylon_only_fields=_CACHEABLE_ZYLON_FIELDS | {"raw_name"},
         sdk_only_fields=frozenset(),
         sdk_sample={
             "type": "tool_use",
@@ -133,7 +133,7 @@ CONTENT_BLOCK_REGISTRY: list[TypeMapping] = [
         our_type=ServerToolUseBlock,
         sdk_schema_name="ServerToolUseBlock",
         openapi_schema_name=None,
-        zylon_only_fields=_CACHEABLE_ZYLON_FIELDS,
+        zylon_only_fields=_CACHEABLE_ZYLON_FIELDS | {"raw_name"},
         sdk_only_fields=frozenset(),
         sdk_sample={
             "type": "server_tool_use",
