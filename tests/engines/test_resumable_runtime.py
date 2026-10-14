@@ -939,3 +939,71 @@ def test_checkpoint_context_stack_rejects_non_resumable_server_tool() -> None:
 
     with pytest.raises(NonResumableToolError, match="ephemeral"):
         stack.checkpoint_dump()
+
+
+@pytest.mark.asyncio
+async def test_fail_abandoned_publishes_terminal_error_and_closes_stream() -> None:
+    from private_gpt.events.models import FatalError
+
+    store = InMemoryChatCheckpointStore()
+    runner = _resumable_runner(store, MagicMock())
+    events = runner._events.listen("execution-abandoned")
+
+    await runner.fail_abandoned("execution-abandoned", "worker stopped")
+
+    received = [event async for event in events]
+    assert len(received) == 1
+    assert isinstance(received[0], FatalError)
+    assert await store.mark_terminal("execution-abandoned", "failed") is False
+
+
+@pytest.mark.asyncio
+async def test_fail_abandoned_does_not_override_a_finished_chat() -> None:
+    store = InMemoryChatCheckpointStore()
+    await store.mark_terminal("execution-done", "completed")
+    runner = _resumable_runner(store, MagicMock())
+    events = runner._events.listen("execution-done")
+
+    await runner.fail_abandoned("execution-done", "worker stopped")
+
+    assert [event async for event in events] == []
+
+
+@pytest.mark.asyncio
+async def test_tool_result_arriving_during_resume_triggers_the_next_resume() -> None:
+    store = InMemoryChatCheckpointStore()
+    scheduler = MagicMock()
+    scheduler.resume = AsyncMock()
+    scheduler.tool_timeout = AsyncMock()
+    runner = _resumable_runner(store, scheduler)
+
+    def _checkpoint(checkpoint_id: str, tool_id: str, iteration: int) -> ChatCheckpoint:
+        return ChatCheckpoint(
+            correlation_id="execution-race",
+            request_data={},
+            stream_type="chat_completion",
+            metadata={},
+            iteration=iteration,
+            checkpoint="tools",
+            checkpoint_payload=IterationCheckpointPayload(
+                pending_async_tools={tool_id: f"job-{tool_id}"}
+            ),
+            checkpoint_id=checkpoint_id,
+        )
+
+    await store.save(_checkpoint("checkpoint-old", "tool-old", 0))
+    assert await store.claim_resume("execution-race") is True
+
+    await runner.callback(
+        execution_id="execution-race",
+        tool_id="tool-new",
+        result=_tool_response("tool-new").model_dump(mode="json"),
+    )
+    scheduler.resume.assert_not_awaited()
+
+    await store.save(_checkpoint("checkpoint-new", "tool-new", 1))
+    await runner._resume_if_ready("execution-race")
+
+    scheduler.resume.assert_awaited_once_with(
+        execution_id="execution-race", checkpoint_id="checkpoint-new"
+    )

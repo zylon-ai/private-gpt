@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO
 from urllib.parse import quote
@@ -14,6 +17,8 @@ from private_gpt.settings.settings import settings
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from mypy_boto3_s3.client import S3Client
 
     from private_gpt.settings.settings import S3Settings
@@ -34,6 +39,9 @@ def _encode_metadata_value(value: str) -> str:
 class S3Helper:
     _s3_client: S3Client | None
     _s3_settings: S3Settings
+    _async_session: Any = None
+    _async_session_warmed: bool = False
+    _async_session_lock = threading.Lock()
 
     @inject
     def __init__(self) -> None:
@@ -76,21 +84,51 @@ class S3Helper:
         )
         return client
 
-    def _get_async_s3_client(self) -> Any:
+    def _async_client_kwargs(self) -> dict[str, Any]:
         from aiobotocore.config import AioConfig  # ty:ignore[unresolved-import]
-        from aiobotocore.session import get_session  # ty:ignore[unresolved-import]
 
-        return get_session().create_client(
-            "s3",
-            verify=False,
-            endpoint_url=self._s3_settings.endpoint_url,
-            aws_access_key_id=self._s3_settings.access_key_id,
-            aws_secret_access_key=self._s3_settings.secret_access_key,
-            config=AioConfig(
+        return {
+            "verify": False,
+            "endpoint_url": self._s3_settings.endpoint_url,
+            "aws_access_key_id": self._s3_settings.access_key_id,
+            "aws_secret_access_key": self._s3_settings.secret_access_key,
+            "config": AioConfig(
                 connect_timeout=self._s3_settings.connect_timeout_seconds,
                 read_timeout=self._s3_settings.read_timeout_seconds,
             ),
-        )
+        }
+
+    def _warm_async_session(self) -> Any:
+        with self._async_session_lock:
+            if self._async_session is None:
+                from aiobotocore.session import (  # ty:ignore[unresolved-import]
+                    get_session,
+                )
+
+                self._async_session = get_session()
+            session = self._async_session
+            if not self._async_session_warmed:
+
+                async def build_client() -> None:
+                    async with session.create_client(
+                        "s3", **self._async_client_kwargs()
+                    ) as client:
+                        client.get_paginator("list_objects_v2")
+
+                try:
+                    asyncio.run(build_client())
+                except Exception:
+                    logger.warning("Failed to warm S3 client data", exc_info=True)
+                self._async_session_warmed = True
+            return session
+
+    @asynccontextmanager
+    async def _get_async_s3_client(self) -> AsyncIterator[Any]:
+        session = self._async_session
+        if session is None or not self._async_session_warmed:
+            session = await asyncio.to_thread(self._warm_async_session)
+        async with session.create_client("s3", **self._async_client_kwargs()) as client:
+            yield client
 
     def upload_file_to_s3(
         self,

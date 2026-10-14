@@ -238,9 +238,7 @@ class CondenserContextMemoryStrategy(BaseMemoryStrategy):
             if not batch:
                 continue
 
-            texts = [
-                await asyncio.to_thread(messages_to_history_str, b) for b in batches
-            ]
+            texts = [await asyncio.to_thread(messages_to_history_str, batch)]
             summarized_history_tasks.append(
                 self._summarize_obj(
                     llm=llm,

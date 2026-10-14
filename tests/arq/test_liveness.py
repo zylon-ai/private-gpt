@@ -232,3 +232,126 @@ async def test_worker_keeps_legacy_lock_while_legacy_health_exists(
 
     assert recovered == 0
     pool.eval.assert_awaited_once()
+
+
+def _failed_result(function: str, args: tuple[object, ...], error: Exception) -> bytes:
+    from arq.jobs import serialize_result
+
+    result = serialize_result(
+        function,
+        args,
+        {},
+        2,
+        0,
+        False,
+        error,
+        0,
+        0,
+        f"job:{function}",
+        "queue",
+        job_id="job",
+    )
+    assert result is not None
+    return result
+
+
+def _worker() -> HeartbeatWorker:
+    async def noop(ctx: object) -> None:
+        del ctx
+
+    return HeartbeatWorker(
+        functions=[noop], redis_pool=MagicMock(), handle_signals=False
+    )
+
+
+async def test_dropped_chat_resume_job_fails_the_chat(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from arq.worker import JobExecutionFailed
+
+    runner = MagicMock()
+    runner.fail_abandoned = AsyncMock()
+    injector = MagicMock()
+    injector.get.return_value = runner
+    monkeypatch.setattr("private_gpt.di.get_global_injector", lambda **_: injector)
+
+    await _worker()._fail_abandoned_chat(
+        "msg-1:resume:abc",
+        _failed_result(
+            "private_gpt.chat.resume_iteration",
+            ("msg-1", "checkpoint", None),
+            JobExecutionFailed("max 1 retries exceeded"),
+        ),
+    )
+
+    runner.fail_abandoned.assert_awaited_once()
+    assert runner.fail_abandoned.await_args.args[0] == "msg-1"
+
+
+async def test_dropped_chat_start_job_fails_the_chat(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from arq.worker import JobExecutionFailed
+
+    runner = MagicMock()
+    runner.fail_abandoned = AsyncMock()
+    injector = MagicMock()
+    injector.get.return_value = runner
+    monkeypatch.setattr("private_gpt.di.get_global_injector", lambda **_: injector)
+
+    await _worker()._fail_abandoned_chat(
+        "msg-2:start",
+        _failed_result(
+            "private_gpt.chat.start",
+            ({"messages": []}, "msg-2", "chat", {}, None),
+            JobExecutionFailed("max 1 retries exceeded"),
+        ),
+    )
+
+    runner.fail_abandoned.assert_awaited_once()
+    assert runner.fail_abandoned.await_args.args[0] == "msg-2"
+
+
+async def test_other_failures_do_not_fail_the_chat(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from arq.worker import JobExecutionFailed
+
+    runner = MagicMock()
+    runner.fail_abandoned = AsyncMock()
+    injector = MagicMock()
+    injector.get.return_value = runner
+    monkeypatch.setattr("private_gpt.di.get_global_injector", lambda **_: injector)
+    worker = _worker()
+
+    await worker._fail_abandoned_chat(
+        "msg-3:resume:x",
+        _failed_result(
+            "private_gpt.chat.resume_iteration",
+            ("msg-3", "checkpoint", None),
+            ValueError("boom"),
+        ),
+    )
+    await worker._fail_abandoned_chat(
+        "msg-4:tool-result:t",
+        _failed_result(
+            "private_gpt.tool.resume",
+            ("msg-4", "t", {}, None),
+            JobExecutionFailed("max 1 retries exceeded"),
+        ),
+    )
+    await worker._fail_abandoned_chat("msg-5:start", None)
+
+    runner.fail_abandoned.assert_not_awaited()
+
+
+def test_abandonable_task_names_match_registered_chat_tasks() -> None:
+    from private_gpt.arq.tasks.chat.settings import (
+        RESUME_ITERATION_TASK_NAME,
+        START_CHAT_TASK_NAME,
+    )
+
+    assert set(liveness._ABANDONABLE_CHAT_TASKS) == {
+        START_CHAT_TASK_NAME,
+        RESUME_ITERATION_TASK_NAME,
+    }

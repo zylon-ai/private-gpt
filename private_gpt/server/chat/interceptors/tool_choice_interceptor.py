@@ -35,8 +35,15 @@ class ToolChoiceRequestInterceptor(ChatRequestLoopInterceptor):
             tools=state.input.context_stack.all_tools(),
             tool_choices=state.input.request.tool_config.tool_choices,
         )
-        new_state = state.model_copy(deep=True)
-        new_state.input.request.messages = list(history or [])
+        request = state.input.request
+        new_state = state.model_copy()
+        new_state.input = state.input.model_copy()
+        new_state.input.request = request.model_copy(
+            update={
+                "messages": list(history or []),
+                "tool_config": request.tool_config.model_copy(),
+            }
+        )
         if new_tool_choice:
             new_state.input.request.tool_config.tool_choices = new_tool_choice
 

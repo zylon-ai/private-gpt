@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import Coroutine, Sequence
 from typing import Any
 
@@ -82,8 +83,11 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
         """Get tree summarize response."""
         summary_template = self._summary_template.partial_format(query_str=query_str)
         # repack text_chunks so that each chunk fills the context window
-        text_chunks = self._prompt_helper.repack(
-            summary_template, text_chunks=text_chunks, llm=self._llm
+        text_chunks = await asyncio.to_thread(
+            self._prompt_helper.repack,
+            summary_template,
+            text_chunks=text_chunks,
+            llm=self._llm,
         )
 
         if self._verbose:

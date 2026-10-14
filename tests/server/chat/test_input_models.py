@@ -2570,3 +2570,37 @@ def test_validate_system_config_merges_prompt_flags() -> None:
     assert merged.prompt.code_execution is True
     assert merged.prompt.citations is False
     assert merged.prompt.thinking is False
+
+
+def test_assistant_string_content_stays_one_text_block() -> None:
+    text = "word " * 1800
+    messages = [
+        MessageInput(role="user", content="hi"),
+        MessageInput(role="assistant", content=text),
+        MessageInput(role="user", content="and now?"),
+    ]
+
+    processed = MessageInput._process_messages(messages)
+
+    assistant = [m for m in processed if m.role == "assistant"]
+    assert len(assistant) == 1
+    assert isinstance(assistant[0].content, list)
+    assert len(assistant[0].content) == 1
+    block = assistant[0].content[0]
+    assert isinstance(block, TextBlock)
+    assert block.text == text
+
+
+def test_assistant_string_content_converts_to_one_llama_block() -> None:
+    text = "answer with numbers 123 456 " * 300
+    result = MessageInput.convert_from_llama_index_messages(
+        [
+            MessageInput(role="user", content="hi"),
+            MessageInput(role="assistant", content=text),
+        ]
+    )
+
+    assistant = [m for m in result if m.role == MessageRole.ASSISTANT]
+    assert len(assistant) == 1
+    assert len(assistant[0].blocks) == 1
+    assert assistant[0].content == text

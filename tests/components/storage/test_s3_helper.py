@@ -82,7 +82,7 @@ def test_sync_s3_client_is_built_with_timeouts(monkeypatch: Any) -> None:
     assert config.read_timeout == 42
 
 
-def test_async_s3_client_is_built_with_timeouts(monkeypatch: Any) -> None:
+async def test_async_s3_client_is_built_with_timeouts(monkeypatch: Any) -> None:
     import aiobotocore.session
 
     from private_gpt.settings.settings import S3Settings
@@ -109,9 +109,47 @@ def test_async_s3_client_is_built_with_timeouts(monkeypatch: Any) -> None:
         read_timeout_seconds=42,
     )
 
-    helper._get_async_s3_client()
+    async with helper._get_async_s3_client():
+        pass
 
     config = captured.get("config")
     assert config is not None, "aiobotocore client built without an AioConfig"
     assert config.connect_timeout == 7
     assert config.read_timeout == 42
+
+
+async def test_async_s3_client_loads_botocore_data_off_the_event_loop_thread(
+    monkeypatch: Any,
+) -> None:
+    import threading
+
+    import botocore.loaders
+
+    from private_gpt.settings.settings import S3Settings
+
+    loop_thread = threading.get_ident()
+    load_threads: list[int] = []
+    original_load_file = botocore.loaders.JSONFileLoader.load_file
+
+    def load_file(self: Any, *args: Any, **kwargs: Any) -> Any:
+        load_threads.append(threading.get_ident())
+        return original_load_file(self, *args, **kwargs)
+
+    monkeypatch.setattr(botocore.loaders.JSONFileLoader, "load_file", load_file)
+
+    helper = S3Helper.__new__(S3Helper)
+    helper._s3_settings = S3Settings(
+        endpoint_url="http://s3.local",
+        public_endpoint_url="http://s3.local",
+        access_key_id="key",
+        secret_access_key="secret",
+        durable_bucket_name="durable",
+        temporary_bucket_name="temporary",
+    )
+
+    for _ in range(2):
+        async with helper._get_async_s3_client() as s3_client:
+            s3_client.get_paginator("list_objects_v2")
+
+    assert load_threads
+    assert loop_thread not in load_threads

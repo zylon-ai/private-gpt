@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Any
 
 from arq.constants import health_check_key_suffix
+from arq.jobs import deserialize_result
 from arq.utils import timestamp_ms
-from arq.worker import Worker
+from arq.worker import JobExecutionFailed, Worker
 from redis.exceptions import ResponseError, WatchError
 
 from private_gpt.arq.leases import (
@@ -40,6 +41,12 @@ if redis.call('get', KEYS[1]) == ARGV[1]
 end
 return 0
 """
+
+
+_ABANDONABLE_CHAT_TASKS: dict[str, int] = {
+    "private_gpt.chat.start": 1,
+    "private_gpt.chat.resume_iteration": 0,
+}
 
 
 def arq_health_check_interval() -> int:
@@ -219,6 +226,57 @@ class HeartbeatWorker(Worker):
                     job_id,
                 )
         return recovered
+
+    async def finish_failed_job(self, job_id: str, result_data: bytes | None) -> None:
+        await super().finish_failed_job(job_id, result_data)
+        await self._fail_abandoned_chat(job_id, result_data)
+
+    async def _fail_abandoned_chat(
+        self, job_id: str, result_data: bytes | None
+    ) -> None:
+        if result_data is None:
+            return
+        try:
+            result = deserialize_result(result_data, deserializer=self.job_deserializer)
+        except Exception:
+            logger.debug("Could not read failed ARQ result job_id=%s", job_id)
+            return
+        if not isinstance(result.result, JobExecutionFailed):
+            return
+        if "retries exceeded" not in str(result.result):
+            return
+        correlation_id = _ABANDONABLE_CHAT_TASKS.get(result.function)
+        if correlation_id is None:
+            return
+        execution_id = result.args[correlation_id] if result.args else None
+        if not isinstance(execution_id, str):
+            return
+
+        logger.warning(
+            "Failing chat abandoned by a dead worker job_id=%s correlation_id=%s",
+            job_id,
+            execution_id,
+        )
+        try:
+            from private_gpt.components.engines.chat.resumable_runner import (
+                ResumableChatRunner,
+            )
+            from private_gpt.di import get_global_injector
+
+            runner = get_global_injector(allow_to_generate_new_injectors=True).get(
+                ResumableChatRunner
+            )
+            await runner.fail_abandoned(
+                execution_id,
+                "The chat was interrupted because the worker processing it "
+                "stopped. Please retry.",
+            )
+        except Exception:
+            logger.exception(
+                "Could not fail abandoned chat job_id=%s correlation_id=%s",
+                job_id,
+                execution_id,
+            )
 
     async def _poll_iteration(self) -> None:
         # Renew before looking for stale owners. After a Redis interruption this

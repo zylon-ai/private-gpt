@@ -328,6 +328,10 @@ class ResumableChatRunner:
             return_exceptions=True,
         )
 
+    async def fail_abandoned(self, execution_id: str, reason: str) -> None:
+        await self._cancel_pending_tools(execution_id)
+        await self._fail(execution_id, RuntimeError(reason))
+
     async def _fail(
         self,
         execution_id: str,

@@ -752,7 +752,7 @@ class AsyncChatEngine:
         self._store_runtime_usage(run)
         run.state = run.state.model_copy(deep=True)
         run.state.runtime.next_block_count = run.block_count
-        return run.state.model_copy(deep=True)
+        return run.state
 
     async def _execute_start_checkpoint(
         self,
@@ -936,7 +936,6 @@ class AsyncChatEngine:
         )
         self._apply_payload_usage(run, checkpoint_context.payload)
         stop_reason = checkpoint_context.stop_reason
-        run.state = run.state.model_copy(deep=True)
         run.state.output.stop_reason = stop_reason
         channel.emit(
             RawMessageDeltaEvent(
@@ -1152,7 +1151,6 @@ class AsyncChatEngine:
 
         if not tool_calls:
             stop_reason = assistant_message.additional_kwargs.get("stop_reason")
-            run.state = run.state.model_copy(deep=True)
             run.state.output.stop_reason = stop_reason
             # COMPLETED: job dispatches close_chat_job — it emits stop events
             run.state.output.status = ChatStatus.COMPLETED
