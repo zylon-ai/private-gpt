@@ -10,8 +10,6 @@ from private_gpt.components.workflows.others.tree_summarize_synthesizer import (
 
 @pytest.mark.asyncio
 async def test_repack_runs_off_the_event_loop_thread() -> None:
-    # repack tokenizes every chunk synchronously; on a long history that
-    # blocks the loop long enough for the worker heartbeat to expire.
     loop_thread = threading.get_ident()
     repack_threads: list[int] = []
 

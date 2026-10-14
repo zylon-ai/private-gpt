@@ -121,9 +121,6 @@ async def test_async_s3_client_is_built_with_timeouts(monkeypatch: Any) -> None:
 async def test_async_s3_client_loads_botocore_data_off_the_event_loop_thread(
     monkeypatch: Any,
 ) -> None:
-    # Creating an aiobotocore client loads botocore's endpoint/service JSON
-    # synchronously; on the loop, bursts of chat starts stalled the worker
-    # heartbeat for seconds.
     import threading
 
     import botocore.loaders

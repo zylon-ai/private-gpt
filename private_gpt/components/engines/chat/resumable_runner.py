@@ -329,12 +329,6 @@ class ResumableChatRunner:
         )
 
     async def fail_abandoned(self, execution_id: str, reason: str) -> None:
-        """Fail an execution whose job was dropped without ever finishing.
-
-        Used when a worker died mid-job and the queue gave up retrying it:
-        nothing else will ever publish a terminal event, so without this the
-        client keeps waiting until the stream expires.
-        """
         await self._cancel_pending_tools(execution_id)
         await self._fail(execution_id, RuntimeError(reason))
 

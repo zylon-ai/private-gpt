@@ -82,9 +82,7 @@ class TreeSummarizeSynthesizer(BaseSynthesizer):
     ) -> RESPONSE_TEXT_TYPE:
         """Get tree summarize response."""
         summary_template = self._summary_template.partial_format(query_str=query_str)
-        # repack text_chunks so that each chunk fills the context window.
-        # Repacking tokenizes every chunk synchronously, so keep it off the
-        # event loop: on a long history it would starve the worker heartbeat.
+        # repack text_chunks so that each chunk fills the context window
         text_chunks = await asyncio.to_thread(
             self._prompt_helper.repack,
             summary_template,

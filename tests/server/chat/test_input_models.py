@@ -2573,10 +2573,6 @@ def test_validate_system_config_merges_prompt_flags() -> None:
 
 
 def test_assistant_string_content_stays_one_text_block() -> None:
-    # A plain-string assistant message used to be iterated character by
-    # character, turning a 9000-char reply into 9000 TextBlocks. Every deep
-    # copy of the chat state then walked all of them, blocking the worker
-    # loop long enough to fail its liveness probe on long histories.
     text = "word " * 1800
     messages = [
         MessageInput(role="user", content="hi"),

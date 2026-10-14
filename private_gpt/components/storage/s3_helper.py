@@ -39,8 +39,6 @@ def _encode_metadata_value(value: str) -> str:
 class S3Helper:
     _s3_client: S3Client | None
     _s3_settings: S3Settings
-    # One aiobotocore session per helper: its botocore loader caches the
-    # endpoint/service JSON, so only the first client pays for loading it.
     _async_session: Any = None
     _async_session_warmed: bool = False
     _async_session_lock = threading.Lock()
@@ -127,7 +125,6 @@ class S3Helper:
                 try:
                     asyncio.run(build_client())
                 except Exception:
-                    # Not fatal: real clients will load the data themselves.
                     logger.warning("Failed to warm S3 client data", exc_info=True)
                 self._async_session_warmed = True
             return session

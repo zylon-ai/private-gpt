@@ -38,8 +38,6 @@ def _store(stored: dict[str, str]) -> RedisChatCheckpointStore:
 
 @pytest.mark.asyncio
 async def test_get_results_parses_tool_results_off_the_event_loop_thread() -> None:
-    # Recorded tool results can be large knowledge-search outputs; parsing all
-    # of them on the loop on every resume starves the worker heartbeat.
     loop_thread = threading.get_ident()
     parse_threads: list[int] = []
     expected = {tool_id: _tool_response(tool_id) for tool_id in ("a", "b")}

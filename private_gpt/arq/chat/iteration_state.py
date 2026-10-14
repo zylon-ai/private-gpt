@@ -123,9 +123,6 @@ class RedisChatCheckpointStore(ChatCheckpointStore):
             dict[str, str],
             await cast(Any, self._redis.hgetall(self._results_key(execution_id))),
         )
-        # Tool results can be large (e.g. knowledge-search outputs) and every
-        # resume/callback re-parses all of them; keep that off the event loop
-        # so it cannot starve the worker heartbeat.
         return await asyncio.to_thread(_parse_results, payload)
 
     async def claim_resume(self, execution_id: str) -> bool:

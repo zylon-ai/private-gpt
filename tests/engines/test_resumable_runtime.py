@@ -971,10 +971,6 @@ async def test_fail_abandoned_does_not_override_a_finished_chat() -> None:
 
 @pytest.mark.asyncio
 async def test_tool_result_arriving_during_resume_triggers_the_next_resume() -> None:
-    # A resume claims the execution, then dispatches the next iteration's
-    # tools before it saves the new checkpoint. A fast tool can call back in
-    # that window; dropping its result left the chat waiting for the tool
-    # timeout (50 min on test4) even though the result had arrived.
     store = InMemoryChatCheckpointStore()
     scheduler = MagicMock()
     scheduler.resume = AsyncMock()
