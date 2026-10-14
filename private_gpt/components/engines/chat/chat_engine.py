@@ -678,6 +678,7 @@ class ChatLoopEngine:
                                     tool_input={},
                                 )
                             )
+                            content_block.raw_name = tool_spec.raw_name
                         use_start = RawContentBlockStartEvent(
                             index=run.block_count,
                             block_id=f"block_{uuid4().hex}",

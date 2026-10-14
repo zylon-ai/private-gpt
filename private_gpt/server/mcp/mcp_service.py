@@ -318,6 +318,7 @@ def rebuild_mcp_tool(
     }
     return ToolSpec.from_defaults(
         name=name or tool_name,
+        raw_name=tool_name,
         type=type,
         runtime="server",
         description=description,

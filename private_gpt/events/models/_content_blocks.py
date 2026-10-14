@@ -403,6 +403,10 @@ class ToolUseBlock(CacheableContentBlock, StandardContentProtocol):
     name: str = Field(
         description="Name of the tool being called", min_length=1, max_length=200
     )
+    raw_name: str | None = Field(
+        default=None,
+        description="Original tool name before model-facing normalization",
+    )
     input: dict[str, Any] = Field(
         description="Input payload for the tool call",
         title="ToolUseInput",

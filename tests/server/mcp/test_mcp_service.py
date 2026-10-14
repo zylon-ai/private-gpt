@@ -14,6 +14,7 @@ from private_gpt.server.mcp.mcp_service import (
     McpToolDefinition,
     mcp_tool_to_spec,
     normalize_mcp_tool_name,
+    rebuild_mcp_tool,
 )
 
 
@@ -59,6 +60,7 @@ def test_mcp_tool_spec_json_roundtrip_preserves_rebuild_config() -> None:
 
     restored = ToolSpec.model_validate_json(spec.model_dump_json())
 
+    assert restored.raw_name == "lookup"
     assert restored.execution_metadata is not None
     kwargs = restored.execution_metadata.rebuild_kwargs
     assert kwargs["config"] == config
@@ -66,6 +68,32 @@ def test_mcp_tool_spec_json_roundtrip_preserves_rebuild_config() -> None:
     assert kwargs["name"] == "lookup"
     assert kwargs["description"] == "Look something up"
     assert kwargs["input_schema"] == spec.input_schema
+
+
+def test_mcp_raw_name_survives_serialization_and_rebuild() -> None:
+    config = McpServerConfig(name="FERI SAP DYNAMICS", url="https://mcp.example.com")
+    tool = McpToolDefinition.from_mcp_tool(
+        Tool(
+            name="get_sap_business_partner",
+            description="Look up a business partner",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        server_name=config.name,
+    )
+    spec = mcp_tool_to_spec(config, tool)
+    restored = ToolSpec.model_validate_json(spec.model_dump_json())
+
+    assert restored.name == tool.name
+    assert restored.raw_name == "get_sap_business_partner"
+    assert restored.execution_metadata is not None
+    rebuilt = rebuild_mcp_tool(**restored.execution_metadata.rebuild_kwargs)
+    assert rebuilt.raw_name == restored.raw_name
+    assert rebuilt.name == restored.name
+
+    provider_tool = rebuilt.to_function_tool().metadata.to_openai_tool()
+    assert provider_tool["function"]["name"] == tool.name
+    assert "raw_name" not in provider_tool
+    assert "raw_name" not in provider_tool["function"]
 
 
 @pytest.mark.asyncio
