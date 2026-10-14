@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, cast
 
 import redis.asyncio as redis  # type: ignore[import-untyped]
@@ -15,6 +16,13 @@ from private_gpt.components.engines.chat.checkpoint_store import (
 )
 from private_gpt.components.tools.remote_execution import ToolExecutionResponse
 from private_gpt.settings.settings import Settings
+
+
+def _parse_results(payload: dict[str, str]) -> dict[str, ToolExecutionResponse]:
+    return {
+        key: ToolExecutionResponse.model_validate_json(value)
+        for key, value in payload.items()
+    }
 
 
 @singleton
@@ -115,10 +123,10 @@ class RedisChatCheckpointStore(ChatCheckpointStore):
             dict[str, str],
             await cast(Any, self._redis.hgetall(self._results_key(execution_id))),
         )
-        return {
-            key: ToolExecutionResponse.model_validate_json(value)
-            for key, value in payload.items()
-        }
+        # Tool results can be large (e.g. knowledge-search outputs) and every
+        # resume/callback re-parses all of them; keep that off the event loop
+        # so it cannot starve the worker heartbeat.
+        return await asyncio.to_thread(_parse_results, payload)
 
     async def claim_resume(self, execution_id: str) -> bool:
         return bool(
