@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import Generator
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from injector import inject, singleton
 from llama_index.core import StorageContext, VectorStoreIndex
@@ -25,6 +25,10 @@ from private_gpt.components.postprocessor.tree_expansion.table_expansion_post_pr
     TableExpansionPostProcessor,
 )
 from private_gpt.components.sandbox import SandboxComponent
+from private_gpt.components.tools.artifact_refs import (
+    ArtifactRefInput,
+    resolve_artifact_refs,
+)
 from private_gpt.components.tools.binary_block_decorators import (
     auto_resolve_media_blocks,
 )
@@ -286,6 +290,12 @@ class TabularDataToolBuilder:
                                 if context_filter_copy.artifacts
                                 else list(set(artifacts))
                             )
+                            # An empty scope would widen to the whole collection
+                            if not context_filter_copy.artifacts:
+                                raise ValueError(
+                                    "artifacts rejected, nothing was run: "
+                                    "none of them is available here."
+                                )
                         elif (
                             context_filter_copy is not None
                             and context_filter_copy.artifacts
@@ -309,9 +319,19 @@ class TabularDataToolBuilder:
         @auto_resolve_media_blocks(blob_visibility=blob_visibility)
         async def tabular_data_analysis(
             query: str,
-            artifacts: list[str] | None = None,
+            artifacts: Annotated[
+                list[ArtifactRefInput] | None,
+                "CSV files to analyze, one {name, artifact_id} per file, both copied "
+                "from the same entry of the file list.",
+            ] = None,
         ) -> list[ResultContentBlockType]:
-            w = await _ensure_workflow(artifacts=artifacts)
+            artifact_ids = await resolve_artifact_refs(
+                artifacts,
+                context_filter=context_filter,
+                node_store_component=self.node_store_component,
+                action="run",
+            )
+            w = await _ensure_workflow(artifacts=artifact_ids)
             result = await w.run(
                 start_event=tabular_data_analysis_input_event_cls(
                     query=query,
