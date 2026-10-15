@@ -7,6 +7,7 @@ from private_gpt.components.ingest.metadata_helper import MetadataNode
 from private_gpt.components.ingest.transformations.include_token_count_to_nodes_transform import (
     IncludeTokenCountIntoNodesTransform,
 )
+from private_gpt.components.llm.tokenizers.tokenizer_base import TokenizerBase
 from private_gpt.components.readers.nodes.diff_node import DiffNode
 from private_gpt.components.readers.nodes.document_node import DocumentRootNode
 from private_gpt.components.readers.nodes.image_node import ImageNode
@@ -154,3 +155,74 @@ def test_token_count(
             MetadataNode.TOKEN_COUNT.value
             in transformed_nodes[0].excluded_embed_metadata_keys
         )
+
+
+class _CountingTokenizer(TokenizerBase):
+    """Records the batches it is asked to tokenize."""
+
+    def __init__(self) -> None:
+        self.batches: list[list[str]] = []
+
+    def encode_batch(self, texts, add_special_tokens=None):  # type: ignore[no-untyped-def]
+        self.batches.append(list(texts))
+        return [t.split() for t in texts]
+
+
+# Only the batch surface is exercised; the rest of the ABC isn't needed.
+_CountingTokenizer.__abstractmethods__ = frozenset()
+
+
+def _nodes() -> list[TextNode]:
+    return [
+        TextNode(text="one two three"),
+        TextNode(text="one two three"),
+        TextNode(text="four"),
+        TextNode(text=""),
+    ]
+
+
+def test_sync_batch_tokenizes_unique_contents_once() -> None:
+    tokenizer = _CountingTokenizer()
+    transform = IncludeTokenCountIntoNodesTransform(
+        tokenizer=None, batch_tokenizer=tokenizer
+    )
+    nodes = transform(_nodes())
+
+    assert tokenizer.batches == [["one two three", "four"]]
+    counts = [n.metadata.get(MetadataNode.TOKEN_COUNT.value) for n in nodes]
+    assert counts == [3, 3, 1, None]
+
+
+def test_async_batch_uses_aencode_batch_with_bounded_concurrency() -> None:
+    import asyncio
+
+    from private_gpt.components.llm.tokenizers.tokenizer_base import (
+        AsyncTokenizerBase,
+    )
+
+    class _Async(AsyncTokenizerBase):
+        in_flight = 0
+        max_in_flight = 0
+
+        async def aencode(self, text, add_special_tokens=None):  # type: ignore[no-untyped-def]
+            _Async.in_flight += 1
+            _Async.max_in_flight = max(_Async.max_in_flight, _Async.in_flight)
+            await asyncio.sleep(0)
+            _Async.in_flight -= 1
+            return text.split()
+
+    # Only the async surface is exercised; the rest of the ABC isn't needed.
+    _Async.__abstractmethods__ = frozenset()
+    tokenizer = _Async()
+    texts = [f"t{i} x" for i in range(100)]
+
+    ids = asyncio.run(tokenizer.aencode_batch(texts, concurrency=4))
+    assert [len(i) for i in ids] == [2] * 100
+    assert _Async.max_in_flight <= 4
+
+    transform = IncludeTokenCountIntoNodesTransform(
+        tokenizer=None, batch_tokenizer=tokenizer
+    )
+    nodes = asyncio.run(transform.acall(_nodes()))
+    counts = [n.metadata.get(MetadataNode.TOKEN_COUNT.value) for n in nodes]
+    assert counts == [3, 3, 1, None]
