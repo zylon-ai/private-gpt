@@ -34,6 +34,8 @@ jobs:
           - typecheck
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: ./.github/workflows/actions/install_dependencies
       - name: run ${{ matrix.quality-command }}
         run: make ${{ matrix.quality-command }}
@@ -44,6 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          persist-credentials: false
           fetch-depth: 0
       - uses: ./.github/workflows/actions/install_dependencies
       - name: Run affected tests
