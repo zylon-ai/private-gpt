@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - "fern/**"
+permissions:
+  contents: read
+
 
 jobs:
   publish-docs:
