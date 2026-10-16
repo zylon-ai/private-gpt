@@ -1,5 +1,5 @@
 {% set search_tool = namespace.tools.get("semantic_search_tool_name", "knowledge_search") %}
-{% set list_tool = namespace.tools.get("list_files_tool_name") %}
+{% set list_tool = namespace.tools.get("list_files_tool_name") or namespace.tools.get("list_ingested_files_tool_name") or namespace.tools.get("get_knowledge_base_files_tool_name") %}
 
 <{{ search_tool }}>
 Returns relevant fragments with attribution, including the artifact_id of the source document.
@@ -27,11 +27,12 @@ Use the `artifacts` parameter when you know which documents are relevant. Avoid 
 Each search result may reveal new aspects or additional relevant artifacts. Use findings to sharpen subsequent queries — each new query must target a **distinct** aspect or artifact not yet covered. If results are repeating or converging, stop searching and synthesize.
 **Parameters:**
 - `query` (required): Search terms — always provide this, focused on a single topic
-- `artifacts` (optional): List of artifact_ids to restrict scope
+- `artifacts` (optional): Files to restrict scope, one `{name, artifact_id}` object per file
 - `metadata_filter` (optional): Additional criteria
 
 **Constraints:**
 - NEVER call this tool without a `query` parameter
+- In `artifacts`, `name` and `artifact_id` must come from the same file entry
 - NEVER repeat or rephrase the same query — vary the core topic, not just the wording.
 - NEVER return the node ID to the user in code blocks. Return as part of the natural language response.
 
@@ -39,17 +40,17 @@ Each search result may reveal new aspects or additional relevant artifacts. Use 
 <search_workflow_examples>
 
 **Question spanning multiple documents — filenames carry useful metadata:**
-{% if list_tool %}`{{ list_tool }}`(...) → identify relevant artifact_ids → `{{ search_tool }}`(query="...", artifacts=[id_a]) + `{{ search_tool }}`(query="...", artifacts=[id_b]) → synthesize
-{% else %}`{{ search_tool }}`(query="...") → surface relevant artifact_ids → `{{ search_tool }}`(query="...", artifacts=[id_a]) + `{{ search_tool }}`(query="...", artifacts=[id_b]) → synthesize{% endif %}
+{% if list_tool %}`{{ list_tool }}`(...) → identify relevant artifact_ids → `{{ search_tool }}`(query="...", artifacts=[{name: "a.pdf", artifact_id: id_a}]) + `{{ search_tool }}`(query="...", artifacts=[{name: "b.pdf", artifact_id: id_b}]) → synthesize
+{% else %}`{{ search_tool }}`(query="...") → surface relevant artifact_ids → `{{ search_tool }}`(query="...", artifacts=[{name: "a.pdf", artifact_id: id_a}]) + `{{ search_tool }}`(query="...", artifacts=[{name: "b.pdf", artifact_id: id_b}]) → synthesize{% endif %}
 
 **Question spanning multiple documents — filenames are opaque:**
-`{{ search_tool }}`(query="...") → surface relevant artifact_ids from results → `{{ search_tool }}`(query="...", artifacts=[id_a]) + `{{ search_tool }}`(query="...", artifacts=[id_b]) → synthesize
+`{{ search_tool }}`(query="...") → surface relevant artifact_ids from results → `{{ search_tool }}`(query="...", artifacts=[{name: "a.pdf", artifact_id: id_a}]) + `{{ search_tool }}`(query="...", artifacts=[{name: "b.pdf", artifact_id: id_b}]) → synthesize
 
 **Single document or already known scope:**
-`{{ search_tool }}`(query="...", artifacts=[known_id]) → follow-up on discovered aspects if needed → synthesize
+`{{ search_tool }}`(query="...", artifacts=[{name: "known.pdf", artifact_id: known_id}]) → follow-up on discovered aspects if needed → synthesize
 
 **Conversational follow-up — context already established:**
-`{{ search_tool }}`(query="...", artifacts=[known_id]) — no scoping step needed unless the question introduces a new scope
+`{{ search_tool }}`(query="...", artifacts=[{name: "known.pdf", artifact_id: known_id}]) — no scoping step needed unless the question introduces a new scope
 
 </search_workflow_examples>
 {% endif %}

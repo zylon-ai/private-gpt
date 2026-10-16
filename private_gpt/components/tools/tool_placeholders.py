@@ -45,7 +45,8 @@ SEMANTIC_SEARCH_TOOL_FN = _placeholder_tool(
     "Search the knowledge base and return the most relevant fragments with attribution. "
     "Keep each query focused on a single topic — decompose multi-faceted questions into "
     "separate calls and refine successive queries as results reveal new aspects or documents. "
-    "Optionally restrict scope to specific source documents with the `artifacts` parameter. "
+    "Optionally restrict scope to specific source documents with the `artifacts` parameter: "
+    "one `{name, artifact_id}` per file, both copied from the same entry of the file list. "
     "Always provide a `query`; never call this tool without one.",
 )
 
@@ -55,7 +56,8 @@ TABULAR_DATA_TOOL_FN = _placeholder_tool(
     "(aggregations, groupings, rankings, statistics, filtering, joins). "
     "Describe the desired operation in natural language, naming the columns and any "
     "grouping or filter conditions. CSV files only — this tool fails on PDF, DOCX, "
-    "XLSX, TXT, and image files.",
+    "XLSX, TXT, and image files. Pass the CSV files in `artifacts` as one "
+    "`{name, artifact_id}` per file, both copied from the same entry of the file list.",
 )
 
 DATABASE_QUERY_TOOL_FN = _placeholder_tool(

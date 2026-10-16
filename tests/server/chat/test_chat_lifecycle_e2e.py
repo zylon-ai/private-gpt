@@ -2505,7 +2505,9 @@ class TestPlatformGuidelinesSyncedToLatestStack:
                         tool_name="semantic_search",
                         tool_kwargs={
                             "query": "docA",
-                            "artifacts": ["artifact-a"],
+                            "artifacts": [
+                                {"name": "doc-a.txt", "artifact_id": "artifact-a"}
+                            ],
                         },
                     )
                 ],
@@ -2515,7 +2517,9 @@ class TestPlatformGuidelinesSyncedToLatestStack:
                         tool_name="semantic_search",
                         tool_kwargs={
                             "query": "docB",
-                            "artifacts": ["artifact-b"],
+                            "artifacts": [
+                                {"name": "doc-b.txt", "artifact_id": "artifact-b"}
+                            ],
                         },
                     )
                 ],
@@ -2526,14 +2530,14 @@ class TestPlatformGuidelinesSyncedToLatestStack:
         collection = str(uuid.uuid4())
         artifact_a = "artifact-a"
         artifact_b = "artifact-b"
-        for artifact, text in [
-            (artifact_a, "FIRSTDOC platform sync"),
-            (artifact_b, "SECONDDOC platform sync"),
+        for artifact, file_name, text in [
+            (artifact_a, "doc-a.txt", "FIRSTDOC platform sync"),
+            (artifact_b, "doc-b.txt", "SECONDDOC platform sync"),
         ]:
             ingest = await async_test_client.post(
                 "/v1/artifacts/ingest",
                 json={
-                    "metadata": {},
+                    "metadata": {"file_name": file_name},
                     "input": {"type": "text", "value": text},
                     "collection": collection,
                     "artifact": artifact,
