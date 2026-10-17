@@ -50,8 +50,17 @@ class DelimitedReferenceRule:
             content_start += len(self.start_token)
 
         end = text.find(self.end_token, content_start)
-        if end == -1:
+        next_start = text.find(self.start_token, content_start)
+        if end == -1 and next_start == -1 and not context.final:
             return ProbeResult.need_more()
+        if end == -1 or -1 < next_start < end:
+            # The start token is never closed (another reference opens first
+            # or the stream ended), so it is literal text such as "[0, 1)".
+            return ProbeResult(
+                status=ProbeStatus.MATCH,
+                consumed=content_start - position,
+                action=Action.PASS,
+            )
 
         # Skip consecutive end tokens (e.g., ]]] for [[[XXXX]]])
         end_offset = end + len(self.end_token)

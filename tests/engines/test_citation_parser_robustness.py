@@ -117,6 +117,32 @@ def test_incomplete_citation_is_withheld_with_no_false_citation() -> None:
     assert citations == []
 
 
+def test_unclosed_bracket_is_kept_when_the_stream_ends() -> None:
+    document = create_document("AB12")
+    text = "Scores fall in [0, 1). Values above 1 are clipped."
+
+    formatted, citations, _ = extract_citations_by_original_text(
+        text,
+        [document],
+        is_final=True,
+    )
+
+    assert formatted == text
+    assert citations == []
+
+
+def test_unclosed_bracket_does_not_swallow_a_later_citation() -> None:
+    document = create_document("AB12")
+
+    formatted, citations, _ = extract_citations_by_original_text(
+        "Scores fall in [0, 1), see [AB12].",
+        [document],
+    )
+
+    assert formatted == f"Scores fall in [0, 1), see {format_cite(0, document, 0)}."
+    assert len(citations) == 1
+
+
 def test_placeholder_like_model_output_does_not_capture_real_citation() -> None:
     document = create_document("AB12")
     model_text = "Literal \ue000citationn0\ue001 then [AB12]."
