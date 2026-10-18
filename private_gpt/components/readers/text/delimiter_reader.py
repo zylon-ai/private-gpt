@@ -55,12 +55,17 @@ class DelimiterTextReader(TextReader):
                 result = "| " + " | ".join(str(cell).strip() for cell in row) + " |"
                 return " ".join(result.split())
 
+            # Read every cell as the text it holds: inferred dtypes would turn
+            # "01067" into "1067.0", and pandas' default NA values would turn
+            # empty cells, "NA" and "N/A" into "nan".
             for chunk in pd.read_csv(
                 file_path,
                 sep=delimiter,
                 encoding=encoding or "utf-8",
                 on_bad_lines="warn",
                 chunksize=chunksize,
+                dtype=str,
+                keep_default_na=False,
             ):
                 if first_chunk:
                     # Generate header and separator rows
