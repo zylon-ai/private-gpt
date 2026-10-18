@@ -240,6 +240,22 @@ def test_csv_cells_are_kept_as_written(tmp_path: Path) -> None:
     assert "nan" not in markdown_content
 
 
+@pytest.mark.parametrize(
+    ("text", "rows"),
+    [
+        ("Note\nAlice\nBob\n", ["| Note |", "| Alice |", "| Bob |"]),
+        ("title\nHello world\n", ["| title |", "| Hello world |"]),
+    ],
+)
+def test_single_column_csv_is_not_split_on_a_letter(
+    tmp_path: Path, text: str, rows: list[str]
+) -> None:
+    lines = _csv_markdown(tmp_path, text).splitlines()
+
+    for row in rows:
+        assert row in lines
+
+
 def test_eml() -> None:
     file = TEST_FILE_PATH / "file.eml"
     mock_file_info = get_file_info(file, "file.eml")

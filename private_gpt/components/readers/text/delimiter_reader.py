@@ -8,6 +8,10 @@ from llama_index.core.schema import BaseNode, Document
 
 from private_gpt.components.readers.text.text_reader import TextReader
 
+# The characters a field separator can be. Unrestricted, csv.Sniffer picks a
+# letter in a one-column file and splits the header "Note" into "No" and "e".
+DELIMITERS = ",;\t|"
+
 
 class DelimiterTextReader(TextReader):
     """Reader for handling delimited files (CSV, TSV, etc.)."""
@@ -32,7 +36,7 @@ class DelimiterTextReader(TextReader):
 
         sniffer = csv.Sniffer()
         try:
-            dialect = sniffer.sniff(sample)
+            dialect = sniffer.sniff(sample, delimiters=DELIMITERS)
             has_header = sniffer.has_header(sample)
             return str(dialect.delimiter), has_header
         except csv.Error:
@@ -60,7 +64,9 @@ class DelimiterTextReader(TextReader):
             # empty cells, "NA" and "N/A" into "nan".
             for chunk in pd.read_csv(
                 file_path,
-                sep=delimiter,
+                # No detected separator means one column. sep=None would make
+                # pandas sniff again, without the restriction above.
+                sep=delimiter or ",",
                 encoding=encoding or "utf-8",
                 on_bad_lines="warn",
                 chunksize=chunksize,
