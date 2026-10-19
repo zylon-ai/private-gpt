@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import fnmatch
 import json
 import logging
@@ -113,7 +114,9 @@ class _Delegating:
         self._delegate.on_start(span, parent_context=parent_context)
 
     def _on_ending(self, span: Span) -> None:
-        self._delegate._on_ending(span)
+        on_ending = getattr(self._delegate, "_on_ending", None)
+        if on_ending is not None:
+            on_ending(span)
 
     def shutdown(self) -> None:
         self._delegate.shutdown()
@@ -496,3 +499,74 @@ class ExporterViewProcessor(_Delegating):
         if self._resource_attributes:
             changes["resource"] = self._resource(span)
         self._delegate.on_end(_copy(span, **changes) if changes else span)
+
+
+class BackgroundSpanProcessor(_Delegating):
+    """Run the processing chain off the request path.
+
+    ``on_start`` stays inline (it only records ids, and children need it
+    before they start); ``on_end`` only enqueues the finished span, and a
+    daemon thread runs the rest of the chain (tagging, dropping, attribute
+    normalization, per-exporter filtering) and hands spans to the exporters'
+    own batch queues. When the queue is full spans are dropped and counted,
+    never waited on, so a slow or unreachable backend cannot slow requests.
+    """
+
+    def __init__(self, delegate: Any, max_queue_size: int = 8192) -> None:
+        super().__init__(delegate)
+        import queue
+
+        self._queue: queue.Queue[Any] = queue.Queue(maxsize=max_queue_size)
+        self.dropped = 0
+        self._closed = False
+        self._thread = threading.Thread(
+            target=self._run, name="pgpt-span-processor", daemon=True
+        )
+        self._thread.start()
+
+    def on_end(self, span: ReadableSpan) -> None:
+        if self._closed:
+            return
+        try:
+            self._queue.put_nowait(span)
+        except Exception:
+            self.dropped += 1
+            if self.dropped == 1 or self.dropped % 1000 == 0:
+                logger.warning("Span queue full; %d spans dropped", self.dropped)
+
+    def _run(self) -> None:
+        while True:
+            item = self._queue.get()
+            try:
+                if item is None:
+                    return
+                if isinstance(item, threading.Event):
+                    item.set()
+                    continue
+                self._delegate.on_end(item)
+            except Exception:  # pragma: no cover - never kill the worker
+                logger.debug("Span processing failed", exc_info=True)
+            finally:
+                self._queue.task_done()
+
+    def _drain(self, timeout_millis: int) -> bool:
+        marker = threading.Event()
+        try:
+            self._queue.put(marker, timeout=timeout_millis / 1000)
+        except Exception:
+            return False
+        return marker.wait(timeout_millis / 1000)
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return self._drain(timeout_millis) and self._delegate.force_flush(
+            timeout_millis
+        )
+
+    def shutdown(self) -> None:
+        # Bounded: a dead backend must not hold up process exit (Celery
+        # recycles children after N tasks).
+        self._drain(2000)
+        self._closed = True
+        with contextlib.suppress(Exception):
+            self._queue.put_nowait(None)
+        self._delegate.shutdown()

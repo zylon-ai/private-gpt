@@ -76,6 +76,7 @@ def configure_tracing(settings: Settings, *, role: str | None = None) -> bool:
     from private_gpt.observability.exporters import build_span_processors
     from private_gpt.observability.instrumentations import instrument_libraries
     from private_gpt.observability.processors import (
+        BackgroundSpanProcessor,
         DropSpansProcessor,
         FanOutSpanProcessor,
         SemconvSpanProcessor,
@@ -116,16 +117,19 @@ def configure_tracing(settings: Settings, *, role: str | None = None) -> bool:
     # gen_ai.* if asked.
     provider.add_span_processor(
         # Tagging sees every span (dropped ones too) so per-trace bookkeeping
-        # always balances; exporters then filter on the tags.
-        TraceTagsProcessor(  # ty: ignore[invalid-argument-type] - duck-typed SpanProcessor
-            rules=obs.trace_tags,
-            delegate=DropSpansProcessor(
-                patterns=obs.drop_spans,
-                delegate=SemconvSpanProcessor(
-                    semconv=obs.semconv,
-                    delegate=FanOutSpanProcessor(exporter_processors),
+        # always balances; exporters then filter on the tags. All of it runs
+        # in a background thread: a request only enqueues finished spans.
+        BackgroundSpanProcessor(  # ty: ignore[invalid-argument-type] - duck-typed SpanProcessor
+            TraceTagsProcessor(
+                rules=obs.trace_tags,
+                delegate=DropSpansProcessor(
+                    patterns=obs.drop_spans,
+                    delegate=SemconvSpanProcessor(
+                        semconv=obs.semconv,
+                        delegate=FanOutSpanProcessor(exporter_processors),
+                    ),
                 ),
-            ),
+            )
         )
     )
     trace.set_tracer_provider(provider)

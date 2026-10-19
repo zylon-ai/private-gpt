@@ -9,7 +9,6 @@ and usage. ``RecordingEventChannel`` (engines/chat/event_channel.py) feeds a
 
 from __future__ import annotations
 
-import base64
 from typing import TYPE_CHECKING, Any
 
 from private_gpt.events.models import (
@@ -110,30 +109,24 @@ class MessageFolder:
 _MAX_INLINE_MEDIA = 48_000
 
 
-def _media(kind: str, data: bytes | None, mime: str | None, url: Any) -> dict[str, Any]:
+def _media(kind: str, encoded: Any, mime: str | None, url: Any) -> dict[str, Any]:
+    """Summary of a media block; small images are inlined as a data URL.
+
+    ``encoded`` is the base64 payload llama-index keeps once a block is
+    validated. Its size is derived from the length, so nothing is decoded
+    or re-encoded per span.
+    """
     block: dict[str, Any] = {"type": kind}
     if mime:
         block["media_type"] = mime
     if url:
         block["url"] = str(url)
-    if data:
-        block["size"] = len(data)
-        encoded = base64.b64encode(data).decode()
-        if len(encoded) <= _MAX_INLINE_MEDIA and kind == "image":
-            block["url"] = f"data:{mime or 'image/png'};base64,{encoded}"
+    if isinstance(encoded, bytes) and encoded:
+        padding = encoded[-2:].count(b"=")
+        block["size"] = len(encoded) * 3 // 4 - padding
+        if kind == "image" and len(encoded) <= _MAX_INLINE_MEDIA:
+            block["url"] = f"data:{mime or 'image/png'};base64,{encoded.decode()}"
     return block
-
-
-def _raw_bytes(value: Any) -> bytes | None:
-    if not value:
-        return None
-    if isinstance(value, bytes):
-        # llama-index keeps media base64-encoded in place once validated.
-        try:
-            return base64.b64decode(value, validate=True)
-        except ValueError:
-            return value
-    return None
 
 
 def _document(block: Any) -> dict[str, Any]:
@@ -170,15 +163,13 @@ def fold_user_message(message: Any) -> dict[str, Any] | None:
             content.append(
                 _media(
                     "image",
-                    _raw_bytes(block.image),
+                    block.image,
                     block.image_mimetype,
                     block.url or block.path,
                 )
             )
         elif kind == "audio":
-            content.append(
-                _media("audio", _raw_bytes(block.audio), block.format, block.url)
-            )
+            content.append(_media("audio", block.audio, block.format, block.url))
         elif kind == "document":
             content.append(
                 {

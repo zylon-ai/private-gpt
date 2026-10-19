@@ -55,6 +55,9 @@ def _llama_index(obs: ObservabilitySettings, provider: Any) -> None:
     from openinference.instrumentation import TraceConfig
     from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
 
+    from private_gpt.observability.llama_index_patch import patch_llama_index_handler
+
+    patch_llama_index_handler(obs.max_llm_input_messages)
     hide = not obs.capture_content
     LlamaIndexInstrumentor().instrument(
         tracer_provider=provider,

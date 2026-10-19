@@ -123,6 +123,10 @@ def _preset(
 _LLM_BACKENDS = {"phoenix", "arize", "langfuse", "langsmith", "opik", "datadog"}
 
 
+# A down or slow backend only delays the exporter thread, for at most this
+# long per batch (the SDK default is 10s plus retries).
+EXPORT_TIMEOUT_SECONDS = 5
+
 # HTTP routes whose work is a chat turn (see ``ExporterViewProcessor``).
 TURN_ROUTES = ["POST /v1/messages", "POST /v1/messages/async"]
 
@@ -161,6 +165,7 @@ def build_exporter(cfg: ObservabilityExporterSettings) -> tuple[Any, dict[str, s
         return (
             GrpcExporter(
                 endpoint=endpoint,
+                timeout=EXPORT_TIMEOUT_SECONDS,
                 headers=tuple((k.lower(), v) for k, v in headers.items()),
                 insecure=endpoint.startswith("http://"),
             ),
@@ -170,7 +175,14 @@ def build_exporter(cfg: ObservabilityExporterSettings) -> tuple[Any, dict[str, s
         OTLPSpanExporter as HttpExporter,
     )
 
-    return HttpExporter(endpoint=_traces_url(endpoint), headers=headers), resource
+    return (
+        HttpExporter(
+            endpoint=_traces_url(endpoint),
+            headers=headers,
+            timeout=EXPORT_TIMEOUT_SECONDS,
+        ),
+        resource,
+    )
 
 
 def build_span_processors(
@@ -204,7 +216,17 @@ def build_span_processors(
             TagFilterProcessor(
                 exporter_tags(cfg),
                 ExporterViewProcessor(
-                    BatchSpanProcessor(exporter),
+                    # Exports run in the SDK's own thread; a full queue drops
+                    # spans instead of waiting. Small batches keep each
+                    # protobuf encode short: it holds the GIL, so a 512-span
+                    # batch of LLM spans would pause the event loop ~60 ms.
+                    BatchSpanProcessor(
+                        exporter,
+                        max_queue_size=4096,
+                        max_export_batch_size=32,
+                        schedule_delay_millis=1000,
+                        export_timeout_millis=EXPORT_TIMEOUT_SECONDS * 1000,
+                    ),
                     # Per exporter, so each one can write to its own project.
                     resource=exporter_resource,
                     turn_root=cfg.turn_root

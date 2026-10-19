@@ -1114,7 +1114,24 @@ class ObservabilitySettings(BaseModel):
             "text. Disable to export only metadata (PII-sensitive deployments)."
         ),
     )
-    sampling_ratio: float = Field(default=1.0, ge=0.0, le=1.0)
+    sampling_ratio: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Fraction of traces recorded (parent-based, so a trace is all or "
+            "nothing). Lower it under high traffic."
+        ),
+    )
+    max_llm_input_messages: int = Field(
+        default=20,
+        ge=1,
+        description=(
+            "Messages recorded per LLM span (system messages plus the most recent "
+            "ones). Earlier turns are on the session's previous traces; serializing "
+            "the whole history on every call costs milliseconds on the event loop."
+        ),
+    )
     instrumentations: list[str] | Literal["lean", "full", "none"] = Field(
         default="lean",
         description=(
