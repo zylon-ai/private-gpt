@@ -19,6 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           ref: refs/pull/${{ github.event.pull_request.number }}/merge
           allow-unsafe-pr-checkout: true
 
