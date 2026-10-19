@@ -11,11 +11,14 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.code_execution.output_cleaning import (
+    OutputCleaner,
+    truncate_head_tail,
+)
 from private_gpt.components.tools.events.adapters import BashCodeExecutionEventAdapter
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import BASH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import BASH_TOOL_FN
-from private_gpt.components.tools.utils import truncate_output
 from private_gpt.di import get_global_injector
 from private_gpt.events.models import BashCodeExecutionResultBlock
 from private_gpt.settings.settings import Settings
@@ -35,6 +38,7 @@ class BashToolBuilder:
     ) -> None:
         self._component = code_execution_component
         self._settings = settings
+        self._clean = OutputCleaner.for_bash(settings.code_execution.output_cleaning)
 
     async def build_tool(
         self,
@@ -59,12 +63,12 @@ class BashToolBuilder:
             )
             return [
                 BashCodeExecutionResultBlock(
-                    stdout=truncate_output(
-                        result.stdout,
+                    stdout=truncate_head_tail(
+                        self._clean(result.stdout),
                         self._settings.code_execution.max_output_bytes,
                     ),
-                    stderr=truncate_output(
-                        result.stderr,
+                    stderr=truncate_head_tail(
+                        self._clean(result.stderr),
                         self._settings.code_execution.max_output_bytes,
                     ),
                     return_code=result.exit_code,

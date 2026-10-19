@@ -11,6 +11,7 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.code_execution.output_cleaning import OutputCleaner
 from private_gpt.components.tools.events.adapters import (
     TextEditorCodeExecutionEventAdapter,
 )
@@ -59,6 +60,7 @@ class TextEditorToolBuilder:
     ) -> None:
         self._component = code_execution_component
         self._settings = settings
+        self._clean = OutputCleaner.for_view(settings.code_execution.output_cleaning)
 
     async def _session(
         self, config: CodeExecutionSessionConfig
@@ -96,7 +98,8 @@ class TextEditorToolBuilder:
             if not result.success:
                 raise RuntimeError(result.error or "Unable to view file")
             output = _truncated(
-                result.output, self._settings.code_execution.max_output_bytes
+                self._clean(result.output),
+                self._settings.code_execution.max_output_bytes,
             )
             lines = output.splitlines()
             full_num_lines = len(lines)
