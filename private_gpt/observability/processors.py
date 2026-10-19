@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+SPAN_KIND = "openinference.span.kind"
 _TOOL_SCHEMA_KEY = re.compile(r"^llm\.tools\.(\d+)\.tool\.json_schema$")
 _BROKEN_REPR = re.compile(r'^"?<[\w.]+ object at 0x[0-9a-f]+>"?$')
 
@@ -66,7 +67,7 @@ def _copy(span: ReadableSpan, **changes: Any) -> ReadableSpan:
         events=span.events,
         links=span.links,
         kind=span.kind,
-        status=span.status,
+        status=changes.get("status", span.status),
         start_time=span.start_time,
         end_time=span.end_time,
         instrumentation_scope=span.instrumentation_scope,
@@ -235,9 +236,34 @@ class SemconvSpanProcessor(_Delegating):
                 del attrs[key]
         return True
 
+    @staticmethod
+    def _celery(span: ReadableSpan, attrs: dict[str, Any]) -> Any:
+        """Give Celery task spans a kind and, for runs, an OK/ERROR status.
+
+        The Celery instrumentation leaves them kind-less (``unknown`` in LLM
+        backends) and only sets ERROR, never OK; ``celery.state`` has the
+        outcome. Returns the status to apply, or ``None``.
+        """
+        if "celery.action" not in attrs:
+            return None
+        attrs.setdefault("openinference.span.kind", "CHAIN")
+        if not span.status.is_unset:
+            return None
+        from opentelemetry.trace import Status, StatusCode
+
+        state = attrs.get("celery.state")
+        if state in ("FAILURE", "REVOKED"):
+            return Status(StatusCode.ERROR, f"Celery task {state}")
+        if state == "SUCCESS" or attrs.get("celery.action") == "apply_async":
+            return Status(StatusCode.OK)
+        return None
+
     def on_end(self, span: ReadableSpan) -> None:
         attrs = dict(span.attributes or {})
         changed = self._fix_tools(span, attrs)
+        celery_kind = "celery.action" in attrs and SPAN_KIND not in attrs
+        status = self._celery(span, attrs)
+        changed = changed or celery_kind
         if self._to_genai is not None and attrs.get("openinference.span.kind"):
             try:
                 genai = self._to_genai(cast("Any", attrs))
@@ -254,7 +280,11 @@ class SemconvSpanProcessor(_Delegating):
                     if k.startswith(("llm.input_messages.", "llm.output_messages."))
                 ]:
                     del attrs[key]
-        self._delegate.on_end(_with_attributes(span, attrs) if changed else span)
+        if status is not None:
+            span = _copy(span, attributes=attrs, status=status)
+        elif changed:
+            span = _with_attributes(span, attrs)
+        self._delegate.on_end(span)
 
 
 TRACE_TAGS = "pgpt.trace.tags"

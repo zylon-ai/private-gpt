@@ -181,3 +181,33 @@ def test_async_observer_spans_link_to_the_turn_trace() -> None:
     assert status.attributes
     assert status.attributes["pgpt.message_id"] == "m1"
     assert status.attributes["pgpt.origin.trace_id"] == reference["trace_id"]
+
+
+def test_celery_spans_get_kind_and_status() -> None:
+    from opentelemetry.trace import StatusCode
+
+    from private_gpt.observability.processors import SemconvSpanProcessor
+
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(
+        SemconvSpanProcessor("openinference", SimpleSpanProcessor(memory))  # ty: ignore[invalid-argument-type]
+    )
+    tracer = provider.get_tracer("t")
+    for name, attributes in (
+        ("apply_async/x", {"celery.action": "apply_async"}),
+        ("run/ok", {"celery.action": "run", "celery.state": "SUCCESS"}),
+        ("run/bad", {"celery.action": "run", "celery.state": "FAILURE"}),
+        ("plain", {}),
+    ):
+        with tracer.start_as_current_span(name, attributes=attributes):
+            pass
+
+    spans = {span.name: span for span in memory.get_finished_spans()}
+    assert spans["apply_async/x"].status.status_code is StatusCode.OK
+    assert spans["run/ok"].status.status_code is StatusCode.OK
+    assert spans["run/bad"].status.status_code is StatusCode.ERROR
+    assert spans["run/ok"].attributes
+    assert spans["run/ok"].attributes["openinference.span.kind"] == "CHAIN"
+    assert spans["plain"].status.is_unset
+    assert spans["plain"].attributes == {}
