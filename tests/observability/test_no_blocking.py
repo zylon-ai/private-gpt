@@ -212,3 +212,80 @@ def test_nodes_are_readable_in_spans() -> None:
 
     encoded = json.loads(safe_json_dumps({"nodes": [node]}, cls=_handler._Encoder))
     assert encoded["nodes"][0]["id"] == node.node_id
+
+
+async def test_wrapping_stream_llm_records_its_output() -> None:
+    """Like Triton: astream_chat consumes the stream of astream_complete."""
+    from typing import Any
+
+    from llama_index.core.base.llms.types import (
+        ChatMessage,
+        ChatResponse,
+        CompletionResponse,
+        LLMMetadata,
+    )
+    from llama_index.core.llms.callbacks import (
+        llm_chat_callback,
+        llm_completion_callback,
+    )
+    from llama_index.core.llms.custom import CustomLLM
+    from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
+
+    from private_gpt.observability.llama_index_patch import patch_llama_index_handler
+
+    class Wrapping(CustomLLM):
+        @property
+        def metadata(self) -> LLMMetadata:
+            return LLMMetadata(model_name="wrapping")
+
+        def complete(self, prompt: str, formatted: bool = False, **kw: Any) -> Any:
+            return CompletionResponse(text="hi")
+
+        def stream_complete(
+            self, prompt: str, formatted: bool = False, **kw: Any
+        ) -> Any:
+            raise NotImplementedError
+
+        @llm_completion_callback()
+        async def astream_complete(
+            self, prompt: str, formatted: bool = False, **kw: Any
+        ) -> Any:
+            async def gen() -> Any:
+                text = ""
+                for token in ("Hello", " world"):
+                    text += token
+                    yield CompletionResponse(text=text, delta=token)
+
+            return gen()
+
+        @llm_chat_callback()
+        async def astream_chat(self, messages: Any, **kw: Any) -> Any:
+            inner = await self.astream_complete("prompt")
+
+            async def gen() -> Any:
+                async for response in inner:
+                    yield ChatResponse(
+                        message=ChatMessage(role="assistant", content=response.text),
+                        delta=response.delta,
+                    )
+
+            return gen()
+
+    patch_llama_index_handler(20)
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(memory))
+    instrumentor = LlamaIndexInstrumentor()
+    instrumentor.instrument(tracer_provider=provider, use_legacy_callback_handler=False)
+    try:
+        stream = await Wrapping().astream_chat([ChatMessage(role="user", content="q")])
+        async for _ in stream:
+            pass
+    finally:
+        instrumentor.uninstrument()
+
+    spans = {s.name: dict(s.attributes or {}) for s in memory.get_finished_spans()}
+    chat = spans["Wrapping.astream_chat"]
+    assert chat["llm.output_messages.0.message.content"] == "Hello world"
+    assert "Hello world" in chat["output.value"]
+    assert spans["Wrapping.astream_complete"]["output.value"] == "Hello world"

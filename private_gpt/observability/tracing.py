@@ -201,6 +201,8 @@ def start_span(
         yield _NOOP_SPAN
         return
     tracer = trace.get_tracer(TRACER_NAME)
+    if context is None:
+        context = _llama_index_parent()
     base = {SPAN_KIND: str(kind)}
     # OpenInference context attributes (session/user/metadata/tags) are copied
     # onto every span so that each backend can group without walking parents.
@@ -223,6 +225,56 @@ def start_span(
             record_exception(exc, span)
             raise
         set_span_status(span)
+
+
+def _llama_index_parent() -> Any:
+    """Context of the innermost open llama-index span, when it is deeper.
+
+    llama-index workflow steps run in their own tasks: they know their
+    llama-index span (``active_span_id``) but the OTel current span is still
+    the one that started the workflow. Spans we open inside a step
+    (``tabular.analysis``, ``web_search.query``...) would otherwise become
+    siblings of the workflow instead of children of the step.
+    """
+    try:
+        from llama_index_instrumentation.span import active_span_id
+        from openinference.instrumentation.llama_index import _handler
+    except ImportError:
+        return None
+    span_id = active_span_id.get()
+    if not span_id:
+        return None
+    handler = _llama_index_span_handler(_handler)
+    if handler is None:
+        return None
+    with handler.lock:
+        li_span = handler.open_spans.get(span_id)
+    if li_span is None or not li_span.active:
+        return None
+    current = trace.get_current_span().get_span_context()
+    li_ctx = li_span._otel_span.get_span_context()
+    if current.is_valid and current.trace_id != li_ctx.trace_id:
+        return None
+    # Only when the llama-index span is newer (deeper) than the current one.
+    current_start = getattr(trace.get_current_span(), "start_time", 0) or 0
+    if (getattr(li_span._otel_span, "start_time", 0) or 0) < current_start:
+        return None
+    return li_span.context
+
+
+_li_handler: Any = None
+
+
+def _llama_index_span_handler(module: Any) -> Any:
+    global _li_handler
+    if _li_handler is None:
+        from llama_index_instrumentation import get_dispatcher
+
+        for handler in get_dispatcher().span_handlers:
+            if isinstance(handler, module._SpanHandler):
+                _li_handler = handler
+                break
+    return _li_handler
 
 
 def retrieval_documents(documents: Sequence[Mapping[str, Any]]) -> dict[str, Any]:

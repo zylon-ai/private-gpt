@@ -13,6 +13,10 @@ call):
 * Nodes (documents, chunks, retrieval results) were rendered as
   ``<ChunkNode(id_=...)>``; they now show id, type, a text preview, score and
   the identifying metadata (artifact, file, page) as JSON.
+* A streaming LLM that consumes another LLM stream (Triton ``astream_chat``
+  wraps ``astream_complete``) was ended when the inner stream finished,
+  before its own end event set the output; LLM spans now wait for their own
+  end event.
 * ``_process_messages`` writes every message of the prompt. Only the system
   messages and the last ``max_input_messages`` are kept; earlier turns are
   on the previous traces of the session, and the count of omitted ones is
@@ -87,6 +91,27 @@ def patch_llama_index_handler(max_input_messages: int) -> None:
             return info if info is not None else encoder(obj)
 
         setattr(_handler, "_encoder", encode)  # noqa: B010
+
+    notify_parent = getattr(span_cls, "notify_parent", None)
+    finished = getattr(getattr(_handler, "_StreamingStatus", None), "FINISHED", None)
+    llm_kind = getattr(_handler, "LLM", None)
+    if notify_parent is not None and finished is not None and llm_kind is not None:
+
+        def notify(self: Any, status: Any) -> None:
+            parent = getattr(self, "_parent", None)
+            if (
+                status is finished
+                and parent is not None
+                and getattr(parent, "_span_kind", None) == llm_kind
+                and parent.active
+                and parent.waiting_for_streaming
+            ):
+                # The parent LLM span ends on its own LLM*EndEvent, which
+                # carries the output messages.
+                return
+            notify_parent(self, status)
+
+        span_cls.notify_parent = notify  # ty: ignore[invalid-assignment]
 
     original_messages = getattr(span_cls, "_process_messages", None)
     input_prefix = getattr(_handler, "LLM_INPUT_MESSAGES", None)

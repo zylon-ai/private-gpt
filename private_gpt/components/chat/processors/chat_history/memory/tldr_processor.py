@@ -25,6 +25,11 @@ from private_gpt.events.event_errors import Errors
 from private_gpt.events.models import (
     BasicContentBlockType,
 )
+from private_gpt.observability.tracing import (
+    SpanKind,
+    set_span_attributes,
+    start_span,
+)
 from private_gpt.settings.settings import settings
 from private_gpt.utils.tokens import (
     AsyncTokenizerFn,
@@ -111,6 +116,17 @@ async def condense_chat_history(
         message_to_input=message_to_input,
         **kwargs,
     )
+    set_span_attributes(
+        **{
+            "pgpt.condensation.strategy": str(strategy_type),
+            "pgpt.condensation.max_tokens": max_length,
+            "pgpt.condensation.available_tokens": remaining_max_length,
+            "pgpt.condensation.tokens_before": current_token_count,
+            "pgpt.condensation.messages_before": len(conversation_history),
+            "pgpt.condensation.needed": condense_strategy is not None
+            and current_token_count > remaining_max_length,
+        }
+    )
     if condense_strategy is None or current_token_count <= remaining_max_length:
         logger.debug(
             "No condensation needed for conversation history. "
@@ -155,6 +171,12 @@ async def condense_chat_history(
         message_to_input=message_to_input,
         **kwargs,
     )
+    set_span_attributes(
+        **{
+            "pgpt.condensation.tokens_after": current_token_count,
+            "pgpt.condensation.messages_after": len(condensed_history),
+        }
+    )
     if current_token_count > max_length:
         raise ValueError(
             "Condensed history exceeds maximum length after applying condensation strategy."
@@ -184,13 +206,21 @@ async def _apply_condensation_strategy(
 ) -> list[ChatMessage]:
     """Apply the specified condensation strategy to chat history."""
     try:
-        coro = condense_strategy.get_memory(
-            chat_history=chat_history, max_length=max_length, **kwargs
-        )
-        if timeout_seconds is None:
-            return await coro
-
-        return await asyncio.wait_for(coro, timeout=timeout_seconds)
+        with start_span(
+            f"condensation.{type(condense_strategy).__name__}",
+            SpanKind.CHAIN,
+            input={"messages": len(chat_history), "max_tokens": max_length},
+            attributes={"pgpt.condensation.timeout_s": timeout_seconds},
+        ) as span:
+            coro = condense_strategy.get_memory(
+                chat_history=chat_history, max_length=max_length, **kwargs
+            )
+            if timeout_seconds is None:
+                result = await coro
+            else:
+                result = await asyncio.wait_for(coro, timeout=timeout_seconds)
+            set_span_attributes(span, output={"messages": len(result)})
+            return result
     except TimeoutError as e:
         raise Errors.Overloaded(
             f"Condensation strategy timed out after {timeout_seconds} seconds",

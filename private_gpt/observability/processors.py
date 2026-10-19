@@ -151,12 +151,16 @@ class DropSpansProcessor(_Delegating):
         return self._regex is not None and bool(self._regex.match(name))
 
     def _idle(self, span: ReadableSpan) -> bool:
-        """An interceptor that changed nothing, failed nothing and did no work."""
+        """An interceptor or condensation check that did no work and did not fail."""
         attrs = span.attributes or {}
+        if not span.status.is_ok:
+            return False
+        if attrs.get("pgpt.condensation.condensed") is False:
+            # Checked the history, nothing to condense.
+            return True
         return (
             attrs.get("pgpt.interceptor.changed") is False
             and span.context.span_id not in self._has_children
-            and span.status.is_ok
         )
 
     def on_start(self, span: Span, parent_context: Context | None = None) -> None:
@@ -202,9 +206,19 @@ class SemconvSpanProcessor(_Delegating):
       message payloads so content is not exported twice.
     """
 
+    _TOKEN_KEYS = (
+        "llm.token_count.prompt",
+        "llm.token_count.completion",
+        "llm.token_count.total",
+    )
+
     def __init__(self, semconv: str, delegate: Any) -> None:
         super().__init__(delegate)
         self._semconv = semconv
+        # LLM span id -> token counts of a nested LLM call (children end
+        # first); LLM wrappers like Triton's chat -> complete only get usage
+        # on the inner span.
+        self._child_tokens: dict[int, dict[str, Any]] = {}
         self._to_genai = None
         if semconv != "openinference":
             try:
@@ -263,9 +277,25 @@ class SemconvSpanProcessor(_Delegating):
             return Status(StatusCode.OK)
         return None
 
+    def _carry_tokens(self, span: ReadableSpan, attrs: dict[str, Any]) -> bool:
+        if attrs.get(SPAN_KIND) != "LLM":
+            return False
+        inherited = self._child_tokens.pop(span.context.span_id, None)
+        changed = False
+        if inherited and not any(key in attrs for key in self._TOKEN_KEYS):
+            attrs.update(inherited)
+            changed = True
+        tokens = {key: attrs[key] for key in self._TOKEN_KEYS if key in attrs}
+        if tokens and span.parent is not None:
+            self._child_tokens[span.parent.span_id] = tokens
+            if len(self._child_tokens) > 10_000:  # parents that never ended
+                self._child_tokens.pop(next(iter(self._child_tokens)))
+        return changed
+
     def on_end(self, span: ReadableSpan) -> None:
         attrs = dict(span.attributes or {})
         changed = self._fix_tools(span, attrs)
+        changed = self._carry_tokens(span, attrs) or changed
         celery_kind = "celery.action" in attrs and SPAN_KIND not in attrs
         status = self._celery(span, attrs)
         changed = changed or celery_kind
