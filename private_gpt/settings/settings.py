@@ -2069,7 +2069,7 @@ class CodeExecutionSettings(BaseModel):
         description="Default code execution timeout in seconds.",
     )
     max_output_bytes: int = Field(
-        default=40_000,
+        default=40_960,
         description=(
             "Maximum size in UTF-8 bytes returned to the model per output stream "
             "(bash stdout and stderr each, text_editor view), after cleaning. "

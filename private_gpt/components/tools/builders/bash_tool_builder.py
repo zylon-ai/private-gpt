@@ -28,6 +28,12 @@ if TYPE_CHECKING:
     from private_gpt.events.models import ResultContentBlockType
 
 
+_TRUNCATION_HINT = (
+    ". Re-run the command limiting its output (e.g. | head, | tail, | grep, "
+    "quiet flags) or redirect it to a file and inspect the parts you need"
+)
+
+
 @singleton
 class BashToolBuilder:
     @inject
@@ -66,10 +72,12 @@ class BashToolBuilder:
                     stdout=truncate_head_tail(
                         self._clean(result.stdout),
                         self._settings.code_execution.max_output_bytes,
+                        hint=_TRUNCATION_HINT,
                     ),
                     stderr=truncate_head_tail(
                         self._clean(result.stderr),
                         self._settings.code_execution.max_output_bytes,
+                        hint=_TRUNCATION_HINT,
                     ),
                     return_code=result.exit_code,
                 )

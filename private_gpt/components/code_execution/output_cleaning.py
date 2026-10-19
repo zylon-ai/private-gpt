@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from private_gpt.settings.settings import OutputCleaningSettings
 
 
-def _human_size(num_bytes: int) -> str:
+def human_size(num_bytes: int) -> str:
     if num_bytes < 1024:
         return f"{num_bytes} B"
     if num_bytes < 1024 * 1024:
@@ -71,7 +71,7 @@ class BinaryOutputInterceptor(OutputInterceptor):
         if binary == 0:
             return text
         if binary / len(text) >= self._threshold:
-            size = _human_size(len(text.encode("utf-8", errors="replace")))
+            size = human_size(len(text.encode("utf-8", errors="replace")))
             return f"[binary output omitted: {size}]"
         return self._BINARY_RUN.sub(
             lambda m: f"[binary data omitted: {len(m.group())} bytes]", text
@@ -228,7 +228,7 @@ class DataUriInterceptor(OutputInterceptor):
         if len(payload) < self._min_length:
             return match.group()
         mime = match.group("mime") or "unknown"
-        size = _human_size(_base64_decoded_size(payload))
+        size = human_size(_base64_decoded_size(payload))
         return f"[base64 {mime} omitted: {size}]"
 
     def __call__(self, text: str) -> str:
@@ -265,7 +265,7 @@ class Base64BlobInterceptor(OutputInterceptor):
             and re.search(r"[0-9]", payload)
         ):
             return blob
-        return f"[base64 data omitted: {_human_size(_base64_decoded_size(payload))}]"
+        return f"[base64 data omitted: {human_size(_base64_decoded_size(payload))}]"
 
     def __call__(self, text: str) -> str:
         if len(text) < self._min_length:
@@ -389,13 +389,16 @@ class OutputCleaner:
         return text
 
 
-def truncate_head_tail(text: str, max_bytes: int, head_ratio: float = 0.2) -> str:
+def truncate_head_tail(
+    text: str, max_bytes: int, head_ratio: float = 0.2, hint: str = ""
+) -> str:
     """Keep the start and the end of *text* within *max_bytes*.
 
     Command output puts its errors and summaries at the end, so the tail gets
     most of the budget. Cuts snap to line boundaries when one is near (a
     single huge line is cut on a UTF-8 character boundary instead) and the
-    marker tells the model how much was dropped.
+    marker tells the model how much was dropped and, via *hint*, how to get
+    at it.
     """
     encoded = text.encode("utf-8")
     if len(encoded) <= max_bytes:
@@ -410,6 +413,29 @@ def truncate_head_tail(text: str, max_bytes: int, head_ratio: float = 0.2) -> st
         tail = tail[cut + 1 :]
     omitted = text[len(head) : len(text) - len(tail)]
     omitted_lines = len(omitted.strip("\n").splitlines())
-    size = _human_size(len(omitted.encode("utf-8")))
+    size = human_size(len(omitted.encode("utf-8")))
     detail = f"{omitted_lines} lines, {size}" if omitted_lines > 0 else size
-    return f"{head}\n... [{detail} truncated] ...\n{tail}"
+    reason = f"; output exceeded the {human_size(max_bytes)} limit"
+    return f"{head}\n... [{detail} truncated{reason}{hint}] ...\n{tail}"
+
+
+def truncate_lines(text: str, max_bytes: int) -> tuple[str, int]:
+    """Keep the leading whole lines of *text* that fit in *max_bytes*.
+
+    Returns the kept text and the number of lines kept. At least one line is
+    always kept (cut on a UTF-8 boundary if it alone exceeds the budget).
+    """
+    if len(text.encode("utf-8")) <= max_bytes:
+        return text, len(text.splitlines())
+    kept: list[str] = []
+    used = 0
+    for line in text.splitlines():
+        size = len(line.encode("utf-8")) + 1
+        if used + size > max_bytes:
+            break
+        kept.append(line)
+        used += size
+    if not kept:
+        first = text.splitlines()[0].encode("utf-8")[:max_bytes]
+        return first.decode("utf-8", errors="ignore"), 1
+    return "\n".join(kept), len(kept)

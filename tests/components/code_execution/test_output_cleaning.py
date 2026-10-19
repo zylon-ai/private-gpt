@@ -182,7 +182,7 @@ def test_head_tail_truncation_keeps_the_end() -> None:
     out = truncate_head_tail(text, 1000)
     assert out.startswith("HEAD")
     assert out.endswith("TAIL error: boom")
-    assert "truncated] ..." in out
+    assert "truncated; output exceeded the 1000 B limit] ..." in out
     assert truncate_head_tail("small", 1000) == "small"
 
 
