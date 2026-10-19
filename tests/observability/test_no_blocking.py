@@ -289,3 +289,62 @@ async def test_wrapping_stream_llm_records_its_output() -> None:
     assert chat["llm.output_messages.0.message.content"] == "Hello world"
     assert "Hello world" in chat["output.value"]
     assert spans["Wrapping.astream_complete"]["output.value"] == "Hello world"
+
+
+def test_llm_spans_show_tool_calls_and_results() -> None:
+    from llama_index.core.base.llms.types import ChatMessage
+    from llama_index.core.llms.llm import ToolSelection
+    from llama_index.core.llms.mock import MockLLM
+    from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
+
+    from private_gpt.observability.llama_index_patch import patch_llama_index_handler
+
+    patch_llama_index_handler(20)
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(memory))
+    instrumentor = LlamaIndexInstrumentor()
+    instrumentor.instrument(tracer_provider=provider, use_legacy_callback_handler=False)
+    try:
+        MockLLM(max_tokens=3).chat(
+            [
+                ChatMessage(role="user", content="weather?"),
+                ChatMessage(
+                    role="assistant",
+                    content="",
+                    additional_kwargs={
+                        "tool_calls": [
+                            ToolSelection(
+                                tool_id="t1",
+                                tool_name="get_weather",
+                                tool_kwargs={"city": "Madrid"},
+                            )
+                        ],
+                        "thinking": "I should call the tool.",
+                    },
+                ),
+                ChatMessage(
+                    role="tool",
+                    content="sunny",
+                    additional_kwargs={
+                        "tool_call_id": "t1",
+                        "tool_call_name": "get_weather",
+                    },
+                ),
+            ]
+        )
+    finally:
+        instrumentor.uninstrument()
+
+    llm = next(s for s in memory.get_finished_spans() if s.name.endswith(".chat"))
+    attributes = dict(llm.attributes or {})
+    call = "llm.input_messages.1.message.tool_calls.0.tool_call"
+    assert attributes[f"{call}.function.name"] == "get_weather"
+    assert attributes[f"{call}.id"] == "t1"
+    assert attributes[f"{call}.function.arguments"] == '{"city": "Madrid"}'
+    assert (
+        attributes["llm.input_messages.1.message.reasoning"]
+        == "I should call the tool."
+    )
+    assert attributes["llm.input_messages.2.message.tool_call_id"] == "t1"
+    assert attributes["llm.input_messages.2.message.name"] == "get_weather"

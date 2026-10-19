@@ -17,6 +17,11 @@ call):
   wraps ``astream_complete``) was ended when the inner stream finished,
   before its own end event set the output; LLM spans now wait for their own
   end event.
+* Tool calls are ``ToolSelection`` objects, which the handler skips: an
+  assistant turn that only called tools showed as an empty message. They
+  are written as OpenInference ``message.tool_calls`` (name, id, arguments),
+  tool results get their ``tool_call_id`` and name, and reasoning goes to
+  the message's ``thinking`` content.
 * ``_process_messages`` writes every message of the prompt. Only the system
   messages and the last ``max_input_messages`` are kept; earlier turns are
   on the previous traces of the session, and the count of omitted ones is
@@ -113,19 +118,65 @@ def patch_llama_index_handler(max_input_messages: int) -> None:
 
         span_cls.notify_parent = notify  # ty: ignore[invalid-assignment]
 
+    original_event = getattr(span_cls, "process_event", None)
+    output_prefix = getattr(_handler, "LLM_OUTPUT_MESSAGES", None)
+    if original_event is not None and output_prefix is not None:
+        from llama_index.core.instrumentation.events.llm import (
+            LLMChatEndEvent,
+            LLMChatInProgressEvent,
+        )
+
+        def process_event(self: Any, event: Any) -> None:
+            # Streamed tool calls come in some chunk, not necessarily the last
+            # one the end event carries; collect them as they pass.
+            if isinstance(event, LLMChatInProgressEvent):
+                calls = _tool_calls(event.response)
+                if calls:
+                    self.__dict__["_pgpt_tool_calls"] = calls
+            elif isinstance(event, LLMChatEndEvent) and event.response is not None:
+                calls = _tool_calls(event.response) or self.__dict__.get(
+                    "_pgpt_tool_calls"
+                )
+                if calls:
+                    message = event.response.message
+                    if not message.additional_kwargs.get("tool_calls"):
+                        message = message.model_copy(
+                            update={
+                                "additional_kwargs": {
+                                    **message.additional_kwargs,
+                                    "tool_calls": calls,
+                                }
+                            }
+                        )
+                        event = event.model_copy(
+                            update={
+                                "response": event.response.model_copy(
+                                    update={"message": message}
+                                )
+                            }
+                        )
+            original_event(self, event)
+
+        span_cls.process_event = process_event  # ty: ignore[invalid-assignment]
+
     original_messages = getattr(span_cls, "_process_messages", None)
     input_prefix = getattr(_handler, "LLM_INPUT_MESSAGES", None)
     if original_messages is not None and input_prefix is not None:
 
         def process_messages(self: Any, prefix: str, *messages: Any) -> None:
-            if prefix != input_prefix or len(messages) <= max_input_messages:
-                original_messages(self, prefix, *messages)
-                return
-            system = [m for m in messages if _role(m) == "system"]
-            rest = [m for m in messages if _role(m) != "system"]
-            kept = rest[-max_input_messages:]
-            original_messages(self, prefix, *system, *kept)
-            self["pgpt.llm.input_messages.omitted"] = len(rest) - len(kept)
+            omitted = 0
+            if prefix == input_prefix and len(messages) > max_input_messages:
+                system = [m for m in messages if _role(m) == "system"]
+                rest = [m for m in messages if _role(m) != "system"]
+                kept = rest[-max_input_messages:]
+                omitted = len(rest) - len(kept)
+                messages = (*system, *kept)
+            original_messages(self, prefix, *messages)
+            for index, message in enumerate(messages):
+                for key, value in _message_extras(message):
+                    self[f"{prefix}.{index}.{key}"] = value
+            if omitted:
+                self["pgpt.llm.input_messages.omitted"] = omitted
 
         span_cls._process_messages = process_messages
 
@@ -192,3 +243,43 @@ def node_info(obj: Any) -> dict[str, Any] | None:
     if isinstance(children, list) and children:
         summary["children"] = len(children)
     return summary
+
+
+def _message_extras(message: Any) -> list[tuple[str, Any]]:
+    """Tool calls, tool-result ids and reasoning the handler leaves out."""
+    import json
+
+    extras: list[tuple[str, Any]] = []
+    kwargs = getattr(message, "additional_kwargs", None) or {}
+    for index, call in enumerate(kwargs.get("tool_calls") or []):
+        name = getattr(call, "tool_name", None)
+        if name is None:
+            continue  # dicts and ToolCallBlocks are handled by the handler
+        prefix = f"message.tool_calls.{index}.tool_call"
+        extras.append((f"{prefix}.function.name", name))
+        if tool_id := getattr(call, "tool_id", None):
+            extras.append((f"{prefix}.id", tool_id))
+        arguments = getattr(call, "tool_kwargs", None)
+        extras.append(
+            (
+                f"{prefix}.function.arguments",
+                arguments
+                if isinstance(arguments, str)
+                else json.dumps(arguments, ensure_ascii=False, default=str),
+            )
+        )
+    if _role(message) == "tool":
+        if name := kwargs.get("tool_call_name"):
+            extras.append(("message.name", name))
+    thinking = kwargs.get("thinking") or kwargs.get("reasoning_content")
+    if isinstance(thinking, str) and thinking.strip():
+        extras.append(("message.reasoning", thinking))
+    return extras
+
+
+def _tool_calls(response: Any) -> list[Any] | None:
+    kwargs = getattr(getattr(response, "message", None), "additional_kwargs", None)
+    calls = (kwargs or {}).get("tool_calls") or (
+        getattr(response, "additional_kwargs", None) or {}
+    ).get("tool_calls")
+    return list(calls) if calls else None
