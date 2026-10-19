@@ -393,7 +393,9 @@ def truncate_head_tail(text: str, max_bytes: int, head_ratio: float = 0.2) -> st
     """Keep the start and the end of *text* within *max_bytes*.
 
     Command output puts its errors and summaries at the end, so the tail gets
-    most of the budget. Cuts land on UTF-8 character boundaries.
+    most of the budget. Cuts snap to line boundaries when one is near (a
+    single huge line is cut on a UTF-8 character boundary instead) and the
+    marker tells the model how much was dropped.
     """
     encoded = text.encode("utf-8")
     if len(encoded) <= max_bytes:
@@ -402,5 +404,12 @@ def truncate_head_tail(text: str, max_bytes: int, head_ratio: float = 0.2) -> st
     tail_bytes = max_bytes - head_bytes
     head = encoded[:head_bytes].decode("utf-8", errors="ignore")
     tail = encoded[-tail_bytes:].decode("utf-8", errors="ignore") if tail_bytes else ""
-    omitted = len(encoded) - head_bytes - tail_bytes
-    return f"{head}\n... [{_human_size(omitted)} of output truncated] ...\n{tail}"
+    if (cut := head.rfind("\n")) > len(head) // 2:
+        head = head[:cut]
+    if (cut := tail.find("\n")) != -1 and cut < len(tail) // 2:
+        tail = tail[cut + 1 :]
+    omitted = text[len(head) : len(text) - len(tail)]
+    omitted_lines = len(omitted.strip("\n").splitlines())
+    size = _human_size(len(omitted.encode("utf-8")))
+    detail = f"{omitted_lines} lines, {size}" if omitted_lines > 0 else size
+    return f"{head}\n... [{detail} truncated] ...\n{tail}"

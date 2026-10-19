@@ -182,8 +182,19 @@ def test_head_tail_truncation_keeps_the_end() -> None:
     out = truncate_head_tail(text, 1000)
     assert out.startswith("HEAD")
     assert out.endswith("TAIL error: boom")
-    assert "of output truncated]" in out
+    assert "truncated] ..." in out
     assert truncate_head_tail("small", 1000) == "small"
+
+
+def test_head_tail_truncation_cuts_on_line_boundaries() -> None:
+    lines = [f"tests/test_{i:04d}.py::test PASSED" for i in range(3000)]
+    lines.append("=== 1 failed, 2999 passed in 1.23s ===")
+    out = truncate_head_tail("\n".join(lines), 2000).split("\n")
+    marker = next(i for i, line in enumerate(out) if line.startswith("... ["))
+    kept = out[:marker] + out[marker + 1 :]
+    assert all(line in lines for line in kept)
+    assert out[-1] == "=== 1 failed, 2999 passed in 1.23s ==="
+    assert out[marker].startswith(f"... [{len(lines) - len(kept)} lines, ")
 
 
 def test_disabled_cleaner_is_identity() -> None:
