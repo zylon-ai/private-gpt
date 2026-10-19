@@ -226,6 +226,13 @@ def patch_llama_index_handler(max_input_messages: int) -> None:
             for index, message in enumerate(messages):
                 for key, value in _message_extras(message):
                     self[f"{prefix}.{index}.{key}"] = value
+                    if key == "message.reasoning" and prefix == output_prefix:
+                        # Trace UIs only render `content`; an answer that is
+                        # all reasoning (before a tool call) would look empty.
+                        content = getattr(message, "content", None) or ""
+                        self[f"{prefix}.{index}.message.content"] = _quote_reasoning(
+                            value, content
+                        )
             if omitted:
                 self["pgpt.llm.input_messages.omitted"] = omitted
 
@@ -340,6 +347,12 @@ def _collect_tool_calls(span: Any, calls: list[Any] | None) -> None:
             or f"#{index}"
         )
         collected[key] = call
+
+
+def _quote_reasoning(reasoning: str, content: str) -> str:
+    """Reasoning as a markdown quote, followed by the answer."""
+    quoted = "\n".join(f"> {line}" if line else ">" for line in reasoning.splitlines())
+    return f"> **Reasoning**\n>\n{quoted}" + (f"\n\n{content}" if content else "")
 
 
 def _response_kwargs(response: Any) -> dict[str, Any]:

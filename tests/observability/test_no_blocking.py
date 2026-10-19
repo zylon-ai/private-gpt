@@ -456,4 +456,8 @@ def test_streamed_completion_shows_tool_calls_and_lasts_until_drained() -> None:
     assert attributes[f"{prefix}.1.tool_call.id"] == "b"
     assert attributes[f"{prefix}.1.tool_call.function.arguments"] == '{"city": "Paris"}'
     assert attributes["llm.output_messages.0.message.reasoning"] == "Need the weather."
+    # Shown in `content` too: trace UIs render only that.
+    assert attributes["llm.output_messages.0.message.content"] == (
+        "> **Reasoning**\n>\n> Need the weather."
+    )
     assert span.end_time - span.start_time >= 0.15 * 1e9  # until drained
