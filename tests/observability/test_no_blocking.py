@@ -458,6 +458,15 @@ def test_streamed_completion_shows_tool_calls_and_lasts_until_drained() -> None:
     assert attributes["llm.output_messages.0.message.reasoning"] == "Need the weather."
     # Shown in `content` too: trace UIs render only that.
     assert attributes["llm.output_messages.0.message.content"] == (
-        "> **Reasoning**\n>\n> Need the weather."
+        "> Need the weather."
     )
     assert span.end_time - span.start_time >= 0.15 * 1e9  # until drained
+
+
+def test_reasoning_is_quoted_line_by_line_before_the_answer() -> None:
+    from private_gpt.observability.llama_index_patch import _quote_reasoning
+
+    assert _quote_reasoning("first\n\nsecond", "Answer") == (
+        "> first\n>\n> second\n\n---\n\nAnswer"
+    )
+    assert _quote_reasoning("only", "") == "> only"

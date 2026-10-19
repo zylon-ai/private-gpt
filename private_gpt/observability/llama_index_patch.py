@@ -350,9 +350,9 @@ def _collect_tool_calls(span: Any, calls: list[Any] | None) -> None:
 
 
 def _quote_reasoning(reasoning: str, content: str) -> str:
-    """Reasoning as a markdown quote, followed by the answer."""
+    """Reasoning as a markdown quote, then a rule and the answer."""
     quoted = "\n".join(f"> {line}" if line else ">" for line in reasoning.splitlines())
-    return f"> **Reasoning**\n>\n{quoted}" + (f"\n\n{content}" if content else "")
+    return quoted + (f"\n\n---\n\n{content}" if content else "")
 
 
 def _response_kwargs(response: Any) -> dict[str, Any]:
