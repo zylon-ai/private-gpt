@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import re
 from typing import TYPE_CHECKING, Any
 
 from private_gpt.observability import setup
@@ -113,8 +114,40 @@ def _matches(path: str, patterns: list[str]) -> bool:
     return any(fnmatch.fnmatch(path, pattern) for pattern in patterns)
 
 
+def _route_path(scope: Scope) -> str:
+    """Request path without the mount prefix (``/gpt/v1/x`` -> ``/v1/x``).
+
+    Patterns are written against the API routes; behind a ``root_path``
+    Starlette keeps the prefix in ``scope["path"]``.
+    """
+    path = scope.get("path", "")
+    root = (scope.get("root_path") or "").rstrip("/")
+    if root and path.startswith(root + "/"):
+        return path[len(root) :]
+    return path
+
+
+# A JSON string of base64 (file uploads, images); also matches one cut by the
+# capture cap, which has no closing quote.
+_BASE64_STRING = re.compile(r'"([A-Za-z0-9+/]{512,}={0,2})("|$)')
+
+
+def _elide_base64(text: str) -> str:
+    def marker(match: re.Match[str]) -> str:
+        size = len(match.group(1)) * 3 // 4
+        cut = "" if match.group(2) else "+"
+        return f'"<base64, {size}{cut} bytes>"'
+
+    return _BASE64_STRING.sub(marker, text)
+
+
 def _shape(text: str, content_type: str) -> Any:
-    """JSON bodies are recorded as JSON; everything else as text."""
+    """JSON bodies are recorded as JSON; everything else as text.
+
+    Inline files (base64) are replaced by a size marker: they are what makes
+    bodies big and they are unreadable in a trace.
+    """
+    text = _elide_base64(text)
     if "json" in content_type:
         try:
             return json.loads(text)
@@ -135,7 +168,7 @@ class HttpBodyCaptureMiddleware:
             scope["type"] != "http"
             or obs is None
             or not setup.is_configured()
-            or _matches(scope.get("path", ""), obs.excluded_urls)
+            or _matches(_route_path(scope), obs.excluded_urls)
         ):
             await self.app(scope, receive, send)
             return
@@ -150,7 +183,7 @@ class HttpBodyCaptureMiddleware:
         capture = (
             setup.capture_content()
             and obs.capture_http_bodies
-            and _matches(scope.get("path", ""), obs.capture_http_paths)
+            and _matches(_route_path(scope), obs.capture_http_paths)
         )
         limit = obs.max_http_body_bytes
         request_body = _CappedBuffer(limit)

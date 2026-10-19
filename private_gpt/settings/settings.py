@@ -1170,7 +1170,18 @@ class ObservabilitySettings(BaseModel):
         ),
     )
     capture_http_paths: list[str] = Field(
-        default_factory=lambda: ["/v1/messages*", "/v1/chat/*", "/v1/completions*"],
+        default_factory=lambda: [
+            "/v1/messages*",
+            "/v1/chat/*",
+            "/v1/completions*",
+            "/v1/complete",
+            "/v1/tools/*",
+            "/v1/primitives/*",
+            "/v1/artifacts/convert",
+            "/v1/artifacts/ingest",
+            "/v1/artifacts/ingest/async",
+            "/v1/artifacts/delete*",
+        ],
         description="fnmatch patterns of request paths whose bodies are recorded.",
     )
     max_http_body_bytes: int = Field(

@@ -13,6 +13,7 @@ import functools
 import json
 import logging
 from contextlib import contextmanager
+from contextvars import ContextVar
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
@@ -241,15 +242,8 @@ def _llama_index_parent() -> Any:
         from openinference.instrumentation.llama_index import _handler
     except ImportError:
         return None
-    span_id = active_span_id.get()
-    if not span_id:
-        return None
-    handler = _llama_index_span_handler(_handler)
-    if handler is None:
-        return None
-    with handler.lock:
-        li_span = handler.open_spans.get(span_id)
-    if li_span is None or not li_span.active:
+    li_span = _open_llama_index_span(active_span_id, _handler)
+    if li_span is None:
         return None
     current = trace.get_current_span().get_span_context()
     li_ctx = li_span._otel_span.get_span_context()
@@ -262,18 +256,57 @@ def _llama_index_parent() -> Any:
     return li_span.context
 
 
+def _open_llama_index_span(active_span_id: Any, module: Any) -> Any:
+    span_id = active_span_id.get()
+    if not span_id:
+        return None
+    handler = _llama_index_span_handler(module)
+    if handler is None:
+        return None
+    with handler.lock:
+        li_span = handler.open_spans.get(span_id)
+    if li_span is None or not li_span.active:
+        return None
+    return li_span
+
+
+# Set by an LLM backend while it builds a request; read by the llama-index
+# LLM span when its end event arrives (see llama_index_patch). Generators run
+# in the consumer's context, so a value set inside a streaming generator is
+# visible to the end event dispatched after it.
+pending_invocation_parameters: ContextVar[str | None] = ContextVar(
+    "pgpt_invocation_parameters", default=None
+)
+
+
+def set_llm_invocation_parameters(parameters: Mapping[str, Any]) -> None:
+    """Record the parameters an LLM request is actually sent with.
+
+    The llama-index instrumentation only records ``LLM.metadata``; backends
+    that resolve their parameters per call (sampling, dynamic ``max_tokens``,
+    structured outputs...) call this right before sending the request, and
+    the LLM span shows them as ``llm.invocation_parameters``.
+    """
+    if not is_enabled():
+        return
+    pending_invocation_parameters.set(
+        json.dumps(parameters, default=str, sort_keys=True)
+    )
+
+
 _li_handler: Any = None
 
 
 def _llama_index_span_handler(module: Any) -> Any:
     global _li_handler
-    if _li_handler is None:
-        from llama_index_instrumentation import get_dispatcher
+    from llama_index_instrumentation import get_dispatcher
 
-        for handler in get_dispatcher().span_handlers:
-            if isinstance(handler, module._SpanHandler):
-                _li_handler = handler
-                break
+    handlers = get_dispatcher().span_handlers
+    # Re-instrumenting replaces the handler; never keep a detached one.
+    if _li_handler is None or _li_handler not in handlers:
+        _li_handler = next(
+            (h for h in handlers if isinstance(h, module._SpanHandler)), None
+        )
     return _li_handler
 
 

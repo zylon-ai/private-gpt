@@ -34,6 +34,7 @@ otherwise, so an upgrade of the instrumentation degrades to its defaults.
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -124,40 +125,87 @@ def patch_llama_index_handler(max_input_messages: int) -> None:
         from llama_index.core.instrumentation.events.llm import (
             LLMChatEndEvent,
             LLMChatInProgressEvent,
+            LLMChatStartEvent,
+            LLMCompletionEndEvent,
+            LLMCompletionInProgressEvent,
+            LLMCompletionStartEvent,
         )
 
+        from private_gpt.observability.tracing import pending_invocation_parameters
+
         def process_event(self: Any, event: Any) -> None:
-            # Streamed tool calls come in some chunk, not necessarily the last
-            # one the end event carries; collect them as they pass.
-            if isinstance(event, LLMChatInProgressEvent):
-                calls = _tool_calls(event.response)
-                if calls:
-                    self.__dict__["_pgpt_tool_calls"] = calls
+            # Parameters the backend actually sent (set while the request is
+            # built), replacing the static metadata the instrumentation shows.
+            if isinstance(event, (LLMChatStartEvent, LLMCompletionStartEvent)):
+                pending_invocation_parameters.set(None)
+            elif isinstance(event, (LLMChatEndEvent, LLMCompletionEndEvent)):
+                if parameters := pending_invocation_parameters.get():
+                    self["llm.invocation_parameters"] = parameters
+            # Streamed tool calls come in some chunks, not necessarily the
+            # last one the end event carries; collect them as they pass.
+            if isinstance(
+                event, (LLMChatInProgressEvent, LLMCompletionInProgressEvent)
+            ):
+                _collect_tool_calls(self, _tool_calls(event.response))
             elif isinstance(event, LLMChatEndEvent) and event.response is not None:
-                calls = _tool_calls(event.response) or self.__dict__.get(
-                    "_pgpt_tool_calls"
-                )
+                _collect_tool_calls(self, _tool_calls(event.response))
+                calls = self.__dict__.get("_pgpt_tool_calls")
                 if calls:
                     message = event.response.message
-                    if not message.additional_kwargs.get("tool_calls"):
-                        message = message.model_copy(
-                            update={
-                                "additional_kwargs": {
-                                    **message.additional_kwargs,
-                                    "tool_calls": calls,
-                                }
+                    message = message.model_copy(
+                        update={
+                            "additional_kwargs": {
+                                **message.additional_kwargs,
+                                "tool_calls": list(calls.values()),
                             }
-                        )
-                        event = event.model_copy(
-                            update={
-                                "response": event.response.model_copy(
-                                    update={"message": message}
-                                )
-                            }
-                        )
+                        }
+                    )
+                    event = event.model_copy(
+                        update={
+                            "response": event.response.model_copy(
+                                update={"message": message}
+                            )
+                        }
+                    )
+            elif (
+                isinstance(event, LLMCompletionEndEvent) and event.response is not None
+            ):
+                # Completions only record the text; show the answer as an
+                # assistant message with its tool calls, like chat spans.
+                _collect_tool_calls(self, _tool_calls(event.response))
+                calls = self.__dict__.get("_pgpt_tool_calls")
+                if calls and output_prefix is not None:
+                    from llama_index.core.base.llms.types import ChatMessage
+
+                    self._process_messages(
+                        output_prefix,
+                        ChatMessage(
+                            role="assistant",
+                            content=event.response.text or "",
+                            additional_kwargs={"tool_calls": list(calls.values())},
+                        ),
+                    )
             original_event(self, event)
 
         span_cls.process_event = process_event  # ty: ignore[invalid-assignment]
+
+    original_end = getattr(span_cls, "end", None)
+    if original_end is not None:
+
+        def end(self: Any, exception: BaseException | None = None) -> None:
+            # For a streamed LLM call the handler stamps the end time when the
+            # generator is returned; the call really ends when it is drained.
+            if getattr(self, "waiting_for_streaming", False):
+                last = getattr(self, "_last_updated_at", None)
+                # The sweeper ends abandoned streams after 60 s idle: use the
+                # last chunk, not the sweep time.
+                if last is not None and time.time() - last > 30:
+                    self._end_time = max(self._end_time, int(last * 1e9))
+                else:
+                    self._end_time = time.time_ns()
+            original_end(self, exception)
+
+        span_cls.end = end  # ty: ignore[invalid-assignment]
 
     original_messages = getattr(span_cls, "_process_messages", None)
     input_prefix = getattr(_handler, "LLM_INPUT_MESSAGES", None)
@@ -275,6 +323,20 @@ def _message_extras(message: Any) -> list[tuple[str, Any]]:
     if isinstance(thinking, str) and thinking.strip():
         extras.append(("message.reasoning", thinking))
     return extras
+
+
+def _collect_tool_calls(span: Any, calls: list[Any] | None) -> None:
+    """Keep every tool call seen in the stream, once (by id, else position)."""
+    if not calls:
+        return
+    collected = span.__dict__.setdefault("_pgpt_tool_calls", {})
+    for index, call in enumerate(calls):
+        key = (
+            getattr(call, "tool_id", None)
+            or (call.get("id") if isinstance(call, dict) else None)
+            or f"#{index}"
+        )
+        collected[key] = call
 
 
 def _tool_calls(response: Any) -> list[Any] | None:

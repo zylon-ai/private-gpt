@@ -46,17 +46,21 @@ _SESSION_METHODS: dict[str, tuple[str, Callable[..., Any], Callable[[Any], Any]]
     "read_file": (
         "sandbox.read_file",
         lambda path: {"path": path},
-        lambda r: {"bytes": len(r)},
+        lambda r: {"bytes": len(r), "content": _preview(r)},
     ),
     "write_file": (
         "sandbox.write_file",
-        lambda path, content: {"path": path, "bytes": len(content)},
+        lambda path, content: {
+            "path": path,
+            "bytes": len(content),
+            "content": _preview(content),
+        },
         lambda _: None,
     ),
     "list_dir": (
         "sandbox.list_dir",
         lambda path: {"path": path},
-        lambda r: {"entries": len(r)},
+        lambda r: {"entries": len(r), "names": [_entry(e) for e in r[:200]]},
     ),
     "path_exists": (
         "sandbox.path_exists",
@@ -106,6 +110,34 @@ _PROVIDER_METHODS: dict[str, tuple[str, Callable[..., Any], Callable[[Any], Any]
     "kill_session": ("sandbox.kill", lambda *_, **__: None, lambda _: None),
     "delete_session": ("sandbox.delete", lambda *_, **__: None, lambda _: None),
 }
+
+
+def _preview(content: Any) -> Any:
+    """File content as text (clipped); binary content only as a marker."""
+    if isinstance(content, str):
+        return _clip(content)
+    if not isinstance(content, (bytes, bytearray)):
+        return None
+    head = bytes(content[: _MAX_TEXT + 4])
+    try:
+        text = head.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        # A multi-byte character cut at the end of the slice is still text.
+        if exc.start < len(head) - 4:
+            return f"<binary, {len(content)} bytes>"
+        text = head[: exc.start].decode("utf-8")
+    if "\x00" in text:
+        return f"<binary, {len(content)} bytes>"
+    if len(content) > len(head):
+        return text[:_MAX_TEXT] + f"… [{len(content) - _MAX_TEXT} more bytes]"
+    return _clip(text)
+
+
+def _entry(entry: Any) -> Any:
+    for attr in ("name", "path"):
+        if isinstance(value := getattr(entry, attr, None), str):
+            return value
+    return entry if isinstance(entry, str) else str(entry)
 
 
 def _clip(text: Any) -> Any:

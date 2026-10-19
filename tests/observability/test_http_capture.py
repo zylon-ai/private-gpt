@@ -193,3 +193,27 @@ async def test_bodies_are_not_captured_when_content_capture_is_off(
     assert span.attributes["http.request.body.size"] == 0
     # Status and kind are still set.
     assert span.status.status_code == StatusCode.OK
+
+
+def test_patterns_match_routes_behind_a_root_path() -> None:
+    from private_gpt.observability.http import _route_path
+
+    scope = {"path": "/gpt/v1/messages/count_tokens", "root_path": "/gpt"}
+    assert _route_path(scope) == "/v1/messages/count_tokens"
+    assert _route_path({"path": "/v1/messages", "root_path": ""}) == "/v1/messages"
+    assert _route_path({"path": "/gptx/v1", "root_path": "/gpt"}) == "/gptx/v1"
+
+
+def test_inline_files_are_replaced_by_their_size() -> None:
+    from private_gpt.observability.http import _shape
+
+    payload = "QUJD" * 300  # 1200 base64 chars -> 900 bytes
+    body = json.dumps({"input": {"type": "file", "value": payload}, "n": 1})
+    assert _shape(body, "application/json") == {
+        "input": {"type": "file", "value": "<base64, 900 bytes>"},
+        "n": 1,
+    }
+    # Cut by the capture cap: no closing quote, still elided.
+    assert _shape('{"value": "' + payload, "application/json") == (
+        '{"value": "<base64, 900+ bytes>"'
+    )

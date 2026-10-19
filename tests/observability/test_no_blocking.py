@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import threading
 import time
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
@@ -348,3 +350,103 @@ def test_llm_spans_show_tool_calls_and_results() -> None:
     )
     assert attributes["llm.input_messages.2.message.tool_call_id"] == "t1"
     assert attributes["llm.input_messages.2.message.name"] == "get_weather"
+
+
+def test_llm_invocation_parameters_are_the_ones_sent() -> None:
+    from llama_index.core.base.llms.types import ChatMessage, CompletionResponse
+    from llama_index.core.llms.callbacks import llm_completion_callback
+    from llama_index.core.llms.mock import MockLLM
+    from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
+
+    from private_gpt.observability.llama_index_patch import patch_llama_index_handler
+    from private_gpt.observability.tracing import set_llm_invocation_parameters
+
+    class _SamplingLLM(MockLLM):
+        # Like Triton: parameters are resolved inside the stream generator,
+        # where no llama-index span is active.
+        @llm_completion_callback()
+        def stream_complete(self, prompt: str, formatted: bool = False, **kwargs):  # type: ignore[override]
+            def gen():
+                set_llm_invocation_parameters({"temperature": 0.2, "max_tokens": 7})
+                yield CompletionResponse(text="ok", delta="ok")
+
+            return gen()
+
+    patch_llama_index_handler(20)
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(memory))
+    instrumentor = LlamaIndexInstrumentor()
+    instrumentor.instrument(tracer_provider=provider, use_legacy_callback_handler=False)
+    try:
+        with patch("private_gpt.observability.tracing.is_enabled", return_value=True):
+            for _ in _SamplingLLM(max_tokens=3).stream_chat(
+                [ChatMessage(role="user", content="hi")]
+            ):
+                pass
+    finally:
+        instrumentor.uninstrument()
+
+    spans = {s.name: s for s in memory.get_finished_spans()}
+    for suffix in (".stream_complete", ".stream_chat"):
+        span = next(s for name, s in spans.items() if name.endswith(suffix))
+        assert json.loads((span.attributes or {})["llm.invocation_parameters"]) == {
+            "max_tokens": 7,
+            "temperature": 0.2,
+        }
+
+
+def test_streamed_completion_shows_tool_calls_and_lasts_until_drained() -> None:
+    from llama_index.core.base.llms.types import CompletionResponse
+    from llama_index.core.llms.callbacks import llm_completion_callback
+    from llama_index.core.llms.llm import ToolSelection
+    from llama_index.core.llms.mock import MockLLM
+    from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
+
+    from private_gpt.observability.llama_index_patch import patch_llama_index_handler
+
+    def call(tool_id: str, city: str) -> ToolSelection:
+        return ToolSelection(
+            tool_id=tool_id, tool_name="get_weather", tool_kwargs={"city": city}
+        )
+
+    class _ToolLLM(MockLLM):
+        # Like Triton: each tool call arrives in its own chunk mid-stream.
+        @llm_completion_callback()
+        async def astream_complete(
+            self, prompt: str, formatted: bool = False, **kwargs
+        ):  # type: ignore[override]
+            async def gen():
+                for calls in ([call("a", "Madrid")], [call("b", "Paris")], []):
+                    await asyncio.sleep(0.05)
+                    yield CompletionResponse(
+                        text="", delta="", additional_kwargs={"tool_calls": calls}
+                    )
+
+            return gen()
+
+    patch_llama_index_handler(20)
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(memory))
+    instrumentor = LlamaIndexInstrumentor()
+    instrumentor.instrument(tracer_provider=provider, use_legacy_callback_handler=False)
+
+    async def drain() -> None:
+        async for _ in await _ToolLLM().astream_complete("weather?"):
+            pass
+
+    try:
+        asyncio.run(drain())
+    finally:
+        instrumentor.uninstrument()
+
+    span = next(
+        s for s in memory.get_finished_spans() if s.name.endswith(".astream_complete")
+    )
+    attributes = dict(span.attributes or {})
+    prefix = "llm.output_messages.0.message.tool_calls"
+    assert attributes[f"{prefix}.0.tool_call.id"] == "a"
+    assert attributes[f"{prefix}.1.tool_call.id"] == "b"
+    assert attributes[f"{prefix}.1.tool_call.function.arguments"] == '{"city": "Paris"}'
+    assert span.end_time - span.start_time >= 0.15 * 1e9  # until drained
