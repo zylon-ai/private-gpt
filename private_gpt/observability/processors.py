@@ -136,9 +136,20 @@ class DropSpansProcessor(_Delegating):
         self._lock = threading.Lock()
         # dropped span id -> its parent context
         self._reparent: dict[int, Any] = {}
+        # spans with at least one exported child (children end first)
+        self._has_children: set[int] = set()
 
     def _dropped(self, name: str) -> bool:
         return self._regex is not None and bool(self._regex.match(name))
+
+    def _idle(self, span: ReadableSpan) -> bool:
+        """An interceptor that changed nothing, failed nothing and did no work."""
+        attrs = span.attributes or {}
+        return (
+            attrs.get("pgpt.interceptor.changed") is False
+            and span.context.span_id not in self._has_children
+            and span.status.is_ok
+        )
 
     def on_start(self, span: Span, parent_context: Context | None = None) -> None:
         if self._dropped(span.name):
@@ -153,14 +164,22 @@ class DropSpansProcessor(_Delegating):
         return parent
 
     def on_end(self, span: ReadableSpan) -> None:
+        span_id = span.context.span_id
         if self._dropped(span.name):
             with self._lock:
-                self._reparent.pop(span.context.span_id, None)
+                self._reparent.pop(span_id, None)
             return
-        if span.parent is not None and span.parent.span_id in self._reparent:
+        with self._lock:
+            idle = self._idle(span)
+            self._has_children.discard(span_id)
+        if idle:
+            return
+        if span.parent is not None:
             with self._lock:
-                parent = self._resolve(span.parent)
-            span = _with_parent(span, parent)
+                if span.parent.span_id in self._reparent:
+                    span = _with_parent(span, self._resolve(span.parent))
+                if span.parent is not None:
+                    self._has_children.add(span.parent.span_id)
         self._delegate.on_end(span)
 
 

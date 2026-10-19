@@ -1125,6 +1125,22 @@ class ObservabilitySettings(BaseModel):
         default=True,
         description="Return `X-Trace-Id` and W3C `traceresponse` on HTTP responses.",
     )
+    capture_http_bodies: bool = Field(
+        default=True,
+        description=(
+            "Record request and response bodies (JSON or SSE) on the HTTP server "
+            "span as they stream; the client is never delayed. Ignored when "
+            "capture_content is false."
+        ),
+    )
+    capture_http_paths: list[str] = Field(
+        default_factory=lambda: ["/v1/messages*", "/v1/chat/*", "/v1/completions*"],
+        description="fnmatch patterns of request paths whose bodies are recorded.",
+    )
+    max_http_body_bytes: int = Field(
+        default=64_000,
+        description="Bytes kept per request/response body; the rest is counted only.",
+    )
     exporters: list[ObservabilityExporterSettings] = Field(default_factory=list)
 
 

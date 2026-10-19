@@ -248,3 +248,56 @@ def tool_span(
         },
     ) as span:
         yield span
+
+
+@contextmanager
+def interceptor_span(interceptor: Any, phase: Any) -> Iterator[Any]:
+    """CHAIN span for one interceptor run (condensation, documents, media...).
+
+    Spans of interceptors that changed nothing are dropped on export (see
+    :class:`~private_gpt.observability.processors.DropSpansProcessor`), so
+    each iteration only shows the steps that did work.
+    """
+    name = type(interceptor).__name__
+    with start_span(
+        f"interceptor {name}",
+        SpanKind.CHAIN,
+        attributes={
+            "pgpt.interceptor": name,
+            "pgpt.interceptor.phase": str(getattr(phase, "value", phase)),
+        },
+    ) as span:
+        yield span
+
+
+def record_interceptor_result(span: Any, before: Any, after: Any) -> None:
+    """Record what an interceptor changed in the conversation."""
+    if not is_enabled():
+        return
+    before_messages = _messages(before)
+    after_messages = _messages(after)
+    changed = after is not before and (
+        len(before_messages) != len(after_messages)
+        or any(
+            a is not b for a, b in zip(before_messages, after_messages, strict=False)
+        )
+        or _stack_size(before) != _stack_size(after)
+    )
+    set_span_attributes(
+        span,
+        **{
+            "pgpt.interceptor.changed": changed,
+            "pgpt.messages.before": len(before_messages),
+            "pgpt.messages.after": len(after_messages),
+        },
+    )
+
+
+def _messages(state: Any) -> list[Any]:
+    request = getattr(getattr(state, "input", None), "request", None)
+    return list(getattr(request, "messages", None) or [])
+
+
+def _stack_size(state: Any) -> int:
+    stack = getattr(getattr(state, "input", None), "context_stack", None)
+    return len(getattr(stack, "layers", None) or [])

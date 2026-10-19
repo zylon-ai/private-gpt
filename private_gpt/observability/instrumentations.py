@@ -174,6 +174,10 @@ def instrument_fastapi_app(app: Any) -> None:
     except ImportError as e:
         logger.warning("FastAPI instrumentation unavailable: %s", e)
         return
+    from private_gpt.observability.http import HttpBodyCaptureMiddleware
+
+    # Added before instrumenting so it runs inside the server span.
+    app.add_middleware(HttpBodyCaptureMiddleware)
     FastAPIInstrumentor.instrument_app(
         app,
         excluded_urls=",".join(obs.excluded_urls),

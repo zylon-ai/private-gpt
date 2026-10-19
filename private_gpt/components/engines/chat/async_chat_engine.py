@@ -125,7 +125,9 @@ from private_gpt.events.models import (
     Usage,
 )
 from private_gpt.observability.chat import (
+    interceptor_span,
     iteration_span,
+    record_interceptor_result,
     record_iteration_result,
     tool_span,
 )
@@ -1861,7 +1863,10 @@ class AsyncChatEngine:
                 phase=phase,
                 emit_fn=channel.emit if channel is not None else lambda _event: None,
             )
-            await interceptor.intercept(context)
+            with interceptor_span(interceptor, phase) as span:
+                before = run.state
+                await interceptor.intercept(context)
+                record_interceptor_result(span, before, context.state)
             run.state = context.state
 
     def _build_tools(self, state: ChatState) -> list[AsyncBaseTool]:

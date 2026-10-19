@@ -769,3 +769,84 @@ def _async(value: Any) -> Any:
         return value
 
     return fn
+
+
+# ---------------------------------------------------------------------------
+# Interceptor phases inside the iteration
+# ---------------------------------------------------------------------------
+
+
+async def test_interceptors_that_change_the_request_nest_under_iteration(
+    async_test_client: AsyncClient,
+    injector: MockInjector,
+    exporter: InMemorySpanExporter,
+) -> None:
+    _, by_name, turn_trace = await _run_turn(
+        async_test_client, injector, exporter, _scripted(["hi"])
+    )
+
+    interceptors = [s for s in turn_trace if s.name.startswith("interceptor ")]
+    assert interceptors, "the system prompt interceptor always changes the request"
+    iteration = by_name["chat.iteration 1"]
+    in_iteration = [
+        s for s in interceptors if s.parent.span_id == iteration.context.span_id
+    ]
+    assert in_iteration
+    for span in interceptors:
+        assert span.attributes["pgpt.interceptor.changed"] is True
+        assert span.attributes["pgpt.interceptor.phase"]
+        assert _status(span) == StatusCode.OK
+
+
+def test_idle_interceptor_spans_are_dropped_but_failures_kept() -> None:
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(
+        DropSpansProcessor(  # ty: ignore[invalid-argument-type]
+            patterns=[], delegate=SimpleSpanProcessor(memory)
+        )
+    )
+    tracer = provider.get_tracer("t")
+    with tracer.start_as_current_span("chat.iteration 1"):
+        with tracer.start_as_current_span("interceptor Idle") as idle:
+            idle.set_attribute("pgpt.interceptor.changed", False)
+        with tracer.start_as_current_span("interceptor Busy") as busy:
+            busy.set_attribute("pgpt.interceptor.changed", False)
+            with tracer.start_as_current_span("TritonLLM.astream_chat"):
+                pass
+        with tracer.start_as_current_span("interceptor Broken") as broken:
+            broken.set_attribute("pgpt.interceptor.changed", False)
+            broken.set_status(StatusCode.ERROR, "boom")
+
+    names = {s.name for s in memory.get_finished_spans()}
+    assert "interceptor Idle" not in names
+    # Did work (an LLM call, e.g. condensation) or failed: kept.
+    assert {"interceptor Busy", "interceptor Broken"} <= names
+
+
+async def test_describe_image_is_traced_with_image_metadata(
+    exporter: InMemorySpanExporter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from llama_index.core.base.llms.types import ImageBlock
+
+    from private_gpt.components.multimodality import image_handler
+
+    class _Workflow:
+        def __init__(self, *_: Any, **__: Any) -> None: ...
+
+        async def run(self, **_: Any) -> Any:
+            return Mock(description="a red square")
+
+    monkeypatch.setattr(image_handler, "ImageProcessingWorkflow", _Workflow)
+    block = ImageBlock(image=b"\x89PNG", image_mimetype="image/png")
+
+    assert await image_handler.describe_image(Mock(), [block], "what is it?") == (
+        "a red square"
+    )
+
+    (span,) = [s for s in exporter.get_finished_spans() if s.name == "describe_image"]
+    assert '"images": 1' in span.attributes["input.value"]
+    assert '"image/png"' in span.attributes["input.value"]
+    assert span.attributes["output.value"] == "a red square"
+    assert _status(span) == StatusCode.OK
