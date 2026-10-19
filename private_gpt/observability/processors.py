@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 SPAN_KIND = "openinference.span.kind"
 _TOOL_SCHEMA_KEY = re.compile(r"^llm\.tools\.(\d+)\.tool\.json_schema$")
 _BROKEN_REPR = re.compile(r'^"?<[\w.]+ object at 0x[0-9a-f]+>"?$')
@@ -62,7 +63,7 @@ def _copy(span: ReadableSpan, **changes: Any) -> ReadableSpan:
         name=span.name,
         context=span.context,
         parent=changes.get("parent", span.parent),
-        resource=span.resource,
+        resource=changes.get("resource", span.resource),
         attributes=changes.get("attributes", span.attributes),
         events=span.events,
         links=span.links,
@@ -380,3 +381,118 @@ class TagFilterProcessor(_Delegating):
     def on_end(self, span: ReadableSpan) -> None:
         if self.accepts(span):
             self._delegate.on_end(span)
+
+
+class ExporterViewProcessor(_Delegating):
+    """Per-exporter shape of a trace: project and, optionally, turn roots.
+
+    * ``resource``: attributes merged into each span's resource, so two
+      exporters of the same backend can write to different projects
+      (e.g. Phoenix ``openinference.project.name``).
+    * ``turn_root``: LLM backends build session views from each trace's root
+      span (input = first message, output = answer). With the HTTP server span
+      as root they show raw request bodies, and for ``/messages/async`` the
+      ``{"message_id": ..., "status": "pending"}`` acknowledgement. Here the
+      ``chat.turn`` span becomes the root and the HTTP span of a turn route is
+      not exported, unless it failed before any turn started (validation
+      errors stay visible).
+    """
+
+    def __init__(
+        self,
+        delegate: Any,
+        *,
+        resource: Mapping[str, str] | None = None,
+        turn_root: bool = False,
+        turn_routes: list[str] | None = None,
+    ) -> None:
+        super().__init__(delegate)
+        self._resource_attributes = dict(resource or {})
+        self._resources: dict[int, Any] = {}
+        self._turn_root = turn_root
+        self._routes = (
+            re.compile("|".join(fnmatch.translate(p) for p in turn_routes))
+            if turn_routes
+            else None
+        )
+        self._lock = threading.Lock()
+        # open HTTP spans of turn routes: span id -> a chat.turn ran under it
+        self._servers: dict[int, bool] = {}
+        # skipped HTTP spans: span id -> end time (ns)
+        self._skipped: dict[int, int] = {}
+        # spans not exported (plumbing under a turn route, and descendants)
+        self._hidden: set[int] = set()
+
+    def _resource(self, span: ReadableSpan) -> Any:
+        if not self._resource_attributes:
+            return span.resource
+        key = id(span.resource)
+        resource = self._resources.get(key)
+        if resource is None:
+            resource = span.resource.merge(
+                type(span.resource)(self._resource_attributes)
+            )
+            self._resources[key] = resource
+        return resource
+
+    def _is_turn_route(self, span: Any) -> bool:
+        from opentelemetry.trace import SpanKind as OtelKind
+
+        return (
+            self._routes is not None
+            and span.kind is OtelKind.SERVER
+            and bool(self._routes.match(span.name))
+        )
+
+    def on_start(self, span: Span, parent_context: Context | None = None) -> None:
+        if self._turn_root:
+            span_id = span.context.span_id
+            parent_id = span.parent.span_id if span.parent is not None else None
+            with self._lock:
+                if self._is_turn_route(span):
+                    self._servers[span_id] = False
+                elif span.name != "chat.turn" and (
+                    parent_id in self._servers
+                    or parent_id in self._skipped
+                    or parent_id in self._hidden
+                ):
+                    # Request plumbing next to the turn (body mapping, auth
+                    # calls) and its subtree: not part of the conversation.
+                    self._hidden.add(span_id)
+        super().on_start(span, parent_context=parent_context)
+
+    def _prune(self, now: int) -> None:
+        # Skipped HTTP spans are remembered for late children (an async turn
+        # starts after its POST returned); forget them after ten minutes.
+        limit = now - 600 * 10**9
+        for span_id, ended in list(self._skipped.items()):
+            if ended < limit:
+                del self._skipped[span_id]
+
+    def on_end(self, span: ReadableSpan) -> None:
+        changes: dict[str, Any] = {}
+        if self._turn_root:
+            span_id = span.context.span_id
+            with self._lock:
+                if span_id in self._hidden:
+                    self._hidden.discard(span_id)
+                    return
+                if span.name == "chat.turn":
+                    # Root of its own: its HTTP span is skipped, already ended
+                    # (async) or lives in another process (ARQ worker).
+                    parent_id = span.parent.span_id if span.parent else None
+                    if parent_id in self._servers:
+                        self._servers[parent_id] = True
+                    changes["parent"] = None
+                if span_id in self._servers:
+                    saw_turn = self._servers.pop(span_id)
+                    # Kept only when it failed before any turn ran (validation
+                    # errors, unknown model...): that is the whole story then.
+                    if saw_turn or span.status.status_code.name != "ERROR":
+                        now = span.end_time or 0
+                        self._skipped[span_id] = now
+                        self._prune(now)
+                        return
+        if self._resource_attributes:
+            changes["resource"] = self._resource(span)
+        self._delegate.on_end(_copy(span, **changes) if changes else span)

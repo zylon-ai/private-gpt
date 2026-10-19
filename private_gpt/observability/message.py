@@ -9,6 +9,7 @@ and usage. ``RecordingEventChannel`` (engines/chat/event_channel.py) feeds a
 
 from __future__ import annotations
 
+import base64
 from typing import TYPE_CHECKING, Any
 
 from private_gpt.events.models import (
@@ -21,6 +22,8 @@ from private_gpt.events.models import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
     from private_gpt.events.models import Event
 
 # Fields that only matter on the wire (timestamps, cache hints, signatures).
@@ -100,3 +103,141 @@ class MessageFolder:
         if self.usage:
             message["usage"] = self.usage
         return message
+
+
+# Inline media up to this size (base64) so trace UIs can render it; larger
+# payloads are summarized (type, mime, size) to keep spans small.
+_MAX_INLINE_MEDIA = 48_000
+
+
+def _media(kind: str, data: bytes | None, mime: str | None, url: Any) -> dict[str, Any]:
+    block: dict[str, Any] = {"type": kind}
+    if mime:
+        block["media_type"] = mime
+    if url:
+        block["url"] = str(url)
+    if data:
+        block["size"] = len(data)
+        encoded = base64.b64encode(data).decode()
+        if len(encoded) <= _MAX_INLINE_MEDIA and kind == "image":
+            block["url"] = f"data:{mime or 'image/png'};base64,{encoded}"
+    return block
+
+
+def _raw_bytes(value: Any) -> bytes | None:
+    if not value:
+        return None
+    if isinstance(value, bytes):
+        # llama-index keeps media base64-encoded in place once validated.
+        try:
+            return base64.b64decode(value, validate=True)
+        except ValueError:
+            return value
+    return None
+
+
+def _document(block: Any) -> dict[str, Any]:
+    data = block.model_dump(mode="json", exclude_none=True)
+    source = data.get("source") or {}
+    folded: dict[str, Any] = {"type": "document"}
+    for key in ("title", "context"):
+        if data.get(key):
+            folded[key] = data[key]
+    folded["source"] = {
+        key: value
+        for key, value in source.items()
+        if key in ("type", "media_type", "url", "file_id")
+    }
+    if source.get("type") == "text" and isinstance(source.get("data"), str):
+        folded["source"]["text"] = source["data"][:4_000]
+    elif isinstance(source.get("data"), str):
+        folded["source"]["size"] = len(source["data"]) * 3 // 4
+    return folded
+
+
+def fold_user_message(message: Any) -> dict[str, Any] | None:
+    """Anthropic-shaped view of a llama-index user message for tracing.
+
+    Text, images (inline when small), audio and attached documents, the same
+    whether the request came as JSON, SSE or through ``/messages/async``.
+    """
+    content: list[dict[str, Any]] = []
+    for block in getattr(message, "blocks", None) or []:
+        kind = getattr(block, "block_type", None)
+        if kind == "text" and (text := getattr(block, "text", "")).strip():
+            content.append({"type": "text", "text": text})
+        elif kind == "image":
+            content.append(
+                _media(
+                    "image",
+                    _raw_bytes(block.image),
+                    block.image_mimetype,
+                    block.url or block.path,
+                )
+            )
+        elif kind == "audio":
+            content.append(
+                _media("audio", _raw_bytes(block.audio), block.format, block.url)
+            )
+        elif kind == "document":
+            content.append(
+                {
+                    "type": "document",
+                    "title": getattr(block, "title", None),
+                    "source": {"media_type": getattr(block, "document_mimetype", None)},
+                }
+            )
+    for document in (getattr(message, "additional_kwargs", None) or {}).get(
+        "document", []
+    ) or []:
+        try:
+            content.append(_document(document))
+        except Exception:
+            content.append({"type": "document"})
+    if not content:
+        return None
+    return {"role": "user", "content": content}
+
+
+def last_user_message(messages: Sequence[Any]) -> dict[str, Any] | None:
+    """Folded last user message that has content (tool results have none)."""
+    for message in reversed(messages or []):
+        role = getattr(message, "role", None)
+        if str(getattr(role, "value", role)) != "user":
+            continue
+        folded = fold_user_message(message)
+        if folded is not None:
+            return folded
+    return None
+
+
+def message_text(message: Mapping[str, Any] | None) -> str | None:
+    """Markdown rendering for span inputs and session bubbles.
+
+    Text as is; images inline (``![image](data:...)``) when small enough so
+    Phoenix renders them in sessions and span details alike; audio and
+    documents as ``[audio: audio/wav]`` / ``[document: report.pdf]`` markers.
+    """
+    if not message:
+        return None
+    parts: list[str] = []
+    for block in message.get("content", []):
+        kind = block.get("type")
+        if kind == "text":
+            parts.append(block["text"])
+        elif kind == "image" and block.get("url"):
+            parts.append(f"![{block.get('media_type') or 'image'}]({block['url']})")
+        else:
+            name = block.get("title") or block.get("media_type") or ""
+            size = f", {human_bytes(block['size'])}" if block.get("size") else ""
+            parts.append(f"[{kind}{': ' + name if name else ''}{size}]")
+    return "\n\n".join(parts) or None
+
+
+def human_bytes(size: int) -> str:
+    value = float(size)
+    for unit in ("B", "KB", "MB"):
+        if value < 1024:
+            return f"{value:.0f} {unit}"
+        value /= 1024
+    return f"{value:.1f} GB"

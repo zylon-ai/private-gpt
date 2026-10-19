@@ -1057,6 +1057,16 @@ class ObservabilityExporterSettings(BaseModel):
             "`workspace`, arize `space_id`, datadog `site`."
         ),
     )
+    turn_root: bool | None = Field(
+        default=None,
+        description=(
+            "Export the `chat.turn` span as the trace root (skipping the HTTP "
+            "span of /v1/messages and /v1/messages/async unless it failed "
+            "before a turn started), so session views show the user message and "
+            "the answer instead of request bodies or the async acknowledgement. "
+            "Defaults to true for LLM backends."
+        ),
+    )
     tags: list[str] | None = Field(
         default=None,
         description=(

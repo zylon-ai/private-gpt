@@ -123,6 +123,10 @@ def _preset(
 _LLM_BACKENDS = {"phoenix", "arize", "langfuse", "langsmith", "opik", "datadog"}
 
 
+# HTTP routes whose work is a chat turn (see ``ExporterViewProcessor``).
+TURN_ROUTES = ["POST /v1/messages", "POST /v1/messages/async"]
+
+
 def exporter_tags(cfg: ObservabilityExporterSettings) -> list[str]:
     """Trace tags ``cfg`` receives (``all`` for every span)."""
     if cfg.tags is not None:
@@ -180,7 +184,10 @@ def build_span_processors(
     """
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-    from private_gpt.observability.processors import TagFilterProcessor
+    from private_gpt.observability.processors import (
+        ExporterViewProcessor,
+        TagFilterProcessor,
+    )
 
     processors: list[Any] = []
     resource: dict[str, str] = {}
@@ -192,10 +199,19 @@ def build_span_processors(
         except Exception:
             logger.exception("Could not build %s trace exporter; skipping", cfg.type)
             continue
+        llm_backend = cfg.type in _LLM_BACKENDS
         processors.append(
-            TagFilterProcessor(exporter_tags(cfg), BatchSpanProcessor(exporter))
+            TagFilterProcessor(
+                exporter_tags(cfg),
+                ExporterViewProcessor(
+                    BatchSpanProcessor(exporter),
+                    # Per exporter, so each one can write to its own project.
+                    resource=exporter_resource,
+                    turn_root=cfg.turn_root
+                    if cfg.turn_root is not None
+                    else llm_backend,
+                    turn_routes=TURN_ROUTES,
+                ),
+            )
         )
-        for key, value in exporter_resource.items():
-            # Resource is process-wide: first exporter that names a project wins.
-            resource.setdefault(key, value)
     return processors, resource

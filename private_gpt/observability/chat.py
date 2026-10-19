@@ -15,6 +15,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
+from private_gpt.observability.message import last_user_message, message_text
 from private_gpt.observability.processors import (
     register_llm_tools,
     unregister_llm_tools,
@@ -47,23 +48,33 @@ if TYPE_CHECKING:
 AGENT = "chat_agent"
 
 
-def _last_user_text(request: Any) -> str | None:
-    """Text of the last user message that has any (tool results have none)."""
-    for message in reversed(getattr(request, "messages", []) or []):
-        role = getattr(message, "role", None)
-        if str(getattr(role, "value", role)) != "user":
-            continue
-        content = getattr(message, "content", None)
-        if isinstance(content, str) and content.strip():
-            return content
-        texts = [
-            text
-            for block in getattr(message, "blocks", None) or []
-            if isinstance(text := getattr(block, "text", None), str) and text.strip()
-        ]
-        if texts:
-            return "\n".join(texts)
-    return None
+def user_input_attributes(messages: Any) -> dict[str, Any]:
+    """Folded last user message as span input (same on every chat span).
+
+    ``input.value`` is the readable text (``[image: image/png]`` markers for
+    media), which session views show as the user bubble; the OpenInference
+    ``llm.input_messages`` contents let UIs render images; the full block list
+    is in ``pgpt.input.message``.
+    """
+    message = last_user_message(messages or [])
+    if message is None:
+        return {}
+    attributes: dict[str, Any] = {
+        "input": message_text(message),
+        "pgpt.input.message": message,
+        "llm.input_messages.0.message.role": "user",
+    }
+    prefix = "llm.input_messages.0.message.contents"
+    for index, block in enumerate(message["content"]):
+        if block["type"] == "text":
+            attributes[f"{prefix}.{index}.message_content.type"] = "text"
+            attributes[f"{prefix}.{index}.message_content.text"] = block["text"]
+        elif block["type"] == "image" and block.get("url"):
+            attributes[f"{prefix}.{index}.message_content.type"] = "image"
+            attributes[f"{prefix}.{index}.message_content.image.image.url"] = block[
+                "url"
+            ]
+    return attributes
 
 
 @contextmanager
@@ -96,7 +107,6 @@ def chat_turn_span(
         start_span(
             name,
             SpanKind.AGENT,
-            input=_last_user_text(request),
             attributes={
                 AGENT_NAME: AGENT,
                 GRAPH_NODE_ID: AGENT,
@@ -111,7 +121,16 @@ def chat_turn_span(
             },
         ) as span,
     ):
-        yield span
+        set_span_attributes(
+            span, **user_input_attributes(getattr(request, "messages", None))
+        )
+        try:
+            yield span
+        except Exception as exc:
+            # Session views show the output as the answer bubble; a failed
+            # turn shows why instead of an empty one.
+            set_span_attributes(span, output=f"Error: {exc}")
+            raise
 
 
 def record_turn_result(
@@ -176,7 +195,9 @@ def _set_tokens(span: Any, prompt: int | None, completion: int | None) -> None:
 
 
 @contextmanager
-def iteration_span(iteration: int, tools: list[Any]) -> Iterator[Any]:
+def iteration_span(
+    iteration: int, tools: list[Any], messages: Any = None
+) -> Iterator[Any]:
     """CHAIN span around one LLM call and the tools it triggers."""
     with start_span(
         f"chat.iteration {iteration}",
@@ -191,6 +212,7 @@ def iteration_span(iteration: int, tools: list[Any]) -> Iterator[Any]:
             GRAPH_NODE_PARENT_ID: AGENT,
         },
     ) as span:
+        set_span_attributes(span, **user_input_attributes(messages))
         if is_enabled() and tools:
             # Real schemas for the child LLM span (the OpenInference handler
             # exports `<FunctionTool object at 0x..>` otherwise).

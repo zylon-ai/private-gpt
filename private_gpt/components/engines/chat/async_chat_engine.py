@@ -1058,7 +1058,9 @@ class AsyncChatEngine:
         """One LLM call. Sets status; stop events are emitted by run_close."""
         input_tokens, output_tokens = run.total_input_tokens, run.total_output_tokens
         with iteration_span(
-            run.state.runtime.iteration + 1, self._build_tools(run.state)
+            run.state.runtime.iteration + 1,
+            self._build_tools(run.state),
+            run.state.input.request.messages,
         ) as span:
             await self._run_iteration_body(run, handler)
             output = run.state.output
