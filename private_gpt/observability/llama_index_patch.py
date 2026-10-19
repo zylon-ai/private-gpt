@@ -141,22 +141,24 @@ def patch_llama_index_handler(max_input_messages: int) -> None:
             elif isinstance(event, (LLMChatEndEvent, LLMCompletionEndEvent)):
                 if parameters := pending_invocation_parameters.get():
                     self["llm.invocation_parameters"] = parameters
-            # Streamed tool calls come in some chunks, not necessarily the
-            # last one the end event carries; collect them as they pass.
+            # Streamed tool calls and reasoning come in some chunks, not
+            # necessarily the last one the end event carries; collect them as
+            # they pass.
             if isinstance(
                 event, (LLMChatInProgressEvent, LLMCompletionInProgressEvent)
             ):
                 _collect_tool_calls(self, _tool_calls(event.response))
+                _collect_reasoning(self, event.response)
             elif isinstance(event, LLMChatEndEvent) and event.response is not None:
                 _collect_tool_calls(self, _tool_calls(event.response))
-                calls = self.__dict__.get("_pgpt_tool_calls")
-                if calls:
+                extra = _streamed_extras(self, event.response)
+                if extra:
                     message = event.response.message
                     message = message.model_copy(
                         update={
                             "additional_kwargs": {
                                 **message.additional_kwargs,
-                                "tool_calls": list(calls.values()),
+                                **extra,
                             }
                         }
                     )
@@ -171,10 +173,11 @@ def patch_llama_index_handler(max_input_messages: int) -> None:
                 isinstance(event, LLMCompletionEndEvent) and event.response is not None
             ):
                 # Completions only record the text; show the answer as an
-                # assistant message with its tool calls, like chat spans.
+                # assistant message with its tool calls and reasoning, like
+                # chat spans.
                 _collect_tool_calls(self, _tool_calls(event.response))
-                calls = self.__dict__.get("_pgpt_tool_calls")
-                if calls and output_prefix is not None:
+                extra = _streamed_extras(self, event.response)
+                if extra and output_prefix is not None:
                     from llama_index.core.base.llms.types import ChatMessage
 
                     self._process_messages(
@@ -182,7 +185,7 @@ def patch_llama_index_handler(max_input_messages: int) -> None:
                         ChatMessage(
                             role="assistant",
                             content=event.response.text or "",
-                            additional_kwargs={"tool_calls": list(calls.values())},
+                            additional_kwargs=extra,
                         ),
                     )
             original_event(self, event)
@@ -337,6 +340,35 @@ def _collect_tool_calls(span: Any, calls: list[Any] | None) -> None:
             or f"#{index}"
         )
         collected[key] = call
+
+
+def _response_kwargs(response: Any) -> dict[str, Any]:
+    """``additional_kwargs`` of a chat/completion response and its message."""
+    message = getattr(response, "message", None)
+    return {
+        **(getattr(response, "additional_kwargs", None) or {}),
+        **(getattr(message, "additional_kwargs", None) or {}),
+    }
+
+
+def _collect_reasoning(span: Any, response: Any) -> None:
+    delta = _response_kwargs(response).get("thinking_delta")
+    if isinstance(delta, str) and delta:
+        span.__dict__.setdefault("_pgpt_reasoning", []).append(delta)
+
+
+def _streamed_extras(span: Any, response: Any) -> dict[str, Any]:
+    """Tool calls and reasoning seen in the stream, missing from the last chunk."""
+    kwargs = _response_kwargs(response)
+    extra: dict[str, Any] = {}
+    if calls := span.__dict__.get("_pgpt_tool_calls"):
+        extra["tool_calls"] = list(calls.values())
+    thinking = kwargs.get("thinking") or kwargs.get("reasoning_content")
+    if not (isinstance(thinking, str) and thinking.strip()):
+        thinking = "".join(span.__dict__.get("_pgpt_reasoning", []))
+    if thinking.strip():
+        extra["thinking"] = thinking
+    return extra
 
 
 def _tool_calls(response: Any) -> list[Any] | None:

@@ -417,6 +417,12 @@ def test_streamed_completion_shows_tool_calls_and_lasts_until_drained() -> None:
             self, prompt: str, formatted: bool = False, **kwargs
         ):  # type: ignore[override]
             async def gen():
+                for thinking in ("Need the ", "weather."):
+                    yield CompletionResponse(
+                        text="",
+                        delta="",
+                        additional_kwargs={"thinking_delta": thinking},
+                    )
                 for calls in ([call("a", "Madrid")], [call("b", "Paris")], []):
                     await asyncio.sleep(0.05)
                     yield CompletionResponse(
@@ -449,4 +455,5 @@ def test_streamed_completion_shows_tool_calls_and_lasts_until_drained() -> None:
     assert attributes[f"{prefix}.0.tool_call.id"] == "a"
     assert attributes[f"{prefix}.1.tool_call.id"] == "b"
     assert attributes[f"{prefix}.1.tool_call.function.arguments"] == '{"city": "Paris"}'
+    assert attributes["llm.output_messages.0.message.reasoning"] == "Need the weather."
     assert span.end_time - span.start_time >= 0.15 * 1e9  # until drained
