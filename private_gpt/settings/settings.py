@@ -1189,6 +1189,8 @@ class ObservabilitySettings(BaseModel):
                 "POST /v1/complete",
                 "POST /v1/tools/*",
                 "POST /v1/primitives/search",
+                "POST /v1/embeddings",
+                "POST /v1/messages/count_tokens",
                 "chat.turn*",
                 "run/private_gpt.tools.*",
             ],
@@ -1196,6 +1198,7 @@ class ObservabilitySettings(BaseModel):
             # store-vectors tasks): parsing, image description, embeddings.
             "ingestion": [
                 "POST /v1/artifacts/ingest*",
+                "POST /v1/artifacts/delete*",
                 "POST /v1/artifacts/convert",
                 "run/private_gpt.ingestion.*",
             ],

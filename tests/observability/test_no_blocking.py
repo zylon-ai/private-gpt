@@ -182,3 +182,33 @@ def test_llm_spans_keep_system_and_recent_messages() -> None:
     assert attributes["pgpt.llm.input_messages.omitted"] == 6
     # The full argument dump is not recorded on LLM spans.
     assert "m0" not in str(attributes.get("input.value", ""))
+
+
+def test_nodes_are_readable_in_spans() -> None:
+    import json
+
+    from llama_index.core.schema import NodeWithScore, TextNode
+
+    from private_gpt.observability.llama_index_patch import (
+        node_info,
+        patch_llama_index_handler,
+    )
+
+    patch_llama_index_handler(20)
+    from openinference.instrumentation.helpers import safe_json_dumps
+    from openinference.instrumentation.llama_index import _handler
+
+    node = TextNode(
+        text="x" * 400,
+        metadata={"artifact": "handbook", "file_name": "h.txt", "terms": ["a"] * 9},
+    )
+    info = node_info(NodeWithScore(node=node, score=0.123456))
+    assert info is not None
+    assert info["type"] == "TextNode"
+    assert info["score"] == 0.1235
+    assert info["metadata"] == {"artifact": "handbook", "file_name": "h.txt"}
+    assert info["chars"] == 400
+    assert info["text"].endswith("…")
+
+    encoded = json.loads(safe_json_dumps({"nodes": [node]}, cls=_handler._Encoder))
+    assert encoded["nodes"][0]["id"] == node.node_id

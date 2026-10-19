@@ -43,45 +43,89 @@ def _provider(memory: InMemorySpanExporter, **kwargs: object) -> TracerProvider:
     return provider
 
 
-def test_turn_becomes_root_and_http_plumbing_is_hidden() -> None:
-    memory = InMemorySpanExporter()
-    tracer = _provider(memory).get_tracer("t")
-    with tracer.start_as_current_span("POST /v1/messages", kind=SpanKind.SERVER):
-        with tracer.start_as_current_span("ChatRequestMapper.map"):
-            with tracer.start_as_current_span("GET auth"):
-                pass
-        with tracer.start_as_current_span("chat.turn"):
-            with tracer.start_as_current_span("chat.iteration 1"):
-                pass
-
-    spans = {span.name: span for span in memory.get_finished_spans()}
-    assert set(spans) == {"chat.turn", "chat.iteration 1"}
-    assert spans["chat.turn"].parent is None
-    assert spans["chat.iteration 1"].parent is not None
-    assert (
-        spans["chat.iteration 1"].parent.span_id == spans["chat.turn"].context.span_id
-    )
-
-
-def test_async_turn_after_response_is_still_a_root() -> None:
+def test_http_root_shows_the_turn_input_and_output() -> None:
     memory = InMemorySpanExporter()
     tracer = _provider(memory).get_tracer("t")
     with tracer.start_as_current_span(
-        "POST /v1/messages/async", kind=SpanKind.SERVER
+        "POST /v1/messages",
+        kind=SpanKind.SERVER,
+        attributes={"input.value": '{"model": "m", "messages": []}'},
     ) as http:
-        from opentelemetry import context, trace
+        with tracer.start_as_current_span(
+            "chat.turn",
+            attributes={
+                "input.value": "hello",
+                "session.id": "conv-1",
+                "user.id": "u",
+            },
+        ) as turn:
+            with tracer.start_as_current_span("chat.iteration 1"):
+                pass
+            turn.set_attribute("output.value", "hi there")
+        http.set_attribute("output.value", "event: message_start ...")
 
+    spans = {span.name: span for span in memory.get_finished_spans()}
+    assert set(spans) == {"POST /v1/messages", "chat.turn", "chat.iteration 1"}
+    root = spans["POST /v1/messages"]
+    assert root.parent is None
+    assert spans["chat.turn"].parent.span_id == root.context.span_id
+    assert root.attributes["input.value"] == "hello"
+    assert root.attributes["output.value"] == "hi there"
+    assert root.attributes["session.id"] == "conv-1"
+    assert root.attributes["pgpt.http.request.body"].startswith('{"model"')
+    assert root.attributes["pgpt.http.response.body"].startswith("event:")
+
+
+def test_async_post_is_held_until_its_turn_ends() -> None:
+    from opentelemetry import context, trace
+
+    memory = InMemorySpanExporter()
+    tracer = _provider(memory).get_tracer("t")
+    with tracer.start_as_current_span(
+        "POST /v1/messages/async",
+        kind=SpanKind.SERVER,
+        attributes={"output.value": '{"message_id": "m1", "status": "pending"}'},
+    ) as http:
         ctx = trace.set_span_in_context(http)
-    # The turn runs in a background task after the 200 acknowledgement.
+    assert memory.get_finished_spans() == ()
+
+    # The turn runs in a background task after the acknowledgement.
     token = context.attach(ctx)
     try:
-        with tracer.start_as_current_span("chat.turn"):
+        with tracer.start_as_current_span(
+            "chat.turn", attributes={"input.value": "q", "output.value": "a"}
+        ):
             pass
     finally:
         context.detach(token)
 
-    assert [(s.name, s.parent) for s in memory.get_finished_spans()] == [
-        ("chat.turn", None)
+    spans = {span.name: span for span in memory.get_finished_spans()}
+    root = spans["POST /v1/messages/async"]
+    assert root.attributes["output.value"] == "a"
+    assert root.attributes["pgpt.http.response.body"].startswith('{"message_id"')
+    assert spans["chat.turn"].parent.span_id == root.context.span_id
+
+
+def test_held_post_is_exported_when_the_turn_never_shows_up() -> None:
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(
+        ExporterViewProcessor(  # ty: ignore[invalid-argument-type]
+            SimpleSpanProcessor(memory),
+            turn_root=True,
+            turn_routes=TURN_ROUTES,
+            hold_seconds=0,
+        )
+    )
+    tracer = provider.get_tracer("t")
+    with tracer.start_as_current_span("POST /v1/messages/async", kind=SpanKind.SERVER):
+        pass
+    # The next span (any) flushes expired holds.
+    with tracer.start_as_current_span("other"):
+        pass
+    assert sorted(s.name for s in memory.get_finished_spans()) == [
+        "POST /v1/messages/async",
+        "other",
     ]
 
 

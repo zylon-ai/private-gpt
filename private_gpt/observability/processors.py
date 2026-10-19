@@ -8,6 +8,7 @@ import json
 import logging
 import re
 import threading
+from time import time_ns
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
@@ -387,19 +388,33 @@ class TagFilterProcessor(_Delegating):
 
 
 class ExporterViewProcessor(_Delegating):
-    """Per-exporter shape of a trace: project and, optionally, turn roots.
+    """Per-exporter shape of a trace: project and the chat-turn view.
 
     * ``resource``: attributes merged into each span's resource, so two
       exporters of the same backend can write to different projects
       (e.g. Phoenix ``openinference.project.name``).
-    * ``turn_root``: LLM backends build session views from each trace's root
-      span (input = first message, output = answer). With the HTTP server span
-      as root they show raw request bodies, and for ``/messages/async`` the
-      ``{"message_id": ..., "status": "pending"}`` acknowledgement. Here the
-      ``chat.turn`` span becomes the root and the HTTP span of a turn route is
-      not exported, unless it failed before any turn started (validation
-      errors stay visible).
+    * ``turn_root``: the HTTP span of a chat route stays the root of the
+      trace, with ``chat.turn`` under it, but LLM backends build session views
+      from the root's input/output: there the raw request body, the SSE text
+      or, for ``/messages/async``, the ``{"message_id": ...}``
+      acknowledgement. So the turn's folded input/output, session and user are
+      copied onto the HTTP span (the bodies move to ``pgpt.http.request.body``
+      / ``pgpt.http.response.body``). An async POST ends before its turn: it
+      is held until the turn ends, or exported as is after
+      ``hold_seconds`` (turn in another process, e.g. an ARQ worker).
     """
+
+    _TURN_KEYS = (
+        "input.value",
+        "input.mime_type",
+        "output.value",
+        "output.mime_type",
+        "session.id",
+        "user.id",
+        "metadata",
+        "pgpt.input.message",
+        "pgpt.output.message",
+    )
 
     def __init__(
         self,
@@ -408,6 +423,7 @@ class ExporterViewProcessor(_Delegating):
         resource: Mapping[str, str] | None = None,
         turn_root: bool = False,
         turn_routes: list[str] | None = None,
+        hold_seconds: float = 600,
     ) -> None:
         super().__init__(delegate)
         self._resource_attributes = dict(resource or {})
@@ -418,13 +434,12 @@ class ExporterViewProcessor(_Delegating):
             if turn_routes
             else None
         )
+        self._hold_ns = int(hold_seconds * 10**9)
         self._lock = threading.Lock()
-        # open HTTP spans of turn routes: span id -> a chat.turn ran under it
-        self._servers: dict[int, bool] = {}
-        # skipped HTTP spans: span id -> end time (ns)
-        self._skipped: dict[int, int] = {}
-        # spans not exported (plumbing under a turn route, and descendants)
-        self._hidden: set[int] = set()
+        # HTTP span id of a chat route -> attributes of its finished turn
+        self._turns: dict[int, dict[str, Any]] = {}
+        # ended HTTP spans waiting for their turn: span id -> span
+        self._held: dict[int, ReadableSpan] = {}
 
     def _resource(self, span: ReadableSpan) -> Any:
         if not self._resource_attributes:
@@ -447,58 +462,71 @@ class ExporterViewProcessor(_Delegating):
             and bool(self._routes.match(span.name))
         )
 
-    def on_start(self, span: Span, parent_context: Context | None = None) -> None:
-        if self._turn_root:
-            span_id = span.context.span_id
-            parent_id = span.parent.span_id if span.parent is not None else None
-            with self._lock:
-                if self._is_turn_route(span):
-                    self._servers[span_id] = False
-                elif span.name != "chat.turn" and (
-                    parent_id in self._servers
-                    or parent_id in self._skipped
-                    or parent_id in self._hidden
-                ):
-                    # Request plumbing next to the turn (body mapping, auth
-                    # calls) and its subtree: not part of the conversation.
-                    self._hidden.add(span_id)
-        super().on_start(span, parent_context=parent_context)
+    def _with_turn(self, span: ReadableSpan, turn: Mapping[str, Any]) -> ReadableSpan:
+        attrs = dict(span.attributes or {})
+        for key, target in (
+            ("input.value", "pgpt.http.request.body"),
+            ("output.value", "pgpt.http.response.body"),
+        ):
+            if key in attrs:
+                attrs[target] = attrs[key]
+        attrs.update(turn)
+        return _with_attributes(span, attrs)
 
-    def _prune(self, now: int) -> None:
-        # Skipped HTTP spans are remembered for late children (an async turn
-        # starts after its POST returned); forget them after ten minutes.
-        limit = now - 600 * 10**9
-        for span_id, ended in list(self._skipped.items()):
-            if ended < limit:
-                del self._skipped[span_id]
+    def _export(self, span: ReadableSpan) -> None:
+        if self._resource_attributes:
+            span = _copy(span, resource=self._resource(span))
+        self._delegate.on_end(span)
+
+    def _expired(self, now: int) -> list[ReadableSpan]:
+        expired = [
+            span_id
+            for span_id, span in self._held.items()
+            if (span.end_time or 0) < now - self._hold_ns
+        ]
+        return [self._held.pop(span_id) for span_id in expired]
 
     def on_end(self, span: ReadableSpan) -> None:
-        changes: dict[str, Any] = {}
-        if self._turn_root:
-            span_id = span.context.span_id
-            with self._lock:
-                if span_id in self._hidden:
-                    self._hidden.discard(span_id)
-                    return
-                if span.name == "chat.turn":
-                    # Root of its own: its HTTP span is skipped, already ended
-                    # (async) or lives in another process (ARQ worker).
-                    parent_id = span.parent.span_id if span.parent else None
-                    if parent_id in self._servers:
-                        self._servers[parent_id] = True
-                    changes["parent"] = None
-                if span_id in self._servers:
-                    saw_turn = self._servers.pop(span_id)
-                    # Kept only when it failed before any turn ran (validation
-                    # errors, unknown model...): that is the whole story then.
-                    if saw_turn or span.status.status_code.name != "ERROR":
-                        now = span.end_time or 0
-                        self._skipped[span_id] = now
-                        self._prune(now)
-                        return
-        if self._resource_attributes:
-            changes["resource"] = self._resource(span)
-        self._delegate.on_end(_copy(span, **changes) if changes else span)
+        if not self._turn_root:
+            self._export(span)
+            return
+        ready: list[ReadableSpan] = []
+        span_id = span.context.span_id
+        current: ReadableSpan | None = span
+        with self._lock:
+            if span.name == "chat.turn" and span.parent is not None:
+                attrs = span.attributes or {}
+                turn = {k: attrs[k] for k in self._TURN_KEYS if k in attrs}
+                parent_id = span.parent.span_id
+                held = self._held.pop(parent_id, None)
+                if held is not None:
+                    ready.append(self._with_turn(held, turn))
+                else:
+                    self._turns[parent_id] = turn
+            if self._is_turn_route(span):
+                turn = self._turns.pop(span_id, None)
+                if turn is not None:
+                    current = self._with_turn(span, turn)
+                elif span.status.status_code.name != "ERROR":
+                    # Async: the turn has not run yet. (A failed request
+                    # never had one; it is exported as is.)
+                    self._held[span_id] = span
+                    current = None
+            ready.extend(self._expired(time_ns()))
+        if current is not None:
+            ready.append(current)
+        for item in ready:
+            self._export(item)
+
+    def shutdown(self) -> None:
+        with self._lock:
+            held, self._held = list(self._held.values()), {}
+        for span in held:
+            self._export(span)
+        super().shutdown()
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return self._delegate.force_flush(timeout_millis)
 
 
 class BackgroundSpanProcessor(_Delegating):
