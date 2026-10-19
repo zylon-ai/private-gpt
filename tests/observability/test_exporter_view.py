@@ -43,7 +43,7 @@ def _provider(memory: InMemorySpanExporter, **kwargs: object) -> TracerProvider:
     return provider
 
 
-def test_http_root_shows_the_turn_input_and_output() -> None:
+def test_http_root_keeps_the_request_and_shows_the_turn_output() -> None:
     memory = InMemorySpanExporter()
     tracer = _provider(memory).get_tracer("t")
     with tracer.start_as_current_span(
@@ -69,10 +69,11 @@ def test_http_root_shows_the_turn_input_and_output() -> None:
     root = spans["POST /v1/messages"]
     assert root.parent is None
     assert spans["chat.turn"].parent.span_id == root.context.span_id
-    assert root.attributes["input.value"] == "hello"
+    # The JSON request stays the input; the folded user input is on chat.turn.
+    assert root.attributes["input.value"] == '{"model": "m", "messages": []}'
+    assert spans["chat.turn"].attributes["input.value"] == "hello"
     assert root.attributes["output.value"] == "hi there"
     assert root.attributes["session.id"] == "conv-1"
-    assert root.attributes["pgpt.http.request.body"].startswith('{"model"')
     assert root.attributes["pgpt.http.response.body"].startswith("event:")
 
 

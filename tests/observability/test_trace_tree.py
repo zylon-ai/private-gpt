@@ -850,3 +850,93 @@ async def test_describe_image_is_traced_with_image_metadata(
     assert '"image/png"' in span.attributes["input.value"]
     assert span.attributes["output.value"] == "a red square"
     assert _status(span) == StatusCode.OK
+
+
+def test_state_snapshot_keeps_conversation_tools_and_params() -> None:
+    from llama_index.core.base.llms.types import ChatMessage
+    from llama_index.core.llms.llm import ToolSelection
+
+    from private_gpt.observability.chat import state_snapshot
+
+    class _Obj:
+        def __init__(self, **kw: object) -> None:
+            self.__dict__.update(kw)
+
+    class _Params:
+        def model_dump(self, **_: object) -> dict:
+            return {"temperature": 0.1}
+
+    state = _Obj(
+        input=_Obj(
+            request=_Obj(
+                system=_Obj(prompt="Be brief."),
+                thinking=_Obj(enabled=True, type="low"),
+                messages=[
+                    ChatMessage(role="user", content="weather?"),
+                    ChatMessage(
+                        role="assistant",
+                        content="",
+                        additional_kwargs={
+                            "thinking": "Use the tool.",
+                            "tool_calls": [
+                                ToolSelection(
+                                    tool_id="t1",
+                                    tool_name="get_weather",
+                                    tool_kwargs={"city": "Madrid"},
+                                )
+                            ],
+                        },
+                    ),
+                    ChatMessage(
+                        role="tool",
+                        content="sunny",
+                        additional_kwargs={
+                            "tool_call_id": "t1",
+                            "tool_call_name": "get_weather",
+                        },
+                    ),
+                ],
+            ),
+            context_stack=_Obj(
+                all_tools=lambda: [
+                    _Obj(name="get_weather", type=None, runtime="server")
+                ]
+            ),
+            llm_kwargs=_Params(),
+        ),
+        runtime=_Obj(iteration=2, total_input_tokens=100, total_output_tokens=20),
+        output=_Obj(
+            status="running",
+            stop_reason="tool_use",
+            pending_external_tool_calls=[],
+            pending_async_tools={},
+        ),
+    )
+
+    assert state_snapshot(state) == {
+        "iteration": 2,
+        "status": "running",
+        "stop_reason": "tool_use",
+        "system": "Be brief.",
+        "thinking": "low",
+        "messages": [
+            {"role": "user", "content": "weather?"},
+            {
+                "role": "assistant",
+                "content": "",
+                "reasoning": "Use the tool.",
+                "tool_calls": [
+                    {"id": "t1", "name": "get_weather", "arguments": {"city": "Madrid"}}
+                ],
+            },
+            {
+                "role": "tool",
+                "content": "sunny",
+                "tool_call_id": "t1",
+                "name": "get_weather",
+            },
+        ],
+        "tools": [{"name": "get_weather", "runtime": "server"}],
+        "llm_params": {"temperature": 0.1},
+        "tokens": {"input": 100, "output": 20},
+    }

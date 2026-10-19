@@ -129,6 +129,7 @@ from private_gpt.observability.chat import (
     iteration_span,
     record_interceptor_result,
     record_iteration_result,
+    record_iteration_state,
     tool_span,
 )
 from private_gpt.observability.tracing import set_span_attributes, set_span_status
@@ -1062,10 +1063,12 @@ class AsyncChatEngine:
             self._build_tools(run.state),
             run.state.input.request.messages,
         ) as span:
+            record_iteration_state(span, run.state)
             await self._run_iteration_body(run, handler)
             output = run.state.output
             record_iteration_result(
                 span,
+                state=run.state,
                 stop_reason=output.stop_reason or str(output.status),
                 tool_calls=len(
                     run.state.input.request.messages[-1].additional_kwargs.get(

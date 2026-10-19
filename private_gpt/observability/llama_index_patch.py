@@ -188,6 +188,15 @@ def patch_llama_index_handler(max_input_messages: int) -> None:
                             additional_kwargs=extra,
                         ),
                     )
+            if isinstance(event, LLMChatEndEvent) and event.response is not None:
+                # Chat responses converted from a completion stream keep the
+                # usage on the message, where the handler does not look. Set
+                # before the handler runs: it ends a streamed span on this
+                # event, and usage it finds itself still takes precedence.
+                message = getattr(event.response, "message", None)
+                usage = getattr(message, "additional_kwargs", None) or {}
+                for key, value in _token_counts(usage):
+                    self[key] = value
             original_event(self, event)
 
         span_cls.process_event = process_event  # ty: ignore[invalid-assignment]
@@ -353,6 +362,19 @@ def _quote_reasoning(reasoning: str, content: str) -> str:
     """Reasoning as a markdown quote, then a rule and the answer."""
     quoted = "\n".join(f"> {line}" if line else ">" for line in reasoning.splitlines())
     return quoted + (f"\n\n---\n\n{content}" if content else "")
+
+
+def _token_counts(usage: dict[str, Any]) -> list[tuple[str, int]]:
+    prompt = usage.get("input_tokens") or usage.get("prompt_tokens")
+    completion = usage.get("output_tokens") or usage.get("completion_tokens")
+    counts: list[tuple[str, int]] = []
+    if isinstance(prompt, int):
+        counts.append(("llm.token_count.prompt", prompt))
+    if isinstance(completion, int):
+        counts.append(("llm.token_count.completion", completion))
+    if isinstance(prompt, int) and isinstance(completion, int):
+        counts.append(("llm.token_count.total", prompt + completion))
+    return counts
 
 
 def _response_kwargs(response: Any) -> dict[str, Any]:

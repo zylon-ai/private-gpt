@@ -470,3 +470,57 @@ def test_reasoning_is_quoted_line_by_line_before_the_answer() -> None:
         "> first\n>\n> second\n\n---\n\nAnswer"
     )
     assert _quote_reasoning("only", "") == "> only"
+
+
+def test_chat_over_a_completion_stream_records_token_counts() -> None:
+    from llama_index.core.base.llms.generic_utils import (
+        astream_completion_response_to_chat_response,
+    )
+    from llama_index.core.base.llms.types import ChatMessage, CompletionResponse
+    from llama_index.core.llms.callbacks import llm_chat_callback
+    from llama_index.core.llms.mock import MockLLM
+    from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
+
+    from private_gpt.observability.llama_index_patch import patch_llama_index_handler
+
+    class _TritonLike(MockLLM):
+        # Like Triton: astream_chat wraps a completion stream whose last
+        # chunk carries the usage in additional_kwargs.
+        @llm_chat_callback()
+        async def astream_chat(self, messages, **kwargs):  # type: ignore[override]
+            async def completions():
+                yield CompletionResponse(text="hi", delta="hi")
+                yield CompletionResponse(
+                    text="hi",
+                    delta="",
+                    additional_kwargs={"input_tokens": 12, "output_tokens": 3},
+                )
+
+            return astream_completion_response_to_chat_response(completions())
+
+    patch_llama_index_handler(20)
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(memory))
+    instrumentor = LlamaIndexInstrumentor()
+    instrumentor.instrument(tracer_provider=provider, use_legacy_callback_handler=False)
+
+    async def drain() -> None:
+        stream = await _TritonLike().astream_chat(
+            [ChatMessage(role="user", content="hi")]
+        )
+        async for _ in stream:
+            pass
+
+    try:
+        asyncio.run(drain())
+    finally:
+        instrumentor.uninstrument()
+
+    span = next(
+        s for s in memory.get_finished_spans() if s.name.endswith(".astream_chat")
+    )
+    attributes = dict(span.attributes or {})
+    assert attributes["llm.token_count.prompt"] == 12
+    assert attributes["llm.token_count.completion"] == 3
+    assert attributes["llm.token_count.total"] == 15

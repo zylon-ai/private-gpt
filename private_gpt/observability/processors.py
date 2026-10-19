@@ -424,25 +424,25 @@ class ExporterViewProcessor(_Delegating):
       exporters of the same backend can write to different projects
       (e.g. Phoenix ``openinference.project.name``).
     * ``turn_root``: the HTTP span of a chat route stays the root of the
-      trace, with ``chat.turn`` under it, but LLM backends build session views
-      from the root's input/output: there the raw request body, the SSE text
-      or, for ``/messages/async``, the ``{"message_id": ...}``
-      acknowledgement. So the turn's folded input/output, session and user are
-      copied onto the HTTP span (the bodies move to ``pgpt.http.request.body``
-      / ``pgpt.http.response.body``). An async POST ends before its turn: it
-      is held until the turn ends, or exported as is after
-      ``hold_seconds`` (turn in another process, e.g. an ARQ worker).
+      trace, with ``chat.turn`` under it. Its input is the JSON request; its
+      output would be the SSE text or, for ``/messages/async``, the
+      ``{"message_id": ...}`` acknowledgement, while LLM backends build
+      session views from the root's output. So the turn's answer, session and
+      user are copied onto the HTTP span (the raw response body moves to
+      ``pgpt.http.response.body``); the folded user input (text, images) is
+      on ``chat.turn``. An async POST ends before its turn: it is held until
+      the turn ends, or exported as is after ``hold_seconds`` (turn in another
+      process, e.g. an ARQ worker).
     """
 
+    # The HTTP span keeps the JSON request as input; it gets the turn's
+    # answer as output (session views read it) and its session/user.
     _TURN_KEYS = (
-        "input.value",
-        "input.mime_type",
         "output.value",
         "output.mime_type",
         "session.id",
         "user.id",
         "metadata",
-        "pgpt.input.message",
         "pgpt.output.message",
     )
 
@@ -494,12 +494,8 @@ class ExporterViewProcessor(_Delegating):
 
     def _with_turn(self, span: ReadableSpan, turn: Mapping[str, Any]) -> ReadableSpan:
         attrs = dict(span.attributes or {})
-        for key, target in (
-            ("input.value", "pgpt.http.request.body"),
-            ("output.value", "pgpt.http.response.body"),
-        ):
-            if key in attrs:
-                attrs[target] = attrs[key]
+        if "output.value" in attrs:
+            attrs["pgpt.http.response.body"] = attrs["output.value"]
         attrs.update(turn)
         return _with_attributes(span, attrs)
 

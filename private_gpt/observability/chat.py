@@ -12,10 +12,14 @@ Resulting tree for one ``/v1/messages`` turn::
 
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from typing import TYPE_CHECKING, Any
 
-from private_gpt.observability.message import last_user_message, message_text
+from private_gpt.observability.message import (
+    fold_user_message,
+    last_user_message,
+    message_text,
+)
 from private_gpt.observability.processors import (
     register_llm_tools,
     unregister_llm_tools,
@@ -230,6 +234,12 @@ def iteration_span(
                 unregister_llm_tools(span)
 
 
+def record_iteration_state(span: Any, state: Any) -> None:
+    """The state an iteration starts from, as its span input."""
+    if is_enabled():
+        set_span_attributes(span, input=state_snapshot(state))
+
+
 def record_iteration_result(
     span: Any,
     *,
@@ -237,12 +247,115 @@ def record_iteration_result(
     tool_calls: int,
     input_tokens: int | None,
     output_tokens: int | None,
+    state: Any = None,
 ) -> None:
+    """Outcome of an iteration; ``state`` (the state it leaves) is the output.
+
+    Input and output of consecutive iterations chain: what one leaves is what
+    the next one starts from, so a trace replays the whole loop.
+    """
     set_span_attributes(
         span,
         **{"pgpt.stop_reason": stop_reason, "pgpt.tool_calls": tool_calls},
     )
+    if state is not None and is_enabled():
+        set_span_attributes(span, output=state_snapshot(state))
     _set_tokens(span, input_tokens, output_tokens)
+
+
+def state_snapshot(state: Any) -> dict[str, Any]:
+    """Readable view of a chat loop state: conversation, tools, parameters.
+
+    Messages keep text, reasoning, tool calls and tool results; media are
+    summarized (small images inline). Runtime caches, tokenizers and the
+    context stack internals are left out.
+    """
+    input_state = getattr(state, "input", None)
+    request = getattr(input_state, "request", None)
+    runtime = getattr(state, "runtime", None)
+    output = getattr(state, "output", None)
+    snapshot: dict[str, Any] = {
+        "iteration": getattr(runtime, "iteration", None),
+        "status": str(getattr(output, "status", "") or "") or None,
+        "stop_reason": getattr(output, "stop_reason", None),
+    }
+    if request is not None:
+        system = getattr(request, "system", None)
+        prompt = getattr(system, "prompt", None)
+        if isinstance(prompt, list):
+            prompt = "\n\n".join(getattr(block, "text", "") for block in prompt)
+        snapshot["system"] = prompt
+        snapshot["messages"] = [
+            state_message(message) for message in getattr(request, "messages", [])
+        ]
+        thinking = getattr(request, "thinking", None)
+        if thinking is not None and getattr(thinking, "enabled", False):
+            snapshot["thinking"] = getattr(thinking, "type", None)
+    stack = getattr(input_state, "context_stack", None)
+    if stack is not None and hasattr(stack, "all_tools"):
+        with suppress(Exception):
+            snapshot["tools"] = [
+                {
+                    key: value
+                    for key, value in (
+                        ("name", tool.name),
+                        ("type", tool.type),
+                        ("runtime", tool.runtime),
+                    )
+                    if value
+                }
+                for tool in stack.all_tools()
+            ]
+    params = getattr(input_state, "llm_kwargs", None)
+    if params is not None:
+        with suppress(Exception):
+            snapshot["llm_params"] = params.model_dump(mode="json", exclude_none=True)
+    pending = getattr(output, "pending_external_tool_calls", None)
+    if pending:
+        snapshot["pending_tool_calls"] = [_tool_call(call) for call in pending]
+    if pending_async := getattr(output, "pending_async_tools", None):
+        snapshot["pending_async_tools"] = dict(pending_async)
+    if runtime is not None:
+        snapshot["tokens"] = {
+            "input": getattr(runtime, "total_input_tokens", 0),
+            "output": getattr(runtime, "total_output_tokens", 0),
+        }
+    return {key: value for key, value in snapshot.items() if value is not None}
+
+
+def state_message(message: Any) -> dict[str, Any]:
+    """One llama-index message as role, content, reasoning, tool calls/results."""
+    role = getattr(message, "role", None)
+    role = str(getattr(role, "value", role))
+    kwargs = getattr(message, "additional_kwargs", None) or {}
+    folded = fold_user_message(message) if role == "user" else None
+    item: dict[str, Any] = {"role": role}
+    if folded is not None and any(b["type"] != "text" for b in folded["content"]):
+        item["content"] = folded["content"]
+    else:
+        item["content"] = getattr(message, "content", None) or ""
+    thinking = kwargs.get("thinking")
+    if isinstance(thinking, str) and thinking.strip():
+        item["reasoning"] = thinking
+    calls = kwargs.get("tool_calls")
+    if calls:
+        item["tool_calls"] = [_tool_call(call) for call in calls]
+    if role == "tool":
+        item["tool_call_id"] = kwargs.get("tool_call_id")
+        item["name"] = kwargs.get("tool_call_name")
+        if kwargs.get("is_error"):
+            item["is_error"] = True
+    return {key: value for key, value in item.items() if value is not None}
+
+
+def _tool_call(call: Any) -> Any:
+    if isinstance(call, dict):
+        return call
+    return {
+        "id": getattr(call, "tool_id", None),
+        "name": getattr(call, "tool_name", None),
+        "arguments": getattr(call, "tool_kwargs", None),
+    }
 
 
 @contextmanager
