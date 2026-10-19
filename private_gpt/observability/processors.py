@@ -10,6 +10,8 @@ import threading
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from opentelemetry.context import Context
     from opentelemetry.sdk.trace import ReadableSpan, Span
 
@@ -253,3 +255,98 @@ class SemconvSpanProcessor(_Delegating):
                 ]:
                     del attrs[key]
         self._delegate.on_end(_with_attributes(span, attrs) if changed else span)
+
+
+TRACE_TAGS = "pgpt.trace.tags"
+_OI_TAGS = "tag.tags"
+ALL_TAGS = "all"
+
+
+class TraceTagsProcessor(_Delegating):
+    """Tag whole traces from span-name rules (``observability.trace_tags``).
+
+    A rule is an fnmatch pattern on the span name (``POST /v1/messages``,
+    ``chat.turn*``, ``run/private_gpt.ingestion.parse``) or ``kind:<KIND>`` on
+    the OpenInference span kind. When any span of a trace matches, every span
+    of that trace still open or ending later in this process carries the tag
+    in ``pgpt.trace.tags`` (and OpenInference ``tag.tags``), so exporters can
+    keep or skip whole trees (see :class:`TagFilterProcessor`).
+
+    Matching is per process: a worker continuing a trace re-derives the tags
+    from its own spans (``chat.turn``, Celery ``run/<task>``), which the
+    default rules cover.
+    """
+
+    def __init__(self, rules: Mapping[str, list[str]], delegate: Any) -> None:
+        super().__init__(delegate)
+        self._names: list[tuple[str, re.Pattern[str]]] = []
+        self._kinds: list[tuple[str, set[str]]] = []
+        for tag, patterns in rules.items():
+            names = [p for p in patterns if not p.startswith("kind:")]
+            kinds = {p.removeprefix("kind:") for p in patterns if p.startswith("kind:")}
+            if names:
+                self._names.append(
+                    (tag, re.compile("|".join(fnmatch.translate(p) for p in names)))
+                )
+            if kinds:
+                self._kinds.append((tag, kinds))
+        self._lock = threading.Lock()
+        # trace id -> [open spans, tags]
+        self._traces: dict[int, list[Any]] = {}
+
+    def _match(self, span: ReadableSpan) -> set[str]:
+        tags = {tag for tag, regex in self._names if regex.match(span.name)}
+        kind = (span.attributes or {}).get("openinference.span.kind")
+        if kind:
+            tags.update(tag for tag, kinds in self._kinds if kind in kinds)
+        return tags
+
+    def on_start(self, span: Span, parent_context: Context | None = None) -> None:
+        tags = self._match(span)
+        with self._lock:
+            entry = self._traces.setdefault(span.context.trace_id, [0, set()])
+            entry[0] += 1
+            entry[1].update(tags)
+        super().on_start(span, parent_context=parent_context)
+
+    def on_end(self, span: ReadableSpan) -> None:
+        trace_id = span.context.trace_id
+        tags = self._match(span)
+        with self._lock:
+            entry = self._traces.get(trace_id)
+            if entry is not None:
+                entry[1].update(tags)
+                tags = set(entry[1])
+                entry[0] -= 1
+                if entry[0] <= 0:
+                    del self._traces[trace_id]
+        if tags:
+            attrs = dict(span.attributes or {})
+            attrs[TRACE_TAGS] = sorted(tags)
+            existing = attrs.get(_OI_TAGS)
+            if isinstance(existing, (list, tuple)):
+                tags = tags.union(str(tag) for tag in existing)
+            attrs[_OI_TAGS] = sorted(tags)
+            span = _with_attributes(span, attrs)
+        self._delegate.on_end(span)
+
+
+class TagFilterProcessor(_Delegating):
+    """Forward only spans whose trace carries one of ``tags`` (``all``: every span)."""
+
+    def __init__(self, tags: list[str], delegate: Any) -> None:
+        super().__init__(delegate)
+        self._all = ALL_TAGS in tags
+        self._tags = set(tags)
+
+    def accepts(self, span: ReadableSpan) -> bool:
+        if self._all:
+            return True
+        tags = (span.attributes or {}).get(TRACE_TAGS)
+        return isinstance(tags, (list, tuple)) and not self._tags.isdisjoint(
+            str(tag) for tag in tags
+        )
+
+    def on_end(self, span: ReadableSpan) -> None:
+        if self.accepts(span):
+            self._delegate.on_end(span)

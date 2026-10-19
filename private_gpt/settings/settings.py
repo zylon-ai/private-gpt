@@ -1057,6 +1057,15 @@ class ObservabilityExporterSettings(BaseModel):
             "`workspace`, arize `space_id`, datadog `site`."
         ),
     )
+    tags: list[str] | None = Field(
+        default=None,
+        description=(
+            "Trace tags (see `observability.trace_tags`) this exporter receives; "
+            "`all` sends every span. Defaults to `[ai]` for LLM backends "
+            "(phoenix, arize, langfuse, langsmith, opik, datadog) and `[all]` "
+            "for the rest (otlp, grafana, honeycomb, console)."
+        ),
+    )
 
 
 class ObservabilitySettings(BaseModel):
@@ -1140,6 +1149,36 @@ class ObservabilitySettings(BaseModel):
     max_http_body_bytes: int = Field(
         default=64_000,
         description="Bytes kept per request/response body; the rest is counted only.",
+    )
+    trace_tags: dict[str, list[str]] = Field(
+        default_factory=lambda: {
+            # Model work worth debugging: the agent turn and everything under
+            # it, standalone tool/search/completion calls, and the worker side
+            # of a turn (ARQ chat jobs open `chat.turn*`; Celery tool runs do
+            # not, so they are matched by task name).
+            "ai": [
+                "POST /v1/messages",
+                "POST /v1/messages/async",
+                "POST /v1/complete",
+                "POST /v1/tools/*",
+                "POST /v1/primitives/search",
+                "chat.turn*",
+                "run/private_gpt.tools.*",
+            ],
+            # Document ingestion (sync API, async API and the Celery parse /
+            # store-vectors tasks): parsing, image description, embeddings.
+            "ingestion": [
+                "POST /v1/artifacts/ingest*",
+                "POST /v1/artifacts/convert",
+                "run/private_gpt.ingestion.*",
+            ],
+        },
+        description=(
+            "Tag -> span-name patterns (fnmatch, or `kind:<OPENINFERENCE_KIND>`). "
+            "A matching span tags its whole trace; exporters choose which tags "
+            "they receive with `exporters[].tags`. Status polling, listings, "
+            "health and admin routes match nothing, so LLM backends skip them."
+        ),
     )
     exporters: list[ObservabilityExporterSettings] = Field(default_factory=list)
 

@@ -118,6 +118,18 @@ def _preset(
     return endpoint, headers, resource
 
 
+# Backends built for LLM traces: by default they get only AI traces, not every
+# HTTP request the API serves.
+_LLM_BACKENDS = {"phoenix", "arize", "langfuse", "langsmith", "opik", "datadog"}
+
+
+def exporter_tags(cfg: ObservabilityExporterSettings) -> list[str]:
+    """Trace tags ``cfg`` receives (``all`` for every span)."""
+    if cfg.tags is not None:
+        return cfg.tags
+    return ["ai"] if cfg.type in _LLM_BACKENDS else ["all"]
+
+
 def _traces_url(endpoint: str) -> str:
     endpoint = endpoint.rstrip("/")
     return endpoint if endpoint.endswith("/v1/traces") else f"{endpoint}/v1/traces"
@@ -168,6 +180,8 @@ def build_span_processors(
     """
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+    from private_gpt.observability.processors import TagFilterProcessor
+
     processors: list[Any] = []
     resource: dict[str, str] = {}
     for cfg in exporters:
@@ -178,7 +192,9 @@ def build_span_processors(
         except Exception:
             logger.exception("Could not build %s trace exporter; skipping", cfg.type)
             continue
-        processors.append(BatchSpanProcessor(exporter))
+        processors.append(
+            TagFilterProcessor(exporter_tags(cfg), BatchSpanProcessor(exporter))
+        )
         for key, value in exporter_resource.items():
             # Resource is process-wide: first exporter that names a project wins.
             resource.setdefault(key, value)

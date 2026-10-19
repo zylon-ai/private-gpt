@@ -79,6 +79,7 @@ def configure_tracing(settings: Settings, *, role: str | None = None) -> bool:
         DropSpansProcessor,
         FanOutSpanProcessor,
         SemconvSpanProcessor,
+        TraceTagsProcessor,
     )
     from private_gpt.utils.runner import get_version
 
@@ -111,13 +112,19 @@ def configure_tracing(settings: Settings, *, role: str | None = None) -> bool:
         sampler=ParentBased(TraceIdRatioBased(obs.sampling_ratio)),
     )
     # Normalization runs once, before fan-out, so every exporter sees the same
-    # cleaned span: drop noisy leaves, fix tool schemas, add gen_ai.* if asked.
+    # cleaned span: tag traces, drop noisy leaves, fix tool schemas, add
+    # gen_ai.* if asked.
     provider.add_span_processor(
-        DropSpansProcessor(  # ty: ignore[invalid-argument-type] - duck-typed SpanProcessor
-            patterns=obs.drop_spans,
-            delegate=SemconvSpanProcessor(
-                semconv=obs.semconv,
-                delegate=FanOutSpanProcessor(exporter_processors),
+        # Tagging sees every span (dropped ones too) so per-trace bookkeeping
+        # always balances; exporters then filter on the tags.
+        TraceTagsProcessor(  # ty: ignore[invalid-argument-type] - duck-typed SpanProcessor
+            rules=obs.trace_tags,
+            delegate=DropSpansProcessor(
+                patterns=obs.drop_spans,
+                delegate=SemconvSpanProcessor(
+                    semconv=obs.semconv,
+                    delegate=FanOutSpanProcessor(exporter_processors),
+                ),
             ),
         )
     )

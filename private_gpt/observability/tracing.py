@@ -372,6 +372,41 @@ def link_from(carrier: Mapping[str, Any] | None) -> list[Any]:
     return [Link(span_ctx)] if span_ctx.is_valid else []
 
 
+def trace_reference() -> dict[str, str]:
+    """``trace_id``/``traceparent`` of the current span, for stored records.
+
+    Safe to expose to clients (no session/user attributes), unlike the full
+    carrier from :func:`inject_trace_context`.
+    """
+    if not _OTEL_AVAILABLE:
+        return {}
+    carrier: dict[str, str] = {}
+    propagate.inject(carrier)
+    trace_id = current_trace_id()
+    if trace_id is None or "traceparent" not in carrier:
+        return {}
+    return {"trace_id": trace_id, "traceparent": carrier["traceparent"]}
+
+
+def link_current_span(reference: Mapping[str, Any] | None, **attributes: Any) -> None:
+    """Link the current span to a :func:`trace_reference` (e.g. a turn).
+
+    Used by requests that observe work started by another request (async
+    stream / status), so trace backends can jump to the originating trace.
+    """
+    if not is_enabled():
+        return
+    span = trace.get_current_span()
+    if not span.is_recording():
+        return
+    pgpt = {f"pgpt.{key}": value for key, value in attributes.items()}
+    if reference and reference.get("traceparent"):
+        for link in link_from({"traceparent": reference["traceparent"]}):
+            span.add_link(link.context, {"pgpt.link": "origin"})
+        pgpt["pgpt.origin.trace_id"] = reference.get("trace_id")
+    set_span_attributes(span, **pgpt)
+
+
 class _NoopSpan:
     def set_attribute(self, *_: Any, **__: Any) -> None: ...
 
