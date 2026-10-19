@@ -1983,6 +1983,76 @@ class CodeExecutionToolsSettings(BaseModel):
     )
 
 
+class OutputCleaningSettings(BaseModel):
+    enabled: bool = Field(
+        default=True,
+        description="Clean code execution output before returning it to the model.",
+    )
+    bash_interceptors: list[str] = Field(
+        default_factory=lambda: [
+            "binary",
+            "ansi",
+            "terminal",
+            "control",
+            "unicode",
+            "secrets",
+            "data_uri",
+            "base64",
+            "long_lines",
+            "repeated_lines",
+            "whitespace",
+        ],
+        description=(
+            "Interceptors applied in order to bash stdout/stderr. Available: "
+            "binary, ansi, terminal, control, unicode, secrets, data_uri, base64, "
+            "long_lines, repeated_lines, whitespace. When set via env var, use a "
+            "comma-separated string."
+        ),
+    )
+    view_interceptors: list[str] = Field(
+        default_factory=lambda: [
+            "binary",
+            "ansi",
+            "control",
+            "unicode",
+            "data_uri",
+            "base64",
+            "long_lines",
+        ],
+        description=(
+            "Interceptors applied to text_editor view output. Kept conservative: "
+            "the model edits files from what it sees, so line structure and "
+            "content must stay faithful."
+        ),
+    )
+    base64_min_length: int = Field(
+        default=256,
+        description="Minimum length of a base64 run (or data URI payload) to omit.",
+    )
+    binary_threshold: float = Field(
+        default=0.1,
+        description=(
+            "Fraction of binary characters above which the whole output is "
+            "replaced by a placeholder instead of collapsing binary runs."
+        ),
+    )
+    max_line_length: int = Field(
+        default=2000,
+        description="Lines longer than this are cut with a truncation marker.",
+    )
+    min_repeated_lines: int = Field(
+        default=3,
+        description="Identical consecutive lines collapsed once a run is this long.",
+    )
+
+    @field_validator("bash_interceptors", "view_interceptors", mode="before")
+    @classmethod
+    def split_comma_separated(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+
 class CodeExecutionSettings(BaseModel):
     provider: str | None = Field(
         default="local",
@@ -1999,8 +2069,17 @@ class CodeExecutionSettings(BaseModel):
         description="Default code execution timeout in seconds.",
     )
     max_output_bytes: int = Field(
-        default=1_048_576,
-        description="Maximum output size to return from code execution tools.",
+        default=40_960,
+        description=(
+            "Maximum size in UTF-8 bytes returned to the model per output stream "
+            "(bash stdout and stderr each, text_editor view), after cleaning. "
+            "About 10k tokens; bash keeps head and tail, view keeps the head."
+        ),
+    )
+    output_cleaning: OutputCleaningSettings = Field(
+        default_factory=lambda: OutputCleaningSettings(),
+        description="Interceptors that strip base64, binary and terminal noise "
+        "from code execution output.",
     )
     session_ttl_seconds: int = Field(
         default=1800,

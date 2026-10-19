@@ -203,9 +203,68 @@ async def test_text_editor_view_max_lines_cap() -> None:
     view_result = await view_tool.async_fn(path="file.txt")
 
     assert view_result[0].num_lines == 3
-    assert view_result[0].content == "\n".join(f"{i}: line" for i in range(1, 4))
+    content, notice = view_result[0].content.split("\n\n")
+    assert content == "\n".join(f"{i}: line" for i in range(1, 4))
+    assert "10 entries because of the 3-line view limit" in notice
     # total_lines still reflects the full file (10 lines), not the capped view.
     assert view_result[0].total_lines == 10
+
+
+@pytest.mark.asyncio
+async def test_text_editor_view_tells_model_how_to_read_the_rest() -> None:
+    session = SimpleNamespace(
+        view=AsyncMock(
+            return_value=FileOperationResult(
+                success=True,
+                output="\n".join(f"line {i:05d}" for i in range(1, 5001)),
+                total_lines=5000,
+            )
+        )
+    )
+    settings = _settings()  # max_output_bytes = 10_000
+    builder = TextEditorToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        ),
+        settings=settings,
+    )
+
+    view_tool = await builder.build_view_tool("corr-truncated")
+    result = (await view_tool.async_fn(path="big.txt"))[0]
+
+    assert result.num_lines == 909
+    assert result.content.splitlines()[908] == "line 00909"
+    assert result.content.endswith(
+        "[Truncated: showing lines 1-909 of 5000 because of the 9.8 KB output "
+        "limit. Use view_range=[910, 1818] to read the next fragment, or search "
+        "the file with bash (e.g. grep -n) and view only the lines you need.]"
+    )
+
+
+@pytest.mark.asyncio
+async def test_bash_truncation_tells_model_how_to_limit_output() -> None:
+    session = SimpleNamespace(
+        execute_bash=AsyncMock(
+            return_value=BashExecutionResult(
+                success=True,
+                stdout="\n".join(f"row {i}" for i in range(20_000)),
+                exit_code=0,
+            )
+        )
+    )
+    builder = BashToolBuilder(
+        code_execution_component=SimpleNamespace(
+            get_or_create_session=AsyncMock(return_value=session)
+        ),
+        settings=_settings(),
+    )
+
+    tool = await builder.build_tool("corr-bash-truncated")
+    stdout = (await tool.async_fn(command="seq"))[0].stdout
+
+    assert stdout.endswith("row 19999")
+    assert "output exceeded the 9.8 KB limit. Re-run the command" in stdout
+    assert "| head, | tail, | grep" in stdout
 
 
 @pytest.mark.asyncio
