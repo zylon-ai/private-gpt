@@ -129,7 +129,7 @@ from private_gpt.observability.chat import (
     record_iteration_result,
     tool_span,
 )
-from private_gpt.observability.tracing import set_span_attributes
+from private_gpt.observability.tracing import set_span_attributes, set_span_status
 
 if TYPE_CHECKING:
     from private_gpt.components.streaming.tasks.chat_scheduler import (
@@ -1584,6 +1584,8 @@ class AsyncChatEngine:
                 span=span,
             )
             set_span_attributes(span, **{"pgpt.tool.status": result.status})
+            if result.status == _ToolExecutionStatus.NOT_FOUND:
+                set_span_status(span, error=f"Tool '{tool_call.tool_name}' not found.")
             if result.async_handle:
                 set_span_attributes(span, **{"pgpt.tool.task_id": result.async_handle})
             return result
@@ -1700,6 +1702,8 @@ class AsyncChatEngine:
                 "pgpt.tool.error.type": getattr(failure, "exception_type", None),
             },
         )
+        if failure is not None:
+            set_span_status(span, error=failure.message or "Tool execution failed")
         async with lock:
             run.state = run.state.model_copy(deep=True)
             run.state.input.request.messages = [

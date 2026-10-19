@@ -140,6 +140,27 @@ def set_span_attributes(span: Any = None, /, **attributes: Any) -> None:
     span.set_attributes(_clean(attributes))
 
 
+def set_span_status(span: Any = None, *, error: str | None = None) -> None:
+    """Mark ``span`` as failed (``error`` given) or successful.
+
+    The first final status wins. The SDK lets a later OK overwrite an ERROR
+    (and freezes a span once it is OK), so an ERROR is never replaced here:
+    a span failed by an outcome stays failed when its ``start_span`` closes.
+    """
+    if not _OTEL_AVAILABLE:
+        return
+    span = span or trace.get_current_span()
+    if not span.is_recording():
+        return
+    current = getattr(getattr(span, "status", None), "status_code", None)
+    if current is StatusCode.ERROR:
+        return
+    if error is None:
+        span.set_status(Status(StatusCode.OK))
+    else:
+        span.set_status(Status(StatusCode.ERROR, error[:500]))
+
+
 def record_exception(exc: BaseException, span: Any = None) -> None:
     if not _OTEL_AVAILABLE:
         return
@@ -153,7 +174,7 @@ def record_exception(exc: BaseException, span: Any = None) -> None:
         span.set_attribute("pgpt.cancelled", True)
         return
     span.record_exception(exc)
-    span.set_status(Status(StatusCode.ERROR, f"{type(exc).__name__}: {exc}"[:500]))
+    set_span_status(span, error=f"{type(exc).__name__}: {exc}")
 
 
 @contextmanager
@@ -168,8 +189,10 @@ def start_span(
 ) -> Iterator[Any]:
     """Start an OpenInference-typed span as the current span.
 
-    Exceptions are recorded and re-raised; ``asyncio.CancelledError`` is
-    tagged as cancelled instead of being reported as an error.
+    A span that exits normally ends with status OK unless something marked it
+    as failed (``set_span_status(error=...)``) while it was open. Exceptions
+    are recorded as ERROR and re-raised; ``asyncio.CancelledError`` is tagged
+    as cancelled and left UNSET, since a stopped turn did not fail.
     """
     if not is_enabled():
         yield _NOOP_SPAN
@@ -196,6 +219,7 @@ def start_span(
         except BaseException as exc:
             record_exception(exc, span)
             raise
+        set_span_status(span)
 
 
 def _context_attributes() -> dict[str, Any]:
@@ -295,6 +319,8 @@ class _NoopSpan:
     def set_attributes(self, *_: Any, **__: Any) -> None: ...
 
     def add_event(self, *_: Any, **__: Any) -> None: ...
+
+    def set_status(self, *_: Any, **__: Any) -> None: ...
 
     def is_recording(self) -> bool:
         return False
