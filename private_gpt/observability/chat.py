@@ -42,15 +42,27 @@ from private_gpt.observability.tracing import (
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
 
+    from private_gpt.observability.message import MessageFolder
+
 AGENT = "chat_agent"
 
 
 def _last_user_text(request: Any) -> str | None:
+    """Text of the last user message that has any (tool results have none)."""
     for message in reversed(getattr(request, "messages", []) or []):
         role = getattr(message, "role", None)
-        if str(getattr(role, "value", role)) == "user":
-            content = getattr(message, "content", None)
-            return content if isinstance(content, str) else None
+        if str(getattr(role, "value", role)) != "user":
+            continue
+        content = getattr(message, "content", None)
+        if isinstance(content, str) and content.strip():
+            return content
+        texts = [
+            text
+            for block in getattr(message, "blocks", None) or []
+            if isinstance(text := getattr(block, "text", None), str) and text.strip()
+        ]
+        if texts:
+            return "\n".join(texts)
     return None
 
 
@@ -65,12 +77,16 @@ def chat_turn_span(
     """AGENT span for one chat turn plus session/user context for children."""
     context = getattr(request, "context", None)
     system = getattr(request, "system", None)
-    session_id = (
-        getattr(context, "container", None)
-        or getattr(context, "user_id", None)
-        or execution_id
+    # A session is a conversation: the caller's container (the backend sends
+    # the thread id). Without one each turn stands alone. The user id is only
+    # what the caller sent in metadata.user_id; the request mapper fills a
+    # random uuid when it is missing, which must not become a "user".
+    session_id = getattr(context, "container", None) or execution_id
+    user_id = (
+        getattr(context, "user_id", None)
+        if getattr(context, "user_id_provided", False)
+        else None
     )
-    user_id = getattr(context, "user_id", None)
     with (
         using_trace_attributes(
             session_id=session_id,
@@ -98,15 +114,39 @@ def chat_turn_span(
         yield span
 
 
-def record_turn_result(span: Any, state: Any) -> None:
+def record_turn_result(
+    span: Any, state: Any, folder: MessageFolder | None = None
+) -> None:
+    """Final result on the turn span.
+
+    ``output.value`` is the answer text the user read: session views (Phoenix
+    sessions, Langfuse) render it as the assistant bubble. The whole folded
+    message (text, reasoning, tool calls and results, stop reason, usage) is
+    in ``pgpt.output.message`` as JSON for inspection.
+    """
     output = getattr(state, "output", None)
     runtime = getattr(state, "runtime", None)
-    messages = getattr(getattr(state.input, "request", None), "messages", []) or []
-    last = messages[-1] if messages else None
+    message = folder.message() if folder is not None else None
+    if message is not None:
+        message["stop_reason"] = message.get("stop_reason") or getattr(
+            output, "stop_reason", None
+        )
+    text = folder.text if folder is not None else ""
+    reasoning = folder.reasoning if folder is not None else ""
     set_span_attributes(
         span,
-        output=getattr(last, "content", None) if last is not None else None,
+        output=text or None,
         **{
+            "llm.output_messages.0.message.role": "assistant",
+            "llm.output_messages.0.message.content": text or None,
+            "pgpt.output.message": message,
+            "pgpt.output.reasoning": reasoning or None,
+            "pgpt.output.tool_calls": [
+                block.get("name")
+                for block in (message or {}).get("content", [])
+                if block.get("type") in ("tool_use", "server_tool_use")
+            ]
+            or None,
             "pgpt.status": str(getattr(output, "status", "")),
             "pgpt.stop_reason": getattr(output, "stop_reason", None),
             "pgpt.iterations": getattr(runtime, "iteration", None),

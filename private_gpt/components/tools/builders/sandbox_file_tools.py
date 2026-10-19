@@ -17,6 +17,11 @@ from typing import TYPE_CHECKING
 from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
 from private_gpt.components.environment.naming import unique_name
 from private_gpt.events.models import TextBlock
+from private_gpt.observability.tracing import (
+    SpanKind,
+    set_span_attributes,
+    start_span,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -123,11 +128,22 @@ async def run_over_paths(
     )
     write_lock = asyncio.Lock()
 
+    async def _traced(filepath: str) -> str:
+        with start_span(
+            f"{gerund} {noun}",
+            SpanKind.CHAIN,
+            input=filepath,
+            attributes={"pgpt.file.path": filepath},
+        ) as span:
+            result = await worker(filepath, write_lock)
+            set_span_attributes(span, output=result)
+            return result
+
     async def _bounded(filepath: str) -> str:
         if semaphore is not None:
             async with semaphore:
-                return await worker(filepath, write_lock)
-        return await worker(filepath, write_lock)
+                return await _traced(filepath)
+        return await _traced(filepath)
 
     results = await asyncio.gather(
         *[_bounded(filepath) for filepath in filepaths],

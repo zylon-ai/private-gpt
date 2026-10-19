@@ -15,6 +15,12 @@ from private_gpt.events.models import (
     ResultContentBlockType,
     WebFetchResultBlock,
 )
+from private_gpt.observability.tracing import (
+    SpanKind,
+    retrieval_documents,
+    set_span_attributes,
+    start_span,
+)
 
 
 @singleton
@@ -44,7 +50,14 @@ class WebFetchToolBuilder:
         runtime: Literal["client", "server"] = "server",
     ) -> ToolSpec:
         async def run_tool(url: str) -> list[ResultContentBlockType]:
-            result = await self.web_scraper.scrape_max_compress(url)
+            with start_span("web_fetch.scrape", SpanKind.RETRIEVER, input=url) as span:
+                result = await self.web_scraper.scrape_max_compress(url)
+                set_span_attributes(
+                    span,
+                    **retrieval_documents(
+                        [{"id": url, "content": result.markdown_content}]
+                    ),
+                )
 
             return [
                 WebFetchResultBlock.from_markdown(

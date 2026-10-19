@@ -22,6 +22,7 @@ from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.components.sandbox.sandbox_component import SandboxComponent
 from private_gpt.components.tabular.pandasai_model import PGPTPandasAILLM
 from private_gpt.components.tabular.pandasai_sandbox import PandasAISandboxAdapter
+from private_gpt.observability.tracing import SpanKind, set_span_status, traced
 from private_gpt.settings.settings import settings
 from private_gpt.utils.dataframe import df_to_minimal_markdown
 
@@ -205,6 +206,21 @@ class PandasAIOutput(BaseModel):
 
 
 @singleton
+def _analysis_output(output: PandasAIOutput) -> dict[str, Any]:
+    """Span output for a PandasAI run: generated code, value type and error."""
+    if output.error:
+        set_span_status(error=output.error)
+    response = output.response
+    return {
+        "type": type(response).__name__,
+        "code": getattr(response, "last_code_executed", None),
+        "value": response.value
+        if isinstance(response.value, str | int | float)
+        else str(response.value)[:2000],
+        "error": output.error,
+    }
+
+
 class PandasAIService(BaseModel):
     _pandas_ai: PandaAIProtocol
 
@@ -318,6 +334,15 @@ class PandasAIService(BaseModel):
             error=result.value if isinstance(result, ErrorResponse) else None,
         )
 
+    @traced(
+        "tabular.analysis",
+        SpanKind.TOOL,
+        capture=lambda _self, query, *dataframes, **_: {
+            "query": query,
+            "dataframes": [list(df.shape) for df in dataframes],
+        },
+        result=lambda r: _analysis_output(r),
+    )
     async def run_analysis(
         self,
         query: str,

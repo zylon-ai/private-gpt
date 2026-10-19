@@ -1108,10 +1108,13 @@ class ObservabilitySettings(BaseModel):
         default_factory=lambda: [
             "*.get_metadata",
             "*._prepare_chat_with_tools",
+            # Duplicates our `tool <name>` span; tool internals are its siblings.
+            "FunctionTool.acall",
         ],
         description=(
-            "fnmatch patterns of leaf span names that are dropped before export "
-            "(pure noise from llama-index auto-instrumentation)."
+            "fnmatch patterns of span names dropped before export (noise from "
+            "llama-index auto-instrumentation). Children of a dropped span are "
+            "re-attached to its parent."
         ),
     )
     excluded_urls: list[str] = Field(

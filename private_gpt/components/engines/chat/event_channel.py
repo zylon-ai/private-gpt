@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING
 
 from private_gpt.components.engines.chat.async_chat_engine import EventChannel
@@ -8,6 +9,7 @@ from private_gpt.components.engines.chat.async_chat_engine import EventChannel
 if TYPE_CHECKING:
     from private_gpt.components.engines.chat.event_broker import EngineEventBroker
     from private_gpt.events.models import Event
+    from private_gpt.observability.message import MessageFolder
 
 
 class BrokerEventChannel(EventChannel):
@@ -34,3 +36,23 @@ class BrokerEventChannel(EventChannel):
 
     async def close(self) -> None:
         await self.flush()
+
+
+class RecordingEventChannel(EventChannel):
+    """Forward events unchanged while folding them into a message for tracing."""
+
+    def __init__(self, inner: EventChannel, folder: MessageFolder) -> None:
+        self._inner = inner
+        self.folder = folder
+
+    def emit(self, event: Event) -> None:
+        # Tracing must never break the stream.
+        with contextlib.suppress(Exception):
+            self.folder.add(event)
+        self._inner.emit(event)
+
+    async def flush(self) -> None:
+        await self._inner.flush()
+
+    async def close(self) -> None:
+        await self._inner.close()

@@ -18,7 +18,10 @@ from private_gpt.components.engines.chat.checkpoint_store import (
     ChatCheckpointStoreFactory,
 )
 from private_gpt.components.engines.chat.event_broker import EngineEventBrokerFactory
-from private_gpt.components.engines.chat.event_channel import BrokerEventChannel
+from private_gpt.components.engines.chat.event_channel import (
+    BrokerEventChannel,
+    RecordingEventChannel,
+)
 from private_gpt.components.engines.chat.execution_scheduler import (
     ChatExecutionSchedulerFactory,
 )
@@ -39,6 +42,7 @@ from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
 from private_gpt.events.event_serializer import StreamingEventHandler
 from private_gpt.events.models import ContentBlockType
 from private_gpt.observability.chat import chat_turn_span, record_turn_result
+from private_gpt.observability.message import MessageFolder
 from private_gpt.observability.tracing import (
     TRACE_CONTEXT_KEY,
     inject_trace_context,
@@ -147,13 +151,16 @@ class ResumableChatRunner:
         if not await self._state.claim_action(execution_id, "start"):
             return
         channel = BrokerEventChannel(self._events, execution_id)
+        folder = MessageFolder()
         request = self._request(request_data)
         with chat_turn_span("chat.turn", request, execution_id) as span:
             try:
                 state = await engine.execute(
-                    request, hooks=_RESUME_HOOKS, channel=channel
+                    request,
+                    hooks=_RESUME_HOOKS,
+                    channel=RecordingEventChannel(channel, folder),
                 )
-                record_turn_result(span, state)
+                record_turn_result(span, state, folder)
                 await channel.close()
                 await self._handle_state(
                     execution_id=execution_id,
@@ -202,6 +209,7 @@ class ResumableChatRunner:
         channel: BrokerEventChannel,
         span: Any,
     ) -> None:
+        folder = MessageFolder()
         try:
             results = await self._state.get_results(execution_id)
             responses = self._ordered_results(saved, results)
@@ -230,9 +238,9 @@ class ResumableChatRunner:
                     runtime=self._runtime(saved),
                 ),
                 hooks=_RESUME_HOOKS,
-                channel=channel,
+                channel=RecordingEventChannel(channel, folder),
             )
-            record_turn_result(span, state)
+            record_turn_result(span, state, folder)
             await channel.close()
             await self._handle_state(
                 execution_id=execution_id,

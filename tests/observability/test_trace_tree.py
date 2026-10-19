@@ -125,15 +125,18 @@ class _ScriptedLLM(FunctionCallingLLM, ZylonLLM):
 
         async def gen() -> ChatResponseAsyncGen:
             text = ""
-            for delta in deltas:
+            for index, delta in enumerate(deltas):
                 if isinstance(delta, BaseException):
                     raise delta
                 tool_calls = [delta] if isinstance(delta, ToolSelection) else None
                 text += delta if isinstance(delta, str) else ""
+                extra: dict[str, Any] = {"tool_calls": tool_calls}
+                if index == len(deltas) - 1 and not tool_calls:
+                    extra["stop_reason"] = "end_turn"  # as real providers report
                 message = ChatMessage(
                     role=MessageRole.ASSISTANT,
                     content=text or None,
-                    additional_kwargs={"tool_calls": tool_calls},
+                    additional_kwargs=extra,
                 )
                 yield ChatResponse(
                     message=message,
@@ -293,6 +296,7 @@ async def _run_turn(
     injector: MockInjector,
     exporter: InMemorySpanExporter,
     llm: _ScriptedLLM,
+    **body_fields: Any,
 ) -> tuple[int, dict[str, ReadableSpan], list[ReadableSpan]]:
     collection = str(uuid.uuid4())
     await _create_skill(client, collection=collection, name="status-probe")
@@ -305,7 +309,8 @@ async def _run_turn(
         tools=_skill_tools(),
         tool_context=[SkillArtifact(skill_filter=SkillFilter(collection=collection))],
     )
-    response = await client.post("/v1/messages", json=body.model_dump())
+    payload = {**body.model_dump(), **body_fields}
+    response = await client.post("/v1/messages", json=payload)
     spans = list(exporter.get_finished_spans())
     by_name = {s.name: s for s in spans}
     turn = by_name["chat.turn"]
@@ -483,3 +488,284 @@ def test_cancellation_is_not_an_error(exporter: InMemorySpanExporter) -> None:
     (span,) = exporter.get_finished_spans()
     assert _status(span) == StatusCode.UNSET
     assert span.attributes["pgpt.cancelled"] is True
+
+
+# ---------------------------------------------------------------------------
+# Turn output and sessions
+# ---------------------------------------------------------------------------
+
+
+async def test_turn_output_is_answer_text_with_folded_message(
+    async_test_client: AsyncClient,
+    injector: MockInjector,
+    exporter: InMemorySpanExporter,
+) -> None:
+    import json
+
+    _, by_name, _ = await _run_turn(
+        async_test_client,
+        injector,
+        exporter,
+        _scripted([_list_skills_call()], ["The answer ", "is 42."]),
+    )
+
+    turn = by_name["chat.turn"]
+    # Session views render output.value as the assistant bubble.
+    assert turn.attributes["output.value"] == "The answer is 42."
+    assert turn.attributes["output.mime_type"] == "text/plain"
+    message = json.loads(turn.attributes["pgpt.output.message"])
+    assert message["role"] == "assistant"
+    assert message["stop_reason"] == "end_turn"
+    types = [block["type"] for block in message["content"]]
+    assert types[-1] == "text"
+    assert "server_tool_use" in types or "tool_use" in types
+    tool_use = next(b for b in message["content"] if b.get("name") == "list_skills")
+    assert tool_use["input"] == {"page": 0, "page_size": 20}
+    # Wire-only fields are left out.
+    assert not any("start_timestamp" in block for block in message["content"])
+    assert list(turn.attributes["pgpt.output.tool_calls"]) == ["list_skills"]
+
+
+async def test_session_is_container_and_user_is_caller_metadata(
+    async_test_client: AsyncClient,
+    injector: MockInjector,
+    exporter: InMemorySpanExporter,
+) -> None:
+    _, by_name, turn_trace = await _run_turn(
+        async_test_client,
+        injector,
+        exporter,
+        _scripted(["hi"]),
+        container="thread-123",
+        metadata={"user_id": "member-7"},
+    )
+
+    assert by_name["chat.turn"].attributes["session.id"] == "thread-123"
+    assert by_name["chat.turn"].attributes["user.id"] == "member-7"
+    # Every span of the turn carries the same session for grouping.
+    assert {s.attributes.get("session.id") for s in _ours(turn_trace)} == {"thread-123"}
+
+
+async def test_without_container_each_turn_is_its_own_session_and_no_user(
+    async_test_client: AsyncClient,
+    injector: MockInjector,
+    exporter: InMemorySpanExporter,
+) -> None:
+    _, first, _ = await _run_turn(
+        async_test_client, injector, exporter, _scripted(["one"])
+    )
+    _, second, _ = await _run_turn(
+        async_test_client, injector, exporter, _scripted(["two"])
+    )
+
+    a, b = first["chat.turn"], second["chat.turn"]
+    assert a.attributes["session.id"] != b.attributes["session.id"]
+    # The request mapper generates a uuid user_id when none is sent; it must
+    # not show up as a user.
+    assert "user.id" not in a.attributes
+    assert "user.id" not in b.attributes
+
+
+async def test_follow_up_turns_share_the_session(
+    async_test_client: AsyncClient,
+    injector: MockInjector,
+    exporter: InMemorySpanExporter,
+) -> None:
+    _, first, _ = await _run_turn(
+        async_test_client,
+        injector,
+        exporter,
+        _scripted(["first answer"]),
+        container="thread-9",
+    )
+    _, second, _ = await _run_turn(
+        async_test_client,
+        injector,
+        exporter,
+        _scripted(["second answer"]),
+        container="thread-9",
+        messages=[
+            {"role": "user", "content": "hello"},
+            {"role": "assistant", "content": "first answer"},
+            {"role": "user", "content": "and then?"},
+        ],
+    )
+
+    a, b = first["chat.turn"], second["chat.turn"]
+    assert a.attributes["session.id"] == b.attributes["session.id"] == "thread-9"
+    assert a.context.trace_id != b.context.trace_id
+    assert b.attributes["input.value"] == "and then?"
+    assert b.attributes["output.value"] == "second answer"
+
+
+# ---------------------------------------------------------------------------
+# Span plumbing
+# ---------------------------------------------------------------------------
+
+
+def test_dropped_span_children_are_reattached_to_its_parent() -> None:
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(
+        DropSpansProcessor(  # ty: ignore[invalid-argument-type]
+            patterns=["FunctionTool.acall"],
+            delegate=SimpleSpanProcessor(memory),
+        )
+    )
+    tracer = provider.get_tracer("t")
+    with (
+        tracer.start_as_current_span("tool x") as tool,
+        tracer.start_as_current_span("FunctionTool.acall"),
+        tracer.start_as_current_span("sandbox.exec"),
+    ):
+        pass
+
+    spans = {s.name: s for s in memory.get_finished_spans()}
+    assert set(spans) == {"tool x", "sandbox.exec"}
+    assert spans["sandbox.exec"].parent.span_id == tool.get_span_context().span_id
+
+
+async def test_traced_records_input_output_and_failure(
+    exporter: InMemorySpanExporter,
+) -> None:
+    from private_gpt.observability import traced
+
+    @traced("step.ok", capture=lambda x: {"x": x}, result=lambda r: {"double": r})
+    async def ok(x: int) -> int:
+        return x * 2
+
+    @traced("step.fail")
+    async def fail() -> None:
+        raise RuntimeError("nope")
+
+    assert await ok(21) == 42
+    with pytest.raises(RuntimeError):
+        await fail()
+
+    spans = {s.name: s for s in exporter.get_finished_spans()}
+    assert spans["step.ok"].attributes["input.value"] == '{"x": 21}'
+    assert spans["step.ok"].attributes["output.value"] == '{"double": 42}'
+    assert _status(spans["step.ok"]) == StatusCode.OK
+    assert _status(spans["step.fail"]) == StatusCode.ERROR
+
+
+async def test_traced_is_a_passthrough_when_tracing_is_off() -> None:
+    from private_gpt.observability import traced
+
+    calls = []
+
+    @traced("step", capture=lambda *_: calls.append("capture"))
+    async def work() -> str:
+        return "done"
+
+    assert await work() == "done"
+    assert calls == []
+
+
+# ---------------------------------------------------------------------------
+# Server tool internals
+# ---------------------------------------------------------------------------
+
+
+async def test_web_search_traces_provider_query_and_processing(
+    exporter: InMemorySpanExporter,
+) -> None:
+    from private_gpt.components.web.web_search.models import WebSearchResult
+    from private_gpt.components.web.web_search.web_search_service import (
+        WebSearchService,
+    )
+
+    hits = [WebSearchResult(title="Rust 1.99", url="https://rust.dev", description="d")]
+    service = WebSearchService.__new__(WebSearchService)
+    service._initialized = True
+    service._settings = Mock(web_search=Mock(num_links=3))
+    service._provider = Mock(make_query=_async(hits))
+    service._processor = Mock(process_results=_async(hits))
+    service.validate = _async(None)
+
+    assert await service.search("rust version") == hits
+
+    spans = {s.name.split(" ")[0]: s for s in exporter.get_finished_spans()}
+    query, process = spans["web_search.query"], spans["web_search.process"]
+    assert query.attributes["openinference.span.kind"] == "RETRIEVER"
+    assert query.attributes["input.value"] == "rust version"
+    assert query.attributes["retrieval.documents.0.document.id"] == "https://rust.dev"
+    assert query.attributes["pgpt.web_search.results"] == 1
+    assert "Rust 1.99" in process.attributes["output.value"]
+
+
+async def test_sandbox_operations_are_traced_and_failures_marked(
+    exporter: InMemorySpanExporter,
+) -> None:
+    from private_gpt.components.code_execution.results import BashExecutionResult
+    from private_gpt.components.code_execution.sandbox_session import (
+        SandboxCodeExecutionSession,
+    )
+
+    env = Mock(
+        id="s1",
+        workspace="/home/agent/",
+        exec=_async(
+            Mock(
+                success=True,
+                stdout="hello",
+                stderr="",
+                exit_code=0,
+                execution_time_ms=5,
+            )
+        ),
+        touch=Mock(),
+    )
+    env.sandbox = Mock(path_exists=_async(False))
+    session = SandboxCodeExecutionSession(env)
+
+    result = await session.execute_bash("echo hello")
+    assert isinstance(result, BashExecutionResult)
+    missing = await session.view("missing.txt")
+    assert not missing.success
+
+    spans = {s.name: s for s in exporter.get_finished_spans()}
+    exec_span = spans["sandbox.exec"]
+    assert '"command": "echo hello"' in exec_span.attributes["input.value"]
+    assert '"stdout": "hello"' in exec_span.attributes["output.value"]
+    assert _status(exec_span) == StatusCode.OK
+    view_span = spans["sandbox.view"]
+    assert _status(view_span) == StatusCode.ERROR
+    assert "File not found" in view_span.status.description
+
+
+async def test_file_tools_trace_one_span_per_path(
+    exporter: InMemorySpanExporter,
+) -> None:
+    from private_gpt.components.tools.builders.sandbox_file_tools import (
+        run_over_paths,
+    )
+
+    async def worker(path: str, _lock: Any) -> str:
+        if path == "bad.pdf":
+            raise ValueError("not a document")
+        return f"converted {path}"
+
+    await run_over_paths(
+        ["a.pdf", "bad.pdf"],
+        worker,
+        2,
+        gerund="converting",
+        past="converted",
+        noun="document",
+    )
+
+    spans = [
+        s for s in exporter.get_finished_spans() if s.name == "converting document"
+    ]
+    by_path = {s.attributes["pgpt.file.path"]: s for s in spans}
+    assert _status(by_path["a.pdf"]) == StatusCode.OK
+    assert by_path["a.pdf"].attributes["output.value"] == "converted a.pdf"
+    assert _status(by_path["bad.pdf"]) == StatusCode.ERROR
+
+
+def _async(value: Any) -> Any:
+    async def fn(*_: Any, **__: Any) -> Any:
+        return value
+
+    return fn

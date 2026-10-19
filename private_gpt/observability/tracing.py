@@ -9,14 +9,17 @@ them, so call sites never write two conventions.
 
 from __future__ import annotations
 
+import functools
 import json
 import logging
 from contextlib import contextmanager
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Callable, Iterator, Mapping, Sequence
+
+F = TypeVar("F", bound="Callable[..., Any]")
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +223,62 @@ def start_span(
             record_exception(exc, span)
             raise
         set_span_status(span)
+
+
+def retrieval_documents(documents: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """OpenInference ``retrieval.documents.N.document.*`` attributes.
+
+    Each document may carry ``id``, ``content``, ``score`` and ``metadata``;
+    backends render them as the RETRIEVER span's result list.
+    """
+    attributes: dict[str, Any] = {}
+    for index, document in enumerate(documents):
+        prefix = f"retrieval.documents.{index}.document"
+        for key in ("id", "content", "score"):
+            if document.get(key) is not None:
+                attributes[f"{prefix}.{key}"] = document[key]
+        if document.get("metadata"):
+            attributes[f"{prefix}.metadata"] = _serialize(document["metadata"])[0]
+    return attributes
+
+
+def traced(
+    name: str | None = None,
+    kind: SpanKind | str = SpanKind.CHAIN,
+    *,
+    capture: Callable[..., Any] | None = None,
+    result: Callable[[Any], Any] | None = None,
+) -> Callable[[F], F]:
+    """Decorate an async function so each call runs inside ``start_span``.
+
+    ``capture(*args, **kwargs)`` picks the span input (default: keyword
+    arguments, without ``self``); ``result(value)`` shapes the span output
+    (default: the returned value, serialized). Both run only when tracing is
+    enabled and never break the call.
+    """
+
+    def decorate(fn: F) -> F:
+        span_name = name or getattr(fn, "__qualname__", repr(fn))
+
+        @functools.wraps(fn)
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            if not is_enabled():
+                return await fn(*args, **kwargs)
+            try:
+                captured = capture(*args, **kwargs) if capture else kwargs or None
+            except Exception:
+                captured = None
+            with start_span(span_name, kind, input=captured) as span:
+                value = await fn(*args, **kwargs)
+                try:
+                    set_span_attributes(span, output=result(value) if result else value)
+                except Exception:
+                    logger.debug("Could not record output of %s", span_name)
+                return value
+
+        return cast("F", wrapper)
+
+    return decorate
 
 
 def _context_attributes() -> dict[str, Any]:

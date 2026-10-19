@@ -45,14 +45,22 @@ def unregister_llm_tools(span: Any) -> None:
 
 
 def _with_attributes(span: ReadableSpan, attributes: dict[str, Any]) -> ReadableSpan:
+    return _copy(span, attributes=attributes)
+
+
+def _with_parent(span: ReadableSpan, parent: Any) -> ReadableSpan:
+    return _copy(span, parent=parent)
+
+
+def _copy(span: ReadableSpan, **changes: Any) -> ReadableSpan:
     from opentelemetry.sdk.trace import ReadableSpan
 
     return ReadableSpan(
         name=span.name,
         context=span.context,
-        parent=span.parent,
+        parent=changes.get("parent", span.parent),
         resource=span.resource,
-        attributes=attributes,
+        attributes=changes.get("attributes", span.attributes),
         events=span.events,
         links=span.links,
         kind=span.kind,
@@ -111,11 +119,11 @@ class _Delegating:
 
 
 class DropSpansProcessor(_Delegating):
-    """Drop leaf spans whose name matches any fnmatch pattern.
+    """Drop spans whose name matches any fnmatch pattern.
 
-    Only safe for leaves: dropping a span with children would orphan them.
-    The defaults (``*.get_metadata``, ``*._prepare_chat_with_tools``) are
-    leaves emitted by llama-index auto-instrumentation.
+    Children of a dropped span are re-attached to the dropped span's parent,
+    so nothing is orphaned. Children end before their parent, so the mapping
+    is recorded when the dropped span starts.
     """
 
     def __init__(self, patterns: list[str], delegate: Any) -> None:
@@ -125,10 +133,34 @@ class DropSpansProcessor(_Delegating):
             if patterns
             else None
         )
+        self._lock = threading.Lock()
+        # dropped span id -> its parent context
+        self._reparent: dict[int, Any] = {}
+
+    def _dropped(self, name: str) -> bool:
+        return self._regex is not None and bool(self._regex.match(name))
+
+    def on_start(self, span: Span, parent_context: Context | None = None) -> None:
+        if self._dropped(span.name):
+            with self._lock:
+                self._reparent[span.context.span_id] = self._resolve(span.parent)
+            return
+        super().on_start(span, parent_context=parent_context)
+
+    def _resolve(self, parent: Any) -> Any:
+        while parent is not None and parent.span_id in self._reparent:
+            parent = self._reparent[parent.span_id]
+        return parent
 
     def on_end(self, span: ReadableSpan) -> None:
-        if self._regex is not None and self._regex.match(span.name):
+        if self._dropped(span.name):
+            with self._lock:
+                self._reparent.pop(span.context.span_id, None)
             return
+        if span.parent is not None and span.parent.span_id in self._reparent:
+            with self._lock:
+                parent = self._resolve(span.parent)
+            span = _with_parent(span, parent)
         self._delegate.on_end(span)
 
 

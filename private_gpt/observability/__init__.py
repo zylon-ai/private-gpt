@@ -15,10 +15,12 @@ from private_gpt.observability.tracing import (
     current_trace_id,
     inject_trace_context,
     record_exception,
+    retrieval_documents,
     set_span_attributes,
     set_span_status,
     start_span,
     trace_context_from,
+    traced,
     using_trace_attributes,
 )
 
@@ -27,9 +29,11 @@ __all__ = [
     "current_trace_id",
     "inject_trace_context",
     "record_exception",
+    "retrieval_documents",
     "set_span_attributes",
     "set_span_status",
     "start_span",
     "trace_context_from",
+    "traced",
     "using_trace_attributes",
 ]
