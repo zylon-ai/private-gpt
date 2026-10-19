@@ -115,38 +115,19 @@ def register_observability(mode: str, provider: ObservabilityProvider) -> None:
     _PROVIDERS[mode] = provider
 
 
-def _initialize_arize_phoenix(settings: "Settings") -> None:
-    try:
-        from openinference.instrumentation.llama_index import (  # ty:ignore[unresolved-import]
-            LlamaIndexInstrumentor,
-        )
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # ty:ignore[unresolved-import]
-            OTLPSpanExporter,
-        )
-        from opentelemetry.sdk import trace as trace_sdk  # ty:ignore[unresolved-import]
-        from opentelemetry.sdk.trace.export import (  # ty:ignore[unresolved-import]
-            SimpleSpanProcessor,
-        )
-    except ImportError as e:
-        raise ImportError(
-            format_missing_dependency_message(
-                "Arize Phoenix",
-                extras="observability-arize-phoenix",
-            )
-        ) from e
+def _initialize_otel(settings: "Settings") -> None:
+    """Vendor-neutral OpenTelemetry tracing (see ``private_gpt.observability``)."""
+    from private_gpt.observability.setup import configure_tracing
+    from private_gpt.settings.settings import ObservabilityExporterSettings
 
-    endpoint = f"{settings.phoenix.url}/v1/traces"
-    tracer_provider = trace_sdk.TracerProvider()
-    tracer_provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint)))
-
-    LlamaIndexInstrumentor().instrument(
-        tracer_provider=tracer_provider,
-        use_legacy_callback_handler=False,
-    )
-    logging.getLogger("openinference.instrumentation.llama_index._handler").setLevel(
-        logging.CRITICAL
-    )
-    logging.getLogger("opentelemetry.attributes").setLevel(logging.CRITICAL)
+    obs = settings.observability
+    if not obs.exporters and settings.phoenix.url:
+        # Backwards compatibility: `mode: arize_phoenix` + `phoenix.url` used
+        # to be the only configuration.
+        obs.exporters = [
+            ObservabilityExporterSettings(type="phoenix", endpoint=settings.phoenix.url)
+        ]
+    configure_tracing(settings)
 
 
 def _initialize_opik(settings: "Settings") -> None:
@@ -186,7 +167,8 @@ def _initialize_simple(settings: "Settings") -> None:
 
 _PROVIDERS.update(
     {
-        "arize_phoenix": _initialize_arize_phoenix,
+        "otel": _initialize_otel,
+        "arize_phoenix": _initialize_otel,
         "opik": _initialize_opik,
         "simple": _initialize_simple,
     }

@@ -38,6 +38,12 @@ from private_gpt.components.engines.chat.utils.request_builder import (
 from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
 from private_gpt.events.event_serializer import StreamingEventHandler
 from private_gpt.events.models import ContentBlockType
+from private_gpt.observability.chat import chat_turn_span, record_turn_result
+from private_gpt.observability.tracing import (
+    TRACE_CONTEXT_KEY,
+    inject_trace_context,
+    trace_context_from,
+)
 from private_gpt.settings.settings import Settings
 
 if TYPE_CHECKING:
@@ -141,22 +147,26 @@ class ResumableChatRunner:
         if not await self._state.claim_action(execution_id, "start"):
             return
         channel = BrokerEventChannel(self._events, execution_id)
-        try:
-            request = self._request(request_data)
-            state = await engine.execute(request, hooks=_RESUME_HOOKS, channel=channel)
-            await channel.close()
-            await self._handle_state(
-                execution_id=execution_id,
-                state=state,
-                stream_type=stream_type,
-                metadata=metadata,
-            )
-        except asyncio.CancelledError:
-            await self._cancel_pending_tools(execution_id)
-            raise
-        except Exception as exc:
-            await self._fail(execution_id, exc, channel)
-            raise
+        request = self._request(request_data)
+        with chat_turn_span("chat.turn", request, execution_id) as span:
+            try:
+                state = await engine.execute(
+                    request, hooks=_RESUME_HOOKS, channel=channel
+                )
+                record_turn_result(span, state)
+                await channel.close()
+                await self._handle_state(
+                    execution_id=execution_id,
+                    state=state,
+                    stream_type=stream_type,
+                    metadata=metadata,
+                )
+            except asyncio.CancelledError:
+                await self._cancel_pending_tools(execution_id)
+                raise
+            except Exception as exc:
+                await self._fail(execution_id, exc, channel)
+                raise
 
     async def resume(
         self,
@@ -171,6 +181,27 @@ class ResumableChatRunner:
         if not await self._state.claim_action(execution_id, f"resume:{checkpoint_id}"):
             return
         channel = BrokerEventChannel(self._events, execution_id)
+        with (
+            # Resume continues the original turn's trace (the turn span id was
+            # stored with the checkpoint), so a paused turn stays one tree.
+            trace_context_from(saved.metadata.get(TRACE_CONTEXT_KEY)),
+            chat_turn_span(
+                "chat.turn.resume",
+                self._request(saved.request_data),
+                execution_id,
+                attributes={"pgpt.checkpoint_id": checkpoint_id},
+            ) as span,
+        ):
+            await self._resume(engine, execution_id, saved, channel, span)
+
+    async def _resume(
+        self,
+        engine: AsyncChatEngine,
+        execution_id: str,
+        saved: ChatCheckpoint,
+        channel: BrokerEventChannel,
+        span: Any,
+    ) -> None:
         try:
             results = await self._state.get_results(execution_id)
             responses = self._ordered_results(saved, results)
@@ -201,6 +232,7 @@ class ResumableChatRunner:
                 hooks=_RESUME_HOOKS,
                 channel=channel,
             )
+            record_turn_result(span, state)
             await channel.close()
             await self._handle_state(
                 execution_id=execution_id,
@@ -258,7 +290,10 @@ class ResumableChatRunner:
                 runtime_data=self._dump_runtime(state),
                 runtime_cache_data=self._dump_runtime_cache(state),
                 stream_type=stream_type,
-                metadata=metadata,
+                metadata={
+                    **metadata,
+                    TRACE_CONTEXT_KEY: inject_trace_context(),
+                },
                 iteration=state.runtime.iteration,
                 checkpoint=state.output.pause_type,
                 checkpoint_payload=self._checkpoint_payload(state),

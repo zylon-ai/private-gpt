@@ -31,6 +31,8 @@ from private_gpt.global_handler import (
     request_validation_exception_adapter,
 )
 from private_gpt.initialize import initialize_globals, initialize_observability
+from private_gpt.observability.http import add_trace_response_headers
+from private_gpt.observability.instrumentations import instrument_fastapi_app
 from private_gpt.server.chat.chat_router import chat_router
 from private_gpt.server.chat_async.chat_async_router import (
     chat_router as chat_async_router,
@@ -190,9 +192,15 @@ def create_app(root_injector: Injector) -> FastAPI:
         ).set_current()
 
         try:
-            return await call_next(request)
+            response = await call_next(request)
         finally:
             reset_bag()
+        add_trace_response_headers(response)
+        return response
+
+    # Server spans wrap the middleware above, so the principal/bag are set
+    # inside the request span and every child span nests under it.
+    instrument_fastapi_app(app)
 
     app.include_router(chat_router)
     app.include_router(completion_router)

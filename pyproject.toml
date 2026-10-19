@@ -278,17 +278,38 @@ media = [
 # ---------------------------------------------------------------------------
 # Observability
 # ---------------------------------------------------------------------------
+# observability-otel: vendor-neutral OpenTelemetry tracing. Any OTLP backend
+# (Phoenix, Langfuse, LangSmith, Opik, Grafana Tempo, Datadog, ...) is an
+# exporter entry in ``observability.exporters``; no vendor SDK is required.
+observability-otel = [
+    "opentelemetry-api>=1.45.0,<2",
+    "opentelemetry-sdk>=1.45.0,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.0,<2",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.45.0,<2",
+    "opentelemetry-instrumentation-fastapi>=0.66b1",
+    "opentelemetry-instrumentation-httpx>=0.66b1",
+    "opentelemetry-instrumentation-threading>=0.66b1",
+    "opentelemetry-instrumentation-celery>=0.66b1",
+    "opentelemetry-instrumentation-logging>=0.66b1",
+    "opentelemetry-instrumentation-grpc>=0.66b1",
+    "opentelemetry-instrumentation-sqlalchemy>=0.66b1",
+    "opentelemetry-instrumentation-redis>=0.66b1",
+    "openinference-semantic-conventions>=0.1.41",
+    "openinference-instrumentation>=0.1.71",
+    "openinference-instrumentation-llama-index>=4.6.0,<5",
+    # openinference-instrumentation-llama-index 4.6 imports SpanCancelledEvent,
+    # added in llama-index-workflows 2.16 (it does not declare the floor itself).
+    "llama-index-workflows>=2.16.0,<3",
+]
+# Kept as an alias: Phoenix is now just an OTLP exporter preset.
 observability-arize-phoenix = [
-    "openinference-instrumentation-llama-index>=4.3.9,<5",
-    "opentelemetry-proto>=1.41.0,<2",
-    "opentelemetry-exporter-otlp>=1.41.0,<2",
-    "opentelemetry-sdk>=1.41.0,<2",
+    "private-gpt[observability-otel]",
 ]
 observability-opik = [
     "opik>=2.0.21,<3",
 ]
 observability = [
-    "private-gpt[observability-arize-phoenix,observability-opik]",
+    "private-gpt[observability-otel,observability-opik]",
 ]
 
 # ---------------------------------------------------------------------------

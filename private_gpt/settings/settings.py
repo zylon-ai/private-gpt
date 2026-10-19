@@ -1007,8 +1007,122 @@ class OpenAISettings(BaseModel):
     )
 
 
+class ObservabilityExporterSettings(BaseModel):
+    """One trace destination. Every vendor is reached over OTLP."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal[
+        "otlp",
+        "phoenix",
+        "arize",
+        "langfuse",
+        "langsmith",
+        "opik",
+        "grafana",
+        "datadog",
+        "honeycomb",
+        "console",
+    ] = Field(
+        default="otlp",
+        description=(
+            "Exporter preset. Presets only fill endpoint path, auth headers and "
+            "project resource attributes; `otlp` is the raw form for anything else "
+            "(Tempo, Jaeger, an OTel Collector, Grafana Alloy...)."
+        ),
+    )
+    enabled: bool = Field(default=True)
+    endpoint: str | None = Field(
+        default=None,
+        description=(
+            "Base URL or full traces URL. `/v1/traces` is appended for HTTP when "
+            "missing. Defaults per preset (Phoenix: http://localhost:6006)."
+        ),
+    )
+    protocol: Literal["http", "grpc"] = Field(default="http")
+    headers: dict[str, str] = Field(default_factory=dict, repr=False)
+    api_key: str | None = Field(
+        default=None,
+        repr=False,
+        description="Preset-specific credential (placed in the right header).",
+    )
+    project: str | None = Field(
+        default=None,
+        description="Project / workspace name for backends that group by project.",
+    )
+    options: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Preset extras, e.g. langfuse `public_key`/`secret_key`, opik "
+            "`workspace`, arize `space_id`, datadog `site`."
+        ),
+    )
+
+
 class ObservabilitySettings(BaseModel):
-    mode: Literal["simple", "arize_phoenix", "opik", "none"]
+    mode: Literal["simple", "arize_phoenix", "opik", "otel", "none"] = Field(
+        default="none",
+        description=(
+            "`otel` (and the legacy alias `arize_phoenix`) enables vendor-neutral "
+            "OpenTelemetry tracing sent to `exporters`. `opik` keeps the legacy "
+            "llama-index callback handler; prefer `otel` with an `opik` exporter."
+        ),
+    )
+    service_name: str | None = Field(
+        default=None,
+        description=(
+            "OTel service.name. Defaults to `<namespace>-<process role>` "
+            "(e.g. private-gpt-api, private-gpt-celery, private-gpt-arq)."
+        ),
+    )
+    service_namespace: str = Field(default="private-gpt")
+    environment: str | None = Field(
+        default=None, description="deployment.environment resource attribute."
+    )
+    resource_attributes: dict[str, str] = Field(default_factory=dict)
+    semconv: Literal["openinference", "genai", "both"] = Field(
+        default="openinference",
+        description=(
+            "Attribute conventions on LLM spans. `openinference` is understood by "
+            "Phoenix, Arize, Langfuse, LangSmith and Datadog; `genai` (gen_ai.*) "
+            "by Grafana, Opik and Honeycomb boards; `both` emits both."
+        ),
+    )
+    capture_content: bool = Field(
+        default=True,
+        description=(
+            "Record prompts, completions, tool arguments/results and retrieved "
+            "text. Disable to export only metadata (PII-sensitive deployments)."
+        ),
+    )
+    sampling_ratio: float = Field(default=1.0, ge=0.0, le=1.0)
+    instrumentations: list[str] | Literal["lean", "full", "none"] = Field(
+        default="lean",
+        description=(
+            "Library instrumentations to enable. `lean`: fastapi, httpx, "
+            "threading, celery, logging, llama_index, mcp. `full` adds grpc, "
+            "sqlalchemy, redis. Or an explicit list of those names."
+        ),
+    )
+    drop_spans: list[str] = Field(
+        default_factory=lambda: [
+            "*.get_metadata",
+            "*._prepare_chat_with_tools",
+        ],
+        description=(
+            "fnmatch patterns of leaf span names that are dropped before export "
+            "(pure noise from llama-index auto-instrumentation)."
+        ),
+    )
+    excluded_urls: list[str] = Field(
+        default_factory=lambda: ["/health", "/metrics"],
+        description="HTTP routes never traced.",
+    )
+    trace_response_header: bool = Field(
+        default=True,
+        description="Return `X-Trace-Id` and W3C `traceresponse` on HTTP responses.",
+    )
+    exporters: list[ObservabilityExporterSettings] = Field(default_factory=list)
 
 
 class QdrantSettings(BaseModel):
