@@ -2069,8 +2069,12 @@ class CodeExecutionSettings(BaseModel):
         description="Default code execution timeout in seconds.",
     )
     max_output_bytes: int = Field(
-        default=1_048_576,
-        description="Maximum output size to return from code execution tools.",
+        default=40_000,
+        description=(
+            "Maximum size in UTF-8 bytes returned to the model per output stream "
+            "(bash stdout and stderr each, text_editor view), after cleaning. "
+            "About 10k tokens; bash keeps head and tail, view keeps the head."
+        ),
     )
     output_cleaning: OutputCleaningSettings = Field(
         default_factory=lambda: OutputCleaningSettings(),
