@@ -1008,72 +1008,44 @@ class OpenAISettings(BaseModel):
 
 
 class ObservabilityExporterSettings(BaseModel):
-    """One trace destination. Every vendor is reached over OTLP."""
+    """One trace destination.
+
+    Built in: ``jsonl`` (OTLP JSON lines to a file, one export batch per line,
+    readable by the OpenTelemetry Collector file receiver) and ``console``.
+    Other types (OTLP backends, vendor presets) are added by
+    ``private_gpt.observability.exporters.register_exporter``; their own
+    fields go in ``options``.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    type: Literal[
-        "otlp",
-        "phoenix",
-        "arize",
-        "langfuse",
-        "langsmith",
-        "opik",
-        "grafana",
-        "datadog",
-        "honeycomb",
-        "console",
-    ] = Field(
-        default="otlp",
-        description=(
-            "Exporter preset. Presets only fill endpoint path, auth headers and "
-            "project resource attributes; `otlp` is the raw form for anything else "
-            "(Tempo, Jaeger, an OTel Collector, Grafana Alloy...)."
-        ),
+    type: str = Field(
+        default="jsonl",
+        description="Exporter type: `jsonl`, `console` or a registered one.",
     )
     enabled: bool = Field(default=True)
-    endpoint: str | None = Field(
-        default=None,
-        description=(
-            "Base URL or full traces URL. `/v1/traces` is appended for HTTP when "
-            "missing. Defaults per preset (Phoenix: http://localhost:6006)."
-        ),
+    path: str = Field(
+        default="local_data/traces/traces.jsonl",
+        description="`jsonl`: file to append to; rotated by size.",
     )
-    protocol: Literal["http", "grpc"] = Field(default="http")
-    headers: dict[str, str] = Field(default_factory=dict, repr=False)
-    api_key: str | None = Field(
-        default=None,
-        repr=False,
-        description="Preset-specific credential (placed in the right header).",
+    max_bytes: int = Field(
+        default=50 * 1024 * 1024,
+        description="`jsonl`: rotate when the file reaches this size.",
     )
-    project: str | None = Field(
-        default=None,
-        description="Project / workspace name for backends that group by project.",
-    )
-    options: dict[str, str] = Field(
-        default_factory=dict,
-        description=(
-            "Preset extras, e.g. langfuse `public_key`/`secret_key`, opik "
-            "`workspace`, arize `space_id`, datadog `site`."
-        ),
-    )
-    turn_root: bool | None = Field(
-        default=None,
-        description=(
-            "On chat routes (/v1/messages, /v1/messages/async) copy the turn's "
-            "final message, session and user onto the HTTP root span, and hold "
-            "an async POST until its turn ends, so session views group and "
-            "show turns. Defaults to true for LLM backends."
-        ),
+    backup_count: int = Field(
+        default=5, description="`jsonl`: rotated files kept (`traces.jsonl.1`...)."
     )
     tags: list[str] | None = Field(
         default=None,
         description=(
             "Trace tags (see `observability.trace_tags`) this exporter receives; "
-            "`all` sends every span. Defaults to `[ai]` for LLM backends "
-            "(phoenix, arize, langfuse, langsmith, opik, datadog) and `[all]` "
-            "for the rest (otlp, grafana, honeycomb, console)."
+            "`all` sends every span. Default: `all`, or what the exporter type "
+            "declares."
         ),
+    )
+    options: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Settings of registered exporter types (endpoint, keys...).",
     )
 
 

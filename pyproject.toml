@@ -284,8 +284,9 @@ media = [
 observability-otel = [
     "opentelemetry-api>=1.45.0,<2",
     "opentelemetry-sdk>=1.45.0,<2",
-    "opentelemetry-exporter-otlp-proto-http>=1.45.0,<2",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.45.0,<2",
+    # OTLP JSON encoding for the `jsonl` exporter; network exporters (OTLP
+    # HTTP/gRPC, vendor presets) are registered by the application.
+    "opentelemetry-exporter-otlp-proto-common>=1.45.0,<2",
     "opentelemetry-instrumentation-fastapi>=0.66b1",
     "opentelemetry-instrumentation-httpx>=0.66b1",
     "opentelemetry-instrumentation-threading>=0.66b1",

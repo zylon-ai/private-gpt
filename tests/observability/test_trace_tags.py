@@ -144,11 +144,16 @@ def test_kind_rules_and_dropped_spans_keep_counts_balanced() -> None:
 
 
 def test_exporter_default_tags() -> None:
-    assert exporter_tags(ObservabilityExporterSettings(type="phoenix")) == ["ai"]
-    assert exporter_tags(ObservabilityExporterSettings(type="opik")) == ["ai"]
-    assert exporter_tags(ObservabilityExporterSettings(type="otlp")) == ["all"]
+    from private_gpt.observability.exporters import ExporterSpec
+
+    spec = ExporterSpec(exporter=None)
+    llm_spec = ExporterSpec(exporter=None, default_tags=["ai"])
+    jsonl = ObservabilityExporterSettings(type="jsonl")
+    assert exporter_tags(jsonl, spec) == ["all"]
+    assert exporter_tags(jsonl, llm_spec) == ["ai"]
     assert exporter_tags(
-        ObservabilityExporterSettings(type="phoenix", tags=["ai", "ingestion"])
+        ObservabilityExporterSettings(type="jsonl", tags=["ai", "ingestion"]),
+        llm_spec,
     ) == ["ai", "ingestion"]
 
 

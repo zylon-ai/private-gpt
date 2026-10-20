@@ -1,6 +1,6 @@
 ---
 title: "Observability"
-description: "Trace requests, LLM calls, tools and ingestion with OpenTelemetry, and send them to Phoenix, Langfuse, Opik, Jaeger or any OTLP backend."
+description: "Trace requests, LLM calls, tools and ingestion with OpenTelemetry, written as OTLP JSON lines."
 ---
 
 PrivateGPT emits OpenTelemetry traces for every API request, chat turn, LLM call, tool, sandbox operation, retrieval step and ingestion task (API and workers). Traces go to one or more **exporters**.
@@ -17,44 +17,43 @@ PrivateGPT emits OpenTelemetry traces for every API request, chat turn, LLM call
 observability:
   mode: otel          # none (default) | otel
   exporters:
-    - type: phoenix
-      endpoint: http://localhost:6006
+    - type: jsonl
+      path: local_data/traces/traces.jsonl
 ```
 
 ---
 
 ## Exporters
 
-Each exporter is one trace destination. `type` picks a preset that fills the endpoint path, authentication headers and project attributes; `otlp` is the raw form for anything else (Jaeger, Grafana Tempo, an OpenTelemetry Collector...).
+| Type | Writes |
+|---|---|
+| `jsonl` | OTLP JSON lines to `path`, one export batch per line, rotated at `max_bytes` (default 50 MB) keeping `backup_count` files (default 5) |
+| `console` | Spans to stdout |
 
-| Type | Default endpoint | Credentials |
-|---|---|---|
-| `phoenix` | `http://localhost:6006` | `api_key` (optional), `project` |
-| `arize` | `https://otlp.arize.com` | `api_key`, `options.space_id`, `project` |
-| `langfuse` | `https://cloud.langfuse.com` | `options.public_key`, `options.secret_key` |
-| `langsmith` | `https://api.smith.langchain.com` | `api_key`, `project` |
-| `opik` | `https://www.comet.com/opik/api` | `api_key`, `options.workspace`, `project` |
-| `datadog` | `https://otlp.datadoghq.com` | `api_key`, `options.site` |
-| `grafana` | `http://localhost:4318` | `api_key`, `options.instance_id` |
-| `honeycomb` | `https://api.honeycomb.io` | `api_key`, `options.dataset` |
-| `otlp` | `http://localhost:4318` | `headers` |
-| `console` | stdout | — |
+Other fields: `enabled`, `tags`. Applications built on PrivateGPT can register more types with `private_gpt.observability.exporters.register_exporter`; their settings go in `options`.
 
-Other fields: `enabled`, `protocol` (`http` or `grpc`), `headers`, `tags`, `turn_root`.
+### Sending the file to a backend
+
+The `jsonl` file is the format of the OpenTelemetry Collector's file exporter, so the Collector `otlpjsonfile` receiver replays it into any OTLP backend (Jaeger, Grafana Tempo, Phoenix, Langfuse...):
 
 ```yaml
-observability:
-  mode: otel
-  exporters:
-    - type: phoenix
-      endpoint: http://localhost:6006
-      tags: [ai, ingestion]
-    - type: langfuse
-      options:
-        public_key: pk-lf-...
-        secret_key: sk-lf-...
-    - type: otlp
-      endpoint: http://localhost:4318   # e.g. Jaeger
+receivers:
+  otlpjsonfile:
+    include: [/var/lib/private-gpt/traces/traces.jsonl*]
+exporters:
+  otlphttp:
+    endpoint: http://jaeger:4318
+service:
+  pipelines:
+    traces:
+      receivers: [otlpjsonfile]
+      exporters: [otlphttp]
+```
+
+It also reads well with `jq`, e.g. the span names of each batch:
+
+```bash
+jq -c '[.resourceSpans[].scopeSpans[].spans[].name]' local_data/traces/traces.jsonl
 ```
 
 ### From environment variables
@@ -63,15 +62,11 @@ Like models, exporters can be declared from the environment, one id per destinat
 
 ```bash
 PGPT_OBSERVABILITY=otel
-PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_ENDPOINT=http://phoenix:6006
-PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_TAGS=ai,ingestion
-PGPT_OBSERVABILITY_EXPORTERS_JAEGER_TYPE=otlp
-PGPT_OBSERVABILITY_EXPORTERS_JAEGER_ENDPOINT=http://jaeger:4318
-PGPT_OBSERVABILITY_EXPORTERS_LANGFUSE_OPTIONS__PUBLIC_KEY=pk-lf-...
-PGPT_OBSERVABILITY_EXPORTERS_LANGFUSE_OPTIONS__SECRET_KEY=sk-lf-...
+PGPT_OBSERVABILITY_EXPORTERS_JSONL_PATH=/var/lib/private-gpt/traces/traces.jsonl
+PGPT_OBSERVABILITY_EXPORTERS_JSONL_TAGS=ai,ingestion
 ```
 
-`PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>]`: `type` defaults to the id when it names a preset; `__` reaches nested fields; `TAGS` is comma separated.
+`PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>]`: `type` defaults to the id; `__` reaches nested fields (`OPTIONS__ENDPOINT`); `TAGS` is comma separated.
 
 ---
 
@@ -84,7 +79,7 @@ Traces are tagged by what they are (`observability.trace_tags`):
 | `ai` | Chat turns (`/v1/messages`, async included), `/v1/complete`, `/v1/tools/*`, search primitives, embeddings, token counting, and the worker side of those |
 | `ingestion` | Ingestion, deletion and conversion (API and Celery tasks) |
 
-LLM backends (`phoenix`, `arize`, `langfuse`, `langsmith`, `opik`, `datadog`) receive only `ai` traces by default; the rest receive everything. Set `tags` per exporter to change it (`all` for every trace, including health checks and status polling).
+Exporters receive every trace by default (`all`, including health checks and status polling); set `tags` per exporter to keep only some, e.g. `tags: [ai]`.
 
 ---
 

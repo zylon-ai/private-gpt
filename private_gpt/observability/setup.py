@@ -99,8 +99,7 @@ def configure_tracing(settings: Settings, *, role: str | None = None) -> bool:
     if obs.environment:
         resource_attributes["deployment.environment.name"] = obs.environment
 
-    exporter_processors, project_attributes = build_span_processors(obs.exporters)
-    resource_attributes.update(project_attributes)
+    exporter_processors = build_span_processors(obs.exporters)
     if not exporter_processors:
         logger.warning(
             "Tracing is on but no exporter is configured; spans are kept "

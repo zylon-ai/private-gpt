@@ -65,32 +65,19 @@ observability:
   # Record prompts, messages and tool payloads on spans.
   capture_content: ${PGPT_OBSERVABILITY_CAPTURE_CONTENT:true}
   sampling_ratio: ${PGPT_OBSERVABILITY_SAMPLING_RATIO:1.0}
-  # Exporters (trace destinations). Like `models`, each one can be declared
-  # here or from the environment, one id per destination:
+  # Exporters (trace destinations). Built in: `jsonl` (OTLP JSON lines to a
+  # rotating file; replay it into any backend with the OpenTelemetry Collector
+  # `otlpjsonfile` receiver) and `console`. Applications can register more.
+  # Like `models`, each one can also come from the environment, one id per
+  # destination, appended to this list:
   #   PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>]=value
   # e.g.
-  #   PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_ENDPOINT=http://phoenix:6006
-  #   PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_TAGS=ai,ingestion
-  #   PGPT_OBSERVABILITY_EXPORTERS_JAEGER_TYPE=otlp
-  #   PGPT_OBSERVABILITY_EXPORTERS_JAEGER_ENDPOINT=http://jaeger:4318
-  #   PGPT_OBSERVABILITY_EXPORTERS_LANGFUSE_OPTIONS__PUBLIC_KEY=pk-lf-...
-  # `type` defaults to the id when it names a preset (phoenix, arize,
-  # langfuse, langsmith, opik, grafana, datadog, honeycomb, console); use
-  # `otlp` for anything else (Jaeger, Tempo, an OTel Collector...).
-  # LLM backends receive only `ai` traces by default; `tags: [all]` for
-  # everything. Environment exporters are appended to this list.
-  exporters: []
-  #  - type: phoenix
-  #    endpoint: http://localhost:6006
-  #    project: private-gpt
-  #    tags: [ai, ingestion]
-  #  - type: langfuse
-  #    endpoint: https://cloud.langfuse.com
-  #    options:
-  #      public_key: pk-lf-...
-  #      secret_key: sk-lf-...
-  #  - type: otlp
-  #    endpoint: http://localhost:4318
+  #   PGPT_OBSERVABILITY_EXPORTERS_JSONL_PATH=local_data/traces/traces.jsonl
+  #   PGPT_OBSERVABILITY_EXPORTERS_JSONL_TAGS=ai
+  # `type` defaults to the id when it names an exporter type.
+  exporters:
+    - type: jsonl
+      path: ${PGPT_OBSERVABILITY_JSONL_PATH:local_data/traces/traces.jsonl}
 
 retrieval:
   top_k: ${PGPT_RETRIEVAL_TOP_K:32}

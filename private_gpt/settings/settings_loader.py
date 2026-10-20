@@ -163,15 +163,14 @@ def discover_exporters_from_environment(
     ``PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>]``.
 
     Examples:
-        PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_TYPE=phoenix
-        PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_ENDPOINT=http://phoenix:6006
-        PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_TAGS=ai,ingestion
+        PGPT_OBSERVABILITY_EXPORTERS_JSONL_PATH=/var/log/pgpt/traces.jsonl
+        PGPT_OBSERVABILITY_EXPORTERS_JSONL_TAGS=ai,ingestion
         PGPT_OBSERVABILITY_EXPORTERS_JAEGER_TYPE=otlp
-        PGPT_OBSERVABILITY_EXPORTERS_JAEGER_ENDPOINT=http://jaeger:4318
-        PGPT_OBSERVABILITY_EXPORTERS_LANGFUSE_OPTIONS__PUBLIC_KEY=pk-...
+        PGPT_OBSERVABILITY_EXPORTERS_JAEGER_OPTIONS__ENDPOINT=http://jaeger:4318
 
     The id only groups the variables (and orders the exporters); ``type``
-    defaults to the id when it names a preset (``phoenix``, ``langfuse``...).
+    defaults to the id, so an id that names an exporter type needs no
+    ``TYPE``.
     """
     prefix = "PGPT_OBSERVABILITY_EXPORTERS_"
     exporters: dict[str, dict[str, Any]] = {}

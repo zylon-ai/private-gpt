@@ -105,24 +105,17 @@ def test_discover_exporters_from_environment() -> None:
 
     exporters = discover_exporters_from_environment(
         {
-            "PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_ENDPOINT": "http://phoenix:6006",
-            "PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_TAGS": "ai, ingestion",
+            "PGPT_OBSERVABILITY_EXPORTERS_JSONL_PATH": "/tmp/t.jsonl",
+            "PGPT_OBSERVABILITY_EXPORTERS_JSONL_TAGS": "ai, ingestion",
             "PGPT_OBSERVABILITY_EXPORTERS_JAEGER_TYPE": "otlp",
-            "PGPT_OBSERVABILITY_EXPORTERS_JAEGER_ENDPOINT": "http://jaeger:4318",
-            "PGPT_OBSERVABILITY_EXPORTERS_LANGFUSE_OPTIONS__PUBLIC_KEY": "pk",
-            "PGPT_OBSERVABILITY_EXPORTERS_LANGFUSE_OPTIONS__SECRET_KEY": "sk",
+            "PGPT_OBSERVABILITY_EXPORTERS_JAEGER_OPTIONS__ENDPOINT": "http://j:4318",
             "PGPT_OBSERVABILITY_ENVIRONMENT": "prod",  # not an exporter
         }
     )
 
     assert exporters == [
-        {"type": "otlp", "endpoint": "http://jaeger:4318"},
-        {"type": "langfuse", "options": {"public_key": "pk", "secret_key": "sk"}},
-        {
-            "type": "phoenix",
-            "endpoint": "http://phoenix:6006",
-            "tags": ["ai", "ingestion"],
-        },
+        {"type": "otlp", "options": {"endpoint": "http://j:4318"}},
+        {"type": "jsonl", "path": "/tmp/t.jsonl", "tags": ["ai", "ingestion"]},
     ]
     # Valid settings as they come from the environment.
     for exporter in exporters:
