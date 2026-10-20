@@ -1060,11 +1060,10 @@ class ObservabilityExporterSettings(BaseModel):
     turn_root: bool | None = Field(
         default=None,
         description=(
-            "Export the `chat.turn` span as the trace root (skipping the HTTP "
-            "span of /v1/messages and /v1/messages/async unless it failed "
-            "before a turn started), so session views show the user message and "
-            "the answer instead of request bodies or the async acknowledgement. "
-            "Defaults to true for LLM backends."
+            "On chat routes (/v1/messages, /v1/messages/async) copy the turn's "
+            "final message, session and user onto the HTTP root span, and hold "
+            "an async POST until its turn ends, so session views group and "
+            "show turns. Defaults to true for LLM backends."
         ),
     )
     tags: list[str] | None = Field(
@@ -1079,13 +1078,9 @@ class ObservabilityExporterSettings(BaseModel):
 
 
 class ObservabilitySettings(BaseModel):
-    mode: Literal["simple", "arize_phoenix", "opik", "otel", "none"] = Field(
+    mode: Literal["otel", "none"] = Field(
         default="none",
-        description=(
-            "`otel` (and the legacy alias `arize_phoenix`) enables vendor-neutral "
-            "OpenTelemetry tracing sent to `exporters`. `opik` keeps the legacy "
-            "llama-index callback handler; prefer `otel` with an `opik` exporter."
-        ),
+        description="`otel` sends OpenTelemetry traces to `exporters`.",
     )
     service_name: str | None = Field(
         default=None,
@@ -1757,20 +1752,6 @@ class S3Settings(BaseModel):
         default=120.0,
         gt=0,
         description="Seconds to wait for data on an open S3 connection.",
-    )
-
-
-class ArizePhoenixSettings(BaseModel):
-    url: str = Field(description="Arize Phoenix host")
-
-
-class OpikSettings(BaseModel):
-    workspace: str = Field(description="Opik workspace")
-    project_name: str = Field(description="Opik project name")
-    host: str | None = Field(description="Opik host", default="http://localhost:5173/")
-    api_key: str | None = Field(description="Opik API key", repr=False)
-    task_threads: int = Field(
-        default=4, description="Number of threads to use for Opik tasks."
     )
 
 
@@ -2513,8 +2494,6 @@ class Settings(BaseModel):
     cache: CacheSettings = Field(default_factory=CacheSettings)
     tasks_results_broker: TasksResultsBroker
     s3: S3Settings
-    phoenix: ArizePhoenixSettings
-    opik: OpikSettings
     principal: PrincipalSettings
     sandbox: SandboxSettings
     bash: BashSettings

@@ -1,66 +1,111 @@
 ---
 title: "Observability"
-description: "Trace LLM calls and monitor performance with Arize Phoenix or Opik."
+description: "Trace requests, LLM calls, tools and ingestion with OpenTelemetry, and send them to Phoenix, Langfuse, Opik, Jaeger or any OTLP backend."
 ---
 
-PrivateGPT can emit traces for every LLM call, embedding request, and retrieval step. Set `observability.mode` in `settings.yaml` or in a profile such as `settings-local.yaml` to choose a backend.
+PrivateGPT emits OpenTelemetry traces for every API request, chat turn, LLM call, tool, sandbox operation, retrieval step and ingestion task (API and workers). Traces go to one or more **exporters**.
 
 <Warning>
-  This feature requires to have the `observability` extra enabled in your application. If you are adding storage to an existing application, make sure to run the sync command after enabling the module:
+  This feature requires the `observability` extra. If you are adding it to an existing application, run the sync command after enabling the module:
 
   ```bash
   uv sync --inexact observability
   ```
 </Warning>
 
-| Mode | Description |
+```yaml
+observability:
+  mode: otel          # none (default) | otel
+  exporters:
+    - type: phoenix
+      endpoint: http://localhost:6006
+```
+
+---
+
+## Exporters
+
+Each exporter is one trace destination. `type` picks a preset that fills the endpoint path, authentication headers and project attributes; `otlp` is the raw form for anything else (Jaeger, Grafana Tempo, an OpenTelemetry Collector...).
+
+| Type | Default endpoint | Credentials |
+|---|---|---|
+| `phoenix` | `http://localhost:6006` | `api_key` (optional), `project` |
+| `arize` | `https://otlp.arize.com` | `api_key`, `options.space_id`, `project` |
+| `langfuse` | `https://cloud.langfuse.com` | `options.public_key`, `options.secret_key` |
+| `langsmith` | `https://api.smith.langchain.com` | `api_key`, `project` |
+| `opik` | `https://www.comet.com/opik/api` | `api_key`, `options.workspace`, `project` |
+| `datadog` | `https://otlp.datadoghq.com` | `api_key`, `options.site` |
+| `grafana` | `http://localhost:4318` | `api_key`, `options.instance_id` |
+| `honeycomb` | `https://api.honeycomb.io` | `api_key`, `options.dataset` |
+| `otlp` | `http://localhost:4318` | `headers` |
+| `console` | stdout | — |
+
+Other fields: `enabled`, `protocol` (`http` or `grpc`), `headers`, `tags`, `turn_root`.
+
+```yaml
+observability:
+  mode: otel
+  exporters:
+    - type: phoenix
+      endpoint: http://localhost:6006
+      tags: [ai, ingestion]
+    - type: langfuse
+      options:
+        public_key: pk-lf-...
+        secret_key: sk-lf-...
+    - type: otlp
+      endpoint: http://localhost:4318   # e.g. Jaeger
+```
+
+### From environment variables
+
+Like models, exporters can be declared from the environment, one id per destination. They are appended to the ones in the settings files:
+
+```bash
+PGPT_OBSERVABILITY=otel
+PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_ENDPOINT=http://phoenix:6006
+PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_TAGS=ai,ingestion
+PGPT_OBSERVABILITY_EXPORTERS_JAEGER_TYPE=otlp
+PGPT_OBSERVABILITY_EXPORTERS_JAEGER_ENDPOINT=http://jaeger:4318
+PGPT_OBSERVABILITY_EXPORTERS_LANGFUSE_OPTIONS__PUBLIC_KEY=pk-lf-...
+PGPT_OBSERVABILITY_EXPORTERS_LANGFUSE_OPTIONS__SECRET_KEY=sk-lf-...
+```
+
+`PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>]`: `type` defaults to the id when it names a preset; `__` reaches nested fields; `TAGS` is comma separated.
+
+---
+
+## Which traces each exporter gets
+
+Traces are tagged by what they are (`observability.trace_tags`):
+
+| Tag | Traces |
 |---|---|
-| `none` | No tracing (default) |
-| `simple` | Console logs via LlamaIndex's built-in handler |
-| `arize_phoenix` | Send OpenTelemetry traces to [Arize Phoenix](https://phoenix.arize.com) |
-| `opik` | Send traces to [Opik](https://www.comet.com/site/products/opik/) |
+| `ai` | Chat turns (`/v1/messages`, async included), `/v1/complete`, `/v1/tools/*`, search primitives, embeddings, token counting, and the worker side of those |
+| `ingestion` | Ingestion, deletion and conversion (API and Celery tasks) |
 
-```yaml
-observability:
-  mode: arize_phoenix   # none | simple | arize_phoenix | opik
-```
+LLM backends (`phoenix`, `arize`, `langfuse`, `langsmith`, `opik`, `datadog`) receive only `ai` traces by default; the rest receive everything. Set `tags` per exporter to change it (`all` for every trace, including health checks and status polling).
 
 ---
 
-## Arize Phoenix
+## What a trace shows
 
-[Arize Phoenix](https://phoenix.arize.com) is an open-source observability platform for LLM applications. It visualises traces, spans, token counts, latency, and retrieval quality.
+* **HTTP span** (root): the JSON request and the final message as JSON (also for streaming and async responses), session and user.
+* **`chat.turn`**: the user input (text, images, documents) and the answer.
+* **`chat.iteration N`**: the conversation state the iteration starts from and the one it leaves (messages with reasoning, tool calls and results, tools, LLM parameters, tokens), and the interceptors that changed it.
+* **LLM spans**: input and output messages (reasoning, tool calls), the sampling parameters actually sent, token counts, time until the stream is drained.
+* **Tool and sandbox spans**: arguments, results, commands and file contents; retrieval steps with the nodes they return.
 
-For installation instructions see the [Phoenix docs](https://docs.arize.com/phoenix/deployment).
-
-Put this in your settings file or in a profile such as `settings-local.yaml`. If you need to create a new settings file or profile first, see [Settings Files](/configuration/settings).
-
-```yaml
-observability:
-  mode: arize_phoenix
-
-phoenix:
-  url: http://localhost:6006
-```
-
-Traces are sent to `<phoenix.url>/v1/traces` via OpenTelemetry OTLP over HTTP.
+Sessions group by the request's `container` (one conversation); users by `metadata.user_id`.
 
 ---
 
-## Opik
+## Other settings
 
-[Opik](https://www.comet.com/site/products/opik/) is an LLM observability platform by Comet. It can run fully self-hosted.
+| Setting | Env | Default | |
+|---|---|---|---|
+| `environment` | `PGPT_OBSERVABILITY_ENVIRONMENT` | — | `deployment.environment.name` |
+| `capture_content` | `PGPT_OBSERVABILITY_CAPTURE_CONTENT` | `true` | Record prompts, messages and payloads; `false` keeps structure and timings only |
+| `sampling_ratio` | `PGPT_OBSERVABILITY_SAMPLING_RATIO` | `1.0` | Fraction of traces kept |
 
-For installation instructions see the [Opik docs](https://www.comet.com/docs/opik/self-host/overview).
-
-Put this in your settings file or in a profile such as `settings-local.yaml`. If you need to create a new settings file or profile first, see [Settings Files](/configuration/settings).
-
-```yaml
-observability:
-  mode: opik
-
-opik:
-  host: http://localhost:5173/
-  workspace: default
-  project_name: private-gpt
-```
+Export runs in the background: a slow or unreachable backend never delays requests (spans are dropped when its queue is full).

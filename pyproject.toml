@@ -301,15 +301,8 @@ observability-otel = [
     # added in llama-index-workflows 2.16 (it does not declare the floor itself).
     "llama-index-workflows>=2.16.0,<3",
 ]
-# Kept as an alias: Phoenix is now just an OTLP exporter preset.
-observability-arize-phoenix = [
-    "private-gpt[observability-otel]",
-]
-observability-opik = [
-    "opik>=2.0.21,<3",
-]
 observability = [
-    "private-gpt[observability-otel,observability-opik]",
+    "private-gpt[observability-otel]",
 ]
 
 # ---------------------------------------------------------------------------

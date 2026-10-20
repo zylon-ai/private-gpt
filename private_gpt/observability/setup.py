@@ -103,9 +103,8 @@ def configure_tracing(settings: Settings, *, role: str | None = None) -> bool:
     resource_attributes.update(project_attributes)
     if not exporter_processors:
         logger.warning(
-            "observability.mode=%s but no exporter is configured; spans are kept "
-            "in-process only (useful for propagation and log correlation).",
-            obs.mode,
+            "Tracing is on but no exporter is configured; spans are kept "
+            "in-process only (useful for propagation and log correlation)."
         )
 
     provider = TracerProvider(
