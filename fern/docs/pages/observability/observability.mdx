@@ -68,6 +68,8 @@ PGPT_OBSERVABILITY_EXPORTERS_JSONL_TAGS=ai,ingestion
 
 `PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>]`: `type` defaults to the id; `__` reaches nested fields (`OPTIONS__ENDPOINT`); `TAGS` is comma separated.
 
+The default `jsonl` exporter from `settings.yaml` can be turned off with `PGPT_OBSERVABILITY_JSONL_ENABLED=false`, e.g. in containers that only send traces to a network backend.
+
 ---
 
 ## Which traces each exporter gets

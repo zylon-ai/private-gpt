@@ -66,6 +66,7 @@ observability:
   # More from PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>], like models.
   exporters:
     - type: jsonl
+      enabled: ${PGPT_OBSERVABILITY_JSONL_ENABLED:true}
       path: ${PGPT_OBSERVABILITY_JSONL_PATH:local_data/traces/traces.jsonl}
 
 retrieval:
