@@ -211,3 +211,31 @@ def test_celery_spans_get_kind_and_status() -> None:
     assert spans["run/ok"].attributes["openinference.span.kind"] == "CHAIN"
     assert spans["plain"].status.is_unset
     assert spans["plain"].attributes == {}
+
+
+def test_a_request_observing_its_own_turn_does_not_link_to_itself() -> None:
+    from opentelemetry import trace
+
+    from private_gpt.observability import setup
+    from private_gpt.observability.tracing import link_current_span, trace_reference
+
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(memory))
+    trace._TRACER_PROVIDER = provider  # type: ignore[attr-defined]
+    setup._configured = True
+    setup._settings = ObservabilitySettings(mode="otel")
+    try:
+        tracer = provider.get_tracer("t")
+        # POST /v1/messages starts the turn and streams it in one request.
+        with tracer.start_as_current_span("POST /v1/messages"):
+            link_current_span(trace_reference(), message_id="m1")
+    finally:
+        setup._reset_for_tests()
+        trace._TRACER_PROVIDER = None  # type: ignore[attr-defined]
+
+    (span,) = memory.get_finished_spans()
+    assert list(span.links) == []
+    assert span.attributes
+    assert "pgpt.origin.trace_id" not in span.attributes
+    assert span.attributes["pgpt.message_id"] == "m1"

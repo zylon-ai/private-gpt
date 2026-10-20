@@ -486,9 +486,15 @@ def link_current_span(reference: Mapping[str, Any] | None, **attributes: Any) ->
         return
     pgpt = {f"pgpt.{key}": value for key, value in attributes.items()}
     if reference and reference.get("traceparent"):
+        own = span.get_span_context()
         for link in link_from({"traceparent": reference["traceparent"]}):
+            # `POST /v1/messages` starts the turn and observes it in the same
+            # request: a link to itself makes Jaeger & co. lose the root.
+            if link.context.span_id == own.span_id:
+                continue
             span.add_link(link.context, {"pgpt.link": "origin"})
-        pgpt["pgpt.origin.trace_id"] = reference.get("trace_id")
+        if reference.get("trace_id") != f"{own.trace_id:032x}":
+            pgpt["pgpt.origin.trace_id"] = reference.get("trace_id")
     set_span_attributes(span, **pgpt)
 
 
