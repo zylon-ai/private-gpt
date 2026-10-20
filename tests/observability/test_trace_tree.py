@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from typing import TYPE_CHECKING, Any
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from llama_index.core.base.llms.types import (
@@ -940,3 +940,47 @@ def test_state_snapshot_keeps_conversation_tools_and_params() -> None:
         "llm_params": {"temperature": 0.1},
         "tokens": {"input": 100, "output": 20},
     }
+
+
+def test_in_place_interceptor_changes_are_detected() -> None:
+    from llama_index.core.base.llms.types import ChatMessage
+
+    from private_gpt.observability.chat import (
+        record_interceptor_result,
+        state_fingerprint,
+    )
+
+    class _Obj:
+        def __init__(self, **kw: object) -> None:
+            self.__dict__.update(kw)
+
+    class _Span:
+        def __init__(self) -> None:
+            self.attributes: dict = {}
+
+        def is_recording(self) -> bool:
+            return True
+
+        def set_attributes(self, attributes: dict) -> None:
+            self.attributes.update(attributes)
+
+    message = ChatMessage(role="assistant", content="", additional_kwargs={"a": 1})
+    request = _Obj(messages=[message], system=_Obj(prompt="p"))
+    state = _Obj(input=_Obj(request=request, context_stack=_Obj(layers=[])))
+
+    def run(mutate: object) -> dict:
+        span = _Span()
+        with patch("private_gpt.observability.chat.is_enabled", return_value=True):
+            before = state_fingerprint(state)
+            mutate()  # type: ignore[operator]
+            record_interceptor_result(span, before, state)
+        return span.attributes
+
+    untouched = run(lambda: None)
+    assert untouched["pgpt.interceptor.changed"] is False
+    # Same message object, kwargs dropped in place (flattening tool calls).
+    changed = run(lambda: message.additional_kwargs.pop("a"))
+    assert changed["pgpt.interceptor.changed"] is True
+    assert changed["pgpt.interceptor.changes"] == ["messages"]
+    prompt = run(lambda: setattr(request.system, "prompt", "q"))
+    assert prompt["pgpt.interceptor.changes"] == ["system_prompt"]

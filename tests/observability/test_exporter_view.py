@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import base64
+import json
 
 from llama_index.core.base.llms.types import (
     AudioBlock,
@@ -62,6 +63,10 @@ def test_http_root_keeps_the_request_and_shows_the_turn_output() -> None:
             with tracer.start_as_current_span("chat.iteration 1"):
                 pass
             turn.set_attribute("output.value", "hi there")
+            turn.set_attribute(
+                "pgpt.output.message",
+                '{"role": "assistant", "content": [{"type": "text", "text": "hi there"}]}',
+            )
         http.set_attribute("output.value", "event: message_start ...")
 
     spans = {span.name: span for span in memory.get_finished_spans()}
@@ -72,7 +77,12 @@ def test_http_root_keeps_the_request_and_shows_the_turn_output() -> None:
     # The JSON request stays the input; the folded user input is on chat.turn.
     assert root.attributes["input.value"] == '{"model": "m", "messages": []}'
     assert spans["chat.turn"].attributes["input.value"] == "hello"
-    assert root.attributes["output.value"] == "hi there"
+    # Output: the final message as JSON, also for SSE.
+    assert json.loads(root.attributes["output.value"])["content"][0]["text"] == (
+        "hi there"
+    )
+    assert root.attributes["output.mime_type"] == "application/json"
+    assert spans["chat.turn"].attributes["output.value"] == "hi there"
     assert root.attributes["session.id"] == "conv-1"
     assert root.attributes["pgpt.http.response.body"].startswith("event:")
 

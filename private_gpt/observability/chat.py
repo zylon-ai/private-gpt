@@ -405,23 +405,50 @@ def interceptor_span(interceptor: Any, phase: Any) -> Iterator[Any]:
         yield span
 
 
-def record_interceptor_result(span: Any, before: Any, after: Any) -> None:
-    """Record what an interceptor changed in the conversation."""
+def state_fingerprint(state: Any) -> tuple[Any, ...] | None:
+    """Cheap identity snapshot of what an interceptor can change.
+
+    Interceptors mutate the state in place, so comparing the state object
+    before/after says nothing; this records, before the call, the message
+    objects with their content and kwargs keys, the system prompt and the
+    context stack size, to compare with the state after it.
+    """
     if not is_enabled():
-        return
-    before_messages = _messages(before)
-    after_messages = _messages(after)
-    changed = after is not before and (
-        len(before_messages) != len(after_messages)
-        or any(
-            a is not b for a, b in zip(before_messages, after_messages, strict=False)
+        return None
+    request = getattr(getattr(state, "input", None), "request", None)
+    messages = tuple(
+        (
+            id(m),
+            m.content if isinstance(m.content, str) else None,
+            tuple(m.additional_kwargs),
         )
-        or _stack_size(before) != _stack_size(after)
+        for m in _messages(state)
     )
+    system = getattr(getattr(request, "system", None), "prompt", None)
+    return (messages, _stack_size(state), str(system) if system is not None else None)
+
+
+def record_interceptor_result(span: Any, before: Any, after: Any) -> None:
+    """Record what an interceptor changed: messages, system prompt, context."""
+    if not is_enabled() or before is None:
+        return
+    after_fp = state_fingerprint(after)
+    before_messages, before_stack, before_system = before
+    after_messages, after_stack, after_system = after_fp or ((), 0, None)
+    changes = [
+        name
+        for name, changed in (
+            ("messages", before_messages != after_messages),
+            ("system_prompt", before_system != after_system),
+            ("context", before_stack != after_stack),
+        )
+        if changed
+    ]
     set_span_attributes(
         span,
         **{
-            "pgpt.interceptor.changed": changed,
+            "pgpt.interceptor.changed": bool(changes),
+            "pgpt.interceptor.changes": changes or None,
             "pgpt.messages.before": len(before_messages),
             "pgpt.messages.after": len(after_messages),
         },

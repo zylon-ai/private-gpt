@@ -130,6 +130,7 @@ from private_gpt.observability.chat import (
     record_interceptor_result,
     record_iteration_result,
     record_iteration_state,
+    state_fingerprint,
     tool_span,
 )
 from private_gpt.observability.tracing import set_span_attributes, set_span_status
@@ -1869,7 +1870,7 @@ class AsyncChatEngine:
                 emit_fn=channel.emit if channel is not None else lambda _event: None,
             )
             with interceptor_span(interceptor, phase) as span:
-                before = run.state
+                before = state_fingerprint(run.state)
                 await interceptor.intercept(context)
                 record_interceptor_result(span, before, context.state)
             run.state = context.state

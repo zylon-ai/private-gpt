@@ -426,17 +426,17 @@ class ExporterViewProcessor(_Delegating):
     * ``turn_root``: the HTTP span of a chat route stays the root of the
       trace, with ``chat.turn`` under it. Its input is the JSON request; its
       output would be the SSE text or, for ``/messages/async``, the
-      ``{"message_id": ...}`` acknowledgement, while LLM backends build
-      session views from the root's output. So the turn's answer, session and
-      user are copied onto the HTTP span (the raw response body moves to
-      ``pgpt.http.response.body``); the folded user input (text, images) is
-      on ``chat.turn``. An async POST ends before its turn: it is held until
+      ``{"message_id": ...}`` acknowledgement. So the turn's final message
+      (JSON, as a non-streaming response would return it), session and user
+      are copied onto the HTTP span (the raw response body moves to
+      ``pgpt.http.response.body``); the folded user input and the answer text
+      are on ``chat.turn``. An async POST ends before its turn: it is held until
       the turn ends, or exported as is after ``hold_seconds`` (turn in another
       process, e.g. an ARQ worker).
     """
 
-    # The HTTP span keeps the JSON request as input; it gets the turn's
-    # answer as output (session views read it) and its session/user.
+    # The HTTP span keeps the JSON request as input; it gets the turn's final
+    # message as output and its session/user.
     _TURN_KEYS = (
         "output.value",
         "output.mime_type",
@@ -497,6 +497,13 @@ class ExporterViewProcessor(_Delegating):
         if "output.value" in attrs:
             attrs["pgpt.http.response.body"] = attrs["output.value"]
         attrs.update(turn)
+        # Output: the final message as JSON (role, content blocks, stop
+        # reason, usage), the same for JSON, SSE and async responses and for
+        # any output type (text, tool use, images...).
+        message = turn.get("pgpt.output.message")
+        if isinstance(message, str) and message:
+            attrs["output.value"] = message
+            attrs["output.mime_type"] = "application/json"
         return _with_attributes(span, attrs)
 
     def _export(self, span: ReadableSpan) -> None:
