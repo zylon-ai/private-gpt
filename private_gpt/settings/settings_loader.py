@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 import typing
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -148,6 +148,58 @@ def discover_models_from_environment(
     return list(models.values())
 
 
+# Exporter fields whose values are lists; from the environment they are
+# comma separated (`PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_TAGS=ai,ingestion`).
+_EXPORTER_LIST_FIELDS = {"tags"}
+
+
+def discover_exporters_from_environment(
+    environ: Mapping[str, str] = os.environ,
+) -> list[dict[str, Any]]:
+    """Discover observability exporters from environment variables.
+
+    Same shape as :func:`discover_models_from_environment`, so a deployment can
+    add one destination per id without editing YAML:
+    ``PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>]``.
+
+    Examples:
+        PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_TYPE=phoenix
+        PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_ENDPOINT=http://phoenix:6006
+        PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_TAGS=ai,ingestion
+        PGPT_OBSERVABILITY_EXPORTERS_JAEGER_TYPE=otlp
+        PGPT_OBSERVABILITY_EXPORTERS_JAEGER_ENDPOINT=http://jaeger:4318
+        PGPT_OBSERVABILITY_EXPORTERS_LANGFUSE_OPTIONS__PUBLIC_KEY=pk-...
+
+    The id only groups the variables (and orders the exporters); ``type``
+    defaults to the id when it names a preset (``phoenix``, ``langfuse``...).
+    """
+    prefix = "PGPT_OBSERVABILITY_EXPORTERS_"
+    exporters: dict[str, dict[str, Any]] = {}
+    for key in sorted(environ):
+        if not key.startswith(prefix):
+            continue
+        exporter_id, _, param = key[len(prefix) :].partition("_")
+        if not exporter_id or not param:
+            continue
+        config = exporters.setdefault(exporter_id.lower(), {})
+        *parents, leaf = param.lower().split("__")
+        current = config
+        for name in parents:
+            nested = current.setdefault(name, {})
+            if not isinstance(nested, dict):
+                raise ValueError(
+                    f"Conflict setting {key}: '{name}' is already a scalar value."
+                )
+            current = nested
+        value = environ[key]
+        if not parents and leaf in _EXPORTER_LIST_FIELDS:
+            value = [item.strip() for item in value.split(",") if item.strip()]
+        current[leaf] = value
+    for exporter_id, config in exporters.items():
+        config.setdefault("type", exporter_id)
+    return list(exporters.values())
+
+
 def load_active_settings() -> dict[str, Any]:
     """Load active profiles and merge them."""
     logger.debug("Loading settings with profiles=%s", active_profiles)
@@ -161,5 +213,14 @@ def load_active_settings() -> dict[str, Any]:
         merged["models"] = [
             *(merged.get("models", []) or []),
             *discovered_models,
+        ]
+
+    discovered_exporters = discover_exporters_from_environment()
+    if discovered_exporters:
+        observability = merged.setdefault("observability", {}) or {}
+        merged["observability"] = observability
+        observability["exporters"] = [
+            *(observability.get("exporters", []) or []),
+            *discovered_exporters,
         ]
     return merged

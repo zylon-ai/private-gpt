@@ -95,3 +95,35 @@ def test_empty_default_envvar_resolves_to_empty_string() -> None:
     """
     loaded = load_yaml_with_envvars(io.StringIO(sample_yaml), {})
     assert loaded["max_lines"] == ""
+
+
+def test_discover_exporters_from_environment() -> None:
+    from private_gpt.settings.settings import ObservabilityExporterSettings
+    from private_gpt.settings.settings_loader import (
+        discover_exporters_from_environment,
+    )
+
+    exporters = discover_exporters_from_environment(
+        {
+            "PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_ENDPOINT": "http://phoenix:6006",
+            "PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_TAGS": "ai, ingestion",
+            "PGPT_OBSERVABILITY_EXPORTERS_JAEGER_TYPE": "otlp",
+            "PGPT_OBSERVABILITY_EXPORTERS_JAEGER_ENDPOINT": "http://jaeger:4318",
+            "PGPT_OBSERVABILITY_EXPORTERS_LANGFUSE_OPTIONS__PUBLIC_KEY": "pk",
+            "PGPT_OBSERVABILITY_EXPORTERS_LANGFUSE_OPTIONS__SECRET_KEY": "sk",
+            "PGPT_OBSERVABILITY_ENVIRONMENT": "prod",  # not an exporter
+        }
+    )
+
+    assert exporters == [
+        {"type": "otlp", "endpoint": "http://jaeger:4318"},
+        {"type": "langfuse", "options": {"public_key": "pk", "secret_key": "sk"}},
+        {
+            "type": "phoenix",
+            "endpoint": "http://phoenix:6006",
+            "tags": ["ai", "ingestion"],
+        },
+    ]
+    # Valid settings as they come from the environment.
+    for exporter in exporters:
+        ObservabilityExporterSettings.model_validate(exporter)

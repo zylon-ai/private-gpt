@@ -1098,6 +1098,13 @@ class ObservabilitySettings(BaseModel):
     environment: str | None = Field(
         default=None, description="deployment.environment resource attribute."
     )
+
+    @field_validator("environment", mode="before")
+    @classmethod
+    def _empty_environment_is_unset(cls, value: Any) -> Any:
+        # `${PGPT_OBSERVABILITY_ENVIRONMENT:}` loads as "" when unset.
+        return value or None
+
     resource_attributes: dict[str, str] = Field(default_factory=dict)
     semconv: Literal["openinference", "genai", "both"] = Field(
         default="openinference",
