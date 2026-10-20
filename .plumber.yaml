@@ -1,0 +1,18 @@
+# Plumber overlay: inherits every control from the CLI's built-in
+# baseline, only the differences for this repository are written here.
+# Run 'plumber config resolve' to see the full effective config.
+extends: plumber:default
+version: '2.0'
+
+github:
+  controls:
+    githubActionMustComeFromAuthorizedSources:
+      # Keep the curated default list and trust the three actions this
+      # repository uses on top of it: the disk-space cleaner in the
+      # release workflow, and the ffmpeg setup the install_dependencies
+      # action runs, with the tool cache that setup calls on its own.
+      includePlumberDefaults: true
+      trustedGithubActions:
+        - AnimMouse/setup-ffmpeg
+        - AnimMouse/tool-cache
+        - jlumbroso/free-disk-space
