@@ -1,9 +1,8 @@
 """Vendor-neutral tracing for PrivateGPT.
 
 Application code only talks to the plain OpenTelemetry API through the helpers
-in :mod:`private_gpt.observability.tracing`. Where spans end up (Phoenix,
-Langfuse, LangSmith, Opik, Grafana Tempo, Datadog, ...) is decided purely by
-``observability.exporters`` in settings, see
+in :mod:`private_gpt.observability.tracing`. Where spans end up is decided
+purely by ``observability.exporters`` in settings, see
 :mod:`private_gpt.observability.setup`.
 
 When tracing is disabled (or the ``observability-otel`` extra is missing) every

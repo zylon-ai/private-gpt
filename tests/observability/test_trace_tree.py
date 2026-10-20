@@ -271,7 +271,7 @@ async def test_messages_turn_with_tool_is_one_trace(
 
 # ---------------------------------------------------------------------------
 # Span status: OK on success, ERROR wherever something failed, so a failed
-# turn can be found by status alone (Phoenix "status: error" filter).
+# turn can be found by status alone (a "status: error" filter).
 # ---------------------------------------------------------------------------
 
 

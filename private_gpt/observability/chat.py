@@ -142,8 +142,8 @@ def record_turn_result(
 ) -> None:
     """Final result on the turn span.
 
-    ``output.value`` is the answer text the user read: session views (Phoenix
-    sessions, Langfuse) render it as the assistant bubble. The whole folded
+    ``output.value`` is the answer text the user read: backend session views
+    render it as the assistant bubble. The whole folded
     message (text, reasoning, tool calls and results, stop reason, usage) is
     in ``pgpt.output.message`` as JSON for inspection.
     """

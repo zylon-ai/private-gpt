@@ -1,10 +1,10 @@
 """Thin, dependency-optional tracing helpers used across the codebase.
 
 Only ``opentelemetry-api`` is needed at import time; without it every helper
-is a no-op. Span attributes follow OpenInference names (understood by Phoenix,
-Arize, Langfuse, LangSmith, Datadog); the ``SemconvSpanProcessor`` adds the
-OTel GenAI equivalents at export time when ``observability.semconv`` asks for
-them, so call sites never write two conventions.
+is a no-op. Span attributes follow OpenInference names; the
+``SemconvSpanProcessor`` adds the OTel GenAI equivalents at export time when
+``observability.semconv`` asks for them, so call sites never write two
+conventions.
 """
 
 from __future__ import annotations
@@ -487,7 +487,7 @@ def link_current_span(reference: Mapping[str, Any] | None, **attributes: Any) ->
         own = span.get_span_context()
         for link in link_from({"traceparent": reference["traceparent"]}):
             # `POST /v1/messages` starts the turn and observes it in the same
-            # request: a link to itself makes Jaeger & co. lose the root.
+            # request: a link to itself makes backends lose the root.
             if link.context.span_id == own.span_id:
                 continue
             span.add_link(link.context, {"pgpt.link": "origin"})

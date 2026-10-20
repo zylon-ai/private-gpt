@@ -1,7 +1,7 @@
 """Fold a turn's streamed events into the final assistant message for tracing.
 
 The chat engine streams Anthropic-style events. Backends that render a turn
-(Phoenix sessions, Langfuse, ...) need the folded result on the turn span:
+(session views) need the folded result on the turn span:
 the text the user saw, reasoning, tool calls with their results, stop reason
 and usage. ``RecordingEventChannel`` (engines/chat/event_channel.py) feeds a
 ``MessageFolder`` as events pass, without changing what is delivered.
@@ -206,7 +206,7 @@ def message_text(message: Mapping[str, Any] | None) -> str | None:
     """Markdown rendering for span inputs and session bubbles.
 
     Text as is; images inline (``![image](data:...)``) when small enough so
-    Phoenix renders them in sessions and span details alike; audio and
+    backends render them in sessions and span details alike; audio and
     documents as ``[audio: audio/wav]`` / ``[document: report.pdf]`` markers.
     """
     if not message:

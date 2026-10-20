@@ -421,7 +421,7 @@ class ExporterViewProcessor(_Delegating):
 
     * ``resource``: attributes merged into each span's resource, so two
       exporters of the same backend can write to different projects
-      (e.g. Phoenix ``openinference.project.name``).
+      (e.g. ``openinference.project.name``).
     * ``turn_root``: the HTTP span of a chat route stays the root of the
       trace, with ``chat.turn`` under it. Its input is the JSON request; its
       output would be the SSE text or, for ``/messages/async``, the

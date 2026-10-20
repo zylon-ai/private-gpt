@@ -67,8 +67,8 @@ def _names(memory: InMemorySpanExporter) -> list[str]:
 
 
 def test_ai_trace_reaches_llm_backend_and_generic_otel() -> None:
-    phoenix, otel = InMemorySpanExporter(), InMemorySpanExporter()
-    tracer = _pipeline((["ai"], phoenix), (["all"], otel)).get_tracer("t")
+    ai_only, otel = InMemorySpanExporter(), InMemorySpanExporter()
+    tracer = _pipeline((["ai"], ai_only), (["all"], otel)).get_tracer("t")
 
     _tree(tracer, "POST /v1/messages", "chat.turn", "tool search")
     with tracer.start_as_current_span("GET /v1/messages/async/{message_id}/status"):
@@ -76,24 +76,24 @@ def test_ai_trace_reaches_llm_backend_and_generic_otel() -> None:
     with tracer.start_as_current_span("GET /v1/artifacts/list"):
         pass
 
-    assert _names(phoenix) == ["POST /v1/messages", "chat.turn", "tool search"]
+    assert _names(ai_only) == ["POST /v1/messages", "chat.turn", "tool search"]
     assert len(otel.get_finished_spans()) == 5
     # Every span of the tree carries the tag, not just the matching root.
     assert all(
         span.attributes and list(span.attributes[TRACE_TAGS]) == ["ai"]
-        for span in phoenix.get_finished_spans()
+        for span in ai_only.get_finished_spans()
     )
 
 
 def test_worker_side_of_a_trace_is_tagged_by_its_own_spans() -> None:
     """ARQ / Celery workers see only their part of the trace."""
-    phoenix = InMemorySpanExporter()
-    tracer = _pipeline((["ai"], phoenix)).get_tracer("t")
+    ai_only = InMemorySpanExporter()
+    tracer = _pipeline((["ai"], ai_only)).get_tracer("t")
 
     _tree(tracer, "chat.turn.resume", "chat.iteration 2")
     _tree(tracer, "run/private_gpt.tools.run", "sandbox.exec")
 
-    assert _names(phoenix) == [
+    assert _names(ai_only) == [
         "chat.iteration 2",
         "chat.turn.resume",
         "run/private_gpt.tools.run",
@@ -102,8 +102,8 @@ def test_worker_side_of_a_trace_is_tagged_by_its_own_spans() -> None:
 
 
 def test_ingestion_is_its_own_tag() -> None:
-    phoenix, ingestion = InMemorySpanExporter(), InMemorySpanExporter()
-    tracer = _pipeline((["ai"], phoenix), (["ingestion"], ingestion)).get_tracer("t")
+    ai_only, ingestion = InMemorySpanExporter(), InMemorySpanExporter()
+    tracer = _pipeline((["ai"], ai_only), (["ingestion"], ingestion)).get_tracer("t")
 
     _tree(
         tracer,
@@ -112,7 +112,7 @@ def test_ingestion_is_its_own_tag() -> None:
     )
     _tree(tracer, "run/private_gpt.ingestion.store_vectors", "describe_image")
 
-    assert phoenix.get_finished_spans() == ()
+    assert ai_only.get_finished_spans() == ()
     assert len(ingestion.get_finished_spans()) == 4
 
 

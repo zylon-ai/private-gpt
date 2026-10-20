@@ -1076,9 +1076,8 @@ class ObservabilitySettings(BaseModel):
     semconv: Literal["openinference", "genai", "both"] = Field(
         default="openinference",
         description=(
-            "Attribute conventions on LLM spans. `openinference` is understood by "
-            "Phoenix, Arize, Langfuse, LangSmith and Datadog; `genai` (gen_ai.*) "
-            "by Grafana, Opik and Honeycomb boards; `both` emits both."
+            "Attribute conventions on LLM spans: `openinference`, `genai` "
+            "(OTel gen_ai.*) or `both`, as the backend expects."
         ),
     )
     capture_content: bool = Field(
