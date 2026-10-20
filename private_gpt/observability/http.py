@@ -223,7 +223,6 @@ class HttpBodyCaptureMiddleware:
         try:
             await self.app(scope, receive_wrapper, send_wrapper)
         finally:
-            # Disconnects and failures before the last chunk.
             finish()
 
     @staticmethod

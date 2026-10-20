@@ -110,9 +110,6 @@ def configure_tracing(settings: Settings, *, role: str | None = None) -> bool:
         resource=Resource.create(resource_attributes),
         sampler=ParentBased(TraceIdRatioBased(obs.sampling_ratio)),
     )
-    # Normalization runs once, before fan-out, so every exporter sees the same
-    # cleaned span: tag traces, drop noisy leaves, fix tool schemas, add
-    # gen_ai.* if asked.
     provider.add_span_processor(
         # Tagging sees every span (dropped ones too) so per-trace bookkeeping
         # always balances; exporters then filter on the tags. All of it runs

@@ -156,7 +156,6 @@ class DropSpansProcessor(_Delegating):
         if not span.status.is_ok:
             return False
         if attrs.get("pgpt.condensation.condensed") is False:
-            # Checked the history, nothing to condense.
             return True
         return (
             attrs.get("pgpt.interceptor.changed") is False
@@ -435,8 +434,6 @@ class ExporterViewProcessor(_Delegating):
       process, e.g. an ARQ worker).
     """
 
-    # The HTTP span keeps the JSON request as input; it gets the turn's final
-    # message as output and its session/user.
     _TURN_KEYS = (
         "output.value",
         "output.mime_type",
@@ -497,9 +494,6 @@ class ExporterViewProcessor(_Delegating):
         if "output.value" in attrs:
             attrs["pgpt.http.response.body"] = attrs["output.value"]
         attrs.update(turn)
-        # Output: the final message as JSON (role, content blocks, stop
-        # reason, usage), the same for JSON, SSE and async responses and for
-        # any output type (text, tool use, images...).
         message = turn.get("pgpt.output.message")
         if isinstance(message, str) and message:
             attrs["output.value"] = message

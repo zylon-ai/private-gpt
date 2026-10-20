@@ -24,7 +24,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# HTTP routes whose work is a chat turn (see ``ExporterViewProcessor``).
 TURN_ROUTES = ["POST /v1/messages", "POST /v1/messages/async"]
 
 
@@ -198,7 +197,6 @@ def build_span_processors(
                         schedule_delay_millis=1000,
                         export_timeout_millis=5000,
                     ),
-                    # Per exporter, so each one can write to its own project.
                     resource=spec.resource,
                     turn_root=spec.turn_root,
                     turn_routes=TURN_ROUTES,

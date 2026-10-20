@@ -62,7 +62,6 @@ GRAPH_NODE_ID = "graph.node.id"
 GRAPH_NODE_NAME = "graph.node.name"
 GRAPH_NODE_PARENT_ID = "graph.node.parent_id"
 
-# Bag key used to carry W3C trace context across ARQ / Celery / Redis hops.
 TRACE_CONTEXT_KEY = "_trace"
 
 _MAX_ATTRIBUTE_CHARS = 32_000
@@ -249,7 +248,6 @@ def _llama_index_parent() -> Any:
     li_ctx = li_span._otel_span.get_span_context()
     if current.is_valid and current.trace_id != li_ctx.trace_id:
         return None
-    # Only when the llama-index span is newer (deeper) than the current one.
     current_start = getattr(trace.get_current_span(), "start_time", 0) or 0
     if (getattr(li_span._otel_span, "start_time", 0) or 0) < current_start:
         return None

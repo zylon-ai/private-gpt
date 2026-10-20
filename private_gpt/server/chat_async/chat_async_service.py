@@ -52,7 +52,6 @@ class ChatAsyncService:
             metadata={
                 "message_count": len(request.messages),
                 "thinking_enabled": request.thinking.enabled,
-                # Lets clients and the observe/status spans find the turn trace.
                 **trace_reference(),
             },
         )

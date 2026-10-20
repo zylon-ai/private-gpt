@@ -148,8 +148,6 @@ def discover_models_from_environment(
     return list(models.values())
 
 
-# Exporter fields whose values are lists; from the environment they are
-# comma separated (`PGPT_OBSERVABILITY_EXPORTERS_PHOENIX_TAGS=ai,ingestion`).
 _EXPORTER_LIST_FIELDS = {"tags"}
 
 

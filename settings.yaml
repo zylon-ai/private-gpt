@@ -59,22 +59,11 @@ data:
   use_async: ${PGPT_USE_ASYNC:false}
 
 observability:
-  # `otel` sends OpenTelemetry traces to every exporter below.
   mode: ${PGPT_OBSERVABILITY:none}
   environment: ${PGPT_OBSERVABILITY_ENVIRONMENT:}
-  # Record prompts, messages and tool payloads on spans.
   capture_content: ${PGPT_OBSERVABILITY_CAPTURE_CONTENT:true}
   sampling_ratio: ${PGPT_OBSERVABILITY_SAMPLING_RATIO:1.0}
-  # Exporters (trace destinations). Built in: `jsonl` (OTLP JSON lines to a
-  # rotating file; replay it into any backend with the OpenTelemetry Collector
-  # `otlpjsonfile` receiver) and `console`. Applications can register more.
-  # Like `models`, each one can also come from the environment, one id per
-  # destination, appended to this list:
-  #   PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>]=value
-  # e.g.
-  #   PGPT_OBSERVABILITY_EXPORTERS_JSONL_PATH=local_data/traces/traces.jsonl
-  #   PGPT_OBSERVABILITY_EXPORTERS_JSONL_TAGS=ai
-  # `type` defaults to the id when it names an exporter type.
+  # More from PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>], like models.
   exporters:
     - type: jsonl
       path: ${PGPT_OBSERVABILITY_JSONL_PATH:local_data/traces/traces.jsonl}

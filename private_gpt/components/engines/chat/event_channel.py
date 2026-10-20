@@ -46,7 +46,6 @@ class RecordingEventChannel(EventChannel):
         self.folder = folder
 
     def emit(self, event: Event) -> None:
-        # Tracing must never break the stream.
         with contextlib.suppress(Exception):
             self.folder.add(event)
         self._inner.emit(event)

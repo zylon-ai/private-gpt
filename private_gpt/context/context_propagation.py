@@ -91,7 +91,6 @@ def snapshot() -> ContextBag:
     everything currently written (headers / cookies / ids).
     """
     bag = {k: v for k, v in current_bag().items() if not _is_empty(v)}
-    # Carry the active trace so the worker's spans continue the same trace.
     # Lazy import: tracing is optional and must not slow down this hot path.
     from private_gpt.observability.tracing import (
         TRACE_CONTEXT_KEY,
