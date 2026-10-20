@@ -128,7 +128,7 @@ _INSTRUMENTATIONS: dict[str, Callable[[ObservabilitySettings, Any], None]] = {
 def register_instrumentation(
     name: str, installer: Callable[[ObservabilitySettings, Any], None]
 ) -> None:
-    """Let extensions (e.g. zylon-gpt) add named instrumentations."""
+    """Let extensions add named instrumentations."""
     _INSTRUMENTATIONS[name] = installer
 
 
