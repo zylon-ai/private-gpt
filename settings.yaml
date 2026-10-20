@@ -93,6 +93,7 @@ chat:
     documents:
       max_concurrency: ${PGPT_PREPROCESS_DOCUMENTS_MAX_CONCURRENCY:-1}
       return_type: ${PGPT_PREPROCESS_DOCUMENTS_RETURN_TYPE:user_message}
+      describe_images: ${PGPT_PREPROCESS_DOCUMENTS_DESCRIBE_IMAGES:true}
     multimodal:
       max_concurrency: ${PGPT_PREPROCESS_MULTIMODAL_MAX_CONCURRENCY:-1}
       return_type: ${PGPT_PREPROCESS_MULTIMODAL_RETURN_TYPE:user_message}

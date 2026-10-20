@@ -56,6 +56,12 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
         self._file_service = file_service
         self._tool_name = DOCUMENT_PROCESSING_TOOL_NAME
         self._preprocess_settings = settings.chat.preprocess.documents
+        self._image_description = (
+            settings.transformation.docling
+            if self._preprocess_settings.describe_images
+            and settings.transformation.docling.is_enabled
+            else None
+        )
 
     async def intercept(self, context: ChatInterceptorContext) -> None:
         """Convert document blocks to text, or land them in the sandbox.
@@ -150,6 +156,7 @@ class DocumentFilePreprocessingInterceptor(ChatRequestLoopInterceptor):
                 convert_service=self._scheduler_factory.get(),
                 max_concurrency=self._preprocess_settings.max_concurrency,
                 return_type=self._preprocess_settings.return_type,
+                image_description=self._image_description,
             ):
                 processing = response.processing_status
                 if processing is not None:

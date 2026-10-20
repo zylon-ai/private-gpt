@@ -484,9 +484,24 @@ class PreprocessTypeSettings(BaseModel):
     )
 
 
+class DocumentPreprocessSettings(PreprocessTypeSettings):
+    """Preprocessing settings for documents attached to chat messages."""
+
+    describe_images: bool = Field(
+        default=True,
+        description=(
+            "Describe the images embedded in attached documents the same way "
+            "ingestion does: only when `transformation.docling.vision` is "
+            "enabled, reusing its tuning, and with a model that supports images. "
+            "Set to false to opt chat out. Images that are not described are "
+            "replaced by a placeholder instead of reaching the prompt as base64."
+        ),
+    )
+
+
 class PreprocessSettings(BaseModel):
-    documents: PreprocessTypeSettings = Field(
-        default_factory=lambda: PreprocessTypeSettings(),
+    documents: DocumentPreprocessSettings = Field(
+        default_factory=lambda: DocumentPreprocessSettings(),
         description="Settings for document block preprocessing.",
     )
     multimodal: PreprocessTypeSettings = Field(
