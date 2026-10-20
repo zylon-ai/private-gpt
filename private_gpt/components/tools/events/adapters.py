@@ -245,3 +245,15 @@ class PresentFilesEventAdapter(ServerToolEventAdapter):
 
 class PresentServerEventAdapter(ServerToolEventAdapter):
     pass
+
+
+class ConvertDocumentsEventAdapter(ServerToolEventAdapter):
+    pass
+
+
+class DescribeImageEventAdapter(ServerToolEventAdapter):
+    pass
+
+
+class TranscribeAudioEventAdapter(ServerToolEventAdapter):
+    pass

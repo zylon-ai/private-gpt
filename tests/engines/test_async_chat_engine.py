@@ -10,6 +10,7 @@ from llama_index.core.llms.llm import ToolSelection
 from llama_index.core.schema import NodeWithScore, TextNode
 from pydantic import Field
 
+from private_gpt.chat.input_models import MessageInput
 from private_gpt.components.chat.models.chat_config_models import (
     CitationConfig,
     ResolvedChatRequest,
@@ -51,6 +52,7 @@ from private_gpt.events.models import (
     RawContentBlockStartEvent,
     TextBlock,
     ToolResultBlock,
+    ToolUseBlock,
 )
 from private_gpt.server.chat.interceptors.citation_interceptor import (
     CitationRequestInterceptor,
@@ -446,18 +448,34 @@ async def test_async_engine_matches_sync_one_client_tool_and_stops_first_iterati
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("tool_name", "raw_name"),
+    [
+        ("echo", None),
+        (
+            "mcp_FERI_SAP_DYNAMICS__get_sap_business_partner_fa39d150eb20",
+            "get_sap_business_partner",
+        ),
+    ],
+)
 async def test_async_engine_matches_sync_one_server_tool_and_resumes_same_point(
     base_request: ResolvedChatRequest,
+    tool_name: str,
+    raw_name: str | None,
 ) -> None:
     request = base_request.model_copy(deep=True)
-    request.tool_config = ResolvedToolConfig(tools=[_server_tool("echo")])
+    tool_spec = _server_tool(tool_name)
+    tool_spec.raw_name = raw_name
+    request.tool_config = ResolvedToolConfig(tools=[tool_spec])
     sync_events = await _run_sync_engine(
         request.model_copy(deep=True),
         get_mock_function_calling_llm(
             [
                 [
                     ToolSelection(
-                        tool_id="tool_1", tool_name="echo", tool_kwargs={"value": "x"}
+                        tool_id="tool_1",
+                        tool_name=tool_name,
+                        tool_kwargs={"value": "x"},
                     )
                 ],
                 ["done"],
@@ -470,7 +488,9 @@ async def test_async_engine_matches_sync_one_server_tool_and_resumes_same_point(
             [
                 [
                     ToolSelection(
-                        tool_id="tool_1", tool_name="echo", tool_kwargs={"value": "x"}
+                        tool_id="tool_1",
+                        tool_name=tool_name,
+                        tool_kwargs={"value": "x"},
                     )
                 ],
                 ["done"],
@@ -487,6 +507,38 @@ async def test_async_engine_matches_sync_one_server_tool_and_resumes_same_point(
     assert _tool_result_texts(async_result.events) == ["ok:x"]
     assert _tool_result_texts(sync_events) == ["ok:x"]
     assert _normalize_events(async_result.events) == _normalize_events(sync_events)
+
+    for events in (sync_events, async_result.events):
+        tool_starts = [
+            event
+            for event in events
+            if isinstance(event, RawContentBlockStartEvent)
+            and isinstance(event.content_block, ToolUseBlock)
+        ]
+        assert len(tool_starts) == 1
+        tool_use = tool_starts[0].content_block
+        assert tool_use.name == tool_name
+        assert tool_use.raw_name == raw_name
+        payload = tool_starts[0].model_dump()["content_block"]
+        assert payload["name"] == tool_name
+        if raw_name is None:
+            assert "raw_name" not in payload
+        else:
+            assert payload["raw_name"] == raw_name
+
+        replayed_messages = MessageInput.convert_from_llama_index_messages(
+            [MessageInput.model_validate({"role": "assistant", "content": [payload]})]
+        )
+        replayed_calls = replayed_messages[0].additional_kwargs["tool_calls"]
+        assert [call.tool_name for call in replayed_calls] == [tool_name]
+
+    internal_calls = [
+        call
+        for message in async_result.states[-1].input.request.messages
+        for call in message.additional_kwargs.get("tool_calls", []) or []
+        if isinstance(call, ToolSelection)
+    ]
+    assert {call.tool_name for call in internal_calls} == {tool_name}
 
 
 @pytest.mark.asyncio

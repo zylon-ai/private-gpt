@@ -6,7 +6,9 @@ from private_gpt.components.tools.tool_names import (
     BASH_CODE_EXECUTION_TOOL_NAME,
     BASH_TOOL_NAME,
     CODE_EXECUTION_TOOL_NAME,
+    CONVERT_DOCUMENTS_TOOL_NAME,
     DATABASE_QUERY_TOOL_NAME,
+    DESCRIBE_IMAGE_TOOL_NAME,
     PRESENT_FILES_TOOL_NAME,
     PRESENT_SERVER_TOOL_NAME,
     SEMANTIC_SEARCH_TOOL_NAME,
@@ -19,6 +21,7 @@ from private_gpt.components.tools.tool_names import (
     TEXT_EDITOR_STR_REPLACE_TOOL_NAME,
     TEXT_EDITOR_TOOL_NAME,
     TEXT_EDITOR_VIEW_TOOL_NAME,
+    TRANSCRIBE_AUDIO_TOOL_NAME,
     WEB_FETCH_TOOL_NAME,
     WEB_SEARCH_TOOL_NAME,
 )
@@ -42,7 +45,8 @@ SEMANTIC_SEARCH_TOOL_FN = _placeholder_tool(
     "Search the knowledge base and return the most relevant fragments with attribution. "
     "Keep each query focused on a single topic — decompose multi-faceted questions into "
     "separate calls and refine successive queries as results reveal new aspects or documents. "
-    "Optionally restrict scope to specific source documents with the `artifacts` parameter. "
+    "Optionally restrict scope to specific source documents with the `artifacts` parameter: "
+    "one `{name, artifact_id}` per file, both copied from the same entry of the file list. "
     "Always provide a `query`; never call this tool without one.",
 )
 
@@ -52,7 +56,8 @@ TABULAR_DATA_TOOL_FN = _placeholder_tool(
     "(aggregations, groupings, rankings, statistics, filtering, joins). "
     "Describe the desired operation in natural language, naming the columns and any "
     "grouping or filter conditions. CSV files only — this tool fails on PDF, DOCX, "
-    "XLSX, TXT, and image files.",
+    "XLSX, TXT, and image files. Pass the CSV files in `artifacts` as one "
+    "`{name, artifact_id}` per file, both copied from the same entry of the file list.",
 )
 
 DATABASE_QUERY_TOOL_FN = _placeholder_tool(
@@ -182,6 +187,50 @@ PRESENT_SERVER_TOOL_FN = _placeholder_tool(
         "Streamlit) so the user can open or interact with it. Optionally pass `service_name` "
         "and an `initial_path` to deep-link to a specific route."
     ),
+)
+
+CONVERT_DOCUMENTS_TOOL_FN = _placeholder_tool(
+    CONVERT_DOCUMENTS_TOOL_NAME,
+    "Extract the text of a binary document into markdown so it can be read. Takes the "
+    "sandbox paths of one or more files — typically the user's attachments, which "
+    "arrive under /mnt/user-data/uploads/. Short content is returned in the result; "
+    "longer content is written to /home/agent/workspace/<name>.md and the result gives "
+    "its path, so you can then read, grep or process it.\n\n"
+    "Use it only for formats whose bytes are not readable as text: PDF, DOCX, XLSX, "
+    "PPTX, and similar. Not for images or audio — it does no OCR or "
+    "transcription. Plain-text files (.txt, .csv, .json, .md, source code, …) are "
+    "already readable — open those directly instead; converting them adds a step and "
+    "can lose structure. Converting a file you were not asked to work with wastes a "
+    "turn, so only convert what the request actually requires.",
+)
+
+DESCRIBE_IMAGE_TOOL_FN = _placeholder_tool(
+    DESCRIBE_IMAGE_TOOL_NAME,
+    "Describe the visual content of one or more image files in the sandbox. Takes the "
+    "sandbox paths of the images — typically the user's attachments, which arrive "
+    "under /mnt/user-data/uploads/ — and produces a detailed description of each. A "
+    "short description is returned in the result; a longer one is written to "
+    "/home/agent/workspace/<name>.md and the result gives its path, so you can then "
+    "read, grep or quote it.\n\n"
+    "Use it when you need a written account of what an image shows and you cannot see "
+    "the image yourself, or when you want a more thorough reading than a glance gives: "
+    "the description is produced by a dedicated vision pass that examines the image in "
+    "detail. If the image is already visible to you and a glance answers the question, "
+    "just answer. For measurements rather than description — pixel statistics, colour "
+    "histograms, dimensions, cropping — read the file with code instead; this tool "
+    "returns prose, not numbers.",
+)
+
+TRANSCRIBE_AUDIO_TOOL_FN = _placeholder_tool(
+    TRANSCRIBE_AUDIO_TOOL_NAME,
+    "Transcribe the speech in one or more audio files in the sandbox. Takes the sandbox "
+    "paths of the audio — typically the user's attachments, which arrive under "
+    "/mnt/user-data/uploads/. A short transcript is returned in the result; a longer "
+    "one is written to /home/agent/workspace/<name>.md and the result gives its path, "
+    "so you can then read, grep or quote it.\n\n"
+    "Use it when you need the words spoken in a recording. For properties of the audio "
+    "signal rather than its content — duration, sample rate, waveform, format "
+    "conversion — read the file with code instead.",
 )
 
 SKILLS_TOOL_FN = _placeholder_tool(

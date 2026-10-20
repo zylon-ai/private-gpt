@@ -484,9 +484,24 @@ class PreprocessTypeSettings(BaseModel):
     )
 
 
+class DocumentPreprocessSettings(PreprocessTypeSettings):
+    """Preprocessing settings for documents attached to chat messages."""
+
+    describe_images: bool = Field(
+        default=True,
+        description=(
+            "Describe the images embedded in attached documents the same way "
+            "ingestion does: only when `transformation.docling.vision` is "
+            "enabled, reusing its tuning, and with a model that supports images. "
+            "Set to false to opt chat out. Images that are not described are "
+            "replaced by a placeholder instead of reaching the prompt as base64."
+        ),
+    )
+
+
 class PreprocessSettings(BaseModel):
-    documents: PreprocessTypeSettings = Field(
-        default_factory=lambda: PreprocessTypeSettings(),
+    documents: DocumentPreprocessSettings = Field(
+        default_factory=lambda: DocumentPreprocessSettings(),
         description="Settings for document block preprocessing.",
     )
     multimodal: PreprocessTypeSettings = Field(
@@ -1898,6 +1913,33 @@ class PresentFilesToolSettings(BaseModel):
     )
 
 
+class ConvertDocumentsToolSettings(BaseModel):
+    """Config for the convert_documents tool."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Feature flag to enable the convert_documents tool.",
+    )
+
+
+class DescribeImageToolSettings(BaseModel):
+    """Config for the describe_image tool."""
+
+    enabled: bool = Field(
+        default=False,
+        description="Feature flag to enable the describe_image tool. Off by default.",
+    )
+
+
+class TranscribeAudioToolSettings(BaseModel):
+    """Config for the transcribe_audio tool."""
+
+    enabled: bool = Field(
+        default=False,
+        description="Feature flag to enable the transcribe_audio tool. Off by default.",
+    )
+
+
 class PresentServerToolSettings(BaseModel):
     """Config for the present_server tool."""
 
@@ -1924,6 +1966,28 @@ class CodeExecutionToolsSettings(BaseModel):
         default_factory=PresentServerToolSettings,
         description="Config for the present_server tool.",
     )
+    convert_documents: ConvertDocumentsToolSettings = Field(
+        default_factory=ConvertDocumentsToolSettings,
+        description="Config for the convert_documents tool.",
+    )
+    describe_image: DescribeImageToolSettings = Field(
+        default_factory=DescribeImageToolSettings,
+        description="Config for the describe_image tool.",
+    )
+    transcribe_audio: TranscribeAudioToolSettings = Field(
+        default_factory=TranscribeAudioToolSettings,
+        description="Config for the transcribe_audio tool.",
+    )
+    inline_result_bytes: int = Field(
+        default=4096,
+        ge=0,
+        description=(
+            "Results of convert_documents, describe_image and transcribe_audio up "
+            "to this many UTF-8 bytes are returned inline to the model; longer ones "
+            "are written to /home/agent/workspace/<name>.md and only their path is "
+            "returned. 0 always writes a file."
+        ),
+    )
     server_tool_result_mode: Literal["full", "client"] = Field(
         default="full",
         description=(
@@ -1932,6 +1996,76 @@ class CodeExecutionToolsSettings(BaseModel):
             "'client' renders the result as plain text before passing it to the model."
         ),
     )
+
+
+class OutputCleaningSettings(BaseModel):
+    enabled: bool = Field(
+        default=True,
+        description="Clean code execution output before returning it to the model.",
+    )
+    bash_interceptors: list[str] = Field(
+        default_factory=lambda: [
+            "binary",
+            "ansi",
+            "terminal",
+            "control",
+            "unicode",
+            "secrets",
+            "data_uri",
+            "base64",
+            "long_lines",
+            "repeated_lines",
+            "whitespace",
+        ],
+        description=(
+            "Interceptors applied in order to bash stdout/stderr. Available: "
+            "binary, ansi, terminal, control, unicode, secrets, data_uri, base64, "
+            "long_lines, repeated_lines, whitespace. When set via env var, use a "
+            "comma-separated string."
+        ),
+    )
+    view_interceptors: list[str] = Field(
+        default_factory=lambda: [
+            "binary",
+            "ansi",
+            "control",
+            "unicode",
+            "data_uri",
+            "base64",
+            "long_lines",
+        ],
+        description=(
+            "Interceptors applied to text_editor view output. Kept conservative: "
+            "the model edits files from what it sees, so line structure and "
+            "content must stay faithful."
+        ),
+    )
+    base64_min_length: int = Field(
+        default=256,
+        description="Minimum length of a base64 run (or data URI payload) to omit.",
+    )
+    binary_threshold: float = Field(
+        default=0.1,
+        description=(
+            "Fraction of binary characters above which the whole output is "
+            "replaced by a placeholder instead of collapsing binary runs."
+        ),
+    )
+    max_line_length: int = Field(
+        default=2000,
+        description="Lines longer than this are cut with a truncation marker.",
+    )
+    min_repeated_lines: int = Field(
+        default=3,
+        description="Identical consecutive lines collapsed once a run is this long.",
+    )
+
+    @field_validator("bash_interceptors", "view_interceptors", mode="before")
+    @classmethod
+    def split_comma_separated(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
 
 class CodeExecutionSettings(BaseModel):
@@ -1950,8 +2084,17 @@ class CodeExecutionSettings(BaseModel):
         description="Default code execution timeout in seconds.",
     )
     max_output_bytes: int = Field(
-        default=1_048_576,
-        description="Maximum output size to return from code execution tools.",
+        default=40_960,
+        description=(
+            "Maximum size in UTF-8 bytes returned to the model per output stream "
+            "(bash stdout and stderr each, text_editor view), after cleaning. "
+            "About 10k tokens; bash keeps head and tail, view keeps the head."
+        ),
+    )
+    output_cleaning: OutputCleaningSettings = Field(
+        default_factory=lambda: OutputCleaningSettings(),
+        description="Interceptors that strip base64, binary and terminal noise "
+        "from code execution output.",
     )
     session_ttl_seconds: int = Field(
         default=1800,

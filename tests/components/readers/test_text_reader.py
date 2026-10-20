@@ -2,6 +2,7 @@ import asyncio
 import uuid
 from pathlib import Path
 
+import pytest
 from llama_index.core.schema import MetadataMode
 
 from private_gpt.components.ingest.metadata_helper import MetadataKeys
@@ -232,3 +233,38 @@ def test_eml() -> None:
     assert "Thanks for your time today." in markdown_content, (
         "Expected a table in the first node."
     )
+
+
+def test_text_reader_refuses_an_image(tmp_path: Path) -> None:
+    """Latin-1 decodes any byte, so an image used to come back as garbage text."""
+    file = tmp_path / "photo.gif"
+    file.write_bytes(b"GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00")
+
+    with pytest.raises(RuntimeError, match="binary"):
+        asyncio.run(collect_nodes(get_file_info(file, "photo.gif")))
+
+
+def test_text_reader_refuses_bytes_with_nul(tmp_path: Path) -> None:
+    file = tmp_path / "blob.txt"
+    file.write_bytes(b"looks like text\x00\x01\x02 but is not")
+
+    with pytest.raises(RuntimeError, match="binary"):
+        asyncio.run(collect_nodes(get_file_info(file, "blob.txt")))
+
+
+def test_text_reader_still_reads_latin1_text(tmp_path: Path) -> None:
+    file = tmp_path / "legacy.txt"
+    file.write_bytes("caf\u00e9 cr\u00e8me".encode("latin-1"))
+
+    nodes = asyncio.run(_collect_untransformed(get_file_info(file, "legacy.txt")))
+
+    assert nodes[0].get_content(metadata_mode=MetadataMode.NONE) == "café crème"
+
+
+async def _collect_untransformed(file_info):
+    return [
+        node
+        async for node in reader.lazy_load_data(
+            file_info=file_info, execute_transformations=False
+        )
+    ]

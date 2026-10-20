@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import posixpath
+import shlex
 from typing import TYPE_CHECKING
 
 from private_gpt.components.code_execution.base import CodeExecutionSession
@@ -13,6 +14,54 @@ from private_gpt.components.sandbox.base import SandboxExecOptions
 if TYPE_CHECKING:
     from private_gpt.components.environment.environment import Environment
     from private_gpt.components.sandbox.base import SandboxLink, SandboxSession
+
+
+def _as_text(raw: bytes) -> str | None:
+    """Decode *raw* as UTF-8 text, or return None when it is binary.
+
+    A lenient decode turns an image into pages of replacement characters that
+    cost tokens and tell the model nothing. NUL bytes are rejected as well: they
+    are valid UTF-8 but never appear in a text file.
+    """
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    return None if "\x00" in text else text
+
+
+# Ask CLIs for plain output at the source; the output cleaner only has to
+# catch what still slips through. Exported as a shell prefix rather than via
+# SandboxExecOptions.env (not every backend honours it), so an ``export``
+# inside the model's own command still wins.
+PLAIN_OUTPUT_ENV: dict[str, str] = {
+    "NO_COLOR": "1",
+    "FORCE_COLOR": "0",
+    "CLICOLOR": "0",
+    "CLICOLOR_FORCE": "0",
+    "TERM": "dumb",
+    "PAGER": "cat",
+    "GIT_PAGER": "cat",
+    "GH_PAGER": "cat",
+    "GIT_TERMINAL_PROMPT": "0",
+    "COLORTERM": "",
+    "MANPAGER": "cat",
+    "SYSTEMD_PAGER": "",
+    "PY_COLORS": "0",
+    "PIP_PROGRESS_BAR": "off",
+    "PIP_NO_COLOR": "1",
+    "NPM_CONFIG_COLOR": "false",
+    "NPM_CONFIG_PROGRESS": "false",
+    "TQDM_DISABLE": "1",
+    "CARGO_TERM_COLOR": "never",
+    "CARGO_TERM_PROGRESS_WHEN": "never",
+    "BUILDKIT_PROGRESS": "plain",
+    "GCC_COLORS": "",
+    "DEBIAN_FRONTEND": "noninteractive",
+}
+_PLAIN_OUTPUT_PREFIX = "export " + " ".join(
+    f"{k}={shlex.quote(v)}" for k, v in PLAIN_OUTPUT_ENV.items()
+)
 
 
 class SandboxCodeExecutionSession(CodeExecutionSession):
@@ -46,7 +95,7 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             await self._env.exec(f"rm -rf {workspace}* {workspace}.[!.]*")
             await self._sandbox.make_dir(workspace)
         result = await self._env.exec(
-            command,
+            f"{_PLAIN_OUTPUT_PREFIX}\n{command}",
             SandboxExecOptions(timeout=timeout, cwd=workspace),
         )
         return BashExecutionResult(
@@ -74,7 +123,16 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
                 entries = await self._sandbox.list_dir(path)
                 return FileOperationResult(success=True, output="\n".join(entries))
             raw = await self._sandbox.read_file(path)
-            text = raw.decode("utf-8", errors="replace")
+            text = _as_text(raw)
+            if text is None:
+                return FileOperationResult(
+                    success=False,
+                    error=(
+                        f"{path} is a binary file and cannot be viewed as text. "
+                        "Inspect it with code instead, or use describe_image, "
+                        "transcribe_audio or convert_documents when available."
+                    ),
+                )
             all_lines = text.splitlines()
             total = len(all_lines)
             base_line = 1

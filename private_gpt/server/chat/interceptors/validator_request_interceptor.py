@@ -118,7 +118,7 @@ class ValidatorRequestInterceptor(ChatRequestLoopInterceptor):
         # If a system message is present in the request messages, it's a misuse
         if self._system_message_text(context.state.input.request.messages):
             raise RuntimeError(
-                "System messages should be as layer in the context stack."
+                "System messages must be passed as a layer in the context stack, not as request messages."
             )
 
         # A token covers at least one byte of text, so when the byte counts already

@@ -60,8 +60,6 @@ class ChatCheckpointStore(ABC):
         execution_id: str,
         tool_id: str,
         result: dict[str, Any],
-        *,
-        allow_claimed: bool = False,
     ) -> dict[str, ToolExecutionResponse] | None: ...
 
     @abstractmethod
@@ -114,13 +112,9 @@ class InMemoryChatCheckpointStore(ChatCheckpointStore):
         execution_id: str,
         tool_id: str,
         result: dict[str, Any],
-        *,
-        allow_claimed: bool = False,
     ) -> dict[str, ToolExecutionResponse] | None:
         response = normalize_tool_result(tool_id, result)
         async with self._lock:
-            if execution_id in self._resumed and not allow_claimed:
-                return None
             if execution_id in self._terminal:
                 return None
             checkpoint = self._checkpoints.get(execution_id)

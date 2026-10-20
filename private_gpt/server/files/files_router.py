@@ -45,7 +45,8 @@ async def list_namespaces(
     description=(
         "Upload into the session filesystem. By default the file goes to the "
         "uploads mount (`/mnt/user-data/uploads/`). A top-level `outputs/` key "
-        "selects the deliverables mount (`/mnt/user-data/outputs/`); custom nested "
+        "selects the deliverables mount (`/mnt/user-data/outputs/`) and a top-level "
+        "`workspace/` key the agent's working directory (`/home/agent/workspace/`); custom nested "
         "keys such as `data/2024/report.pdf` remain on the uploads mount."
         "The relative path is returned as the file ID. "
         "Uploading a file to an existing key overwrites it."
@@ -95,7 +96,8 @@ async def upload_file(
     description=(
         "S3/blob-style put-object into the session filesystem. Ordinary keys go to "
         "the uploads mount (`/mnt/user-data/uploads/`). A top-level `outputs/` key "
-        "goes to the outputs mount (`/mnt/user-data/outputs/`). Parent "
+        "goes to the outputs mount (`/mnt/user-data/outputs/`) and a top-level "
+        "`workspace/` key to the agent's working directory (`/home/agent/workspace/`). Parent "
         "directories are created automatically and existing keys are overwritten. "
         "The response is the same `FileMetadata` as `POST /v1/files`, so the returned "
         "`id` can be used with the other file endpoints."

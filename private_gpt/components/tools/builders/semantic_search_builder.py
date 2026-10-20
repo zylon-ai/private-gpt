@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import Generator
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from injector import inject, singleton
 from llama_index.core import StorageContext, VectorStoreIndex
@@ -24,6 +24,10 @@ from private_gpt.components.postprocessor.tree_expansion.tree_expansion_replacem
     TreeExpansionReplacementPostProcessor,
 )
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
+from private_gpt.components.tools.artifact_refs import (
+    ArtifactRefInput,
+    resolve_artifact_refs,
+)
 from private_gpt.components.tools.remote_execution import build_rebuild_metadata
 from private_gpt.components.tools.tool_names import SEMANTIC_SEARCH_TOOL_NAME
 from private_gpt.components.tools.tool_placeholders import SEMANTIC_SEARCH_TOOL_FN
@@ -255,6 +259,12 @@ class SemanticSearchToolBuilder:
                                 if context_filter_copy.artifacts
                                 else list(set(artifacts))
                             )
+                            # An empty scope would widen to the whole collection
+                            if not context_filter_copy.artifacts:
+                                raise ValueError(
+                                    "artifacts rejected, nothing was searched: "
+                                    "none of them is available here."
+                                )
                         elif (
                             context_filter_copy is not None
                             and context_filter_copy.artifacts
@@ -293,9 +303,19 @@ class SemanticSearchToolBuilder:
 
         async def semantic_search(
             query: str,
-            artifacts: list[str] | None = None,
+            artifacts: Annotated[
+                list[ArtifactRefInput] | None,
+                "Files to restrict the search to, one {name, artifact_id} per file, both copied "
+                "from the same entry of the file list.",
+            ] = None,
         ) -> list[ResultContentBlockType]:
-            w = await _ensure_workflow(artifacts=artifacts)
+            artifact_ids = await resolve_artifact_refs(
+                artifacts,
+                context_filter=context_filter,
+                node_store_component=self.node_store_component,
+                action="searched",
+            )
+            w = await _ensure_workflow(artifacts=artifact_ids)
             result: SemanticSearchResultEvent = await w.run(
                 start_event=SemanticSearchInputEvent(
                     query=query,

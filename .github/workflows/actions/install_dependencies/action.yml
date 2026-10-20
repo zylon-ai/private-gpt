@@ -28,7 +28,7 @@ runs:
         enable-cache: ${{ inputs.enable_cache }}
 
     - name: Setup FFmpeg
-      uses: AnimMouse/setup-ffmpeg@v1.2.3
+      uses: AnimMouse/setup-ffmpeg@ae28d57dabbb148eff63170b6bf7f2b60062cbae # v1.2.3
 
     - name: Install Dependencies
       run: |

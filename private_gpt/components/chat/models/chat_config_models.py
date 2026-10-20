@@ -177,6 +177,10 @@ class ToolExecutionMetadata(BaseModel):
 
 class ToolSpec(BaseModel):
     name: str | None = Field(description="Unique name identifier for the tool")
+    raw_name: str | None = Field(
+        default=None,
+        description="Original tool name before model-facing normalization",
+    )
     type: str | None = Field(
         default=None,
         description="Type of the tool, use to identify internal tools database_query_v1 or semantic_search_v1",
@@ -307,6 +311,7 @@ class ToolSpec(BaseModel):
         instructions: str | None = None,
         requirements: list[ToolRequirements] | None = None,
         execution_metadata: ToolExecutionMetadata | None = None,
+        raw_name: str | None = None,
     ) -> ToolSpec:
         """Create a ToolSpec from default parameters."""
         if not input_schema and not async_fn:
@@ -320,6 +325,7 @@ class ToolSpec(BaseModel):
 
         return cls(
             name=name,
+            raw_name=raw_name,
             type=type,
             runtime=runtime,
             event_adapter=event_adapter,

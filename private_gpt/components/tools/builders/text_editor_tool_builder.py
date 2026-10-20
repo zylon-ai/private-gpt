@@ -11,6 +11,11 @@ from private_gpt.components.chat.models.chat_config_models import (
 from private_gpt.components.code_execution.code_execution_component import (
     CodeExecutionComponent,
 )
+from private_gpt.components.code_execution.output_cleaning import (
+    OutputCleaner,
+    human_size,
+    truncate_lines,
+)
 from private_gpt.components.tools.events.adapters import (
     TextEditorCodeExecutionEventAdapter,
 )
@@ -27,7 +32,6 @@ from private_gpt.components.tools.tool_placeholders import (
     TEXT_EDITOR_STR_REPLACE_TOOL_FN,
     TEXT_EDITOR_VIEW_TOOL_FN,
 )
-from private_gpt.components.tools.utils import truncate_output
 from private_gpt.di import get_global_injector
 from private_gpt.events.models import (
     NO_TOOL_CONTENT,
@@ -45,8 +49,29 @@ if TYPE_CHECKING:
     from private_gpt.events.models import ResultContentBlockType
 
 
-def _truncated(output: str, max_bytes: int) -> str:
-    return truncate_output(output, max_bytes)
+def _view_truncation_notice(
+    *,
+    is_file: bool,
+    start_line: int,
+    end_line: int,
+    last_line: int,
+    total_lines: int,
+    reason: str,
+) -> str:
+    """Tell the model a view was cut short and how to read the rest."""
+    if not is_file:
+        return (
+            f"[Truncated: showing {end_line} of {total_lines} entries because of "
+            f"{reason}. List a subdirectory, or use bash (ls, find, grep) to "
+            "narrow the listing.]"
+        )
+    next_end = min(end_line + (end_line - start_line + 1), last_line)
+    return (
+        f"[Truncated: showing lines {start_line}-{end_line} of {total_lines} "
+        f"because of {reason}. Use view_range=[{end_line + 1}, {next_end}] to "
+        "read the next fragment, or search the file with bash (e.g. grep -n) "
+        "and view only the lines you need.]"
+    )
 
 
 @singleton
@@ -59,6 +84,7 @@ class TextEditorToolBuilder:
     ) -> None:
         self._component = code_execution_component
         self._settings = settings
+        self._clean = OutputCleaner.for_view(settings.code_execution.output_cleaning)
 
     async def _session(
         self, config: CodeExecutionSessionConfig
@@ -95,24 +121,37 @@ class TextEditorToolBuilder:
             )
             if not result.success:
                 raise RuntimeError(result.error or "Unable to view file")
-            output = _truncated(
-                result.output, self._settings.code_execution.max_output_bytes
-            )
+            max_bytes = self._settings.code_execution.max_output_bytes
+            cleaned = self._clean(result.output)
+            available = len(cleaned.splitlines())
+            output, _ = truncate_lines(cleaned, max_bytes)
             lines = output.splitlines()
-            full_num_lines = len(lines)
+            reason = f"the {human_size(max_bytes)} output limit"
             if (
                 view_settings.max_lines is not None
                 and len(lines) > view_settings.max_lines
             ):
                 lines = lines[: view_settings.max_lines]
+                reason = f"the {view_settings.max_lines}-line view limit"
             num_lines = len(lines)
             start_line = resolved_view_range[0] if resolved_view_range else 1
+            end_line = start_line + num_lines - 1
             total_lines = (
-                result.total_lines if result.total_lines is not None else full_num_lines
+                result.total_lines if result.total_lines is not None else available
             )
+            content = "\n".join(lines) if lines else NO_TOOL_CONTENT
+            if lines and num_lines < available:
+                content += "\n\n" + _view_truncation_notice(
+                    is_file=result.total_lines is not None,
+                    start_line=start_line,
+                    end_line=end_line,
+                    last_line=start_line + available - 1,
+                    total_lines=total_lines,
+                    reason=reason,
+                )
             return [
                 TextEditorCodeExecutionViewResultBlock(
-                    content="\n".join(lines) if lines else NO_TOOL_CONTENT,
+                    content=content,
                     num_lines=num_lines,
                     start_line=start_line,
                     total_lines=total_lines,
