@@ -3188,6 +3188,7 @@ source = { editable = "." }
 dependencies = [
     { name = "arq" },
     { name = "cachetools" },
+    { name = "celery" },
     { name = "fastapi", extra = ["all"] },
     { name = "injector" },
     { name = "llama-index-core" },
@@ -3487,12 +3488,10 @@ observability-opik = [
     { name = "opik" },
 ]
 queue = [
-    { name = "celery" },
     { name = "flower" },
     { name = "pika" },
 ]
 queue-celery = [
-    { name = "celery" },
     { name = "flower" },
 ]
 queue-rabbitmq = [
@@ -3604,7 +3603,7 @@ requires-dist = [
     { name = "beautifulsoup4", marker = "extra == 'ingest-markup'", specifier = ">=4.14.3,<5" },
     { name = "boto3", marker = "extra == 'storage-s3'", specifier = ">=1.35.0,<1.43.2" },
     { name = "cachetools", specifier = ">=7.0.0" },
-    { name = "celery", marker = "extra == 'queue-celery'", specifier = "==5.4.0,<6" },
+    { name = "celery", specifier = "==5.4.0,<6" },
     { name = "celery-types", marker = "extra == 'typecheck'", specifier = ">=0.20.0,<0.21" },
     { name = "chardet", marker = "extra == 'ingest-core'", specifier = ">=5.2.0,<6" },
     { name = "fastapi", extras = ["all"], specifier = ">=0.136.0" },

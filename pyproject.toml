@@ -14,6 +14,8 @@ dependencies = [
     "watchdog>=4.0.1,<5",
     # Core framework
     "llama-index-core>=0.14.21,<0.15.0",
+    # Task processing
+    "celery==5.4.0,<6",
     # Utilities
     "cachetools>=7.0.0",
     "partial-json-parser>=0.2.1.1.post7,<0.3",
@@ -207,7 +209,7 @@ database = [
 # Queue / Task processing
 # ---------------------------------------------------------------------------
 queue-celery = [
-    "celery==5.4.0,<6",
+    # Celery is required; this extra adds optional monitoring.
     "flower>=2.0.1,<3",
 ]
 queue-rabbitmq = [
