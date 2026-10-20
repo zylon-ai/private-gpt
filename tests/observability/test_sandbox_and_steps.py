@@ -6,6 +6,12 @@ from typing import TYPE_CHECKING
 
 import httpx
 import pytest
+from llama_index.core.workflow import (  # noqa: TC002 - resolved at runtime by @step
+    StartEvent,
+    StopEvent,
+    Workflow,
+    step,
+)
 from opentelemetry import trace
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
@@ -118,12 +124,6 @@ async def test_sandbox_operations_replace_raw_http_spans(
 async def test_spans_in_a_workflow_step_nest_under_the_step(
     memory: InMemorySpanExporter,
 ) -> None:
-    from llama_index.core.workflow import (  # noqa: TC002 - used at runtime by @step
-        StartEvent,
-        StopEvent,
-        Workflow,
-        step,
-    )
     from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
 
     from private_gpt.observability.tracing import SpanKind, start_span

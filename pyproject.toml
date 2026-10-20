@@ -295,7 +295,8 @@ observability-otel = [
     "openinference-instrumentation-llama-index>=4.6.0,<5",
     # openinference-instrumentation-llama-index 4.6 imports SpanCancelledEvent,
     # added in llama-index-workflows 2.16 (it does not declare the floor itself).
-    "llama-index-workflows>=2.16.0,<3",
+    # Pinned: on 2.26 the audio workflow times out before its first LLM call.
+    "llama-index-workflows==2.16.0",
 ]
 observability = [
     "private-gpt[observability-otel]",

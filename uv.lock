@@ -1888,16 +1888,16 @@ wheels = [
 
 [[package]]
 name = "llama-index-workflows"
-version = "2.26.0"
+version = "2.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "llama-index-instrumentation" },
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1d/42/d4e1b004a041fcbad1e3acc804090a28161358ac567b0c74be2a3eef760c/llama_index_workflows-2.26.0.tar.gz", hash = "sha256:1aa685b678acbbd0a01a22e4d73aecd374cd12f923cf12ea83c5264f68bafa16", size = 159151, upload-time = "2026-10-11T15:00:02.452Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bf/0e/f928ab689d387bce277efc43bb4e6b0840af914315728a62203452f3b424/llama_index_workflows-2.16.0.tar.gz", hash = "sha256:be4df184498c649dc1558a074794402a3bb0eb59a83e28ff5cfe9885d9787187", size = 83347, upload-time = "2026-03-11T16:40:34.652Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/74/35/f446e276b94d0602471d575def1407eb5248ac4edd05feef21419cb5149f/llama_index_workflows-2.26.0-py3-none-any.whl", hash = "sha256:c90cf7562f175f11cef5d5a657c38db0a21ce66bee07573c2c5a1f68cb8ae4df", size = 183259, upload-time = "2026-10-11T15:00:01.131Z" },
+    { url = "https://files.pythonhosted.org/packages/98/a5/823834f8ee527fde3976c66bddffb9d757bd3a666303658682fe0a3ce23a/llama_index_workflows-2.16.0-py3-none-any.whl", hash = "sha256:564f19987f6cbd6bca69581cc934a721a402c1cc773c58faea4fb0041350f77c", size = 106493, upload-time = "2026-03-11T16:40:32.062Z" },
 ]
 
 [[package]]
@@ -3615,7 +3615,7 @@ requires-dist = [
     { name = "llama-index-storage-index-store-postgres", marker = "extra == 'indexstore-postgres'" },
     { name = "llama-index-utils-workflow", marker = "extra == 'ingest-core'" },
     { name = "llama-index-vector-stores-qdrant", marker = "extra == 'vectorstore-qdrant'" },
-    { name = "llama-index-workflows", marker = "extra == 'observability-otel'", specifier = ">=2.16.0,<3" },
+    { name = "llama-index-workflows", marker = "extra == 'observability-otel'", specifier = "==2.16.0" },
     { name = "lxml-html-clean", marker = "extra == 'ingest-markup'", specifier = ">=0.4.4" },
     { name = "markdownify", marker = "extra == 'ingest-markup'", specifier = ">=0.13.1,<0.14" },
     { name = "markitdown", extras = ["docx", "pdf", "pptx", "xls", "xlsx"], marker = "extra == 'ingest-markitdown'", specifier = ">=0.1.5" },
