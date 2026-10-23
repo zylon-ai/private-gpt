@@ -30,6 +30,11 @@ from private_gpt.events.models import (
     TLDRBlock,
     TLDRDelta,
 )
+from private_gpt.observability.tracing import (
+    SpanKind,
+    set_span_attributes,
+    start_span,
+)
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -141,6 +146,33 @@ async def _condensation_producer(
         queue.put_nowait(_SENTINEL)
 
     return result
+
+
+async def _traced_producer(
+    queue: asyncio.Queue[Event | object | None],
+    result: _CondensationResult,
+    generator: AsyncIterator[CondenseResponse],
+    messages: int,
+) -> _CondensationResult:
+    """Run the producer inside a ``chat.condensation`` span.
+
+    The span records whether condensation was needed (token counts against
+    the limit) and, when it ran, the strategy and the history before and
+    after; the strategy's LLM calls nest under it.
+    """
+    with start_span(
+        "chat.condensation", SpanKind.CHAIN, input={"messages": messages}
+    ) as span:
+        outcome = await _condensation_producer(queue, result, generator)
+        set_span_attributes(
+            span,
+            output={
+                "condensed": outcome.condensed,
+                "messages": len(outcome.chat_history or []) or None,
+            },
+            **{"pgpt.condensation.condensed": outcome.condensed},
+        )
+        return outcome
 
 
 class _OpenBlockTracker:
@@ -290,7 +322,9 @@ class CondensationRequestInterceptor(ChatRequestLoopInterceptor):
 
         queue: asyncio.Queue[Event | object | None] = asyncio.Queue()
         result = _CondensationResult()
-        producer = asyncio.create_task(_condensation_producer(queue, result, generator))
+        producer = asyncio.create_task(
+            _traced_producer(queue, result, generator, len(history))
+        )
         tracker = _OpenBlockTracker()
 
         try:

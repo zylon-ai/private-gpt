@@ -67,6 +67,12 @@ class SandboxSession(ABC):
 
     python_executable: str = "python"
 
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        super().__init_subclass__(**kwargs)
+        from private_gpt.components.sandbox.tracing import trace_sandbox_class
+
+        trace_sandbox_class(cls, provider=False)
+
     @abstractmethod
     async def exec(
         self, command: str, opts: SandboxExecOptions | None = None
@@ -147,6 +153,12 @@ class SandboxSession(ABC):
 
 
 class SandboxProvider(ABC):
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        super().__init_subclass__(**kwargs)
+        from private_gpt.components.sandbox.tracing import trace_sandbox_class
+
+        trace_sandbox_class(cls, provider=True)
+
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 

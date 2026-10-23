@@ -10,6 +10,7 @@ from private_gpt.components.code_execution.results import (
     FileOperationResult,
 )
 from private_gpt.components.sandbox.base import SandboxExecOptions
+from private_gpt.observability.tracing import SpanKind, set_span_status, traced
 
 if TYPE_CHECKING:
     from private_gpt.components.environment.environment import Environment
@@ -64,6 +65,13 @@ _PLAIN_OUTPUT_PREFIX = "export " + " ".join(
 )
 
 
+def _file_result(result: FileOperationResult) -> dict[str, object]:
+    """Span output for a file operation; failures are marked on the span."""
+    if not result.success:
+        set_span_status(error=result.error or "File operation failed")
+    return result.model_dump(exclude_none=True)
+
+
 class SandboxCodeExecutionSession(CodeExecutionSession):
     """CodeExecutionSession tool protocol over a managed Environment.
 
@@ -85,6 +93,16 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             return path
         return posixpath.join(self._env.workspace, path)
 
+    @traced(
+        "sandbox.exec",
+        SpanKind.TOOL,
+        capture=lambda _self, command, timeout=None, restart=False: {
+            "command": command,
+            "timeout": timeout,
+            "restart": restart,
+        },
+        result=lambda r: r.model_dump(exclude={"success"}),
+    )
     async def execute_bash(
         self, command: str, timeout: int | None = None, restart: bool = False
     ) -> BashExecutionResult:
@@ -106,6 +124,15 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
             execution_time_ms=result.execution_time_ms,
         )
 
+    @traced(
+        "sandbox.view",
+        SpanKind.TOOL,
+        capture=lambda _self, path, view_range=None, **_: {
+            "path": path,
+            "view_range": view_range,
+        },
+        result=_file_result,
+    )
     async def view(
         self,
         path: str,
@@ -151,6 +178,16 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
         except Exception as exc:
             return FileOperationResult(success=False, error=str(exc))
 
+    @traced(
+        "sandbox.str_replace",
+        SpanKind.TOOL,
+        capture=lambda _self, path, old_str, new_str: {
+            "path": path,
+            "old_str": old_str,
+            "new_str": new_str,
+        },
+        result=_file_result,
+    )
     async def str_replace(
         self, path: str, old_str: str, new_str: str
     ) -> FileOperationResult:
@@ -186,6 +223,15 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
         except Exception as exc:
             return FileOperationResult(success=False, error=str(exc))
 
+    @traced(
+        "sandbox.create",
+        SpanKind.TOOL,
+        capture=lambda _self, path, file_text: {
+            "path": path,
+            "bytes": len(file_text or ""),
+        },
+        result=_file_result,
+    )
     async def create(self, path: str, file_text: str) -> FileOperationResult:
         if not isinstance(file_text, str):
             return FileOperationResult(
@@ -204,6 +250,16 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
         except Exception as exc:
             return FileOperationResult(success=False, error=str(exc))
 
+    @traced(
+        "sandbox.insert",
+        SpanKind.TOOL,
+        capture=lambda _self, path, insert_line, new_str: {
+            "path": path,
+            "insert_line": insert_line,
+            "new_str": new_str,
+        },
+        result=_file_result,
+    )
     async def insert(
         self, path: str, insert_line: int, new_str: str
     ) -> FileOperationResult:
@@ -235,11 +291,23 @@ class SandboxCodeExecutionSession(CodeExecutionSession):
     async def get_endpoint(self, port: int) -> SandboxLink | None:
         return await self._sandbox.get_endpoint(port)
 
+    @traced(
+        "sandbox.read_file",
+        SpanKind.TOOL,
+        capture=lambda _self, path: {"path": path},
+        result=lambda raw: {"bytes": len(raw)},
+    )
     async def read_file(self, path: str) -> bytes:
         path = self._resolve_path(path)
         self._env.touch()
         return await self._sandbox.read_file(path)
 
+    @traced(
+        "sandbox.write_file",
+        SpanKind.TOOL,
+        capture=lambda _self, path, content: {"path": path, "bytes": len(content)},
+        result=lambda _: None,
+    )
     async def write_file(self, path: str, content: bytes) -> None:
         path = self._resolve_path(path)
         self._env.touch()

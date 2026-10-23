@@ -123,6 +123,16 @@ from private_gpt.events.models import (
     ToolUseBlock,
     Usage,
 )
+from private_gpt.observability.chat import (
+    interceptor_span,
+    iteration_span,
+    record_interceptor_result,
+    record_iteration_result,
+    record_iteration_state,
+    state_fingerprint,
+    tool_span,
+)
+from private_gpt.observability.tracing import set_span_attributes, set_span_status
 
 if TYPE_CHECKING:
     from private_gpt.components.streaming.tasks.chat_scheduler import (
@@ -1048,6 +1058,32 @@ class AsyncChatEngine:
 
     async def _run_iteration(self, run: _Run, handler: _EventHandler) -> None:
         """One LLM call. Sets status; stop events are emitted by run_close."""
+        input_tokens, output_tokens = run.total_input_tokens, run.total_output_tokens
+        with iteration_span(
+            run.state.runtime.iteration + 1,
+            self._build_tools(run.state),
+            run.state.input.request.messages,
+        ) as span:
+            record_iteration_state(span, run.state)
+            await self._run_iteration_body(run, handler)
+            output = run.state.output
+            record_iteration_result(
+                span,
+                state=run.state,
+                stop_reason=output.stop_reason or str(output.status),
+                tool_calls=len(
+                    run.state.input.request.messages[-1].additional_kwargs.get(
+                        "tool_calls"
+                    )
+                    or []
+                )
+                if run.state.input.request.messages
+                else 0,
+                input_tokens=run.total_input_tokens - input_tokens,
+                output_tokens=run.total_output_tokens - output_tokens,
+            )
+
+    async def _run_iteration_body(self, run: _Run, handler: _EventHandler) -> None:
         run.state = run.state.model_copy(deep=True)
 
         await self.run_interceptor_phase(
@@ -1557,6 +1593,43 @@ class AsyncChatEngine:
         lock: asyncio.Lock,
         semaphore: asyncio.Semaphore | None = None,
     ) -> _ToolExecutionResult:
+        tool_spec = tool_specs_by_name.get(tool_call.tool_name or "")
+        with tool_span(
+            tool_name=tool_call.tool_name or "",
+            tool_id=tool_id_map.get(tool_call.tool_id or "") or tool_call.tool_id or "",
+            arguments=tool_call.tool_kwargs,
+            description=getattr(tool_spec, "description", None),
+            parameters=getattr(tool_spec, "input_schema", None),
+            runtime=getattr(tool_spec, "runtime", None),
+        ) as span:
+            result = await self._execute_tool_use(
+                run=run,
+                tool_call=tool_call,
+                tool_specs_by_name=tool_specs_by_name,
+                handler=handler,
+                tool_id_map=tool_id_map,
+                lock=lock,
+                semaphore=semaphore,
+                span=span,
+            )
+            set_span_attributes(span, **{"pgpt.tool.status": result.status})
+            if result.status == _ToolExecutionStatus.NOT_FOUND:
+                set_span_status(span, error=f"Tool '{tool_call.tool_name}' not found.")
+            if result.async_handle:
+                set_span_attributes(span, **{"pgpt.tool.task_id": result.async_handle})
+            return result
+
+    async def _execute_tool_use(
+        self,
+        run: _Run,
+        tool_call: ToolSelection,
+        tool_specs_by_name: dict[str, ToolSpec],
+        handler: _EventHandler,
+        tool_id_map: dict[str, str],
+        lock: asyncio.Lock,
+        semaphore: asyncio.Semaphore | None = None,
+        span: Any = None,
+    ) -> _ToolExecutionResult:
         raw_id = tool_call.tool_id or ""
         call_id = tool_id_map.get(raw_id) or ""
         if not call_id:
@@ -1660,6 +1733,19 @@ class AsyncChatEngine:
                 interceptors=self._tool_interceptors,
             )
 
+        failure = getattr(response.outcome, "error", None)
+        set_span_attributes(
+            span,
+            output=response.tool_message.content,
+            **{
+                "pgpt.tool.outcome": response.outcome.type,
+                "pgpt.tool.error.code": getattr(failure, "code", None),
+                "pgpt.tool.error.message": getattr(failure, "message", None),
+                "pgpt.tool.error.type": getattr(failure, "exception_type", None),
+            },
+        )
+        if failure is not None:
+            set_span_status(span, error=failure.message or "Tool execution failed")
         async with lock:
             run.state = run.state.model_copy(deep=True)
             run.state.input.request.messages = [
@@ -1810,7 +1896,10 @@ class AsyncChatEngine:
                 phase=phase,
                 emit_fn=channel.emit if channel is not None else lambda _event: None,
             )
-            await interceptor.intercept(context)
+            with interceptor_span(interceptor, phase) as span:
+                before = state_fingerprint(run.state)
+                await interceptor.intercept(context)
+                record_interceptor_result(span, before, context.state)
             run.state = context.state
 
     def _build_tools(self, state: ChatState) -> list[AsyncBaseTool]:

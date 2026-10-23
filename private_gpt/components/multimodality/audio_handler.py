@@ -15,6 +15,7 @@ from private_gpt.components.llm.models import MODEL_NOT_AVAILABLE_EXCEPTION_TYPE
 from private_gpt.components.prompts.prompt_builder import PromptBuilderService
 from private_gpt.components.workflows.types import AnyContext
 from private_gpt.di import get_global_injector
+from private_gpt.observability.tracing import SpanKind, traced
 from private_gpt.utils.dependencies import format_missing_dependency_message
 from private_gpt.utils.retry import retry_context
 
@@ -991,6 +992,16 @@ class AudioProcessingWorkflow(Workflow):
         return unique_speakers if unique_speakers else None
 
 
+@traced(
+    "transcribe_audio",
+    SpanKind.CHAIN,
+    capture=lambda _llm, audio_blocks=None, *_, **__: {
+        "audio_files": len(audio_blocks or []),
+    },
+    result=lambda r: (
+        {"transcript": r.transcript, "speakers": r.speakers} if r else None
+    ),
+)
 async def transcribe_audio(
     audio_multimodal_llm: LLM,
     audio_blocks: list[AudioBlock] | None = None,

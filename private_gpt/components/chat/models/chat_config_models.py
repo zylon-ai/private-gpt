@@ -477,6 +477,13 @@ class ContextConfig(BaseModel):
         default=None,
         description="Opaque user identifier for the chat session.",
     )
+    user_id_provided: bool = Field(
+        default=False,
+        description=(
+            "Whether user_id came from the caller (metadata.user_id) rather "
+            "than being generated for this request."
+        ),
+    )
     container: str | None = Field(
         default=None,
         description="Container identifier for reuse across requests.",

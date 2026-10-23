@@ -16,6 +16,7 @@ from private_gpt.components.readers.nodes.image_node import IMAGE_NOT_PROCESSABL
 from private_gpt.components.workflows.types import AnyContext
 from private_gpt.di import get_global_injector
 from private_gpt.events.event_errors import Errors
+from private_gpt.observability.tracing import SpanKind, traced
 from private_gpt.utils.dependencies import format_missing_dependency_message
 from private_gpt.utils.retry import retry_context
 
@@ -600,6 +601,15 @@ class ImageProcessingWorkflow(Workflow):
         return result
 
 
+@traced(
+    "describe_image",
+    SpanKind.CHAIN,
+    capture=lambda _llm, image_blocks=None, user_query=None, *_, **__: {
+        "images": len(image_blocks or []),
+        "mimetypes": [getattr(b, "image_mimetype", None) for b in image_blocks or []],
+        "user_query": user_query,
+    },
+)
 async def describe_image(
     image_multimodal_llm: LLM,
     image_blocks: list[ImageBlock] | None = None,

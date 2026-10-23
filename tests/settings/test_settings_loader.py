@@ -95,3 +95,28 @@ def test_empty_default_envvar_resolves_to_empty_string() -> None:
     """
     loaded = load_yaml_with_envvars(io.StringIO(sample_yaml), {})
     assert loaded["max_lines"] == ""
+
+
+def test_discover_exporters_from_environment() -> None:
+    from private_gpt.settings.settings import ObservabilityExporterSettings
+    from private_gpt.settings.settings_loader import (
+        discover_exporters_from_environment,
+    )
+
+    exporters = discover_exporters_from_environment(
+        {
+            "PGPT_OBSERVABILITY_EXPORTERS_JSONL_PATH": "/tmp/t.jsonl",
+            "PGPT_OBSERVABILITY_EXPORTERS_JSONL_TAGS": "ai, ingestion",
+            "PGPT_OBSERVABILITY_EXPORTERS_JAEGER_TYPE": "otlp",
+            "PGPT_OBSERVABILITY_EXPORTERS_JAEGER_OPTIONS__ENDPOINT": "http://j:4318",
+            "PGPT_OBSERVABILITY_ENVIRONMENT": "prod",  # not an exporter
+        }
+    )
+
+    assert exporters == [
+        {"type": "otlp", "options": {"endpoint": "http://j:4318"}},
+        {"type": "jsonl", "path": "/tmp/t.jsonl", "tags": ["ai", "ingestion"]},
+    ]
+    # Valid settings as they come from the environment.
+    for exporter in exporters:
+        ObservabilityExporterSettings.model_validate(exporter)

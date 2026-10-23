@@ -1,66 +1,108 @@
 ---
 title: "Observability"
-description: "Trace LLM calls and monitor performance with Arize Phoenix or Opik."
+description: "Trace requests, LLM calls, tools and ingestion with OpenTelemetry, written as OTLP JSON lines."
 ---
 
-PrivateGPT can emit traces for every LLM call, embedding request, and retrieval step. Set `observability.mode` in `settings.yaml` or in a profile such as `settings-local.yaml` to choose a backend.
+PrivateGPT emits OpenTelemetry traces for every API request, chat turn, LLM call, tool, sandbox operation, retrieval step and ingestion task (API and workers). Traces go to one or more **exporters**.
 
 <Warning>
-  This feature requires to have the `observability` extra enabled in your application. If you are adding storage to an existing application, make sure to run the sync command after enabling the module:
+  This feature requires the `observability` extra. If you are adding it to an existing application, run the sync command after enabling the module:
 
   ```bash
   uv sync --inexact observability
   ```
 </Warning>
 
-| Mode | Description |
+```yaml
+observability:
+  mode: otel          # none (default) | otel
+  exporters:
+    - type: jsonl
+      path: local_data/traces/traces.jsonl
+```
+
+---
+
+## Exporters
+
+| Type | Writes |
 |---|---|
-| `none` | No tracing (default) |
-| `simple` | Console logs via LlamaIndex's built-in handler |
-| `arize_phoenix` | Send OpenTelemetry traces to [Arize Phoenix](https://phoenix.arize.com) |
-| `opik` | Send traces to [Opik](https://www.comet.com/site/products/opik/) |
+| `jsonl` | OTLP JSON lines to `path`, one export batch per line, rotated at `max_bytes` (default 50 MB) keeping `backup_count` files (default 5) |
+| `console` | Spans to stdout |
+
+Other fields: `enabled`, `tags`. Applications built on PrivateGPT can register more types with `private_gpt.observability.exporters.register_exporter`; their settings go in `options`.
+
+### Sending the file to a backend
+
+The `jsonl` file is the format of the OpenTelemetry Collector's file exporter, so the Collector `otlpjsonfile` receiver replays it into any OTLP backend (Jaeger, Grafana Tempo, Phoenix, Langfuse...):
 
 ```yaml
-observability:
-  mode: arize_phoenix   # none | simple | arize_phoenix | opik
+receivers:
+  otlpjsonfile:
+    include: [/var/lib/private-gpt/traces/traces.jsonl*]
+exporters:
+  otlphttp:
+    endpoint: http://jaeger:4318
+service:
+  pipelines:
+    traces:
+      receivers: [otlpjsonfile]
+      exporters: [otlphttp]
 ```
+
+It also reads well with `jq`, e.g. the span names of each batch:
+
+```bash
+jq -c '[.resourceSpans[].scopeSpans[].spans[].name]' local_data/traces/traces.jsonl
+```
+
+### From environment variables
+
+Like models, exporters can be declared from the environment, one id per destination. They are appended to the ones in the settings files:
+
+```bash
+PGPT_OBSERVABILITY=otel
+PGPT_OBSERVABILITY_EXPORTERS_JSONL_PATH=/var/lib/private-gpt/traces/traces.jsonl
+PGPT_OBSERVABILITY_EXPORTERS_JSONL_TAGS=ai,ingestion
+```
+
+`PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>]`: `type` defaults to the id; `__` reaches nested fields (`OPTIONS__ENDPOINT`); `TAGS` is comma separated.
+
+The default `jsonl` exporter from `settings.yaml` can be turned off with `PGPT_OBSERVABILITY_JSONL_ENABLED=false`, e.g. in containers that only send traces to a network backend.
 
 ---
 
-## Arize Phoenix
+## Which traces each exporter gets
 
-[Arize Phoenix](https://phoenix.arize.com) is an open-source observability platform for LLM applications. It visualises traces, spans, token counts, latency, and retrieval quality.
+Traces are tagged by what they are (`observability.trace_tags`):
 
-For installation instructions see the [Phoenix docs](https://docs.arize.com/phoenix/deployment).
+| Tag | Traces |
+|---|---|
+| `ai` | Chat turns (`/v1/messages`, async included), `/v1/complete`, `/v1/tools/*`, search primitives, embeddings, token counting, and the worker side of those |
+| `ingestion` | Ingestion, deletion and conversion (API and Celery tasks) |
 
-Put this in your settings file or in a profile such as `settings-local.yaml`. If you need to create a new settings file or profile first, see [Settings Files](/configuration/settings).
-
-```yaml
-observability:
-  mode: arize_phoenix
-
-phoenix:
-  url: http://localhost:6006
-```
-
-Traces are sent to `<phoenix.url>/v1/traces` via OpenTelemetry OTLP over HTTP.
+Exporters receive every trace by default (`all`, including health checks and status polling); set `tags` per exporter to keep only some, e.g. `tags: [ai]`.
 
 ---
 
-## Opik
+## What a trace shows
 
-[Opik](https://www.comet.com/site/products/opik/) is an LLM observability platform by Comet. It can run fully self-hosted.
+* **HTTP span** (root): the JSON request and the final message as JSON (also for streaming and async responses), session and user.
+* **`chat.turn`**: the user input (text, images, documents) and the answer.
+* **`chat.iteration N`**: the conversation state the iteration starts from and the one it leaves (messages with reasoning, tool calls and results, tools, LLM parameters, tokens), and the interceptors that changed it.
+* **LLM spans**: input and output messages (reasoning, tool calls), the sampling parameters actually sent, token counts, time until the stream is drained.
+* **Tool and sandbox spans**: arguments, results, commands and file contents; retrieval steps with the nodes they return.
 
-For installation instructions see the [Opik docs](https://www.comet.com/docs/opik/self-host/overview).
+Sessions group by the request's `container` (one conversation); users by `metadata.user_id`.
 
-Put this in your settings file or in a profile such as `settings-local.yaml`. If you need to create a new settings file or profile first, see [Settings Files](/configuration/settings).
+---
 
-```yaml
-observability:
-  mode: opik
+## Other settings
 
-opik:
-  host: http://localhost:5173/
-  workspace: default
-  project_name: private-gpt
-```
+| Setting | Env | Default | |
+|---|---|---|---|
+| `environment` | `PGPT_OBSERVABILITY_ENVIRONMENT` | — | `deployment.environment.name` |
+| `capture_content` | `PGPT_OBSERVABILITY_CAPTURE_CONTENT` | `true` | Record prompts, messages and payloads; `false` keeps structure and timings only |
+| `sampling_ratio` | `PGPT_OBSERVABILITY_SAMPLING_RATIO` | `1.0` | Fraction of traces kept |
+
+Export runs in the background: a slow or unreachable backend never delays requests (spans are dropped when its queue is full).

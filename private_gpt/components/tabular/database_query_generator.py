@@ -49,6 +49,7 @@ from private_gpt.components.database.view_inspector import DatabaseViewInspector
 from private_gpt.components.llm.llm_component import LLMComponent
 from private_gpt.di import get_global_injector
 from private_gpt.events.models import TextBlock
+from private_gpt.observability.tracing import SpanKind, set_span_status, traced
 from private_gpt.utils.dependencies import format_missing_dependency_message
 
 if TYPE_CHECKING:
@@ -141,6 +142,17 @@ class ErrorQueryResult(BaseModel):
                 "Example fix: c.DeliveryLocation.ToString() AS DeliveryLocation\n"
             )
         return self.description
+
+
+def _query_result_output(result: "QueryResult") -> dict[str, Any]:
+    """Span output for a query: SQL, columns, row count and errors.
+
+    Raw rows are left out (``rows_text`` already has the readable preview);
+    a failed query marks the span as an error.
+    """
+    if result.error is not None:
+        set_span_status(error=result.error.model_dump_json(exclude_none=True))
+    return result.model_dump(mode="json", exclude={"rows"}, exclude_none=True)
 
 
 class SqlAttempt(BaseModel):
@@ -489,6 +501,7 @@ class DatabaseQueryGenerator:
         finally:
             self._disconnect()
 
+    @traced("sql.check_connection", SpanKind.TOOL, capture=lambda _self: None)
     async def check_connection(self) -> str | None:
         result = await asyncio.to_thread(self._check_connection)
         if result is None:
@@ -692,11 +705,26 @@ class DatabaseQueryGenerator:
         unsupported_dialects = [Dialects.POSTGRES]
         return self._dialect not in unsupported_dialects
 
+    @traced(
+        "sql.execute",
+        SpanKind.TOOL,
+        capture=lambda _self, query: query,
+        result=_query_result_output,
+    )
     async def _query_batched_stream(self, query: str) -> QueryResult:
         return await asyncio.to_thread(
             self._query, query, execute_batch=self._check_batched_support()
         )
 
+    @traced(
+        "sql.query",
+        SpanKind.CHAIN,
+        capture=lambda _self, query, additional_context=None: {
+            "question": query,
+            "additional_context": additional_context,
+        },
+        result=_query_result_output,
+    )
     async def query(
         self,
         query: str,
@@ -895,6 +923,16 @@ class DatabaseQueryGenerator:
 
         return messages
 
+    @traced(
+        "sql.generate",
+        SpanKind.CHAIN,
+        capture=lambda _self, natural_language_query, schemas, additional_context=None, previous_attempts=None: {
+            "question": natural_language_query,
+            "previous_attempts": [
+                a.model_dump(exclude_none=True) for a in previous_attempts or []
+            ],
+        },
+    )
     async def generate_sql_query(
         self,
         natural_language_query: str,

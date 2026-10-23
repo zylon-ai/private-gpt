@@ -6,6 +6,7 @@ import logging
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from types import SimpleNamespace
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -16,7 +17,8 @@ from fastapi.staticfiles import StaticFiles
 from injector import Injector
 from llama_index.core.embeddings import MockEmbedding
 from llama_index.core.settings import Settings as LlamaIndexSettings
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.datastructures import MutableHeaders
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from private_gpt.components.persistence.persistence_component import (
     PersistenceComponent,
@@ -31,6 +33,8 @@ from private_gpt.global_handler import (
     request_validation_exception_adapter,
 )
 from private_gpt.initialize import initialize_globals, initialize_observability
+from private_gpt.observability.http import add_trace_response_headers
+from private_gpt.observability.instrumentations import instrument_fastapi_app
 from private_gpt.server.chat.chat_router import chat_router
 from private_gpt.server.chat_async.chat_async_router import (
     chat_router as chat_async_router,
@@ -103,8 +107,15 @@ class RequestContextMiddleware:
             settings.principal.forwarded_cookies,
         ).set_current()
 
+        async def send_with_trace_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                add_trace_response_headers(
+                    SimpleNamespace(headers=MutableHeaders(scope=message))
+                )
+            await send(message)
+
         try:
-            await self.app(scope, receive, send)
+            await self.app(scope, receive, send_with_trace_headers)
         finally:
             reset_bag()
 
@@ -205,6 +216,10 @@ def create_app(root_injector: Injector) -> FastAPI:
     )
 
     app.add_middleware(RequestContextMiddleware, root_injector=root_injector)
+
+    # Server spans wrap the middleware above, so the principal/bag are set
+    # inside the request span and every child span nests under it.
+    instrument_fastapi_app(app)
 
     app.include_router(chat_router)
     app.include_router(completion_router)

@@ -16,6 +16,12 @@ from private_gpt.components.web.web_search.processors.select_best_links import (
     SelectBestLinks,
 )
 from private_gpt.components.web.web_search.providers.base import BaseWebSearchProvider
+from private_gpt.observability.tracing import (
+    SpanKind,
+    retrieval_documents,
+    set_span_attributes,
+    start_span,
+)
 from private_gpt.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -63,10 +69,40 @@ class WebSearchService:
     ) -> list[WebSearchResult]:
         await self.validate()
 
-        provider_results: list[WebSearchResult] = await self._provider.make_query(
-            query, self._settings.web_search.num_links, **kwargs
-        )
-        return await self._processor.process_results(query, provider_results, model_id)
+        provider = type(self._provider).__name__
+        processor = type(self._processor).__name__
+        with start_span(
+            f"web_search.query {provider}",
+            SpanKind.RETRIEVER,
+            input=query,
+            attributes={"pgpt.web_search.provider": provider},
+        ) as span:
+            provider_results: list[WebSearchResult] = await self._provider.make_query(
+                query, self._settings.web_search.num_links, **kwargs
+            )
+            set_span_attributes(
+                span,
+                **{"pgpt.web_search.results": len(provider_results)},
+                **retrieval_documents(_web_documents(provider_results)),
+            )
+        with start_span(
+            f"web_search.process {processor}",
+            SpanKind.CHAIN,
+            input={"query": query, "urls": [r.url for r in provider_results]},
+            attributes={"pgpt.web_search.processor": processor},
+        ) as span:
+            processed = await self._processor.process_results(
+                query, provider_results, model_id
+            )
+            set_span_attributes(
+                span,
+                output=[
+                    r.model_dump(exclude_none=True, exclude={"metadata"})
+                    for r in processed
+                ],
+                **{"pgpt.web_search.results": len(processed)},
+            )
+        return processed
 
     async def validate(self) -> None:
         if not self._initialized:
@@ -150,3 +186,14 @@ class WebSearchService:
                 f"Unknown processor: {self._settings.web_search.processor}. "
                 f"Available: simple_text, scraped_content, clean_content"
             )
+
+
+def _web_documents(results: list[WebSearchResult]) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": result.url,
+            "content": result.content or result.description,
+            "metadata": {"title": result.title, "url": result.url, "age": result.age},
+        }
+        for result in results
+    ]
