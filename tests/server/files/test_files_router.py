@@ -4,6 +4,7 @@ import io
 from pathlib import Path
 from urllib.parse import quote
 
+import pytest
 from fastapi.testclient import TestClient
 
 from private_gpt.server.files.file_models import (
@@ -636,4 +637,34 @@ def test_content_download_inline(files_client: TestClient) -> None:
     )
     assert resp.status_code == 200
     assert resp.headers["Content-Disposition"].startswith("inline")
+    assert resp.content == _FILE_CONTENT
+
+
+@pytest.mark.parametrize(
+    ("filename", "expected"),
+    [
+        pytest.param("data.csv", 'attachment; filename="data.csv"', id="ascii"),
+        pytest.param(
+            "résumé.csv",
+            "attachment; filename*=UTF-8''r%C3%A9sum%C3%A9.csv",
+            id="latin-1",
+        ),
+        pytest.param(
+            "报告.csv",
+            "attachment; filename*=UTF-8''%E6%8A%A5%E5%91%8A.csv",
+            id="non-latin-1",
+        ),
+    ],
+)
+def test_content_download_filename_header(
+    files_client: TestClient, filename: str, expected: str
+) -> None:
+    upload_resp = files_client.post(
+        f"/v1/files?scope_id={_SESSION_ID}",
+        files={"file": (filename, io.BytesIO(_FILE_CONTENT), _MIME_TYPE)},
+    )
+    file_id = upload_resp.json()["id"]
+    resp = files_client.get(_file_url(file_id, _SESSION_ID, suffix="/content"))
+    assert resp.status_code == 200
+    assert resp.headers["Content-Disposition"] == expected
     assert resp.content == _FILE_CONTENT
