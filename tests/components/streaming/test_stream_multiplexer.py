@@ -717,3 +717,105 @@ async def test_concurrent_stream_creation_allows_only_one_replica() -> None:
 
     assert results.count("same-message") == 1
     assert sum(isinstance(result, ValueError) for result in results) == 9
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 7. Terminal event — readers stop on the final event, not on the status poll
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TerminalEventHandler(SimpleEventHandler):
+    """``n == -1`` marks the final event (like ``message_stop``)."""
+
+    async def get_current_status(self, event: BaseModel) -> StreamStatus | None:
+        if event.n == -1:  # type: ignore[attr-defined]
+            return StreamStatus.COMPLETED
+        return None
+
+
+async def _push_with_terminal_event(service: StreamService, cid: str) -> None:
+    # The stream status is never set to COMPLETED here: the reader must end on
+    # the terminal event alone, as soon as it is read.
+    await service.create_stream("test", correlation_id=cid)
+    for i in range(3):
+        await service.push_event(cid, json.dumps({"n": i}))
+    await service.push_event(cid, json.dumps({"n": -1}))
+
+
+@pytest.mark.asyncio
+async def test_direct_path_ends_on_terminal_event(
+    service: StreamService, stream_reader: StreamReader
+) -> None:
+    await _push_with_terminal_event(service, "cid-term-direct")
+
+    loop = asyncio.get_running_loop()
+    start = loop.time()
+    events = await run_direct(stream_reader, TerminalEventHandler(), "cid-term-direct")
+
+    assert [e.n for e in events] == [0, 1, 2, -1]  # type: ignore[attr-defined]
+    assert loop.time() - start < DEFAULT_BLOCK_MS / 1000
+
+
+@pytest.mark.asyncio
+async def test_multiplexed_path_ends_on_terminal_event(
+    service: StreamService, multiplexer: StreamMultiplexer
+) -> None:
+    await _push_with_terminal_event(service, "cid-term-mux")
+    await multiplexer.start()
+    try:
+        loop = asyncio.get_running_loop()
+        start = loop.time()
+        events = await run_multiplexed(
+            multiplexer, TerminalEventHandler(), "cid-term-mux"
+        )
+    finally:
+        await multiplexer.stop()
+
+    assert [e.n for e in events] == [0, 1, 2, -1]  # type: ignore[attr-defined]
+    assert loop.time() - start < DEFAULT_BLOCK_MS / 1000
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 8. Completion latency — readers finish when the stream does, not on a poll
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("terminal_event", [True, False], ids=["event", "status"])
+async def test_reader_finishes_promptly_when_stream_completes(
+    service: StreamService,
+    stream_reader: StreamReader,
+    multiplexer: StreamMultiplexer,
+    terminal_event: bool,
+) -> None:
+    """A finished stream must end its readers at once.
+
+    Regression: a stream that completed only through a status change (no
+    terminal event) ended its readers after an empty one-second blocking read
+    plus a status poll, about a second after the producer had finished.
+    """
+    handler = TerminalEventHandler()
+    await multiplexer.start()
+    try:
+        for path in ("direct", "multiplexed"):
+            cid = await service.create_stream(
+                "test", correlation_id=f"prompt-{path}-{terminal_event}"
+            )
+            reader = (
+                run_direct(stream_reader, handler, cid)
+                if path == "direct"
+                else run_multiplexed(multiplexer, handler, cid)
+            )
+            task = asyncio.create_task(reader)
+            await asyncio.sleep(0.05)
+            loop = asyncio.get_running_loop()
+            finished_at = loop.time()
+            await service.push_event(cid, json.dumps({"n": 1}))
+            if terminal_event:
+                await service.push_event(cid, json.dumps({"n": -1}))
+            await service.update_stream_status(cid, StreamStatus.COMPLETED)
+            events = await asyncio.wait_for(task, 5)
+            assert events[0].n == 1  # type: ignore[attr-defined]
+            assert loop.time() - finished_at < 0.3, path
+    finally:
+        await multiplexer.stop()

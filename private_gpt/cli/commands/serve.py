@@ -62,7 +62,7 @@ def serve_command(
             reload=reload,
             log_level=log_level,
             log_config=None,
-            loop="asyncio",
+            loop="auto",
         )
     finally:
         if pid_file and pid_file.exists():

@@ -8,7 +8,6 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-import nest_asyncio
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from injector import Injector
 from llama_index.core.embeddings import MockEmbedding
 from llama_index.core.settings import Settings as LlamaIndexSettings
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from private_gpt.components.persistence.persistence_component import (
     PersistenceComponent,
@@ -69,6 +69,46 @@ def _build_principal(
     return Principal(headers=headers, cookies=cookies)
 
 
+class RequestContextMiddleware:
+    """Expose the injector on ``request.state`` and the request's principal.
+
+    Pure ASGI rather than ``@app.middleware("http")``: Starlette's
+    ``BaseHTTPMiddleware`` relays every response chunk through an anyio
+    memory stream and wraps every ``receive`` in a task group, which costs a
+    task per streamed event and per disconnect check.
+    """
+
+    def __init__(self, app: ASGIApp, root_injector: Injector) -> None:
+        self.app = app
+        self.root_injector = root_injector
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope)
+        app_state = getattr(scope.get("app"), "state", None)
+        injector = getattr(app_state, "injector", None) or self.root_injector
+        request.state.injector = injector
+
+        # Start each request with a fresh context bag so nothing leaks between
+        # requests running on the same asyncio task/loop.
+        reset_bag()
+
+        settings = injector.get(Settings)
+        _build_principal(
+            request,
+            settings.principal.forwarded_headers,
+            settings.principal.forwarded_cookies,
+        ).set_current()
+
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            reset_bag()
+
+
 def apply_migrations(injector: Injector) -> None:
     """Ensure that all migrations are applied."""
     logger.debug("Ensuring migrations are applied")
@@ -91,9 +131,6 @@ def create_app(root_injector: Injector) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         """Lifespan context manager to initialize and clean up resources."""
-        # Set nested loop
-        nest_asyncio.apply()
-
         # Set default thread pool limit. This executor now only serves genuine
         # blocking-I/O offloads (broker waits, sync HTTP, sync file reads); all
         # CPU-bound work is routed to dedicated workers, and chat can be routed
@@ -167,32 +204,7 @@ def create_app(root_injector: Injector) -> FastAPI:
         RequestValidationError, request_validation_exception_adapter
     )
 
-    # Add a middleware than inject the injector to the request state
-    @app.middleware("http")
-    async def inject_injector_middleware(request: Request, call_next: Any) -> Any:
-        """Middleware to inject the injector into the request state."""
-        injector = (
-            request.app.state.injector
-            if hasattr(request.app, "state") and hasattr(request.app.state, "injector")
-            else root_injector
-        )
-        request.state.injector = injector
-
-        # Start each request with a fresh context bag so nothing leaks between
-        # requests running on the same asyncio task/loop.
-        reset_bag()
-
-        settings = injector.get(Settings)
-        _build_principal(
-            request,
-            settings.principal.forwarded_headers,
-            settings.principal.forwarded_cookies,
-        ).set_current()
-
-        try:
-            return await call_next(request)
-        finally:
-            reset_bag()
+    app.add_middleware(RequestContextMiddleware, root_injector=root_injector)
 
     app.include_router(chat_router)
     app.include_router(completion_router)

@@ -20,6 +20,7 @@ from private_gpt.components.sandbox.base import (
     SandboxExecutionResult,
     SandboxSession,
 )
+from private_gpt.utils.async_utils import run_sync
 
 T = TypeVar("T")
 
@@ -142,7 +143,7 @@ class PandasAISandboxAdapter(Sandbox):  # type: ignore[misc]
         """
         if self._loop is not None and self._loop.is_running():
             return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
-        return asyncio.run(coro)
+        return run_sync(coro)
 
     # ------------------------------------------------------------------
     # Lifecycle

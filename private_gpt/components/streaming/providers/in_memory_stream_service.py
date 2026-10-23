@@ -91,6 +91,11 @@ class InMemoryStreamService(StreamService):
             if metadata:
                 stream_meta.metadata.update(metadata)
 
+            # Readers blocked on an empty stream re-check its status now, as a
+            # finished stream may receive no further events.
+            for waiter in list(self._waiters.get(correlation_id, set())):
+                waiter.set()
+
     async def get_stream_metadata(self, correlation_id: str) -> StreamMetadata | None:
         """Get stream metadata by correlation ID."""
         async with self._lock:
@@ -169,7 +174,10 @@ class InMemoryStreamService(StreamService):
         waiter: asyncio.Event | None = None
         async with self._lock:
             event_data, next_last_id = _read_available()
-            if not event_data and block_ms:
+            metadata = self._metadata.get(correlation_id)
+            finished = metadata is not None and metadata.completed_at is not None
+            # A finished stream gets no more events: return instead of blocking.
+            if not event_data and block_ms and not finished:
                 # Register waiter atomically with the "no events" check so we
                 # cannot miss a push_event that fires between check and wait.
                 waiter = asyncio.Event()

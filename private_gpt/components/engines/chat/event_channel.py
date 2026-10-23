@@ -16,21 +16,28 @@ class BrokerEventChannel(EventChannel):
     def __init__(self, broker: EngineEventBroker, execution_id: str) -> None:
         self._broker = broker
         self._execution_id = execution_id
-        self._tail: asyncio.Future[None] | None = None
+        self._pending: list[Event] = []
+        self._drain: asyncio.Task[None] | None = None
 
     def emit(self, event: Event) -> None:
-        previous = self._tail
+        # One drain task publishes everything emitted meanwhile as a single batch.
+        self._pending.append(event)
+        if self._drain is None or (
+            self._drain.done() and self._drain.exception() is None
+        ):
+            self._drain = asyncio.create_task(self._publish_pending())
 
-        async def _publish() -> None:
-            if previous is not None:
-                await previous
-            await self._broker.publish(self._execution_id, event)
-
-        self._tail = asyncio.create_task(_publish())
+    async def _publish_pending(self) -> None:
+        while self._pending:
+            batch, self._pending = self._pending, []
+            await self._broker.publish_many(self._execution_id, batch)
 
     async def flush(self) -> None:
-        if self._tail is not None:
-            await self._tail
+        while self._drain is not None:
+            await self._drain
+            if not self._pending:
+                return
+            self._drain = asyncio.create_task(self._publish_pending())
 
     async def close(self) -> None:
         await self.flush()

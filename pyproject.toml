@@ -19,7 +19,6 @@ dependencies = [
     "partial-json-parser>=0.2.1.1.post7,<0.3",
     "requests>=2.33.0,<3",
     "retry-async>=0.1.4,<0.2",
-    "nest-asyncio>=1.6.0",
     "nltk>=3.10.0,<4",
     "arq>=0.26,<0.27",
 ]
