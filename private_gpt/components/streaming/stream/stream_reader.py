@@ -30,6 +30,11 @@ TERMINAL_STATUSES: Final[set[StreamStatus]] = {
 }
 
 
+def _woken_early(started: float, now: float, block_ms: int) -> bool:
+    """An empty blocking read that returned early was woken by a status change."""
+    return now - started < block_ms / 1000 * 0.9
+
+
 class StreamBroadcast:
     """Append-only batch log that broadcasts to N concurrent readers.
 
@@ -167,6 +172,21 @@ class StreamReader:
                 logger.error(f"Error deserializing event: {e}")
         return events, next_last_id
 
+    async def ends_stream(
+        self, event_handler: EventHandler, events: list[BaseModel]
+    ) -> bool:
+        """Whether the last event of a batch is terminal (e.g. ``message_stop``).
+
+        Lets a reader stop right after the final batch instead of waiting for a
+        blocking read to time out and the periodic status check to run.
+        """
+        try:
+            status = await event_handler.get_current_status(events[-1])
+        except Exception as e:
+            logger.error(f"Error checking batch status: {e}")
+            return False
+        return status in TERMINAL_STATUSES
+
     async def check_terminal_status(
         self,
         correlation_id: str,
@@ -224,6 +244,7 @@ class StreamReader:
                 last_status_check: float = 0.0  # 0 → check on first idle cycle
 
                 while not stop_event.is_set():
+                    read_started = asyncio.get_event_loop().time()
                     events, current_last_id = await self.read_events(
                         event_handler=event_handler,
                         correlation_id=correlation_id,
@@ -234,9 +255,15 @@ class StreamReader:
                     if events:
                         cached_events = events
                         await event_queue.put(events)
+                        if await self.ends_stream(event_handler, events):
+                            break
                     else:
                         current_time = asyncio.get_event_loop().time()
-                        if (current_time - last_status_check) >= STATUS_CHECK_INTERVAL:
+                        if (
+                            _woken_early(read_started, current_time, block_ms)
+                            or (current_time - last_status_check)
+                            >= STATUS_CHECK_INTERVAL
+                        ):
                             if await self.check_terminal_status(
                                 correlation_id,
                                 event_handler,
@@ -308,6 +335,8 @@ class StreamMultiplexer:
         self.worker_task: asyncio.Task[None] | None = None
         self.shutdown_event = asyncio.Event()
         self._lock = asyncio.Lock()
+        # Set when a stream is added, so an idle worker starts reading at once.
+        self._streams_added = asyncio.Event()
 
     async def start(self) -> None:
         if self.worker_task is None or self.worker_task.done():
@@ -349,6 +378,7 @@ class StreamMultiplexer:
         async with self._lock:
             if correlation_id not in self.states:
                 self.states[correlation_id] = StreamState(last_id=last_id)
+                self._streams_added.set()
 
             state = self.states[correlation_id]
             # last_id="0" means "from the start" — replay every batch already in
@@ -386,7 +416,9 @@ class StreamMultiplexer:
                     correlation_ids = list(self.states.keys())
 
                 if not correlation_ids:
-                    await asyncio.sleep(0.5)
+                    self._streams_added.clear()
+                    with contextlib.suppress(TimeoutError):
+                        await asyncio.wait_for(self._streams_added.wait(), 0.5)
                     continue
 
                 tasks = [self._process_stream(cid) for cid in correlation_ids]
@@ -413,6 +445,7 @@ class StreamMultiplexer:
                     return
                 event_handler = consumer_list[0].event_handler
 
+            read_started = asyncio.get_event_loop().time()
             events, new_last_id = await self.stream_reader.read_events(
                 event_handler=event_handler,
                 correlation_id=correlation_id,
@@ -422,34 +455,41 @@ class StreamMultiplexer:
 
             current_time = asyncio.get_event_loop().time()
 
+            terminal = False
             if events:
                 await self._dispatch(
                     correlation_id, state, events, new_last_id, current_time
                 )
+                terminal = await self.stream_reader.ends_stream(event_handler, events)
 
-            elif (current_time - state.last_status_check) >= STATUS_CHECK_INTERVAL:
+            elif (
+                _woken_early(read_started, current_time, DEFAULT_BLOCK_MS)
+                or (current_time - state.last_status_check) >= STATUS_CHECK_INTERVAL
+            ):
                 state.last_status_check = current_time
-                if await self.stream_reader.check_terminal_status(
+                terminal = await self.stream_reader.check_terminal_status(
                     correlation_id,
                     event_handler,
                     state.cached_events,
-                ):
-                    drain_events, drain_last_id = await self.stream_reader.read_events(
-                        event_handler=event_handler,
-                        correlation_id=correlation_id,
-                        last_id=state.last_id,
-                        block_ms=None,
+                )
+
+            if terminal:
+                drain_events, drain_last_id = await self.stream_reader.read_events(
+                    event_handler=event_handler,
+                    correlation_id=correlation_id,
+                    last_id=state.last_id,
+                    block_ms=None,
+                )
+                if drain_events:
+                    await self._dispatch(
+                        correlation_id,
+                        state,
+                        drain_events,
+                        drain_last_id,
+                        current_time,
                     )
-                    if drain_events:
-                        await self._dispatch(
-                            correlation_id,
-                            state,
-                            drain_events,
-                            drain_last_id,
-                            current_time,
-                        )
-                    await self._close_all_consumers(correlation_id)
-                    logger.info(f"Stream {correlation_id} reached terminal status")
+                await self._close_all_consumers(correlation_id)
+                logger.info(f"Stream {correlation_id} reached terminal status")
 
         except Exception as e:
             logger.error(f"Error processing {correlation_id}: {e}", exc_info=True)

@@ -202,4 +202,5 @@ async def test_condensation_span_records_the_decision(
     assert attributes["pgpt.condensation.needed"] is False
     assert attributes["pgpt.condensation.max_tokens"] == 10_000
     assert attributes["pgpt.condensation.messages_before"] == 2
-    assert attributes["pgpt.condensation.tokens_before"] > 0
+    # Short history: decided from the byte bound, without calling the tokenizer.
+    assert attributes["pgpt.condensation.byte_bound"] > 0

@@ -50,6 +50,13 @@ class StreamService(ABC):
         """Push raw event data to the stream."""
         pass
 
+    async def push_events(self, correlation_id: str, event_datas: list[str]) -> str:
+        """Push several events of one stream in order. Returns the last id."""
+        last_id = ""
+        for event_data in event_datas:
+            last_id = await self.push_event(correlation_id, event_data)
+        return last_id
+
     @abstractmethod
     async def push_event_batch(
         self,

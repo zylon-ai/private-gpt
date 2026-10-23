@@ -402,3 +402,21 @@ class TestMultipleDocuments:
         assert any(
             isinstance(b, TextBlock) and "doc content" in b.text for b in result.blocks
         )
+
+
+class TestDocumentImages:
+    async def test_embedded_images_do_not_reach_the_prompt(
+        self, base64_message: ChatMessage
+    ) -> None:
+        convert_service = _mock_convert_service(
+            "intro ![Image](data:image/png;base64,aGVsbG8=) outro"
+        )
+        responses = await _collect(
+            preprocess_document_message(base64_message, convert_service)
+        )
+        message = responses[-1].message
+        assert message is not None
+        text = "\n".join(b.text for b in message.blocks if isinstance(b, TextBlock))
+        assert "base64" not in text
+        assert "intro" in text
+        assert "outro" in text

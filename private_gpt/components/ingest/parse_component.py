@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from collections.abc import Callable
 from pathlib import Path
@@ -40,6 +39,7 @@ from private_gpt.observability.tracing import (
     start_span,
 )
 from private_gpt.settings.settings import Settings
+from private_gpt.utils.async_utils import run_sync
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -242,7 +242,7 @@ class ParseComponent:
         reader_name: str | None = None,
         execute_transformations: bool = True,
     ) -> list[BaseNode]:
-        return asyncio.run(
+        return run_sync(
             self._aload_data(
                 file_info=file_info,
                 file_metadata=file_metadata,

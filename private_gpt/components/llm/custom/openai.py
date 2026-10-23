@@ -2,6 +2,7 @@ import asyncio
 import importlib
 import json
 import logging
+import weakref
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, cast
 
@@ -56,6 +57,29 @@ _CUSTOM_REASONING_EFFORT_MAPPING = {
 
 class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
     """Patched OpenAI LLM with fixes over the base llama_index implementation."""
+
+    def _get_aclient(self) -> Any:
+        """One async client per event loop instead of one per call.
+
+        With ``reuse_client=False`` llama_index builds a new ``AsyncOpenAI``
+        (TLS context, connection pool, no keep-alive) for every request. A
+        client is tied to the event loop it first ran on, and some callers run
+        LLM calls on short-lived loops, so the client is cached per loop.
+        """
+        if self.reuse_client:
+            return super()._get_aclient()
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return super()._get_aclient()
+        clients = self.__dict__.setdefault(
+            "_aclients_by_loop", weakref.WeakKeyDictionary()
+        )
+        client = clients.get(loop)
+        if client is None:
+            client = super()._get_aclient()
+            clients[loop] = client
+        return client
 
     @staticmethod
     def _build_openai_response_format(
@@ -243,8 +267,9 @@ class PatchedOpenAILLM(StructuredChatMixin, OpenAIBase):  # type: ignore[misc]
             return chat_response
 
         async def coro() -> ChatResponseAsyncGen:
+            # A few dict lookups per chunk: cheaper inline than a thread hop.
             async for chat_response in await parent_gen:
-                yield await asyncio.to_thread(process_chat_response, chat_response)
+                yield process_chat_response(chat_response)
 
         return coro()
 

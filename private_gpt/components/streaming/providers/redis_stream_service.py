@@ -207,6 +207,22 @@ class RedisStreamService(StreamService):
 
         return str(results[0])
 
+    async def push_events(self, correlation_id: str, event_datas: list[str]) -> str:
+        """Push events of one stream in one pipeline (N XADD + 1 EXPIRE)."""
+        if not event_datas:
+            return ""
+        stream_key = self._get_stream_key(correlation_id)
+        async with self._client.pipeline(transaction=False) as pipe:
+            for event_data in event_datas:
+                pipe.xadd(
+                    stream_key,
+                    {"data": event_data},  # type: ignore[dict-item]
+                    maxlen=self._config.max_stream_length,
+                )
+            pipe.expire(stream_key, self._config.expiry_seconds)
+            results = await pipe.execute()
+        return str(results[len(event_datas) - 1])
+
     async def push_event_batch(self, events: list[Event]) -> dict[str, str]:
         """Push multiple events efficiently using pipeline."""
         if not events:

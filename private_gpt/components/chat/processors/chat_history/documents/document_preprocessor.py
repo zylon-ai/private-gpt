@@ -7,6 +7,9 @@ from llama_index.core.base.llms.types import TextBlock as LITextBlock
 from llama_index.core.llms import ChatMessage
 from pydantic import BaseModel
 
+from private_gpt.components.chat.processors.chat_history.documents.document_images import (
+    resolve_document_images,
+)
 from private_gpt.events.models import (
     DocumentBlock,
     ResultContentBlockType,
@@ -14,6 +17,7 @@ from private_gpt.events.models import (
     from_tool_output,
 )
 from private_gpt.events.models._content_blocks import DocumentConverter
+from private_gpt.settings.settings import TransformationReadersSettings
 
 if TYPE_CHECKING:
     from private_gpt.events.models import (
@@ -56,6 +60,7 @@ class DocumentProcessingResponse(BaseModel):
 async def _process_document(
     doc_block: DocumentBlock,
     convert_service: DocumentConverter,
+    image_description: TransformationReadersSettings | None = None,
 ) -> LITextBlock:
     text = await asyncio.to_thread(doc_block.source.to_text, convert_service)
     if not text:
@@ -63,6 +68,7 @@ async def _process_document(
             f"No content could be extracted from document source "
             f"(type={doc_block.source.type!r})."
         )
+    text = await resolve_document_images(text, image_description)
 
     parts: list[str] = []
     if doc_block.title:
@@ -79,11 +85,13 @@ async def preprocess_document_message(
     convert_service: DocumentConverter,
     max_concurrency: int | None = None,
     return_type: Literal["user_message", "tool_result"] = "user_message",
+    image_description: TransformationReadersSettings | None = None,
 ) -> AsyncIterator[DocumentProcessingResponse]:
     """Preprocess a message by converting DocumentBlock sources in parallel.
 
     max_concurrency limits how many documents are converted simultaneously.
-    -1 (default) means unlimited.
+    -1 (default) means unlimited. image_description, when set, describes the
+    images embedded in the documents; otherwise they become placeholders.
     """
     document_blocks = extract_document_blocks(message)
     if not document_blocks:
@@ -113,8 +121,8 @@ async def preprocess_document_message(
     async def _bounded(doc: DocumentBlock) -> LITextBlock:
         if semaphore is not None:
             async with semaphore:
-                return await _process_document(doc, convert_service)
-        return await _process_document(doc, convert_service)
+                return await _process_document(doc, convert_service, image_description)
+        return await _process_document(doc, convert_service, image_description)
 
     results = await asyncio.gather(
         *[_bounded(doc) for doc in document_blocks],
@@ -184,6 +192,7 @@ async def preprocess_document_history(
     convert_service: DocumentConverter,
     max_concurrency: int | None = None,
     return_type: Literal["user_message", "tool_result"] = "user_message",
+    image_description: TransformationReadersSettings | None = None,
 ) -> AsyncIterator[DocumentProcessingResponse]:
     """Preprocess documents in the last user message only.
 
@@ -211,6 +220,7 @@ async def preprocess_document_history(
                 convert_service=convert_service,
                 max_concurrency=max_concurrency,
                 return_type=return_type,
+                image_description=image_description,
             ):
                 if response.processing_status is not None:
                     yield response

@@ -1,8 +1,6 @@
 import os
 from typing import Any
 
-import nest_asyncio
-
 from private_gpt.di import (
     clean_global_injector,
     get_global_injector,
@@ -17,7 +15,6 @@ async def startup(ctx: dict[Any, Any]) -> None:
     current_settings = settings()
     initialize_globals()
     initialize_observability(current_settings)
-    nest_asyncio.apply()
     injector = get_global_injector(allow_to_generate_new_injectors=True)
     set_global_injector(injector)
     warm_profile = os.environ.get("PGPT_WORKER_WARM_PROFILE", "").strip()

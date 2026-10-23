@@ -41,8 +41,11 @@ def _builder(
     scheduler_factory = SimpleNamespace(get=MagicMock(return_value=convert_service))
     settings = SimpleNamespace(
         chat=SimpleNamespace(
-            preprocess=SimpleNamespace(documents=SimpleNamespace(max_concurrency=8))
+            preprocess=SimpleNamespace(
+                documents=SimpleNamespace(max_concurrency=8, describe_images=False)
+            )
         ),
+        transformation=SimpleNamespace(docling=None),
         code_execution=SimpleNamespace(
             tools=SimpleNamespace(inline_result_bytes=inline_result_bytes)
         ),
@@ -279,3 +282,28 @@ def test_the_description_rules_out_images_and_audio() -> None:
     )
 
     assert "Not for images or audio" in CONVERT_DOCUMENTS_TOOL_FN.metadata.description
+
+
+@pytest.mark.parametrize(
+    ("describe_images", "vision_enabled", "expected"),
+    [(True, True, True), (True, False, False), (False, True, False)],
+)
+def test_images_are_described_only_when_ingestion_would(
+    describe_images: bool, vision_enabled: bool, expected: bool
+) -> None:
+    docling = SimpleNamespace(is_enabled=vision_enabled)
+    settings = SimpleNamespace(
+        chat=SimpleNamespace(
+            preprocess=SimpleNamespace(
+                documents=SimpleNamespace(
+                    max_concurrency=8, describe_images=describe_images
+                )
+            )
+        ),
+        transformation=SimpleNamespace(docling=docling),
+        code_execution=SimpleNamespace(tools=SimpleNamespace(inline_result_bytes=0)),
+    )
+    builder = ConvertDocumentsToolBuilder(
+        SimpleNamespace(), SimpleNamespace(), settings
+    )
+    assert (builder._image_description is docling) is expected

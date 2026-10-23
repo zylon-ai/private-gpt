@@ -1,3 +1,7 @@
+import copy
+import json
+import threading
+from collections import OrderedDict
 from collections.abc import Callable
 from keyword import iskeyword, issoftkeyword
 from types import UnionType
@@ -365,13 +369,22 @@ def _create_array_model(
             union_format: Literal["any_of", "primitive_type_array"] = "any_of",
         ) -> dict[str, Any]:
             """Return the original array schema, not wrapped in object schema."""
-            return schema
+            return copy.deepcopy(schema)
 
         model_config = ConfigDict(populate_by_name=True, use_attribute_docstrings=True)
 
     ArrayModel.__name__ = model_name
     ArrayModel.__qualname__ = model_name
     return ArrayModel
+
+
+# Tool schemas repeat on every turn of an agent session (Claude Code sends the same
+# ~20 tools each request) and building a model costs ~3 ms each, so models are cached by
+# the schema's canonical JSON. Bounded: callers can send arbitrary schemas.
+_MODEL_CACHE_SIZE = 512
+_model_cache: OrderedDict[tuple[str, str], type[BaseModel]] = OrderedDict()
+# Reached from worker threads (prompt rendering runs under asyncio.to_thread).
+_model_cache_lock = threading.Lock()
 
 
 def create_model_from_json_schema(
@@ -386,6 +399,27 @@ def create_model_from_json_schema(
     Returns:
         A Pydantic model class with sanitized field names
     """
+    try:
+        key = (model_name, json.dumps(schema, sort_keys=True))
+    except (TypeError, ValueError):
+        return _build_model_from_json_schema(schema, model_name)
+    with _model_cache_lock:
+        cached = _model_cache.get(key)
+        if cached is not None:
+            _model_cache.move_to_end(key)
+            return cached
+    model = _build_model_from_json_schema(copy.deepcopy(schema), model_name)
+    with _model_cache_lock:
+        model = _model_cache.setdefault(key, model)
+        _model_cache.move_to_end(key)
+        if len(_model_cache) > _MODEL_CACHE_SIZE:
+            _model_cache.popitem(last=False)
+    return model
+
+
+def _build_model_from_json_schema(
+    schema: dict[str, Any], model_name: str
+) -> type[BaseModel]:
     # Initial validation of the schema
     _validate_json_schema(schema)
 
@@ -468,7 +502,8 @@ def create_model_from_json_schema(
             mode: str = "validation",
         ) -> dict[str, Any]:
             """Return the original schema, not Pydantic's generated schema."""
-            return schema
+            # A copy: the model may be cached and shared across requests.
+            return copy.deepcopy(schema)
 
         model_config = ConfigDict(populate_by_name=True, use_attribute_docstrings=True)
 
