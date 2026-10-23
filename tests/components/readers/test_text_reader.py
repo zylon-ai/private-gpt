@@ -261,6 +261,28 @@ def test_text_reader_still_reads_latin1_text(tmp_path: Path) -> None:
     assert nodes[0].get_content(metadata_mode=MetadataMode.NONE) == "café crème"
 
 
+def test_text_reader_reads_cp1252_punctuation(tmp_path: Path) -> None:
+    text = "\u201cQuoted\u201d text \u2013 costs 5 \u20ac."
+    file = tmp_path / "notes.txt"
+    file.write_bytes(text.encode("cp1252"))
+
+    nodes = asyncio.run(_collect_untransformed(get_file_info(file, "notes.txt")))
+
+    assert nodes[0].get_content(metadata_mode=MetadataMode.NONE) == text
+
+
+@pytest.mark.parametrize("encoding", ["utf-16-le", "utf-16-be"])
+def test_text_reader_reads_utf16_text(tmp_path: Path, encoding: str) -> None:
+    # What Excel's "Unicode Text" export and Notepad's "Unicode" write.
+    text = "Name\tStadt\nM\u00fcller\tK\u00f6ln\n"
+    file = tmp_path / "export.txt"
+    file.write_bytes(("\ufeff" + text).encode(encoding))
+
+    nodes = asyncio.run(_collect_untransformed(get_file_info(file, "export.txt")))
+
+    assert nodes[0].get_content(metadata_mode=MetadataMode.NONE) == text
+
+
 async def _collect_untransformed(file_info):
     return [
         node
