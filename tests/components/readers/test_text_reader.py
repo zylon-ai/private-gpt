@@ -221,6 +221,41 @@ def test_quote_in_csv() -> None:
     assert "| item" in markdown_content, "Expected a table in the first node."
 
 
+def _csv_markdown(tmp_path: Path, text: str) -> str:
+    file = tmp_path / "data.csv"
+    file.write_text(text, encoding="utf-8")
+    csv_reader = reader_component.get_reader("text", extension=".csv")
+    nodes = asyncio.run(collect_nodes(get_file_info(file, "data.csv"), csv_reader))
+    return "".join(node.get_content(MetadataMode.NONE) for node in nodes)
+
+
+def test_csv_cells_are_kept_as_written(tmp_path: Path) -> None:
+    markdown_content = _csv_markdown(
+        tmp_path, "id,zip,country,note\n1,01067,DE,\n2,,NA,N/A\n3,80331,DE,ok\n"
+    )
+
+    assert "| 1 | 01067 | DE | |" in markdown_content
+    assert "| 2 | | NA | N/A |" in markdown_content
+    assert "| 3 | 80331 | DE | ok |" in markdown_content
+    assert "nan" not in markdown_content
+
+
+@pytest.mark.parametrize(
+    ("text", "rows"),
+    [
+        ("Note\nAlice\nBob\n", ["| Note |", "| Alice |", "| Bob |"]),
+        ("title\nHello world\n", ["| title |", "| Hello world |"]),
+    ],
+)
+def test_single_column_csv_is_not_split_on_a_letter(
+    tmp_path: Path, text: str, rows: list[str]
+) -> None:
+    lines = _csv_markdown(tmp_path, text).splitlines()
+
+    for row in rows:
+        assert row in lines
+
+
 def test_eml() -> None:
     file = TEST_FILE_PATH / "file.eml"
     mock_file_info = get_file_info(file, "file.eml")
