@@ -1,0 +1,146 @@
+{# Resolve tool names from the active tool list (Anthropic-style or legacy). #}
+{% set bash_tool = namespace.tools.get("bash_code_execution_tool_name")
+    or namespace.tools.get("bash_tool_name") %}
+{% set text_editor_tool = namespace.tools.get("text_editor_code_execution_tool_name")
+    or namespace.tools.get("text_editor_tool_name") %}
+{% set view_tool = namespace.tools.get("view_tool_name") %}
+{% set str_replace_tool = namespace.tools.get("str_replace_tool_name") %}
+{% set create_tool = namespace.tools.get("create_tool_name") %}
+{% set insert_tool = namespace.tools.get("insert_tool_name") %}
+{% set present_files_tool = namespace.tools.get("present_files_tool_name") %}
+{% set present_server_tool = namespace.tools.get("present_server_tool_name") %}
+{% set has_leaf_editor = view_tool or str_replace_tool or create_tool or insert_tool %}
+{% set section_name = bash_tool or text_editor_tool or "code_execution" %}
+{# Default: no internet (matches CodeExecutionSettings.internet_enabled default). #}
+{% set internet_enabled = internet_enabled if internet_enabled is defined else false %}
+{% set preinstalled_packages = preinstalled_packages if preinstalled_packages is defined else [] %}
+{% set preinstalled_cli_tools = preinstalled_cli_tools if preinstalled_cli_tools is defined else [] %}
+
+{% if layout is not defined or not layout %}{% else %}
+{% set workspace = layout | selectattr("name", "equalto", "user") | first %}
+{% set outputs = layout | selectattr("name", "equalto", "outputs") | first %}
+{% set uploads = layout | selectattr("name", "equalto", "uploads") | first %}
+<code_execution>
+You have a sandboxed code execution environment.
+
+**Available tools**
+{% if bash_tool -%}
+- `{{ bash_tool }}` — run shell commands. Parameters: `command` (required), optional `timeout` (milliseconds) and `restart` (wipe the workspace first). All commands share the same sandbox — files and installed packages persist across calls.
+{% endif -%}
+{% if text_editor_tool -%}
+- `{{ text_editor_tool }}` — read/edit text files. Always pass `path` (absolute) plus the command-specific fields:
+  - `command="view"` → read a file. Always pass `view_range=[start, end]` (1-based, inclusive; `end=-1` means to the end of the file). Never view a whole large file at once — the output is truncated, and the result reports the visible range + total line count so you can page.
+  - `command="create"` → write or overwrite a file (`file_text`)
+  - `command="str_replace"` → patch a file (`old_str`, `new_str`; `old_str` must be unique in the file)
+  - `command="insert"` → insert lines after a line number (`insert_line`, `new_str`)
+{% elif has_leaf_editor -%}
+- File tools:{% if view_tool %}
+  - `{{ view_tool }}` — read a file (`path`). Always pass `view_range=[start, end]` (1-based, inclusive; `end=-1` means to the end of the file). Never view a whole large file at once — page through it using the reported total line count.{% endif %}{% if create_tool %}
+  - `{{ create_tool }}` — write or overwrite a file (`path`, `file_text`){% endif %}{% if str_replace_tool %}
+  - `{{ str_replace_tool }}` — patch a file (`path`, `old_str`, `new_str`; `old_str` must be unique){% endif %}{% if insert_tool %}
+  - `{{ insert_tool }}` — insert lines after a line number (`path`, `insert_line`, `new_str`){% endif %}
+{% endif -%}
+{% if present_files_tool -%}
+- `{{ present_files_tool }}` — **required** to show files to the user. `filepaths` must be absolute paths **already under `{{ outputs.target }}`**. Workspace, uploads, skills, and other paths are rejected. Writing a file does not surface it in chat.
+{% endif -%}
+{% if present_server_tool -%}
+- `{{ present_server_tool }}` — **required** to expose a sandbox HTTP service (`port`; optional `service_name`, `initial_path`)
+{% endif %}
+{% if preinstalled_packages or preinstalled_cli_tools %}
+
+**Environment**
+{% if preinstalled_packages -%}
+- Preinstalled Python packages: {{ preinstalled_packages | join(", ") }}
+{% endif -%}
+{% if preinstalled_cli_tools -%}
+- Preinstalled CLI tools: {{ preinstalled_cli_tools | join(", ") }}
+{% endif -%}
+{% endif %}
+
+**Filesystem**
+| Path | Access | Purpose |
+|---|---|---|
+{% for mount in layout -%}
+| `{{ mount.target }}` | {{ mount.access }} | {{ mount.description }} |
+{% endfor %}
+
+**Rules**
+- Use absolute paths. Working directory: `{{ workspace.target }}`.
+- Stay inside the paths above.
+- Put intermediate work and scripts in `{{ workspace.target }}`. Put final user deliverables in `{{ outputs.target }}`.
+- Prefer writing code to a file under `{{ workspace.target }}`, then running that file{% if bash_tool %} with `{{ bash_tool }}`{% endif %}. Avoid long one-off inline code in the shell so failures are easy to inspect and fix with edits.
+{% if bash_tool -%}
+- All commands share the same sandbox: files you create and packages you install persist across calls. Only the shell process is fresh — exported variables and the current directory do not persist between calls, so set what you need within each command instead of relying on a previous `cd` or export.
+- Batch independent operations into as few calls as possible (e.g. chain with `&&` or a script) to reduce round-trips and improve performance. For independent parallel tasks, issue multiple `{{ bash_tool }}` calls in the same turn so they run concurrently.
+- Every tool call costs a full round-trip (time to first token plus response time). Issuing several independent calls in one message runs them concurrently and returns all results in a single round-trip; issuing them one per message serialises that latency end-to-end.
+- **Batch** in one message whenever you can foresee independent calls: for example, matching 5 separate lines of an already-read file with `str_replace`, viewing 3 files plus running 2 greps, copying several outputs, or running build, lint, and tests that do not feed each other.
+- **Keep serial** only the calls that depend on an earlier result: viewing an unread file before editing it (you need its exact content to pick `old_str`), grepping for a file's location before opening it, re-reading after a failed replacement, building after a write it consumes, or piping one command's output into the next.
+- Check the return/exit code on every result and investigate failures before moving on.
+- Pass `restart=true` to wipe and recreate the workspace when you need a clean slate.
+- Output is truncated to the configured maximum. To inspect a large output, re-run a targeted command (e.g. `grep`, `head`, `tail`, `wc -l`) rather than re-dumping everything.
+{% endif -%}
+{% if text_editor_tool or has_leaf_editor -%}
+- Use the text-editor tool(s) for all file operations (read, create, edit). Use {% if bash_tool %}`{{ bash_tool }}`{% else %}the shell{% endif %} only to execute code and for shell tasks that have no dedicated tool (e.g. copy, compress, run a script).
+- When reading files, always pass a `view_range` window instead of viewing the whole file. Page through large files window by window, using the reported total line count to pick the next range. To locate relevant lines first, use {% if bash_tool %}`{{ bash_tool }}` with `grep -n`{% else %}a search{% endif %} and then view only that range.
+- `str_replace` is exact: `old_str` must match the file character-for-character — spelling, capitalisation, punctuation, spacing, indentation, and line endings. Make several small, targeted replacements instead of one large one; read the file first and copy a short unique excerpt for `old_str`. If a replacement fails, re-read the file and retry with a smaller or more specific snippet. Do not keep repeating the same failed replacement, and do not invent another tool name.
+{% endif -%}
+{% if not internet_enabled -%}
+- No internet: outbound network is disabled. Do not use `pip install`, `npm install`, `curl`, `wget`, `apt`, or any other download/install that needs the network. Use only the preinstalled packages/CLI tools listed above and local files.
+{% endif -%}
+{% if present_files_tool -%}
+- After creating/updating deliverables in `{{ outputs.target }}`, call `{{ present_files_tool }}` with those absolute outputs paths (batch when possible). If a file currently lives elsewhere, copy it into `{{ outputs.target }}` first, then present the copy. Do not claim a file is downloadable unless you already presented it.
+{% endif -%}
+{% if present_server_tool -%}
+- After starting an HTTP server in the sandbox, call `{{ present_server_tool }}` with its port.
+{% endif -%}
+{% if few_shots == "True" %}
+
+**Examples**
+{% if text_editor_tool -%}
+- Read an upload: `{{ text_editor_tool }}` → `command="view"`, `path="{{ uploads.target }}report.csv"`
+{% elif view_tool -%}
+- Read an upload: `{{ view_tool }}` → `path="{{ uploads.target }}report.csv"`
+{% elif bash_tool -%}
+- Read an upload: `{{ bash_tool }}` → `command="cat {{ uploads.target }}report.csv"`
+{% endif -%}
+{% if text_editor_tool -%}
+- Inspect a file: `{{ text_editor_tool }}` → `command="view"`, `path="{{ workspace.target }}config.json"`
+- Inspect lines 10–30 only: `{{ text_editor_tool }}` → `command="view"`, `path="{{ workspace.target }}config.json"`, `view_range=[10, 30]`
+- Page through a large file: view `[1, 200]`, read the reported total line count, then view `[201, 400]`, and so on — never view the whole file at once
+{% if bash_tool -%}
+- Write then run: `{{ text_editor_tool }}` → `command="create"`, `path="{{ workspace.target }}analyze.py"`, `file_text="..."`; then `{{ bash_tool }}` → `command="python {{ workspace.target }}analyze.py"`
+- On failure, patch and re-run: `{{ text_editor_tool }}` → `command="str_replace"`, `path="{{ workspace.target }}analyze.py"`, `old_str="bad_line"`, `new_str="fixed_line"`
+{% endif -%}
+- Insert an import at line 1: `{{ text_editor_tool }}` → `command="insert"`, `path="{{ workspace.target }}analyze.py"`, `insert_line=0`, `new_str="import logging"`
+{% elif has_leaf_editor -%}
+{% if view_tool -%}
+- Inspect a file: `{{ view_tool }}` → `path="{{ workspace.target }}config.json"`
+- Inspect lines 10–30 only: `{{ view_tool }}` → `path="{{ workspace.target }}config.json"`, `view_range=[10, 30]`
+- Page through a large file: view `[1, 200]`, read the reported total line count, then view `[201, 400]`, and so on — never view the whole file at once
+{% endif -%}
+{% if create_tool and bash_tool -%}
+- Write then run: `{{ create_tool }}` → `path="{{ workspace.target }}analyze.py"`, `file_text="..."`; then `{{ bash_tool }}` → `command="python {{ workspace.target }}analyze.py"`
+{% elif create_tool -%}
+- Write a script: `{{ create_tool }}` → `path="{{ workspace.target }}analyze.py"`, `file_text="..."`
+{% endif -%}
+{% if str_replace_tool -%}
+- Fix a script and re-run: `{{ str_replace_tool }}` → `path="{{ workspace.target }}analyze.py"`, `old_str="bad_line"`, `new_str="fixed_line"`
+{% endif -%}
+{% if insert_tool -%}
+- Insert an import at line 1: `{{ insert_tool }}` → `path="{{ workspace.target }}analyze.py"`, `insert_line=0`, `new_str="import logging"`
+{% endif -%}
+{% elif bash_tool -%}
+- Write then run a script: save to `{{ workspace.target }}`, run via `{{ bash_tool }}`, edit inline if it fails, then re-run
+{% endif -%}
+{% if bash_tool -%}
+- Copy output for delivery: `{{ bash_tool }}` → `command="cp chart.png {{ outputs.target }}chart.png"`
+{% endif -%}
+{% if present_files_tool -%}
+- Show to user: `{{ present_files_tool }}` → `filepaths=["{{ outputs.target }}chart.png"]`
+{% endif -%}
+{% if present_server_tool -%}
+- Expose app: `{{ present_server_tool }}` → `port=8501`
+{% endif -%}
+{% endif %}
+</code_execution>
+{% endif %}

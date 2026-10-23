@@ -1,0 +1,1143 @@
+import asyncio
+import json
+from collections.abc import AsyncGenerator
+from typing import Any
+from unittest.mock import MagicMock
+
+import pytest
+from llama_index.core.base.llms.types import (
+    ChatMessage,
+    ChatResponse,
+    MessageRole,
+)
+from llama_index.core.llms.function_calling import FunctionCallingLLM
+from llama_index.core.llms.llm import ToolSelection
+from openai.types.chat.chat_completion_chunk import (
+    ChoiceDeltaToolCall,
+    ChoiceDeltaToolCallFunction,
+)
+
+from private_gpt.components.chat.models.chat_config_models import (
+    ResolvedChatRequest,
+    ResolvedSystemConfig,
+    ResolvedToolConfig,
+    ToolSpec,
+)
+from private_gpt.components.context.models.context_stack import ContextStack
+from private_gpt.components.engines.chat.async_chat_engine import (
+    AsyncChatEngine,
+    LocalEventChannel,
+    _EventHandler,
+    _StreamDeltaState,
+)
+from private_gpt.components.engines.chat.chat_engine import ChatLoopEngine
+from private_gpt.components.engines.chat.chat_engine_interface import (
+    ChatEngine,
+    LoopChatEngineAdapter,
+)
+from private_gpt.components.engines.chat.chat_runner import ChatRunner
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
+    ChatRequestLoopInterceptor,
+)
+from private_gpt.components.engines.chat.models.chat_phase import InterceptorPhase
+from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.streaming.tasks.chat_scheduler import LocalChatScheduler
+from private_gpt.components.tools.tool_scheduler import LocalToolScheduler
+from private_gpt.events.event_folding import fold
+from private_gpt.events.models import (
+    RawContentBlockDeltaEvent,
+    RawContentBlockStartEvent,
+    RawMessageDeltaEvent,
+    RawMessageStopEvent,
+    ThinkingBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+)
+from tests.fixtures.mock_function_llm import get_mock_function_calling_llm
+
+
+async def _noop_tool(value: str) -> str:
+    return f"ok:{value}"
+
+
+async def _collect_events(events: AsyncGenerator[Any, None]) -> list[Any]:
+    return [event async for event in events]
+
+
+class _LocalTestRunner:
+    def __init__(self, engine: AsyncChatEngine) -> None:
+        self._engine = engine
+        self._tasks: dict[str, asyncio.Task[Any]] = {}
+
+    async def submit(
+        self,
+        *,
+        request_data: dict[str, Any],
+        stream_type: str,
+        metadata: dict[str, Any],
+        execution_id: str | None = None,
+    ) -> tuple[str, AsyncGenerator[Any, None]]:
+        del stream_type, metadata
+        correlation_id = execution_id or "test-execution"
+        channel = LocalEventChannel()
+
+        async def execute() -> None:
+            try:
+                request = ResolvedChatRequest.model_validate(request_data)
+                await self._engine.execute(request=request, channel=channel)
+            finally:
+                await channel.close()
+
+        task = asyncio.create_task(execute())
+        self._tasks[correlation_id] = task
+        return correlation_id, channel.stream(task)
+
+    async def cancel(self, execution_id: str) -> bool:
+        task = self._tasks.get(execution_id)
+        if task is None:
+            return False
+        task.cancel()
+        return True
+
+
+async def _run_engine(
+    engine: ChatEngine,
+    request: ResolvedChatRequest,
+    runner: ChatRunner | None,
+) -> list[Any]:
+    execution = await engine.run(request=request, runner=runner)
+    events = await _collect_events(execution.events)
+    if execution.final_state_task is not None:
+        await execution.final_state_task
+    return events
+
+
+def _build_engine(
+    engine_cls: Any,
+    engine_kwargs: dict[str, Any],
+    llm_component: LLMComponent,
+    max_iterations: int,
+    request_interceptors: list[Any] | None = None,
+) -> tuple[ChatEngine, ChatRunner | None]:
+    engine = engine_cls(
+        llm_component=llm_component,
+        request_interceptors=request_interceptors or [],
+        response_interceptors=[],
+        max_iterations=max_iterations,
+        **engine_kwargs,
+    )
+    if isinstance(engine, AsyncChatEngine):
+        runner = _LocalTestRunner(engine)
+        return engine, runner
+    return LoopChatEngineAdapter(engine=engine), None
+
+
+ENGINE_CONFIGS = [
+    pytest.param(
+        AsyncChatEngine,
+        {
+            "tool_scheduler": LocalToolScheduler(),
+            "chat_scheduler": LocalChatScheduler(),
+        },
+        id="async",
+    ),
+    pytest.param(ChatLoopEngine, {}, id="sync"),
+]
+
+
+@pytest.fixture
+def base_request() -> ResolvedChatRequest:
+    return ResolvedChatRequest(
+        messages=[ChatMessage(role=MessageRole.USER, content="hello")],
+        system=ResolvedSystemConfig(prompt="test"),
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_emits_text_and_stop(
+    base_request: ResolvedChatRequest, engine_cls: Any, engine_kwargs: dict
+) -> None:
+    mock_llm = get_mock_function_calling_llm(["hello", " world"])
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=2,
+    )
+
+    events = await _run_engine(
+        engine=engine,
+        request=base_request,
+        runner=runner,
+    )
+    assert any(isinstance(event, RawContentBlockDeltaEvent) for event in events)
+    assert any(isinstance(event, RawMessageStopEvent) for event in events)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_streams_tool_use_and_tool_result(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[
+            ToolSpec.from_defaults(
+                name="echo",
+                type="echo",
+                runtime="server",
+                async_fn=_noop_tool,
+            )
+        ]
+    )
+
+    mock_llm = get_mock_function_calling_llm(
+        [
+            [
+                ToolSelection(
+                    tool_id="tool_1",
+                    tool_name="echo",
+                    tool_kwargs={"value": "x"},
+                )
+            ],
+            ["done"],
+        ]
+    )
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=4,
+    )
+
+    events = await _run_engine(
+        engine=engine,
+        request=request,
+        runner=runner,
+    )
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolUseBlock)
+        for event in events
+    )
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolResultBlock)
+        for event in events
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_handles_tool_call_with_missing_spec(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    """A streamed tool call whose spec is not in the current stack should not crash.
+
+    This can happen when a model calls a tool that was visible in an earlier
+    iteration but was filtered out before the current LLM call. The engine
+    should surface it as an error result instead of raising KeyError.
+    """
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[
+            ToolSpec.from_defaults(
+                name="echo",
+                type="echo",
+                runtime="server",
+                async_fn=_noop_tool,
+            )
+        ]
+    )
+
+    mock_llm = get_mock_function_calling_llm(
+        [
+            [
+                ToolSelection(
+                    tool_id="tool_1",
+                    tool_name="str_replace",
+                    tool_kwargs={"path": "a.txt", "old_str": "x", "new_str": "y"},
+                )
+            ]
+        ]
+    )
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=1,
+    )
+
+    events = await _run_engine(
+        engine=engine,
+        request=request,
+        runner=runner,
+    )
+
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolUseBlock)
+        and event.content_block.name == "str_replace"
+        for event in events
+    )
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolResultBlock)
+        and event.content_block.is_error
+        and event.content_block.content == "Tool 'str_replace' not found."
+        for event in events
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_survives_malformed_overlong_tool_name(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    """A tool name the model filled with call syntax must not fail the stream.
+
+    GLM-5.3 emitted ``Agent(description=..., prompt=...) ...`` (>200 chars) as
+    the name: ToolUseBlock validation (max_length=200) raised mid-stream.
+    The call is answered "not found" so the model can retry.
+    """
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[
+            ToolSpec.from_defaults(
+                name="echo", type="echo", runtime="server", async_fn=_noop_tool
+            )
+        ]
+    )
+    bad_name = 'Agent(description="Listar peer names", prompt="' + "x" * 300 + '")'
+    mock_llm = get_mock_function_calling_llm(
+        [[ToolSelection(tool_id="tool_1", tool_name=bad_name, tool_kwargs={})]]
+    )
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=1,
+    )
+
+    events = await _run_engine(engine=engine, request=request, runner=runner)
+
+    uses = [
+        event.content_block
+        for event in events
+        if isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolUseBlock)
+    ]
+    assert len(uses) == 1
+    assert uses[0].name == bad_name[:200]
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolResultBlock)
+        and event.content_block.is_error
+        and "not found" in str(event.content_block.content)
+        for event in events
+    )
+
+
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_returns_hidden_client_tool_call_to_caller(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    """A client tool removed from the iteration's stack stays the caller's to run.
+
+    Loop recovery replaces the whole context stack (no tools) for one iteration; a
+    model that still calls the client's `bash` tool must get a tool_use stop, not a
+    server-side "not found" tool_result, which Anthropic clients reject.
+    """
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[ToolSpec(name="bash", type="bash", runtime="client")]
+    )
+
+    async def _hide_tools(context: Any) -> None:
+        if context.phase != InterceptorPhase.BEFORE_ITERATION:
+            return
+        state = context.state
+        state.input.context_stack = ContextStack()
+        context.set_state(state)
+
+    hide_tools = MagicMock(spec=ChatRequestLoopInterceptor)
+    hide_tools.intercept.side_effect = _hide_tools
+
+    mock_llm = get_mock_function_calling_llm(
+        [
+            [
+                ToolSelection(
+                    tool_id="tool_1",
+                    tool_name="bash",
+                    tool_kwargs={"command": "ls"},
+                )
+            ]
+        ]
+    )
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=1,
+        request_interceptors=[hide_tools],
+    )
+
+    events = await _run_engine(engine=engine, request=request, runner=runner)
+
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolUseBlock)
+        and event.content_block.name == "bash"
+        for event in events
+    )
+    assert not any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolResultBlock)
+        for event in events
+    )
+    assert any(
+        isinstance(event, RawMessageDeltaEvent)
+        and event.delta.stop_reason == "tool_use"
+        for event in events
+    )
+
+
+async def _fold_events(events: list[Any]) -> Any:
+    async def _gen() -> AsyncGenerator[Any, None]:
+        for event in events:
+            yield event
+
+    return await fold(_gen())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_passes_unknown_tool_call_to_client_caller(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    """A made-up tool name is passed through when the caller owns the tool loop.
+
+    Reproduces the Qwen trace (pymodes-gnss-altitude-test): Claude Code offered Bash
+    but not Grep, the model called both. The response carried a server-side
+    ``tool_result`` for Grep inside the assistant message, which the Anthropic API
+    never does. Now both calls stop as ``tool_use`` and the caller answers Grep with
+    its own error tool_result, in the streamed events and in the folded message.
+    """
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[ToolSpec(name="Bash", type="bash", runtime="client")]
+    )
+
+    mock_llm = get_mock_function_calling_llm(
+        [
+            [
+                ToolSelection(
+                    tool_id="tool_1",
+                    tool_name="Bash",
+                    tool_kwargs={"command": "ls /work"},
+                ),
+                ToolSelection(
+                    tool_id="tool_2",
+                    tool_name="Grep",
+                    tool_kwargs={"pattern": "decode_bds05", "path": "/work"},
+                ),
+            ]
+        ]
+    )
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=1,
+    )
+
+    events = await _run_engine(engine=engine, request=request, runner=runner)
+
+    tool_uses = [
+        event.content_block.name
+        for event in events
+        if isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolUseBlock)
+    ]
+    assert tool_uses == ["Bash", "Grep"]
+    assert not any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolResultBlock)
+        for event in events
+    )
+    assert any(
+        isinstance(event, RawMessageDeltaEvent)
+        and event.delta.stop_reason == "tool_use"
+        for event in events
+    )
+
+    folded = await _fold_events(events)
+    assert [block.type for block in folded.content] == ["tool_use", "tool_use"]
+    assert folded.stop_reason == "tool_use"
+    grep_block = folded.content[1]
+    assert grep_block.name == "Grep"
+    assert grep_block.input == {"pattern": "decode_bds05", "path": "/work"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_streams_reasoning_blocks(
+    base_request: ResolvedChatRequest, engine_cls: Any, engine_kwargs: dict
+) -> None:
+    mock_llm = MagicMock(spec=FunctionCallingLLM)
+    mock_llm.metadata.context_window = 4096
+    mock_llm.metadata.num_output = 1024
+    mock_llm.metadata.is_function_calling_model = True
+    mock_llm.callback_manager = MagicMock()
+    mock_llm.completion_to_prompt = lambda prompt, **kwargs: prompt
+    mock_llm.messages_to_prompt = lambda messages, **kwargs: "\n".join(
+        [message.content for message in messages or [] if message and message.content]
+    )
+
+    def get_tool_calls_from_response(
+        response: ChatResponse,
+        error_on_no_tool_call: bool = True,
+        **kwargs: Any,
+    ) -> list[ToolSelection]:
+        return response.additional_kwargs.get("tool_calls", [])
+
+    mock_llm.get_tool_calls_from_response = get_tool_calls_from_response
+
+    async def astream_chat_with_tools(*args: Any, **kwargs: Any):
+        msg_1 = ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content=None,
+            additional_kwargs={"thinking_delta": "step-1"},
+        )
+        yield ChatResponse(
+            message=msg_1,
+            raw=msg_1,
+            delta=None,
+            additional_kwargs=msg_1.additional_kwargs,
+        )
+
+        msg_2 = ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="done",
+            additional_kwargs={"stop_reason": "end_turn"},
+        )
+        yield ChatResponse(
+            message=msg_2,
+            raw=msg_2,
+            delta="done",
+            additional_kwargs=msg_2.additional_kwargs,
+        )
+
+    async def coro(*args: Any, **kwargs: Any):
+        return astream_chat_with_tools(*args, **kwargs)
+
+    mock_llm.astream_chat_with_tools = coro
+
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=2,
+    )
+
+    events = await _run_engine(
+        engine=engine,
+        request=base_request,
+        runner=runner,
+    )
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ThinkingBlock)
+        for event in events
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_accumulates_usage_across_iterations(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[
+            ToolSpec.from_defaults(
+                name="echo",
+                type="echo",
+                runtime="server",
+                async_fn=_noop_tool,
+            )
+        ]
+    )
+
+    mock_llm = MagicMock(spec=FunctionCallingLLM)
+    mock_llm.metadata.context_window = 4096
+    mock_llm.metadata.num_output = 1024
+    mock_llm.metadata.is_function_calling_model = True
+    mock_llm.callback_manager = MagicMock()
+    mock_llm.completion_to_prompt = lambda prompt, **kwargs: prompt
+    mock_llm.messages_to_prompt = lambda messages, **kwargs: "\n".join(
+        [message.content for message in messages or [] if message and message.content]
+    )
+
+    def get_tool_calls_from_response(
+        response: ChatResponse,
+        error_on_no_tool_call: bool = True,
+        **kwargs: Any,
+    ) -> list[ToolSelection]:
+        return response.additional_kwargs.get("tool_calls", [])
+
+    mock_llm.get_tool_calls_from_response = get_tool_calls_from_response
+
+    call_counter = 0
+
+    async def astream_chat_with_tools(*args: Any, **kwargs: Any):
+        nonlocal call_counter
+        call_counter += 1
+
+        if call_counter == 1:
+            msg = ChatMessage(
+                role=MessageRole.ASSISTANT,
+                content=None,
+                additional_kwargs={
+                    "tool_calls": [
+                        ToolSelection(
+                            tool_id="tool_1",
+                            tool_name="echo",
+                            tool_kwargs={"value": "x"},
+                        )
+                    ],
+                    "input_tokens": 10,
+                    "output_tokens": 2,
+                },
+            )
+            yield ChatResponse(
+                message=msg,
+                raw=msg,
+                delta=None,
+                additional_kwargs=msg.additional_kwargs,
+            )
+            return
+
+        msg = ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="done",
+            additional_kwargs={
+                "stop_reason": "end_turn",
+                "input_tokens": 5,
+                "output_tokens": 3,
+            },
+        )
+        yield ChatResponse(
+            message=msg,
+            raw=msg,
+            delta="done",
+            additional_kwargs=msg.additional_kwargs,
+        )
+
+    async def coro(*args: Any, **kwargs: Any):
+        return astream_chat_with_tools(*args, **kwargs)
+
+    mock_llm.astream_chat_with_tools = coro
+
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=4,
+    )
+
+    events = await _run_engine(
+        engine=engine,
+        request=request,
+        runner=runner,
+    )
+    message_deltas = [
+        event for event in events if isinstance(event, RawMessageDeltaEvent)
+    ]
+    assert message_deltas
+    assert message_deltas[-1].usage is not None
+    assert message_deltas[-1].usage.input_tokens == 15
+    assert message_deltas[-1].usage.output_tokens == 5
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_preserves_tool_calls_when_last_chunk_has_empty_tool_calls(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[
+            ToolSpec.from_defaults(
+                name="echo",
+                type="echo",
+                async_fn=_noop_tool,
+            )
+        ]
+    )
+
+    mock_llm = MagicMock(spec=FunctionCallingLLM)
+    mock_llm.metadata.context_window = 4096
+    mock_llm.metadata.num_output = 1024
+    mock_llm.metadata.is_function_calling_model = True
+    mock_llm.callback_manager = MagicMock()
+    mock_llm.completion_to_prompt = lambda prompt, **kwargs: prompt
+    mock_llm.messages_to_prompt = lambda messages, **kwargs: "\n".join(
+        [message.content for message in messages or [] if message and message.content]
+    )
+
+    def get_tool_calls_from_response(
+        response: ChatResponse,
+        error_on_no_tool_call: bool = True,
+        **kwargs: Any,
+    ) -> list[ToolSelection]:
+        return response.additional_kwargs.get("tool_calls", [])
+
+    mock_llm.get_tool_calls_from_response = get_tool_calls_from_response
+
+    async def astream_chat_with_tools(*args: Any, **kwargs: Any):
+        first = ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content=None,
+            additional_kwargs={
+                "tool_calls": [
+                    ToolSelection(
+                        tool_id="tool_1",
+                        tool_name="echo",
+                        tool_kwargs={"value": "x"},
+                    )
+                ]
+            },
+        )
+        yield ChatResponse(
+            message=first,
+            raw=first,
+            delta=None,
+            additional_kwargs=first.additional_kwargs,
+        )
+
+        # Provider-specific trailing chunk with empty tool_calls
+        last = ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="",
+            additional_kwargs={"tool_calls": []},
+        )
+        yield ChatResponse(
+            message=last,
+            raw=last,
+            delta="",
+            additional_kwargs=last.additional_kwargs,
+        )
+
+    async def coro(*args: Any, **kwargs: Any):
+        return astream_chat_with_tools(*args, **kwargs)
+
+    mock_llm.astream_chat_with_tools = coro
+
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=2,
+    )
+
+    events = await _run_engine(
+        engine=engine,
+        request=request,
+        runner=runner,
+    )
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolUseBlock)
+        for event in events
+    )
+
+
+def _tool_selections_from_openai_or_native(
+    response: ChatResponse,
+    error_on_no_tool_call: bool = True,
+    **kwargs: Any,
+) -> list[ToolSelection]:
+    del error_on_no_tool_call, kwargs
+    raw_calls = response.additional_kwargs.get("tool_calls") or []
+    selections: list[ToolSelection] = []
+    for tool_call in raw_calls:
+        if isinstance(tool_call, ToolSelection):
+            selections.append(tool_call)
+            continue
+        function = getattr(tool_call, "function", None)
+        tool_id = getattr(tool_call, "id", None)
+        tool_name = getattr(function, "name", None) if function is not None else None
+        if not tool_id or not tool_name:
+            continue
+        arguments = getattr(function, "arguments", None) or "{}"
+        try:
+            tool_kwargs = json.loads(arguments)
+        except json.JSONDecodeError:
+            tool_kwargs = {}
+        if not isinstance(tool_kwargs, dict):
+            tool_kwargs = {}
+        selections.append(
+            ToolSelection(
+                tool_id=str(tool_id),
+                tool_name=str(tool_name),
+                tool_kwargs=tool_kwargs,
+            )
+        )
+    return selections
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_loop_preserves_openai_choice_delta_tool_calls(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    request = base_request.model_copy(deep=True)
+    request.tool_config = ResolvedToolConfig(
+        tools=[
+            ToolSpec.from_defaults(
+                name="echo",
+                type="echo",
+                async_fn=_noop_tool,
+            )
+        ]
+    )
+
+    mock_llm = MagicMock(spec=FunctionCallingLLM)
+    mock_llm.metadata.context_window = 4096
+    mock_llm.metadata.num_output = 1024
+    mock_llm.metadata.is_function_calling_model = True
+    mock_llm.callback_manager = MagicMock()
+    mock_llm.completion_to_prompt = lambda prompt, **kwargs: prompt
+    mock_llm.messages_to_prompt = lambda messages, **kwargs: "\n".join(
+        [message.content for message in messages or [] if message and message.content]
+    )
+    mock_llm.get_tool_calls_from_response = _tool_selections_from_openai_or_native
+
+    async def astream_chat_with_tools(*args: Any, **kwargs: Any):
+        del args, kwargs
+        first = ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content=None,
+            additional_kwargs={
+                "tool_calls": [
+                    ChoiceDeltaToolCall(
+                        index=0,
+                        id="call_abc",
+                        type="function",
+                        function=ChoiceDeltaToolCallFunction(
+                            name="echo",
+                            arguments="{",
+                        ),
+                    )
+                ]
+            },
+        )
+        yield ChatResponse(
+            message=first,
+            raw=first,
+            delta=None,
+            additional_kwargs={},
+        )
+
+        second = ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content=None,
+            additional_kwargs={
+                "tool_calls": [
+                    ChoiceDeltaToolCall(
+                        index=0,
+                        function=ChoiceDeltaToolCallFunction(
+                            arguments='"value": "x"}',
+                        ),
+                    )
+                ]
+            },
+        )
+        yield ChatResponse(
+            message=second,
+            raw=second,
+            delta=None,
+            additional_kwargs={},
+        )
+
+        last = ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="",
+            additional_kwargs={"tool_calls": []},
+        )
+        yield ChatResponse(
+            message=last,
+            raw=last,
+            delta="",
+            additional_kwargs={},
+        )
+
+    async def coro(*args: Any, **kwargs: Any):
+        return astream_chat_with_tools(*args, **kwargs)
+
+    mock_llm.astream_chat_with_tools = coro
+
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine, runner = _build_engine(
+        engine_cls=engine_cls,
+        engine_kwargs=engine_kwargs,
+        llm_component=llm_component,
+        max_iterations=2,
+    )
+
+    events = await _run_engine(
+        engine=engine,
+        request=request,
+        runner=runner,
+    )
+    assert any(
+        isinstance(event, RawContentBlockStartEvent)
+        and isinstance(event.content_block, ToolUseBlock)
+        for event in events
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_handle_stream_chunk_accumulates_openai_tool_call_deltas(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    mock_llm = MagicMock(spec=FunctionCallingLLM)
+    mock_llm.metadata.context_window = 4096
+    mock_llm.metadata.num_output = 1024
+    mock_llm.metadata.is_function_calling_model = True
+    mock_llm.callback_manager = MagicMock()
+    mock_llm.completion_to_prompt = lambda prompt, **kwargs: prompt
+    mock_llm.messages_to_prompt = lambda messages, **kwargs: "\n".join(
+        [message.content for message in messages or [] if message and message.content]
+    )
+    mock_llm.get_tool_calls_from_response = lambda *args, **kwargs: []
+
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine = engine_cls(
+        llm_component=llm_component,
+        request_interceptors=[],
+        response_interceptors=[],
+        max_iterations=2,
+        **engine_kwargs,
+    )
+
+    run = engine.initialize_run(base_request)
+    current_response = ChatResponse(
+        message=ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content=None,
+            additional_kwargs={},
+        ),
+        additional_kwargs={},
+    )
+    handler = _EventHandler(queue=asyncio.Queue())
+    stream_delta_state = _StreamDeltaState()
+    lock = asyncio.Lock()
+
+    first = ChatResponse(
+        message=ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content=None,
+            additional_kwargs={
+                "tool_calls": [
+                    ChoiceDeltaToolCall(
+                        index=0,
+                        id="call_abc",
+                        type="function",
+                        function=ChoiceDeltaToolCallFunction(
+                            name="echo",
+                            arguments="{",
+                        ),
+                    )
+                ]
+            },
+        ),
+        delta=None,
+        additional_kwargs={},
+    )
+    second = ChatResponse(
+        message=ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content=None,
+            additional_kwargs={
+                "tool_calls": [
+                    ChoiceDeltaToolCall(
+                        index=0,
+                        function=ChoiceDeltaToolCallFunction(
+                            arguments='"value": "x"}',
+                        ),
+                    )
+                ]
+            },
+        ),
+        delta=None,
+        additional_kwargs={},
+    )
+
+    current_response = await engine._handle_stream_chunk(
+        run=run,
+        llm=mock_llm,
+        chunk=first,
+        current_response=current_response,
+        stream_delta_state=stream_delta_state,
+        handler=handler,
+        tool_specs_by_name={},
+        schema_by_name={},
+        lock=lock,
+    )
+    current_response = await engine._handle_stream_chunk(
+        run=run,
+        llm=mock_llm,
+        chunk=second,
+        current_response=current_response,
+        stream_delta_state=stream_delta_state,
+        handler=handler,
+        tool_specs_by_name={},
+        schema_by_name={},
+        lock=lock,
+    )
+
+    tool_calls = current_response.message.additional_kwargs["tool_calls"]
+    assert len(tool_calls) == 1
+    assert isinstance(tool_calls[0], ChoiceDeltaToolCall)
+    assert tool_calls[0].id == "call_abc"
+    assert tool_calls[0].function is not None
+    assert tool_calls[0].function.arguments == '{"value": "x"}'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("engine_cls", "engine_kwargs"), ENGINE_CONFIGS)
+async def test_handle_stream_chunk_accumulates_token_ids_delta(
+    base_request: ResolvedChatRequest,
+    engine_cls: Any,
+    engine_kwargs: dict,
+) -> None:
+    mock_llm = MagicMock(spec=FunctionCallingLLM)
+    mock_llm.metadata.context_window = 4096
+    mock_llm.metadata.num_output = 1024
+    mock_llm.metadata.is_function_calling_model = True
+    mock_llm.callback_manager = MagicMock()
+    mock_llm.completion_to_prompt = lambda prompt, **kwargs: prompt
+    mock_llm.messages_to_prompt = lambda messages, **kwargs: "\n".join(
+        [message.content for message in messages or [] if message and message.content]
+    )
+    mock_llm.get_tool_calls_from_response = lambda *args, **kwargs: []
+
+    llm_component = MagicMock(spec=LLMComponent)
+    llm_component.get_llm.return_value = mock_llm
+
+    engine = engine_cls(
+        llm_component=llm_component,
+        request_interceptors=[],
+        response_interceptors=[],
+        max_iterations=2,
+        **engine_kwargs,
+    )
+
+    run = engine.initialize_run(base_request)
+    current_response = ChatResponse(
+        message=ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content=None,
+            additional_kwargs={},
+        ),
+        additional_kwargs={},
+    )
+    handler = _EventHandler(queue=asyncio.Queue())
+    stream_delta_state = _StreamDeltaState()
+    lock = asyncio.Lock()
+
+    first = ChatResponse(
+        message=ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="he",
+            additional_kwargs={"token_ids_delta": [11, 12]},
+        ),
+        delta="he",
+        additional_kwargs={"token_ids_delta": [11, 12]},
+    )
+    second = ChatResponse(
+        message=ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="llo",
+            additional_kwargs={"token_ids_delta": [13]},
+        ),
+        delta="llo",
+        additional_kwargs={"token_ids_delta": [13]},
+    )
+
+    current_response = await engine._handle_stream_chunk(
+        run=run,
+        llm=mock_llm,
+        chunk=first,
+        current_response=current_response,
+        stream_delta_state=stream_delta_state,
+        handler=handler,
+        tool_specs_by_name={},
+        schema_by_name={},
+        lock=lock,
+    )
+    current_response = await engine._handle_stream_chunk(
+        run=run,
+        llm=mock_llm,
+        chunk=second,
+        current_response=current_response,
+        stream_delta_state=stream_delta_state,
+        handler=handler,
+        tool_specs_by_name={},
+        schema_by_name={},
+        lock=lock,
+    )
+
+    assert current_response.message.additional_kwargs["token_ids_delta"] == [11, 12, 13]

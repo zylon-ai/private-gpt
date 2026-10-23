@@ -1,0 +1,99 @@
+---
+title: "Async ingestion"
+description: "Ingest and delete documents as background jobs with status polling."
+---
+
+For large files or batches, use the async endpoints to avoid holding the HTTP connection open. Jobs are processed by a background worker (Celery) and can be polled for status.
+
+<Note>
+  Async jobs require a Celery worker running alongside the API server. Start one with `make celery`.
+</Note>
+
+<Warning>
+  This feature requires to have the `worker` extra enabled in your application. If you are adding storage to an existing application, make sure to run the sync command after enabling the module:
+
+  ```bash
+  uv sync --inexact worker
+  ```
+</Warning>
+
+---
+
+## Lifecycle
+
+```
+POST /v1/artifacts/ingest/async      →  task_id (pending)
+         │
+         ▼
+GET  /v1/artifacts/ingest/async/{task_id}   ←─ poll until done
+```
+
+---
+
+## Async ingest
+
+```bash
+curl -X POST http://localhost:8080/v1/artifacts/ingest/async \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ingest_body": {
+      "file_path": "/path/to/large-document.pdf",
+      "collection": "my-collection"
+    }
+  }'
+```
+
+Response:
+
+```json
+{"task_id": "task_01abc..."}
+```
+
+---
+
+## Poll for status
+
+```bash
+curl http://localhost:8080/v1/artifacts/ingest/async/task_01abc...
+```
+
+Response:
+
+```json
+{
+  "task_id": "task_01abc...",
+  "task_status": "SUCCESS",
+  "task_result": {...}
+}
+```
+
+**Status values:** `PENDING` · `SUCCESS` · `FAILURE` · `REVOKED`
+
+Poll until `task_status` is `SUCCESS` or `FAILURE`.
+
+---
+
+## Async delete
+
+```bash
+curl -X POST http://localhost:8080/v1/artifacts/delete/async \
+  -H "Content-Type: application/json" \
+  -d '{"delete_body":{"collection":"my-collection","artifact":"<artifact-id>"}}'
+# → {"task_id": "task_01xyz..."}
+
+curl http://localhost:8080/v1/artifacts/delete/async/task_01xyz...
+```
+
+---
+
+## Worker setup
+
+```bash
+# Start a worker
+make celery
+
+# Monitor workers (optional Flower UI at http://localhost:5555)
+make flower
+```
+
+The broker is configured in `settings.yaml` under `celery.broker_mode`. Supported options: `redis`, `rabbitmq`, `local`.

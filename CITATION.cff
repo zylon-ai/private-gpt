@@ -1,0 +1,16 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: PrivateGPT
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - name: Zylon by PrivateGPT
+    address: hello@zylon.ai
+    website: 'https://www.zylon.ai/'
+repository-code: 'https://github.com/zylon-ai/private-gpt'
+license: Apache-2.0
+date-released: '2023-05-02'

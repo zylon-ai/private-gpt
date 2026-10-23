@@ -1,0 +1,19 @@
+name: Documentation
+description: Suggest a change or addition to the documentation.
+title: "[DOCS] "
+labels: ["documentation"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Please describe the documentation change or addition you would like to suggest.**
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Provide a detailed description of the documentation change.
+      placeholder: "Detailed description of the documentation change"
+    validations:
+      required: true

@@ -1,0 +1,33 @@
+name: publish docs
+
+on: 
+  push: 
+    branches: 
+      - main
+    paths:
+      - "fern/**"
+permissions:
+  contents: read
+
+
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Download Fern
+        run: npm install -g fern-api
+
+      - name: Generate and Publish Docs
+        env:
+          FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
+        run: fern generate --docs --log-level debug

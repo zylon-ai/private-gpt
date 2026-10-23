@@ -1,0 +1,197 @@
+import asyncio
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
+
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
+    ChatResponseLoopInterceptor,
+)
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
+)
+from private_gpt.components.engines.citations.utils import (
+    extract_citations_by_original_text,
+)
+from private_gpt.events.models import (
+    Event,
+    RawContentBlockDeltaEvent,
+    RawContentBlockStartEvent,
+    RawContentBlockStopEvent,
+    TextDelta,
+    ThinkingDelta,
+)
+
+if TYPE_CHECKING:
+    from private_gpt.components.engines.citations.types import Citation, Document
+
+
+class ExtractCitationInterceptor(ChatResponseLoopInterceptor):
+    def __init__(self) -> None:
+        self._send_text: str = ""
+        self._send_citations: list[Citation] = []
+        self._current_text: str = ""
+        self._documents: list[Document] = []
+        self._citation_indices: dict[str, int] = {}
+        self._last_delta_type: str | None = None
+
+    async def on_iteration_start(self, context: ChatInterceptorContext) -> None:
+        self._send_text = ""
+        self._send_citations = []
+        self._current_text = ""
+        self._last_delta_type = None
+        # Do not snapshot documents here: BEFORE_ITERATION has not run yet.
+        self._documents = []
+        self._citation_indices = {}
+
+    async def on_iteration_end(self, context: ChatInterceptorContext) -> None:
+        # Mutate the context state to include the final citations for this iteration
+        if self._send_citations:
+            new_state = context.state.model_copy(deep=True)
+            existing = new_state.input.request.citation.citations or []
+            additions = [c for c in self._send_citations if c not in existing]
+            new_state.input.request.citation.citations = [*existing, *additions]
+            context.set_state(new_state)
+
+        # Reset documents & citation indices
+        self._documents = []
+        self._citation_indices = {}
+
+    def _documents_for_prompt(
+        self, context: ChatInterceptorContext
+    ) -> list["Document"]:
+        """Freeze the document set that was injected into this iteration's prompt.
+
+        ``on_iteration_start`` runs before BEFORE_ITERATION, so the stack is
+        still empty then. The first streamed event is after the prompt was
+        built — snapshot that set and keep it even if the stack later changes.
+        """
+        if not self._documents:
+            self._documents = list(context.state.input.context_stack.all_documents())
+        return self._documents
+
+    async def intercept_event(
+        self,
+        event: Event,
+        context: ChatInterceptorContext,
+    ) -> Event | None:
+        # Checked first: with citations off, every event is a cheap pass-through.
+        if not context.state.input.request.citation.enabled:
+            return event
+        documents = self._documents_for_prompt(context)
+        if not documents:
+            return event
+
+        if isinstance(event, RawContentBlockStartEvent):
+            self._send_text = ""
+            self._send_citations = []
+            self._current_text = ""
+            self._last_delta_type = None
+            return event
+
+        if isinstance(event, RawContentBlockStopEvent):
+            if self._current_text and documents:
+                if not self._citation_indices:
+                    raw = context.state.input.request.citation.citations or []
+                    self._citation_indices = {
+                        c.source_id: int(c.value["index"])
+                        for c in raw
+                        if c.source_id
+                        and c.value is not None
+                        and c.value.get("index") is not None
+                    }
+
+                (
+                    cleaned_text,
+                    current_citations,
+                    self._citation_indices,
+                ) = await asyncio.to_thread(
+                    extract_citations_by_original_text,
+                    text=self._current_text,
+                    documents=documents,
+                    citation_indices=self._citation_indices,
+                    is_final=True,
+                )
+
+                new_delta_text = cleaned_text[len(self._send_text) :]
+                new_citations = current_citations[len(self._send_citations) :]
+
+                if new_delta_text or new_citations:
+                    if self._last_delta_type == "text":
+                        delta = TextDelta.from_citations(new_delta_text, new_citations)
+                    elif self._last_delta_type == "thinking":
+                        delta = ThinkingDelta.from_citations(
+                            new_delta_text, new_citations
+                        )
+                    else:
+                        delta = TextDelta.from_citations(new_delta_text, new_citations)
+
+                    context.emit_event(
+                        RawContentBlockDeltaEvent(
+                            block_id=event.block_id,
+                            delta=delta,
+                        )
+                    )
+
+                    self._send_text = cleaned_text
+                    self._send_citations.extend(new_citations)
+            return event
+
+        if not isinstance(event, RawContentBlockDeltaEvent) or not event.delta:
+            return event
+
+        if isinstance(event.delta, TextDelta):
+            delta_text = event.delta.text or ""
+            self._current_text += delta_text
+            self._last_delta_type = "text"
+        elif isinstance(event.delta, ThinkingDelta):
+            delta_text = event.delta.thinking or ""
+            self._current_text += delta_text
+            self._last_delta_type = "thinking"
+        else:
+            return event
+
+        if not self._citation_indices:
+            raw = context.state.input.request.citation.citations or []
+            self._citation_indices = {
+                c.source_id: int(c.value["index"])
+                for c in raw
+                if c.source_id
+                and c.value is not None
+                and c.value.get("index") is not None
+            }
+
+        (
+            cleaned_text,
+            current_citations,
+            self._citation_indices,
+        ) = await asyncio.to_thread(
+            extract_citations_by_original_text,
+            text=self._current_text,
+            documents=documents,
+            citation_indices=self._citation_indices,
+            is_final=False,
+        )
+
+        if not cleaned_text:
+            return None
+
+        new_delta_text = cleaned_text[len(self._send_text) :]
+        new_citations = current_citations[len(self._send_citations) :]
+
+        if not new_delta_text and not new_citations:
+            return None
+
+        if isinstance(event.delta, TextDelta):
+            event.delta = TextDelta.from_citations(new_delta_text, new_citations)
+        else:
+            event.delta = ThinkingDelta.from_citations(new_delta_text, new_citations)
+
+        self._send_text = cleaned_text
+        self._send_citations.extend(new_citations)
+
+        return event
+
+    def model_copy(
+        self, *, update: Mapping[str, Any] | None | None = None, deep: bool = False
+    ) -> "ExtractCitationInterceptor":
+        # Return a new instance with the same logic but reset state
+        return ExtractCitationInterceptor()

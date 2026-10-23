@@ -1,0 +1,412 @@
+# The default configuration file.
+# More information about configuration can be found in the documentation: https://docs.privategpt.dev/
+# Syntax in `private_gpt/settings/settings.py`
+server:
+  env_name: ${APP_ENV:prod}
+  root_path: ${PGPT_ROOT_PATH:}
+  port: ${PORT:8080}
+  cors:
+    enabled: ${PGPT_CORS_ENABLED:true}
+    allow_origins: ["*"]
+    allow_methods: ["*"]
+    allow_headers: ["*"]
+  auth:
+    enabled: false
+    # python -c 'import base64; print("Basic " + base64.b64encode("secret:key".encode()).decode())'
+    # 'secret' is the username and 'key' is the password for basic auth by default
+    # If the auth is enabled, this value must be set in the "Authorization" header of the request.
+    secret: "Basic c2VjcmV0OmtleQ=="
+  network:
+    offline_mode: ${PGPT_OFFLINE_MODE,HF_HUB_OFFLINE:false}
+    proxy:
+      enabled: ${PROXY_ENABLED:false}
+      http_proxy: ${HTTP_PROXY,http_proxy:}
+      https_server: ${HTTPS_PROXY,https_proxy:}
+      username: ${PROXY_USERNAME:}
+      password: ${PROXY_PASSWORD:}
+      bypass: ${NO_PROXY:localhost,127.0.0.1}
+    ssl:
+      cert_file: ${SSL_CERT_FILE:}
+      cert_dir: ${SSL_CERT_DIR:}
+      verify_ssl: ${SSL_VERIFY:true}
+  api_doc:
+    enabled: ${PGPT_SWAGGER_ENABLED:true}
+    swagger_url: ${PGPT_SWAGGER_URL:/docs}
+    redoc_url: ${PGPT_REDOC_URL:/redoc}
+    openapi_url: ${PGPT_OPENAPI_URL:/openapi.json}
+  ui:
+    enabled: ${PGPT_UI_ENABLED:true}
+    path: ${PGPT_UI_PATH:/ui}
+  debug_mode: ${DEBUG_MODE:false}
+  max_workers: ${PGPT_MAX_WORKERS:0}
+
+data:
+  local_ingestion:
+    enabled: ${LOCAL_INGESTION_ENABLED:false}
+    allow_ingest_from: ["*"]
+  local_data_folder: ${PGPT_LOCAL_DATA_FOLDER:local_data/private_gpt}
+  reader: ${PGPT_DATA_READER:auto}
+  enable_fake_progress: ${PGPT_ENABLE_FAKE_PROGRESS:false}
+  enable_reuse_generated_nodes_before: ${PGPT_ENABLE_REUSE_GENERATED_NODES_BEFORE:false}
+  enable_vision_fallback: ${PGPT_ENABLE_VISION_FALLBACK:false}
+  enable_term_extractor: ${PGPT_ENABLE_TERM_EXTRACTOR:false}
+  max_num_nodes: ${PGPT_MAX_NUM_NODES:0}
+  max_content_nodes: ${PGPT_MAX_CONTENT_NODES:10000}
+  max_content_artifacts: ${PGPT_MAX_CONTENT_ARTIFACTS:20}
+  max_content_depth: ${PGPT_MAX_CONTENT_DEPTH:200}
+  max_content_response_bytes: ${PGPT_MAX_CONTENT_RESPONSE_BYTES:52428800}
+  max_content_concurrency: ${PGPT_MAX_CONTENT_CONCURRENCY:2}
+  use_async: ${PGPT_USE_ASYNC:false}
+
+observability:
+  mode: ${PGPT_OBSERVABILITY:none}
+  environment: ${PGPT_OBSERVABILITY_ENVIRONMENT:}
+  capture_content: ${PGPT_OBSERVABILITY_CAPTURE_CONTENT:true}
+  sampling_ratio: ${PGPT_OBSERVABILITY_SAMPLING_RATIO:1.0}
+  # More from PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>], like models.
+  exporters:
+    - type: jsonl
+      enabled: ${PGPT_OBSERVABILITY_JSONL_ENABLED:true}
+      path: ${PGPT_OBSERVABILITY_JSONL_PATH:local_data/traces/traces.jsonl}
+
+retrieval:
+  top_k: ${PGPT_RETRIEVAL_TOP_K:32}
+  maximize_top_k: ${PGPT_MAXIMIZE_TOP_K:true}
+  max_merging_recalculations: ${PGPT_MAX_MERGING_RECALCULATIONS:3}
+
+chat:
+  engine_mode: ${PGPT_CHAT_ENGINE_MODE:async}
+  max_iterations: ${PGPT_CHAT_MAX_ITERATIONS:100}
+  loop_detection_interval: ${PGPT_CHAT_LOOP_DETECTION_INTERVAL:10}
+  allow_use_default_prompt: ${PGPT_ALLOW_USE_DEFAULT_PROMPT:true}
+  allow_use_context: ${PGPT_ALLOW_USE_CONTEXT:true}
+  allow_generate_citations: ${PGPT_ALLOW_GENERATE_CITATIONS:true}
+  allow_use_reasoning: ${PGPT_ALLOW_USE_REASONING:true}
+  return_missing_citations: ${PGPT_RETURN_MISSING_CITATIONS:false}
+  deduplicate_context_in_history: ${PGPT_DEDUPLICATE_CONTEXT_IN_HISTORY:true}
+  add_context_to_system_prompt: ${PGPT_ADD_CONTEXT_TO_SYSTEM_PROMPT:false}
+  force_to_return_citations: ${PGPT_FORCE_TO_RETURN_CITATIONS:false}
+  numerical_shorter_citations: ${PGPT_NUMERICAL_SHORTER_CITATIONS:false}
+  condense_strategy: ${PGPT_CONDENSE_CHAT_HISTORY:condenser}
+  format_context_strategy: ${PGPT_FORMAT_CONTEXT:list}
+  maximum_context_length: ${PGPT_MAXIMUM_CONTEXT_LENGTH:0}
+  assistant_name: ${PGPT_ASSISTANT_NAME:PrivateGPT}
+  assistant_description: ${PGPT_ASSISTANT_DESCRIPTION:}
+  maximum_history_length: ${PGPT_MAXIMUM_HISTORY_LENGTH:0}
+  tldr_timeout: ${PGPT_TLDR_TIMEOUT:300}
+  tldr_minimum_threshold_seconds: ${PGPT_TLDR_MINIMUM_THRESHOLD_SECONDS:1.5}
+  multiplexing_threshold: ${PGPT_MULTIPLEXING_THRESHOLD:10}
+  maximum_blob_size: ${PGPT_MAXIMUM_BLOB_SIZE:26214400}
+  preprocess:
+    documents:
+      max_concurrency: ${PGPT_PREPROCESS_DOCUMENTS_MAX_CONCURRENCY:-1}
+      return_type: ${PGPT_PREPROCESS_DOCUMENTS_RETURN_TYPE:user_message}
+      describe_images: ${PGPT_PREPROCESS_DOCUMENTS_DESCRIBE_IMAGES:true}
+    multimodal:
+      max_concurrency: ${PGPT_PREPROCESS_MULTIMODAL_MAX_CONCURRENCY:-1}
+      return_type: ${PGPT_PREPROCESS_MULTIMODAL_RETURN_TYPE:user_message}
+      timeout_seconds: ${PGPT_PREPROCESS_MULTIMODAL_TIMEOUT_SECONDS:600}
+
+stream:
+  broker: ${PGPT_ASYNC_BROKER:memory}
+  stream_expiration: ${PGPT_ASYNC_STREAM_EXPIRATION:3600}
+  maximum_stream_length: ${PGPT_ASYNC_MAXIMUM_STREAM_LENGTH:10000}
+  stream_prefix: ${PGPT_ASYNC_STREAM_PREFIX:stream}
+  status_prefix: ${PGPT_ASYNC_STATUS_PREFIX:status}
+  minimum_connections: ${PGPT_ASYNC_MINIMUM_CONNECTIONS:50}
+
+llm:
+  default_model: ${PGPT_LLM_DEFAULT:}
+  auto_discover_models: ${PGPT_LLM_AUTO_DISCOVER_MODELS:true}
+
+# We need to have at least one model defined here, even if it's just a placeholder for the default model defined above.
+models: []
+
+embedding:
+  default_model: ${PGPT_EMBEDDING_DEFAULT:}
+  auto_discover_models: ${PGPT_EMBEDDING_AUTO_DISCOVER_MODELS:true}
+  ingest_mode: simple
+
+huggingface:
+  username: ${PGPT_HUGGINGFACE_USERNAME:zylon-ai}
+  access_token: ${PGPT_HUGGINGFACE_TOKEN:}
+  # Warning: Enabling this option will allow the model to download and execute code from the internet.
+  # Nomic AI requires this option to be enabled to use the model, be aware if you are using a different model.
+  trust_remote_code: true
+
+vectorstore:
+  database: ${PGPT_VECTORSTORE:qdrant}
+  # Needs to match the selected embeddings model
+  embed_dim: ${PGPT_EMBED_DIM:1024}
+  # Determine multi-tenancy type
+  multitenancy: ${PGPT_MULTITENANCY:logical}
+  # Default collection name when logical multitenancy is enabled
+  default_collection: ${PGPT_DEFAULT_COLLECTION:zgptvector}
+
+node_store:
+  index_store: ${PGPT_INDEX_STORE:simple}
+  doc_store: ${PGPT_DOC_STORE:simple}
+
+openai:
+  api_base: ${OPENAI_API_BASE:https://api.openai.com/v1}
+  api_key: ${OPENAI_API_KEY:}
+  embedding_api_base: ${OPENAI_EMBEDDING_API_BASE:}
+  embedding_api_key: ${OPENAI_EMBEDDING_API_KEY:}
+  request_timeout: ${OPENAI_REQUEST_TIMEOUT:600.0}
+
+docling:
+  mode: ${PGPT_DOCLING_MODE:api}
+  api_base: ${PGPT_DOCLING_API_BASE:http://localhost:5001}
+  api_version: ${PGPT_DOCLING_API_VERSION:v1alpha}
+  api_key: ${PGPT_DOCLING_API_KEY:}
+  tenant_id: ${PGPT_DOCLING_TENANT_ID:}
+  num_threads: ${PGPT_DOCLING_NUM_WORKERS:4}
+  use_ocr: ${PGPT_DOCLING_USE_OCR:true}
+  ocr_model: ${PGPT_DOCLING_OCR_MODEL:easyocr}
+  use_gpu: ${PGPT_DOCLING_USE_GPU:false}
+  force_full_page_ocr: ${PGPT_DOCLING_FORCE_FULL_PAGE_OCR:false}
+  bitmap_area_threshold: ${PGPT_DOCLING_BITMAP_AREA_THRESHOLD:0.2}
+  do_cell_matching: ${PGPT_DOCLING_DO_CELL_MATCHING:true}
+  image_mode: ${PGPT_DOCLING_IMAGE_MODE:placeholder}
+  table_mode: ${PGPT_DOCLING_TABLE_MODE:accurate}
+  image_classifier: ${PGPT_DOCLING_IMAGE_CLASSIFIER:none}
+  image_descriptor: ${PGPT_DOCLING_IMAGE_DESCRIPTOR:none}
+  langs: ${PGPT_DOCLING_LANGS:["en-US", "fr-FR", "de-DE", "es-ES"]}
+  use_async: ${PGPT_DOCLING_USE_ASYNC:true}
+
+pdf_inspector:
+  hybrid_ocr_page_threshold: ${PGPT_PDF_INSPECTOR_HYBRID_OCR_PAGE_THRESHOLD:0.15}
+  hybrid_ocr_reader: ${PGPT_PDF_INSPECTOR_HYBRID_OCR_READER:docling}
+  max_ocr_groups: ${PGPT_PDF_INSPECTOR_MAX_OCR_GROUPS:20}
+  hybrid_min_pages: ${PGPT_PDF_INSPECTOR_HYBRID_MIN_PAGES:5}
+  broken_table_avg_words_per_cell: ${PGPT_PDF_INSPECTOR_BROKEN_TABLE_AVG_WORDS_PER_CELL:5.0}
+  broken_table_pct_long_cells: ${PGPT_PDF_INSPECTOR_BROKEN_TABLE_PCT_LONG_CELLS:0.35}
+  broken_table_page_threshold: ${PGPT_PDF_INSPECTOR_BROKEN_TABLE_PAGE_THRESHOLD:0.3}
+  fragmented_text_short_token_ratio: ${PGPT_PDF_INSPECTOR_FRAGMENTED_TEXT_SHORT_TOKEN_RATIO:0.5}
+  fragmented_text_page_threshold: ${PGPT_PDF_INSPECTOR_FRAGMENTED_TEXT_PAGE_THRESHOLD:0.2}
+  sparse_chart_table_empty_cell_ratio: ${PGPT_PDF_INSPECTOR_SPARSE_CHART_TABLE_EMPTY_CELL_RATIO:0.25}
+  sparse_chart_table_page_threshold: ${PGPT_PDF_INSPECTOR_SPARSE_CHART_TABLE_PAGE_THRESHOLD:0.2}
+  glued_numbers_cell_ratio: ${PGPT_PDF_INSPECTOR_GLUED_NUMBERS_CELL_RATIO:0.1}
+  glued_numbers_page_threshold: ${PGPT_PDF_INSPECTOR_GLUED_NUMBERS_PAGE_THRESHOLD:0.3}
+
+celery:
+  use_workers: true
+  acks_late: ${PGPT_CELERY_ACKS_LATE:true}
+  soft_time_limit: ${PGPT_CELERY_SOFT_TIME_LIMIT:}
+  hard_time_limit: ${PGPT_CELERY_HARD_TIME_LIMIT:}
+  visibility_timeout: ${PGPT_CELERY_VISIBILITY_TIMEOUT:21600}
+  max_tasks_per_child: ${PGPT_CELERY_MAX_TASKS_PER_CHILD:1000}
+  max_memory_per_child: ${PGPT_CELERY_MAX_MEMORY_PER_CHILD:}
+
+# Broker to which workers will notify the result of tasks
+tasks_results_broker:
+  mode: ${PGPT_TASKS_RESULTS_BROKER_MODE:rabbitmq}
+
+rabbitmq:
+  ssl: ${PGPT_RABBITMQ_SSL:false}
+  host: ${PGPT_RABBITMQ_HOST:localhost:5672}
+  username: ${PGPT_RABBITMQ_USERNAME:guest}
+  password: ${PGPT_RABBITMQ_PASSWORD:guest}
+
+database:
+  host: ${PGPT_DATABASE_HOST:localhost:5432}
+  database: ${PGPT_DATABASE_NAME:backend-main}
+  username: ${PGPT_DATABASE_USERNAME:postgres}
+  password: ${PGPT_DATABASE_PASSWORD:postgres}
+
+redis:
+  host: ${PGPT_REDIS_HOST:localhost:6379}
+  username: ${PGPT_REDIS_USERNAME:}
+  password: ${PGPT_REDIS_PASSWORD:}
+  database: ${PGPT_REDIS_DATABASE:0}
+
+cache:
+  provider: ${PGPT_CACHE_PROVIDER:memory}
+  ttl_seconds: ${PGPT_CACHE_TTL_SECONDS:86400}
+  max_entries: ${PGPT_CACHE_MAX_ENTRIES:1000}
+  key_prefix: ${PGPT_CACHE_KEY_PREFIX:private-gpt}
+  redis_database: ${PGPT_CACHE_REDIS_DATABASE:}
+
+unstructured:
+  url: ${PGPT_UNSTRUCTURED_URL:}
+
+qdrant:
+  url: ${PGPT_QDRANT_URL:}
+  path: ${PGPT_QDRANT_PATH:local_data/qdrant}
+  hybrid_search: ${PGPT_QDRANT_HYBRID_SEARCH:false}
+  distance_metric: ${PGPT_QDRANT_DISTANCE_METRIC:cosine}
+  hnsw_m: ${PGPT_QDRANT_HSNW_M:0}
+  hnsw_payload_m: ${PGPT_QDRANT_HSNW_PAYLOAD_M:16}
+  prefer_grpc: ${PGPT_QDRANT_PREFER_GRPC:true}
+  timeout: ${PGPT_QDRANT_TIMEOUT:120000}
+
+s3:
+  endpoint_url: ${PGPT_S3_ENDPOINT_URL:}
+  public_endpoint_url: ${PGPT_S3_PUBLIC_ENDPOINT_URL:}
+  path_prefix: ${PGPT_S3_PATH_PREFIX:}
+  access_key_id: ${PGPT_S3_ACCESS_KEY_ID:}
+  secret_access_key: ${PGPT_S3_SECRET_ACCESS_KEY:}
+  durable_bucket_name: ${PGPT_S3_DURABLE_BUCKET_NAME:zylon-storage}
+  temporary_bucket_name: ${PGPT_S3_TEMPORARY_BUCKET_NAME:zylon-temporary}
+  connect_timeout_seconds: ${PGPT_S3_CONNECT_TIMEOUT_SECONDS:10}
+  read_timeout_seconds: ${PGPT_S3_READ_TIMEOUT_SECONDS:120}
+
+principal:
+  forwarded_headers: ${PGPT_PRINCIPAL_FORWARDED_HEADERS:authorization,anthropic-beta}
+
+sandbox:
+  provider: ${PGPT_SANDBOX_PROVIDER:local}
+  timeout: ${PGPT_SANDBOX_TIMEOUT:60}
+
+code_execution:
+  provider: ${PGPT_CODE_EXECUTION_PROVIDER:local}
+  workspace_path: ${PGPT_CODE_EXECUTION_WORKSPACE_PATH:}
+  timeout: ${PGPT_CODE_EXECUTION_TIMEOUT:60}
+  internet_enabled: ${PGPT_CODE_EXECUTION_INTERNET_ENABLED:false}
+  preinstalled_packages: ${PGPT_CODE_EXECUTION_PREINSTALLED_PACKAGES:pandas,numpy,scipy,scikit-learn,statsmodels,matplotlib,seaborn,pyarrow,openpyxl,xlsxwriter,xlrd,pillow,python-pptx,python-docx,pypdf,pdfplumber,pypdfium2,pdf2image,pdfkit,tabula-py,reportlab,img2pdf,sympy,mpmath,tqdm,python-dateutil,pytz,joblib}
+  preinstalled_cli_tools: ${PGPT_CODE_EXECUTION_PREINSTALLED_CLI_TOOLS:unzip,unrar,7zip,bc,rg,fd,sqlite3}
+  tools:
+    bash:
+      enabled: ${PGPT_CODE_EXECUTION_TOOLS_BASH_ENABLED:true}
+    text_editor:
+      enabled: ${PGPT_CODE_EXECUTION_TOOLS_TEXT_EDITOR_ENABLED:true}
+      view:
+        include_line_numbers: ${PGPT_CODE_EXECUTION_TOOLS_VIEW_INCLUDE_LINE_NUMBERS:false}
+        max_lines: ${PGPT_CODE_EXECUTION_TOOLS_VIEW_MAX_LINES:}
+    present_files:
+      enabled: ${PGPT_CODE_EXECUTION_TOOLS_PRESENT_FILES_ENABLED:true}
+    present_server:
+      enabled: ${PGPT_CODE_EXECUTION_TOOLS_PRESENT_SERVER_ENABLED:true}
+    convert_documents:
+      enabled: ${PGPT_CODE_EXECUTION_TOOLS_CONVERT_DOCUMENTS_ENABLED:true}
+    describe_image:
+      enabled: ${PGPT_CODE_EXECUTION_TOOLS_DESCRIBE_IMAGE_ENABLED:false}
+    transcribe_audio:
+      enabled: ${PGPT_CODE_EXECUTION_TOOLS_TRANSCRIBE_AUDIO_ENABLED:false}
+    inline_result_bytes: ${PGPT_CODE_EXECUTION_TOOLS_INLINE_RESULT_BYTES:4096}
+    server_tool_result_mode: ${PGPT_CODE_EXECUTION_SERVER_TOOL_RESULT_MODE:full}
+  max_output_bytes: ${PGPT_CODE_EXECUTION_MAX_OUTPUT_BYTES:40960}
+  output_cleaning:
+    enabled: ${PGPT_CODE_EXECUTION_OUTPUT_CLEANING_ENABLED:true}
+    bash_interceptors: ${PGPT_CODE_EXECUTION_OUTPUT_CLEANING_BASH_INTERCEPTORS:binary,ansi,terminal,control,unicode,secrets,data_uri,base64,long_lines,repeated_lines,whitespace}
+    view_interceptors: ${PGPT_CODE_EXECUTION_OUTPUT_CLEANING_VIEW_INTERCEPTORS:binary,ansi,control,unicode,data_uri,base64,long_lines}
+    base64_min_length: ${PGPT_CODE_EXECUTION_OUTPUT_CLEANING_BASE64_MIN_LENGTH:256}
+    max_line_length: ${PGPT_CODE_EXECUTION_OUTPUT_CLEANING_MAX_LINE_LENGTH:2000}
+
+bash:
+  cpu_limit_seconds: ${PGPT_BASH_CPU_LIMIT_SECONDS:30}
+  memory_limit_mb: ${PGPT_BASH_MEMORY_LIMIT_MB:512}
+  fsize_limit_mb: ${PGPT_BASH_FSIZE_LIMIT_MB:10}
+  nproc_limit: ${PGPT_BASH_NPROC_LIMIT:50}
+  output_cap_bytes: ${PGPT_BASH_OUTPUT_CAP_BYTES:1048576}
+
+web_fetch:
+  enabled: ${PGPT_WEBFETCH_ENABLED:false}
+  provider: ${PGPT_WEBFETCH_PROVIDER:local}
+  timeout_seconds: ${PGPT_WEBFETCH_TIMEOUT_SECONDS:15}
+  pool_size: ${PGPT_WEBFETCH_POOL_SIZE:8}
+  pool_idle_timeout_seconds: ${PGPT_WEBFETCH_POOL_IDLE_TIMEOUT:300}
+  max_requests_per_session: ${PGPT_WEBFETCH_MAX_REQUESTS_PER_SESSION:1}
+  batch_size: ${PGPT_WEBFETCH_BATCH_SIZE:5}
+  batch_wait_ms: ${PGPT_WEBFETCH_BATCH_WAIT_MS:250}
+
+database_query:
+  timeout_seconds: ${PGPT_DATABASE_QUERY_TIMEOUT_SECONDS:1000}
+  batch_size: ${PGPT_DATABASE_QUERY_BATCH_SIZE:1000}
+  max_mb_result: ${PGPT_DATABASE_QUERY_MAX_MB_RESULT:150}
+
+web_search:
+  enabled: ${PGPT_WEBSEARCH_ENABLED:false}
+  provider: ${PGPT_WEBSEARCH_PROVIDER:mock}
+  processor: ${PGPT_WEBSEARCH_PROCESSOR:best_links}
+  num_links: ${PGPT_WEBSEARCH_NUM_LINKS:20}
+  mode_quality: ${PGPT_WEBSEARCH_MODE_QUALITY:fast}
+  cached: ${PGPT_WEBSEARCH_CACHED:false}
+  context_token: ${PGPT_WEBSEARCH_CONTEXT_TOKEN:2000}
+
+  fast_params:
+    max_timeout_seconds: ${PGPT_WEBSEARCH_FAST_MAX_TIMEOUT_SECONDS:100}
+    max_summary_timeout_seconds: ${PGPT_WEBSEARCH_FAST_MAX_SUMMARY_TIMEOUT_SECONDS:40}
+    num_references: ${PGPT_WEBSEARCH_FAST_NUM_REFERENCES:3}
+    num_concurrent_consumers: ${PGPT_WEBSEARCH_FAST_NUM_CONCURRENT_CONSUMERS:6}
+    max_parallel_summary: ${PGPT_WEBSEARCH_FAST_MAX_PARALLEL_SUMMARY:2}
+    index_weight: ${PGPT_WEBSEARCH_FAST_INDEX_WEIGHT:0}
+    token_weight: ${PGPT_WEBSEARCH_FAST_TOKEN_WEIGHT:1}
+    token_exponent_penalty: ${PGPT_WEBSEARCH_FAST_TOKEN_EXPONENT_PENALTY:4}
+  accurate_params:
+    max_timeout_seconds: ${PGPT_WEBSEARCH_ACCURATE_MAX_TIMEOUT_SECONDS:500}
+    max_summary_timeout_seconds: ${PGPT_WEBSEARCH_ACCURATE_MAX_SUMMARY_TIMEOUT_SECONDS:100}
+    num_references: ${PGPT_WEBSEARCH_ACCURATE_NUM_REFERENCES:5}
+    num_concurrent_consumers: ${PGPT_WEBSEARCH_ACCURATE_NUM_CONCURRENT_CONSUMERS:4}
+    max_parallel_summary: ${PGPT_WEBSEARCH_ACCURATE_MAX_PARALLEL_SUMMARY:2}
+    index_weight: ${PGPT_WEBSEARCH_ACCURATE_INDEX_WEIGHT:1}
+    token_weight: ${PGPT_WEBSEARCH_ACCURATE_TOKEN_WEIGHT:1}
+    token_exponent_penalty: ${PGPT_WEBSEARCH_ACCURATE_TOKEN_EXPONENT_PENALTY:4}
+
+brave:
+  api_key: ${PGPT_BRAVE_API_KEY:}
+  rate_limit: ${PGPT_BRAVE_RATE_LIMIT:1}
+
+skills:
+  database: ${PGPT_SKILLS_DATABASE:sqlite}
+  storage_provider: ${PGPT_SKILLS_STORAGE_PROVIDER:local}
+  skill_injection_mode: ${PGPT_SKILL_INJECTION_MODE:system_prompt}
+  maximum_loaded_skills: ${PGPT_SKILL_MAXIMUM_LOADED_SKILLS:1}
+  max_bundle_size_bytes: ${PGPT_SKILLS_MAX_BUNDLE_SIZE_BYTES:}
+
+semaphore:
+  mode: ${PGPT_SEMAPHORE_MODE:memory}
+
+scheduler:
+  ingestion:
+    mode: ${PGPT_INGESTION_SCHEDULER_MODE:local}
+    celery_queue: ${PGPT_INGESTION_CELERY_QUEUE:ingestion}
+    convert_timeout_seconds: ${PGPT_INGESTION_CONVERT_TIMEOUT_SECONDS:600}
+    ingest_timeout_seconds: ${PGPT_INGESTION_INGEST_TIMEOUT_SECONDS:1800}
+  chat:
+    mode: ${PGPT_CHAT_SCHEDULER_MODE:local}
+    celery_queue: ${PGPT_CHAT_CELERY_QUEUE:chat}
+    callback_timeout_seconds: ${PGPT_CHAT_CALLBACK_TIMEOUT_SECONDS:300}
+  tools:
+    mode: ${PGPT_TOOLS_SCHEDULER_MODE:local}
+    celery_queue: ${PGPT_TOOLS_CELERY_QUEUE:tools}
+
+transformation:
+  pptx:
+    vision:
+      retry_number: ${PGPT_TRANSFORMATION_PPTX_VISION_RETRY_NUMBER:3}
+      enable_evaluation: ${PGPT_TRANSFORMATION_PPTX_VISION_ENABLE_EVALUATION:true}
+      max_concurrent: ${PGPT_TRANSFORMATION_PPTX_VISION_MAX_CONCURRENT:4}
+      batch_size: ${PGPT_TRANSFORMATION_PPTX_VISION_BATCH_SIZE:8}
+      max_iterations: ${PGPT_TRANSFORMATION_PPTX_VISION_MAX_ITERATIONS:2}
+      enable_semaphore: ${PGPT_TRANSFORMATION_PPTX_ENABLE_SEMAPHORE:false}
+      mode: ${PGPT_TRANSFORMATION_PPTX_VISION_MODE:none}
+
+  docling:
+    vision:
+      retry_number: ${PGPT_TRANSFORMATION_DOCLING_VISION_RETRY_NUMBER:3}
+      enable_evaluation: ${PGPT_TRANSFORMATION_DOCLING_VISION_ENABLE_EVALUATION:true}
+      max_concurrent: ${PGPT_TRANSFORMATION_DOCLING_VISION_MAX_CONCURRENT:4}
+      batch_size: ${PGPT_TRANSFORMATION_DOCLING_VISION_BATCH_SIZE:8}
+      max_iterations: ${PGPT_TRANSFORMATION_DOCLING_VISION_MAX_ITERATIONS:2}
+      enable_semaphore: ${PGPT_TRANSFORMATION_DOCLING_ENABLE_SEMAPHORE:false}
+      mode: ${PGPT_TRANSFORMATION_DOCLING_VISION_MODE:none}
+
+  vision_documents:
+      vision:
+        retry_number: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_RETRY_NUMBER:3}
+        enable_evaluation: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_ENABLE_EVALUATION:false}
+        max_concurrent: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MAX_CONCURRENT:4}
+        batch_size: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_BATCH_SIZE:8}
+        max_iterations: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MAX_ITERATIONS:2}
+        enable_semaphore: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_ENABLE_SEMAPHORE:false}
+        mode: ${PGPT_TRANSFORMATION_VISION_DOCUMENTS_VISION_MODE:none}
+
+filesystems:
+  namespaces:
+    session:
+      root: ${PGPT_CODE_EXECUTION_VOLUME_ROOT:local_data/private_gpt/volumes/sessions}
+      default_mode: ${PGPT_CODE_EXECUTION_VOLUME_DEFAULT_MODE:rw}
+    skills:
+      root: ${PGPT_SKILLS_VOLUME_ROOT:local_data/private_gpt/volumes/skills}
+      default_mode: ${PGPT_SKILLS_VOLUME_DEFAULT_MODE:ro}

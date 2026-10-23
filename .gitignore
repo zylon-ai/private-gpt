@@ -1,0 +1,50 @@
+.venv
+.env
+.uv-cache
+.dist
+
+/models/
+/tiktoken_cache/
+/local_data/
+
+settings-me.yaml
+
+.ruff_cache
+.pytest_cache
+.mypy_cache
+.dmypy.json
+control/**
+
+# byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# unit tests / coverage reports
+/tests-results.xml
+/.coverage
+/coverage.xml
+/htmlcov/
+
+# pyenv
+/.python-version
+
+# IDE
+.idea/
+.vscode/
+/.run/
+.fleet/
+
+# macOS
+.DS_Store
+
+# Celery
+celery_backend.db
+celery_flower.db
+celery.exchange
+celery.pidbox.exchange
+
+# Coverage
+.coverage.*
+
+# Websearch cache
+.cache/

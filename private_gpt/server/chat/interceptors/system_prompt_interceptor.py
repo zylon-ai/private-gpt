@@ -1,0 +1,125 @@
+import asyncio
+from typing import Any
+
+from injector import inject, singleton
+
+from private_gpt.components.chat.models.chat_config_models import ChatRequest
+from private_gpt.components.context.models.context_layer import (
+    AnyContextLayer,
+    ContextPromptLayer,
+    RuntimeInstructionsLayer,
+)
+from private_gpt.components.context.models.layer_type import LayerType
+from private_gpt.components.engines.chat.interceptors.chat_interceptor import (
+    ChatRequestLoopInterceptor,
+)
+from private_gpt.components.engines.chat.models.chat_interceptor_context import (
+    ChatInterceptorContext,
+)
+from private_gpt.components.engines.chat.models.chat_phase import (
+    InterceptorPhase,
+)
+from private_gpt.components.engines.chat.utils.request_builder import (
+    build_request_from_context_stack,
+)
+from private_gpt.components.llm.llm_helper import as_sync_tokenizer_fn
+from private_gpt.components.prompts.prompt_builder import PromptBuilderService
+
+
+@singleton
+class SystemPromptRequestInterceptor(ChatRequestLoopInterceptor):
+    """Ensure final system prompt is present in conversation history."""
+
+    @inject
+    def __init__(
+        self,
+        prompt_builder_service: PromptBuilderService,
+        add_context_to_system_prompt: bool | None = None,
+    ) -> None:
+        self._prompt_builder_service = prompt_builder_service
+        self._add_context_to_system_prompt = add_context_to_system_prompt
+
+    async def intercept(self, context: ChatInterceptorContext) -> None:
+        if context.phase != InterceptorPhase.BEFORE_ITERATION:
+            return
+
+        # Only the (immutable) stack and the request change below, and
+        # build_request_from_context_stack mutates the request's tool_config,
+        # context and system in place: copy just that path, not the whole state.
+        state = context.state.model_copy()
+        state.input = state.input.model_copy()
+        request = state.input.request
+        state.input.request = request.model_copy(
+            update={
+                "tool_config": request.tool_config.model_copy(),
+                "context": request.context.model_copy(),
+                "system": request.system.model_copy(),
+            }
+        )
+        stack = state.input.context_stack
+
+        stack = stack.remove_layers_of_type(LayerType.RUNTIME_INSTRUCTIONS)
+        stack = stack.remove_layers_of_type(LayerType.CONTEXT)
+
+        generated_layers = await self._build_generated_layers(
+            context=context,
+            request=state.input.request,
+            documents=stack.all_documents(),
+        )
+        for layer in generated_layers:
+            stack = stack.append_layer(layer)
+
+        state.input.context_stack = stack
+        state.input.request = build_request_from_context_stack(
+            state.input.request, state.input.context_stack
+        )
+        context.set_state(state)
+
+    async def _build_generated_layers(
+        self,
+        context: ChatInterceptorContext,
+        request: ChatRequest,
+        documents: list[Any],
+    ) -> list[AnyContextLayer]:
+        def build() -> list[AnyContextLayer]:
+            generated_layers: list[AnyContextLayer] = []
+            header = self._prompt_builder_service.create_chat_header_prompt().format()
+            if header.strip():
+                generated_layers.append(
+                    RuntimeInstructionsLayer(
+                        text=header.strip(),
+                        source="platform_header",
+                    )
+                )
+
+            add_context_to_system_prompt = (
+                self._add_context_to_system_prompt
+                if self._add_context_to_system_prompt is not None
+                else request.context.add_context_to_system_prompt
+            )
+            if add_context_to_system_prompt:
+                (
+                    context_prompt,
+                    _,
+                ) = self._prompt_builder_service.create_chat_context_for_system_prompt(
+                    documents=documents,
+                    generate_citations=request.citation.enabled,
+                    guidelines_prompt=None,
+                    token_limit=context.state.runtime.effective_token_limit,
+                    tokenizer_fn=as_sync_tokenizer_fn(
+                        context.state.runtime.tokenizer_fn
+                    ),
+                )
+                if context_prompt:
+                    context_text = context_prompt.format().strip()
+                    if context_text:
+                        generated_layers.append(
+                            ContextPromptLayer(
+                                text=context_text,
+                                source="system_prompt",
+                            )
+                        )
+
+            return generated_layers
+
+        return await asyncio.to_thread(build)

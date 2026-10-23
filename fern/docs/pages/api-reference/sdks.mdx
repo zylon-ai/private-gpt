@@ -1,0 +1,80 @@
+---
+title: "Client libraries"
+description: "Use the Anthropic SDK or LangChain to talk to PrivateGPT."
+---
+
+PrivateGPT follows the Claude API model, so any client that speaks that protocol works against it — point it at your local PrivateGPT URL instead of Anthropic's servers.
+
+---
+
+## Anthropic SDK
+
+<Tabs>
+  <Tab title="Python">
+    ```bash
+    pip install anthropic
+    ```
+
+    ```python
+    import anthropic
+
+    client = anthropic.Anthropic(
+        base_url="http://localhost:8080",
+        api_key="any",  # required by the client but not validated by default
+    )
+
+    message = client.messages.create(
+        model="qwen3.5:35b",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": "Hello!"}],
+    )
+    print(message.content[0].text)
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```bash
+    npm install @anthropic-ai/sdk
+    ```
+
+    ```typescript
+    import Anthropic from "@anthropic-ai/sdk";
+
+    const client = new Anthropic({
+      baseURL: "http://localhost:8080",
+      apiKey: "any",
+    });
+
+    const message = await client.messages.create({
+      model: "qwen3.5:35b",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: "Hello!" }],
+    });
+    console.log(message.content[0].text);
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## LangChain
+
+<Tabs>
+  <Tab title="Python">
+    ```bash
+    pip install langchain-anthropic
+    ```
+
+    ```python
+    from langchain_anthropic import ChatAnthropic
+
+    llm = ChatAnthropic(
+        model="qwen3.5:35b",
+        anthropic_api_url="http://localhost:8080",
+        anthropic_api_key="any",
+    )
+
+    response = llm.invoke("Hello!")
+    print(response.content)
+    ```
+  </Tab>
+</Tabs>

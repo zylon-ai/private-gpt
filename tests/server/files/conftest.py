@@ -1,0 +1,102 @@
+from pathlib import Path
+from unittest.mock import AsyncMock
+
+import pytest
+from fastapi.testclient import TestClient
+
+from private_gpt.components.code_execution.code_execution_component import (
+    CodeExecutionComponent,
+)
+from private_gpt.components.persistence.persistence_component import (
+    PersistenceComponent,
+)
+from private_gpt.launcher import create_app
+from tests.fixtures.fast_api_test_client import inject_global_injector
+from tests.fixtures.mock_injector import MockInjector
+
+_SESSION_ID = "test-session-abc123"
+_FILE_CONTENT = b"col_a,col_b\n1,2\n3,4\n"
+_FILE_NAME = "data.csv"
+_MIME_TYPE = "text/plain"  # python-magic detects CSV as text/plain
+
+
+@pytest.fixture
+def volume_root(tmp_path: Path) -> Path:
+    """Host-side volume root with pre-created per-folder session dirs.
+
+    New layout: {volume_root}/{folder_type}/{session_id}/ so that MinIO
+    lifecycle rules can target each folder type with a simple prefix filter.
+    """
+    (tmp_path / "uploads" / _SESSION_ID).mkdir(parents=True)
+    (tmp_path / "outputs" / _SESSION_ID).mkdir(parents=True)
+    return tmp_path
+
+
+@pytest.fixture
+def files_client(injector: MockInjector, volume_root: Path) -> TestClient:
+    """TestClient configured with a local session namespace and a mocked sandbox."""
+    # The default settings also register a 'skills' namespace; point it at an
+    # existing tmp dir so NamespaceRegistry does not fail at startup.
+    skills_root = volume_root / "skills_ns"
+    skills_root.mkdir(parents=True, exist_ok=True)
+    injector.bind_settings(
+        {
+            "filesystems": {
+                "namespaces": {
+                    "session": {
+                        "root": str(volume_root),
+                        "default_mode": "rw",
+                        "storage_backend": True,
+                    },
+                    "skills": {
+                        "root": str(skills_root),
+                        "default_mode": "ro",
+                    },
+                }
+            },
+        }
+    )
+
+    ce_mock = injector.bind_mock(CodeExecutionComponent)
+    ce_mock.get_or_create_session = AsyncMock(return_value=None)
+
+    injector.get(PersistenceComponent).apply_migrations()
+
+    app = create_app(injector.test_injector)
+    app.middleware("http")(inject_global_injector(injector))
+    return TestClient(app)
+
+
+@pytest.fixture
+def files_namespaces_client(injector: MockInjector, volume_root: Path) -> TestClient:
+    """TestClient with explicit filesystem namespaces bound."""
+    session_root = volume_root / "session_ns"
+    artifacts_root = volume_root / "artifacts_ns"
+    skills_root = volume_root / "skills_ns"
+    for root in (session_root, artifacts_root, skills_root):
+        root.mkdir(parents=True, exist_ok=True)
+
+    injector.bind_settings(
+        {
+            "filesystems": {
+                "namespaces": {
+                    "session": {
+                        "root": str(session_root),
+                        "default_mode": "rw",
+                        "storage_backend": True,
+                    },
+                    "artifacts": {"root": str(artifacts_root), "default_mode": "rw"},
+                    "skills": {"root": str(skills_root), "default_mode": "ro"},
+                }
+            },
+        }
+    )
+
+    ce_mock = injector.bind_mock(CodeExecutionComponent)
+    ce_mock.get_or_create_session = AsyncMock(return_value=None)
+
+    injector.get(PersistenceComponent).apply_migrations()
+
+    app = create_app(injector.test_injector)
+    app.middleware("http")(inject_global_injector(injector))
+    return TestClient(app)

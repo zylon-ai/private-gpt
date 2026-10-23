@@ -1,0 +1,13 @@
+{% set tool_name = namespace.tools.get("web_fetch_tool_name", namespace.tools.get("web_extract_tool_name")) %}
+
+<{{ tool_name }}>
+Retrieve full webpage content as markdown.
+
+Use when: User provides URL, search snippets are insufficient, detailed extraction needed, user asks to "read" or "summarize this page"
+{% if few_shots == "True" %}
+
+Examples:
+- "Read https://example.com/article" → url="https://example.com/article"
+- "Summarize that Bloomberg article" → url=[URL from previous context]
+{% endif %}
+</{{ tool_name }}>

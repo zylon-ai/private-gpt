@@ -1,0 +1,129 @@
+---
+title: "DaoXE"
+description: "Use DaoXE as an OpenAI-compatible cloud gateway — access GPT, Claude, Grok, GLM and more model families through a single endpoint."
+---
+
+[DaoXE](https://daoxe.com) is a multi-model, multi-protocol AI API gateway. It exposes an OpenAI-compatible endpoint at `https://daoxe.com/v1`, giving you access to models from multiple providers (GPT, Claude, Grok, GLM, and others) through a single API key.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ✅ provider-dependent |
+| Tool / function calling | ✅ model-dependent |
+| Structured output | ✅ model-dependent |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Get a DaoXE API key">
+    1. Sign up at [daoxe.com](https://daoxe.com).
+    2. Go to your dashboard and create an API key.
+    3. Note the available model IDs in your account — these are the models you can use.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://daoxe.com/v1 \
+          OPENAI_API_KEY=your-daoxe-api-key \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://daoxe.com/v1 \
+          -e OPENAI_API_KEY=your-daoxe-api-key \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://daoxe.com/v1 \
+          OPENAI_API_KEY=your-daoxe-api-key \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    <Tip>
+      Store the API key in an `.env` file or use `OPENAI_API_KEY` as an environment variable to avoid exposing it in shell history.
+    </Tip>
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+```yaml
+# settings-model.yaml
+llm:
+  default_model: gpt-4o
+
+models:
+  - name: gpt-4o
+    type: llm
+    mode: openai
+    context_window: 128000
+    support_tools: true
+    support_reasoning: false
+    sampling_params:
+      temperature: 0.7
+
+  - name: claude-sonnet-4-20250514
+    type: llm
+    mode: openai
+    context_window: 200000
+    support_tools: true
+    support_reasoning: true
+    sampling_params:
+      temperature: 0.7
+
+  - name: grok-3
+    type: llm
+    mode: openai
+    context_window: 131072
+    support_tools: true
+    support_reasoning: false
+    sampling_params:
+      temperature: 0.7
+```
+
+Run with a profile:
+
+```bash
+OPENAI_API_BASE=https://daoxe.com/v1 \
+  OPENAI_API_KEY=your-daoxe-api-key \
+  PGPT_PROFILES=model \
+  uv run python -m private_gpt
+```
+
+---
+
+## settings.yaml override
+
+You can also set the endpoint directly in `settings.yaml` instead of environment variables:
+
+```yaml
+openai:
+  api_base: https://daoxe.com/v1
+  api_key: ${DAOXE_API_KEY:}
+```
+
+---
+
+## Notes
+
+- **Model IDs** depend on your DaoXE account plan. Check your dashboard for available models.
+- **Not available in mainland China.** The service is accessible from other regions worldwide.
+- DaoXE supports the OpenAI, Anthropic Messages, and other protocols — PrivateGPT uses the OpenAI-compatible endpoint.
+- Because DaoXE does not expose `/tokenize`, set `context_window` explicitly in your model profiles for accurate token management.

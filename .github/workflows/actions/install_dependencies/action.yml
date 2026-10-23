@@ -1,0 +1,49 @@
+name: "Install Dependencies"
+description: "Action to build the project dependencies from the main versions"
+inputs:
+  python_version:
+    description: "Python version to use for the project"
+    required: true
+    type: string
+    default: "3.11"
+  uv_version:
+    description: "Version of UV to use for the project"
+    required: true
+    type: string
+    default: "0.11.16"
+  enable_cache:
+    description: "Enable caching for dependencies"
+    required: false
+    type: boolean
+    default: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install UV and set Python version
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      with:
+        version: ${{ inputs.uv_version }}
+        python-version: ${{ inputs.python_version }}
+        enable-cache: ${{ inputs.enable_cache }}
+
+    - name: Setup FFmpeg
+      uses: AnimMouse/setup-ffmpeg@ae28d57dabbb148eff63170b6bf7f2b60062cbae # v1.2.3
+
+    - name: Install Dependencies
+      run: |
+        uv sync \
+          --extra dev \
+          --extra core \
+          --extra llm-mistral \
+          --extra llm-anthropic \
+          --extra llm-openai \
+          --extra embedding-openai \
+          --extra ingest-markitdown \
+          --extra storage \
+          --extra database \
+          --extra queue \
+          --extra media \
+          --extra observability \
+          --extra redis
+      shell: bash

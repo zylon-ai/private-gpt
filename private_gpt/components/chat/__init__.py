@@ -1,0 +1,1 @@
+"""Chat domain components."""

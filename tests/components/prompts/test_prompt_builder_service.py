@@ -1,0 +1,873 @@
+from unittest.mock import Mock
+
+import pytest
+from llama_index.core import PromptTemplate
+from llama_index.core.base.llms.types import ChatMessage, MessageRole
+from llama_index.core.schema import NodeWithScore, TextNode
+
+from private_gpt.components.prompts.prompt_builder import PromptBuilderService
+from private_gpt.di import get_global_injector
+
+
+@pytest.fixture
+def prompt_builder() -> PromptBuilderService:
+    return get_global_injector().get(PromptBuilderService)
+
+
+@pytest.fixture
+def sample_nodes() -> list[NodeWithScore]:
+    return [
+        NodeWithScore(
+            node=TextNode(
+                text="Solar panels convert sunlight to electricity using photovoltaic cells.",
+                metadata={"file_name": "energy.txt", "page_label": "1"},
+            ),
+            score=0.9,
+        ),
+        NodeWithScore(
+            node=TextNode(
+                text="Wind turbines generate electricity by using wind to rotate blades.",
+                metadata={"file_name": "energy.txt", "page_label": "2"},
+            ),
+            score=0.8,
+        ),
+    ]
+
+
+@pytest.fixture
+def empty_node_list() -> list[NodeWithScore]:
+    return []
+
+
+@pytest.mark.parametrize(
+    ("question", "chat_history", "max_words", "few_shots"),
+    [
+        (
+            "What is their efficiency?",
+            "User: Tell me about solar panels\nAI: Solar panels convert sunlight into electricity using photovoltaic cells.",
+            25,
+            True,
+        ),
+        (
+            "What are the main use cases?",
+            "User: Explain Python generators\nAI: Python generators are functions that can pause and resume their execution state.",
+            15,
+            False,
+        ),
+        (
+            "How many types are there?",
+            "User: Tell me about design patterns\nAI: Design patterns are reusable solutions to common software design problems.",
+            10,
+            True,
+        ),
+        (
+            "What is the capital of France?",
+            "User: Can you tell me about the UK?\nAI: The UK consists of England, Scotland, Wales, and Northern Ireland.",
+            20,
+            False,
+        ),
+        # Edge case: Empty chat history
+        (
+            "What is the best programming language?",
+            "",
+            20,
+            True,
+        ),
+        # Edge case: Very large max_words
+        (
+            "What are neural networks?",
+            "User: Tell me about AI\nAI: AI is a broad field of computer science.",
+            1000,
+            False,
+        ),
+        # Edge case: Null max_words
+        (
+            "What is the best programming language?",
+            "User: Can you tell me about the UK?\nAI: The UK consists of England, Scotland, Wales, and Northern Ireland.",
+            None,
+            True,
+        ),
+    ],
+)
+def test_create_chat_condense_prompt(
+    prompt_builder: PromptBuilderService,
+    question: str,
+    chat_history: str,
+    max_words: int | None,
+    few_shots: bool,
+) -> None:
+    prompt = prompt_builder.create_chat_condense_prompt(
+        question=question,
+        chat_history=chat_history,
+        max_words=max_words,
+        few_shots=few_shots,
+    )
+
+    formatted = prompt.format()
+
+    assert (
+        "rewrite follow-up questions into clear, standalone questions"
+        in formatted.lower()
+    )
+    assert question in formatted
+
+    if max_words:
+        assert str(max_words) in formatted
+    else:
+        assert "less than" not in formatted
+
+    if chat_history:
+        assert chat_history in formatted
+
+    if few_shots:
+        assert "Examples:" in formatted
+    else:
+        assert "Examples:" not in formatted
+
+
+def test_create_context_prompt_with_nodes(
+    prompt_builder: PromptBuilderService, sample_nodes: list[NodeWithScore]
+) -> None:
+    prompt, _ = prompt_builder.create_context_prompt(
+        nodes=sample_nodes, included_in_system_prompt=True
+    )
+    formatted = prompt.format()
+
+    assert "Context Information" in formatted
+    assert "Solar panels convert sunlight to electricity" in formatted
+    assert "Wind turbines generate electricity" in formatted
+
+
+def test_create_context_prompt_with_token_limit(
+    prompt_builder: PromptBuilderService, sample_nodes: list[NodeWithScore]
+) -> None:
+    # Simple tokenizer function for testing
+    def simple_tokenizer(text: str) -> list[str]:
+        return text.split()
+
+    # Test with small token limit
+    prompt, _ = prompt_builder.create_context_prompt(
+        nodes=sample_nodes,
+        token_limit=10,
+        tokenizer_fn=simple_tokenizer,
+        included_in_system_prompt=True,
+    )
+
+    formatted = prompt.format()
+    assert "Context Information" in formatted
+    tokens = simple_tokenizer(formatted)
+    assert len(tokens) < 19  # Reasonable limit for truncated content
+
+
+def test_create_context_prompt_empty(prompt_builder: PromptBuilderService) -> None:
+    prompt, _ = prompt_builder.create_context_prompt(nodes=None)
+    formatted = prompt.format()
+    assert formatted == ""
+
+
+def test_create_context_prompt_empty_list(
+    prompt_builder: PromptBuilderService, empty_node_list: list[NodeWithScore]
+) -> None:
+    prompt, _ = prompt_builder.create_context_prompt(nodes=empty_node_list)
+    formatted = prompt.format()
+    assert formatted == ""
+
+
+def test_create_citation_prompt(
+    prompt_builder: PromptBuilderService, sample_nodes: list[NodeWithScore]
+) -> None:
+    prompt = prompt_builder.create_citation_guidelines(nodes=sample_nodes)
+    formatted = prompt.format()
+    assert "citation" in formatted.lower()
+    assert "citation_protocol" in formatted.lower()
+
+
+def test_create_citation_prompt_empty(prompt_builder: PromptBuilderService) -> None:
+    prompt = prompt_builder.create_citation_guidelines(nodes=None)
+    formatted = prompt.format()
+    assert formatted == ""
+
+
+def test_create_citation_prompt_empty_list(
+    prompt_builder: PromptBuilderService, empty_node_list: list[NodeWithScore]
+) -> None:
+    prompt = prompt_builder.create_citation_guidelines(nodes=empty_node_list)
+    formatted = prompt.format()
+    assert formatted == ""
+
+
+def test_create_citation_prompt_no_metadata(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    # Create nodes with no metadata
+    no_metadata_nodes = [
+        NodeWithScore(
+            node=TextNode(
+                text="Text without metadata",
+                extra_info={},  # Empty metadata
+            ),
+            score=0.9,
+        ),
+    ]
+
+    prompt = prompt_builder.create_citation_guidelines(nodes=no_metadata_nodes)
+    formatted = prompt.format()
+
+    # Should still produce a valid citation prompt
+    assert "citation" in formatted.lower()
+
+
+@pytest.mark.parametrize(
+    ("system_prompt", "user_query", "additional_instructions"),
+    [
+        (
+            "You are a helpful assistant.",
+            "Explain quantum computing",
+            "Keep it simple and focus on practical applications",
+        ),
+        (None, "History of the internet", None),
+        (None, "", "Make it comprehensive"),  # Edge case: Empty query
+        (None, "Machine learning basics", ""),  # Edge case: Empty instructions
+    ],
+)
+def test_create_summary_prompt(
+    prompt_builder: PromptBuilderService,
+    system_prompt: str | None,
+    user_query: str,
+    additional_instructions: str | None,
+) -> None:
+    prompt = prompt_builder.create_summary_prompt(
+        system_prompt=system_prompt,
+        user_query=user_query,
+        additional_instructions=additional_instructions,
+    )
+    formatted = prompt.format()
+
+    if system_prompt:
+        assert system_prompt in formatted
+
+    # Verify the template structure
+    assert user_query in formatted
+    assert "Rules:" in formatted.lower() or "rules" in formatted.lower()
+
+    # Check conditional rendering of additional instructions
+    if additional_instructions:
+        assert additional_instructions in formatted
+    else:
+        assert "Additional Instructions:" not in formatted
+        assert "additional instructions:" not in formatted.lower()
+
+
+def test_create_summary_prompt_no_instructions(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    user_query = "Explain quantum computing"
+
+    prompt = prompt_builder.create_summary_prompt(user_query=user_query)
+    formatted = prompt.format()
+
+    assert user_query in formatted
+    assert "Rules:" in formatted.lower() or "rules" in formatted.lower()
+    assert "Additional Instructions:" not in formatted
+    assert "additional instructions:" not in formatted.lower()
+
+
+@pytest.fixture
+def sample_chat_history() -> list[ChatMessage]:
+    return [
+        ChatMessage(role=MessageRole.USER, content="What is machine learning?"),
+        ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="Machine learning is a subset of AI that enables computers to learn from data.",
+        ),
+        ChatMessage(role=MessageRole.USER, content="Can you give me an example?"),
+        ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content="Sure! Email spam detection uses ML to classify emails as spam or legitimate.",
+        ),
+    ]
+
+
+@pytest.fixture
+def empty_chat_history() -> list[ChatMessage]:
+    return []
+
+
+@pytest.fixture
+def mock_messages_to_history_str():
+    def mock_fn(messages):
+        return "\n".join([f"{msg.role.value}: {msg.content}" for msg in messages])
+
+    return mock_fn
+
+
+@pytest.mark.parametrize(
+    (
+        "user_query",
+        "chat_history_fixture",
+        "system_prompt",
+        "max_words",
+        "few_shots",
+        "use_custom_fn",
+    ),
+    [
+        (
+            "What are the main applications?",
+            "sample_chat_history",
+            "You are a helpful AI assistant.",
+            100,
+            True,
+            False,
+        ),
+        (
+            "Explain this concept further",
+            "sample_chat_history",
+            None,
+            50,
+            False,
+            True,
+        ),
+        (
+            "What is the next step?",
+            "empty_chat_history",
+            "Be concise and accurate.",
+            None,
+            True,
+            False,
+        ),
+        (
+            "How does this work?",
+            None,
+            "System prompt test",
+            200,
+            False,
+            False,
+        ),
+        # Edge case: PromptTemplate as system_prompt
+        (
+            "Advanced question",
+            "sample_chat_history",
+            "template_prompt",
+            75,
+            True,
+            True,
+        ),
+        # Edge case: Zero max_words
+        (
+            "Brief question",
+            "sample_chat_history",
+            None,
+            0,
+            False,
+            False,
+        ),
+        # Edge case: Very large max_words
+        (
+            "Detailed explanation needed",
+            "sample_chat_history",
+            "Detailed system prompt",
+            10000,
+            True,
+            False,
+        ),
+    ],
+)
+def test_create_summary_history_in_details(
+    prompt_builder: PromptBuilderService,
+    sample_chat_history: list[ChatMessage],
+    empty_chat_history: list[ChatMessage],
+    mock_messages_to_history_str,
+    user_query: str,
+    chat_history_fixture: str | None,
+    system_prompt: str | None,
+    max_words: int | None,
+    few_shots: bool,
+    use_custom_fn: bool,
+) -> None:
+    # Setup chat history based on fixture name
+    if chat_history_fixture == "sample_chat_history":
+        chat_history = sample_chat_history
+    elif chat_history_fixture == "empty_chat_history":
+        chat_history = empty_chat_history
+    else:
+        chat_history = None
+
+    # Handle PromptTemplate case
+    if system_prompt == "template_prompt":
+        mock_template = Mock(spec=PromptTemplate)
+        mock_template.format.return_value = "Formatted template content"
+        system_prompt = mock_template
+
+    # Setup custom function
+    custom_fn = mock_messages_to_history_str if use_custom_fn else None
+
+    # Test empty chat history returns empty template
+    if chat_history_fixture == "empty_chat_history":
+        result = prompt_builder.create_summary_history_in_details(
+            user_query=user_query,
+            chat_history=chat_history,
+            system_prompt=system_prompt,
+            max_words=max_words,
+            few_shots=few_shots,
+            messages_to_history_str_fn=custom_fn,
+        )
+        assert result.template == ""
+        return
+
+    # Test normal cases
+    result = prompt_builder.create_summary_history_in_details(
+        user_query=user_query,
+        chat_history=chat_history,
+        system_prompt=system_prompt,
+        max_words=max_words,
+        few_shots=few_shots,
+        messages_to_history_str_fn=custom_fn,
+    )
+
+    # Verify result is a proper prompt template
+    assert hasattr(result, "format")
+    formatted = result.format()
+
+    # Verify user query is included
+    assert user_query in formatted or "reply to the following user content" in formatted
+
+    # Verify chat history handling
+    if chat_history:
+        if use_custom_fn:
+            # Custom function was used
+            assert any(msg.content in formatted for msg in chat_history)
+        else:
+            # Default function behavior
+            assert any(msg.content in formatted for msg in chat_history)
+
+    # Verify max_words parameter
+    if max_words and max_words != 0:
+        assert str(max_words) in formatted
+
+    # Verify few_shots parameter
+    if few_shots:
+        assert "Examples" in formatted or "Example" in formatted
+
+    # Verify system prompt handling
+    if isinstance(system_prompt, Mock):
+        system_prompt.format.assert_called_once()
+    elif system_prompt and chat_history_fixture != "empty_chat_history":
+        # System prompt should be processed appropriately
+        assert result is not None
+
+
+@pytest.mark.parametrize(
+    (
+        "chat_history_fixture",
+        "system_prompt",
+        "max_words",
+        "few_shots",
+        "use_custom_fn",
+    ),
+    [
+        (
+            "sample_chat_history",
+            "You are a summarization assistant.",
+            150,
+            True,
+            False,
+        ),
+        (
+            "sample_chat_history",
+            None,
+            75,
+            False,
+            True,
+        ),
+        (
+            "empty_chat_history",
+            "Brief and accurate",
+            None,
+            True,
+            False,
+        ),
+        (
+            None,
+            "System prompt for no history",
+            100,
+            False,
+            False,
+        ),
+        # Edge case: PromptTemplate as system_prompt
+        (
+            "sample_chat_history",
+            "template_prompt",
+            50,
+            True,
+            True,
+        ),
+        # Edge case: Zero max_words
+        (
+            "sample_chat_history",
+            None,
+            0,
+            False,
+            False,
+        ),
+        # Edge case: Very large max_words
+        (
+            "sample_chat_history",
+            "Comprehensive summarization",
+            5000,
+            True,
+            False,
+        ),
+    ],
+)
+def test_create_summary_history_approximately(
+    prompt_builder: PromptBuilderService,
+    sample_chat_history: list[ChatMessage],
+    empty_chat_history: list[ChatMessage],
+    mock_messages_to_history_str,
+    chat_history_fixture: str | None,
+    system_prompt: str | None,
+    max_words: int | None,
+    few_shots: bool,
+    use_custom_fn: bool,
+) -> None:
+    # Setup chat history based on fixture name
+    if chat_history_fixture == "sample_chat_history":
+        chat_history = sample_chat_history
+    elif chat_history_fixture == "empty_chat_history":
+        chat_history = empty_chat_history
+    else:
+        chat_history = None
+
+    # Handle PromptTemplate case
+    if system_prompt == "template_prompt":
+        mock_template = Mock(spec=PromptTemplate)
+        mock_template.format.return_value = (
+            "Formatted template content for approximation"
+        )
+        system_prompt = mock_template
+
+    # Setup custom function
+    custom_fn = mock_messages_to_history_str if use_custom_fn else None
+
+    # Test empty chat history returns empty template
+    if chat_history_fixture == "empty_chat_history":
+        result = prompt_builder.create_summary_history_approximately(
+            chat_history=chat_history,
+            system_prompt=system_prompt,
+            max_words=max_words,
+            few_shots=few_shots,
+            messages_to_history_str_fn=custom_fn,
+        )
+        assert result.template == ""
+        return
+
+    # Test normal cases
+    result = prompt_builder.create_summary_history_approximately(
+        chat_history=chat_history,
+        system_prompt=system_prompt,
+        max_words=max_words,
+        few_shots=few_shots,
+        messages_to_history_str_fn=custom_fn,
+    )
+
+    # Verify result is a proper prompt template
+    assert hasattr(result, "format")
+    formatted = result.format()
+
+    # Verify summarization instruction is present
+    assert "summarize" in formatted.lower() or "json array" in formatted.lower()
+
+    # Verify chat history handling
+    if chat_history:
+        if use_custom_fn:
+            # Custom function was used
+            assert any(msg.content in formatted for msg in chat_history)
+        else:
+            # Default function behavior
+            assert any(msg.content in formatted for msg in chat_history)
+
+    # Verify max_words parameter
+    if max_words and max_words != 0:
+        assert str(max_words) in formatted
+
+    # Verify few_shots parameter
+    if few_shots:
+        assert "Examples" in formatted or "Example" in formatted
+
+    # Verify JSON format requirement
+    assert "json" in formatted.lower()
+    assert "array" in formatted.lower()
+
+    # Verify role specification
+    assert "user" in formatted
+    assert "assistant" in formatted
+
+    # Verify system prompt handling
+    if isinstance(system_prompt, Mock):
+        system_prompt.format.assert_called_once()
+    elif system_prompt and chat_history_fixture != "empty_chat_history":
+        # System prompt should be processed appropriately
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# Tests for new create_* guidelines methods
+# ---------------------------------------------------------------------------
+
+
+def test_create_thinking_guidelines(prompt_builder: PromptBuilderService) -> None:
+    prompt = prompt_builder.create_thinking_guidelines()
+    formatted = prompt.format()
+    assert "thinking" in formatted.lower()
+    assert formatted != ""
+
+
+def test_create_thinking_guidelines_few_shots(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    with_shots = prompt_builder.create_thinking_guidelines(few_shots=True)
+    without_shots = prompt_builder.create_thinking_guidelines(few_shots=False)
+    assert "Examples" in with_shots.format() or "Good thinking" in with_shots.format()
+    assert len(with_shots.format()) > len(without_shots.format())
+
+
+def test_create_citation_guidelines(
+    prompt_builder: PromptBuilderService, sample_nodes: list[NodeWithScore]
+) -> None:
+    prompt = prompt_builder.create_citation_guidelines(nodes=sample_nodes)
+    formatted = prompt.format()
+    assert "citation" in formatted.lower()
+    assert formatted != ""
+
+
+def test_create_tool_instructions_unknown_tool_returns_empty(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.prompts.prompt_builder import _ToolNamespace
+
+    prompt = prompt_builder.create_tool_instructions(
+        "nonexistent_tool_xyz", _ToolNamespace({})
+    )
+    assert prompt.format() == ""
+
+
+def test_create_tool_instructions_known_tool(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+    from private_gpt.components.prompts.prompt_builder import _build_tool_namespace
+
+    tool = ToolSpec(name="web_search")
+    namespace = _build_tool_namespace([tool])
+    prompt = prompt_builder.create_tool_instructions("web_search", namespace)
+    assert prompt.format() != ""
+
+
+def test_seed_tool_instructions_skips_explicit(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+
+    tool = ToolSpec(name="web_search", instructions="Custom override")
+    seeded = prompt_builder.seed_tool_instructions([tool])
+    assert seeded[0].instructions == "Custom override"
+
+
+def test_seed_tool_instructions_empty_string_suppresses(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+
+    tool = ToolSpec(name="web_search", instructions="")
+    seeded = prompt_builder.seed_tool_instructions([tool])
+    assert seeded[0].instructions == ""
+
+
+def _expanded_code_execution_tools(
+    *,
+    include_editor: bool = True,
+    include_present_files: bool = True,
+    include_present_server: bool = True,
+) -> list:
+    """Tool list after code_execution expands to Anthropic-style sub-tools."""
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+
+    tools = [
+        ToolSpec(name="bash_code_execution", type="bash_code_execution_v1"),
+    ]
+    if include_editor:
+        # Unified editor: one tool with command=view|str_replace|create|insert
+        tools.append(
+            ToolSpec(
+                name="text_editor_code_execution",
+                type="text_editor_code_execution_v1",
+            )
+        )
+    if include_present_files:
+        tools.append(ToolSpec(name="present_files", type="present_files_v1"))
+    if include_present_server:
+        tools.append(ToolSpec(name="present_server", type="present_server_v1"))
+    return tools
+
+
+def test_create_code_execution_prompt_contains_paths(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
+
+    tools = _expanded_code_execution_tools()
+    prompt = prompt_builder.create_code_execution_prompt(tools)
+    formatted = prompt.format()
+    assert formatted != ""
+    # All layout entries (workspace, uploads, outputs, skills) appear uniformly
+    for mount in DEFAULT_SESSION_LAYOUT:
+        assert mount.target in formatted
+        assert mount.access in formatted
+        assert mount.description in formatted
+    assert "/mnt/skills/" in formatted  # skills mount included in the layout
+
+
+def test_create_code_execution_prompt_no_code_execution_tool(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+    from private_gpt.server.chat.interceptors.platform_guidelines_interceptor import (
+        PlatformGuidelinesInterceptor,
+    )
+
+    # On platforms where code execution raises OSError (no FUSE/sandbox), no
+    # code execution tool is wired up. The interceptor guard prevents injection.
+    tools: list[ToolSpec] = [ToolSpec(name="web_search")]
+    assert not PlatformGuidelinesInterceptor._has_code_execution_tool(tools)
+
+
+def test_create_code_execution_prompt_lists_available_tools(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
+
+    workspace = next(m for m in DEFAULT_SESSION_LAYOUT if m.name == "user")
+    formatted = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools()
+    ).format()
+
+    assert "**Available tools**" in formatted
+    assert "`bash_code_execution`" in formatted
+    assert "`text_editor_code_execution`" in formatted
+    assert "command" in formatted
+    assert "view" in formatted
+    assert "str_replace" in formatted
+    assert "`present_files`" in formatted
+    assert "`present_server`" in formatted
+    assert "<code_execution>" in formatted
+    # Prefer workspace code files over long inline shell one-liners
+    assert (
+        "writing code to a file" in formatted.lower()
+        or "write code to a file" in formatted.lower()
+    )
+    assert "inline" in formatted.lower()
+    assert workspace.target in formatted
+
+    without_optional = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(
+            include_editor=False,
+            include_present_files=False,
+            include_present_server=False,
+        )
+    ).format()
+    assert "`bash_code_execution`" in without_optional
+    assert "`text_editor_code_execution`" not in without_optional
+    assert "present_files" not in without_optional
+    assert "present_server" not in without_optional
+
+
+def test_create_code_execution_prompt_accepts_legacy_leaf_editor_tools(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    """Legacy expanded leaf tools (view/str_replace/create/insert) still work."""
+    from private_gpt.components.chat.models.chat_config_models import ToolSpec
+
+    tools = [
+        ToolSpec(name="bash", type="bash_v1"),
+        ToolSpec(name="view", type="view_v1"),
+        ToolSpec(name="str_replace", type="str_replace_v1"),
+        ToolSpec(name="create", type="create_v1"),
+        ToolSpec(name="insert", type="insert_v1"),
+    ]
+    formatted = prompt_builder.create_code_execution_prompt(tools).format()
+    assert "`view`" in formatted
+    assert "`str_replace`" in formatted
+    assert "`create`" in formatted
+    assert "`insert`" in formatted
+
+
+def test_create_code_execution_prompt_requires_present_files(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    from private_gpt.components.environment.layout import DEFAULT_SESSION_LAYOUT
+
+    outputs = next(m for m in DEFAULT_SESSION_LAYOUT if m.name == "outputs")
+
+    formatted = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools()
+    ).format()
+
+    assert "`present_files`" in formatted
+    assert "required" in formatted.lower()
+    assert (
+        "does not surface" in formatted.lower() or "writing a file" in formatted.lower()
+    )
+    assert outputs.target in formatted
+    assert "already under" in formatted
+    assert "Copy files into" in formatted or "copy it into" in formatted.lower()
+    assert "`present_server`" in formatted
+    assert "`text_editor_code_execution`" in formatted
+
+    formatted_without = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(
+            include_editor=False,
+            include_present_files=False,
+            include_present_server=False,
+        )
+    ).format()
+    assert "present_files" not in formatted_without
+    assert "present_server" not in formatted_without
+
+
+def test_create_code_execution_prompt_internet_disabled_by_default(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    formatted = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(),
+        internet_enabled=False,
+    ).format()
+    assert "No internet" in formatted
+    assert "pip install" in formatted
+
+    formatted_online = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(),
+        internet_enabled=True,
+    ).format()
+    assert "No internet" not in formatted_online
+    assert "pip install" not in formatted_online
+
+
+def test_create_code_execution_prompt_lists_preinstalled_inventory(
+    prompt_builder: PromptBuilderService,
+) -> None:
+    formatted = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(),
+        preinstalled_packages=["numpy", "pandas"],
+        preinstalled_cli_tools=["rg", "sqlite3"],
+    ).format()
+    assert "**Environment**" in formatted
+    assert "Preinstalled Python packages: numpy, pandas" in formatted
+    assert "Preinstalled CLI tools: rg, sqlite3" in formatted
+
+    empty = prompt_builder.create_code_execution_prompt(
+        _expanded_code_execution_tools(),
+        preinstalled_packages=[],
+        preinstalled_cli_tools=[],
+    ).format()
+    assert "**Environment**" not in empty
+    assert "Preinstalled Python packages" not in empty

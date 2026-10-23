@@ -1,0 +1,380 @@
+import asyncio
+import logging
+from collections.abc import AsyncIterator
+from typing import Any, Literal
+
+from llama_index.core.base.llms.types import MessageRole, TextBlock
+from llama_index.core.llms import LLM, ChatMessage
+
+from private_gpt.components.chat.processors.chat_history.multimodality.audio_preprocessor import (
+    AUDIO_PROCESSING_FAILED_MESSAGE,
+    preprocess_audio_message,
+)
+from private_gpt.components.chat.processors.chat_history.multimodality.image_preprocessor import (
+    IMAGE_PROCESSING_FAILED_MESSAGE,
+    preprocess_image_message,
+)
+from private_gpt.components.chat.processors.chat_history.multimodality.models import (
+    MultimodalProcessingResponse,
+    MultimodalProcessingStatus,
+)
+from private_gpt.components.chat.processors.chat_history.multimodality.utils import (
+    extract_audio_blocks,
+    extract_image_blocks,
+    requires_audio_preprocessing,
+    requires_image_preprocessing,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def _fallback_message(
+    message: ChatMessage,
+    modality: Literal["image", "audio"],
+    return_type: Literal["user_message", "tool_result"],
+) -> ChatMessage:
+    """Message with the failed media removed and the fallback text appended."""
+    media_blocks = (
+        extract_image_blocks(message)
+        if modality == "image"
+        else extract_audio_blocks(message)
+    )
+    fallback = (
+        IMAGE_PROCESSING_FAILED_MESSAGE
+        if modality == "image"
+        else AUDIO_PROCESSING_FAILED_MESSAGE
+    )
+    other_blocks = [block for block in message.blocks if block not in media_blocks]
+    final_blocks = (
+        [*other_blocks, TextBlock(text=fallback)]
+        if return_type == "user_message"
+        else other_blocks
+    )
+    return ChatMessage(role=message.role, blocks=final_blocks)
+
+
+async def _collect_image_response(
+    main_llm: LLM,
+    message: ChatMessage,
+    image_multimodal_llm: LLM | None,
+    return_type: Literal["user_message", "tool_result"] = "user_message",
+    **kwargs: Any,
+) -> tuple[list[MultimodalProcessingStatus], ChatMessage]:
+    statuses: list[MultimodalProcessingStatus] = []
+    final_message = message
+    async for resp in preprocess_image_message(
+        main_llm, message, image_multimodal_llm, return_type=return_type, **kwargs
+    ):
+        if resp.processing_status is not None:
+            statuses.append(resp.processing_status)
+        if resp.message is not None:
+            final_message = resp.message
+    return statuses, final_message
+
+
+async def _collect_audio_response(
+    main_llm: LLM,
+    message: ChatMessage,
+    audio_multimodal_llm: LLM | None,
+    return_type: Literal["user_message", "tool_result"] = "user_message",
+    **kwargs: Any,
+) -> tuple[list[MultimodalProcessingStatus], ChatMessage]:
+    statuses: list[MultimodalProcessingStatus] = []
+    final_message = message
+    async for resp in preprocess_audio_message(
+        main_llm, message, audio_multimodal_llm, return_type=return_type, **kwargs
+    ):
+        if resp.processing_status is not None:
+            statuses.append(resp.processing_status)
+        if resp.message is not None:
+            final_message = resp.message
+    return statuses, final_message
+
+
+async def preprocess_multimodal_message(
+    main_llm: LLM,
+    message: ChatMessage,
+    image_multimodal_llm: LLM | None = None,
+    audio_multimodal_llm: LLM | None = None,
+    max_concurrency: int | None = None,
+    return_type: Literal["user_message", "tool_result"] = "user_message",
+    **kwargs: Any,
+) -> AsyncIterator[MultimodalProcessingResponse]:
+    """Process image and audio blocks in the message in parallel.
+
+    max_concurrency limits how many modalities run simultaneously.
+    -1 (default) means unlimited.
+    """
+    # Pre-check which modalities will actually run so we can emit "processing"
+    # events before the parallel tasks start.
+    needs_image = (
+        requires_image_preprocessing(main_llm, image_multimodal_llm)
+        and bool(extract_image_blocks(message))
+        and image_multimodal_llm is not None
+    )
+    needs_audio = (
+        requires_audio_preprocessing(main_llm, audio_multimodal_llm)
+        and bool(extract_audio_blocks(message))
+        and audio_multimodal_llm is not None
+    )
+
+    if needs_image:
+        yield MultimodalProcessingResponse(
+            processing_status=MultimodalProcessingStatus(
+                status="processing", type="image"
+            )
+        )
+    if needs_audio:
+        yield MultimodalProcessingResponse(
+            processing_status=MultimodalProcessingStatus(
+                status="processing", type="audio"
+            )
+        )
+
+    if not needs_image and not needs_audio:
+        yield MultimodalProcessingResponse(modified_message=message)
+        return
+
+    semaphore = (
+        asyncio.Semaphore(max_concurrency)
+        if max_concurrency and max_concurrency > 0
+        else None
+    )
+
+    async def _bounded_image() -> tuple[list[MultimodalProcessingStatus], ChatMessage]:
+        if semaphore is not None:
+            async with semaphore:
+                return await _collect_image_response(
+                    main_llm,
+                    message,
+                    image_multimodal_llm,
+                    return_type=return_type,
+                    **kwargs,
+                )
+        return await _collect_image_response(
+            main_llm, message, image_multimodal_llm, return_type=return_type, **kwargs
+        )
+
+    async def _bounded_audio() -> tuple[list[MultimodalProcessingStatus], ChatMessage]:
+        if semaphore is not None:
+            async with semaphore:
+                return await _collect_audio_response(
+                    main_llm,
+                    message,
+                    audio_multimodal_llm,
+                    return_type=return_type,
+                    **kwargs,
+                )
+        return await _collect_audio_response(
+            main_llm, message, audio_multimodal_llm, return_type=return_type, **kwargs
+        )
+
+    # Run image and audio preprocessing concurrently (bounded by semaphore when set).
+    results = await asyncio.gather(
+        _bounded_image(),
+        _bounded_audio(),
+        return_exceptions=True,
+    )
+    image_result, audio_result = results
+
+    def normalize_result(
+        result: tuple[list[MultimodalProcessingStatus], ChatMessage] | BaseException,
+        modality: Literal["image", "audio"],
+        active: bool,
+    ) -> tuple[list[MultimodalProcessingStatus], ChatMessage]:
+        if isinstance(result, Exception):
+            if not active:
+                logger.exception("Unexpected %s preprocessing failure", modality)
+                return [], message
+            logger.exception("%s preprocessing failed", modality.capitalize())
+            failed = MultimodalProcessingStatus(
+                status="failed",
+                type=modality,
+                error_detail=str(result) or result.__class__.__name__,
+            )
+            return [failed], _fallback_message(message, modality, return_type)
+        if isinstance(result, BaseException):
+            raise result
+        return result
+
+    image_statuses, image_msg = normalize_result(image_result, "image", needs_image)
+    audio_statuses, audio_msg = normalize_result(audio_result, "audio", needs_audio)
+
+    for status in image_statuses:
+        if status.status in {"completed", "failed"}:
+            yield MultimodalProcessingResponse(processing_status=status)
+    for status in audio_statuses:
+        if status.status in {"completed", "failed"}:
+            yield MultimodalProcessingResponse(processing_status=status)
+
+    final_blocks = list(message.blocks)
+
+    if image_statuses:
+        image_blocks = extract_image_blocks(message)
+        final_blocks = [b for b in final_blocks if b not in image_blocks]
+        if return_type == "user_message" and image_msg.blocks:
+            final_blocks.append(image_msg.blocks[-1])
+
+    if audio_statuses:
+        audio_blocks = extract_audio_blocks(message)
+        final_blocks = [b for b in final_blocks if b not in audio_blocks]
+        if return_type == "user_message" and audio_msg.blocks:
+            final_blocks.append(audio_msg.blocks[-1])
+
+    yield MultimodalProcessingResponse(
+        modified_message=ChatMessage(
+            role=message.role,
+            blocks=final_blocks,
+            additional_kwargs=dict(message.additional_kwargs),
+        )
+    )
+
+
+async def preprocess_multimodal_history(
+    main_llm: LLM,
+    chat_history: list[ChatMessage] | None,
+    image_multimodal_llm: LLM | None = None,
+    audio_multimodal_llm: LLM | None = None,
+    max_concurrency: int | None = None,
+    return_type: Literal["user_message", "tool_result"] = "user_message",
+    max_images: int | None = None,
+    max_audios: int | None = None,
+    **kwargs: Any,
+) -> AsyncIterator[MultimodalProcessingResponse]:
+    """Preprocess image/audio blocks across the whole chat history.
+
+    The main LLM keeps raw image/audio blocks natively when it supports them, so
+    instead of stripping media from every message except the last user one, they
+    are retained across the history up to the model's maximum supported counts
+    (``max_images``/``max_audios``). The most recent blocks are kept, so when the
+    history contains more media than the model supports, the latest ones are kept
+    raw and the older ones are removed.
+    """
+    if not chat_history:
+        yield MultimodalProcessingResponse(chat_history=chat_history)
+        return
+
+    if chat_history[-1].role != MessageRole.USER:
+        yield MultimodalProcessingResponse(chat_history=chat_history)
+        return
+
+    # The main LLM keeps a modality natively when it is the multimodal LLM.
+    image_native = (
+        image_multimodal_llm is not None
+        and not requires_image_preprocessing(main_llm, image_multimodal_llm)
+    )
+    audio_native = (
+        audio_multimodal_llm is not None
+        and not requires_audio_preprocessing(main_llm, audio_multimodal_llm)
+    )
+
+    # The last user message keeps its media natively as a whole; older messages
+    # can only retain what is left of the model's maximum supported counts.
+    last_user_image_count = 0
+    last_user_audio_count = 0
+    for message in reversed(chat_history):
+        if message.role != MessageRole.USER:
+            continue
+        if image_native:
+            last_user_image_count = len(extract_image_blocks(message))
+        if audio_native:
+            last_user_audio_count = len(extract_audio_blocks(message))
+        break
+
+    def remaining_budget(max_count: int | None, kept_count: int) -> int | None:
+        if max_count is None:
+            return None
+        return max(max_count - kept_count, 0)
+
+    remaining_images = (
+        remaining_budget(max_images, last_user_image_count) if image_native else 0
+    )
+    remaining_audios = (
+        remaining_budget(max_audios, last_user_audio_count) if audio_native else 0
+    )
+
+    def trim_media(
+        message: ChatMessage,
+        image_budget: int | None,
+        audio_budget: int | None,
+    ) -> tuple[ChatMessage, int | None, int | None]:
+        """Keep the latest native media blocks within the remaining budget."""
+        image_blocks = extract_image_blocks(message)
+        audio_blocks = extract_audio_blocks(message)
+
+        def keep_latest(blocks: list[Any], budget: int | None) -> list[Any]:
+            if budget is None:
+                return list(blocks)
+            if budget <= 0:
+                return []
+            return blocks[-budget:]
+
+        kept_images = keep_latest(image_blocks, image_budget)
+        kept_audios = keep_latest(audio_blocks, audio_budget)
+
+        def consumed(budget: int | None, block_count: int) -> int | None:
+            if budget is None:
+                return None
+            return max(budget - block_count, 0)
+
+        new_image_budget = consumed(image_budget, len(image_blocks))
+        new_audio_budget = consumed(audio_budget, len(audio_blocks))
+
+        kept_ids = {id(block) for block in kept_images} | {
+            id(block) for block in kept_audios
+        }
+        new_blocks = [
+            block
+            for block in message.blocks
+            if isinstance(block, TextBlock) or id(block) in kept_ids
+        ]
+        return (
+            ChatMessage(
+                role=message.role,
+                blocks=new_blocks,
+                additional_kwargs=dict(message.additional_kwargs),
+            ),
+            new_image_budget,
+            new_audio_budget,
+        )
+
+    is_last_user_message = True
+    preprocessed_history = []
+
+    for message in reversed(chat_history):
+        if message.role == MessageRole.USER and is_last_user_message:
+            async for response in preprocess_multimodal_message(
+                main_llm,
+                message,
+                image_multimodal_llm=image_multimodal_llm,
+                audio_multimodal_llm=audio_multimodal_llm,
+                max_concurrency=max_concurrency,
+                return_type=return_type,
+                **kwargs,
+            ):
+                if response.processing_status:
+                    yield response
+                if response.modified_message:
+                    preprocessed_history.append(response.modified_message)
+
+            is_last_user_message = False
+        elif message.role == MessageRole.USER:
+            trimmed, remaining_images, remaining_audios = trim_media(
+                message, remaining_images, remaining_audios
+            )
+            preprocessed_history.append(trimmed)
+        else:
+            preprocessed_history.append(
+                ChatMessage(
+                    role=message.role,
+                    blocks=[
+                        block
+                        for block in message.blocks
+                        if isinstance(block, TextBlock)
+                    ],
+                    additional_kwargs=dict(message.additional_kwargs),
+                )
+            )
+
+    final_history = list(reversed(preprocessed_history))
+    yield MultimodalProcessingResponse(chat_history=final_history)

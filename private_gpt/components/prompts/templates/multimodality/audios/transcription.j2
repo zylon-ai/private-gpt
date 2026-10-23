@@ -1,0 +1,199 @@
+{% set has_query = user_query is defined and user_query != "" %}
+{% set has_word_limit = max_words is defined and max_words %}
+{% set has_evaluation = (errors is defined and errors) or (suggestions is defined and suggestions) %}
+{% set is_continuation = not has_evaluation and last_content is defined and last_content != "" %}
+{% set is_evaluation = has_evaluation and last_content is defined and last_content != "" %}
+{% set audio_type = audio_type if audio_type is defined else "speech" %}
+{% set few_shots = few_shots if few_shots is defined and few_shots else false %}
+
+TASK: Transcribe audio content and return as JSON: {"transcript": "...", "speakers": [...], "timestamps": [...], "is_complete": true}
+
+{% if has_query %}FOCUS: {{ user_query }}{% endif %}
+{% if has_word_limit %}LIMIT: {{ max_words }} words maximum{% endif %}
+{% if language is defined and language != "en" %}LANGUAGE: Transcribe in {{ language }}{% endif %}
+{% if enable_speaker_diarization is defined and enable_speaker_diarization %}SPEAKERS: Identify and label different speakers{% endif %}
+
+{% if few_shots %}
+EXPECTED OUTPUT EXAMPLES:
+
+{% if audio_type == "speech" %}
+**Speech Example:**
+```json
+{
+  "transcript": "Good morning everyone. Today I want to discuss our quarterly results. We achieved a 25% increase in revenue, reaching 2.3 million dollars. This growth was driven primarily by our new product line, which launched in March and exceeded all expectations.",
+  "speakers": null,
+  "timestamps": null,
+  "is_complete": true
+}
+```
+
+{% elif audio_type == "conversation" %}
+**Conversation Example:**
+```json
+{
+  "transcript": "Speaker A: What's the status of the project?\nSpeaker B: We're on track to finish by Friday. The development team completed testing yesterday.\nSpeaker A: Great. Any blockers?\nSpeaker B: None at the moment. We're just finalizing documentation.",
+  "speakers": ["Speaker A", "Speaker B"],
+  "timestamps": [
+    {"start": 0.0, "end": 2.5, "speaker": "Speaker A", "text": "What's the status of the project?"},
+    {"start": 2.8, "end": 8.2, "speaker": "Speaker B", "text": "We're on track to finish by Friday. The development team completed testing yesterday."},
+    {"start": 8.5, "end": 10.0, "speaker": "Speaker A", "text": "Great. Any blockers?"},
+    {"start": 10.3, "end": 14.5, "speaker": "Speaker B", "text": "None at the moment. We're just finalizing documentation."}
+  ],
+  "is_complete": true
+}
+```
+
+{% elif audio_type == "lecture" %}
+**Lecture Example:**
+```json
+{
+  "transcript": "# Introduction to Machine Learning\n\n## What is Machine Learning?\n\nMachine learning is a subset of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed. There are three main types:\n\n1. **Supervised Learning**: The algorithm learns from labeled training data\n2. **Unsupervised Learning**: The algorithm finds patterns in unlabeled data\n3. **Reinforcement Learning**: The algorithm learns through trial and error\n\nLet's explore each of these in detail.",
+  "speakers": ["Lecturer"],
+  "timestamps": null,
+  "is_complete": false
+}
+```
+
+{% elif audio_type == "podcast" %}
+**Podcast Example:**
+```json
+{
+  "transcript": "Host: Welcome back to Tech Insights. Today we're joined by Dr. Sarah Chen, an AI researcher at MIT.\n\nDr. Chen: Thanks for having me.\n\nHost: Let's dive right in. What's the most exciting development in AI this year?\n\nDr. Chen: I'd say it's the advancement in multimodal models. These systems can now process text, images, and audio simultaneously, opening up entirely new possibilities for human-computer interaction.",
+  "speakers": ["Host", "Dr. Chen"],
+  "timestamps": [
+    {"start": 0.0, "end": 8.5, "speaker": "Host", "text": "Welcome back to Tech Insights. Today we're joined by Dr. Sarah Chen, an AI researcher at MIT."},
+    {"start": 9.0, "end": 10.5, "speaker": "Dr. Chen", "text": "Thanks for having me."},
+    {"start": 11.0, "end": 16.2, "speaker": "Host", "text": "Let's dive right in. What's the most exciting development in AI this year?"},
+    {"start": 16.8, "end": 28.5, "speaker": "Dr. Chen", "text": "I'd say it's the advancement in multimodal models. These systems can now process text, images, and audio simultaneously, opening up entirely new possibilities for human-computer interaction."}
+  ],
+  "is_complete": false
+}
+```
+
+{% elif audio_type == "interview" %}
+**Interview Example:**
+```json
+{
+  "transcript": "Interviewer: Can you tell me about your experience with project management?\n\nCandidate: Absolutely. In my previous role at Tech Corp, I led a team of eight developers on a major platform migration. We completed the project two weeks ahead of schedule and 15% under budget.\n\nInterviewer: That's impressive. What was your biggest challenge?\n\nCandidate: The biggest challenge was coordinating across multiple time zones. We had team members in San Francisco, London, and Singapore.",
+  "speakers": ["Interviewer", "Candidate"],
+  "timestamps": null,
+  "is_complete": false
+}
+```
+
+{% elif audio_type == "music" %}
+**Music Example:**
+```json
+{
+  "transcript": "[Instrumental music - no speech content]\n\nGenre: Jazz\nInstrumentation: Piano, bass, drums, saxophone\nTempo: Medium swing\nDuration: Approximately 3 minutes",
+  "speakers": null,
+  "timestamps": null,
+  "is_complete": true
+}
+```
+
+{% elif audio_type == "ambient" %}
+**Ambient Example:**
+```json
+{
+  "transcript": "[Ambient sounds - minimal speech]\n\nEnvironment: Office setting\nSounds detected: Keyboard typing, phone ringing in distance, muffled conversations, air conditioning\nOccasional audible speech: 'Excuse me' at 0:45, 'Thanks' at 1:20",
+  "speakers": null,
+  "timestamps": null,
+  "is_complete": true
+}
+```
+
+{% else %}
+**Mixed Content Example:**
+```json
+{
+  "transcript": "# Conference Opening Remarks\n\n[Background music fades]\n\nSpeaker A: Good morning everyone and welcome to the 2024 Innovation Summit.\n\n[Applause]\n\nSpeaker A: We have an exciting lineup today. First, let me introduce our keynote speaker.\n\nSpeaker B: Thank you. I'm thrilled to be here. Today I want to share three key insights about the future of technology.\n\n[Pause]\n\nSpeaker B: First, artificial intelligence will transform every industry within the next five years.",
+  "speakers": ["Speaker A", "Speaker B"],
+  "timestamps": null,
+  "is_complete": false
+}
+```
+{% endif %}
+
+{% endif %}
+
+TRANSCRIPTION RULES:
+{% if audio_type == "speech" %}
+- Transcribe all spoken words verbatim
+- Use proper punctuation and capitalization
+- Maintain natural speech flow and pauses
+- Do not add interpretations or assumptions
+- Mark unclear segments as [inaudible] or [unclear]
+
+{% elif audio_type == "conversation" or audio_type == "interview" or audio_type == "podcast" %}
+- Identify each speaker (Speaker A, Speaker B, or by name if known)
+- Format as dialogue with speaker labels
+- Maintain conversation flow and turn-taking
+- Include natural speech patterns (pauses, interruptions)
+{% if enable_speaker_diarization is defined and enable_speaker_diarization %}
+- Provide timestamps for each speaker segment
+- List all identified speakers in the "speakers" array
+{% endif %}
+- Mark overlapping speech as [crosstalk] if unintelligible
+
+{% elif audio_type == "lecture" %}
+- Structure content with headers and sections
+- Use Markdown formatting for clarity
+- Maintain lecture organization and flow
+- Include key points, examples, and transitions
+- Note visual references like "as you can see on the slide"
+
+{% elif audio_type == "music" %}
+- Describe musical content if no speech
+- Note genre, instrumentation, tempo
+- Transcribe any lyrics if present
+- Mark instrumental sections clearly
+
+{% elif audio_type == "ambient" %}
+- Describe ambient environment and sounds
+- Transcribe any audible speech fragments
+- Note sound types and patterns
+- Indicate approximate timing of notable sounds
+
+{% else %}
+- Identify and separate different audio content types
+- Transcribe speech content verbatim
+- Note non-speech elements [music], [applause], [noise]
+- Maintain chronological order
+- Preserve context and atmosphere
+{% endif %}
+
+QUALITY GUIDELINES:
+- Accuracy: Transcribe exactly what is said, not what should have been said
+- Completeness: Include all audible speech, mark inaudible sections
+- Formatting: Use proper grammar, punctuation, and paragraph breaks
+- Context: Note relevant non-speech sounds in [brackets]
+- Clarity: Break long segments into readable paragraphs
+
+{% if is_continuation %}
+CONTINUATION: Resume transcription from where previous segment ended.
+Previous segment: {{ last_content }}
+{% endif %}
+
+{% if is_evaluation %}
+EVALUATION: Review previous transcription and fix issues.
+Previous Transcription:
+{{ last_content }}
+---
+
+{% if errors is defined and errors %}
+NOTE: Previous transcription had issues:
+{% for error in errors %}
+- {{ error }}
+{% endfor %}
+{% endif %}
+
+{% if suggestions is defined and suggestions %}
+SUGGESTIONS:
+{% for suggestion in suggestions %}
+- {{ suggestion }}
+{% endfor %}
+{% endif %}
+
+TASK: Provide corrected transcription addressing all identified issues.
+{% endif %}

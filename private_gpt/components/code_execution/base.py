@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from private_gpt.components.sandbox.mount import Mount
+from private_gpt.settings.settings import Settings
+
+if TYPE_CHECKING:
+    from private_gpt.components.code_execution.results import (
+        BashExecutionResult,
+        FileOperationResult,
+    )
+
+
+class CodeExecutionSession(ABC):
+    @abstractmethod
+    async def execute_bash(
+        self, command: str, timeout: int | None = None, restart: bool = False
+    ) -> BashExecutionResult:
+        """Execute a bash command in the session workspace."""
+
+    @abstractmethod
+    async def view(
+        self,
+        path: str,
+        view_range: tuple[int, int] | None = None,
+        include_line_numbers: bool = True,
+    ) -> FileOperationResult:
+        """View a file or directory from the session workspace."""
+
+    @abstractmethod
+    async def str_replace(
+        self, path: str, old_str: str, new_str: str
+    ) -> FileOperationResult:
+        """Replace a single string occurrence in a file."""
+
+    @abstractmethod
+    async def create(self, path: str, file_text: str) -> FileOperationResult:
+        """Create a new file in the session workspace."""
+
+    @abstractmethod
+    async def insert(
+        self, path: str, insert_line: int, new_str: str
+    ) -> FileOperationResult:
+        """Insert text into a file after a given line number."""
+
+    @abstractmethod
+    async def read_file(self, path: str) -> bytes:
+        """Read raw file bytes from the session workspace."""
+
+    @abstractmethod
+    async def write_file(self, path: str, content: bytes) -> None:
+        """Write raw file bytes into the session workspace."""
+
+    @abstractmethod
+    async def path_exists(self, path: str) -> bool:
+        """Return True if the path exists in the session workspace."""
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Close and release the backing execution session."""
+
+
+class CodeExecutionSessionConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    session_id: str
+    env: dict[str, str] = Field(default_factory=dict)
+    mounts: list[Mount] = Field(
+        default_factory=list,
+        description=(
+            "The single mount set for the session: session layout is added by "
+            "the layout mounter; this list carries skill/bundle mounts (with a "
+            "storage ref) and Backend mount-plan volumes (with a source dir). "
+            "A change in this set recreates the sandbox instead of "
+            "materializing files into the running container."
+        ),
+    )
+
+
+class CodeExecutionProvider(ABC):
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+
+    @abstractmethod
+    async def create_session(
+        self,
+        config: CodeExecutionSessionConfig,
+    ) -> CodeExecutionSession:
+        """Create a code execution session, optionally mounting extra bundles."""
+
+    @abstractmethod
+    def delete_session(self, session: CodeExecutionSession) -> None:
+        """Delete a code execution session."""
+
+
+CodeExecutionProviderFactory = (
+    type[CodeExecutionProvider] | Callable[[Settings], CodeExecutionProvider]
+)

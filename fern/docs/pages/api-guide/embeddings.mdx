@@ -1,0 +1,58 @@
+---
+title: "Embeddings"
+description: "Generate vector embeddings from text for semantic search, clustering, and similarity."
+---
+
+The Embeddings API (`POST /v1/embeddings`) converts text into high-dimensional vectors. Use them to build your own semantic search, clustering pipelines, or similarity scoring outside of PrivateGPT's built-in retrieval.
+
+---
+
+## Single input
+
+```bash
+curl -X POST http://localhost:8080/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "mxbai-embed-large",
+    "input": "The quick brown fox jumps over the lazy dog."
+  }'
+```
+
+Response:
+
+```json
+{
+  "data": [
+    {"index": 0, "embedding": [0.021, -0.013, ...], "object": "embedding"}
+  ],
+  "model": "mxbai-embed-large",
+  "usage": {"input_tokens": 12, "total_tokens": 12}
+}
+```
+
+---
+
+## Batch input
+
+Pass an array of strings to embed multiple texts in one request. The response preserves input order — `data[i]` corresponds to `input[i]`:
+
+```bash
+curl -X POST http://localhost:8080/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "mxbai-embed-large",
+    "input": [
+      "First document text",
+      "Second document text",
+      "Third document text"
+    ]
+  }'
+```
+
+---
+
+## Choosing a model
+
+The `model` field must match the name of an embedding model registered in your PrivateGPT instance. Use `GET /v1/models` to list available models and their types.
+
+For consistent similarity results, always use the same model to embed both your corpus and your queries. Mixing models produces incomparable vectors.

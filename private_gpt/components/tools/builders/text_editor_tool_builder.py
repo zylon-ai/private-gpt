@@ -1,0 +1,335 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
+
+from injector import inject, singleton
+
+from private_gpt.components.chat.models.chat_config_models import (
+    ToolRequirements,
+    ToolSpec,
+)
+from private_gpt.components.code_execution.code_execution_component import (
+    CodeExecutionComponent,
+)
+from private_gpt.components.code_execution.output_cleaning import (
+    OutputCleaner,
+    human_size,
+    truncate_lines,
+)
+from private_gpt.components.tools.events.adapters import (
+    TextEditorCodeExecutionEventAdapter,
+)
+from private_gpt.components.tools.remote_execution import build_rebuild_metadata
+from private_gpt.components.tools.tool_names import (
+    TEXT_EDITOR_CREATE_TOOL_NAME,
+    TEXT_EDITOR_INSERT_TOOL_NAME,
+    TEXT_EDITOR_STR_REPLACE_TOOL_NAME,
+    TEXT_EDITOR_VIEW_TOOL_NAME,
+)
+from private_gpt.components.tools.tool_placeholders import (
+    TEXT_EDITOR_CREATE_TOOL_FN,
+    TEXT_EDITOR_INSERT_TOOL_FN,
+    TEXT_EDITOR_STR_REPLACE_TOOL_FN,
+    TEXT_EDITOR_VIEW_TOOL_FN,
+)
+from private_gpt.di import get_global_injector
+from private_gpt.events.models import (
+    NO_TOOL_CONTENT,
+    TextEditorCodeExecutionCreateResultBlock,
+    TextEditorCodeExecutionStrReplaceResultBlock,
+    TextEditorCodeExecutionViewResultBlock,
+)
+from private_gpt.settings.settings import Settings
+
+if TYPE_CHECKING:
+    from private_gpt.components.code_execution.base import (
+        CodeExecutionSession,
+        CodeExecutionSessionConfig,
+    )
+    from private_gpt.events.models import ResultContentBlockType
+
+
+def _view_truncation_notice(
+    *,
+    is_file: bool,
+    start_line: int,
+    end_line: int,
+    last_line: int,
+    total_lines: int,
+    reason: str,
+) -> str:
+    """Tell the model a view was cut short and how to read the rest."""
+    if not is_file:
+        return (
+            f"[Truncated: showing {end_line} of {total_lines} entries because of "
+            f"{reason}. List a subdirectory, or use bash (ls, find, grep) to "
+            "narrow the listing.]"
+        )
+    next_end = min(end_line + (end_line - start_line + 1), last_line)
+    return (
+        f"[Truncated: showing lines {start_line}-{end_line} of {total_lines} "
+        f"because of {reason}. Use view_range=[{end_line + 1}, {next_end}] to "
+        "read the next fragment, or search the file with bash (e.g. grep -n) "
+        "and view only the lines you need.]"
+    )
+
+
+@singleton
+class TextEditorToolBuilder:
+    @inject
+    def __init__(
+        self,
+        code_execution_component: CodeExecutionComponent,
+        settings: Settings,
+    ) -> None:
+        self._component = code_execution_component
+        self._settings = settings
+        self._clean = OutputCleaner.for_view(settings.code_execution.output_cleaning)
+
+    async def _session(
+        self, config: CodeExecutionSessionConfig
+    ) -> CodeExecutionSession:
+        session = await self._component.get_or_create_session(config)
+        if session is None:
+            raise ValueError("code_execution provider is not configured.")
+        return session
+
+    async def build_view_tool(
+        self,
+        config: CodeExecutionSessionConfig,
+        name: str = TEXT_EDITOR_VIEW_TOOL_NAME,
+        type: str = TEXT_EDITOR_VIEW_TOOL_NAME + "_v1",
+        description: str = TEXT_EDITOR_VIEW_TOOL_FN.metadata.description,
+    ) -> ToolSpec:
+        view_settings = self._settings.code_execution.tools.text_editor.view
+
+        async def view(
+            path: str,
+            view_range: list[int] | None = None,
+        ) -> list[ResultContentBlockType]:
+            resolved_view_range: tuple[int, int] | None = None
+            if view_range is not None:
+                if len(view_range) != 2:
+                    raise ValueError("view_range must contain exactly two integers")
+                resolved_view_range = (view_range[0], view_range[1])
+
+            session = await self._session(config)
+            result = await session.view(
+                path,
+                view_range=resolved_view_range,
+                include_line_numbers=view_settings.include_line_numbers,
+            )
+            if not result.success:
+                raise RuntimeError(result.error or "Unable to view file")
+            max_bytes = self._settings.code_execution.max_output_bytes
+            cleaned = self._clean(result.output)
+            available = len(cleaned.splitlines())
+            output, _ = truncate_lines(cleaned, max_bytes)
+            lines = output.splitlines()
+            reason = f"the {human_size(max_bytes)} output limit"
+            if (
+                view_settings.max_lines is not None
+                and len(lines) > view_settings.max_lines
+            ):
+                lines = lines[: view_settings.max_lines]
+                reason = f"the {view_settings.max_lines}-line view limit"
+            num_lines = len(lines)
+            start_line = resolved_view_range[0] if resolved_view_range else 1
+            end_line = start_line + num_lines - 1
+            total_lines = (
+                result.total_lines if result.total_lines is not None else available
+            )
+            content = "\n".join(lines) if lines else NO_TOOL_CONTENT
+            if lines and num_lines < available:
+                content += "\n\n" + _view_truncation_notice(
+                    is_file=result.total_lines is not None,
+                    start_line=start_line,
+                    end_line=end_line,
+                    last_line=start_line + available - 1,
+                    total_lines=total_lines,
+                    reason=reason,
+                )
+            return [
+                TextEditorCodeExecutionViewResultBlock(
+                    content=content,
+                    num_lines=num_lines,
+                    start_line=start_line,
+                    total_lines=total_lines,
+                )
+            ]
+
+        return ToolSpec.from_defaults(
+            name=name,
+            type=type,
+            runtime="server",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
+            description=description,
+            async_fn=view,
+            requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_text_editor_view_tool,
+                {
+                    "config": config,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                },
+            ),
+        )
+
+    async def build_str_replace_tool(
+        self,
+        config: CodeExecutionSessionConfig,
+        name: str = TEXT_EDITOR_STR_REPLACE_TOOL_NAME,
+        type: str = TEXT_EDITOR_STR_REPLACE_TOOL_NAME + "_v1",
+        description: str = TEXT_EDITOR_STR_REPLACE_TOOL_FN.metadata.description,
+    ) -> ToolSpec:
+        async def str_replace(
+            path: str,
+            old_str: str,
+            new_str: str,
+        ) -> list[ResultContentBlockType]:
+            session = await self._session(config)
+            result = await session.str_replace(path, old_str, new_str)
+            if not result.success:
+                raise RuntimeError(result.error or "Unable to replace text")
+            old_lines = old_str.splitlines()
+            new_lines = new_str.splitlines()
+            diff_lines = [f"- {line}" for line in old_lines] + [
+                f"+ {line}" for line in new_lines
+            ]
+            start = result.start_line or 0
+            return [
+                TextEditorCodeExecutionStrReplaceResultBlock(
+                    old_start=start,
+                    new_start=start,
+                    old_lines=len(old_lines),
+                    new_lines=len(new_lines),
+                    lines=diff_lines,
+                )
+            ]
+
+        return ToolSpec.from_defaults(
+            name=name,
+            type=type,
+            runtime="server",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
+            description=description,
+            async_fn=str_replace,
+            requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_text_editor_str_replace_tool,
+                {
+                    "config": config,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                },
+            ),
+        )
+
+    async def build_create_tool(
+        self,
+        config: CodeExecutionSessionConfig,
+        name: str = TEXT_EDITOR_CREATE_TOOL_NAME,
+        type: str = TEXT_EDITOR_CREATE_TOOL_NAME + "_v1",
+        description: str = TEXT_EDITOR_CREATE_TOOL_FN.metadata.description,
+    ) -> ToolSpec:
+        async def create(
+            path: str,
+            file_text: str,
+        ) -> list[ResultContentBlockType]:
+            session = await self._session(config)
+            result = await session.create(path, file_text)
+            if not result.success:
+                raise RuntimeError(result.error or "Unable to create file")
+            return [
+                TextEditorCodeExecutionCreateResultBlock(
+                    is_file_update=result.is_update
+                )
+            ]
+
+        return ToolSpec.from_defaults(
+            name=name,
+            type=type,
+            runtime="server",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
+            description=description,
+            async_fn=create,
+            requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_text_editor_create_tool,
+                {
+                    "config": config,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                },
+            ),
+        )
+
+    async def build_insert_tool(
+        self,
+        config: CodeExecutionSessionConfig,
+        name: str = TEXT_EDITOR_INSERT_TOOL_NAME,
+        type: str = TEXT_EDITOR_INSERT_TOOL_NAME + "_v1",
+        description: str = TEXT_EDITOR_INSERT_TOOL_FN.metadata.description,
+    ) -> ToolSpec:
+        async def insert(
+            path: str,
+            insert_line: int,
+            new_str: str,
+        ) -> list[ResultContentBlockType]:
+            session = await self._session(config)
+            result = await session.insert(path, insert_line, new_str)
+            if not result.success:
+                raise RuntimeError(result.error or "Unable to insert text")
+            new_lines_list = new_str.splitlines()
+            return [
+                TextEditorCodeExecutionStrReplaceResultBlock(
+                    old_start=insert_line,
+                    new_start=insert_line,
+                    old_lines=0,
+                    new_lines=len(new_lines_list),
+                    lines=[f"+ {line}" for line in new_lines_list],
+                )
+            ]
+
+        return ToolSpec.from_defaults(
+            name=name,
+            type=type,
+            runtime="server",
+            event_adapter=TextEditorCodeExecutionEventAdapter,
+            description=description,
+            async_fn=insert,
+            requirements=[ToolRequirements.SANDBOX],
+            execution_metadata=build_rebuild_metadata(
+                rebuild_text_editor_insert_tool,
+                {
+                    "config": config,
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                },
+            ),
+        )
+
+
+async def rebuild_text_editor_view_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(TextEditorToolBuilder)
+    return await builder.build_view_tool(**cast(Any, kwargs))
+
+
+async def rebuild_text_editor_str_replace_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(TextEditorToolBuilder)
+    return await builder.build_str_replace_tool(**cast(Any, kwargs))
+
+
+async def rebuild_text_editor_create_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(TextEditorToolBuilder)
+    return await builder.build_create_tool(**cast(Any, kwargs))
+
+
+async def rebuild_text_editor_insert_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(TextEditorToolBuilder)
+    return await builder.build_insert_tool(**cast(Any, kwargs))

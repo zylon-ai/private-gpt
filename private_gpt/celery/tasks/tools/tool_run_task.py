@@ -1,0 +1,189 @@
+"""Celery task that executes a single tool call on a dedicated tools worker."""
+
+from __future__ import annotations
+
+import json
+import logging
+from typing import Any
+
+from private_gpt.celery.base import StatefulBackgroundTask
+from private_gpt.celery.celery import celery_app
+from private_gpt.components.engines.chat.checkpoint_store import (
+    ChatCheckpointStoreFactory,
+)
+from private_gpt.components.tools.remote_execution import (
+    ToolExecutionRequest,
+    ToolExecutionResponse,
+    build_error_response,
+    build_error_tool_message,
+    execute_tool_request,
+    resolve_tool_execution_interceptors,
+)
+from private_gpt.components.tools.tool_execution_outcome import (
+    ToolExecutionError,
+    ToolExecutionFailure,
+)
+from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
+from private_gpt.context import reinstall
+from private_gpt.di import get_global_injector
+from private_gpt.settings.settings import settings
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG if settings().server.debug_mode else logging.INFO)
+
+RESULT_FRAGMENT_LENGTH = 200
+
+
+@celery_app.task(
+    name="private_gpt.tools.run",
+    base=StatefulBackgroundTask,
+    ignore_result=False,
+)
+async def tool_run_task(*, request_data: dict[str, Any]) -> dict[str, Any]:
+    try:
+        request = ToolExecutionRequest.model_validate(request_data)
+    except Exception:
+        logger.exception("Invalid tool execution request")
+        raise
+
+    correlation_id = request.context.get("correlation_id")
+    message_id = request.context.get("message_id") or correlation_id
+    # The request's context bag is not serialized across the broker; reinstall
+    # it (from the snapshot captured at dispatch time) for the whole task so
+    # tool rebuilds, sandbox session creation and the completion enqueue all
+    # see the same request context.
+    with reinstall(request.context.get("_context")):
+        if not await _claim_tool_execution(request):
+            logger.warning(
+                "Duplicate tool execution suppressed correlation_id=%s message_id=%s "
+                "tool_id=%s tool_name=%s",
+                correlation_id,
+                message_id,
+                request.tool_id,
+                request.tool_name,
+            )
+            return _duplicate_execution_response(request).model_dump(mode="json")
+        logger.info(
+            "Tool execution started correlation_id=%s message_id=%s tool_id=%s",
+            correlation_id,
+            message_id,
+            request.tool_id,
+        )
+        try:
+            response = await execute_tool_request(
+                request,
+                interceptors=resolve_tool_execution_interceptors(
+                    request.interceptor_paths
+                ),
+            )
+        except Exception as exc:
+            logger.exception(
+                "Tool execution raised an exception correlation_id=%s message_id=%s "
+                "tool_id=%s",
+                correlation_id,
+                message_id,
+                request.tool_id,
+            )
+            response = build_error_response(request, exc)
+        else:
+            logger.debug(
+                "Tool execution completed correlation_id=%s "
+                "message_id=%s tool_id=%s tool_name=%s is_error=%s",
+                correlation_id,
+                message_id,
+                request.tool_id,
+                request.tool_name,
+                isinstance(response.outcome, ToolExecutionFailure),
+            )
+
+        logger.debug(
+            "Notifying tool completion correlation_id=%s "
+            "message_id=%s tool_id=%s tool_name=%s is_error=%s",
+            correlation_id,
+            message_id,
+            request.tool_id,
+            request.tool_name,
+            response.is_error,
+        )
+        try:
+            await _notify_completion(request, response)
+        except Exception:
+            logger.exception(
+                "Tool completion notification failed correlation_id=%s message_id=%s "
+                "tool_id=%s",
+                correlation_id,
+                message_id,
+                request.tool_id,
+            )
+            raise
+        finish_log = logger.error if response.is_error else logger.info
+        finish_log(
+            "Tool execution finished correlation_id=%s message_id=%s tool_id=%s "
+            "is_error=%s result=%s",
+            correlation_id,
+            message_id,
+            request.tool_id,
+            isinstance(response.outcome, ToolExecutionFailure),
+            _result_fragment(response),
+        )
+        return response.model_dump(mode="json")
+
+
+async def _claim_tool_execution(request: ToolExecutionRequest) -> bool:
+    correlation_id = request.context.get("correlation_id")
+    if not correlation_id or not request.tool_id:
+        return True
+    injector = get_global_injector(allow_to_generate_new_injectors=True)
+    store = injector.get(ChatCheckpointStoreFactory).get()
+    return await store.claim_action(
+        correlation_id,
+        f"tool:{request.tool_id}",
+    )
+
+
+def _duplicate_execution_response(
+    request: ToolExecutionRequest,
+) -> ToolExecutionResponse:
+    message = "Duplicate tool execution was suppressed."
+    return ToolExecutionResponse(
+        tool_name=request.tool_name,
+        tool_id=request.tool_id,
+        outcome=ToolExecutionFailure(
+            error=ToolExecutionError(
+                code="duplicate_execution",
+                message=message,
+            )
+        ),
+        tool_message=build_error_tool_message(request, message),
+    )
+
+
+async def _notify_completion(
+    request: ToolExecutionRequest,
+    response: ToolExecutionResponse,
+) -> None:
+    correlation_id = request.context.get("correlation_id")
+    if not correlation_id or not request.tool_id:
+        logger.debug(
+            "Skipping tool completion correlation_id=%s "
+            "message_id=%s tool_id=%s tool_name=%s",
+            correlation_id,
+            request.context.get("message_id") or correlation_id,
+            request.tool_id,
+            request.tool_name,
+        )
+        return
+    scheduler = get_global_injector(True).get(ToolSchedulerFactory).get()
+    await scheduler.complete(request, response)
+
+
+def _result_fragment(response: ToolExecutionResponse) -> str:
+    serialized = json.dumps(
+        response.model_dump(mode="json")["outcome"],
+        ensure_ascii=False,
+        default=str,
+    )
+    single_line = " ".join(serialized.split())
+    if len(single_line) <= RESULT_FRAGMENT_LENGTH:
+        return single_line
+    return f"{single_line[:RESULT_FRAGMENT_LENGTH]}..."

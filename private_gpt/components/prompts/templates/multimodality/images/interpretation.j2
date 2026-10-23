@@ -1,0 +1,173 @@
+{% set has_query = user_query is defined and user_query != "" %}
+{% set has_word_limit = max_words is defined and max_words %}
+{% set is_continuation = last_content is defined and last_content != "" %}
+{% set extraction_type = extraction_type if extraction_type is defined else "text" %}
+
+{% set has_query = user_query is defined and user_query != "" %}
+{% set has_word_limit = max_words is defined and max_words %}
+{% set has_evaluation = (errors is defined and errors) or (suggestions is defined and suggestions) %}
+{% set is_continuation = not has_evaluation and last_content is defined and last_content != "" %}
+{% set is_evaluation = has_evaluation  and last_content is defined and last_content != "" %}
+{% set extraction_type = extraction_type if extraction_type is defined else "text" %}
+{% set few_shots = few_shots if few_shots is defined and few_shots else false %}
+## Task
+Extract content from image and return as JSON: {"markdown": "...", "is_complete": true}
+`is_complete` must be true if all content is extracted, false if partial.
+
+**Important**:
+{% if has_red_box %}
+There is a red rectangle drawn around the region of interest. Extract **ONLY** the content **inside** this red box. **Ignore everything outside it. Do not include any text, numbers, or symbols from outside the red rectangle.**
+Use the rest of the image to understand context, but do not include any content outside the red border in your extraction if it is required to focus on that area.
+{% endif %}
+{% if has_query or has_word_limit or (language is defined and language != "en") %}
+
+## Context
+{% if has_query %}FOCUS: {{ user_query }}{% endif %}
+{% if has_word_limit %}LIMIT: {{ max_words }} words maximum{% endif %}
+{% if language is defined and language != "en" %}LANGUAGE: Extract in {{ language }}{% endif %}
+{% endif %}
+
+{% if is_evaluation %}
+
+### Issues found
+The previous extraction was incomplete or incorrect. You must re-extract the ENTIRE content from scratch, addressing ALL errors below:
+**Errors to fix:**
+{% for error in errors %}
+{{ loop.index }}. {{ error }}
+{% endfor %}
+
+**Previous (failed) extraction:**
+```markdown
+{{ last_content }}
+```
+{% endif %}
+{% if few_shots %}
+
+## Examples
+{% if extraction_type == "picture" %}
+**Picture Example:**
+```json
+{
+  "markdown": "A modern office space with three people working at laptops. The room has white walls, large windows with natural light, and wooden desks. Two women and one man are visible, all wearing casual business attire. There are potted plants on the windowsill and a whiteboard with diagrams in the background. The text 'Innovation Hub' is visible on a wall sign.",
+  "is_complete": true
+}
+```
+{% elif extraction_type == "chart" %}
+**Chart Example:**
+```json
+{
+  "markdown": "**Chart Type**: Line chart\n\n**Title**: Monthly Revenue Growth 2023\n\n**Axis**: X-axis: Months (Jan-Dec), Y-axis: Revenue ($K)\n\n**Legend**: Sales (blue), Marketing (red), Operations (green)\n\n**Data**:\n**Sales**: (Jan, 45) → (Jun, 78) → (Dec, 120)\n**Marketing**: (Jan, 23) → (Jun, 45) → (Dec, 67)\n**Operations**: (Jan, 12) → (Jun, 28) → (Dec, 43)\n\nSource: Internal Analytics, steady growth across all departments",
+  "is_complete": true
+}
+```
+{% elif extraction_type == "table" %}
+**Table Example:**
+```json
+{
+  "markdown": "| Product | Q1 Sales | Q2 Sales | Growth % |\n|---------|----------|----------|----------|\n| Widget A | $125,000 | $148,000 | 18.4% |\n| Widget B | $89,000 | $92,000 | 3.4% |\n| Widget C | $67,000 | $78,000 | 16.4% |\n| **Total** | **$281,000** | **$318,000** | **13.2%** |",
+  "is_complete": true
+}
+```
+{% elif extraction_type == "diagram" %}
+**Diagram Example:**
+```json
+{
+  "markdown": "**Title**: Data flows \n\n**Elements**: Input Box, Processing Unit, Decision Diamond, Output A, Output B\n\n**Connections**: Data flow from input through processing to decision point\n\n**Structure**:\n1. Input Box → Processing Unit\n2. Processing Unit → Decision Diamond\n3. Decision Diamond → Output A (Yes branch)\n4. Decision Diamond → Output B (No branch)\n\n**Labels**: 'Start Process', 'Validate Data', 'Valid?', 'Success', 'Error'",
+  "is_complete": true
+}
+```
+{% elif extraction_type == "form" %}
+**Form Example:**
+```json
+{
+  "markdown": "**Personal Information**\n- Full Name: [text field]\n- Email: [text field] \n- Phone: [text field]\n\n**Preferences**\n- Newsletter: ☑ Subscribe to updates\n- Contact Method: ○ Email ● Phone ○ SMS\n- Department: [dropdown: Sales selected]\n\n**Actions**\n- [Submit] [Cancel] buttons",
+  "is_complete": true
+}
+```
+{% elif extraction_type == "mixed" %}
+**Mixed Content Example:**
+```json
+{
+  "markdown": "# Annual Report Summary\n\n## Performance Metrics\n\n| Metric | 2022 | 2023 | Change |\n|--------|------|------|--------|\n| Revenue | $2.1M | $2.8M | +33% |\n| Users | 15K | 22K | +47% |\n\n## Process Flow\n\n**Elements**: Lead Generation, Qualification, Conversion\n\n**Structure**:\n1. Marketing → Lead Generation\n2. Lead Generation → Sales Qualification  \n3. Sales Qualification → Customer Conversion\n\n## Key Insights\n\nThe diagram shows our improved conversion funnel resulted in higher efficiency across all stages.",
+  "is_complete": true
+}
+```
+{% else %}
+**Text Example:**
+```json
+{
+  "markdown": "# Product Launch Guidelines\n\n## Phase 1: Planning\n- Define target market and objectives\n- Conduct competitive analysis\n- Set timeline and budget\n\n## Phase 2: Development\n- Create minimum viable product\n- Test with focus groups\n- Iterate based on feedback\n\n## Phase 3: Launch\n- Execute marketing campaign\n- Monitor key performance indicators\n- Adjust strategy as needed\n\n**Note**: All phases should include regular stakeholder reviews.",
+  "is_complete": true
+}
+```
+{% endif %}
+{% endif %}
+
+## Extraction Instructions
+{% if extraction_type == "picture" %}
+- Describe the image content in detail
+- Include colors, objects, people, and setting
+- Mention any visible text or labels
+- Use clear, concise language
+- Avoid assumptions about context or meaning
+
+{% elif extraction_type == "table" %}
+- Extract as Markdown table with exact data
+- Preserve headers, structure, and formatting
+- Leave empty cells empty, mark merged cells
+- Extract all cell data: copy text verbatim, describe images/icons with their meaning and context.
+- Ensure that table is syntactically correct in Markdown.
+- Do not create multi-indexed tables. Format compacting header rows if needed without losing information.
+- Always format a full table. If table does not have headers, create generic headers (Column 1, Column 2, etc.)
+
+It is CRITICAL to capture all data accurately, and output must be valid Markdown.
+Remember to focus on red bordered area if present.
+
+{% elif extraction_type == "chart" %}
+- Describe the chart in structured format:
+- **Chart Type**: [bar/line/pie/etc.]
+- **Title**: [main title and subtitle if applicable]
+- **Axis**: [x-axis and y-axis with units if applicable]
+- **Legend**: [item (color), item (color) if applicable]
+- **Data**: **Series**: (x,y) → (x,y) → (x,y) format for key points
+- **Final Notes**: [source, scale, notable features like trends, peaks, anomalies; if applicable]
+
+Important: If chart has annotations, or highlights, include those in the extraction. Do not INVENT data - only extract what is visible.
+Remember to focus on red bordered area if present.
+
+{% elif extraction_type == "diagram" %}
+Show the diagram structure clearly, representing ALL elements and connections.
+- **Title**: [title of the diagram if present]
+- **Structure**:
+  1. Element A → Element B
+  2. Element C → Element D
+
+Important: If diagram has external annotations or legends, include those in the extraction. If diagram is complex with multiple sections, break down each section clearly.
+It is critical to capture the relationships and flow accurately. Marking direction (arrows) and types of connections (dashed, solid) is important.
+Remember to focus on red bordered area if present.
+
+{% elif extraction_type == "form" %}
+- Extract as key-value pairs
+- Maintain field order and grouping
+- Note checkbox/radio states
+
+{% elif extraction_type == "mixed" %}
+- Identify and separate different content types
+- Extract tables using Markdown table syntax
+- Preserve text formatting and structure
+- Describe diagrams and visual elements
+- Maintain document flow and organization
+
+{% else %}
+- Use Markdown formatting (headers, lists, emphasis)
+- Preserve document structure and hierarchy
+- Extract all visible text systematically
+
+Important: Do not add interpretations or assumptions about the content. Focus on accurate extraction of visible information only.
+{% endif %}
+
+{% if is_continuation %}
+## Last Extraction
+Resume from where your previous extraction ended.
+Previous: {{ last_content }}
+{% endif %}

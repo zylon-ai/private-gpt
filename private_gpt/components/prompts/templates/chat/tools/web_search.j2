@@ -1,0 +1,22 @@
+{% set tool_name = namespace.tools.get("web_search_tool_name") %}
+
+<{{ tool_name }}>
+Retrieve real-time internet information when the knowledge base lacks needed data.
+
+This tool calls an external third-party service with strict rate limits that are very easy to reach. Exceeding them will return a 429 (Too Many Requests) error, blocking any further searches for the current response. Be conservative with every search.
+
+Use for: Current events, news, recent data (stocks, weather, sports), general knowledge{% if namespace.tools.get("has_semantic_search") %}, supplementing knowledge base results{% endif %}
+Execute one call at a time. After each result, evaluate whether another search is still necessary before proceeding. Stop as soon as you have enough information to compose the response.
+
+Rules:
+- Hard limit: 5 calls maximum per response.
+- Never issue a follow-up query whose answer could be inferred from results already retrieved.
+
+{% if few_shots == "True" %}
+
+Examples:
+- "Latest AI developments in Jan 2025" → query="latest AI developments January 2025"
+- "NVIDIA stock price" → query="NVIDIA stock price today"{% if namespace.tools.get("has_semantic_search") %}
+- After KB search on strategy + "what are industry trends?" → query="[industry] trends 2025"{% endif %}
+{% endif %}
+</{{ tool_name }}>

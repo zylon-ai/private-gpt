@@ -1,0 +1,203 @@
+---
+title: "Database Tools"
+description: "Install and configure built-in database query tools."
+---
+
+This page covers installation and server-side configuration for built-in database tools.
+
+Use this together with:
+
+- [Tools](/api-guide/tools) for request examples and runtime usage
+
+---
+
+## Supported database tools
+
+Built-in database tools include:
+
+- `database_query_v1`
+- `/v1/tools/database-query`
+
+---
+
+## How to install
+
+### Python extras
+
+Choose the smallest extra that matches your database:
+
+| Database | Extra | Installs |
+|---|---|---|
+| PostgreSQL | `private-gpt[database-postgres]` | `psycopg2-binary`, `asyncpg` |
+| MySQL | `private-gpt[database-mysql]` | `pymysql` |
+| SQL Server | `private-gpt[database-mssql]` | `pyodbc` |
+| DB2 | `private-gpt[database-db2]` | `ibm-db`, `ibm-db-sa` |
+| All database drivers | `private-gpt[database]` | all of the above |
+| Database tool bundle | `private-gpt[tool-database]` | `private-gpt[database]` |
+
+If you only want the database tool itself, `tool-database` is the simplest entry point. If you want a narrower install, use the driver-specific extra directly.
+
+<Warning>
+  DB2 support is only available on non-`aarch64` platforms in the current package metadata. On arm64 / Apple Silicon, the `database-db2` extra cannot be installed and DB2 is not supported.
+</Warning>
+
+Examples:
+
+```bash
+uv sync --extra database-postgres
+uv sync --extra database-mysql
+uv sync --extra database-mssql
+uv sync --extra database-db2
+uv sync --extra tool-database
+```
+
+`database_query_v1` will also work when you install broader bundles that include database support, such as `private-gpt[database]`, `private-gpt[tool-database]`, `private-gpt[tools]`, or `private-gpt[core]`.
+
+---
+
+### OS libraries required
+
+The Python drivers above need database client libraries from the operating system.
+
+| Database | What the driver needs | Notes |
+|---|---|---|
+| PostgreSQL | No extra OS package in most cases | `psycopg2-binary` and `asyncpg` bundle their own client libraries on common platforms. |
+| MySQL / MariaDB | MySQL/MariaDB client libraries | On Debian/Ubuntu the Dockerfile installs `libmariadb3`. On other distros install your MySQL/MariaDB client package. |
+| SQL Server | Microsoft ODBC driver | The Docker image installs `msodbcsql18` from Microsoft’s APT repo. Use the matching ODBC driver for your OS. |
+| DB2 | IBM DB2 client libraries | `ibm-db` uses IBM’s DB2 client; availability varies by platform and architecture. Not available on arm64 / Apple Silicon. |
+
+---
+
+## Install by environment
+
+<Tabs>
+  <Tab title="Docker">
+    When you use the published Docker image (`zylonai/private-gpt:latest` and variants), there is nothing extra to install for database tools: the image already contains the Python drivers and required OS libraries for all supported databases.
+
+    Only if you are **building your own image from source** do you need to think about extras:
+
+    ```bash
+    docker build \
+      --build-arg EXTRAS="core tool-database" \
+      -t private-gpt-db .
+    ```
+
+    This mirrors the official image behavior by:
+
+    - Installing the Python extras from the table above (`tool-database` → all `database-*` extras).
+    - Triggering the Dockerfile logic that installs OS-level libraries (`libmariadb3` for MySQL/MariaDB and `msodbcsql18` for SQL Server).
+
+    After that, run the image as usual:
+
+    ```bash
+    docker run -p 8080:8080 private-gpt-db
+    ```
+
+    You can still pass additional extras via `EXTRAS` if you also need ingestion, media, or other tools.
+  </Tab>
+  <Tab title="macOS">
+    For local macOS installs, first install PrivateGPT with database support (via `uv` or the package):
+
+    ```bash
+    # Example with uv source install
+    uv sync --frozen --extra core --extra tool-database
+    ```
+
+    Then ensure database client libraries are available:
+
+    - **PostgreSQL**: Install Postgres (includes client libs), for example:
+
+      ```bash
+      brew install postgresql
+      ```
+
+    - **MySQL / MariaDB** (matches the example setup script):
+
+      ```bash
+      brew install mysql pkg-config
+      ```
+
+    - **SQL Server**: Install the Microsoft ODBC driver for SQL Server, for example:
+
+      ```bash
+      brew install unixodbc freetds
+      brew tap microsoft/mssql-release https://github.com/Microsoft/homebrew-mssql-release
+      brew update
+      HOMEBREW_ACCEPT_EULA=Y brew install msodbcsql18 mssql-tools18
+      ```
+
+    - **DB2**: (non-arm64 only) Install IBM’s DB2 client for macOS and configure the environment according to IBM’s documentation; `ibm-db` will detect it. DB2 is not available on Apple Silicon.
+  </Tab>
+  <Tab title="Linux (Debian/Ubuntu)">
+    On Linux, install PrivateGPT with database support (for example with uv):
+
+    ```bash
+    uv sync --frozen --extra core --extra tool-database
+    ```
+
+    Then install the OS packages for your distribution.
+
+    For Debian/Ubuntu-like systems:
+
+    - **PostgreSQL**:
+
+      ```bash
+      sudo apt update
+      sudo apt install postgresql-client
+      ```
+
+    - **MySQL / MariaDB** (matches the Dockerfile’s `libmariadb3`):
+
+      ```bash
+      sudo apt update
+      sudo apt install libmariadb3
+      ```
+
+    - **SQL Server** (same approach as the Dockerfile):
+
+      ```bash
+      curl -sSL -O https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb
+      sudo dpkg -i packages-microsoft-prod.deb
+      rm packages-microsoft-prod.deb
+      sudo apt update
+      sudo ACCEPT_EULA=Y apt install msodbcsql18
+      ```
+
+    - **DB2** (non-arm64 only):
+
+      Install IBM’s DB2 client packages for your distribution and architecture, then configure as documented by IBM. The `database-db2` extra is only published for non-`aarch64` platforms and is not available on arm64.
+
+    After installing both the Python extras and the OS libraries, restart the server and `database_query_v1` will be able to connect to your configured databases.
+  </Tab>
+</Tabs>
+
+---
+
+## Settings reference
+
+Database query does not have a global `enabled` flag in `settings.yaml`. Instead, the server uses runtime limits from `database_query`, and each request provides the target database through a `sql_database` artifact.
+
+```yaml
+database_query:
+  timeout_seconds: 1000
+  batch_size: 1000
+  max_mb_result: 150
+```
+
+---
+
+### Settings
+
+| Setting | Description |
+|---|---|
+| `database_query.timeout_seconds` | Maximum time allowed for a database query. |
+| `database_query.batch_size` | Number of rows processed per batch. |
+| `database_query.max_mb_result` | Maximum response size in MB before truncation or failure. |
+
+---
+
+### Runtime requirement
+
+The database connection is not configured globally in `settings.yaml`. Pass it in the request as a `sql_database` artifact.
+
+See [Tools](/api-guide/tools) for Messages API and standalone tool endpoint examples.

@@ -1,0 +1,1 @@
+"""OpenAI compatibility utilities."""

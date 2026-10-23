@@ -1,0 +1,18 @@
+{% if system_prompt %}
+{{ system_prompt }}
+{% endif %}
+
+{% if rules %}
+{{ rules }}
+{% endif %}
+
+{% if user_query %}
+The user query is:
+`{{ user_query }}`
+Generate output in user language query, keeping consistency.
+{% endif %}
+
+{% if additional_instructions %}
+Finally, take into account these instructions:
+{{ additional_instructions }}
+{% endif %}

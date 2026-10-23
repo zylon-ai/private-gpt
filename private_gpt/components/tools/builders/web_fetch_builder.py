@@ -1,0 +1,90 @@
+from typing import Any, Literal, cast
+
+from injector import inject, singleton
+
+from private_gpt.components.chat.models.chat_config_models import ToolSpec
+from private_gpt.components.llm.llm_component import LLMComponent
+from private_gpt.components.tools.events.adapters import WebFetchEventAdapter
+from private_gpt.components.tools.remote_execution import build_rebuild_metadata
+from private_gpt.components.tools.tool_names import WEB_FETCH_TOOL_NAME
+from private_gpt.components.tools.tool_placeholders import WEB_FETCH_TOOL_FN
+from private_gpt.components.web.web_scraper_service import WebScraperService
+from private_gpt.di import get_global_injector
+from private_gpt.events.models import (
+    NO_TOOL_CONTENT,
+    ResultContentBlockType,
+    WebFetchResultBlock,
+)
+from private_gpt.observability.tracing import (
+    SpanKind,
+    retrieval_documents,
+    set_span_attributes,
+    start_span,
+)
+
+
+@singleton
+class WebFetchToolBuilder:
+    """A builder class for creating a web fetch tool.
+
+    This tool allows users to fetch and summarize content from a given URL.
+    It retrieves the content of the webpage
+    and processes it to extract relevant information.
+    """
+
+    @inject
+    def __init__(
+        self,
+        llm_component: LLMComponent,
+        web_scraper: WebScraperService,
+    ):
+        """Initialize the WebFetchToolBuilder with necessary components."""
+        self.llm_component = llm_component
+        self.web_scraper = web_scraper
+
+    def build_tool(
+        self,
+        name: str = WEB_FETCH_TOOL_NAME,
+        type: str = WEB_FETCH_TOOL_NAME + "_v1",
+        description: str = WEB_FETCH_TOOL_FN.metadata.description,
+        runtime: Literal["client", "server"] = "server",
+    ) -> ToolSpec:
+        async def run_tool(url: str) -> list[ResultContentBlockType]:
+            with start_span("web_fetch.scrape", SpanKind.RETRIEVER, input=url) as span:
+                result = await self.web_scraper.scrape_max_compress(url)
+                set_span_attributes(
+                    span,
+                    **retrieval_documents(
+                        [{"id": url, "content": result.markdown_content}]
+                    ),
+                )
+
+            return [
+                WebFetchResultBlock.from_markdown(
+                    url=url,
+                    markdown=result.markdown_content or NO_TOOL_CONTENT,
+                )
+            ]
+
+        return ToolSpec.from_defaults(
+            name=name,
+            type=type,
+            runtime=runtime,
+            event_adapter=WebFetchEventAdapter,
+            description=description,
+            async_fn=run_tool,
+            execution_metadata=build_rebuild_metadata(
+                rebuild_web_fetch_tool,
+                {
+                    "name": name,
+                    "type": type,
+                    "description": description,
+                    "runtime": runtime,
+                },
+            ),
+        )
+
+
+def rebuild_web_fetch_tool(**kwargs: Any) -> ToolSpec:
+    builder = get_global_injector().get(WebFetchToolBuilder)
+    return builder.build_tool(**cast(Any, kwargs))

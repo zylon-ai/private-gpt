@@ -1,0 +1,21 @@
+Analyze this audio and determine the optimal transcription strategy.
+Consider content type (speech, music, conversation, lecture, podcast, interview, ambient, or mixed), audio quality, language, number of speakers, background noise levels, and whether audio enhancement is needed.
+Return as a JSON object with the following structure:
+{
+  "type": "speech|music|conversation|lecture|podcast|interview|ambient|mixed",
+  "confidence": 0.0-1.0,
+  "language": "language_code",
+  "has_multiple_speakers": true|false,
+  "has_background_noise": true|false,
+  "enhance_audio": true|false,
+  "speaker_diarization": true|false
+}
+
+Focus on:
+- Primary content type and secondary characteristics
+- Audio clarity and quality (signal-to-noise ratio)
+- Number of distinct speakers or voices
+- Background noise, music, or ambient sounds
+- Language and accent detection
+- Whether noise reduction or normalization would improve transcription
+- Whether speaker separation would be beneficial

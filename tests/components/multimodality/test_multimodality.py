@@ -1,0 +1,896 @@
+from typing import TYPE_CHECKING, Any
+
+import pytest
+from llama_index.core.base.llms.types import (
+    AudioBlock,
+    ImageBlock,
+    TextBlock,
+)
+from llama_index.core.llms import LLM, ChatMessage, MessageRole
+from pydantic import Field
+
+from private_gpt.components.chat.processors.chat_history.multimodality.audio_preprocessor import (
+    preprocess_audio_message,
+)
+from private_gpt.components.chat.processors.chat_history.multimodality.image_preprocessor import (
+    preprocess_image_message,
+)
+from private_gpt.components.chat.processors.chat_history.multimodality.multimodality_preprocessor import (
+    preprocess_multimodal_history,
+    preprocess_multimodal_message,
+)
+from private_gpt.components.chat.processors.chat_history.multimodality.utils import (
+    extract_audio_blocks,
+    extract_image_blocks,
+    requires_image_preprocessing,
+)
+from private_gpt.components.llm.custom.mock import FunctionCallingLLMMock
+from private_gpt.components.multimodality.image_handler import (
+    ExtractionContent,
+    ExtractionEvaluation,
+    ExtractionStrategy,
+)
+
+if TYPE_CHECKING:
+    from private_gpt.components.chat.processors.chat_history.multimodality.models import (
+        MultimodalProcessingResponse,
+    )
+
+
+class MockLLM(FunctionCallingLLMMock):
+    responses: list[Any] = Field(default_factory=list)
+    call_count: int = Field(default=0)
+    messages_history: list[list[ChatMessage]] = Field(default_factory=list)
+
+    def __init__(self, responses: list[Any] | None = None, **kwargs: Any) -> None:
+        # Initialize parent class with only its expected parameters
+        super().__init__(**kwargs)
+
+        # Set our custom fields after parent initialization
+        if responses is not None:
+            self.responses = responses
+        self.responses = self.responses or []
+        self.call_count = 0
+        self.messages_history = []
+
+    async def astructured_chat(
+        self, output_cls: type, messages: list[ChatMessage], **kwargs: Any
+    ) -> Any:
+        self.messages_history.append(messages)
+        if self.call_count < len(self.responses):
+            response = self.responses[self.call_count]
+            self.call_count += 1
+            return response
+        raise IndexError("No more mock responses available")
+
+
+@pytest.fixture
+def main_llm() -> LLM:
+    return MockLLM()
+
+
+@pytest.fixture
+def image_llm() -> LLM:
+    mock_responses = [
+        # Strategy inference
+        ExtractionStrategy(
+            type="table",
+            confidence=0.95,
+            language="en",
+            has_structure=True,
+            increase_contrast=False,
+        ),
+        # Content extraction (complete)
+        ExtractionContent(
+            markdown="Describe these images",
+            is_complete=True,
+        ),
+        # Evaluation (passes)
+        ExtractionEvaluation(
+            score=0.9,
+            issues_found=[],
+        ),
+    ]
+
+    llm = MockLLM(responses=mock_responses)
+    return llm
+
+
+@pytest.fixture
+def audio_llm() -> LLM:
+    from private_gpt.components.multimodality.audio_handler import (
+        TimestampSegment,
+        TranscriptionContent,
+        TranscriptionEvaluation,
+        TranscriptionStrategy,
+    )
+
+    mock_responses = [
+        TranscriptionStrategy(
+            type="speech",
+            confidence=0.9,
+            language="en",
+            has_multiple_speakers=False,
+            has_background_noise=False,
+            enhance_audio=False,
+            speaker_diarization=False,
+        ),
+        TranscriptionContent(
+            timestamps=[
+                TimestampSegment(
+                    start=0.0,
+                    end=2.5,
+                    speaker="Speaker 1",
+                    text="Hello, how are you today?",
+                )
+            ],
+            is_complete=True,
+        ),
+        TranscriptionContent(
+            timestamps=[
+                TimestampSegment(
+                    start=0.0,
+                    end=2.5,
+                    speaker="Speaker 1",
+                    text="This is chunk two.",
+                )
+            ],
+            is_complete=True,
+        ),
+        TranscriptionContent(
+            timestamps=[
+                TimestampSegment(
+                    start=0.0,
+                    end=2.5,
+                    speaker="Speaker 1",
+                    text="This is chunk three.",
+                )
+            ],
+            is_complete=True,
+        ),
+        TranscriptionContent(
+            timestamps=[
+                TimestampSegment(
+                    start=0.0,
+                    end=2.5,
+                    speaker="Speaker 1",
+                    text="This is chunk four.",
+                )
+            ],
+            is_complete=True,
+        ),
+        TranscriptionContent(
+            timestamps=[
+                TimestampSegment(
+                    start=0.0,
+                    end=2.5,
+                    speaker="Speaker 1",
+                    text="This is chunk five.",
+                )
+            ],
+            is_complete=True,
+        ),
+        TranscriptionEvaluation(
+            score=0.9,
+            issues_found=[],
+            clarity=0.85,
+        ),
+    ]
+
+    llm = MockLLM(responses=mock_responses)
+    return llm
+
+
+@pytest.fixture
+def text_message() -> ChatMessage:
+    return ChatMessage(
+        role=MessageRole.USER,
+        blocks=[TextBlock(text="Hello, how are you?")],
+    )
+
+
+@pytest.fixture
+def image_message() -> ChatMessage:
+    return ChatMessage(
+        role=MessageRole.USER,
+        blocks=[
+            TextBlock(text="Describe these images"),
+            ImageBlock(url="https://picsum.photos/200/300"),
+            ImageBlock(url="https://picsum.photos/200/300"),
+        ],
+    )
+
+
+@pytest.fixture
+def audio_message() -> ChatMessage:
+    return ChatMessage(
+        role=MessageRole.USER,
+        blocks=[
+            TextBlock(text="Transcribe this audio"),
+            AudioBlock(
+                url="https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3"
+            ),
+        ],
+    )
+
+
+@pytest.fixture
+def multimodal_message() -> ChatMessage:
+    return ChatMessage(
+        role=MessageRole.USER,
+        blocks=[
+            TextBlock(text="Process this media"),
+            ImageBlock(url="https://picsum.photos/200/300"),
+            AudioBlock(
+                url="https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3"
+            ),
+        ],
+    )
+
+
+class TestImagePreprocessing:
+    @pytest.mark.asyncio
+    async def test_same_llm_no_preprocessing(
+        self, main_llm: LLM, image_message: ChatMessage
+    ) -> None:
+        responses = []
+        async for response in preprocess_image_message(
+            main_llm, image_message, main_llm
+        ):
+            responses.append(response)
+
+        result = responses[-1].message
+        assert result is image_message
+
+    @pytest.mark.asyncio
+    async def test_different_llm_preprocessing_occurs(
+        self, main_llm: LLM, image_llm: LLM, image_message: ChatMessage
+    ) -> None:
+        responses = []
+        async for response in preprocess_image_message(
+            main_llm, image_message, image_llm
+        ):
+            responses.append(response)
+
+        result = responses[-1].message
+        assert result is not None
+        assert "images in their message" in str(result.blocks[-1].text)
+        assert result.role == MessageRole.USER
+        assert len(result.blocks) >= 2
+        assert isinstance(result.blocks[-1], TextBlock)
+
+    @pytest.mark.asyncio
+    async def test_text_message_passes_through(
+        self, main_llm: LLM, image_llm: LLM, text_message: ChatMessage
+    ) -> None:
+        responses = []
+        async for response in preprocess_image_message(
+            main_llm, text_message, image_llm
+        ):
+            responses.append(response)
+
+        result = responses[-1].message
+        assert result is text_message
+
+    @pytest.mark.asyncio
+    async def test_missing_image_llm_raises_error(
+        self, main_llm: LLM, image_message: ChatMessage
+    ) -> None:
+        with pytest.raises(
+            ValueError, match="Image blocks found but no image-capable LLM"
+        ):
+            async for _ in preprocess_image_message(main_llm, image_message, None):
+                pass
+
+
+class TestAudioPreprocessing:
+    @pytest.mark.asyncio
+    async def test_same_llm_no_preprocessing(
+        self, main_llm: LLM, audio_message: ChatMessage
+    ) -> None:
+        responses = []
+        async for response in preprocess_audio_message(
+            main_llm, audio_message, main_llm
+        ):
+            responses.append(response)
+
+        result = responses[-1].message
+        assert result is audio_message
+
+    @pytest.mark.asyncio
+    async def test_different_llm_preprocessing_occurs(
+        self, main_llm: LLM, audio_llm: LLM, audio_message: ChatMessage
+    ) -> None:
+        responses = []
+        async for response in preprocess_audio_message(
+            main_llm, audio_message, audio_llm
+        ):
+            responses.append(response)
+
+        result = responses[-1].message
+        assert result is not None
+        assert "audios in their message" in str(result.blocks[-1].text)
+        assert result.role == MessageRole.USER
+        assert len(result.blocks) >= 2
+        assert isinstance(result.blocks[-1], TextBlock)
+
+    @pytest.mark.asyncio
+    async def test_text_message_passes_through(
+        self, main_llm: LLM, audio_llm: LLM, text_message: ChatMessage
+    ) -> None:
+        responses = []
+        async for response in preprocess_audio_message(
+            main_llm, text_message, audio_llm
+        ):
+            responses.append(response)
+
+        result = responses[-1].message
+        assert result is text_message
+
+    @pytest.mark.asyncio
+    async def test_missing_audio_llm_raises_error(
+        self, main_llm: LLM, audio_message: ChatMessage
+    ) -> None:
+        with pytest.raises(
+            ValueError, match="Audio blocks found but no audio-capable LLM"
+        ):
+            async for _ in preprocess_audio_message(main_llm, audio_message, None):
+                pass
+
+
+class TestMultimodalPreprocessing:
+    @pytest.mark.asyncio
+    async def test_same_llms_no_preprocessing(
+        self, main_llm: LLM, multimodal_message: ChatMessage
+    ) -> None:
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_message(
+            main_llm,
+            multimodal_message.model_copy(),
+            image_multimodal_llm=main_llm,
+            audio_multimodal_llm=main_llm,
+        ):
+            responses.append(response)
+
+        result = responses[-1].modified_message
+        assert result.content == multimodal_message.content
+        assert result.role == multimodal_message.role
+
+    @pytest.mark.asyncio
+    async def test_image_only_preprocessing(
+        self, main_llm: LLM, image_llm: LLM, image_message: ChatMessage
+    ) -> None:
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_message(
+            main_llm,
+            image_message,
+            image_multimodal_llm=image_llm,
+            audio_multimodal_llm=main_llm,
+        ):
+            responses.append(response)
+
+        result = responses[-1].modified_message
+        assert len(result.blocks) >= 2
+        assert isinstance(result.blocks[-1], TextBlock)
+        assert "images in their message" in result.blocks[-1].text
+
+    @pytest.mark.asyncio
+    async def test_audio_only_preprocessing(
+        self,
+        main_llm: LLM,
+        image_llm: LLM,
+        audio_llm: LLM,
+        multimodal_message: ChatMessage,
+    ) -> None:
+        # Audio processing now yields failed status instead of raising directly
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_message(
+            main_llm,
+            multimodal_message.model_copy(),
+            image_multimodal_llm=image_llm,
+            audio_multimodal_llm=audio_llm,
+        ):
+            responses.append(response)
+
+        result = responses[-1].modified_message
+        assert len(result.blocks) >= 2
+        assert isinstance(result.blocks[-1], TextBlock)
+        assert "audios in their message" in result.blocks[-1].text
+
+    @pytest.mark.asyncio
+    async def test_text_message_passes_through(
+        self,
+        main_llm: LLM,
+        image_llm: LLM,
+        audio_llm: LLM,
+        text_message: ChatMessage,
+    ) -> None:
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_message(
+            main_llm,
+            text_message,
+            image_multimodal_llm=image_llm,
+            audio_multimodal_llm=audio_llm,
+        ):
+            responses.append(response)
+
+        result = responses[-1].modified_message
+        assert result.content == text_message.content
+        assert result.role == text_message.role
+
+
+class TestHistoryPreprocessing:
+    @pytest.mark.asyncio
+    async def test_same_llm_no_preprocessing(
+        self, main_llm: LLM, text_message: ChatMessage, image_message: ChatMessage
+    ) -> None:
+        history = [text_message, image_message]
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm,
+            history,
+            image_multimodal_llm=main_llm,
+            audio_multimodal_llm=main_llm,
+        ):
+            responses.append(response)
+
+        result = responses[-1].chat_history
+        assert len(result) == len(history)
+        assert result[0].content == text_message.content
+        assert result[1].content == image_message.content
+
+    @pytest.mark.asyncio
+    async def test_processes_most_recent_user_message(
+        self,
+        main_llm: LLM,
+        image_llm: LLM,
+        text_message: ChatMessage,
+        image_message: ChatMessage,
+    ) -> None:
+        history = [
+            ChatMessage(
+                role=MessageRole.USER,
+                content="First",
+                blocks=[ImageBlock(url="https://picsum.photos/300/300")],
+            ),
+            ChatMessage(role=MessageRole.ASSISTANT, content="Response", blocks=[]),
+            image_message,
+        ]
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm, history, image_multimodal_llm=image_llm, audio_multimodal_llm=None
+        ):
+            responses.append(response)
+
+        result = responses[-1].chat_history
+        assert len(result) == 3
+        assert len(result[2].blocks) >= 2
+        assert isinstance(result[2].blocks[-1], TextBlock)
+        assert "images in their message" in result[2].blocks[-1].text
+
+        assert result[0].content == "First"
+        assert all(isinstance(block, TextBlock) for block in result[0].blocks)
+
+    @pytest.mark.asyncio
+    async def test_keeps_supported_images_across_history_within_limit(
+        self, main_llm: LLM
+    ) -> None:
+        history = [
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="First"),
+                    ImageBlock(url="https://picsum.photos/1/1"),
+                    ImageBlock(url="https://picsum.photos/2/2"),
+                ],
+            ),
+            ChatMessage(role=MessageRole.ASSISTANT, content="Response", blocks=[]),
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="Second"),
+                    ImageBlock(url="https://picsum.photos/3/3"),
+                    ImageBlock(url="https://picsum.photos/4/4"),
+                ],
+            ),
+        ]
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm,
+            history,
+            image_multimodal_llm=main_llm,
+            audio_multimodal_llm=None,
+            max_images=2,
+        ):
+            responses.append(response)
+
+        result = responses[-1].chat_history
+        # The last user message keeps its images raw (native support).
+        assert len(extract_image_blocks(result[2])) == 2
+        # No budget left, so the older message's images are dropped.
+        assert extract_image_blocks(result[0]) == []
+        assert result[0].content == "First"
+
+    @pytest.mark.asyncio
+    async def test_keeps_latest_images_when_history_exceeds_limit(
+        self, main_llm: LLM
+    ) -> None:
+        history = [
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="First"),
+                    ImageBlock(url="https://picsum.photos/1/1"),
+                    ImageBlock(url="https://picsum.photos/2/2"),
+                    ImageBlock(url="https://picsum.photos/3/3"),
+                ],
+            ),
+            ChatMessage(role=MessageRole.ASSISTANT, content="Response", blocks=[]),
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="Second"),
+                    ImageBlock(url="https://picsum.photos/4/4"),
+                    ImageBlock(url="https://picsum.photos/5/5"),
+                ],
+            ),
+        ]
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm,
+            history,
+            image_multimodal_llm=main_llm,
+            audio_multimodal_llm=None,
+            max_images=3,
+        ):
+            responses.append(response)
+
+        result = responses[-1].chat_history
+        assert len(extract_image_blocks(result[2])) == 2
+        # Only the latest image of the older message fits within the budget.
+        kept = extract_image_blocks(result[0])
+        assert len(kept) == 1
+        assert str(kept[0].url) == "https://picsum.photos/3/3"
+
+    @pytest.mark.asyncio
+    async def test_keeps_supported_images_and_audio_with_independent_limits(
+        self, main_llm: LLM
+    ) -> None:
+        history = [
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="First"),
+                    ImageBlock(url="https://picsum.photos/1/1"),
+                    AudioBlock(url="https://example.com/a1.mp3"),
+                ],
+            ),
+            ChatMessage(role=MessageRole.ASSISTANT, content="Response", blocks=[]),
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="Second"),
+                    ImageBlock(url="https://picsum.photos/2/2"),
+                    ImageBlock(url="https://picsum.photos/3/3"),
+                    AudioBlock(url="https://example.com/a2.mp3"),
+                    AudioBlock(url="https://example.com/a3.mp3"),
+                ],
+            ),
+        ]
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm,
+            history,
+            image_multimodal_llm=main_llm,
+            audio_multimodal_llm=main_llm,
+            max_images=2,
+            max_audios=3,
+        ):
+            responses.append(response)
+
+        result = responses[-1].chat_history
+        # The last user message keeps its images and audios raw.
+        assert len(extract_image_blocks(result[2])) == 2
+        assert len(extract_audio_blocks(result[2])) == 2
+        # The older message keeps nothing for images and one audio slot.
+        assert extract_image_blocks(result[0]) == []
+        kept_audios = extract_audio_blocks(result[0])
+        assert len(kept_audios) == 1
+        assert str(kept_audios[0].url) == "https://example.com/a1.mp3"
+
+    @pytest.mark.asyncio
+    async def test_keeps_all_supported_media_without_limit(self, main_llm: LLM) -> None:
+        history = [
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="First"),
+                    ImageBlock(url="https://picsum.photos/1/1"),
+                ],
+            ),
+            ChatMessage(role=MessageRole.ASSISTANT, content="Response", blocks=[]),
+            ChatMessage(
+                role=MessageRole.USER,
+                blocks=[
+                    TextBlock(text="Second"),
+                    ImageBlock(url="https://picsum.photos/2/2"),
+                ],
+            ),
+        ]
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm,
+            history,
+            image_multimodal_llm=main_llm,
+            audio_multimodal_llm=None,
+        ):
+            responses.append(response)
+
+        result = responses[-1].chat_history
+        assert len(extract_image_blocks(result[0])) == 1
+        assert len(extract_image_blocks(result[2])) == 1
+
+    @pytest.mark.asyncio
+    async def test_empty_history_returns_none(
+        self, main_llm: LLM, image_llm: LLM
+    ) -> None:
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm, None, image_multimodal_llm=image_llm, audio_multimodal_llm=None
+        ):
+            responses.append(response)
+
+        assert len(responses) == 1
+        assert responses[0].chat_history is None
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm, [], image_multimodal_llm=image_llm, audio_multimodal_llm=None
+        ):
+            responses.append(response)
+
+        assert len(responses) == 1
+        assert responses[0].chat_history == []
+
+
+class TestTypeChecking:
+    def test_llm_objects_identity_comparison(
+        self, main_llm: LLM, image_llm: LLM
+    ) -> None:
+        assert not requires_image_preprocessing(main_llm, main_llm)
+        assert requires_image_preprocessing(main_llm, image_llm)
+        assert requires_image_preprocessing(main_llm, None)
+
+    def test_extract_functions_return_correct_types(
+        self, multimodal_message: ChatMessage
+    ) -> None:
+        images = extract_image_blocks(multimodal_message)
+        audios = extract_audio_blocks(multimodal_message)
+
+        assert isinstance(images, list)
+        assert isinstance(audios, list)
+        assert len(images) == 1
+        assert len(audios) == 1
+        assert isinstance(images[0], ImageBlock)
+        assert isinstance(audios[0], AudioBlock)
+
+
+@pytest.mark.parametrize(
+    ("same_image_llm", "same_audio_llm", "expected_preprocessing"),
+    [
+        (True, True, False),
+        (True, False, True),
+        (False, True, True),
+        (False, False, True),
+    ],
+)
+class TestParametrizedPreprocessing:
+    @pytest.mark.asyncio
+    async def test_preprocessing_decision_logic(
+        self,
+        main_llm: LLM,
+        image_llm: LLM,
+        audio_llm: LLM,
+        multimodal_message: ChatMessage,
+        same_image_llm: bool,
+        same_audio_llm: bool,
+        expected_preprocessing: bool,
+    ) -> None:
+        actual_image_llm = main_llm if same_image_llm else image_llm
+        actual_audio_llm = main_llm if same_audio_llm else audio_llm
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_message(
+            main_llm,
+            multimodal_message.model_copy(),
+            image_multimodal_llm=actual_image_llm,
+            audio_multimodal_llm=actual_audio_llm,
+        ):
+            responses.append(response)
+
+        result = responses[-1].modified_message
+        if expected_preprocessing:
+            assert result.content != multimodal_message.content
+            if not same_image_llm:
+                assert len(result.blocks) >= 2
+                assert any(
+                    "images in their message" in block.text
+                    for block in result.blocks
+                    if isinstance(block, TextBlock)
+                )
+            if not same_audio_llm:
+                assert any(
+                    "audios in their message" in block.text
+                    for block in result.blocks
+                    if isinstance(block, TextBlock)
+                )
+        else:
+            assert result.content == multimodal_message.content
+            assert result.role == multimodal_message.role
+
+
+@pytest.mark.asyncio
+async def test_history_preprocessing_preserves_tool_metadata(main_llm: LLM) -> None:
+    tool_calls = [{"tool_id": "call-1", "tool_name": "load_skill", "tool_kwargs": {}}]
+    history = [
+        ChatMessage(role=MessageRole.USER, content="Create a skill"),
+        ChatMessage(
+            role=MessageRole.ASSISTANT,
+            content=None,
+            additional_kwargs={"tool_calls": tool_calls},
+        ),
+        ChatMessage(
+            role=MessageRole.TOOL,
+            content='{"loaded": true}',
+            additional_kwargs={
+                "tool_call_id": "call-1",
+                "tool_call_name": "load_skill",
+            },
+        ),
+        ChatMessage(role=MessageRole.USER, content="Continue"),
+    ]
+
+    responses: list[MultimodalProcessingResponse] = []
+    async for response in preprocess_multimodal_history(
+        main_llm,
+        history,
+        image_multimodal_llm=main_llm,
+        audio_multimodal_llm=main_llm,
+    ):
+        responses.append(response)
+
+    result = responses[-1].chat_history
+    assert result is not None
+    assert result[1].additional_kwargs["tool_calls"] == tool_calls
+    assert result[2].additional_kwargs == {
+        "tool_call_id": "call-1",
+        "tool_call_name": "load_skill",
+    }
+
+
+class TestMultimodalFailureIsReportedNotRaised:
+    """Per-modality failures become ``failed`` statuses, never exceptions.
+
+    ``preprocess_multimodal_message`` used to re-raise ``RequestTooLarge`` after
+    yielding the ``failed`` status, which escaped the interceptor after the
+    ``tool_use`` had already been emitted and left the chat KO.
+    """
+
+    @pytest.mark.asyncio
+    async def test_image_request_too_large_yields_failed_status(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        main_llm: LLM,
+        image_llm: LLM,
+        image_message: ChatMessage,
+    ) -> None:
+        from private_gpt.events.event_errors import Errors
+
+        async def _too_large(*_args: Any, **_kwargs: Any) -> str:
+            raise Errors.RequestTooLarge("image payload too large")
+
+        monkeypatch.setattr(
+            "private_gpt.components.chat.processors.chat_history.multimodality."
+            "image_preprocessor.process_images_in_message",
+            _too_large,
+        )
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_message(
+            main_llm, image_message, image_multimodal_llm=image_llm
+        ):
+            responses.append(response)
+
+        statuses = [r.processing_status for r in responses if r.processing_status]
+        failed = [s for s in statuses if s.status == "failed"]
+        assert len(failed) == 1
+        assert failed[0].type == "image"
+        assert "too large" in (failed[0].error_detail or "")
+
+        result = responses[-1].modified_message
+        assert result is not None
+        assert not extract_image_blocks(result)
+        assert isinstance(result.blocks[-1], TextBlock)
+        assert "unable to process these images" in result.blocks[-1].text
+
+    @pytest.mark.asyncio
+    async def test_audio_request_too_large_yields_failed_status(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        main_llm: LLM,
+        audio_llm: LLM,
+        audio_message: ChatMessage,
+    ) -> None:
+        from private_gpt.events.event_errors import Errors
+
+        async def _too_large(*_args: Any, **_kwargs: Any) -> str:
+            raise Errors.RequestTooLarge("audio payload too large")
+
+        monkeypatch.setattr(
+            "private_gpt.components.chat.processors.chat_history.multimodality."
+            "audio_preprocessor.process_audio_in_message",
+            _too_large,
+        )
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_history(
+            main_llm, [audio_message], audio_multimodal_llm=audio_llm
+        ):
+            responses.append(response)
+
+        statuses = [r.processing_status for r in responses if r.processing_status]
+        failed = [s for s in statuses if s.status == "failed"]
+        assert len(failed) == 1
+        assert failed[0].type == "audio"
+        assert "too large" in (failed[0].error_detail or "")
+
+        history = responses[-1].chat_history
+        assert history is not None
+        assert not extract_audio_blocks(history[-1])
+
+    @pytest.mark.asyncio
+    async def test_unexpected_image_failure_yields_failed_status(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        main_llm: LLM,
+        image_llm: LLM,
+        image_message: ChatMessage,
+    ) -> None:
+        """A failure outside the per-modality try block must not be swallowed.
+
+        ``normalize_result`` used to turn such exceptions into "no statuses",
+        so the emitted ``processing`` status never got a terminal one and the
+        untouched image blocks were forwarded to a model that cannot read them.
+        """
+
+        async def _explode(*_args: Any, **_kwargs: Any) -> Any:
+            raise RuntimeError("image pipeline crashed")
+            yield  # pragma: no cover - makes this an async generator
+
+        monkeypatch.setattr(
+            "private_gpt.components.chat.processors.chat_history.multimodality."
+            "multimodality_preprocessor.preprocess_image_message",
+            _explode,
+        )
+
+        responses: list[MultimodalProcessingResponse] = []
+        async for response in preprocess_multimodal_message(
+            main_llm, image_message, image_multimodal_llm=image_llm
+        ):
+            responses.append(response)
+
+        statuses = [r.processing_status for r in responses if r.processing_status]
+        assert [s.status for s in statuses] == ["processing", "failed"]
+        assert "crashed" in (statuses[-1].error_detail or "")
+
+        result = responses[-1].modified_message
+        assert result is not None
+        assert not extract_image_blocks(result)
+        assert isinstance(result.blocks[-1], TextBlock)
+        assert "unable to process these images" in result.blocks[-1].text

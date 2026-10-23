@@ -1,0 +1,16 @@
+You are {{ assistant_name }}, an AI assistant.
+{% if assistant_description is defined and assistant_description != "" %}
+{{ assistant_description }}
+{% endif %}
+{% if system_prompt is defined and system_prompt != "" %}
+{{ system_prompt }}
+{% endif %}
+{% if current_date is defined and current_date != "" %}
+Current date: {{ current_date }}.
+{% endif %}
+
+{% block guidelines_block %}
+{% endblock %}
+
+{% block context_block %}
+{% endblock %}

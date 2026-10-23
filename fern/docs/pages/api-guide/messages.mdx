@@ -1,0 +1,187 @@
+---
+title: "Messages"
+description: "The core Messages API — chat, streaming, token counting, validation, and async."
+---
+
+The Messages API (`POST /v1/messages`) is the primary endpoint for generating responses. It accepts a conversation history and returns a model reply.
+
+---
+
+## Basic usage
+
+```bash
+curl http://localhost:8080/v1/messages \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3.5:35b",
+    "messages": [
+      {"role": "user", "content": "Explain retrieval-augmented generation."}
+    ]
+  }'
+```
+
+---
+
+## Streaming
+
+Set `"stream": true` to receive a Server-Sent Events stream instead of a single JSON response:
+
+```bash
+curl http://localhost:8080/v1/messages \
+  -H "Content-Type: application/json" \
+  -d '{"model": "qwen3.5:35b", "stream": true, "messages": [...]}'
+```
+
+---
+
+## Context — documents, databases, web
+
+Pass `tool_context` to give the model access to ingested documents or databases.
+
+**Ingested documents** (retrieval with citations):
+
+```json
+{
+  "model": "qwen3.5:35b",
+  "messages": [{"role": "user", "content": "Summarise the contract."}],
+  "tool_context": [
+    {
+      "type": "ingested_artifact",
+      "context_filter": {
+        "collection": "my-collection",
+        "artifacts": ["artifact-id-1"]
+      }
+    }
+  ]
+}
+```
+
+**SQL database** (natural language to SQL):
+
+```json
+{
+  "tool_context": [
+    {
+      "type": "sql_database",
+      "connection_string": "postgresql://user:pass@localhost:5432/mydb",
+      "description": "Sales database"
+    }
+  ]
+}
+```
+
+---
+
+## Tools
+
+Pass built-in server tools or custom tools in the `tools` array.
+
+Built-in tool dependencies are granular. Install the specific extra you need, or use `private-gpt[tools]` as the bundle fallback. `private-gpt[core]` also includes that bundle.
+
+**Built-in server tools** — reference by `type`:
+
+Built-in tools only require `name` and `type`. Do not provide `inputSchema` for built-in tools. Add `context` only for built-in tools that require it. See [Tools](/api-guide/tools) for the full chat-first reference, including skills, code execution, client tools, and per-tool examples.
+
+```json
+{
+  "tools": [
+    {"name": "search_docs", "type": "semantic_search_v1"},
+    {"name": "analyze_sales", "type": "tabular_analysis_v1"},
+    {"name": "query_db", "type": "database_query_v1"},
+    {"name": "search_web", "type": "web_search_v1"},
+    {"name": "fetch_url", "type": "web_fetch_v1"},
+    {"name": "skills", "type": "skills_v1"},
+    {"name": "code_execution", "type": "code_execution_v1"}
+  ]
+}
+```
+
+**Custom tools** — define `inputSchema` (JSON Schema):
+
+For the broadest tool-calling support, use `private-gpt[tools]` or `private-gpt[core]`.
+
+```json
+{
+  "tools": [
+    {
+      "name": "get_weather",
+      "description": "Get current weather for a city",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "city": {"type": "string"}
+        },
+        "required": ["city"]
+      }
+    }
+  ]
+}
+```
+
+The model will return a `tool_use` block when it wants to call a tool. Your application runs the tool and sends the result back as a `tool_result` message.
+
+---
+
+## MCP servers
+
+Connect MCP servers to extend what tools the model can call:
+
+Requires `private-gpt[tool-mcp]`, or use `private-gpt[tools]` or `private-gpt[core]`.
+
+```json
+{
+  "mcp_servers": [
+    {
+      "name": "my-mcp",
+      "url": "https://my-mcp-server.example.com",
+      "authorization_token": "token"
+    }
+  ]
+}
+```
+
+---
+
+## Sampling parameters
+
+| Parameter | Description |
+|---|---|
+| `temperature` | Randomness (0 = deterministic, higher = more creative) |
+| `top_p` | Nucleus sampling — cumulative probability mass |
+| `top_k` | Limit selection to top K tokens |
+| `max_tokens` | Maximum tokens to generate |
+| `stop_sequences` | List of strings that stop generation when matched |
+
+---
+
+## Count tokens
+
+Estimate the token count of a request without running inference:
+
+```bash
+curl http://localhost:8080/v1/messages/count_tokens \
+  -H "Content-Type: application/json" \
+  -d '{"model": "qwen3.5:35b", "messages": [...]}'
+```
+
+Returns `{"input_tokens": 142}`.
+
+---
+
+## Validate
+
+Dry-run a request to check it is valid without generating a response:
+
+```bash
+curl http://localhost:8080/v1/messages/validate \
+  -H "Content-Type: application/json" \
+  -d '{"model": "qwen3.5:35b", "messages": [...]}'
+```
+
+Returns `{"valid": true}` or a validation error. Useful for checking tool schemas, context filters, and model availability before executing.
+
+---
+
+## Async messages
+
+For long-running generations, fire-and-forget patterns, or background processing, use the async API. See [Async messages](/api-guide/messages-async) for the full reference.

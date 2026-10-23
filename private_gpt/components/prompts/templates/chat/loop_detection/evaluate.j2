@@ -1,0 +1,21 @@
+Evaluate whether the assistant is stuck in a loop after the user's latest message.
+
+A loop is repeated or substantially equivalent actions that are not making meaningful
+progress toward the user's request. Examples include repeatedly invoking the same tool,
+re-running the same failing command, rewriting the same instructions without changing
+strategy, or cycling through the same state. Normal multi-step work, retries with a
+materially different approach, and repeated status checks while work is progressing are
+not loops.
+
+Use the examples as classification guidance. Return the structured result requested by
+the schema.
+
+<examples>
+{{ examples }}
+</examples>
+
+Use only the conversation below when deciding the result.
+
+<conversation>
+{{ conversation }}
+</conversation>

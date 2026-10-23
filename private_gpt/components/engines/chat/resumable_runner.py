@@ -1,0 +1,545 @@
+from __future__ import annotations
+
+import asyncio
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Annotated, Any
+from uuid import uuid4
+
+from injector import inject, singleton
+from llama_index.core.tools import ToolSelection
+from pydantic import Field, TypeAdapter, ValidationError
+
+from private_gpt.components.chat.models.chat_config_models import ResolvedChatRequest
+from private_gpt.components.context.models.context_layer import ToolDefinitionsLayer
+from private_gpt.components.context.models.context_stack import ContextStack
+from private_gpt.components.engines.chat.async_chat_engine import AsyncChatCheckpoint
+from private_gpt.components.engines.chat.checkpoint_store import (
+    ChatCheckpoint,
+    ChatCheckpointStoreFactory,
+)
+from private_gpt.components.engines.chat.event_broker import EngineEventBrokerFactory
+from private_gpt.components.engines.chat.event_channel import (
+    BrokerEventChannel,
+    RecordingEventChannel,
+)
+from private_gpt.components.engines.chat.execution_scheduler import (
+    ChatExecutionSchedulerFactory,
+)
+from private_gpt.components.engines.chat.models.chat_state import (
+    ChatInputState,
+    ChatRuntimeCache,
+    ChatRuntimeState,
+    ChatStatus,
+)
+from private_gpt.components.engines.chat.models.execution_hooks import (
+    ExecutionHooks,
+    ToolExecutionHook,
+)
+from private_gpt.components.engines.chat.utils.request_builder import (
+    build_initial_context_stack,
+)
+from private_gpt.components.tools.tool_scheduler import ToolSchedulerFactory
+from private_gpt.events.event_serializer import StreamingEventHandler
+from private_gpt.events.models import ContentBlockType
+from private_gpt.observability.chat import chat_turn_span, record_turn_result
+from private_gpt.observability.message import MessageFolder
+from private_gpt.observability.tracing import (
+    TRACE_CONTEXT_KEY,
+    inject_trace_context,
+    trace_context_from,
+)
+from private_gpt.settings.settings import Settings
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Sequence
+
+    from private_gpt.components.engines.chat.async_chat_engine import AsyncChatEngine
+    from private_gpt.components.engines.chat.models.chat_state import ChatState
+    from private_gpt.components.tools.remote_execution import ToolExecutionResponse
+    from private_gpt.events.models import Event
+
+
+_RESUME_HOOKS = ExecutionHooks(
+    tool_result=[
+        ToolExecutionHook(
+            callable_path="private_gpt.arq.tasks.chat.callback:resume_chat_callback"
+        )
+    ]
+)
+
+_CONTENT_BLOCK_ADAPTER: TypeAdapter[ContentBlockType] = TypeAdapter(
+    Annotated[ContentBlockType, Field(discriminator="type")]
+)
+
+
+@singleton
+class ResumableChatRunner:
+    """Single start/resume/timeout implementation for local and ARQ execution."""
+
+    @inject
+    def __init__(
+        self,
+        settings: Settings,
+        checkpoint_store_factory: ChatCheckpointStoreFactory,
+        event_broker_factory: EngineEventBrokerFactory,
+        scheduler_factory: ChatExecutionSchedulerFactory,
+        tool_scheduler_factory: ToolSchedulerFactory,
+    ) -> None:
+        self._settings = settings
+        self._state = checkpoint_store_factory.get()
+        self._events = event_broker_factory.get()
+        self._scheduler = scheduler_factory.get()
+        self._tool_scheduler = tool_scheduler_factory.get()
+
+    async def submit(
+        self,
+        *,
+        request_data: dict[str, Any],
+        stream_type: str,
+        metadata: dict[str, Any],
+        execution_id: str | None = None,
+    ) -> tuple[str, AsyncGenerator[Event, None]]:
+        execution_id = execution_id or str(uuid4())
+        events = self._events.listen(execution_id)
+        await self._scheduler.start(
+            execution_id=execution_id,
+            request_data=request_data,
+            stream_type=stream_type,
+            metadata=metadata,
+        )
+        return execution_id, events
+
+    async def cancel(self, execution_id: str) -> bool:
+        await self._state.mark_terminal(execution_id, "cancelled")
+        checkpoint = await self._state.load(execution_id)
+        tool_task_ids = (
+            list(checkpoint.checkpoint_payload.pending_async_tools.values())
+            if checkpoint is not None
+            else []
+        )
+        tool_cancellations = await asyncio.gather(
+            *(
+                self._tool_scheduler.cancel_task(task_id=task_id)
+                for task_id in tool_task_ids
+            ),
+            return_exceptions=True,
+        )
+        try:
+            chat_cancelled = await self._scheduler.cancel(
+                execution_id,
+                checkpoint_id=checkpoint.checkpoint_id if checkpoint else None,
+                tool_ids=(
+                    tuple(checkpoint.checkpoint_payload.pending_async_tools)
+                    if checkpoint
+                    else ()
+                ),
+            )
+        finally:
+            await self._state.cleanup(execution_id)
+            await self._events.finish(execution_id)
+        return chat_cancelled or any(result is True for result in tool_cancellations)
+
+    async def start(
+        self,
+        *,
+        engine: AsyncChatEngine,
+        execution_id: str,
+        request_data: dict[str, Any],
+        stream_type: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        if not await self._state.claim_action(execution_id, "start"):
+            return
+        channel = BrokerEventChannel(self._events, execution_id)
+        folder = MessageFolder()
+        request = self._request(request_data)
+        with chat_turn_span("chat.turn", request, execution_id) as span:
+            try:
+                state = await engine.execute(
+                    request,
+                    hooks=_RESUME_HOOKS,
+                    channel=RecordingEventChannel(channel, folder),
+                )
+                record_turn_result(span, state, folder)
+                await channel.close()
+                await self._handle_state(
+                    execution_id=execution_id,
+                    state=state,
+                    stream_type=stream_type,
+                    metadata=metadata,
+                )
+            except asyncio.CancelledError:
+                await self._cancel_pending_tools(execution_id)
+                raise
+            except Exception as exc:
+                await self._fail(execution_id, exc, channel)
+                raise
+
+    async def resume(
+        self,
+        *,
+        engine: AsyncChatEngine,
+        execution_id: str,
+        checkpoint_id: str,
+    ) -> None:
+        saved = await self._state.load(execution_id)
+        if saved is None or saved.checkpoint_id != checkpoint_id:
+            return
+        if not await self._state.claim_action(execution_id, f"resume:{checkpoint_id}"):
+            return
+        channel = BrokerEventChannel(self._events, execution_id)
+        with (
+            # Resume continues the original turn's trace (the turn span id was
+            # stored with the checkpoint), so a paused turn stays one tree.
+            trace_context_from(saved.metadata.get(TRACE_CONTEXT_KEY)),
+            chat_turn_span(
+                "chat.turn.resume",
+                self._request(saved.request_data),
+                execution_id,
+                attributes={"pgpt.checkpoint_id": checkpoint_id},
+            ) as span,
+        ):
+            await self._resume(engine, execution_id, saved, channel, span)
+
+    async def _resume(
+        self,
+        engine: AsyncChatEngine,
+        execution_id: str,
+        saved: ChatCheckpoint,
+        channel: BrokerEventChannel,
+        span: Any,
+    ) -> None:
+        folder = MessageFolder()
+        try:
+            results = await self._state.get_results(execution_id)
+            responses = self._ordered_results(saved, results)
+            request_data = dict(saved.request_data)
+            request_data["messages"] = [
+                *list(request_data.get("messages", [])),
+                *(
+                    response.tool_message.model_dump(mode="json")
+                    for response in responses
+                ),
+            ]
+            state = await engine.resume(
+                AsyncChatCheckpoint(
+                    checkpoint=saved.checkpoint,
+                    input=ChatInputState(
+                        request=self._request(request_data),
+                        context_stack=self._context_stack(saved, request_data),
+                    ),
+                    iteration=saved.iteration,
+                    next_block_count=saved.next_block_count,
+                    payload=saved.checkpoint_payload.model_copy(
+                        update={"tool_responses": responses}
+                    ),
+                    original_input=self._original_input(saved),
+                    runtime_cache=self._runtime_cache(saved),
+                    runtime=self._runtime(saved),
+                ),
+                hooks=_RESUME_HOOKS,
+                channel=RecordingEventChannel(channel, folder),
+            )
+            record_turn_result(span, state, folder)
+            await channel.close()
+            await self._handle_state(
+                execution_id=execution_id,
+                state=state,
+                stream_type=saved.stream_type,
+                metadata=saved.metadata,
+            )
+        except asyncio.CancelledError:
+            await self._cancel_pending_tools(execution_id)
+            raise
+        except Exception as exc:
+            await self._fail(execution_id, exc, channel)
+            raise
+
+    async def callback(
+        self, *, execution_id: str, tool_id: str, result: dict[str, Any]
+    ) -> None:
+        checkpoint = await self._state.load(execution_id)
+        await self._state.record_result(execution_id, tool_id, result)
+        recorded_results = await self._state.get_results(execution_id)
+        if (
+            checkpoint is not None
+            and tool_id in checkpoint.checkpoint_payload.pending_async_tools
+            and tool_id in recorded_results
+        ):
+            await self._scheduler.cancel_tool_timeout(
+                execution_id=execution_id,
+                checkpoint_id=checkpoint.checkpoint_id,
+                tool_id=tool_id,
+            )
+        await self._resume_if_ready(execution_id)
+
+    async def _handle_state(
+        self,
+        *,
+        execution_id: str,
+        state: ChatState,
+        stream_type: str,
+        metadata: dict[str, Any],
+    ) -> None:
+        if state.output.status != ChatStatus.WAITING:
+            await self._state.mark_terminal(execution_id, "completed")
+            await self._state.cleanup(execution_id)
+            await self._events.finish(execution_id)
+            return
+
+        checkpoint_id = uuid4().hex
+        timeout_seconds = self._settings.scheduler.chat.callback_timeout_seconds
+        saved = await self._state.save(
+            ChatCheckpoint(
+                correlation_id=execution_id,
+                request_data=state.input.request.model_dump(mode="json"),
+                context_stack_data=state.input.context_stack.checkpoint_dump(),
+                original_input_data=self._dump_original_input(state.original_input),
+                runtime_data=self._dump_runtime(state),
+                runtime_cache_data=self._dump_runtime_cache(state),
+                stream_type=stream_type,
+                metadata={
+                    **metadata,
+                    TRACE_CONTEXT_KEY: inject_trace_context(),
+                },
+                iteration=state.runtime.iteration,
+                checkpoint=state.output.pause_type,
+                checkpoint_payload=self._checkpoint_payload(state),
+                next_block_count=state.runtime.next_block_count,
+                checkpoint_id=checkpoint_id,
+                deadline=datetime.now(UTC) + timedelta(seconds=timeout_seconds),
+            )
+        )
+        if not saved:
+            await asyncio.gather(
+                *(
+                    self._tool_scheduler.cancel_task(task_id=task_id)
+                    for task_id in state.output.pending_async_tools.values()
+                ),
+                return_exceptions=True,
+            )
+            return
+        checkpoint = await self._state.load(execution_id)
+        assert checkpoint is not None
+        await asyncio.gather(
+            *(
+                self._scheduler.tool_timeout(
+                    execution_id=execution_id,
+                    checkpoint_id=checkpoint_id,
+                    tool_id=tool_id,
+                    tool_name=self._tool_name(checkpoint, tool_id),
+                    task_id=task_id,
+                    delay_seconds=timeout_seconds,
+                )
+                for tool_id, task_id in checkpoint.checkpoint_payload.pending_async_tools.items()
+            )
+        )
+        await self._resume_if_ready(execution_id)
+
+    async def _resume_if_ready(self, execution_id: str) -> None:
+        checkpoint = await self._state.load(execution_id)
+        if checkpoint is None:
+            return
+        expected = set(checkpoint.checkpoint_payload.pending_async_tools)
+        results = await self._state.get_results(execution_id)
+        if not expected or not expected.issubset(results):
+            return
+        if await self._state.claim_resume(execution_id):
+            try:
+                await self._scheduler.resume(
+                    execution_id=execution_id,
+                    checkpoint_id=checkpoint.checkpoint_id,
+                )
+            except Exception:
+                await self._state.release_resume(execution_id)
+                raise
+
+    async def _cancel_pending_tools(self, execution_id: str) -> None:
+        checkpoint = await self._state.load(execution_id)
+        if checkpoint is None:
+            return
+        tool_task_ids: Sequence[str] = list(
+            checkpoint.checkpoint_payload.pending_async_tools.values()
+        )
+        if not tool_task_ids:
+            return
+        await asyncio.gather(
+            *(
+                self._tool_scheduler.cancel_task(task_id=task_id)
+                for task_id in tool_task_ids
+            ),
+            return_exceptions=True,
+        )
+
+    async def fail_abandoned(self, execution_id: str, reason: str) -> None:
+        await self._cancel_pending_tools(execution_id)
+        await self._fail(execution_id, RuntimeError(reason))
+
+    async def _fail(
+        self,
+        execution_id: str,
+        exc: Exception,
+        channel: BrokerEventChannel | None = None,
+    ) -> None:
+        if not await self._state.mark_terminal(execution_id, "failed"):
+            await self._state.cleanup(execution_id)
+            await self._events.finish(execution_id)
+            return
+        event = StreamingEventHandler().error_event(execution_id, exc)
+        if channel is None:
+            await self._events.publish(execution_id, event)
+        else:
+            channel.emit(event)
+            await channel.close()
+        await self._state.cleanup(execution_id)
+        await self._events.finish(execution_id)
+
+    @staticmethod
+    def _ordered_results(
+        checkpoint: ChatCheckpoint,
+        results: dict[str, ToolExecutionResponse],
+    ) -> list[ToolExecutionResponse]:
+        return [
+            results[tool_id]
+            for tool_id in checkpoint.checkpoint_payload.pending_async_tools
+            if tool_id in results
+        ]
+
+    @staticmethod
+    def _tool_name(checkpoint: ChatCheckpoint, tool_id: str) -> str:
+        request = ResumableChatRunner._request(checkpoint.request_data)
+        for message in reversed(request.messages):
+            tool_calls = message.additional_kwargs.get("tool_calls", [])
+            if not isinstance(tool_calls, list):
+                continue
+            for tool_call in tool_calls:
+                selection = (
+                    tool_call
+                    if isinstance(tool_call, ToolSelection)
+                    else ToolSelection.model_validate(tool_call)
+                )
+                if selection.tool_id == tool_id:
+                    return selection.tool_name or "unknown"
+        return "unknown"
+
+    @staticmethod
+    def _request(request_data: dict[str, Any]) -> ResolvedChatRequest:
+        request = ResolvedChatRequest.model_validate(request_data)
+        for message in request.messages:
+            tool_calls = message.additional_kwargs.get("tool_calls")
+            if isinstance(tool_calls, list):
+                message.additional_kwargs["tool_calls"] = [
+                    ToolSelection.model_validate(tool_call)
+                    if isinstance(tool_call, dict)
+                    else tool_call
+                    for tool_call in tool_calls
+                ]
+
+            message.additional_kwargs = {
+                key: ResumableChatRunner._restore_content_blocks(value)
+                for key, value in message.additional_kwargs.items()
+            }
+        return request
+
+    @staticmethod
+    def _dump_original_input(
+        original_input: ChatInputState | None,
+    ) -> dict[str, Any] | None:
+        if original_input is None or not isinstance(original_input, ChatInputState):
+            return None
+        return original_input.model_dump(mode="json")
+
+    @staticmethod
+    def _dump_runtime(state: ChatState) -> dict[str, Any] | None:
+        runtime = getattr(state, "runtime", None)
+        if not isinstance(runtime, ChatRuntimeState):
+            return None
+        return runtime.model_dump(mode="json", exclude={"tokenizer_fn"})
+
+    @staticmethod
+    def _dump_runtime_cache(state: ChatState) -> dict[str, Any] | None:
+        cache = getattr(getattr(state, "runtime", None), "cache", None)
+        if not isinstance(cache, ChatRuntimeCache):
+            return None
+        return cache.model_dump(mode="json")
+
+    @staticmethod
+    def _runtime(checkpoint: ChatCheckpoint) -> ChatRuntimeState | None:
+        if checkpoint.runtime_data:
+            data = dict(checkpoint.runtime_data)
+            data["tokenizer_fn"] = None
+            return ChatRuntimeState.model_validate(data)
+        cache = ResumableChatRunner._runtime_cache(checkpoint)
+        if cache is None:
+            return None
+        return ChatRuntimeState(cache=cache)
+
+    @staticmethod
+    def _runtime_cache(checkpoint: ChatCheckpoint) -> ChatRuntimeCache | None:
+        if checkpoint.runtime_cache_data:
+            return ChatRuntimeCache.model_validate(checkpoint.runtime_cache_data)
+        runtime = None
+        if checkpoint.runtime_data:
+            runtime = ChatRuntimeState.model_validate(
+                {**checkpoint.runtime_data, "tokenizer_fn": None}
+            )
+        return runtime.cache if runtime is not None else None
+
+    @staticmethod
+    def _original_input(checkpoint: ChatCheckpoint) -> ChatInputState | None:
+        if not checkpoint.original_input_data:
+            return None
+        data = dict(checkpoint.original_input_data)
+        request_data = data.get("request")
+        if isinstance(request_data, dict):
+            data["request"] = ResumableChatRunner._request(request_data)
+        context_stack_data = data.get("context_stack")
+        if isinstance(context_stack_data, dict):
+            data["context_stack"] = ContextStack.model_validate(context_stack_data)
+
+        return ChatInputState.model_validate(data)
+
+    @staticmethod
+    def _context_stack(
+        checkpoint: ChatCheckpoint, request_data: dict[str, Any]
+    ) -> ContextStack:
+        request = ResumableChatRunner._request(request_data)
+        if not checkpoint.context_stack_data:
+            return build_initial_context_stack(request)
+
+        stack = ContextStack.model_validate(checkpoint.context_stack_data)
+        if request.tool_config.tools and not stack.all_tools():
+            stack = stack.append_layer(
+                ToolDefinitionsLayer(
+                    tools=list(request.tool_config.tools),
+                    source="request",
+                )
+            )
+        return stack
+
+    @staticmethod
+    def _restore_content_blocks(value: Any) -> Any:
+        if isinstance(value, list):
+            return [ResumableChatRunner._restore_content_blocks(item) for item in value]
+        if not isinstance(value, dict) or not isinstance(value.get("type"), str):
+            return value
+        try:
+            return _CONTENT_BLOCK_ADAPTER.validate_python(value)
+        except ValidationError:
+            return value
+
+    @staticmethod
+    def _checkpoint_payload(state: ChatState) -> Any:
+        from private_gpt.components.engines.chat.async_chat_engine import (
+            IterationCheckpointPayload,
+        )
+
+        return IterationCheckpointPayload(
+            model_id=state.runtime.model_id,
+            pending_async_tools=state.output.pending_async_tools,
+            pending_external_tool_calls=state.output.pending_external_tool_calls,
+            total_input_tokens=state.runtime.total_input_tokens,
+            total_output_tokens=state.runtime.total_output_tokens,
+            has_input_usage=state.runtime.has_input_usage,
+            has_output_usage=state.runtime.has_output_usage,
+        )

@@ -1,0 +1,144 @@
+---
+title: "Async messages"
+description: "Run chat completions as background jobs — fire, stream, poll, cancel, and clean up."
+---
+
+The async messages API decouples request submission from response consumption. Instead of holding an HTTP connection open until the model finishes, you start a job, get back a `message_id`, and consume the output whenever you are ready.
+
+Use async when:
+- Generation is long and you don't want to hold a connection open.
+- You need to fan out multiple requests and collect results later.
+- You want to let a background worker process the job while the caller does other work.
+
+<Note>
+  Async chat uses an in-process stream broker — no separate worker needed. Use `memory` for single-instance deployments or `redis` for multi-instance.
+</Note>
+
+---
+
+## Lifecycle
+
+```
+POST /v1/messages/async          →  message_id (pending)
+         │
+         ▼
+GET  /v1/messages/async/{id}/stream   ←─ SSE stream of completion events
+GET  /v1/messages/async/{id}/status   ←─ poll status at any time
+         │
+         ▼
+POST /v1/messages/async/{id}/cancel   (optional — while processing)
+DELETE /v1/messages/async/{id}/delete (clean up when done)
+```
+
+---
+
+## Start a job
+
+```bash
+curl -X POST http://localhost:8080/v1/messages/async \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3.5:35b",
+    "messages": [{"role": "user", "content": "Write a detailed report on..."}]
+  }'
+```
+
+Response:
+
+```json
+{"message_id": "msg_01abc..."}
+```
+
+The request body is identical to `POST /v1/messages` — all fields (tools, tool_context, mcp_servers, sampling params) work the same way. The same per-tool dependency rules apply here: install the specific extra you need, or use `private-gpt[tools]` or `private-gpt[core]`.
+
+---
+
+## Stream the output
+
+Connect an SSE client to receive events as the model generates them. Events follow the same format as synchronous streaming:
+
+```bash
+curl http://localhost:8080/v1/messages/async/msg_01abc.../stream
+```
+
+The connection stays open until the job completes, fails, or is cancelled. You can connect and disconnect at any time — the stream replays from the last position on reconnect.
+
+---
+
+## Check status
+
+Poll the status endpoint to inspect the job without consuming the stream:
+
+```bash
+curl http://localhost:8080/v1/messages/async/msg_01abc.../status
+```
+
+Response:
+
+```json
+{
+  "message_id": "msg_01abc...",
+  "status": "processing",
+  "created_at": "2026-05-26T10:00:00Z",
+  "updated_at": "2026-05-26T10:00:05Z",
+  "completed_at": null,
+  "error_message": null
+}
+```
+
+**Status values:**
+
+| Status | Meaning |
+|---|---|
+| `pending` | Job queued, worker not yet started |
+| `processing` | Worker is actively generating |
+| `completed` | Generation finished successfully |
+| `failed` | Generation failed — check `error_message` |
+| `cancelled` | Job was cancelled before completion |
+| `error` | Internal error |
+
+---
+
+## Cancel a job
+
+Cancel a job while it is `pending` or `processing`:
+
+```bash
+curl -X POST http://localhost:8080/v1/messages/async/msg_01abc.../cancel
+```
+
+---
+
+## Clean up
+
+Delete the job and free associated resources once you have consumed the result:
+
+```bash
+curl -X DELETE http://localhost:8080/v1/messages/async/msg_01abc.../delete
+```
+
+---
+
+## Stream broker
+
+Async chat streams are handled in-process — no separate worker required. The broker is configured under `stream.broker` in `settings.yaml`:
+
+| Mode | When to use |
+|---|---|
+| `memory` | Single-instance deployments and local development (default) |
+| `redis` | Multi-instance or production — streams are shared across processes |
+
+```yaml
+stream:
+  broker: memory   # or redis
+```
+
+For Redis, configure the connection:
+
+```yaml
+redis:
+  host: ${PGPT_REDIS_HOST:localhost:6379}
+  username: ${PGPT_REDIS_USERNAME:}
+  password: ${PGPT_REDIS_PASSWORD:}
+  database: ${PGPT_REDIS_DATABASE:0}
+```

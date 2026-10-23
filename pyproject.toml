@@ -1,0 +1,444 @@
+[project]
+name = "private-gpt"
+version = "1.0.1"
+description = "Private GPT"
+authors = [{ name = "Zylon", email = "hi@zylon.ai" }]
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    # Web framework
+    "fastapi[all]>=0.136.0",
+    "python-multipart>=0.0.26",
+    # DI + config
+    "injector>=0.24.0,<0.25",
+    "pyyaml>=6.0.3,<7",
+    "watchdog>=4.0.1,<5",
+    # Core framework
+    "llama-index-core>=0.14.21,<0.15.0",
+    # Utilities
+    "cachetools>=7.0.0",
+    "partial-json-parser>=0.2.1.1.post7,<0.3",
+    "requests>=2.33.0,<3",
+    "retry-async>=0.1.4,<0.2",
+    "nltk>=3.10.0,<4",
+    "arq>=0.26,<0.27",
+]
+
+[project.scripts]
+private-gpt = "private_gpt.cli.main:main"
+
+[project.optional-dependencies]
+
+# ---------------------------------------------------------------------------
+# LLM providers
+# ---------------------------------------------------------------------------
+# sdk-openai: shared base for llm-openai* and embedding-openai*
+sdk-openai = [
+    "openai>=2.0.0,<3",
+    "openai-harmony>=0.0.8",
+]
+llm-openai = [
+    "private-gpt[sdk-openai]",
+    "llama-index-llms-openai",
+]
+llm-openai-compatible = [
+    "private-gpt[sdk-openai]",
+    "llama-index-llms-openai-like",
+]
+llm-mistral = [
+    "mistral-common[image,audio,hf-hub]>=1.11.1,<2",
+    "huggingface_hub",
+]
+llm-anthropic = [
+    "langchain-anthropic>=1.4.3",
+    "anthropic>=0.122.0",
+]
+
+# ---------------------------------------------------------------------------
+# Tokenizers
+# ---------------------------------------------------------------------------
+tokenizer-local = [
+    "transformers>=5.7.0",
+    "huggingface-hub",
+    "hf-transfer>=0.1.9",
+]
+tokenizer = [
+    "private-gpt[tokenizer-local]",
+]
+
+# ---------------------------------------------------------------------------
+# Embedding providers
+# ---------------------------------------------------------------------------
+embedding-openai = [
+    "private-gpt[sdk-openai]",
+    "llama-index-embeddings-openai",
+]
+embedding-openai-compatible = [
+    "private-gpt[sdk-openai]",
+    "llama-index-embeddings-openai-like",
+]
+
+
+# ---------------------------------------------------------------------------
+# Model providers
+# ---------------------------------------------------------------------------
+model-openai = [
+    "private-gpt[llm-openai]",
+    "private-gpt[embedding-openai]",
+]
+model-openai-compatible = [
+    "private-gpt[llm-openai-compatible]",
+    "private-gpt[embedding-openai-compatible]",
+]
+
+# ---------------------------------------------------------------------------
+# Ingestion
+# ---------------------------------------------------------------------------
+# ingest-core: shared base for all ingest-* extras
+ingest-core = [
+    "chardet>=5.2.0,<6",
+    "python-magic>=0.4.27,<0.5",
+    "llama-index-readers-file",
+    "llama-index-utils-workflow",
+    "levenshtein>=0.27.3",
+]
+ingest-documents = [
+    "private-gpt[ingest-core]",
+    "langdetect>=1.0.9,<2",
+    "python-pptx>=1.0.2,<2",
+    "openpyxl>=3.1.5,<4",
+    "pptx2md>=1.7.1",
+    "scipy>=1.10.0,<2",
+]
+ingest-markitdown = [
+    "private-gpt[ingest-core]",
+    "markitdown[docx,pdf,pptx,xls,xlsx]>=0.1.5",
+]
+ingest-pdf-inspector = [
+    "private-gpt[ingest-core]",
+    "pdf-inspector>=0.1,<1",
+]
+ingest-markup = [
+    "private-gpt[ingest-core]",
+    "mistune>=3.2.1,<4",
+    "beautifulsoup4>=4.14.3,<5",
+    "html2text>=2024.2.26,<2025",
+    "marko>=2.2.0,<3",
+    "markdownify>=0.13.1,<0.14",
+    "lxml-html-clean>=0.4.4",
+]
+ingest = [
+    "private-gpt[ingest-documents,ingest-markup, ingest-markitdown, ingest-pdf-inspector]",
+]
+
+# ---------------------------------------------------------------------------
+# Storage backends
+# ---------------------------------------------------------------------------
+storage-s3 = [
+    "boto3>=1.35.0,<1.43.2",
+    "aiobotocore>=3.6.0,<3.7",
+]
+storage-smb = [
+    "smbprotocol>=1.16.1,<2",
+]
+storage = [
+    "private-gpt[storage-s3,storage-smb]",
+]
+
+# ---------------------------------------------------------------------------
+# Vector stores
+# ---------------------------------------------------------------------------
+vectorstore-qdrant = [
+    "llama-index-vector-stores-qdrant",
+    "qdrant-client>=1.17.1,<2",
+]
+nodestore-postgres = [
+    "private-gpt[database-postgres]",
+    "llama-index-storage-docstore-postgres",
+]
+indexstore-postgres = [
+    "private-gpt[database-postgres]",
+    "llama-index-storage-index-store-postgres",
+]
+
+# ---------------------------------------------------------------------------
+# Redis
+# ---------------------------------------------------------------------------
+# redis-core: shared base for redis
+redis-core = [
+    "redis>=5.0.1,<6",
+]
+redis = [
+    "private-gpt[redis-core]",
+    "redis-semaphore-async>=0.0.4",
+]
+
+# ---------------------------------------------------------------------------
+# Database providers
+# ---------------------------------------------------------------------------
+# database-core: shared base for all database-* extras
+database-core = [
+    "sqlalchemy>=2.0.49,<3",
+    "sqlgpt-parser>=0.0.1a5",
+]
+database-postgres = [
+    "private-gpt[database-core]",
+    "psycopg2-binary>=2.9.12,<3",
+    "asyncpg>=0.31.0,<0.32",
+]
+database-mysql = [
+    "private-gpt[database-core]",
+    "pymysql>=1.1.1,<2",
+]
+database-mssql = [
+    "private-gpt[database-core]",
+    "pyodbc>=5.3.0",
+]
+database-db2 = [
+    "private-gpt[database-core]",
+    "ibm-db>=3.2.9; platform_machine != 'aarch64'",
+    "ibm-db-sa>=0.4.4; platform_machine != 'aarch64'",
+]
+database = [
+    "private-gpt[database-postgres,database-mysql,database-mssql,database-db2]",
+]
+
+# ---------------------------------------------------------------------------
+# Queue / Task processing
+# ---------------------------------------------------------------------------
+queue-celery = [
+    "celery==5.4.0,<6",
+    "flower>=2.0.1,<3",
+]
+queue-rabbitmq = [
+    "pika>=1.3.2,<2",
+]
+queue = [
+    "private-gpt[queue-celery,queue-rabbitmq]",
+]
+
+# ---------------------------------------------------------------------------
+# Data / Tabular
+# ---------------------------------------------------------------------------
+data-pandas = [
+    "pandas>=2.2.3,<3",
+]
+data-pandasai = [
+    "private-gpt[data-pandas]",
+    "pandasai>=3.0.0",
+]
+
+# ---------------------------------------------------------------------------
+# Tool integrations
+# ---------------------------------------------------------------------------
+tool-mcp = [
+    "mcp>=2.0.0,<3",
+]
+tool-tabular = [
+    "private-gpt[data-pandasai]",
+]
+tool-database = [
+    "private-gpt[database]",
+]
+tool-web-scraping = [
+    "playwright==1.60.0",
+]
+tools = [
+    "private-gpt[tool-mcp,tool-tabular,tool-database,tool-web-scraping]",
+]
+
+# ---------------------------------------------------------------------------
+# Media processing
+# ---------------------------------------------------------------------------
+# media-core: shared torch base for all media-* extras
+media-core = [
+    "torch>=2.11.0,<3",
+]
+media-image = [
+    "private-gpt[media-core]",
+    "torchvision>=0.26.0,<1",
+    "opencv-python-headless>=4.10.0.84,<4.13.0",
+    "imagehash>=4.3.2",
+]
+media-audio = [
+    "private-gpt[media-core]",
+    "torchaudio>=2.11.0,<3",
+    "pydub>=0.25.1",
+    "noisereduce>=3.0.3",
+]
+media-video = [
+    "private-gpt[media-core]",
+    "ffmpeg>=1.4",
+    "ffprobe>=0.5",
+]
+media = [
+    "private-gpt[media-image,media-audio,media-video]",
+]
+
+# ---------------------------------------------------------------------------
+# Observability
+# ---------------------------------------------------------------------------
+observability-otel = [
+    "opentelemetry-api>=1.45.0,<2",
+    "opentelemetry-sdk>=1.45.0,<2",
+    "opentelemetry-exporter-otlp-proto-common>=1.45.0,<2",
+    "opentelemetry-instrumentation-fastapi>=0.66b1",
+    "opentelemetry-instrumentation-httpx>=0.66b1",
+    "opentelemetry-instrumentation-threading>=0.66b1",
+    "opentelemetry-instrumentation-celery>=0.66b1",
+    "opentelemetry-instrumentation-logging>=0.66b1",
+    "opentelemetry-instrumentation-grpc>=0.66b1",
+    "opentelemetry-instrumentation-sqlalchemy>=0.66b1",
+    "opentelemetry-instrumentation-redis>=0.66b1",
+    "openinference-semantic-conventions>=0.1.41",
+    "openinference-instrumentation>=0.1.71",
+    "openinference-instrumentation-llama-index>=4.6.0,<5",
+    # openinference-instrumentation-llama-index 4.6 imports SpanCancelledEvent,
+    # added in llama-index-workflows 2.16 (it does not declare the floor itself).
+    # Pinned: on 2.26 the audio workflow times out before its first LLM call.
+    "llama-index-workflows==2.16.0",
+]
+observability = [
+    "private-gpt[observability-otel]",
+]
+
+# ---------------------------------------------------------------------------
+# Install flavors
+# ---------------------------------------------------------------------------
+core = [
+    "private-gpt[model-openai,model-openai-compatible,tokenizer,vectorstore-qdrant,ingest,tools]",
+]
+
+# ---------------------------------------------------------------------------
+# Dev tooling
+# ---------------------------------------------------------------------------
+lint = [
+    "pre-commit>=4.5.0,<5",
+    "ruff>=0,<1",
+]
+test = [
+    "pytest>=9,<10",
+    "pytest-xdist>=3.6.1",
+    "pytest-asyncio>=1.3.0,<2",
+    "pytest-cov>=7,<8",
+    "pytest-httpx>=0.36.0",
+]
+typecheck = [
+    "types-pyyaml>=6.0.12.12,<7",
+    "pika-stubs>=0.1.3,<0.2",
+    "types-retry>=0.9.9.4,<0.10",
+    "celery-types>=0.20.0,<0.21",
+    "types-psycopg2>=2.9.21.20241019,<3",
+    "pandas-stubs>=2.2.3.241009,<3",
+    "types-requests>=2.32.0.20241016,<3",
+    "types-markdown>=3.7.0.20240822,<4",
+    "types-beautifulsoup4>=4.12.0.20241020,<5",
+    "types-openpyxl>=3.1.5.20241126,<4",
+    "types-psutil>=6.1.0.20241221,<7",
+    "types-tqdm>=4.67.0.20250809",
+    "types-cachetools>=6.2.0.20251022,<7",
+    "mypy-boto3-s3>=1.42.37",
+    "types-regex>=2026.1.15.20260116",
+    "ty==0.0.59",
+]
+dev = [
+    "private-gpt[lint,test,typecheck]",
+]
+
+[tool.uv]
+default-groups = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  ".uv-cache",
+  ".dist",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["private_gpt"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"settings.yaml" = "settings.yaml"
+"version.txt" = "version.txt"
+"ui" = "ui"
+"scripts" = "scripts"
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+skip_empty = true
+precision = 2
+
+[tool.ruff]
+target-version = 'py311'
+
+lint.select = [
+    "E",
+    "W",
+    "F",
+    "B",
+    "C4",
+    "D",
+    "I",
+    "SIM",
+    "TCH",
+    "TID",
+    "Q",
+    "UP",
+    "PT",
+    "RUF",
+]
+
+lint.ignore = [
+    "E501",
+    "PT011",
+    "SIM102",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "TC006",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 88
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-type-checking]
+strict = true
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+runtime-evaluated-decorators = ["injector.inject"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D"]
+"private_gpt/components/filesystems/mount_ref_resolver.py" = ["TC001"]
+"tests/components/filesystems/test_mount_ref_resolver.py" = ["TC003"]
+
+[tool.ty.environment]
+python-version = "3.11"
+
+[tool.ty.rules]
+redundant-cast = "ignore"
+unresolved-import = "ignore"
+unused-ignore-comment = "ignore"
+unused-type-ignore-comment = "ignore"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = [
+    "--import-mode=importlib",
+]

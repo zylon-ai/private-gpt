@@ -1,0 +1,162 @@
+---
+title: "vLLM"
+description: "High-throughput inference with vLLM — full capability support including structured output."
+---
+
+[vLLM](https://github.com/vllm-project/vllm) is a production-grade inference engine optimised for high throughput and low latency. It is the **only supported provider** that exposes a structured output (JSON schema) endpoint, making it the best choice for production deployments and applications requiring reliable schema-constrained responses.
+
+<Note>
+  vLLM requires an **NVIDIA GPU** with CUDA support. It is not designed for CPU-only inference.
+</Note>
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ |
+| Tokenizer endpoint (`/tokenize`) | ✅ |
+| Embeddings | ✅ |
+| Tool / function calling | ✅ model-dependent |
+| Structured output (JSON schema) | ✅ |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+| Audio input | ❌ |
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Prerequisites">
+    - NVIDIA GPU with CUDA 11.8+ (CUDA 12.x recommended)
+    - Docker with [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
+
+    Verify your setup:
+    ```bash
+    nvidia-smi
+    docker run --gpus all nvidia/cuda:12.0-base nvidia-smi
+    ```
+  </Step>
+
+  <Step title="Start vLLM">
+    <Tabs>
+      <Tab title="Docker">
+        ```bash
+        # Example LLM — GPTQ Int4 quantization (~18 GB)
+        docker run --gpus all \
+          -p 8000:8000 \
+          --ipc=host \
+          vllm/vllm-openai:latest \
+          --model Qwen/Qwen3.5-35B-A3B-GPTQ-Int4 \
+          --max-model-len 32768
+        ```
+
+        For an embeddings model, start a second vLLM instance on a different port:
+        ```bash
+        docker run --gpus all \
+          -p 8001:8000 \
+          --ipc=host \
+          vllm/vllm-openai:latest \
+          --model mixedbread-ai/mxbai-embed-large-v1 \
+          --task embed
+        ```
+      </Tab>
+      <Tab title="pip">
+        ```bash
+        pip install vllm
+
+        # Example LLM — GPTQ Int4 quantization (~18 GB)
+        vllm serve Qwen/Qwen3.5-35B-A3B-GPTQ-Int4 \
+          --port 8000 \
+          --max-model-len 32768
+        ```
+
+        For an embeddings model, start a second vLLM instance on a different port:
+        ```bash
+        vllm serve mixedbread-ai/mxbai-embed-large-v1 \
+          --port 8001 \
+          --task embed
+        ```
+      </Tab>
+    </Tabs>
+
+    The LLM API is available at `http://localhost:8000/v1`. If you start the second instance, the embeddings API is available at `http://localhost:8001/v1`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=http://localhost:8000/v1 \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:8001/v1 \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=http://host.docker.internal:8000/v1 \
+          -e OPENAI_EMBEDDING_API_BASE=http://host.docker.internal:8001/v1 \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=http://localhost:8000/v1 \
+          OPENAI_EMBEDDING_API_BASE=http://localhost:8001/v1 \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+```yaml
+# settings-model.yaml
+llm:
+  default_model: Qwen3.5-35B-A3B-GPTQ-Int4
+
+embedding:
+  default_model: mxbai-embed-large-v1
+
+models:
+  - name: Qwen3.5-35B-A3B-GPTQ-Int4
+    type: llm
+    mode: openai
+    context_window: 32768
+    tokenizer: Qwen/Qwen3.5-35B-A3B
+    support_tools: true
+    support_reasoning: true
+    support_image: 0
+    sampling_params:
+      temperature: 0.6
+      top_p: 0.95
+      top_k: 20
+      min_p: 0.0
+
+  - name: mxbai-embed-large-v1
+    type: embedding
+    mode: openai
+    context_window: 512
+```
+
+If your embeddings model runs on a separate vLLM instance (port 8001):
+
+```bash
+OPENAI_API_BASE=http://localhost:8000/v1 \
+  OPENAI_EMBEDDING_API_BASE=http://localhost:8001/v1 \
+  PGPT_PROFILES=model \
+  uv run python -m private_gpt
+```
+
+---
+
+## Structured output
+
+vLLM supports the OpenAI `response_format` parameter for JSON schema enforcement. When PrivateGPT detects this capability, it uses schema-constrained generation for tool calls and structured responses — significantly more reliable than prompt-based approaches.
+
+No extra configuration is needed; PrivateGPT detects structured output support automatically on startup.

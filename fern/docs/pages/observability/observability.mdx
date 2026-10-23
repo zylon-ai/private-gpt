@@ -1,0 +1,108 @@
+---
+title: "Observability"
+description: "Trace requests, LLM calls, tools and ingestion with OpenTelemetry, written as OTLP JSON lines."
+---
+
+PrivateGPT emits OpenTelemetry traces for every API request, chat turn, LLM call, tool, sandbox operation, retrieval step and ingestion task (API and workers). Traces go to one or more **exporters**.
+
+<Warning>
+  This feature requires the `observability` extra. If you are adding it to an existing application, run the sync command after enabling the module:
+
+  ```bash
+  uv sync --inexact observability
+  ```
+</Warning>
+
+```yaml
+observability:
+  mode: otel          # none (default) | otel
+  exporters:
+    - type: jsonl
+      path: local_data/traces/traces.jsonl
+```
+
+---
+
+## Exporters
+
+| Type | Writes |
+|---|---|
+| `jsonl` | OTLP JSON lines to `path`, one export batch per line, rotated at `max_bytes` (default 50 MB) keeping `backup_count` files (default 5) |
+| `console` | Spans to stdout |
+
+Other fields: `enabled`, `tags`. Applications built on PrivateGPT can register more types with `private_gpt.observability.exporters.register_exporter`; their settings go in `options`.
+
+### Sending the file to a backend
+
+The `jsonl` file is the format of the OpenTelemetry Collector's file exporter, so the Collector `otlpjsonfile` receiver replays it into any OTLP backend (Jaeger, Grafana Tempo, Phoenix, Langfuse...):
+
+```yaml
+receivers:
+  otlpjsonfile:
+    include: [/var/lib/private-gpt/traces/traces.jsonl*]
+exporters:
+  otlphttp:
+    endpoint: http://jaeger:4318
+service:
+  pipelines:
+    traces:
+      receivers: [otlpjsonfile]
+      exporters: [otlphttp]
+```
+
+It also reads well with `jq`, e.g. the span names of each batch:
+
+```bash
+jq -c '[.resourceSpans[].scopeSpans[].spans[].name]' local_data/traces/traces.jsonl
+```
+
+### From environment variables
+
+Like models, exporters can be declared from the environment, one id per destination. They are appended to the ones in the settings files:
+
+```bash
+PGPT_OBSERVABILITY=otel
+PGPT_OBSERVABILITY_EXPORTERS_JSONL_PATH=/var/lib/private-gpt/traces/traces.jsonl
+PGPT_OBSERVABILITY_EXPORTERS_JSONL_TAGS=ai,ingestion
+```
+
+`PGPT_OBSERVABILITY_EXPORTERS_<ID>_<FIELD>[__<NESTED>]`: `type` defaults to the id; `__` reaches nested fields (`OPTIONS__ENDPOINT`); `TAGS` is comma separated.
+
+The default `jsonl` exporter from `settings.yaml` can be turned off with `PGPT_OBSERVABILITY_JSONL_ENABLED=false`, e.g. in containers that only send traces to a network backend.
+
+---
+
+## Which traces each exporter gets
+
+Traces are tagged by what they are (`observability.trace_tags`):
+
+| Tag | Traces |
+|---|---|
+| `ai` | Chat turns (`/v1/messages`, async included), `/v1/complete`, `/v1/tools/*`, search primitives, embeddings, token counting, and the worker side of those |
+| `ingestion` | Ingestion, deletion and conversion (API and Celery tasks) |
+
+Exporters receive every trace by default (`all`, including health checks and status polling); set `tags` per exporter to keep only some, e.g. `tags: [ai]`.
+
+---
+
+## What a trace shows
+
+* **HTTP span** (root): the JSON request and the final message as JSON (also for streaming and async responses), session and user.
+* **`chat.turn`**: the user input (text, images, documents) and the answer.
+* **`chat.iteration N`**: the conversation state the iteration starts from and the one it leaves (messages with reasoning, tool calls and results, tools, LLM parameters, tokens), and the interceptors that changed it.
+* **LLM spans**: input and output messages (reasoning, tool calls), the sampling parameters actually sent, token counts, time until the stream is drained.
+* **Tool and sandbox spans**: arguments, results, commands and file contents; retrieval steps with the nodes they return.
+
+Sessions group by the request's `container` (one conversation); users by `metadata.user_id`.
+
+---
+
+## Other settings
+
+| Setting | Env | Default | |
+|---|---|---|---|
+| `environment` | `PGPT_OBSERVABILITY_ENVIRONMENT` | — | `deployment.environment.name` |
+| `capture_content` | `PGPT_OBSERVABILITY_CAPTURE_CONTENT` | `true` | Record prompts, messages and payloads; `false` keeps structure and timings only |
+| `sampling_ratio` | `PGPT_OBSERVABILITY_SAMPLING_RATIO` | `1.0` | Fraction of traces kept |
+
+Export runs in the background: a slow or unreachable backend never delays requests (spans are dropped when its queue is full).

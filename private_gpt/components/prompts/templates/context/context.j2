@@ -1,0 +1,9 @@
+{% if included_in_system_prompt is defined and included_in_system_prompt %}
+**Context Information**:
+Below is important information to help you provide the most accurate and relevant responses.
+=====================
+{% endif %}
+{{ context_str }}
+{% if included_in_system_prompt %}
+=====================
+{% endif %}

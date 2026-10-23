@@ -1,0 +1,102 @@
+server:
+  env_name: test
+  auth:
+    enabled: false
+    # Dummy secrets used for tests
+    secret: "foo bar; dummy secret"
+
+data:
+  local_data_folder: local_data/tests
+
+qdrant:
+  path: local_data/tests/qdrant
+  url: null
+
+stream:
+  broker: memory
+
+scheduler:
+  ingestion:
+    # Tests run local ingestion and local retrieval in the same process. This
+    # mode reuses the already-open local Qdrant handle instead of opening a
+    # second sync/async client pair against the same on-disk database.
+    mode: local
+
+docling:
+  mode: api
+  use_ocr: true
+  use_gpu: true
+  # Using a threshold of 0.7 to make sure only to use OCR in scanned documents
+  bitmap_area_threshold: 0.7
+  # Disable table recognition
+  table_mode: fast
+  # Disable Image recognition
+  image_mode: placeholder
+
+chat:
+  format_context_strategy: list
+  maximum_history_length: 100000
+
+vectorstore:
+  database: qdrant
+  embed_dim: 384
+  multitenancy: logical
+  default_collection: testing
+
+observability:
+  mode: none
+
+models:
+  - name: mock
+    type: llm
+    mode: mock
+    context_window: 4096
+    support_reasoning: true
+  - name: mock
+    type: embedding
+    mode: mock
+    context_window: 384
+
+llm:
+  default_model: mock
+  auto_discover_models: false
+
+embedding:
+  default_model: mock
+  auto_discover_models: false
+
+# Make sure we don't use workers for testing. We run as a sync application.
+celery:
+  use_workers: false
+  broker_mode: local
+  backend_mode: local
+  acks_late: true
+
+
+tasks_results_broker:
+  mode: none
+
+sentry:
+  enabled: false
+
+node_store:
+  index_store: simple
+  doc_store: simple
+  node_store: qdrant
+
+principal:
+  forwarded_headers: ${PGPT_PRINCIPAL_FORWARDED_HEADERS:authorization,anthropic-beta}
+
+sandbox:
+  provider: null
+
+skills:
+  database: sqlite
+  storage_provider: local
+  skill_injection_mode: system_prompt
+  maximum_loaded_skills: 1
+
+filesystems:
+  namespaces:
+    skills:
+      hydration: true

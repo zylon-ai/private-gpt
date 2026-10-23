@@ -1,0 +1,129 @@
+---
+title: "LM Studio"
+description: "Run local models with LM Studio's built-in server — GUI-driven, full tokenizer support."
+---
+
+[LM Studio](https://lmstudio.ai) is a desktop application for discovering, downloading, and running GGUF models locally. Its built-in local server exposes an OpenAI-compatible API with **full tokenizer support**.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ |
+| Tokenizer endpoint (`/tokenize`) | ✅ |
+| Embeddings | ✅ |
+| Tool / function calling | ✅ model-dependent |
+| Structured output | ❌ |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Install LM Studio">
+    Download and install from [lmstudio.ai](https://lmstudio.ai). Available for macOS, Windows, and Linux.
+  </Step>
+
+  <Step title="Download models">
+    1. Open LM Studio.
+    2. Go to the **Discover** tab (magnifying glass icon).
+    3. Search for a model. Example:
+       - LLM: search `unsloth Qwen3.5-35B-A3B` and pick a Q4 quantization (~18 GB)
+       - Embeddings: search `mxbai-embed-large`
+    4. Click the model and select a quantization (Q4_K_M is a good default).
+    5. Click **Download**.
+  </Step>
+
+  <Step title="Start the local server">
+    1. Click the **Developer** tab (left sidebar, `</>` icon).
+    2. Select your downloaded model from the dropdown.
+    3. Click **Start Server**.
+
+    The default server address is `http://localhost:1234`.
+
+    <Note>
+      To serve an **embeddings model** simultaneously, scroll down in the Developer panel and load a second model under "Embedding model".
+    </Note>
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=http://localhost:1234/v1 private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=http://host.docker.internal:1234/v1 \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=http://localhost:1234/v1 uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+```yaml
+# settings-model.yaml
+llm:
+  default_model: qwen3-35b-a3b-q4_k_m
+
+embedding:
+  default_model: mxbai-embed-large-v1
+
+models:
+  - name: qwen3-35b-a3b-q4_k_m
+    type: llm
+    mode: openai
+    context_window: 32768
+    tokenizer: Qwen/Qwen3.5-35B-A3B
+    support_tools: true
+    support_reasoning: true
+    sampling_params:
+      temperature: 0.6
+      top_p: 0.95
+      top_k: 20
+      min_p: 0.0
+
+  - name: mxbai-embed-large-v1
+    type: embedding
+    mode: openai
+    context_window: 512
+```
+
+Generate this automatically (with LM Studio server running):
+
+```bash
+OPENAI_API_BASE=http://localhost:1234/v1 \
+  uv run python scripts/auto_discover_models.py --out settings-model.yaml
+```
+
+---
+
+## Troubleshooting
+
+**CORS errors from the browser**
+
+Enable CORS in LM Studio: **Developer → Server Settings → Enable CORS**.
+
+**Model name doesn't match**
+
+LM Studio uses the file name as the model ID. Check the exact name with:
+
+```bash
+curl http://localhost:1234/v1/models
+```
+
+Use the `id` field from the response as the model name in your profile.

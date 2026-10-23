@@ -1,0 +1,1002 @@
+from __future__ import annotations
+
+import base64
+import re
+from collections.abc import Sequence  # noqa: TC003
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Protocol, cast
+
+from llama_index.core.base.llms.types import AudioBlock as LIAudioBlock
+from llama_index.core.base.llms.types import ImageBlock as LIImageBlock
+from llama_index.core.base.llms.types import TextBlock as LITextBlock
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    model_serializer,
+    model_validator,
+)
+
+from private_gpt.chat.extensions.citation import ZylonCitation  # noqa: TC001
+from private_gpt.components.chunk.models import Chunk, SourceType  # noqa: TC001
+from private_gpt.components.web.web_search.models import WebSearchResult  # noqa: TC001
+from private_gpt.events.models._base import (
+    BaseContentBlock,
+    CacheableContentBlock,
+    ExtendedContentProtocol,
+    StandardContentProtocol,
+)
+from private_gpt.events.models._callers import ToolCaller  # noqa: TC001
+from private_gpt.events.models._error_messages import (
+    CODE_EXECUTION_ERROR_MESSAGES,
+    WEB_FETCH_ERROR_MESSAGES,
+    WEB_SEARCH_ERROR_MESSAGES,
+)
+from private_gpt.events.models._errors import ErrorDetail
+
+if TYPE_CHECKING:
+    from llama_index.core.schema import NodeWithScore
+    from PIL.Image import Image
+    from pydantic_core.core_schema import SerializerFunctionWrapHandler
+
+
+class DocumentConverter(Protocol):
+    """Structural protocol satisfied by ConvertService."""
+
+    def bytes_to_text(
+        self, raw: bytes, ext: str, execute_transformations: bool = False
+    ) -> str: ...
+
+
+class TextBlock(CacheableContentBlock, StandardContentProtocol):
+    """Plain-text content block."""
+
+    type: Literal["text"] = Field(default="text")
+    text: str = Field(default="", description="Text payload for this block.")
+    citations: list[ZylonCitation] | None = Field(default=[])
+
+    def to_llama_index(self) -> LITextBlock:
+        return LITextBlock(text=self.text)
+
+    def __str__(self) -> str:
+        return self.text or ""
+
+    @model_serializer(mode="wrap")
+    def custom_model_dump(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> dict[str, Any]:
+        data: dict[str, Any] = super().custom_model_dump(handler)
+        if not data.get("citations"):
+            data.pop("citations", None)
+        return data
+
+
+class URLSource(BaseModel):
+    """Shared URL source payload (accepts url/uri input)."""
+
+    type: Literal["url"]
+    url: str = Field(
+        description="Publicly reachable URL",
+        validation_alias=AliasChoices("url", "uri"),
+        serialization_alias="url",
+    )
+    model_config = ConfigDict(extra="allow")
+
+    def get_data(self) -> str:
+        return self.url
+
+    def get_media_type(self) -> str | None:
+        return None
+
+
+class CitationsConfig(BaseModel):
+    enabled: bool | None = Field(default=None)
+
+    model_config = ConfigDict(extra="allow")
+
+
+class CitationCharLocation(BaseModel):
+    type: Literal["char_location"] = Field(default="char_location")
+    cited_text: str
+    document_index: int
+    document_title: str | None
+    start_char_index: int
+    end_char_index: int
+
+    model_config = ConfigDict(extra="allow")
+
+
+class CitationPageLocation(BaseModel):
+    type: Literal["page_location"] = Field(default="page_location")
+    cited_text: str
+    document_index: int
+    document_title: str | None
+    start_page_number: int
+    end_page_number: int
+
+    model_config = ConfigDict(extra="allow")
+
+
+class CitationContentBlockLocation(BaseModel):
+    type: Literal["content_block_location"] = Field(default="content_block_location")
+    cited_text: str
+    document_index: int
+    document_title: str | None
+    start_block_index: int
+    end_block_index: int
+
+    model_config = ConfigDict(extra="allow")
+
+
+class CitationSearchResultLocation(BaseModel):
+    type: Literal["search_result_location"] = Field(default="search_result_location")
+    cited_text: str
+    search_result_index: int
+    source: str
+    title: str | None
+    start_block_index: int
+    end_block_index: int
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class CitationWebSearchResultLocation(BaseModel):
+    type: Literal["web_search_result_location"] = Field(
+        default="web_search_result_location"
+    )
+    cited_text: str
+    encrypted_index: str
+    title: str | None
+    url: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
+TextCitation = Annotated[
+    CitationCharLocation
+    | CitationPageLocation
+    | CitationContentBlockLocation
+    | CitationSearchResultLocation
+    | CitationWebSearchResultLocation,
+    Field(discriminator="type"),
+]
+
+_URI_WITH_SCHEME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*://")
+
+
+def _upgrade_legacy_source_payload(
+    values: Any, *, normalize_image_media_type: bool = False
+) -> Any:
+    if not isinstance(values, dict) or "source" in values:
+        return values
+
+    upgraded = dict(values)
+    url = upgraded.pop("url", None) or upgraded.pop("uri", None)
+    if isinstance(url, str):
+        upgraded["source"] = {"type": "url", "url": url}
+        upgraded.pop("data", None)
+        upgraded.pop("mime_type", None)
+        return upgraded
+
+    data = upgraded.get("data")
+    mime_type = upgraded.get("mime_type")
+    if isinstance(data, str) and isinstance(mime_type, str):
+        if _URI_WITH_SCHEME_RE.match(data):
+            upgraded["source"] = {"type": "url", "url": data}
+        else:
+            media_type = (
+                _normalize_image_media_type(mime_type)
+                if normalize_image_media_type
+                else mime_type
+            )
+            upgraded["source"] = {
+                "type": "base64",
+                "data": data,
+                "media_type": media_type,
+            }
+        upgraded.pop("data", None)
+        upgraded.pop("mime_type", None)
+    return upgraded
+
+
+def _upgrade_legacy_binary_source_payload(values: Any) -> Any:
+    if not isinstance(values, dict):
+        return values
+
+    upgraded = dict(values)
+    source = upgraded.get("source")
+    if isinstance(source, dict) and source.get("type") == "url":
+        url = source.get("url") or source.get("uri")
+        if isinstance(url, str):
+            upgraded["source"] = {"type": "url", "url": url}
+        return upgraded
+
+    if "source" in upgraded:
+        return values
+
+    url = upgraded.pop("url", None) or upgraded.pop("uri", None)
+    if isinstance(url, str):
+        upgraded["source"] = {"type": "url", "url": url}
+        upgraded.pop("data", None)
+        upgraded.pop("mime_type", None)
+        return upgraded
+
+    data = upgraded.get("data")
+    mime_type = upgraded.get("mime_type")
+    if isinstance(data, str) and isinstance(mime_type, str):
+        if _URI_WITH_SCHEME_RE.match(data):
+            upgraded["source"] = {"type": "url", "url": data}
+        else:
+            upgraded["source"] = {
+                "type": "base64",
+                "data": data,
+                "media_type": mime_type,
+            }
+        upgraded.pop("data", None)
+        upgraded.pop("mime_type", None)
+    return upgraded
+
+
+ImageMediaType = Literal["image/jpeg", "image/png", "image/gif", "image/webp"]
+
+
+def _normalize_image_media_type(mime_type: str) -> ImageMediaType:
+    allowed = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+    return cast(ImageMediaType, mime_type) if mime_type in allowed else "image/png"
+
+
+class Base64ImageSource(BaseModel):
+    """Anthropic base64 image source payload."""
+
+    type: Literal["base64"]
+    data: str = Field(
+        description="Base64-encoded image bytes",
+        json_schema_extra={"format": "byte"},
+    )
+    media_type: ImageMediaType
+
+    model_config = ConfigDict(extra="allow")
+
+    def get_data(self) -> str:
+        return self.data
+
+    def get_media_type(self) -> ImageMediaType:
+        return self.media_type
+
+
+ImageSource = Annotated[Base64ImageSource | URLSource, Field(discriminator="type")]
+
+
+class ImageBlock(CacheableContentBlock, StandardContentProtocol):
+    """Anthropic-compatible image content block."""
+
+    type: Literal["image"] = Field(default="image")
+    source: ImageSource = Field(description="Anthropic image source payload")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _upgrade_legacy_payload(cls, values: Any) -> Any:
+        return _upgrade_legacy_source_payload(values, normalize_image_media_type=True)
+
+    @classmethod
+    def from_image(cls, image: Image) -> ImageBlock:
+        import io
+
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        return cls(
+            source=Base64ImageSource(
+                type="base64",
+                data=base64.b64encode(buf.getvalue()).decode(),
+                media_type="image/png",
+            )
+        )
+
+    @classmethod
+    def from_base64(cls, data: str, mime_type: str) -> ImageBlock:
+        return cls(
+            source=Base64ImageSource(
+                type="base64",
+                data=data,
+                media_type=_normalize_image_media_type(mime_type),
+            )
+        )
+
+    @classmethod
+    def from_url(cls, url: str) -> ImageBlock:
+        return cls(source=URLSource(type="url", url=url))
+
+    def to_llama_index(self) -> LIImageBlock:
+        if isinstance(self.source, URLSource):
+            return LIImageBlock(url=self.source.url)
+        return LIImageBlock(
+            image=base64.b64decode(self.source.data),
+            image_mimetype=self.source.media_type,
+        )
+
+
+class Base64AudioSource(BaseModel):
+    """Anthropic-style base64 audio source payload."""
+
+    type: Literal["base64"]
+    data: str = Field(description="Base64-encoded audio bytes")
+    media_type: str = Field(description="Audio MIME type, e.g. 'audio/mpeg'")
+
+    model_config = ConfigDict(extra="allow")
+
+    def get_data(self) -> str:
+        return self.data
+
+    def get_media_type(self) -> str:
+        return self.media_type
+
+
+AudioSource = Annotated[Base64AudioSource | URLSource, Field(discriminator="type")]
+
+
+class AudioBlock(CacheableContentBlock, StandardContentProtocol):
+    """Anthropic-compatible audio content block."""
+
+    type: Literal["audio"] = Field(default="audio")
+    source: AudioSource = Field(description="Audio source payload")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _upgrade_legacy_payload(cls, values: Any) -> Any:
+        return _upgrade_legacy_source_payload(values)
+
+    @classmethod
+    def from_audio(cls, audio: bytes, mime_type: str) -> AudioBlock:
+        return cls(
+            source=Base64AudioSource(
+                type="base64",
+                data=base64.b64encode(audio).decode(),
+                media_type=mime_type,
+            )
+        )
+
+    @classmethod
+    def from_base64(cls, data: str, mime_type: str) -> AudioBlock:
+        return cls(
+            source=Base64AudioSource(type="base64", data=data, media_type=mime_type)
+        )
+
+    @classmethod
+    def from_url(cls, url: str) -> AudioBlock:
+        return cls(source=URLSource(type="url", url=url))
+
+    def to_llama_index(self) -> LIAudioBlock:
+        if isinstance(self.source, URLSource):
+            raise ValueError("URL-backed audio cannot be converted to LlamaIndex bytes")
+        return LIAudioBlock(
+            audio=base64.b64decode(self.source.data),
+            format=self.source.media_type,
+        )
+
+
+class ThinkingBlock(CacheableContentBlock, StandardContentProtocol):
+    """Extended thinking block containing the model's reasoning process."""
+
+    type: Literal["thinking"] = Field(default="thinking")
+    thinking: str = Field(default="", description="Thinking payload")
+    signature: str = Field(
+        description="Anthropic reasoning signature required for extended thinking compatibility",
+    )
+    citations: list[ZylonCitation] | None = Field(default=[])
+
+
+class RedactedThinkingBlock(CacheableContentBlock, StandardContentProtocol):
+    """Redacted thinking block returned when thinking content is encrypted."""
+
+    type: Literal["redacted_thinking"] = Field(default="redacted_thinking")
+    data: str = Field(description="Encrypted thinking payload")
+
+
+class ToolUseBlock(CacheableContentBlock, StandardContentProtocol):
+    """Shared interface for model-initiated tool calls."""
+
+    type: Literal["tool_use"] = Field(default="tool_use")
+    id: str = Field(
+        description="Unique identifier for this tool use",
+        pattern=r"^[a-zA-Z0-9_-]+$",
+    )
+    name: str = Field(
+        description="Name of the tool being called", min_length=1, max_length=200
+    )
+    raw_name: str | None = Field(
+        default=None,
+        description="Original tool name before model-facing normalization",
+    )
+    input: dict[str, Any] = Field(
+        description="Input payload for the tool call",
+        title="ToolUseInput",
+    )
+    caller: ToolCaller | None = Field(default=None)
+
+
+class ClientToolUseBlock(ToolUseBlock):
+    """Represents a client-executed model tool call."""
+
+    type: Literal["tool_use"] = Field(default="tool_use")
+
+
+class ServerToolUseBlock(ToolUseBlock):
+    """Represents a server-side (built-in) tool call initiated by the model."""
+
+    type: Literal["server_tool_use"] = Field(default="server_tool_use")
+    id: str = Field(
+        description="Unique identifier for this server tool use",
+        pattern=r"^[a-zA-Z0-9_]+$",
+    )
+    name: str = Field(
+        description="Name of the server tool being called",
+        min_length=1,
+        max_length=200,
+    )
+    input: dict[str, Any] = Field(
+        description="Input payload for the server tool call",
+        title="ServerToolUseInput",
+    )
+    caller: ToolCaller | None = Field(default=None)
+
+
+class ContainerUploadBlock(CacheableContentBlock, StandardContentProtocol):
+    """References a file that was uploaded to an Anthropic container."""
+
+    type: Literal["container_upload"] = Field(default="container_upload")
+    file_id: str = Field(description="Container file identifier")
+
+
+class DocumentBlock(CacheableContentBlock, StandardContentProtocol):
+    """Anthropic document block (used for document-grounded generation)."""
+
+    class Base64Source(BaseModel):
+        type: Literal["base64"] = Field(default="base64")
+        data: str = Field(json_schema_extra={"format": "byte"})
+        media_type: str
+
+        model_config = ConfigDict(extra="allow")
+
+        def to_bytes(self) -> bytes:
+            data = self.data
+            if ";base64," in data:
+                data = data.split(";base64,", 1)[1]
+            return base64.b64decode(data)
+
+        def extension(self) -> str:
+            import filetype  # type: ignore[import-untyped]
+
+            ft = filetype.get_type(mime=self.media_type)
+            return f".{ft.extension}" if ft else ".txt"
+
+        def to_text(self, convert_service: DocumentConverter) -> str:
+            return convert_service.bytes_to_text(
+                self.to_bytes(), self.extension(), execute_transformations=False
+            )
+
+    class PlainTextSource(BaseModel):
+        type: Literal["text"] = Field(default="text")
+        data: str
+        media_type: Literal["text/plain"]
+
+        model_config = ConfigDict(extra="allow")
+
+        def to_text(self, convert_service: DocumentConverter) -> str:
+            return self.data
+
+    class ContentSource(BaseModel):
+        type: Literal["content"] = Field(default="content")
+        content: (
+            str | list[Annotated[TextBlock | ImageBlock, Field(discriminator="type")]]
+        )
+
+        model_config = ConfigDict(extra="allow")
+
+        def to_text(self, convert_service: DocumentConverter) -> str:
+            if isinstance(self.content, str):
+                return self.content
+            return "\n".join(str(block) for block in self.content)
+
+    class URLDocumentSource(BaseModel):
+        type: Literal["url"] = Field(default="url")
+        url: str
+
+        model_config = ConfigDict(extra="allow")
+
+        def to_bytes(self) -> bytes:
+            from private_gpt.server.ingest.uri_loader import load_file_from_uri
+
+            return load_file_from_uri(self.url).read()
+
+        def to_text(self, convert_service: DocumentConverter) -> str:
+            from pathlib import Path
+
+            import filetype
+
+            data = self.to_bytes()
+            ext = Path(self.url.split("?")[0]).suffix
+            if not ext:
+                kind = filetype.guess(data)
+                ext = f".{kind.extension}" if kind else ext
+            return convert_service.bytes_to_text(
+                data, ext or ".txt", execute_transformations=False
+            )
+
+    type: Literal["document"] = Field(default="document")
+    source: Annotated[
+        Base64Source | PlainTextSource | ContentSource | URLDocumentSource,
+        Field(discriminator="type"),
+    ] = Field(description="Document source payload")
+    title: str | None = Field(default=None)
+    context: str | None = Field(default=None, min_length=1)
+    citations: list[ZylonCitation] | None = Field(default=None)
+
+    @classmethod
+    def from_binary_block(cls, block: BinaryBlock) -> DocumentBlock:
+        return cls(source=block.source.to_document_source(), title=block.filename)
+
+
+class SearchResultBlock(CacheableContentBlock, StandardContentProtocol):
+    """Anthropic search result block."""
+
+    type: Literal["search_result"] = Field(default="search_result")
+    source: str = Field(description="Search result source payload")
+    title: str = Field(description="Search result title")
+    content: list[TextBlock] = Field(description="Search result content")
+    citations: list[ZylonCitation] | None = Field(default=None)
+
+
+class MidConvSystemBlock(CacheableContentBlock, StandardContentProtocol):
+    """System instructions injected at a specific point mid-conversation."""
+
+    type: Literal["mid_conv_system"] = Field(default="mid_conv_system")
+    content: list[TextBlock] = Field(description="System instruction text blocks.")
+
+
+# --------------------------------
+# Custom Zylon Blocks
+# --------------------------------
+
+
+class Base64BinarySource(BaseModel):
+    """Base64 source payload for arbitrary binary data."""
+
+    type: Literal["base64"]
+    data: str = Field(description="Base64-encoded binary data")
+    media_type: str = Field(description="MIME type, e.g. 'application/pdf'")
+
+    model_config = ConfigDict(extra="allow")
+
+    def to_document_source(self) -> DocumentBlock.Base64Source:
+        return DocumentBlock.Base64Source(
+            type="base64",
+            data=self.data,
+            media_type=self.media_type,
+        )
+
+
+class URIBinarySource(BaseModel):
+    """URI source payload for arbitrary binary data."""
+
+    type: Literal["url"]
+    url: str = Field(
+        description="Publicly reachable URI",
+        validation_alias=AliasChoices("uri", "url"),
+        serialization_alias="url",
+    )
+
+    model_config = ConfigDict(extra="allow")
+
+    def to_document_source(self) -> DocumentBlock.URLDocumentSource:
+        return DocumentBlock.URLDocumentSource(url=self.url)
+
+
+BinarySource = Annotated[
+    Base64BinarySource | URIBinarySource, Field(discriminator="type")
+]
+
+
+class BinaryBlock(BaseContentBlock, ExtendedContentProtocol):
+    """Arbitrary binary payload (PDF, ZIP, …) encoded as base64."""
+
+    type: Literal["binary"] = Field(default="binary")
+    filename: str | None = Field(default=None)
+    source: BinarySource = Field(description="Binary source payload")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _upgrade_legacy_payload(cls, values: Any) -> Any:
+        return _upgrade_legacy_binary_source_payload(values)
+
+    @classmethod
+    def from_bytes(
+        cls, binary: bytes, mime_type: str, filename: str | None = None
+    ) -> BinaryBlock:
+        return cls(
+            filename=filename,
+            source=Base64BinarySource(
+                type="base64",
+                data=base64.b64encode(binary).decode(),
+                media_type=mime_type,
+            ),
+        )
+
+    @classmethod
+    def from_text(
+        cls, text: str, mime_type: str, filename: str | None = None
+    ) -> BinaryBlock:
+        return cls.from_bytes(text.encode(), mime_type=mime_type, filename=filename)
+
+    def to_document_block(self) -> DocumentBlock:
+        return DocumentBlock.from_binary_block(self)
+
+
+class LocalResourceBlock(BaseContentBlock, StandardContentProtocol):
+    """Reference to a local file produced by code execution."""
+
+    type: Literal["local_resource"] = Field(default="local_resource")
+    file_path: str = Field(
+        description="Absolute path to the file inside the execution environment"
+    )
+    file_id: str | None = Field(
+        default=None,
+        description="Base64url-encoded storage file ID used to download the file via the files API",
+    )
+    name: str = Field(description="Human-readable file name (stem, without extension)")
+    mime_type: str = Field(description="MIME type of the file")
+
+
+class ResourceLinkBlock(BaseContentBlock, StandardContentProtocol):
+    """Reference to an external resource by URI (not embedded)."""
+
+    type: Literal["resource_link"] = Field(default="resource_link")
+    uri: str = Field(description="URI of the external resource")
+    name: str = Field(description="Human-readable resource name")
+    description: str | None = Field(default=None)
+    mime_type: str | None = Field(default=None)
+
+
+class ResourceBlock(BaseContentBlock, StandardContentProtocol):
+    """Embedded resource with metadata."""
+
+    class Resource(BaseModel):
+        uri: str
+        name: str
+        description: str | None = None
+        mime_type: str | None = None
+
+    type: Literal["resource"] = Field(default="resource")
+    resource: Resource = Field(description="Embedded resource metadata")
+
+
+class SourceBlock(BaseContentBlock, ExtendedContentProtocol):
+    """Document chunks surfaced as RAG context attribution."""
+
+    type: Literal["source"] = Field(default="source")
+    sources: list[SourceType] = Field(
+        description="Document chunks used as context for this response"
+    )
+
+    @classmethod
+    def from_nodes(cls, nodes: list[NodeWithScore]) -> SourceBlock:
+        return cls(sources=[Chunk.from_node(node) for node in nodes])
+
+    @classmethod
+    def from_sources(cls, sources: Sequence[SourceType]) -> SourceBlock:
+        return cls(sources=sources)
+
+
+BasicContentBlockType = (
+    TextBlock
+    | ImageBlock
+    | AudioBlock
+    | BinaryBlock
+    | LocalResourceBlock
+    | ResourceLinkBlock
+    | ResourceBlock
+    | SourceBlock
+    | ThinkingBlock
+    | RedactedThinkingBlock
+    | ToolUseBlock
+    | ServerToolUseBlock
+    | ContainerUploadBlock
+    | DocumentBlock
+    | SearchResultBlock
+    | MidConvSystemBlock
+)
+
+
+class TLDRBlock(BaseContentBlock, ExtendedContentProtocol):
+    """Condensed summary block."""
+
+    type: Literal["tldr"] = Field(default="tldr")
+    content: list[BasicContentBlockType] = Field(default_factory=list)
+    tldr_side: Literal["left", "right"] = Field(default="left")
+
+
+class BashCodeExecutionResultBlock(BaseContentBlock, StandardContentProtocol):
+    type: Literal["bash_code_execution_result"] = "bash_code_execution_result"
+    stdout: str = Field(description="Standard output from the bash command.")
+    stderr: str = Field(description="Standard error output from the bash command.")
+    return_code: int = Field(
+        description="Exit code of the bash command. 0 indicates success."
+    )
+    content: list[BashExecutionFileEntry] | None = Field(
+        default=None, description="Files created during execution."
+    )
+
+    def render(self) -> str:
+        sections = [f"exit_code: {self.return_code}"]
+        if self.stdout:
+            sections.append(f"stdout:\n{self.stdout}")
+        if self.stderr:
+            sections.append(f"stderr:\n{self.stderr}")
+        return "\n\n".join(sections)
+
+
+class BashExecutionFileEntry(BaseModel):
+    """A file created during bash code execution, retrievable via the Files API."""
+
+    type: Literal["bash_code_execution_output"]
+    file_id: str = Field(
+        description="Identifier for the created file, retrievable via the Files API."
+    )
+
+
+class CodeExecutionToolResultErrorBlock(BaseContentBlock, StandardContentProtocol):
+    type: Literal[
+        "bash_code_execution_tool_result_error",
+        "text_editor_code_execution_tool_result_error",
+    ]
+    error_code: Literal[
+        "unavailable",
+        "execution_time_exceeded",
+        "invalid_tool_input",
+        "too_many_requests",
+        "output_file_too_large",
+        "file_not_found",
+    ]
+    detail: ErrorDetail | None = Field(
+        default=None,
+        description="[Zylon extension] Real error detail from the execution environment.",
+    )
+
+    def render(self) -> str:
+        if self.detail:
+            explanation = self.detail.explanation
+            if isinstance(explanation, str) and explanation:
+                return f"Error: {explanation}"
+        message = CODE_EXECUTION_ERROR_MESSAGES.get(self.error_code, self.error_code)
+        return f"Error: {message}"
+
+    def for_response_mode(
+        self, response_mode: Literal["anthropic", "zylon"]
+    ) -> CodeExecutionToolResultErrorBlock | None:
+        if response_mode == "anthropic" and self.detail is not None:
+            return self.model_copy(update={"detail": None})
+        return super().for_response_mode(response_mode)
+
+
+class TextEditorCodeExecutionViewResultBlock(BaseContentBlock, StandardContentProtocol):
+    type: Literal["text_editor_code_execution_view_result"] = (
+        "text_editor_code_execution_view_result"
+    )
+    file_type: Literal["text"] = "text"
+    content: str
+    num_lines: int
+    start_line: int
+    total_lines: int
+
+    def render(self) -> str:
+        if self.start_line > 1 or self.num_lines < self.total_lines:
+            header = f"[lines {self.start_line}-{self.start_line + self.num_lines - 1} / {self.total_lines}]\n"
+            return header + self.content
+        return self.content
+
+
+class TextEditorCodeExecutionCreateResultBlock(
+    BaseContentBlock, StandardContentProtocol
+):
+    type: Literal["text_editor_code_execution_create_result"] = (
+        "text_editor_code_execution_create_result"
+    )
+    is_file_update: bool = False
+
+    def render(self) -> str:
+        return "File updated." if self.is_file_update else "File created."
+
+
+class TextEditorCodeExecutionStrReplaceResultBlock(
+    BaseContentBlock, StandardContentProtocol
+):
+    type: Literal["text_editor_code_execution_str_replace_result"] = (
+        "text_editor_code_execution_str_replace_result"
+    )
+    old_start: int = 0
+    old_lines: int = 0
+    new_start: int = 0
+    new_lines: int = 0
+    lines: list[str] = Field(default_factory=list)
+
+    def render(self) -> str:
+        location = f" at line {self.new_start}" if self.new_start > 0 else ""
+        header = f"Applied{location} (-{self.old_lines} +{self.new_lines}):"
+        if self.lines:
+            return header + "\n" + "\n".join(self.lines)
+        return header
+
+
+class WebSearchResultBlock(BaseContentBlock, StandardContentProtocol):
+    """Result from a single web search hit.
+
+    Mirrors Anthropic's WebSearchResultBlock.
+    ``encrypted_content`` is filled with the actual result text (Zylon executes
+    locally, so there is no encrypted payload). ``content`` is a Zylon extension
+    that carries the same text in plain form; Anthropic-only clients should use
+    ``encrypted_content``.
+    """
+
+    type: Literal["web_search_result"] = "web_search_result"
+    url: str
+    title: str
+    encrypted_content: str
+    page_age: str | None = None
+    # Zylon extension: same payload as encrypted_content but in plain form
+    content: str | None = Field(
+        default=None,
+        description="[Zylon extension] Plain-text result content. "
+        "Mirrors encrypted_content for Zylon consumers.",
+    )
+    # Zylon extension: snippet / description from the search provider
+    description: str | None = Field(
+        default=None,
+        description="[Zylon extension] Short description or snippet from the search provider.",
+    )
+    favicon_url: str | None = Field(
+        default=None,
+        description="[Zylon extension] URL of the website favicon.",
+    )
+
+    def render(self) -> str:
+        entry = f"{self.title}\n"
+        entry += f"Description: {self.description or ''}\n"
+        entry += f"URL: {self.url}\n"
+        text = self.content or self.encrypted_content
+        if text:
+            entry += f"Content: {text}\n"
+        return entry
+
+    @classmethod
+    def from_web_search_result(
+        cls,
+        result: WebSearchResult,
+    ) -> WebSearchResultBlock:
+        """Build from a WebSearchResult domain object."""
+        text = result.content or result.description or ""
+        return cls(
+            url=result.url,
+            title=result.title,
+            encrypted_content=text,
+            content=text,
+            page_age=result.age,
+            description=result.description,
+            favicon_url=result.favicon_url,
+        )
+
+
+class WebFetchResultBlock(BaseContentBlock, StandardContentProtocol):
+    """Fetched page content from web_fetch.
+
+    Mirrors Anthropic's web_fetch_tool_result content shape:
+    ``url`` + ``content`` (a document block).
+    """
+
+    type: Literal["web_fetch_result"] = "web_fetch_result"
+    url: str
+    content: DocumentBlock
+    retrieved_at: str | None = Field(
+        default=None,
+        description="ISO-8601 timestamp of when the page was fetched.",
+    )
+    # Zylon extension: raw markdown text before DocumentBlock wrapping
+    markdown: str | None = Field(
+        default=None,
+        description="[Zylon extension] Raw markdown content before DocumentBlock wrapping.",
+    )
+
+    def render(self) -> str:
+        return self.markdown or "No content could be fetched from the provided URL."
+
+    @classmethod
+    def from_markdown(cls, url: str, markdown: str) -> WebFetchResultBlock:
+        return cls(
+            url=url,
+            markdown=markdown,
+            content=DocumentBlock(
+                source=DocumentBlock.PlainTextSource(
+                    type="text",
+                    media_type="text/plain",
+                    data=markdown,
+                )
+            ),
+        )
+
+
+class WebFetchToolResultErrorBlock(BaseContentBlock, StandardContentProtocol):
+    """Mirrors Anthropic's web_fetch_tool_result_error content block."""
+
+    type: Literal["web_fetch_tool_result_error"] = "web_fetch_tool_result_error"
+    error_code: Literal[
+        "invalid_tool_input",
+        "url_too_long",
+        "url_not_allowed",
+        "url_not_in_prior_context",
+        "url_not_accessible",
+        "unsupported_content_type",
+        "too_many_requests",
+        "max_uses_exceeded",
+        "unavailable",
+    ]
+    detail: ErrorDetail | None = Field(
+        default=None,
+        description="[Zylon extension] Real error detail from the execution environment.",
+    )
+
+    def render(self) -> str:
+        if self.detail:
+            explanation = self.detail.explanation
+            if isinstance(explanation, str) and explanation:
+                return f"Web fetch error: {explanation}"
+        message = WEB_FETCH_ERROR_MESSAGES.get(self.error_code, self.error_code)
+        return f"Web fetch error: {message}"
+
+    def for_response_mode(
+        self, response_mode: Literal["anthropic", "zylon"]
+    ) -> WebFetchToolResultErrorBlock | None:
+        if response_mode == "anthropic" and self.detail is not None:
+            return self.model_copy(update={"detail": None})
+        return super().for_response_mode(response_mode)
+
+
+WebToolResultContentBlockType = WebSearchResultBlock | WebFetchResultBlock
+
+CodeExecutionResultContentBlockType = (
+    BashCodeExecutionResultBlock
+    | CodeExecutionToolResultErrorBlock
+    | TextEditorCodeExecutionViewResultBlock
+    | TextEditorCodeExecutionCreateResultBlock
+    | TextEditorCodeExecutionStrReplaceResultBlock
+)
+
+ResultContentBlockType = (
+    BasicContentBlockType
+    | TLDRBlock
+    | CodeExecutionResultContentBlockType
+    | WebToolResultContentBlockType
+)
+
+
+class WebSearchToolResultError(BaseModel):
+    """SDK-compatible error result for a web_search tool call."""
+
+    type: Literal["web_search_tool_result_error"] = "web_search_tool_result_error"
+    error_code: Literal[
+        "invalid_tool_input",
+        "unavailable",
+        "max_uses_exceeded",
+        "too_many_requests",
+        "query_too_long",
+        "request_too_large",
+    ]
+    detail: ErrorDetail | None = Field(
+        default=None,
+        description="[Zylon extension] Real error detail from the execution environment.",
+    )
+
+    def render(self) -> str:
+        if self.detail:
+            explanation = self.detail.explanation
+            if isinstance(explanation, str) and explanation:
+                return f"Web search error: {explanation}"
+        message = WEB_SEARCH_ERROR_MESSAGES.get(self.error_code, self.error_code)
+        return f"Web search error: {message}"

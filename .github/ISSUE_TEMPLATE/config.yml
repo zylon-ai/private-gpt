@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://docs.privategpt.dev
+    about: Please refer to our documentation for more details and guidance.
+  - name: Discord
+    url: https://discord.gg/bK6mRVpErU
+    about: Join our Discord community to ask questions and get help.
