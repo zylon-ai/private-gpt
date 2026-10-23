@@ -1,0 +1,10 @@
+MAIN (unfixed) private_gpt/utils/token.py
+
+model context_window = 8192
+
+[BUG] no caller limit, configured cap 2048
+       token_limit=None maximum_context_length=2048 -> budget=8192 (tightest limit is 2048)
+[OK ] caller limit 4096, configured cap 2048
+       token_limit=4096 maximum_context_length=2048 -> budget=2048 (tightest limit is 2048)
+[OK ] caller limit 4096, no configured cap, model window 8192
+       token_limit=4096 maximum_context_length=None -> budget=4096 (tightest limit is 4096)

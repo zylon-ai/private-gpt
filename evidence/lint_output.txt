@@ -1,0 +1,13 @@
+linter: ruff 0.15.21 (pinned in uv.lock; Makefile 'lint'/'format' targets; CI job .github/workflows/tests.yml matrix: format, lint, typecheck)
+
+`ruff --version`:
+ruff 0.15.21
+
+`ruff check private_gpt/utils/token.py tests/utils/test_token.py`:
+All checks passed!
+exit=0
+
+`ruff format --check private_gpt/utils/token.py tests/utils/test_token.py`:
+2 files already formatted
+exit=0
+

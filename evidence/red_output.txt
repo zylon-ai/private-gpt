@@ -1,0 +1,121 @@
+repo=zylon-ai/private-gpt  base=main @ 0f6a2de226374a7ccc7ac5e739054be8da9929d9
+command: python -m pytest tests/utils/test_token.py --noconftest -v
+
+============================= test session starts =============================
+collecting ... collected 12 items
+Collected 0 items to run in parallel
+
+tests/utils/test_token.py::test_token_budget_is_the_tightest_limit[0-32768-0] PASSED [  8%]
+tests/utils/test_token.py::test_token_budget_is_the_tightest_limit[2048-None-2048] PASSED [ 16%]
+tests/utils/test_token.py::test_token_budget_is_the_tightest_limit[2048-32768-2048] PASSED [ 25%]
+tests/utils/test_token.py::test_token_budget_is_the_tightest_limit[None-32768-8192] PASSED [ 33%]
+tests/utils/test_token.py::test_token_budget_never_exceeds_a_limit[2048-32768] PASSED [ 41%]
+tests/utils/test_token.py::test_token_budget_never_exceeds_a_limit[32768-32768] FAILED [ 50%]
+tests/utils/test_token.py::test_token_budget_is_the_tightest_limit[None-2048-2048] FAILED [ 58%]
+tests/utils/test_token.py::test_token_budget_never_exceeds_a_limit[32768-2048] PASSED [ 66%]
+tests/utils/test_token.py::test_token_budget_never_exceeds_a_limit[2048-None] PASSED [ 75%]
+tests/utils/test_token.py::test_token_budget_never_exceeds_a_limit[None-2048] FAILED [ 83%]
+tests/utils/test_token.py::test_token_budget_is_the_tightest_limit[None-None-8192] PASSED [ 91%]
+tests/utils/test_token.py::test_token_budget_never_exceeds_a_limit[None-None] PASSED [100%]
+
+================================== FAILURES ===================================
+____________ test_token_budget_never_exceeds_a_limit[32768-32768] _____________
+
+token_limit = 32768, maximum_context_length = 32768
+
+    @pytest.mark.parametrize(
+        ("token_limit", "maximum_context_length"),
+        [
+            (None, None),
+            (2048, 32_768),
+            (32_768, 2048),
+            (2048, None),
+            (None, 2048),
+            (32_768, 32_768),
+        ],
+    )
+    def test_token_budget_never_exceeds_a_limit(
+        token_limit: int | None,
+        maximum_context_length: int | None,
+    ) -> None:
+        budget = calculate_maximum_token_expansion(
+            token_limit=token_limit,
+            context_window=MODEL_WINDOW,
+            maximum_context_length=maximum_context_length,
+        )
+    
+>       assert budget <= MODEL_WINDOW
+E       assert 32768 <= 8192
+
+tests\utils\test_token.py:58: AssertionError
+___________ test_token_budget_is_the_tightest_limit[None-2048-2048] ___________
+
+token_limit = None, maximum_context_length = 2048, expected = 2048
+
+    @pytest.mark.parametrize(
+        ("token_limit", "maximum_context_length", "expected"),
+        [
+            # No explicit limit: only the model window bounds the budget.
+            (None, None, MODEL_WINDOW),
+            (None, 2048, 2048),
+            (None, 32_768, MODEL_WINDOW),
+            # A caller-supplied limit is a cap, not a target: the tighter limit wins.
+            (2048, 32_768, 2048),
+            (2048, None, 2048),
+            # 0 keeps its "no limit configured" meaning, as in chat settings.
+            (0, 32_768, 0),
+        ],
+    )
+    def test_token_budget_is_the_tightest_limit(
+        token_limit: int | None,
+        maximum_context_length: int | None,
+        expected: int,
+    ) -> None:
+        budget = calculate_maximum_token_expansion(
+            token_limit=token_limit,
+            context_window=MODEL_WINDOW,
+            maximum_context_length=maximum_context_length,
+        )
+    
+>       assert budget == expected
+E       assert 8192 == 2048
+
+tests\utils\test_token.py:34: AssertionError
+_____________ test_token_budget_never_exceeds_a_limit[None-2048] ______________
+
+token_limit = None, maximum_context_length = 2048
+
+    @pytest.mark.parametrize(
+        ("token_limit", "maximum_context_length"),
+        [
+            (None, None),
+            (2048, 32_768),
+            (32_768, 2048),
+            (2048, None),
+            (None, 2048),
+            (32_768, 32_768),
+        ],
+    )
+    def test_token_budget_never_exceeds_a_limit(
+        token_limit: int | None,
+        maximum_context_length: int | None,
+    ) -> None:
+        budget = calculate_maximum_token_expansion(
+            token_limit=token_limit,
+            context_window=MODEL_WINDOW,
+            maximum_context_length=maximum_context_length,
+        )
+    
+        assert budget <= MODEL_WINDOW
+        if token_limit is not None:
+            assert budget <= token_limit
+        if maximum_context_length is not None:
+>           assert budget <= maximum_context_length
+E           assert 8192 <= 2048
+
+tests\utils\test_token.py:62: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/utils/test_token.py::test_token_budget_never_exceeds_a_limit[32768-32768]
+FAILED tests/utils/test_token.py::test_token_budget_is_the_tightest_limit[None-2048-2048]
+FAILED tests/utils/test_token.py::test_token_budget_never_exceeds_a_limit[None-2048]
+========================= 3 failed, 9 passed in 0.45s =========================
