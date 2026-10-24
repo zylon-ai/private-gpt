@@ -1,4 +1,5 @@
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Body, Depends, File, Query, Request, UploadFile
 from fastapi.responses import Response
@@ -301,10 +302,18 @@ async def get_file_content(
         scope_id=scope_id, file_id=file_id, namespace=namespace
     )
     disp = "inline" if disposition.lower() == "inline" else "attachment"
+    if display_name.isascii():
+        content_disposition = f'{disp}; filename="{display_name}"'
+    else:
+        # Starlette encodes header values as Latin-1, so a non-ASCII name in
+        # `filename` either raises UnicodeEncodeError or reaches the client as
+        # raw Latin-1 bytes. RFC 6266 sends it as percent-encoded UTF-8 in
+        # `filename*` instead, as Starlette's own FileResponse does.
+        content_disposition = f"{disp}; filename*=UTF-8''{quote(display_name, safe='')}"
     return Response(
         content=content,
         media_type=mime_type,
-        headers={"Content-Disposition": f'{disp}; filename="{display_name}"'},
+        headers={"Content-Disposition": content_disposition},
     )
 
 
