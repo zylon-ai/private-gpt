@@ -95,6 +95,9 @@ navigation:
           - page: API Route
             slug: providers/api-route
             path: ./docs/pages/providers/api-route.mdx
+          - page: Runcrate
+            slug: providers/runcrate
+            path: ./docs/pages/providers/runcrate.mdx
       - section: Integrations
         skip-slug: true
         contents:
