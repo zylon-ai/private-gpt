@@ -101,6 +101,9 @@ navigation:
           - page: Standard Compute
             slug: providers/standardcompute
             path: ./docs/pages/providers/standardcompute.mdx
+          - page: Runcrate
+            slug: providers/runcrate
+            path: ./docs/pages/providers/runcrate.mdx
       - section: Integrations
         skip-slug: true
         contents:
