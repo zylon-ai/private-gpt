@@ -8,6 +8,7 @@ artifact_id belongs to the name it gave so it can fix the call.
 
 import asyncio
 import posixpath
+import unicodedata
 from collections.abc import Sequence
 from typing import Annotated, Any
 
@@ -52,7 +53,9 @@ SHAPE_ERROR = (
 
 
 def _normalize(name: str) -> str:
-    return name.strip().casefold()
+    # NFC first: the same accented file name can arrive pre-composed ("é")
+    # or decomposed ("e" + U+0301), which are visually identical but not equal.
+    return unicodedata.normalize("NFC", name).strip().casefold()
 
 
 def _basename(name: str) -> str:
@@ -119,6 +122,12 @@ async def _ids_by_name(
     # Metadata filters are exact matches: try the name as given and its basename.
     stripped = name.strip()
     candidates = {stripped, posixpath.basename(stripped.replace("\\", "/"))}
+    # The store matches metadata byte-for-byte, so try both Unicode forms of
+    # the name; accented names may be stored pre-composed or decomposed.
+    for form in ("NFC", "NFD"):
+        variant = unicodedata.normalize(form, stripped)
+        candidates.add(variant)
+        candidates.add(posixpath.basename(variant.replace("\\", "/")))
 
     def lookup(file_name: str) -> list[BaseNode]:
         return node_store_component.filtered_nodes(
