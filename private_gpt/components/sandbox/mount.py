@@ -23,7 +23,7 @@ class MountFile(BaseModel):
 
 
 def _fetch_from_uri(
-    uri: str, filename: str | None = None
+    uri: str, filename: str | None = None, *, allow_local: bool = False
 ) -> Callable[[], Awaitable[list[MountFile]]]:
     """Build the default fetch for a URI-backed file or directory mount."""
 
@@ -35,7 +35,7 @@ def _fetch_from_uri(
         local_path = (
             Path(urlparse(uri).path) if uri.startswith("file://") else Path(uri)
         )
-        if local_path.is_dir():
+        if allow_local and local_path.is_dir():
 
             def read_directory() -> list[MountFile]:
                 files: list[MountFile] = []
@@ -53,7 +53,10 @@ def _fetch_from_uri(
 
             return await asyncio.to_thread(read_directory)
 
-        binary = await asyncio.to_thread(load_file_from_uri, uri, allow_local=True)
+        source = str(local_path) if allow_local and uri.startswith("file://") else uri
+        binary = await asyncio.to_thread(
+            load_file_from_uri, source, allow_local=allow_local
+        )
         resolved_filename = filename or Path(urlparse(uri).path).name or "file"
         return [
             MountFile(path=resolved_filename, content=binary.read(), permissions=0o444)
@@ -64,13 +67,17 @@ def _fetch_from_uri(
 
 def _fetch_from_uris(
     sources: list[tuple[str, str | None]],
+    *,
+    allow_local: bool = False,
 ) -> Callable[[], Awaitable[list[MountFile]]]:
     """Build a fetcher that materializes several URI-backed files."""
 
     async def fetch() -> list[MountFile]:
         files: list[MountFile] = []
         for uri, filename in sources:
-            files.extend(await _fetch_from_uri(uri, filename)())
+            files.extend(
+                await _fetch_from_uri(uri, filename, allow_local=allow_local)()
+            )
         return files
 
     return fetch
@@ -82,7 +89,9 @@ class UriSource(BaseModel):
     The host path is the source of truth once a sandbox exists; ``fetch()``
     only (re)hydrates the host file/folder from ``uri`` in local development.
     The URI may be anything ``load_file_from_uri`` understands — ``s3://``,
-    ``https://``, ``data:`` or a local disk path.
+    ``https://`` or ``data:``. Local disk sources require an explicit
+    ``from_uri(..., allow_local=True)`` in trusted server code. That opt-in
+    belongs to the fetch closure and is never restored from serialized data.
     """
 
     uri: str
@@ -136,6 +145,8 @@ class UriSource(BaseModel):
         uri: str,
         filename: str | None = None,
         additional_sources: list[tuple[str, str | None]] | None = None,
+        *,
+        allow_local: bool = False,
     ) -> UriSource:
         """Build a UriSource whose fetch loads bytes via the generic URI loader."""
         sources = additional_sources or []
@@ -143,7 +154,9 @@ class UriSource(BaseModel):
             uri=uri,
             filename=filename,
             additional_sources=sources,
-            fetch=_fetch_from_uris([(uri, filename), *sources]),
+            fetch=_fetch_from_uris(
+                [(uri, filename), *sources], allow_local=allow_local
+            ),
         )
 
     @property

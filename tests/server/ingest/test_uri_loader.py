@@ -291,13 +291,15 @@ async def test_trusted_development_mount_still_loads_local_file(tmp_path: Path) 
 
     source = tmp_path / "local.txt"
     source.write_bytes(b"local mount")
-    files = await UriSource.from_uri(str(source)).fetch()
+    files = await UriSource.from_uri(str(source), allow_local=True).fetch()
     assert len(files) == 1
     assert files[0].content == b"local mount"
 
 
+@pytest.mark.parametrize("unreachable_first", [False, True])
 def test_real_http_transport_connects_only_to_validated_ip(
     monkeypatch: pytest.MonkeyPatch,
+    unreachable_first: bool,
 ) -> None:
     """Exercise actual urllib3, redirect handling, streaming and Host headers.
 
@@ -339,14 +341,21 @@ def test_real_http_transport_connects_only_to_validated_ip(
 
     def resolve(host: str, port: int, *args: object, **kwargs: object) -> list[tuple]:
         if host == "files.example.com":
-            return _addresses(PUBLIC_IP)
+            return (
+                _addresses(PUBLIC_IP, "1.1.1.1")
+                if unreachable_first
+                else _addresses(PUBLIC_IP)
+            )
         return original_resolver(host, port, *args, **kwargs)
 
     def connect(
         address: tuple[str, int], *args: object, **kwargs: object
     ) -> socket.socket:
         attempted.append(address)
-        assert address == (PUBLIC_IP, server.server_port)
+        assert address[0] in {PUBLIC_IP, "1.1.1.1"}
+        assert address[1] == server.server_port
+        if unreachable_first and address[0] == PUBLIC_IP:
+            raise ConnectionRefusedError("synthetic unreachable first public address")
         return original_connect(("127.0.0.1", server.server_port), *args, **kwargs)
 
     monkeypatch.setattr(socket, "getaddrinfo", resolve)
@@ -357,7 +366,7 @@ def test_real_http_transport_connects_only_to_validated_ip(
         assert load_file_from_uri(base + "/start").read() == b"downloaded bytes"
         with pytest.raises(ValueError, match="public addresses"):
             load_file_from_uri(base + "/private")
-        assert len(attempted) == 3
+        assert len(attempted) == (6 if unreachable_first else 3)
         assert requests_seen == [
             ("/start", f"files.example.com:{server.server_port}"),
             ("/final?q=1", f"files.example.com:{server.server_port}"),
@@ -386,3 +395,147 @@ def test_uri_artifact_entry_point_rejects_unsafe_sources(
     with pytest.raises(ValueError):
         UriArtifact(value=uri).to_binary_content()
     factory.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "file",
+        "file_uri",
+        "directory",
+        "directory_uri",
+        "file_symlink",
+        "directory_symlink",
+    ],
+)
+async def test_api_mount_cannot_hydrate_from_host_files(
+    tmp_path: Path, kind: str
+) -> None:
+    """The actual API MountEntry path never inherits local source privileges."""
+    from types import SimpleNamespace
+
+    from private_gpt.components.environment.hydration import HydratingEnvironmentManager
+    from private_gpt.components.filesystems.mount_entry import MountEntry
+    from private_gpt.components.filesystems.mount_resolver import MountResolver
+    from private_gpt.components.filesystems.namespace_registry import NamespaceRegistry
+    from private_gpt.components.filesystems.path_resolver import PathResolver
+    from private_gpt.settings.settings import FilesystemsSettings, NamespaceConfig
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    secret = outside / "synthetic.txt"
+    secret.write_bytes(b"SYNTHETIC_ONLY")
+    root = tmp_path / "namespace"
+    root.mkdir()
+    config = NamespaceConfig(root=str(root), hydration=True)
+    registry = NamespaceRegistry(
+        settings=SimpleNamespace(
+            filesystems=FilesystemsSettings(namespaces={"artifacts": config})
+        )
+    )
+    resolver = MountResolver(
+        registry=registry, resolver=PathResolver(registry=registry)
+    )
+    source = outside if kind.startswith("directory") else secret
+    if kind.endswith("_symlink"):
+        alias = root / "source-alias"
+        alias.symlink_to(source)
+        source = alias
+    uri = source.as_uri() if kind.endswith("_uri") else str(source)
+    entry = MountEntry(
+        namespace="artifacts",
+        scope="thread",
+        path="content",
+        uri=uri,
+        target="/mnt/content/" if kind.startswith("directory") else "/mnt/content.txt",
+    )
+    mounts = resolver.resolve([entry])
+    assert len(mounts) == 1
+    delegate = MagicMock()
+    manager = HydratingEnvironmentManager(
+        manager=delegate, namespaces={"artifacts": config}
+    )
+    with pytest.raises(ValueError, match="Local file paths"):
+        await manager.acquire("session", mounts)
+    delegate.acquire.assert_not_called()
+    assert not (root / "thread" / "content").exists()
+    assert secret.read_bytes() == b"SYNTHETIC_ONLY"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("as_uri", [False, True])
+async def test_server_owned_local_directory_requires_explicit_opt_in(
+    tmp_path: Path, as_uri: bool
+) -> None:
+    from private_gpt.components.sandbox.mount import UriSource
+
+    directory = tmp_path / "server-owned"
+    directory.mkdir()
+    (directory / "a.txt").write_bytes(b"trusted directory")
+    source = directory.as_uri() if as_uri else str(directory)
+    with pytest.raises(ValueError, match="Local file paths"):
+        await UriSource.from_uri(source).fetch()
+    files = await UriSource.from_uri(source, allow_local=True).fetch()
+    assert [(f.path, f.content) for f in files] == [("a.txt", b"trusted directory")]
+
+
+@pytest.mark.asyncio
+async def test_serialized_uri_source_cannot_enable_local_reads(tmp_path: Path) -> None:
+    from private_gpt.components.sandbox.mount import UriSource
+
+    source = tmp_path / "local.txt"
+    source.write_bytes(b"server owned")
+    trusted = UriSource.from_uri(str(source), allow_local=True)
+    data = trusted.model_dump()
+    assert "allow_local" not in data
+    data["allow_local"] = True
+    restored = UriSource.model_validate(data)
+    with pytest.raises(ValueError, match="Local file paths"):
+        await restored.fetch()
+
+
+def test_https_fqdn_retains_host_but_normalizes_tls_identity(
+    transport: tuple[MagicMock, MagicMock],
+) -> None:
+    factory, pool = transport
+    pool.urlopen.return_value = _response()
+    assert load_file_from_uri("https://files.example.com./test").read() == b"body"
+    assert factory.call_args.kwargs["server_hostname"] == "files.example.com"
+    assert factory.call_args.kwargs["assert_hostname"] == "files.example.com"
+    assert factory.call_args.kwargs["cert_reqs"] == "CERT_REQUIRED"
+    assert pool.urlopen.call_args.kwargs["headers"] == {"Host": "files.example.com."}
+
+
+def test_all_validated_connection_addresses_exhausted_without_dns_retry(
+    transport: tuple[MagicMock, MagicMock],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    factory, pool = transport
+    resolver = MagicMock(return_value=_addresses(PUBLIC_IP, "1.1.1.1"))
+    monkeypatch.setattr(socket, "getaddrinfo", resolver)
+    pool.urlopen.side_effect = urllib3.exceptions.NewConnectionError(
+        None, "synthetic connection failure"
+    )
+    with pytest.raises(urllib3.exceptions.NewConnectionError):
+        load_file_from_uri("https://files.example.com/test")
+    assert resolver.call_count == 1
+    assert [call.args[0] for call in factory.call_args_list] == [PUBLIC_IP, "1.1.1.1"]
+
+
+def test_body_read_failure_does_not_retry_another_address(
+    transport: tuple[MagicMock, MagicMock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    factory, pool = transport
+    monkeypatch.setattr(
+        socket, "getaddrinfo", MagicMock(return_value=_addresses(PUBLIC_IP, "1.1.1.1"))
+    )
+    response = _response()
+    response.stream.side_effect = urllib3.exceptions.ReadTimeoutError(
+        None, None, "synthetic read timeout"
+    )
+    pool.urlopen.return_value = response
+    with pytest.raises(urllib3.exceptions.ReadTimeoutError):
+        load_file_from_uri("https://files.example.com/test")
+    assert factory.call_count == 1
+    response.__exit__.assert_called_once()

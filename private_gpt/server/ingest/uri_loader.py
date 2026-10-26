@@ -1,6 +1,8 @@
 import io
 import ipaddress
 import socket
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any, BinaryIO
 from urllib.parse import urljoin, urlparse, urlsplit
 
@@ -16,7 +18,7 @@ _DOWNLOAD_CHUNK_SIZE = 64 * 1024
 _MAX_REDIRECTS = 5
 
 
-def _public_url_target(url: str) -> tuple[str, str, int, str, str]:
+def _public_url_target(url: str) -> tuple[str, str, int, list[str], str]:
     """Resolve once and reject every nonpublic address before connecting."""
     if (
         url != url.strip()
@@ -53,7 +55,58 @@ def _public_url_target(url: str) -> tuple[str, str, int, str, str]:
     target = parsed.path or "/"
     if parsed.query:
         target += "?" + parsed.query
-    return parsed.scheme, host, port, addresses[0][4][0], target
+    return (
+        parsed.scheme,
+        host,
+        port,
+        list(dict.fromkeys(a[4][0] for a in addresses)),
+        target,
+    )
+
+
+@contextmanager
+def _open_public_url(
+    url: str, timeout: urllib3.Timeout
+) -> Iterator[urllib3.HTTPResponse]:
+    """Try validated numeric addresses without a second hostname resolution."""
+    scheme, host, port, addresses, target = _public_url_target(url)
+    authority = f"[{host}]" if ":" in host else host
+    if port != (443 if scheme == "https" else 80):
+        authority += f":{port}"
+    for index, address in enumerate(addresses):
+        pool = (
+            urllib3.HTTPSConnectionPool(
+                address,
+                port,
+                server_hostname=host.rstrip("."),
+                assert_hostname=host.rstrip("."),
+                cert_reqs="CERT_REQUIRED",
+                ca_certs=requests.certs.where(),
+            )
+            if scheme == "https"
+            else urllib3.HTTPConnectionPool(address, port)
+        )
+        with pool:
+            try:
+                response = pool.urlopen(
+                    "GET",
+                    target,
+                    headers={"Host": authority},
+                    redirect=False,
+                    retries=False,
+                    preload_content=False,
+                    timeout=timeout,
+                )
+            except (
+                urllib3.exceptions.NewConnectionError,
+                urllib3.exceptions.ConnectTimeoutError,
+            ):
+                if index == len(addresses) - 1:
+                    raise
+                continue
+            with response:
+                yield response
+            return
 
 
 def _load_file_from_url(
@@ -81,34 +134,7 @@ def _load_file_from_url(
         else urllib3.Timeout(connect=timeout, read=timeout)
     )
     for hop in range(_MAX_REDIRECTS + 1):
-        scheme, host, port, address, target = _public_url_target(url)
-        pool = (
-            urllib3.HTTPSConnectionPool(
-                address,
-                port,
-                server_hostname=host,
-                assert_hostname=host,
-                cert_reqs="CERT_REQUIRED",
-                ca_certs=requests.certs.where(),
-            )
-            if scheme == "https"
-            else urllib3.HTTPConnectionPool(address, port)
-        )
-        authority = f"[{host}]" if ":" in host else host
-        if port != (443 if scheme == "https" else 80):
-            authority += f":{port}"
-        with (
-            pool,
-            pool.urlopen(
-                "GET",
-                target,
-                headers={"Host": authority},
-                redirect=False,
-                retries=False,
-                preload_content=False,
-                timeout=request_timeout,
-            ) as response,
-        ):
+        with _open_public_url(url, request_timeout) as response:
             if response.status in {301, 302, 303, 307, 308}:
                 location = response.headers.get("Location")
                 if not location or hop == _MAX_REDIRECTS:

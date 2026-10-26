@@ -20,7 +20,8 @@ class MountEntry(BaseModel):
     appear. Content is located one of two ways:
 
     - ``uri`` (preferred): a content origin (``s3://...``, ``https://...``,
-      ``data:...`` or a local disk path). The mount is lazy — content is
+      or ``data:...``). Local disk origins are not accepted from API clients.
+      The mount is lazy — content is
       fetched only when the backing folder is absent or empty.
     - ``namespace``/``scope``/``path``: a reference into a registered
       filesystem namespace, resolved to the exact host file/folder.
@@ -41,7 +42,8 @@ class MountEntry(BaseModel):
     uri: str | None = Field(
         default=None,
         description=(
-            "Content origin: s3://, https://, data: or a local disk path. "
+            "Content origin: s3://, public http(s)://, or data:. "
+            "Local disk paths are not accepted. "
             "When set, the mount is lazy — content is "
             "fetched only if the backing folder is absent or empty."
         ),
