@@ -21,7 +21,7 @@ server:
     proxy:
       enabled: ${PROXY_ENABLED:false}
       http_proxy: ${HTTP_PROXY,http_proxy:}
-      https_server: ${HTTPS_PROXY,https_proxy:}
+      https_proxy: ${HTTPS_PROXY,https_proxy:}
       username: ${PROXY_USERNAME:}
       password: ${PROXY_PASSWORD:}
       bypass: ${NO_PROXY:localhost,127.0.0.1}
