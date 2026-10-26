@@ -1,3 +1,4 @@
+import unicodedata
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -198,6 +199,47 @@ async def test_wrong_shape_rejected(store: FakeNodeStore, refs: Any) -> None:
 async def test_name_normalization(store: FakeNodeStore, name: str) -> None:
     ids = await _resolve([{"name": name, "artifact_id": REPORT_2024}], store)
     assert ids == [REPORT_2024]
+
+
+async def test_decomposed_accent_matches_precomposed_name() -> None:
+    """A decomposed accent must match the pre-composed stored name.
+
+    Regression: search results carry the ingested file name decomposed
+    ("e" + U+0301) while the stored name is pre-composed ("\u00e9"). A model
+    reusing the name from those results was rejected, and because both forms
+    render identically the message read "no file is named 'X'; you passed
+    <id>, which is 'X'", so the same call was retried in a loop.
+    """
+    artifact_id = "01a13d96-e5e7-7aaa-8000-0000000000e9"
+    stored = unicodedata.normalize("NFC", "Especificaci\u00f3n-T\u00e9cnica_v02.pdf")
+    store = FakeNodeStore({artifact_id: stored})
+    given = unicodedata.normalize("NFD", stored)
+
+    assert given != stored  # visually identical, different code points
+    ids = await _resolve([{"name": given, "artifact_id": artifact_id}], store)
+    assert ids == [artifact_id]
+
+
+async def test_decomposed_accent_suggests_id_on_real_mismatch() -> None:
+    """An NFD name paired with the wrong id still names the right artifact."""
+    right, wrong = (
+        "01a13d96-e5e7-7aaa-8000-0000000000aa",
+        "01a13d96-e5e7-7aaa-8000-0000000000bb",
+    )
+    accented = "Memoria-T\u00e9cnica.pdf"
+    store = FakeNodeStore(
+        {
+            right: unicodedata.normalize("NFC", accented),
+            wrong: "other.pdf",
+        }
+    )
+    given = unicodedata.normalize("NFD", accented)
+
+    with pytest.raises(ValueError) as exc:
+        await _resolve([{"name": given, "artifact_id": wrong}], store)
+    message = str(exc.value)
+    assert f"has artifact_id {right}" in message
+    assert "no file is named" not in message
 
 
 async def test_mismatch_with_folder_name_finds_correct_id(
