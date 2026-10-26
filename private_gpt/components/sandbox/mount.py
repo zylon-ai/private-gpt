@@ -53,7 +53,7 @@ def _fetch_from_uri(
 
             return await asyncio.to_thread(read_directory)
 
-        binary = await asyncio.to_thread(load_file_from_uri, uri)
+        binary = await asyncio.to_thread(load_file_from_uri, uri, allow_local=True)
         resolved_filename = filename or Path(urlparse(uri).path).name or "file"
         return [
             MountFile(path=resolved_filename, content=binary.read(), permissions=0o444)

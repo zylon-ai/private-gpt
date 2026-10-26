@@ -37,11 +37,23 @@ curl -X POST http://localhost:8080/v1/artifacts/ingest/async \
   -H "Content-Type: application/json" \
   -d '{
     "ingest_body": {
-      "file_path": "/path/to/large-document.pdf",
+      "input": {
+        "type": "uri",
+        "value": "https://example.com/large-document.pdf"
+      },
+      "artifact": "large-document",
       "collection": "my-collection"
     }
   }'
 ```
+
+HTTP(S) URI downloads must resolve exclusively to public IP addresses, including
+every redirect destination. Loopback, private networks, link-local addresses,
+embedded URL credentials and local file paths are rejected. HTTP(S) downloads
+connect directly and do not use environment proxies or `.netrc` credentials.
+Configured S3 storage and base64 file inputs remain supported. For local files,
+upload their content as a file input instead of passing a server filesystem path.
+These URI download rules also apply to synchronous ingestion and chat media.
 
 Response:
 
