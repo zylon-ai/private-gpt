@@ -8,7 +8,6 @@ artifact_id belongs to the name it gave so it can fix the call.
 
 import asyncio
 import posixpath
-import unicodedata
 from collections.abc import Sequence
 from typing import Annotated, Any
 
@@ -18,6 +17,7 @@ from pydantic import BaseModel, Field, ValidationError, WithJsonSchema
 from private_gpt.chat.extensions.context_filter import ContextFilter
 from private_gpt.components.ingest.metadata_helper import MetadataKeys
 from private_gpt.components.node_store.node_store_component import NodeStoreComponent
+from private_gpt.utils.unicode import nfc, unicode_forms
 
 # Upper bound of nodes scanned when looking up the artifacts behind a file name.
 _NAME_LOOKUP_LIMIT = 500
@@ -55,7 +55,7 @@ SHAPE_ERROR = (
 def _normalize(name: str) -> str:
     # NFC first: the same accented file name can arrive pre-composed ("é")
     # or decomposed ("e" + U+0301), which are visually identical but not equal.
-    return unicodedata.normalize("NFC", name).strip().casefold()
+    return nfc(name).strip().casefold()
 
 
 def _basename(name: str) -> str:
@@ -120,12 +120,10 @@ async def _ids_by_name(
 ) -> dict[str, str]:
     """Artifacts (artifact_id -> file name) whose file name matches `name`."""
     # Metadata filters are exact matches: try the name as given and its basename.
-    stripped = name.strip()
-    candidates = {stripped, posixpath.basename(stripped.replace("\\", "/"))}
-    # The store matches metadata byte-for-byte, so try both Unicode forms of
-    # the name; accented names may be stored pre-composed or decomposed.
-    for form in ("NFC", "NFD"):
-        variant = unicodedata.normalize(form, stripped)
+    # The store matches metadata byte-for-byte, so also try both Unicode forms
+    # of the name; accented names may be stored pre-composed or decomposed.
+    candidates: set[str] = set()
+    for variant in unicode_forms(name.strip()):
         candidates.add(variant)
         candidates.add(posixpath.basename(variant.replace("\\", "/")))
 
