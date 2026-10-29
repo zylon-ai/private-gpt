@@ -81,6 +81,11 @@ def _stop_server_subprocess(server_proc: "subprocess.Popen[bytes]") -> None:
     if server_proc.poll() is not None:
         return
 
+    if sys.platform == "win32":
+        server_proc.terminate()
+        server_proc.wait()
+        return
+
     try:
         os.killpg(server_proc.pid, signal.SIGTERM)
     except ProcessLookupError:
@@ -357,7 +362,8 @@ def run_command(
         finally:
             _stop_server_subprocess(server_proc)
 
-    if use_attach:
+    # os.execvp does not replace the process on Windows; run the app as a child.
+    if use_attach and sys.platform != "win32":
         os.execvp(resolved, cmd)
     else:
         result = subprocess.run(cmd, check=False)
