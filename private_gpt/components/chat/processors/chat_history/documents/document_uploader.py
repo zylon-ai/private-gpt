@@ -15,6 +15,7 @@ from private_gpt.components.environment.naming import unique_name
 from private_gpt.events.models import DocumentBlock
 from private_gpt.events.models._content_blocks import DocumentConverter
 from private_gpt.server.files.file_service import FileService
+from private_gpt.utils.unicode import nfc
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,9 @@ class UploadedDocument(BaseModel):
 
 def _filename_for(block: DocumentBlock, index: int) -> str:
     """Derive a safe single-segment upload key for *block*."""
-    raw = (block.title or "").strip()
+    # Store accented names pre-composed, whatever form the client sent, so
+    # uploads are named consistently on disk.
+    raw = nfc(block.title or "").strip()
     name = PurePosixPath(raw).name if raw else ""
     if not name or name in {".", ".."}:
         name = f"document{index + 1}"
