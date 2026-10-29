@@ -1,0 +1,13 @@
+fix(tools): bound tree expansion by the tightest applicable token limit
+
+calculate_maximum_token_expansion() returned the widest of the three limits it
+is given instead of the tightest, and never compared the result against the
+model's context window. With a configured chat.maximum_context_length of 2048
+and an 8192-token model, a None token_limit yielded 8192 (4x the configured
+context budget), and a 4096 token_limit could yield 8192 as well because
+maximum_context_length was applied as a floor rather than a cap. The budget is
+the cap the tree-expansion post-processor enforces, so retrieved context grew
+past both the operator's setting and the model window.
+
+Return the minimum of the non-None limits, and add the missing coverage for the
+helper (it had none).

@@ -1,0 +1,24 @@
+Collected 0 items to run in parallel
+
+=================================== ERRORS ====================================
+_ ERROR collecting tests/components/tools/test_processor_builder_contracts.py _
+ImportError while importing test module 'G:\pr\r51\private_gpt\tests\components\tools\test_processor_builder_contracts.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests\components\tools\test_processor_builder_contracts.py:19: in <module>
+    from private_gpt.components.tools.builders.convert_documents_tool_builder import (
+private_gpt\components\tools\builders\convert_documents_tool_builder.py:14: in <module>
+    from private_gpt.components.chat.processors.chat_history.documents.document_images import (
+private_gpt\components\chat\processors\chat_history\documents\document_images.py:5: in <module>
+    from private_gpt.components.ingest.transformations.describe_image_transform import (
+private_gpt\components\ingest\transformations\describe_image_transform.py:16: in <module>
+    from private_gpt.components.multimodality.image_handler import describe_image
+private_gpt\components\multimodality\image_handler.py:21: in <module>
+    from private_gpt.utils.retry import retry_context
+private_gpt\utils\retry.py:9: in <module>
+    from retry_async import retry as retry_untyped
+E   ModuleNotFoundError: No module named 'retry_async'
+=========================== short test summary info ===========================
+ERROR tests/components/tools/test_processor_builder_contracts.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 4.87s
