@@ -1,0 +1,76 @@
+---
+title: "Runcrate"
+description: "Use Runcrate as an OpenAI-compatible cloud provider for open models, with chat and embeddings behind one key."
+---
+
+[Runcrate](https://www.runcrate.ai/inference/free?utm_source=private-gpt&utm_medium=directory&utm_campaign=gpu_pricing) is a GPU cloud with an OpenAI-compatible inference API at `https://api.runcrate.ai/v1`. One API key serves chat models such as DeepSeek V4.1 Flash, GLM-5.3, Qwen3.8 Flash and gpt-oss 120B, and embedding models such as Qwen3 Embedding and BGE-M3. Open models are free with your GitHub account.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ✅ |
+| Tool / function calling | ✅ model-dependent |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+The same endpoint serves chat and embeddings, so no second server is needed.
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Get an API key">
+    1. Sign in at [runcrate.ai](https://www.runcrate.ai/dashboard/api-keys?utm_source=private-gpt&utm_medium=directory&utm_campaign=gpu_pricing).
+    2. Create an API key under API Keys.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://api.runcrate.ai/v1 \
+          OPENAI_API_KEY=your-runcrate-api-key \
+          PGPT_LLM_DEFAULT=deepseek-ai/DeepSeek-V4.1-Flash \
+          PGPT_EMBEDDING_DEFAULT=Qwen/Qwen3-Embedding-0.6B \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://api.runcrate.ai/v1 \
+          -e OPENAI_API_KEY=your-runcrate-api-key \
+          -e PGPT_LLM_DEFAULT=deepseek-ai/DeepSeek-V4.1-Flash \
+          -e PGPT_EMBEDDING_DEFAULT=Qwen/Qwen3-Embedding-0.6B \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://api.runcrate.ai/v1 \
+          OPENAI_API_KEY=your-runcrate-api-key \
+          PGPT_LLM_DEFAULT=deepseek-ai/DeepSeek-V4.1-Flash \
+          PGPT_EMBEDDING_DEFAULT=Qwen/Qwen3-Embedding-0.6B \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    <Tip>
+      Store the API key in an `.env` file or use `OPENAI_API_KEY` as an environment variable to avoid exposing it in shell history.
+    </Tip>
+  </Step>
+</Steps>
+
+---
+
+## Notes
+
+- Model ids keep their vendor prefix, for example `deepseek-ai/DeepSeek-V4.1-Flash` or `zai-org/GLM-5.3`.
+- `/v1/models` returns `context_length` for each model, so PrivateGPT sets the context window automatically.
+- `/v1/models` lists chat and embedding models together. Set `PGPT_LLM_DEFAULT` to a chat model and `PGPT_EMBEDDING_DEFAULT` to an embedding model.
+- `Qwen/Qwen3-Embedding-0.6B` and `BAAI/bge-m3` return 1024-dimension vectors, which matches the default `PGPT_EMBED_DIM`. For `Qwen/Qwen3-Embedding-8B` set `PGPT_EMBED_DIM=4096`.
