@@ -109,6 +109,87 @@ def _collection() -> str:
     return f"tenant-{uuid.uuid4()}"
 
 
+@pytest.mark.parametrize("version", [False, True], ids=["create", "version"])
+@pytest.mark.parametrize(
+    ("content", "reason"),
+    [
+        ("body without yaml frontmatter", "SKILL.md must start with YAML frontmatter"),
+        (
+            _skill_md("Invalid Name", "A skill"),
+            "name must be lowercase alphanumeric with single hyphens only",
+        ),
+    ],
+    ids=["missing-frontmatter", "invalid-name"],
+)
+def test_skill_upload_returns_actionable_validation_error(
+    test_client: TestClient, version: bool, content: str, reason: str
+) -> None:
+    collection = _collection()
+    url = "/v1/skills"
+    if version:
+        created = test_client.post(
+            url,
+            data={"display_title": "Valid Skill", "collection": collection},
+            files=[("files", _multipart_file("valid-skill", "A valid skill"))],
+        )
+        assert created.status_code == 200
+        url = f"/v1/skills/{created.json()['id']}/versions"
+
+    response = test_client.post(
+        url,
+        data={"display_title": "Broken Skill", "collection": collection},
+        files=[("files", ("SKILL.md", content.encode(), "text/markdown"))],
+    )
+
+    assert response.status_code == 400
+    error = response.json()["error"]
+    assert error["type"] == "invalid_request_error"
+    assert reason in error["message"]
+    assert error["message"] == error["detail"]["explanation"]
+    assert error["detail"]["code"] == "INVALID_REQUEST_ERROR"
+
+
+@pytest.mark.parametrize(
+    "test_client", [{"skills": {"max_bundle_size_bytes": 256}}], indirect=True
+)
+@pytest.mark.parametrize("version", [False, True], ids=["create", "version"])
+def test_skill_upload_returns_request_too_large(
+    test_client: TestClient, version: bool
+) -> None:
+    collection = _collection()
+    url = "/v1/skills"
+    if version:
+        created = test_client.post(
+            url,
+            data={"display_title": "Valid Skill", "collection": collection},
+            files=[("files", _multipart_file("valid-skill", "A valid skill"))],
+        )
+        assert created.status_code == 200
+        url = f"/v1/skills/{created.json()['id']}/versions"
+
+    response = test_client.post(
+        url,
+        data={"display_title": "Large Skill", "collection": collection},
+        files=[
+            (
+                "files",
+                (
+                    "SKILL.md",
+                    _skill_md("valid-skill", "A valid skill", body="x" * 257).encode(),
+                    "text/markdown",
+                ),
+            )
+        ],
+    )
+
+    assert response.status_code == 413
+    error = response.json()["error"]
+    assert error["type"] == "request_too_large"
+    assert "exceeds the maximum allowed size of 256 bytes" in error["message"]
+    assert error["message"] == error["detail"]["explanation"]
+    assert error["detail"]["code"] == "REQUEST_TOO_LARGE_ERROR"
+
+
 def test_validate_skill_returns_parsed_name_and_description(
     test_client: TestClient, injector: MockInjector
 ) -> None:

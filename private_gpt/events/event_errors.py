@@ -5,6 +5,11 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 
 from private_gpt.artifact_index.artifact_exception import InvalidFileError
+from private_gpt.components.skills.errors import (
+    SkillDomainError,
+    SkillErrorCode,
+    SkillValidationErrors,
+)
 
 
 class _Types(enum.StrEnum):
@@ -163,9 +168,22 @@ class Errors:
     ) -> "Errors.Base":
         if isinstance(exception, Errors.Base):
             return exception
-        error_cls = Errors._EXCEPTION_TO_ERROR.get(
-            type(exception), Errors.InternalServerError
-        )
+        # Skill validation is a client error; bundle size alone selects 413.
+        if isinstance(exception, SkillDomainError | SkillValidationErrors):
+            skill_errors = (
+                exception.errors
+                if isinstance(exception, SkillValidationErrors)
+                else [exception]
+            )
+            error_cls = (
+                Errors.RequestTooLarge
+                if any(e.code == SkillErrorCode.BUNDLE_TOO_LARGE for e in skill_errors)
+                else Errors.InvalidRequest
+            )
+        else:
+            error_cls = Errors._EXCEPTION_TO_ERROR.get(
+                type(exception), Errors.InternalServerError
+            )
         return error_cls(
             str(exception),
             event_code=event_code,
@@ -187,9 +205,10 @@ Errors._EXCEPTION_TO_ERROR = {
     Errors.Authentication: Errors.Authentication,
     Errors.Billing: Errors.Billing,
     Errors.PermissionDenied: Errors.PermissionDenied,
-    TypeError: Errors.RequestTooLarge,
-    KeyError: Errors.RequestTooLarge,
-    ConnectionError: Errors.PermissionDenied,
+    TypeError: Errors.InternalServerError,
+    KeyError: Errors.InternalServerError,
+    ConnectionError: Errors.Overloaded,
+    TimeoutError: Errors.Overloaded,
     Errors.Overloaded: Errors.Overloaded,
     MemoryError: Errors.Overloaded,
 }
@@ -208,6 +227,7 @@ Errors._CLASS_NAME_TO_EXCEPTION = {
         TypeError,
         KeyError,
         ConnectionError,
+        TimeoutError,
         MemoryError,
         RuntimeError,
         Exception,
