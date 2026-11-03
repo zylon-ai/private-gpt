@@ -49,7 +49,7 @@ class OpenAILikeCompletionsFactory(LLMFactory):
             model=model_config.name,
             is_chat_model=True,
             api_version="",
-            temperature=model_config.sampling_params.temperature or 0.1,
+            temperature=model_config.sampling_params.temperature,
             context_window=model_config.context_window or 3900,
             max_tokens=model_config.sampling_params.max_new_tokens or 1024,
             messages_to_prompt=prompt_style.messages_to_prompt
