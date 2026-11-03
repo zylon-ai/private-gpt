@@ -42,7 +42,7 @@ class OpenAILikeResponsesFactory(LLMFactory):
                 model=model_config.name,
                 api_key=self.openai_settings.api_key or "default",
                 api_base=self.openai_settings.api_base,
-                temperature=model_config.sampling_params.temperature or 0.1,
+                temperature=model_config.sampling_params.temperature,
                 max_output_tokens=model_config.sampling_params.max_new_tokens or None,
                 context_window=model_config.context_window or None,
                 is_function_calling_model=bool(model_config.support_tools),
