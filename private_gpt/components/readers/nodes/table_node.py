@@ -54,20 +54,15 @@ class NpEncoder:
 
     def decode(self, obj: Any) -> Any:
         if isinstance(obj, str):
-            # First try to convert to float/int
-            try:
-                # Check if it's a number with decimal point
-                if "." in obj:
-                    return float(obj)
-                return int(obj)
-            except ValueError:
-                # Only try timestamp conversion if the string matches date-like patterns
-                if any(re.match(pattern, obj) for pattern in VALID_DATETIME_FORMATS):
-                    try:
-                        return pd.Timestamp(obj)
-                    except ValueError:
-                        pass
-                return obj
+            # Numbers are kept as numbers by JSON, so a string is text from the
+            # document ("01067", "1.10") and must not be parsed as a number.
+            # Only timestamps are encoded as strings.
+            if any(re.match(pattern, obj) for pattern in VALID_DATETIME_FORMATS):
+                try:
+                    return pd.Timestamp(obj)
+                except ValueError:
+                    pass
+            return obj
         elif isinstance(obj, int | float):
             return obj
         elif isinstance(obj, list):
