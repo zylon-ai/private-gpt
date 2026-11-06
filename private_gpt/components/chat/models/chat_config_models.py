@@ -463,7 +463,11 @@ class ContextConfig(BaseModel):
         default=False,
         description="Whether to deduplicate nodes in the chat history to avoid sending "
         "the same document multiple times to the LLM. If enabled, "
-        "it will keep the last occurrence of the document in the chat history.",
+        "it will keep one occurrence (see deduplicate_context_keep).",
+    )
+    deduplicate_context_keep: Literal["first", "last"] = Field(
+        default="first",
+        description="Which occurrence of a repeated document to keep.",
     )
     maximum_context_length: int | None = Field(
         default=None,
