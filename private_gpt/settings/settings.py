@@ -603,6 +603,10 @@ class ChatSettings(BaseModel):
         False,
         description="Flag indicating if the chat engine should deduplicate context in the chat history or not.",
     )
+    deduplicate_context_keep: Literal["first", "last"] = Field(
+        "first",
+        description="Which occurrence of a repeated document to keep when deduplicating context in the chat history.",
+    )
     force_to_return_citations: bool = Field(
         False,
         description="Flag indicating if the chat engine should force to return citations or not. Only used if `allow_generate_citations` is set to True.",

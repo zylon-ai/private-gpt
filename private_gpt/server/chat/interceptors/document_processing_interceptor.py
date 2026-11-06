@@ -43,6 +43,7 @@ class DocumentProcessingRequestInterceptor(ChatRequestLoopInterceptor):
                 else state.input.request.context.add_context_to_system_prompt
             ),
             deduplicate_documents=state.input.request.context.deduplicate_context_in_history,
+            deduplicate_keep=state.input.request.context.deduplicate_context_keep,
         )
         # Only ``messages`` is replaced: copy the path to it, not the state.
         new_state = state.model_copy()
