@@ -213,17 +213,44 @@ class MarkdownTreeNodeParser(TransformComponent):
             content_type="text/markdown",
         )
 
-        text_lines = []
-        for child in element.find_all(["blockquote", "p"], recursive=False):
-            if child.name == "p":
-                lines = child.get_text(strip=True).split("\n")
-                text_lines.extend([f"{'>' * current_level} {line}\n" for line in lines])
-            elif child.name == "blockquote":
+        text_blocks = []
+        for child in element.find_all(recursive=False):
+            if child.name == "blockquote":
                 nested_node = self._process_blockquote(child, current_level + 1)
                 current_node.add_child(nested_node)
+                continue
 
-        current_node.text = MarkdownHelper.sanitize_markdown("\n".join(text_lines))
+            text = self._convert_quoted_block_to_markdown(child)
+            if text:
+                text_blocks.append(
+                    "".join(
+                        f"{'>' * current_level} {line}".rstrip() + "\n"
+                        for line in text.split("\n")
+                    )
+                )
+
+        current_node.text = MarkdownHelper.sanitize_markdown("\n".join(text_blocks))
         return current_node
+
+    def _convert_quoted_block_to_markdown(self, element: Tag) -> str:
+        """Convert a block inside a blockquote to markdown."""
+        if element.name == "hr":
+            return ""
+        if element.name == "p":
+            # The markdown conversion would join the lines of the paragraph
+            return element.get_text().strip()
+        if element.name == "pre":
+            code_element = element.find("code") or element
+            language = self._get_code_language(code_element)  # type: ignore
+            return f"```{language}\n{code_element.get_text().rstrip()}\n```"
+        return self._convert_tag_to_markdown(element).strip()
+
+    def _get_code_language(self, code_element: Tag) -> str:
+        """Get the language of a code element from its `language-*` class."""
+        for cls in code_element.get("class", []):  # type: ignore
+            if cls.startswith("language-"):
+                return cls.split("language-")[1].strip()
+        return ""
 
     def _extract_item_content(self, item: Tag) -> str:
         """Extract content from a list item."""
@@ -292,13 +319,8 @@ class MarkdownTreeNodeParser(TransformComponent):
         elif element.name == "pre":
             code_element = element.find("code")
             if code_element:
-                language = ""
-                for cls in code_element.get("class", []):  # type: ignore
-                    if cls.startswith("language-"):
-                        language = cls.split("language-")[1]
-                        break
+                language = self._get_code_language(code_element)  # type: ignore
                 code_text = code_element.get_text(strip=True)
-                language = language.strip()
                 node = TextNode(
                     text=MarkdownHelper.sanitize_markdown(
                         f"\n```{language}\n{code_text}\n```\n"
