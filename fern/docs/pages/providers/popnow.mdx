@@ -1,0 +1,129 @@
+---
+title: "PopNow"
+description: "Use PopNow as an OpenAI-compatible cloud gateway: Claude, GPT, Gemini, DeepSeek, Kimi and OpenAI embeddings through one pay-as-you-go endpoint."
+---
+
+[PopNow](https://popnow.ai/api) is a pay-as-you-go AI API with an OpenAI-compatible endpoint at `https://api.popnow.ai/v1`. It serves Claude, GPT, Gemini, DeepSeek, Kimi and other chat models, plus OpenAI embedding models, behind a single API key, billed per token in USD.
+
+## Capabilities with PrivateGPT
+
+| Capability | Status |
+|---|---|
+| Model discovery (`/v1/models`) | ✅ |
+| Tokenizer endpoint (`/tokenize`) | ❌ |
+| Embeddings | ✅ |
+| Tool / function calling | ✅ model-dependent |
+| Structured output | ✅ model-dependent |
+| Streaming | ✅ |
+| Vision / image input | ✅ model-dependent |
+
+---
+
+## Setup
+
+<Steps>
+  <Step title="Get a PopNow API key">
+    1. Sign up at [popnow.ai](https://popnow.ai/api).
+    2. Open the [API console](https://popnow.ai/api/console/keys), create an API key and add funds to your API balance. Keys start with `sk-popnow-`.
+    3. Note the model IDs you want to use. PopNow model IDs follow the `<lab>/<model>/<task>` format, e.g. `anthropic/claude-sonnet-5.5/chat` or `openai/text-embedding-3-small/embedding`.
+  </Step>
+
+  <Step title="Run PrivateGPT">
+    <Tabs>
+      <Tab title="Package install">
+        ```bash
+        OPENAI_API_BASE=https://api.popnow.ai/v1 \
+          OPENAI_API_KEY=your-popnow-api-key \
+          private-gpt serve
+        ```
+      </Tab>
+      <Tab title="Docker">
+        ```bash
+        docker run -p 8080:8080 \
+          -e OPENAI_API_BASE=https://api.popnow.ai/v1 \
+          -e OPENAI_API_KEY=your-popnow-api-key \
+          zylonai/private-gpt:latest
+        ```
+      </Tab>
+      <Tab title="uv (local)">
+        ```bash
+        OPENAI_API_BASE=https://api.popnow.ai/v1 \
+          OPENAI_API_KEY=your-popnow-api-key \
+          uv run private-gpt serve
+        ```
+      </Tab>
+    </Tabs>
+
+    <Tip>
+      Store the API key in an `.env` file or use `OPENAI_API_KEY` as an environment variable to avoid exposing it in shell history.
+    </Tip>
+  </Step>
+</Steps>
+
+---
+
+## Advanced profile example
+
+```yaml
+# settings-model.yaml
+llm:
+  default_model: anthropic/claude-sonnet-5.5/chat
+
+models:
+  - name: anthropic/claude-sonnet-5.5/chat
+    type: llm
+    mode: openai
+    context_window: 1000000
+    support_tools: true
+    support_reasoning: true
+    sampling_params:
+      temperature: 0.7
+
+  - name: openai/gpt-6.1-terra/chat
+    type: llm
+    mode: openai
+    context_window: 1050000
+    support_tools: true
+    support_reasoning: true
+    sampling_params:
+      temperature: 0.7
+
+  - name: deepseek/v4-flash/chat
+    type: llm
+    mode: openai
+    context_window: 1048576
+    support_tools: true
+    support_reasoning: true
+    sampling_params:
+      temperature: 0.7
+```
+
+Run with a profile:
+
+```bash
+OPENAI_API_BASE=https://api.popnow.ai/v1 \
+  OPENAI_API_KEY=your-popnow-api-key \
+  PGPT_PROFILES=model \
+  uv run python -m private_gpt
+```
+
+---
+
+## settings.yaml override
+
+You can also set the endpoint directly in `settings.yaml` instead of environment variables:
+
+```yaml
+openai:
+  api_base: https://api.popnow.ai/v1
+  api_key: ${POPNOW_API_KEY:}
+```
+
+---
+
+## Notes
+
+- **Model IDs** end with the task, for example `/chat` for chat models and `/embedding` for embedding models. See the full list with prices in the [PopNow chat API docs](https://popnow.ai/docs/chat), or call `/v1/models`.
+- **Embeddings are available** through `/v1/embeddings`, e.g. `openai/text-embedding-3-small/embedding`.
+- Because PopNow does not expose `/tokenize`, set `context_window` explicitly in your model profiles for accurate token management.
+- PopNow is prepaid: requests fail with an insufficient balance error until you add funds in the API console.
