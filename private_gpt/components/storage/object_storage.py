@@ -94,7 +94,11 @@ class LocalObjectStorage(ObjectStorage):
         root = Path(self._root_path) / prefix
         if not root.exists():
             return []
-        return [str(p.relative_to(root)) for p in root.rglob("*") if p.is_file()]
+        # Storage keys are POSIX paths: the Files API service layer splits them
+        # on "/" and maps them through storage_to_canonical_path, and the S3
+        # backend returns "/"-separated keys. str() would yield backslashes on
+        # Windows and break those callers.
+        return [p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()]
 
     async def write_file(
         self,
@@ -156,7 +160,12 @@ class LocalObjectStorage(ObjectStorage):
                 etag = None
             results.append(
                 FileInfo(
-                    path=str(entry.relative_to(root)),
+                    # Storage keys are POSIX paths: the Files API service layer
+                    # splits them on "/" and maps them through
+                    # storage_to_canonical_path, and the S3 backend returns
+                    # "/"-separated keys. str() would yield backslashes on
+                    # Windows and break those callers.
+                    path=entry.relative_to(root).as_posix(),
                     size_bytes=stat.st_size,
                     created_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
                     mime_type=mime,
